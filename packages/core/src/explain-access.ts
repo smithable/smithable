@@ -455,7 +455,7 @@ function explainAction(
         inAuth("public.create", `Anyone may add ${what}: public.create names ${model.name}.`),
       );
     const why = whyGranted(role, "create", model.name, what);
-    return why
+    return why && a.roles.includes(role.name)
       ? allowed(splits, named, why as AccessReason)
       : denied(splits, named, notGranted(role, "create", model.name));
   }

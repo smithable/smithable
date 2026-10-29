@@ -199,10 +199,10 @@ const addAction: Operation<{
         throw new OperationError(
           "A split names its model, its list and the fields the new record takes, nothing else: no --on, --merge, --set, --when, --add, --copy, --with, input or output.",
         );
-      const model = ir.models.find((m) => m.name === split);
-      if (!model) throw new OperationError(`There is no model named "${split}".`);
       if (split === "User")
         throw new OperationError("Users cannot be split: they are who signs in.");
+      const model = ir.models.find((m) => m.name === split);
+      if (!model) throw new OperationError(`There is no model named "${split}".`);
       if (!model.fields.some((f) => f.name === move && f.type.kind === "relation" && f.type.many))
         throw new OperationError(`${split} has no list named "${move}".`);
       for (const field of rules)
@@ -226,10 +226,10 @@ const addAction: Operation<{
         throw new OperationError(
           "A merge names its model and nothing else: no --on, --set, --when, --add, --copy, --with, input or output.",
         );
-      if (!ir.models.some((m) => m.name === merge))
-        throw new OperationError(`There is no model named "${merge}".`);
       if (merge === "User")
         throw new OperationError("Users cannot be merged: they are who signs in.");
+      if (!ir.models.some((m) => m.name === merge))
+        throw new OperationError(`There is no model named "${merge}".`);
       if (keep !== undefined && !["chosen", "oldest", "newest"].includes(keep))
         throw new OperationError('"--keep" is chosen, oldest or newest.');
       const fieldRules: Record<string, string> = {};

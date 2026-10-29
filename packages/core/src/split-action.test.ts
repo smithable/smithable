@@ -18,12 +18,18 @@ models:
       code: string unique
       total: { type: money, formula: "SUM(lines.amount)" }
       lines: "Line[]"
+      agent: { type: User!, default: ME() }
   Line:
     fields: { order: Order!, item: string!, amount: money! }
   Ticket:
     fields: { key: string! unique, title: string!, tasks: "Task[]" }
   Task:
     fields: { ticket: Ticket!, what: string! }
+  Shift:
+    fields: { day: date!, room: string, slots: "Slot[]" }
+    unique: [[day, room]]
+  Slot:
+    fields: { shift: Shift!, at: string! }
 actions:
 ${actions}
 pages:
@@ -48,13 +54,14 @@ test("split: <Model> is a standard action that sets nothing, with the list that 
 `);
   expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
   const [first, second] = (ir?.actions ?? []) as StandardActionIR[];
-  // Unsaid, every stored field but the sequence, the unique, the computed and the lists.
+  // Unsaid, every stored field but the sequence, the unique, the computed and the lists; a
+  // required field the app fills (ME()) need not be copied.
   expect(first).toMatchObject({
     name: "splitOrder",
     custom: false,
     on: "Order",
     set: [],
-    split: { move: "lines", copy: ["customer", "deliverTo", "note"] },
+    split: { move: "lines", copy: ["customer", "deliverTo", "note", "agent"] },
     intent: "The picked lines go to a new order.",
   });
   expect(second?.split).toEqual({ move: "lines", copy: ["customer"] });
@@ -103,6 +110,16 @@ test("a split names its model, its list and its fields and nothing else; what th
   expect(errors("  x: { split: Order, move: lines, copy: [customer, number] }\n")).toEqual([
     expect.stringContaining("number is not copied, the app gives it."),
   ]);
+  expect(errors("  x: { split: Order, move: lines, copy: [customer, customer] }\n")).toEqual([
+    expect.stringContaining('"copy" of action "x" names customer twice.'),
+  ]);
+  // Fields unique together are not all copied: the new record would repeat the old.
+  expect(errors("  x: { split: Shift, move: slots }\n")).toEqual([
+    expect.stringContaining(
+      'day and room are unique together, and the new Shift would take them all; leave one out of "copy".',
+    ),
+  ]);
+  expect(errors("  x: { split: Shift, move: slots, copy: [day] }\n")).toEqual([]);
   // A required field the new record would not get.
   expect(errors("  x: { split: Order, move: lines, copy: [deliverTo] }\n")).toEqual([
     expect.stringContaining(

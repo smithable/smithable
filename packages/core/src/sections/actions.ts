@@ -82,9 +82,10 @@ export const actionsSection: SpecSection<"actions"> = {
         {
           required: ["on"],
           anyOf: [{ required: ["set"] }, { required: ["add"] }, { required: ["copy"] }],
+          properties: { copy: { type: ["object", "null"] } },
         },
         { required: ["merge"] },
-        { required: ["split"] },
+        { required: ["split", "move"], properties: { copy: { type: "array" } } },
       ],
       additionalProperties: false,
       properties: {
@@ -675,9 +676,22 @@ function readSplitAction(
       } else if (why) {
         ctx.error(at, "invalid-action", `"copy" of ${where}: ${key} is not copied, ${why}.`);
         ok = false;
+      } else if (copy.includes(key)) {
+        ctx.error(at, "invalid-action", `"copy" of ${where} names ${key} twice.`);
+        ok = false;
       } else copy.push(key);
     }
     if (!ok) return undefined;
+  }
+  // Fields unique together, all copied, would make the new record a repeat of the old.
+  const together = (model.unique ?? []).find((u) => u.fields.every((f) => copy.includes(f)));
+  if (together) {
+    ctx.error(
+      (copyEntry ?? entry).value,
+      "invalid-action",
+      `${capitalize(where)}: ${together.fields.join(" and ")} are unique together, and the new ${name} would take them all; leave one out of "copy".`,
+    );
+    return undefined;
   }
   const missing = model.fields.find(
     (f) =>
@@ -687,6 +701,7 @@ function readSplitAction(
       !f.byApp &&
       f.default === undefined &&
       !f.defaultFormula &&
+      !f.defaultMe &&
       !isList(f) &&
       !copy.includes(f.name),
   );

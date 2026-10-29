@@ -830,7 +830,15 @@
                   "copy"
                 ]
               }
-            ]
+            ],
+            "properties": {
+              "copy": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            }
           },
           {
             "required": [
@@ -839,8 +847,14 @@
           },
           {
             "required": [
-              "split"
-            ]
+              "split",
+              "move"
+            ],
+            "properties": {
+              "copy": {
+                "type": "array"
+              }
+            }
           }
         ],
         "additionalProperties": false,
