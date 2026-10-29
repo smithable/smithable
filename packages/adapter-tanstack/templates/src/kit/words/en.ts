@@ -652,7 +652,8 @@ export const w = {
   splitStayed: (n: number) =>
     `${n} ${n === 1 ? "record was" : "records were"} moved elsewhere since and stay there.`,
   mergedIntoTitle: (title: string) => `merged into “${title}”`,
-  mergeKeepIs: (title: string) => `With this merge the oldest or newest stays: ${title}.`,
+  mergeKeepIs: (which: "oldest" | "newest", title: string) =>
+    `With this merge the ${which} of the two stays: ${title}.`,
   mergeChoiceMissing: (field: string) =>
     `${field} differs between the two: say which stays, the kept one's or the other's.`,
   mergeDone: (other: string, kept: string) => `${other} was merged into ${kept}.`,

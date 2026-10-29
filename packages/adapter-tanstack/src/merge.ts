@@ -326,7 +326,7 @@ async function pair(viewer: Viewer | null, first: number, second: number, strict
   if (!one || !two) throw new AccessDenied(viewer !== null);
   const firstStays = ${a.keep} === "chosen" ? true : ${a.keep} === "oldest" ? one.id < two.id : one.id > two.id;
   // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
-  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(String(two.${title} ?? two.id)));
+  if (strict && !firstStays) throw new Conflict(w.mergeKeepIs(${a.keep} === "oldest" ? "oldest" : "newest", String(two.${title} ?? two.id)));
   const [kept, other] = firstStays ? [one, two] : [two, one];
   // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
   // else it stays, emptied of what moved.
