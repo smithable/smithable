@@ -285,3 +285,225 @@ export function walk(moves: readonly Move[], seed: number, count: number, now: D
   }
   return steps;
 }
+
+// ---- The two run modes (docs/design/sample-users.md §3a): a sensible draw from a person's
+// memory, and the variants of every move for the coverage walk. Both pure; the host keeps the
+// memory and the coverage table, rebuilt from the run's log.
+
+/** What a person remembers of their run so far, built by the host from the log. */
+export interface Memory {
+  /** The turn now (the number of moves made in the run, by anyone). */
+  turn: number;
+  /** Records the person made: model → how many. Which record a move takes is the app's pick. */
+  made: Record<string, number>;
+  /** The model of the record the person made in their last move, when that move was an add that was done. */
+  justMade?: string;
+  /** The person's last moves, oldest first (move ids), for the words of a model's prompt. */
+  recent: string[];
+  /** Pages the person has opened (move ids of `open`). */
+  opened: string[];
+  /** Their refusals: the move, and the turn it was refused in. */
+  refused: { move: string; turn: number }[];
+  /** The turn a model was last touched by anyone's move (added, changed, run on, deleted). */
+  touched: Record<string, number>;
+}
+
+export const emptyMemory = (): Memory => ({
+  turn: 0,
+  made: {},
+  recent: [],
+  opened: [],
+  refused: [],
+  touched: {},
+});
+
+/** How many turns a refused move is left alone, unless its model is touched meanwhile. */
+export const REFUSAL_REST = 3;
+
+const modelOf = (move: Move): string | undefined => ("model" in move ? move.model : undefined);
+
+/**
+ * The weight of a move for a person with this memory (§3a): a move on a model they have records
+ * of weighs three times one on a model they have none of; right after adding a record, its
+ * actions come first, then a change, and another add waits; a page weighs more before it has
+ * been opened; a refusal rests; a visitor mostly looks.
+ */
+export function weightOf(move: Move, memory: Memory, actor: Actor): number {
+  const model = modelOf(move);
+  const rested = memory.refused.some(
+    (r) =>
+      r.move === move.id &&
+      memory.turn - r.turn < REFUSAL_REST &&
+      (model === undefined || (memory.touched[model] ?? -1) <= r.turn),
+  );
+  if (rested) return 0;
+  if (actor === "visitor") return move.kind === "open" ? 3 : 1;
+  let weight = 1;
+  if (move.kind === "open") weight = memory.opened.includes(move.id) ? 0.5 : 2;
+  else if (model !== undefined && (memory.made[model] ?? 0) > 0 && move.kind !== "add") weight = 3;
+  if (memory.justMade !== undefined) {
+    if (move.kind === "add") weight *= 0.5;
+    else if (model === memory.justMade && move.kind === "run") weight *= 3;
+    else if (model === memory.justMade && move.kind === "change") weight *= 2;
+  }
+  return weight;
+}
+
+/**
+ * The sensible draw (§3a): one move from the list, weighted by the person's memory, with its
+ * values; the same for the same seed and memory, so a replay holds. Nothing when every weight is 0.
+ */
+export function choose(
+  moves: readonly Move[],
+  memory: Memory,
+  actor: Actor,
+  rnd: () => number,
+  now: Date,
+): Step | undefined {
+  const weights = moves.map((m) => weightOf(m, memory, actor));
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return undefined;
+  let at = rnd() * total;
+  // Float residue may leave `at` just above 0 after the last weight: then the last weighted move.
+  let move = moves[weights.findLastIndex((w) => w > 0)] as Move;
+  for (let i = 0; i < moves.length; i++) {
+    const w = weights[i] ?? 0;
+    if (w <= 0) continue;
+    at -= w;
+    if (at < 0) {
+      move = moves[i] as Move;
+      break;
+    }
+  }
+  const values: Record<string, FieldValue | null> = {};
+  if ("slots" in move)
+    for (const slot of move.slots)
+      if (slot.required || rnd() < 0.7) values[slot.field] = valueFor(slot, rnd, now);
+  return { move: move.id, values };
+}
+
+/** A variant of a move for the coverage walk: its values, and what the app must do with them. */
+export interface Variant extends Step {
+  /** The move's id and the variant's name: "add:Booking#places-below-min". */
+  id: string;
+  /** Done: the app must take it. Refused: the spec's own rules say the app must refuse it. */
+  expect: "done" | "refused";
+  /** Why, in a few words, for the report. */
+  why: string;
+}
+
+/**
+ * Every variant of a move (§3a): the plain one and the boundary values exactly at a slot's min
+ * and max, which the app must take; and the values the spec's rules forbid, which it must
+ * refuse: below min, above max, a required slot empty, a text shorter or longer than its bounds,
+ * a choice not in the values, an email, phone, url, date or time that is not one. One slot
+ * varies at a time, the rest plain; no variant without a rule behind it.
+ */
+export function variantsOf(move: Move, now: Date): Variant[] {
+  const plain = (): Record<string, FieldValue | null> => {
+    const rnd = seeded(1);
+    const values: Record<string, FieldValue | null> = {};
+    if ("slots" in move)
+      for (const slot of move.slots) values[slot.field] = valueFor(slot, rnd, now);
+    return values;
+  };
+  const variants: Variant[] = [
+    {
+      id: `${move.id}#plain`,
+      move: move.id,
+      values: plain(),
+      expect: "done",
+      why: "as a person would",
+    },
+  ];
+  if (!("slots" in move)) return variants;
+  const one = (
+    slot: Slot,
+    name: string,
+    value: FieldValue | null,
+    expect: Variant["expect"],
+    why: string,
+  ) =>
+    variants.push({
+      id: `${move.id}#${slot.field}-${name}`,
+      move: move.id,
+      values: { ...plain(), [slot.field]: value },
+      expect,
+      why,
+    });
+  for (const slot of move.slots) {
+    // A reference is the app's pick (null): an empty one cannot be told from the plain variant.
+    if (slot.required && slot.kind !== "reference")
+      one(slot, "empty", null, "refused", `${slot.field} is required`);
+    const numeric = slot.kind === "number" || slot.kind === "money";
+    if (numeric) {
+      if (slot.min !== undefined) {
+        one(slot, "at-min", slot.min, "done", `${slot.field} at its least`);
+        one(slot, "below-min", slot.min - 1, "refused", `${slot.field} below ${slot.min}`);
+      }
+      if (slot.max !== undefined) {
+        one(slot, "at-max", slot.max, "done", `${slot.field} at its most`);
+        one(slot, "above-max", slot.max + 1, "refused", `${slot.field} above ${slot.max}`);
+      }
+    }
+    if (slot.kind === "text") {
+      if (slot.min !== undefined && slot.min > 0) {
+        one(slot, "at-min", "x".repeat(slot.min), "done", `${slot.field} at its shortest`);
+        if (slot.min > 1)
+          one(
+            slot,
+            "too-short",
+            "x".repeat(slot.min - 1),
+            "refused",
+            `${slot.field} shorter than ${slot.min}`,
+          );
+      }
+      if (slot.max !== undefined) {
+        one(slot, "at-max", "x".repeat(slot.max), "done", `${slot.field} at its longest`);
+        one(
+          slot,
+          "too-long",
+          "x".repeat(slot.max + 1),
+          "refused",
+          `${slot.field} longer than ${slot.max}`,
+        );
+      }
+    }
+    if (slot.kind === "choice")
+      one(
+        slot,
+        "not-a-choice",
+        "not-one-of-them",
+        "refused",
+        `${slot.field} is not one of the choices`,
+      );
+    if (slot.kind === "email")
+      one(slot, "not-an-email", "not an email", "refused", `${slot.field} is not an email`);
+    if (slot.kind === "phone")
+      one(slot, "not-a-phone", "not a phone", "refused", `${slot.field} is not a phone number`);
+    if (slot.kind === "url")
+      one(slot, "not-a-url", "not a url", "refused", `${slot.field} is not an address`);
+    if (slot.kind === "date")
+      one(slot, "not-a-date", "yesterday-ish", "refused", `${slot.field} is not a date`);
+    if (slot.kind === "datetime")
+      one(slot, "not-a-time", "noon-ish", "refused", `${slot.field} is not a time`);
+  }
+  return variants;
+}
+
+/**
+ * The coverage walk's next variant (§3a): the untried first, then the least tried, ties by the
+ * seed; `tried` counts each variant's tries by id. Nothing when there are no moves.
+ */
+export function coverageWalk(
+  moves: readonly Move[],
+  tried: Readonly<Record<string, number>>,
+  rnd: () => number,
+  now: Date,
+): Variant | undefined {
+  const all = moves.flatMap((m) => variantsOf(m, now));
+  if (!all.length) return undefined;
+  const fewest = Math.min(...all.map((v) => tried[v.id] ?? 0));
+  const candidates = all.filter((v) => (tried[v.id] ?? 0) === fewest);
+  return pick(candidates, rnd);
+}
