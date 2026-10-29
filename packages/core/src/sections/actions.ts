@@ -27,7 +27,7 @@ import {
   type CustomActionIR,
   type FieldIR,
   type FieldValue,
-  type MergeKeep,
+  type MergeInto,
   type MergeRule,
   type ModelIR,
   type SemanticText,
@@ -137,11 +137,12 @@ export const actionsSection: SpecSection<"actions"> = {
         merge: {
           type: "string",
           description:
-            "A merge: two records of this model become one; every reference to the other moves to the kept record, which keeps its values, and the other goes to the trash.",
+            "A merge: two or more records of this model become one; every reference to the others moves to the kept record, which keeps its values, and the others go to the trash.",
         },
-        keep: {
-          enum: ["chosen", "oldest", "newest"],
-          description: "For a merge: which record stays; chosen (the person says) unless said.",
+        into: {
+          enum: ["chosen", "new"],
+          description:
+            "For a merge: chosen (the default), the person picks the record that stays; or new, a new record made from the picked ones, which stay as they are.",
         },
         fields: {
           type: "object",
@@ -471,6 +472,7 @@ function readAction(
       "copy",
       "with",
       "merge",
+      "into",
       "keep",
       "fields",
       "touches",
@@ -495,6 +497,14 @@ function readAction(
   const standard = ["on", "when", "set", "add", "copy", "with"]
     .map((k) => byKey.get(k))
     .filter((e) => e !== undefined);
+  // The first design's key (2026-10-29): oldest and newest went, the person picks.
+  const keep = byKey.get("keep");
+  if (keep)
+    ctx.error(
+      keep.keyNode,
+      "invalid-action",
+      `"keep" of ${where} was replaced by "into" (chosen or new): the person picks the record that stays, or a new one is made; oldest and newest are gone.`,
+    );
   // A merge names its model and nothing else (docs/design/intents.md §3).
   const merge = byKey.get("merge");
   if (merge) {
@@ -509,7 +519,7 @@ function readAction(
       ctx.error(
         other.keyNode,
         "invalid-action",
-        `${capitalize(where)} merges two records: "merge" takes keep and fields and nothing else, no ${other.key}.`,
+        `${capitalize(where)} merges records: "merge" takes into and fields and nothing else, no ${other.key}.`,
       );
       return undefined;
     }
@@ -521,7 +531,7 @@ function readAction(
     const other = [
       custom,
       ...standard.filter((e) => e.key !== "copy"),
-      ...["input", "output", "keep", "fields", "touches", "triggers", "examples"].map((k) =>
+      ...["input", "output", "into", "fields", "touches", "triggers", "examples"].map((k) =>
         byKey.get(k),
       ),
     ].find((e) => e !== undefined);
@@ -538,7 +548,7 @@ function readAction(
   const move = byKey.get("move");
   if (move)
     ctx.error(move.keyNode, "invalid-action", `"move" of ${where} goes with "split: <Model>".`);
-  for (const key of ["keep", "fields"]) {
+  for (const key of ["into", "fields"]) {
     const entry = byKey.get(key);
     if (entry)
       ctx.error(
@@ -935,14 +945,14 @@ function readContract(
   return out;
 }
 
-const MERGE_KEEP: MergeKeep[] = ["chosen", "oldest", "newest"];
+const MERGE_INTO: MergeInto[] = ["chosen", "new"];
 const MERGE_RULES: MergeRule[] = ["keep", "other", "ask", "add", "append"];
 
 /**
- * A merge (docs/design/intents.md §3): `merge: <Model>`, with `keep` (chosen, the default; oldest;
- * newest) and `fields`, a rule per field (keep, other, ask, add for numbers and amounts, append
- * for texts); a field not named is asked when the two differ. Users cannot be merged: they are
- * sign-in identities.
+ * A merge (docs/design/intents.md §3): `merge: <Model>`, with `into` (chosen, the default: the
+ * person picks the record that stays; new: a new record from the picked ones) and `fields`, a rule
+ * per field (keep, other, ask, add for numbers and amounts, append for texts); a field not named is
+ * asked when the records differ. Users cannot be merged: they are sign-in identities.
  */
 function readMergeFields(
   ctx: ParseContext,
@@ -1061,7 +1071,7 @@ function readMergeAction(
     on: name,
     set: [],
     merge: {
-      keep: choice("keep", MERGE_KEEP, "chosen"),
+      into: choice("into", MERGE_INTO, "chosen"),
       fields: readMergeFields(ctx, byKey.get("fields"), model, where),
     },
   };

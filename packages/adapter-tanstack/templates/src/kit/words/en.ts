@@ -609,35 +609,59 @@ export const w = {
   mergeIntoWhich: (label: string) => `Which ${label.toLowerCase()} does this one merge into?`,
   mergeChoose: "Choose one",
   mergeKeeps: "Keep",
-  mergeDecide: "The two differ here: choose what stays",
-  mergeSum: "Both added up",
-  mergeJoin: "Both, one after the other",
+  mergeDecide: "They differ here: choose what stays",
+  mergeSum: "Added up",
+  mergeJoin: "All of them, one after the other",
   mergeSame: "Choose two different records to merge.",
+  mergeTooMany: (most: number) => `Choose at most ${most} records to merge at once.`,
   mergeBothHave: (label: string) =>
-    `Each of the two has its own ${label.toLowerCase()}, and there can be only one: keep one first.`,
+    `More than one of them has its own ${label.toLowerCase()}, and there can be only one: keep one first.`,
   mergeMayNotChange: (plural: string) =>
     `Some ${plural.toLowerCase()} that refer to it are not yours to change, so nothing was merged.`,
   /** "Arctic Outdoor Co keeps its values; 3 orders move to it, and Arctic Outdoor goes to the trash." */
   mergeSentence: (
     kept: string,
     moves: string[],
-    other: string,
-    goes: "trash" | "gone" | "stays",
+    others: string[],
+    goes: "trash" | "gone" | "stays" | "some",
     taken: string[],
   ) => {
     const list = (items: string[]) =>
       items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+    const other = list(others);
+    const one = others.length === 1;
     const values = taken.length
       ? `${kept} keeps its values and takes ${list(taken.map((t) => t.toLowerCase()))} from ${other}`
       : `${kept} keeps its values`;
     const moved = moves.length ? `; ${list(moves)} move to it` : "";
     const fate =
       goes === "trash"
-        ? `${other} goes to the trash`
+        ? `${other} ${one ? "goes" : "go"} to the trash`
         : goes === "gone"
-          ? `${other} is deleted for good`
-          : `${other} stays, since you may not delete it`;
+          ? `${other} ${one ? "is" : "are"} deleted for good`
+          : goes === "some"
+            ? `those of ${other} you may delete go to the trash, the rest stay`
+            : `${other} ${one ? "stays, since you may not delete it" : "stay, since you may not delete them"}`;
     return `${values}${moved}, and ${fate}.`;
+  },
+  /** A combine's form: "A new customer is made from A, B and C, which stay as they are." */
+  combineSentence: (from: string[], label: string, emptied: string[], removed: boolean) => {
+    const list = (items: string[]) =>
+      items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+    const made = `A new ${label.toLowerCase()} is made from ${list(from)}, which ${removed ? "go to the trash" : "stay as they are"}.`;
+    return emptied.length
+      ? `${made} Its ${list(emptied.map((e) => e.toLowerCase()))} ${emptied.length === 1 ? "is" : "are"} left empty, since that stays with theirs.`
+      : made;
+  },
+  combineRemove:
+    "Put them in the trash: they are the same apart from what is added up, and nothing refers to them",
+  combineNotRemovable:
+    "They can go to the trash only when they are the same apart from what is added up, nothing refers to them, and you may delete them.",
+  /** "Combined A, B and C into a new customer; they stay as they were." */
+  combined: (from: string[], label: string, removed: boolean) => {
+    const list = (items: string[]) =>
+      items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+    return `Combined ${list(from)} into a new ${label.toLowerCase()}; they ${removed ? "went to the trash" : "stay as they were"}.`;
   },
   /** Splitting a record (docs/design/intents.md §4). */
   splitIt: "Split…",
@@ -654,8 +678,7 @@ export const w = {
   mergedIntoTitle: (title: string) => `merged into “${title}”`,
   mergeKeepIs: (which: "oldest" | "newest", title: string) =>
     `With this merge the ${which} of the two stays: ${title}.`,
-  mergeChoiceMissing: (field: string) =>
-    `${field} differs between the two: say which stays, the kept one's or the other's.`,
+  mergeChoiceMissing: (field: string) => `${field} differs among them: say whose stays.`,
   mergeDone: (other: string, kept: string) => `${other} was merged into ${kept}.`,
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge, or ${n === 1 ? "is" : "are"} not yours to change, and stay as ${n === 1 ? "it is" : "they are"}.`,

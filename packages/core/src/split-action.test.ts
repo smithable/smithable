@@ -77,11 +77,11 @@ test("a split names its model, its list and its fields and nothing else; what th
   expect(errors("  x: { split: Order, move: lines, set: { note: a } }\n")).toEqual([
     expect.stringContaining('"split" takes move and copy and nothing else, no set'),
   ]);
-  expect(errors("  x: { split: Order, move: lines, keep: newest }\n")).toEqual([
-    expect.stringContaining("nothing else, no keep"),
+  expect(errors("  x: { split: Order, move: lines, into: new }\n")).toEqual([
+    expect.stringContaining("nothing else, no into"),
   ]);
   expect(errors("  x: { merge: Order, move: lines }\n")).toEqual([
-    expect.stringContaining('"merge" takes keep and fields and nothing else, no move'),
+    expect.stringContaining('"merge" takes into and fields and nothing else, no move'),
   ]);
   expect(errors("  x: { split: Order }\n")).toEqual([
     expect.stringContaining(

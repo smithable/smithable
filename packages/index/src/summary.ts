@@ -288,8 +288,10 @@ export function summarize(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
     // A merge on it (intents.md §3): its own section says what it does.
-    if (ir.actions.some((a) => !a.custom && a.merge && a.on === model.name))
+    if (ir.actions.some((a) => !a.custom && a.merge?.into === "chosen" && a.on === model.name))
       sentences.push(`${capitalize(many(model))} can be merged.`);
+    if (ir.actions.some((a) => !a.custom && a.merge?.into === "new" && a.on === model.name))
+      sentences.push(`${capitalize(many(model))} can be combined into a new one.`);
     if (model.nameParts?.length) {
       // "its class type", "its class type's name", "its start" (record-names.md §5).
       const words = model.nameParts.flatMap((p) => {
@@ -443,8 +445,7 @@ export function summarize(
             .map((m) => many(m)),
         ),
       ];
-      const stays =
-        action.merge.keep === "chosen" ? "the kept one" : `the ${action.merge.keep} of the two`;
+      const stays = "the kept one";
       const rule = {
         keep: [] as string[],
         other: [] as string[],
@@ -456,13 +457,20 @@ export function summarize(
         if (f && r !== "ask") rule[r].push(fieldLabel(model, f));
       }
       const rules = [
-        ...(rule.keep.length ? [`${list(rule.keep)} from the kept one`] : []),
-        ...(rule.other.length ? [`${list(rule.other)} from the other`] : []),
+        ...(rule.keep.length
+          ? [`${list(rule.keep)} from ${action.merge.into === "new" ? "the first picked" : stays}`]
+          : []),
+        ...(rule.other.length ? [`${list(rule.other)} from the others`] : []),
         ...(rule.add.length ? [`${list(rule.add)} added up`] : []),
         ...(rule.append.length ? [`${list(rule.append)} written one after the other`] : []),
       ];
+      if (action.merge.into === "new")
+        return [
+          `Combine two or more ${many(model)} into a new one: its values come from the picked ones, which stay; where they differ, the person chooses${rules.length ? `, except ${list(rules)}` : ""}.`,
+          ...(action.intent ? [action.intent] : []),
+        ];
       return [
-        `Merge two ${many(model)}: ${pointing.length ? `the other's ${list(pointing)} move to ${stays}` : `${stays} stays`}; where the two differ, the person chooses${rules.length ? `, except ${list(rules)}` : ""}; the other ${model.trash ? "goes to the trash" : "is deleted"}.`,
+        `Merge two or more ${many(model)}: ${pointing.length ? `the others' ${list(pointing)} move to ${stays}` : `${stays} stays`}; where they differ, the person chooses${rules.length ? `, except ${list(rules)}` : ""}; the others ${model.trash ? "go to the trash" : "are deleted"}.`,
         ...(action.intent ? [action.intent] : []),
       ];
     }

@@ -420,10 +420,29 @@ function explainAction(
     return denied(inSpec(at, `${humanize(action.name)} is on a model the spec does not have.`));
   const a = actionAccess(action, auth, ir.models);
   const what = records(model.name);
+  if (action.merge?.into === "new") {
+    const create = modelAccess(model, auth).create;
+    const combines = inSpec(
+      at,
+      `${humanize(action.name)} combines ${what} into a new one: the roles whose actions grant names it run it, with the right to add ${what}; the picked stay as they were.`,
+    );
+    const named = whyGranted(role, "actions", action.name, label);
+    if (!named) return denied(combines, notGranted(role, "actions", action.name));
+    if (create.public)
+      return allowed(
+        combines,
+        named,
+        inAuth("public.create", `Anyone may add ${what}: public.create names ${model.name}.`),
+      );
+    const why = whyGranted(role, "create", model.name, what);
+    return why && a.roles.includes(role.name)
+      ? allowed(combines, named, why as AccessReason)
+      : denied(combines, named, notGranted(role, "create", model.name));
+  }
   if (action.merge) {
     const merges = inSpec(
       at,
-      `${humanize(action.name)} merges two ${what}: the roles whose actions grant names it run it, with write on ${what}; the other goes to the trash where they may delete it, else it stays.`,
+      `${humanize(action.name)} merges ${what}: the roles whose actions grant names it run it, with write on ${what}; the others go to the trash where they may delete them, else they stay.`,
     );
     const named = whyGranted(role, "actions", action.name, label);
     if (!named) return denied(merges, notGranted(role, "actions", action.name));

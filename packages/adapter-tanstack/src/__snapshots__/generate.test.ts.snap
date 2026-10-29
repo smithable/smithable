@@ -10096,7 +10096,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -10118,7 +10118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -16242,7 +16242,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -16265,7 +16265,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -28670,7 +28670,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -28695,7 +28695,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -29498,7 +29498,7 @@ describe("the mergeCustomers action", () => {
     const viewer = signedIn("admin");
     const one = insertCustomer(viewer.id, {});
     const two = insertCustomer(viewer.id, {});
-    expect(await can(() => runMergeCustomers(viewer, one.id, two.id, {
+    expect(await can(() => runMergeCustomers(viewer, [one.id, two.id], {
   name: "keep",
   email: "keep",
   phone: "keep",
@@ -29512,7 +29512,7 @@ describe("the mergeCustomers action", () => {
     const viewer = signedIn("sales");
     const one = insertCustomer(viewer.id, {});
     const two = insertCustomer(viewer.id, {});
-    expect(await can(() => runMergeCustomers(viewer, one.id, two.id, {
+    expect(await can(() => runMergeCustomers(viewer, [one.id, two.id], {
   name: "keep",
   email: "keep",
   phone: "keep",
@@ -29526,7 +29526,7 @@ describe("the mergeCustomers action", () => {
     const viewer = null;
     const one = insertCustomer(stranger.id, {});
     const two = insertCustomer(stranger.id, {});
-    expect(await can(() => runMergeCustomers(viewer, one.id, two.id, {
+    expect(await can(() => runMergeCustomers(viewer, [one.id, two.id], {
   name: "keep",
   email: "keep",
   phone: "keep",
@@ -29607,9 +29607,9 @@ import { mergeCustomersAccess } from "./merge-customers";
 
 const TABLES = { "Order": schema.orders, "FollowUp": schema.followUps } as const;
 /**
- * What becomes of each field (docs/design/intents.md §3): keep (the kept record's), other (the
- * other's), ask (the person picks where the two differ), add (the sum), append (both texts); an
- * empty side always takes the other's value.
+ * What becomes of each field (docs/design/intents.md §3): keep (the kept record's, the first
+ * other's that is not empty when it is), other (the first other's that is not empty), ask (the
+ * person picks where the records differ), add (the sum), append (the texts, a blank line between).
  */
 const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append"; unique: boolean; kind: "number" | "text" | "other" }> = {
   name: { rule: "ask", unique: false, kind: "text" },
@@ -29634,162 +29634,198 @@ type Raw = typeof schema.customers.$inferSelect;
 const empty = (value: unknown) => value === null || value === undefined || value === "";
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-/** What the person may pick for a field asked: either record's value, the sum or both texts. */
-export type Choice = "kept" | "other" | "sum" | "join";
+/** What the person picked for a field asked: a record's value by its id, the sum or the texts joined. */
+export type Choice = number | "sum" | "join";
+
+/** The distinct values a field has among the records, in their order, empty ones left out. */
+function valuesAmong(records: Raw[], key: string): unknown[] {
+  const out: unknown[] = [];
+  for (const r of records) {
+    const v = r[key as keyof Raw];
+    if (!empty(v) && !out.some((o) => same(o, v))) out.push(v);
+  }
+  return out;
+}
 
 /**
- * The fields the merge decides: all, but a unique one only when the other goes (while it stays,
- * its unique values are its own and the kept record keeps its own).
+ * The fields the merge decides: all, but a unique one only when its value is free to take (the
+ * others all go, or a combine removes them); while it stays with a record, it is that record's.
  */
-function decided(goes: boolean): string[] {
-  return Object.keys(RULES).filter((key) => goes || !RULES[key]?.unique);
+function decided(free: boolean): string[] {
+  return Object.keys(RULES).filter((key) => free || !RULES[key]?.unique);
 }
 
-/** The fields the person decides: asked by the spec, and different on the two (an empty one is not). */
-function asked(kept: Raw, other: Raw, goes: boolean): string[] {
-  return decided(goes).filter((key) => {
-    const a = kept[key as keyof Raw];
-    const b = other[key as keyof Raw];
-    return RULES[key]?.rule === "ask" && !empty(a) && !empty(b) && !same(a, b);
-  });
+/** The fields the person decides: asked by the spec, and different among the records (an empty one is not). */
+function asked(records: Raw[], free: boolean): string[] {
+  return decided(free).filter((key) => RULES[key]?.rule === "ask" && valuesAmong(records, key).length > 1);
 }
 
-/** The kept record's new values: each field by its rule, or as the person chose; only what changes. */
-function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>, goes: boolean): Record<string, unknown> {
+/** The values the first record (the kept one) ends with: each field by its rule, or as the person chose. */
+function valuesOf(records: Raw[], chosen: Record<string, Choice>, free: boolean): Record<string, unknown> {
+  const [first, ...rest] = records as [Raw, ...Raw[]];
   const values: Record<string, unknown> = {};
-  for (const key of decided(goes)) {
+  for (const key of decided(free)) {
     const { rule, kind } = RULES[key] as (typeof RULES)[string];
-    const a = kept[key as keyof Raw];
-    const b = other[key as keyof Raw];
-    const pick: Choice = empty(a)
-      ? "other"
-      : empty(b)
-        ? "kept"
-        : rule === "ask"
-          ? (chosen[key] ?? "kept")
-          : rule === "other"
-            ? "other"
-            : rule === "add"
-              ? "sum"
-              : rule === "append"
-                ? "join"
-                : "kept";
-    const value =
-      pick === "other"
-        ? b
-        : pick === "sum" && kind === "number"
-          ? Number(a) + Number(b)
+    const found = valuesAmong(records, key);
+    const own = first[key as keyof Raw];
+    const restFirst = valuesAmong(rest, key)[0];
+    // A sum counts every record's value, the same ones too; texts are joined once each.
+    const all = records.map((r) => r[key as keyof Raw]).filter((v) => !empty(v));
+    const sum = () => all.reduce<number>((total, v) => total + Number(v), 0);
+    const joined = () => found.map(String).join("\\n\\n");
+    let value: unknown;
+    if (rule === "add" && kind === "number" && all.length > 1) value = sum();
+    else if (found.length <= 1) value = found[0] ?? own;
+    else if (rule === "keep") value = empty(own) ? restFirst : own;
+    else if (rule === "other") value = restFirst ?? own;
+    else if (rule === "add" && kind === "number") value = sum();
+    else if (rule === "append" && kind === "text") value = joined();
+    else {
+      const pick = chosen[key];
+      value =
+        pick === "sum" && kind === "number"
+          ? sum()
           : pick === "join" && kind === "text"
-            ? \`\${String(a)}
-
-\${String(b)}\`
-            : a;
-    if (!same(value, a)) values[key] = value;
+            ? joined()
+            : (records.find((r) => r.id === pick) ?? first)[key as keyof Raw];
+    }
+    values[key] = value;
   }
   return values;
 }
 
-/** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
-async function pair(viewer: Viewer | null, first: number, second: number, _strict = false) {
+/** The choices as given: by stored key (a field's name works too), keep as the first record, other as the next. */
+function choicesOf(records: Raw[], given: Record<string, number | string>): Record<string, Choice> {
+  const out: Record<string, Choice> = {};
+  for (const [key, c] of Object.entries(given)) {
+    const choice: Choice | undefined =
+      c === "keep" || c === "kept" ? records[0]?.id : c === "other" ? records[1]?.id : c === "sum" || c === "join" ? c : typeof c === "number" && records.some((r) => r.id === c) ? c : undefined;
+    if (choice !== undefined) out[KEYS[key] ?? key] = choice;
+  }
+  return out;
+}
+
+/** The records picked, as the viewer may read them, in their order; each once, at least two. */
+async function picked(viewer: Viewer | null, ids: number[]) {
   check(mergeCustomersAccess, viewer);
-  if (first === second) throw new Conflict(w.mergeSame);
-  const one = await customerData.get(viewer, first);
-  const two = await customerData.get(viewer, second);
-  if (!one || !two) throw new AccessDenied(viewer !== null);
-  const firstStays = true;
-  // Run (not previewed): with the oldest or the newest staying, the first named must be that one.
-  const [kept, other] = firstStays ? [one, two] : [two, one];
-  // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
-  // else it stays, emptied of what moved.
-  if (!allows(customerAccess.write, viewer, kept.accountManagerId)) throw new AccessDenied(true);
-  return { kept, other, goes: allows(customerAccess.delete, viewer, other.accountManagerId) };
+  const unique = [...new Set(ids)];
+  if (unique.length < 2) throw new Conflict(w.mergeSame);
+  if (unique.length > 50) throw new Conflict(w.mergeTooMany(50));
+  const rows = [];
+  for (const id of unique) {
+    const row = await customerData.get(viewer, id);
+    if (!row) throw new AccessDenied(viewer !== null);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** The stored rows of the records picked, in their order. */
+function rawOf(tx: Tx, ids: number[]): Raw[] {
+  return ids.map((id) => tx.select().from(schema.customers).where(eq(schema.customers.id, id)).get() as Raw);
+}
+
+/** The words of a reference's value for each record: its title. */
+function refsOf(rows: Record<string, unknown>[]): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(REFS).map(([key, [field, titleKey]]) => [
+      key,
+      rows.map((row) => String((row[field] as Record<string, unknown> | null)?.[titleKey] ?? "")),
+    ]),
+  );
+}
+
+/** Which stay and which go: write on them all; each other goes to the trash where the viewer may delete it. */
+function rights(viewer: Viewer | null, rows: { id: number; accountManagerId: string | null }[]) {
+  const others = rows.slice(1);
+  // A merge changes each of them: write on all.
+  if (!rows.every((row) => allows(customerAccess.write, viewer, row.accountManagerId))) throw new AccessDenied(true);
+  // A record the viewer may not delete stays, emptied of what moved.
+  return new Set(others.filter((other) => allows(customerAccess.delete, viewer, other.accountManagerId)).map((o) => o.id));
 }
 
 /** What the merge does, worked out on the records as they are: refused here when it cannot be done. */
-function planOf(tx: Tx, viewer: Viewer | null, _kept: Raw, other: Raw) {
+function planOf(tx: Tx, viewer: Viewer | null, kept: Raw, others: Raw[], _goes: Set<number>) {
   const plan = {
-    moved: [] as { model: keyof typeof TABLES; key: string; id: number }[],
-    trashed: [] as { model: keyof typeof TABLES; id: number }[],
-    cleared: [] as { model: keyof typeof TABLES; key: string; id: number }[],
+    moved: [] as { model: keyof typeof TABLES; key: string; id: number; from: number }[],
+    trashed: [] as { model: keyof typeof TABLES; id: number; from: number }[],
+    cleared: [] as { model: keyof typeof TABLES; key: string; id: number; from: number }[],
   };
   // Order.customer
-  const rows0 = tx.select({ id: schema.orders.id, owner: schema.orders.ownerId }).from(schema.orders).where(eq(schema.orders.customerId, other.id)).all();
+  const rows0 = tx.select({ id: schema.orders.id, ref: schema.orders.customerId, owner: schema.orders.ownerId, deletedAt: schema.orders.deletedAt }).from(schema.orders).where(inArray(schema.orders.customerId, [kept.id, ...others.map((o) => o.id)])).all();
   for (const row of rows0) {
+    if (row.ref === kept.id) continue;
     if (!allows(orderAccess.write, viewer, row.owner)) throw new Conflict(w.mergeMayNotChange(orderUi.pluralLabel));
-    plan.moved.push({ model: "Order", key: "customerId", id: row.id });
+    plan.moved.push({ model: "Order", key: "customerId", id: row.id, from: row.ref as number });
   }
   // FollowUp.customer
-  const rows1 = tx.select({ id: schema.followUps.id, owner: schema.followUps.ownerId }).from(schema.followUps).where(eq(schema.followUps.customerId, other.id)).all();
+  const rows1 = tx.select({ id: schema.followUps.id, ref: schema.followUps.customerId, owner: schema.followUps.ownerId, deletedAt: schema.followUps.deletedAt }).from(schema.followUps).where(inArray(schema.followUps.customerId, [kept.id, ...others.map((o) => o.id)])).all();
   for (const row of rows1) {
+    if (row.ref === kept.id) continue;
     if (!allows(followUpAccess.write, viewer, row.owner)) throw new Conflict(w.mergeMayNotChange(followUpUi.pluralLabel));
-    plan.moved.push({ model: "FollowUp", key: "customerId", id: row.id });
+    plan.moved.push({ model: "FollowUp", key: "customerId", id: row.id, from: row.ref as number });
   }
   return plan;
 }
 
-/** The two stored rows, by the ids the viewer may read. */
-function rawOf(tx: Tx, keptId: number, otherId: number) {
-  const row = (id: number) => tx.select().from(schema.customers).where(eq(schema.customers.id, id)).get() as Raw;
-  return { kept: row(keptId), other: row(otherId) };
-}
-
 /**
- * What merging the two would do, as the viewer may see it: which stays, the values it takes from
- * the other, and how many records of each kind move; or why it cannot be done.
+ * What merging them would do, as the viewer may see it: which stays, the values it takes, how
+ * many records of each kind move, and where each other goes; or why it cannot be done.
  */
-export async function previewMergeCustomers(viewer: Viewer | null, first: number, second: number) {
-  const { kept, other, goes } = await pair(viewer, first, second);
-  const raw = rawOf(db, kept.id, other.id);
+export async function previewMergeCustomers(viewer: Viewer | null, ids: number[]) {
+  const rows = await picked(viewer, ids);
+  const goes = rights(viewer, rows);
+  const raw = rawOf(db, rows.map((r) => r.id));
+  const [kept, ...others] = raw as [Raw, ...Raw[]];
+  const free = others.every((o) => goes.has(o.id));
+  const titles = rows.map((r) => String(r.name ?? r.id));
+  const fate = (others.every((o) => goes.has(o.id)) ? "trash" : others.some((o) => goes.has(o.id)) ? "some" : "stays") as "trash" | "gone" | "stays" | "some";
   try {
-    const plan = planOf(db, viewer, raw.kept, raw.other);
-    const ids = (model: string) => plan.moved.filter((m) => m.model === model).map((m) => m.id);
+    const plan = planOf(db, viewer, kept, others, goes);
+    const moving = (model: string) => plan.moved.filter((m) => m.model === model).map((m) => m.id);
     // Only what the viewer may read is counted.
     const readable = {
-      "Order": (moving: number[]) => moving.length ? db.select({ id: schema.orders.id }).from(schema.orders).where(and(inArray(schema.orders.id, moving), orderData.readable(viewer))).all().length : 0,
-      "FollowUp": (moving: number[]) => moving.length ? db.select({ id: schema.followUps.id }).from(schema.followUps).where(and(inArray(schema.followUps.id, moving), followUpData.readable(viewer))).all().length : 0,
-    } as Record<string, (moving: number[]) => number>;
+      "Order": (ids: number[]) => ids.length ? db.select({ id: schema.orders.id }).from(schema.orders).where(and(inArray(schema.orders.id, ids), orderData.readable(viewer))).all().length : 0,
+      "FollowUp": (ids: number[]) => ids.length ? db.select({ id: schema.followUps.id }).from(schema.followUps).where(and(inArray(schema.followUps.id, ids), followUpData.readable(viewer))).all().length : 0,
+    } as Record<string, (ids: number[]) => number>;
+    const values = valuesOf(raw, {}, free);
     return {
-      kept: raw.kept,
-      other: raw.other,
-      keptTitle: String(kept.name ?? kept.id),
-      otherTitle: String(other.name ?? other.id),
-      // The fields the person decides, and those that take the other's value by the spec's rule.
-      asked: asked(raw.kept, raw.other, goes).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
-      refs: Object.fromEntries(
-        Object.entries(REFS).map(([key, [field, titleKey]]) => {
-          const title = (row: Record<string, unknown>) => String((row[field] as Record<string, unknown> | null)?.[titleKey] ?? "");
-          return [key, [title(kept as Record<string, unknown>), title(other as Record<string, unknown>)]];
-        }),
-      ) as Record<string, [string, string]>,
-      taken: Object.entries(valuesOf(raw.kept, raw.other, {}, goes))
-        .filter(([key, value]) => !asked(raw.kept, raw.other, goes).includes(key) && same(value, raw.other[key as keyof Raw]))
-        .map(([key]) => key),
-      moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(ids(c.model)) ?? 0 })).filter((c) => c.count > 0),
-      // Where the other goes: the trash, gone for good (no trash), or it stays (no right to delete).
-      goes: (!goes ? "stays" : "trash") as "trash" | "gone" | "stays",
+      records: raw,
+      titles,
+      asked: asked(raw, free).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
+      refs: refsOf(rows as Record<string, unknown>[]),
+      // The fields that take another record's value by the spec's rule.
+      taken: Object.keys(values).filter((key) => !asked(raw, free).includes(key) && !same(values[key], kept[key as keyof Raw])),
+      moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(moving(c.model)) ?? 0 })).filter((c) => c.count > 0),
+      goes: fate,
+      emptied: [] as string[],
+      removable: false,
       refused: null as string | null,
     };
   } catch (error) {
     if (!(error instanceof Conflict)) throw error;
-    return { kept: raw.kept, other: raw.other, keptTitle: String(kept.name ?? kept.id), otherTitle: String(other.name ?? other.id), asked: [], refs: {}, taken: [], moves: [], goes: "stays" as "trash" | "gone" | "stays", refused: error.message };
+    return { records: raw, titles, asked: [], refs: {}, taken: [], moves: [], goes: fate, emptied: [] as string[], removable: false, refused: error.message };
   }
 }
 
 /**
- * Merges the two as the viewer: every reference to the other moves to the kept record, which keeps
- * the values its fields' rules and the person's choices give, and the other goes to the trash. Moved records are moved,
- * not changed: no rules of a change, no "changed" events, nothing told.
+ * Merges the records into the first as the viewer: every reference to the others moves to it,
+ * which takes the values its fields' rules and the person's choices give, and the others go to the
+ * trash. Moved records are moved, not changed: no rules of a change, no "changed" events, nothing told.
  */
-export async function runMergeCustomers(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice | "keep"> = {}) {
-  const { kept, other, goes } = await pair(viewer, first, second, true);
+export async function runMergeCustomers(viewer: Viewer | null, ids: number[], given: Record<string, number | string> = {}) {
+  const rows = await picked(viewer, ids);
+  const goes = rights(viewer, rows);
   const when = new Date();
   try {
     db.transaction((tx) => {
-      const raw = rawOf(tx, kept.id, other.id);
-      const plan = planOf(tx, viewer, raw.kept, raw.other);
+      const raw = rawOf(tx, rows.map((r) => r.id));
+      const [kept, ...others] = raw as [Raw, ...Raw[]];
+      const free = others.every((o) => goes.has(o.id));
+      const plan = planOf(tx, viewer, kept, others, goes);
       for (const m of plan.moved) {
         const table = TABLES[m.model];
-        tx.update(table).set({ [m.key]: raw.kept.id }).where(eq(table.id, m.id)).run();
+        tx.update(table).set({ [m.key]: kept.id }).where(eq(table.id, m.id)).run();
       }
       for (const c of plan.cleared) {
         const table = TABLES[c.model];
@@ -29802,26 +29838,27 @@ export async function runMergeCustomers(viewer: Viewer | null, first: number, se
         else tx.delete(table).where(eq(table.id, d.id)).run();
       }
       // Each field the person decides must be decided: a program or Ask asks for the missing one.
-      // By stored key (a field's name works too); a value that is none of the choices is none.
-      const picked = Object.fromEntries(Object.entries(chosen).map(([key, c]) => [KEYS[key] ?? key, c === "keep" ? "kept" : c])) as Record<string, Choice>;
-      const missing = asked(raw.kept, raw.other, goes).find((key) => !["kept", "other", "sum", "join"].includes(picked[key] as string));
+      const chosen = choicesOf(raw, given);
+      const missing = asked(raw, free).find((key) => chosen[key] === undefined);
       if (missing !== undefined) throw new Conflict(w.mergeChoiceMissing(customerUi.fields.find((f) => f.name === missing || f.relation?.key === missing)?.label ?? missing));
-      const values = valuesOf(raw.kept, raw.other, picked, goes);
+      const all = valuesOf(raw, chosen, free);
+      const values = Object.fromEntries(Object.entries(all).filter(([key, value]) => !same(value, kept[key as keyof Raw])));
       const changed = Object.keys(values);
-      // The other goes to the trash, its unique values released as a trashed record's are.
-      if (goes) tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(eq(schema.customers.id, raw.other.id)).run();
-      // After the other has gone, so a unique value it gives the kept one is free (one it keeps
-      // while it stays is refused as a taken value).
-      if (changed.length) tx.update(schema.customers).set(values as Partial<Raw>).where(eq(schema.customers.id, raw.kept.id)).run();
-      // What moved, so Restore can put it back: tied to this trashing, so a later delete and
-      // restore of the record does not replay it.
-      audit(tx, viewer, { action: goes ? "merged" : "merged, kept", model: "Customer", record: raw.other.id, title: other.name, details: { into: raw.kept.id, by: "mergeCustomers", trashedAt: goes ? when.getTime() : null, moved: plan.moved, trashed: plan.trashed, cleared: plan.cleared, before: Object.fromEntries(changed.map((key) => [key, raw.kept[key as keyof Raw]])), after: values } });
-      audit(tx, viewer, { action: "mergeCustomers", model: "Customer", record: raw.kept.id, fields: changed, details: { merged: raw.other.id } });
+      for (const other of others) {
+        // It goes to the trash, its unique values released as a trashed record's are.
+        if (goes.has(other.id)) tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(eq(schema.customers.id, other.id)).run();
+        // What moved from it, so its Restore can put it back: tied to this trashing.
+        const from = <T extends { from: number }>(list: T[]) => list.filter((x) => x.from === other.id);
+        audit(tx, viewer, { action: goes.has(other.id) ? "merged" : "merged, kept", model: "Customer", record: other.id, title: other.name, details: { into: kept.id, by: "mergeCustomers", trashedAt: goes.has(other.id) ? when.getTime() : null, moved: from(plan.moved), trashed: from(plan.trashed), cleared: plan.cleared.filter((c) => c.from === other.id || c.id === other.id), before: Object.fromEntries(changed.map((key) => [key, kept[key as keyof Raw]])), after: values } });
+      }
+      // After the others have gone, so a unique value one gives the kept record is free.
+      if (changed.length) tx.update(schema.customers).set(values as Partial<Raw>).where(eq(schema.customers.id, kept.id)).run();
+      audit(tx, viewer, { action: "mergeCustomers", model: "Customer", record: kept.id, fields: changed, details: { merged: others.map((o) => o.id) } });
     });
   } catch (error) {
     throw refusal(error);
   }
-  return { kept: kept.id, other: other.id, stays: !goes };
+  return { kept: rows[0]?.id as number, others: rows.slice(1).map((r) => r.id), stays: rows.slice(1).map((r) => r.id).filter((id) => !goes.has(id)) };
 }
 "
 `;
@@ -29839,26 +29876,27 @@ import { previewMergeCustomers, runMergeCustomers } from "./merge-customers.serv
 /** Who may run the "mergeCustomers" merge: its grant, with write on customers. */
 export const mergeCustomersAccess: Rule = { public: false, roles: ["admin"], owner: false };
 
-/** Which of the two stays: the person's choice, the oldest or the newest. */
+/** Where the records go: into the one the person picks (chosen), or into a new one (new). */
 export const mergeCustomersKeep = "chosen";
 
-/** The two records: the one the person keeps (or the first picked) and the other. */
-const pair = z.object({ keep: z.number().int(), other: z.number().int() });
-/** And for each field asked, what the person picked. */
-/** keep (the API's and Ask's word for the kept record's value) is kept. */
-const choices = z.record(z.string(), z.enum(["kept", "keep", "other", "sum", "join"])).default({});
+/** The records picked, in their order: the one that stays (or whose values come first) first. */
+const ids = z.array(z.number().int()).min(2).max(50);
+/** And for each field asked, what the person picked: a record's value by its id, the sum or the texts joined. */
+const choices = z
+  .record(z.string(), z.union([z.enum(["keep", "kept", "other", "sum", "join"]), z.number().int()]))
+  .default({});
 
-/** What merging the two would do, as the viewer may see it: the form's sentence. */
+/** What merging them would do, as the viewer may see it: the form's sentence. */
 export const mergeCustomersPreview = createServerFn({ method: "POST" })
-  .validator(pair)
-  .handler(async ({ data }) => previewMergeCustomers(await currentViewer(), data.keep, data.other));
+  .validator(z.object({ ids }))
+  .handler(async ({ data }) => previewMergeCustomers(await currentViewer(), data.ids));
 
 export const mergeCustomers = createServerFn({ method: "POST" })
-  .validator(pair.extend({ choices }))
+  .validator(z.object({ ids, choices }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     writeAllowed(viewer, getRequestHeaders());
-    return runMergeCustomers(viewer, data.keep, data.other, data.choices);
+    return runMergeCustomers(viewer, data.ids, data.choices);
   });
 "
 `;
@@ -30822,7 +30860,7 @@ const MERGED_OWNERS: Record<keyof typeof MERGED_TABLES, string | null> = { "Orde
  */
 function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer: Viewer | null, id: number, deletedAt: Date | null): number {
   const line = tx.select({ details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, "Customer"), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "merged"))).orderBy(desc(schema.auditLog.id)).get();
-  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
+  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number; from?: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
   // Only the merge that put it in the trash this time.
   if (!merged || merged.trashedAt !== deletedAt?.getTime()) return 0;
   let stayed = 0;
@@ -30849,7 +30887,7 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     }
     const table = MERGED_TABLES[c.model] as unknown as typeof schema.customers;
     const column = table[c.key as keyof typeof table] as never;
-    stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
+    stayed += 1 - tx.update(table).set({ [c.key]: c.from ?? (c.id === id ? merged.into : id) } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
   }
   for (const d of merged.trashed) {
     // Those of a model without a trash were deleted for good.
@@ -30871,7 +30909,9 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
     // Forgotten in the log since: the values are not there to put back.
     const keys = Object.keys(merged.after ?? {});
     const untouched = keys.filter((key) => JSON.stringify(now[key]) === JSON.stringify(merged.after[key]));
-    stayed += keys.length - untouched.length;
+    // Put back already, by the Restore of another record of the same merge: nothing to count.
+    const back = keys.filter((key) => !untouched.includes(key) && JSON.stringify(now[key]) === JSON.stringify(merged.before[key]));
+    stayed += keys.length - untouched.length - back.length;
     if (untouched.length) tx.update(schema.customers).set(Object.fromEntries(untouched.map((key) => [key, revived(kept[key as keyof typeof kept], merged.before[key])]))).where(eq(schema.customers.id, merged.into)).run();
   }
   return stayed;
@@ -31826,6 +31866,7 @@ const MOVES: Record<string, DoorMove[]> = {
       kind: "merge",
       action: "mergeCustomers",
       model: "Customer",
+      into: "chosen",
       choices: ["name", "email", "phone", "segment", "creditLimit", "notes"],
     },
     {
@@ -32116,14 +32157,13 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   "change:FollowUp": async (viewer, move, body) => followUpData.update(viewer, record(body), followUpSettable.partial().parse(stored(move.slots ?? [], body.values, { customer: "customerId", dueOn: "dueOn", done: "done", note: "note" }))),
   "delete:FollowUp": async (viewer, _move, body) => followUpData.remove(viewer, record(body)),
   "merge:mergeCustomers": async (viewer, _move, body) => {
-    // The other: another record the person may change; the kept one first, as the merge's keep says.
+    // The record acted on first, then another the person may change.
     const kept = record(body);
     const other = (await customerData.list(viewer)).find((row) => row.id !== kept && allows(customerAccess.write, viewer, row.accountManagerId as string | null))?.id;
     if (other === undefined) throw new Conflict(w.mergeSame);
-    const [first, second] = [kept, other];
-    // Each field the two differ in: the kept one's.
-    const facts = await previewMergeCustomers(viewer, first, second);
-    return runMergeCustomers(viewer, first, second, Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
+    // Each field the two differ in: the first one's.
+    const facts = await previewMergeCustomers(viewer, [kept, other]);
+    return runMergeCustomers(viewer, [kept, other], Object.fromEntries(facts.asked.map((f) => [f.key, "keep" as const])));
   },
   "run:scheduleFollowUps": async (viewer, move, body) => runScheduleFollowUps(viewer, scheduleFollowUpsInput.parse({ ...stored(move.slots ?? [], body.values) })),
 };
@@ -35021,12 +35061,14 @@ function CustomerPage() {
                 concept="action:mergeCustomers"
                 ui={customerUi}
                 app={app}
-                keep={mergeCustomersKeep}
+                model="Customer"
+                mode={mergeCustomersKeep}
                 into={{ record: { id: row.id, title: String(row.name || \`Customer #\${row.id}\`) }, loadOptions: customerOptions as never }}
-                preview={(keep, other) => mergeCustomersPreview({ data: { keep, other } })}
-                run={(keep, other, choices) => mergeCustomers({ data: { keep, other, choices } })}
+                preview={(ids) => mergeCustomersPreview({ data: { ids } })}
+                run={(ids, choices) => mergeCustomers({ data: { ids, choices } })}
                 onDone={async (merged) => {
-                  if (merged.goes === "trash") rememberTrashed("Customer", merged.other.id, merged.other.title);
+                  const [other] = merged.others;
+                  if (merged.goes === "trash" && other) rememberTrashed("Customer", other.id, other.title);
                   await navigate({ to: "/customers/$id", params: { id: String(merged.kept.id) } });
                 }}
               />
@@ -35258,23 +35300,27 @@ function CustomersPage() {
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
           extra={
-            chosen.length === 2 && allows(mergeCustomersAccess, viewer) ? (
+            <>
+            {chosen.length >= 2 && allows(mergeCustomersAccess, viewer) ? (
               <MergeButton
                 label="Merge customers"
                 concept="action:mergeCustomers"
                 ui={customerUi}
                 app={app}
-                keep={mergeCustomersKeep}
-                sides={[chosen[0], chosen[1]].map((row) => ({ id: row.id, title: String(String(row.name)) })) as never}
-                preview={(keep, other) => mergeCustomersPreview({ data: { keep, other } })}
-                run={(keep, other, choices) => mergeCustomers({ data: { keep, other, choices } })}
+                model="Customer"
+                mode={mergeCustomersKeep}
+                sides={chosen.slice(0, 50).map((row) => ({ id: row.id, title: String(String(row.name)) }))}
+                preview={(ids) => mergeCustomersPreview({ data: { ids } })}
+                run={(ids, choices) => mergeCustomers({ data: { ids, choices } })}
                 onDone={async (merged) => {
-                  if (merged.goes === "trash") rememberTrashed("Customer", merged.other.id, merged.other.title);
                   setSelected(new Set());
+                  const [other] = merged.others;
+                  if (merged.goes === "trash" && other && merged.others.length === 1) rememberTrashed("Customer", other.id, other.title);
                   await router.invalidate();
                 }}
               />
-            ) : null
+            ) : null}
+            </>
           }
           deletable={chosen.filter((row) => allows(customerDeleteRule, viewer, row.accountManagerId)).length}
           onDelete={(together) => deleteCustomers({ data: { ids: chosen.map((row) => row.id), together } })}
@@ -37074,9 +37120,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
-  "src/generated/access.test.ts": "5e2ca320 generated",
-  "src/generated/actions/merge-customers.server.ts": "b415cd68 generated",
-  "src/generated/actions/merge-customers.ts": "8e6f8b19 generated",
+  "src/generated/access.test.ts": "b4aa6998 generated",
+  "src/generated/actions/merge-customers.server.ts": "672ac5eb generated",
+  "src/generated/actions/merge-customers.ts": "68575f8a generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
@@ -37084,9 +37130,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "00268b9c generated",
+  "src/generated/customer.server.ts": "30d02290 generated",
   "src/generated/customer.ts": "79b283e3 generated",
-  "src/generated/dev-door.server.ts": "5efb7b3c generated",
+  "src/generated/dev-door.server.ts": "00baba7c generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
   "src/generated/follow-up.server.ts": "60c21496 generated",
@@ -37116,7 +37162,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
-  "src/kit/MergeDialog.tsx": "0cfba4f4 kit",
+  "src/kit/MergeDialog.tsx": "54b364dd kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "fee742a4 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -37136,7 +37182,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -37156,7 +37202,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -37169,9 +37215,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "1910ac9a generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "642231d2 generated",
+  "src/routes/customers/$id.tsx": "d8d2768e generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "c8c34df2 generated",
-  "src/routes/customers/index.tsx": "1925fead generated",
+  "src/routes/customers/index.tsx": "67986234 generated",
   "src/routes/customers/new.tsx": "630db072 generated",
   "src/routes/customers/trash.tsx": "732d5013 generated",
   "src/routes/follow-ups/$id.tsx": "9fa97b96 generated",
@@ -45496,7 +45542,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -45521,7 +45567,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -53363,7 +53409,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -53387,7 +53433,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -58140,7 +58186,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -58163,7 +58209,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -61633,7 +61679,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -61653,7 +61699,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -73266,7 +73312,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -73287,7 +73333,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -80291,7 +80337,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
-  "src/kit/dev-door.server.ts": "7ad86c17 kit",
+  "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -80316,7 +80362,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "b2270307 kit",
+  "src/kit/words/en.ts": "3d177bb3 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",

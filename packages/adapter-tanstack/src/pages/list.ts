@@ -568,7 +568,7 @@ export function listParts(
   const many = offered.filter((a) => !a.copy);
   // A merge: offered when exactly two are picked (intents.md §3).
   // One per page: the bar has one place for it.
-  const merges = within ? [] : mergeActions(page, ir).slice(0, 1);
+  const merges = within ? [] : mergeActions(page, ir).slice(0, 2);
   // Custom actions on the rows picked (A 171): those the page lists whose list is of its records.
   const onRows = within
     ? []
@@ -606,8 +606,9 @@ export function listParts(
           actionNames(a).keep,
           actionNames(a).previewFn,
         )
-        .add("#/kit/MergeDialog", "MergeButton")
-        .add("#/kit/Trash", "rememberTrashed");
+        .add("#/kit/MergeDialog", "MergeButton");
+    if (model.trash && merges.some((a) => a.merge?.into !== "new"))
+      view.add("#/kit/Trash", "rememberTrashed");
     for (const a of onRows)
       view.add(
         actionNames(a).module,
@@ -782,10 +783,9 @@ ${
             },`,
             )
             .join("")}${many.length || onRows.length ? "\n          " : ""}]}
-${merges
+${merges.length ? "          extra={\n            <>\n" : ""}${merges
   .map(
-    (a) => `          extra={
-            chosen.length === 2 && allows(${actionNames(a).access}, viewer) ? (
+    (a) => `            {chosen.length >= 2 && allows(${actionNames(a).access}, viewer) ? (
               <MergeButton
                 label=${attr(t.action(a))}${
                   t.actionHelp(a)
@@ -796,27 +796,32 @@ ${merges
                 concept="action:${a.name}"
                 ui={${n.ui}}
                 app={app}
-                keep={${actionNames(a).keep}}
-                sides={[chosen[0], chosen[1]].map((row) => ({ id: row.id, title: String(${shownTitle(model, `row.${titleField(model) === "id" ? "id" : keyOf(model, titleField(model))}`)}) })) as never}
-                preview={(keep, other) => ${actionNames(a).previewFn}({ data: { keep, other } })}
-                run={(keep, other, choices) => ${a.name}({ data: { keep, other, choices } })}
+                model=${attr(model.name)}
+                mode={${actionNames(a).keep}}
+                sides={chosen.slice(0, 50).map((row) => ({ id: row.id, title: String(${shownTitle(model, `row.${titleField(model) === "id" ? "id" : keyOf(model, titleField(model))}`)}) }))}
+                preview={(ids) => ${actionNames(a).previewFn}({ data: { ids } })}
+                run={(ids, choices${a.merge?.into === "new" ? ", remove" : ""}) => ${a.name}({ data: { ids, choices${a.merge?.into === "new" ? ", remove" : ""} } })}
                 onDone={async (merged) => {
-                  ${
-                    model.trash
-                      ? `if (merged.goes === "trash") rememberTrashed(${JSON.stringify(model.name)}, merged.other.id, merged.other.title);
-                  `
-                      : ""
-                  }setSelected(new Set());
+                  setSelected(new Set());${
+                    a.merge?.into === "new"
+                      ? `
+                  // The new record's page, which says what it was made from.
+                  if (merged.made) await navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(merged.made) } });`
+                      : model.trash
+                        ? `
+                  const [other] = merged.others;
+                  if (merged.goes === "trash" && other && merged.others.length === 1) rememberTrashed(${JSON.stringify(model.name)}, other.id, other.title);`
+                        : ""
+                  }
                   await router.invalidate();
                 }}
               />
-            ) : null
-          }
+            ) : null}
 `,
   )
   .join(
     "",
-  )}          deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
+  )}${merges.length ? "            </>\n          }\n" : ""}          deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
           onDelete={(together) => ${n.removeMany}({ data: { ids: chosen.map((row) => row.id), together } })}${trash ? "\n          trash" : ""}
           onDone={async () => {
             setSelected(new Set());

@@ -28,7 +28,10 @@ models:
 actions:
   mergeCustomers:
     merge: Customer
-    keep: newest
+    fields: { name: keep, revenue: add }
+  combineCustomers:
+    merge: Customer
+    into: new
     fields: { name: keep, revenue: add }
   splitOrder:
     split: Order
@@ -64,26 +67,41 @@ test("a merge asks for the stored fields with no rule: not the computed, the seq
 });
 
 test("the API offers a merge and a split with their model", () => {
-  expect(apiOffers(auth, ir).actions).toEqual(["mergeCustomers", "splitOrder"]);
+  expect(apiOffers(auth, ir).actions).toEqual(["mergeCustomers", "combineCustomers", "splitOrder"]);
 });
 
 test("Ask's run tool takes the other record and the choices for a merge, the ids to move for a split", () => {
   const offer = assistantOffer(ir, auth, { role: "admin" });
   const run = offer.tools.find((t) => t.name === "run");
   const properties = run?.inputSchema.properties as Record<string, unknown>;
-  expect(Object.keys(properties)).toEqual(["action", "id", "other", "choices", "move", "input"]);
+  expect(Object.keys(properties)).toEqual([
+    "action",
+    "id",
+    "ids",
+    "others",
+    "choices",
+    "remove",
+    "move",
+    "input",
+  ]);
   expect(run?.description).toContain(
-    "mergeCustomers (`id` must be the newest) merge two records: `id` stays",
+    "mergeCustomers merge two or more records: `id` stays, `others` go into it",
+  );
+  expect(run?.description).toContain(
+    "combineCustomers combine two or more records, given as `ids` in order, into a new one",
   );
   expect((properties.choices as { additionalProperties: unknown }).additionalProperties).toEqual({
-    enum: ["keep", "other"],
+    type: ["string", "integer"],
   });
   expect(run?.description).toContain("splitOrder split a record: `move` holds the ids");
   expect(offer.summary).toContain(
-    "Actions: mergeCustomers (Customer: two into one), splitOrder (Order: one into two, moving lines).",
+    "Actions: mergeCustomers (Customer: two or more into one), combineCustomers (Customer: two or more into a new one), splitOrder (Order: one into two, moving lines).",
   );
   expect(offer.kinds.find((k) => k.model === "Customer")?.description).toContain(
-    "- mergeCustomers: Merge customers. Two records become one: everything that points to the other moves to the one that stays, and the other goes to the trash. Asked when the two differ: email, segment.",
+    "- mergeCustomers: Merge customers. Two or more records become one: everything that points to the others moves to the one that stays, and the others go to the trash. Asked when they differ: email, segment.",
+  );
+  expect(offer.kinds.find((k) => k.model === "Customer")?.description).toContain(
+    "- combineCustomers: Combine customers. Two or more records become a new one, which takes their values; they stay as they were. Asked when they differ: email, segment.",
   );
   // Sales is granted the split alone: no merge; it may add orders, so it splits.
   const sales = assistantOffer(ir, auth, { role: "sales" });
@@ -105,6 +123,15 @@ test("the sample users merge and split where they are granted it", () => {
       kind: "merge",
       action: "mergeCustomers",
       model: "Customer",
+      into: "chosen",
+      choices: ["email", "segment"],
+    },
+    {
+      id: "merge:combineCustomers",
+      kind: "merge",
+      action: "combineCustomers",
+      model: "Customer",
+      into: "new",
       choices: ["email", "segment"],
     },
     { id: "split:splitOrder", kind: "split", action: "splitOrder", model: "Order", list: "lines" },

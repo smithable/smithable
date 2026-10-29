@@ -93,6 +93,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="legal"",
   ],
   "src/kit/MergeDialog.tsx": [
+    "data-part="combine-notice"",
     "data-kit="merge-dialog"",
     "data-kit="merge-button"",
   ],

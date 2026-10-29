@@ -145,7 +145,7 @@ const addAction: Operation<{
   output?: Record<string, string>;
   intent?: string;
   merge?: string;
-  keep?: string;
+  into?: string;
   fields?: string[];
   reads?: string[];
   writes?: string[];
@@ -203,15 +203,16 @@ const addAction: Operation<{
       intent: { type: "string", description: "What it is for, in a sentence." },
       ...CONTRACT_ARGS,
       merge: refTo(
-        { ref: "model", label: "Merges two records of" },
+        { ref: "model", label: "Merges records of" },
         {
           description:
-            "A merge: two records of this model become one; the other's references move to the kept record, and the other goes to the trash.",
+            "A merge: two or more records of this model become one; the others' references move to the kept record, and the others go to the trash; or, with --into new, a new record is made from them and they stay.",
         },
       ),
-      keep: {
-        enum: ["chosen", "oldest", "newest"],
-        description: "For a merge: which record stays; chosen (the person says) unless said.",
+      into: {
+        enum: ["chosen", "new"],
+        description:
+          "For a merge: chosen (the default), the person picks the record that stays; or new, a new record made from the picked ones, which stay as they are.",
       },
       fields: {
         type: "array",
@@ -250,7 +251,7 @@ const addAction: Operation<{
       output = {},
       intent,
       merge,
-      keep,
+      into,
       fields: rules = [],
       reads,
       writes,
@@ -293,7 +294,7 @@ const addAction: Operation<{
         throw new OperationError(
           'A split needs "--move": the list whose picked records go to the new record.',
         );
-      if (somethingElse || merge !== undefined || keep !== undefined)
+      if (somethingElse || merge !== undefined || into !== undefined)
         throw new OperationError(
           "A split names its model, its list and the fields the new record takes, nothing else: no --on, --merge, --set, --when, --add, --copy, --with, input or output.",
         );
@@ -315,10 +316,10 @@ const addAction: Operation<{
       offerOn(split);
       return [];
     }
-    if (merge !== undefined || keep !== undefined || rules.length) {
+    if (merge !== undefined || into !== undefined || rules.length) {
       if (merge === undefined)
         throw new OperationError(
-          '"--keep" goes with --merge <Model>, and "--fields" with --merge or --split.',
+          '"--into" goes with --merge <Model>, and "--fields" with --merge or --split.',
         );
       if (somethingElse)
         throw new OperationError(
@@ -328,8 +329,8 @@ const addAction: Operation<{
         throw new OperationError("Users cannot be merged: they are who signs in.");
       if (!ir.models.some((m) => m.name === merge))
         throw new OperationError(`There is no model named "${merge}".`);
-      if (keep !== undefined && !["chosen", "oldest", "newest"].includes(keep))
-        throw new OperationError('"--keep" is chosen, oldest or newest.');
+      if (into !== undefined && !["chosen", "new"].includes(into))
+        throw new OperationError('"--into" is chosen or new.');
       const fieldRules: Record<string, string> = {};
       for (const pair of rules) {
         const at = pair.indexOf("=");
@@ -342,7 +343,7 @@ const addAction: Operation<{
       }
       spec.add(["actions"], action, {
         merge,
-        ...(keep !== undefined && keep !== "chosen" ? { keep } : {}),
+        ...(into === "new" ? { into } : {}),
         ...(Object.keys(fieldRules).length ? { fields: fieldRules } : {}),
         ...text,
       });

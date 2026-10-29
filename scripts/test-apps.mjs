@@ -6121,7 +6121,7 @@ async function browserFlow(dir, base) {
     await merging.getByText("1 order and 1 follow up move to it").waitFor({ timeout: 10000 * P });
     await merging
       .getByRole("group", { name: "Notes" })
-      .getByRole("radio", { name: "Both, one after the other" })
+      .getByRole("radio", { name: "All of them, one after the other" })
       .check();
     await merging.getByRole("button", { name: "Merge customers" }).click();
     await page

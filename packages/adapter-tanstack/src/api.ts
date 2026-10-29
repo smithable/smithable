@@ -70,6 +70,12 @@ export function apiParts(ir: SpecIR, auth: AuthIR, t: Texts) {
   };
 }
 
+/** A merge's choices as the API takes them: keep, an id, or the sum or the texts joined where offered. */
+const CHOICES_SCHEMA = {
+  type: "object",
+  additionalProperties: { oneOf: [{ enum: ["keep", "sum", "join"] }, { type: "integer" }] },
+};
+
 /** A value as the API gives it, from a record's (code on `row`). */
 export function readCode(f: FieldIR): string {
   if (f.type.kind === "relation") return `row.${f.name}Id ?? null`;
@@ -244,7 +250,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
         },
       };
   }
-  for (const action of actions) {
+  for (const action of actions.filter((a) => a.merge?.into !== "new")) {
     const path = models.find((m) => m.model.name === action.on)?.path;
     paths[`/api/v1/${path}/{id}/actions/${action.name}`] = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
@@ -258,14 +264,12 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
                     schema: action.merge
                       ? {
                           type: "object",
-                          required: ["other"],
-                          description: `A merge: the record in the path stays${action.merge?.keep === "chosen" ? "" : ` (it must be the ${action.merge?.keep} of the two)`}; other goes. choices: keep or other for each field the two differ in where the merge asks.`,
+                          required: ["others"],
+                          description:
+                            "A merge: the record in the path stays; others go into it. choices: for each field the records differ in where the merge asks, keep or the id of the record whose value is taken.",
                           properties: {
-                            other: { type: "integer" },
-                            choices: {
-                              type: "object",
-                              additionalProperties: { enum: ["keep", "other"] },
-                            },
+                            others: { type: "array", items: { type: "integer" }, minItems: 1 },
+                            choices: CHOICES_SCHEMA,
                           },
                         }
                       : {
@@ -297,6 +301,39 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
             : {}),
         responses: {
           200: { description: "Done: the record as it is now" },
+          403: problem,
+          404: problem,
+          409: problem,
+        },
+      },
+    };
+  }
+  for (const action of actions.filter((a) => a.merge?.into === "new")) {
+    const path = models.find((m) => m.model.name === action.on)?.path;
+    paths[`/api/v1/${path}/actions/${action.name}`] = {
+      post: {
+        summary: action.intent ?? action.name,
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["ids"],
+                description:
+                  "A combine: a new record from the records given, in order, which stay beside it. choices: for each field they differ in where it asks, the id of the record whose value is taken. remove: they go to the trash, when they are the same apart from the sums and nothing refers to them.",
+                properties: {
+                  ids: { type: "array", items: { type: "integer" }, minItems: 2, maxItems: 50 },
+                  choices: CHOICES_SCHEMA,
+                  remove: { type: "boolean" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Done: the new record" },
+          400: problem,
           403: problem,
           404: problem,
           409: problem,
@@ -497,7 +534,8 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
   };
   for (const { model, n, path } of models) {
     const camelName = model.name[0]?.toLowerCase() + model.name.slice(1);
-    const own = actions.filter((a) => a.on === model.name);
+    const own = actions.filter((a) => a.on === model.name && a.merge?.into !== "new");
+    const combines = actions.filter((a) => a.on === model.name && a.merge?.into === "new");
     // What anyone may read or add takes a call without a key too, as the visitor.
     const reads = visitors.read.includes(model.name) ? "openApiCall" : "apiCall";
     const adds = visitors.create.includes(model.name) ? "openApiCall" : "apiCall";
@@ -755,12 +793,11 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
 });
 `;
     const onRows = rowsActions.filter((a) => a.rows.model === model.name);
-    if (onRows.length)
+    if (onRows.length || combines.length)
       files[`src/routes/api/v1/${path}/actions.$action.ts`] =
-        `${HEADER}// The custom actions offered on ${n.pluralLabel.toLowerCase()} picked by id, for programs with a key.
+        `${HEADER}// The actions offered on ${n.pluralLabel.toLowerCase()} picked by id, for programs with a key.
 import { createFileRoute } from "@tanstack/react-router";
-${onRows.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";\nimport { ${actionNames(a).input} } from "#/generated/actions/${kebab(a.name)}.input";`).join("\n")}
-import { apiCall, NotFound } from "#/kit/api.server";
+${combines.length ? `import { ${camelName}ToApi } from "#/generated/api.server";\nimport { ${n.data} } from "#/generated/${kebab(model.name)}.server";\n` : ""}${combines.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";\n`).join("")}${onRows.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";\nimport { ${actionNames(a).input} } from "#/generated/actions/${kebab(a.name)}.input";\n`).join("")}import { apiCall, NotFound } from "#/kit/api.server";${combines.length ? '\nimport { BadInput } from "#/kit/refusal";' : ""}
 
 export const Route = createFileRoute("/api/v1/${path}/actions/$action")({
   server: {
@@ -770,6 +807,19 @@ export const Route = createFileRoute("/api/v1/${path}/actions/$action")({
           // The rows as ids, beside what the action asks for.
           const { ids, ...rest } = (body ?? {}) as Record<string, unknown>;
           switch (params.action) {
+${combines
+  .map(
+    (a) => `            case ${JSON.stringify(a.name)}: {
+              // A combine: a new record from those given, in order; the answer is the new record.
+              const { choices, remove } = rest;
+              if (!Array.isArray(ids) || !ids.every(Number.isInteger)) throw new BadInput("Say which records: ids, a list of two or more.");
+              if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "sum" || c === "join" || Number.isInteger(c))))
+                throw new BadInput("choices: for each field the records differ in, keep or the id of the record whose value is taken (sum or join where offered).");
+              const made = await ${actionNames(a).run}(viewer, ids as number[], (choices ?? {}) as never, remove === true);
+              return ${camelName}ToApi((await ${n.data}.get(viewer, made)) as Record<string, any>);
+            }`,
+  )
+  .join("\n")}
 ${onRows
   .map(
     (a) => `            case ${JSON.stringify(a.name)}:
@@ -804,11 +854,11 @@ ${own
     // A merge (the record in the path stays) and a split (the new record): the answer is that record.
     if (a.merge)
       return `            case ${JSON.stringify(a.name)}: {
-              const { other, choices } = (body ?? {}) as { other?: unknown; choices?: unknown };
-              if (!Number.isInteger(other)) throw new BadInput("Say which record goes: other, its id.");
-              if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "other")))
-                throw new BadInput("choices: keep or other for each field the two differ in.");
-              const merged = await ${actionNames(a).run}(viewer, id, other as number, (choices ?? {}) as never);
+              const { others, choices } = (body ?? {}) as { others?: unknown; choices?: unknown };
+              if (!Array.isArray(others) || !others.length || !others.every(Number.isInteger)) throw new BadInput("Say which records go into it: others, a list of ids.");
+              if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "sum" || c === "join" || Number.isInteger(c))))
+                throw new BadInput("choices: for each field the records differ in, keep or the id of the record whose value is taken (sum or join where offered).");
+              const merged = await ${actionNames(a).run}(viewer, [id, ...(others as number[])], (choices ?? {}) as never);
               return ${camelName}ToApi((await ${n.data}.get(viewer, merged.kept)) as Record<string, any>);
             }`;
     if (a.split)
@@ -957,18 +1007,28 @@ function toolsModule(
     const model = modelNamed(ir, action.on);
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
     const asked = askedFields(action).length > 0;
-    // A merge keeps the record named and takes the other; a split answers with its new record.
+    // A combine answers with its new record, made from the records given by id or title.
+    if (action.merge?.into === "new")
+      return `    case ${JSON.stringify(action.name)}: {
+      if (!Array.isArray(args.ids) || args.ids.length < 2) throw new BadInput("Say which records: ids, two or more.");
+      const ids: number[] = [];
+      for (const one of args.ids) ids.push((await found(KINDS.${model.name}, viewer, one)).id as number);
+      const choices = numbered(args.choices);
+      const made = await ${actionNames(action).run}(keyed(viewer), ids, choices as never, args.remove === true);
+      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), made)) as Record<string, any>);
+    }`;
+    // A merge keeps the record named and takes the others; a split answers with its new record.
     if (action.merge || action.split)
       return `    case ${JSON.stringify(action.name)}: {
       const row = await found(KINDS.${model.name}, viewer, args.id, "change");
       ${
         action.merge
-          ? `// The other by its id or its title, as the record itself.
-      const other = await found(KINDS.${model.name}, viewer, args.other, "merge");
-      const choices = args.choices;
-      if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "other")))
-        throw new BadInput("choices: keep or other for each field the two differ in.");
-      const merged = await ${actionNames(action).run}(keyed(viewer), row.id, other.id, (choices ?? {}) as never);
+          ? `// The others by their ids or titles, as the record itself.
+      if (!Array.isArray(args.others) || !args.others.length) throw new BadInput("Say which records go into it: others, a list of ids.");
+      const others: number[] = [];
+      for (const one of args.others) others.push((await found(KINDS.${model.name}, viewer, one, "merge")).id as number);
+      const choices = numbered(args.choices);
+      const merged = await ${actionNames(action).run}(keyed(viewer), [row.id, ...others], choices as never);
       return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), merged.kept)) as Record<string, any>);`
           : `if (!Array.isArray(args.move) || !args.move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
       return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), await ${actionNames(action).run}(keyed(viewer), row.id, args.move as number[]))) as Record<string, any>);`
@@ -1081,7 +1141,18 @@ const kindOf = (args: Record<string, unknown>): Kind => {
   return kind;
 };
 
-/**
+${
+  actions.some((a) => a.merge)
+    ? `/** A merge's choices as a model gives them: keep, sum, join, or a record's id (a number in words too). */
+function numbered(choices: unknown): Record<string, string | number> {
+  if (choices === undefined) return {};
+  if (typeof choices !== "object" || choices === null || Array.isArray(choices)) throw new BadInput("choices: for each field the records differ in, keep or the id of the record whose value is taken.");
+  return Object.fromEntries(Object.entries(choices).map(([key, c]) => [key, typeof c === "string" && /^\\d+$/.test(c) ? Number(c) : c]));
+}
+
+`
+    : ""
+}/**
  * A record the caller may use, by its id or by its title (an invoice's number): one that fits,
  * never a guess; "not there" and "not yours" are the same answer.
  */
@@ -1397,7 +1468,8 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     if (!run) throw new NotFound(\`There is no action "\${String(args.action)}".\`);
     const kind = Object.hasOwn(KINDS, run.kind) ? KINDS[run.kind] : undefined;
     if (!kind) throw new NotFound(\`There is no kind "\${run.kind}".\`);
-    const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
+    // A combine names its records as ids: the first stands for them here, each is found at the run.
+    const row = (args.id === undefined && Array.isArray(args.ids) ? await found(kind, viewer, args.ids[0]) : await found(kind, viewer, args.id, "change")) as Record<string, any>;
     if (!allows(run.access, viewer, row[kind.owner])) throw new AccessDenied(true);
     if (!run.fits(row as never, viewer)) throw new BadInput("This cannot be done now.");
     // What the action asks for, checked now: a missing or wrong value is said here, not at Confirm.

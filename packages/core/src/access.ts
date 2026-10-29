@@ -127,9 +127,21 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
   const model = action.custom ? undefined : models.find((m) => m.name === action.on);
   if (!model || action.custom)
     return { public: false, roles: granted(auth, "actions", action.name), owner: false };
+  // A merge into a new record (docs/design/intents.md §3): the action's grant, with create on
+  // its model; the picked records are read, not changed.
+  if (action.merge?.into === "new") {
+    const create = modelAccess(model, auth).create;
+    return {
+      public: false,
+      roles: granted(auth, "actions", action.name).filter(
+        (r) => create.public || create.roles.includes(r),
+      ),
+      owner: false,
+    };
+  }
   // A merge (docs/design/intents.md §3): the action's grant, with write on its model, which the
-  // generated server checks on the records themselves; delete on the other decides whether it
-  // goes to the trash or stays.
+  // generated server checks on the records themselves; delete on the others decides whether they
+  // go to the trash or stay.
   if (action.merge) {
     const write = modelAccess(model, auth).write;
     return {
