@@ -230,12 +230,17 @@ export interface FeedLine {
   outcome: "done" | "refused" | "finding" | "miss";
   message?: string;
   seed?: number;
+  /** Trying everything: the variant tried and what the app had to do with it. */
+  variant?: { id: string; expect: "done" | "refused"; why: string };
 }
 
 /** The sample users and their runner: who they are, whether they run, what they did. */
 export interface PeopleState {
   running: boolean;
   fast: boolean;
+  /** Sensible: each does what makes sense next; everything: every move's variants, for faults. */
+  mode: "sensible" | "everything";
+  coverage?: { tried: number; of: number; passes: number; findings: number };
   people: {
     id: string;
     name: string;
@@ -257,8 +262,10 @@ export const api = {
   outbox: () => call<KeptMail[]>("/api/outbox"),
   people: () => call<PeopleState>("/api/people"),
   /** Lets the sample users run (with the model, or `fast`: the random walk), pauses them, or one move. */
-  peopleDo: (what: "run" | "fast" | "pause" | "step" | "clear") =>
-    call<PeopleState>("/api/people", { do: what }),
+  peopleDo: (
+    what: "run" | "fast" | "everything" | "pause" | "step" | "clear",
+    mode?: "sensible" | "everything",
+  ) => call<PeopleState>("/api/people", { do: what, ...(mode ? { mode } : {}) }),
   change: (id: string, all = false) => call<ChangeDetail>(`/api/change/${id}${all ? "?all" : ""}`),
   /** `file`: a picture the change brings, written under its path in the project (base64). */
   operation: (
