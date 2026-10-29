@@ -268,8 +268,8 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
       "select({ id: schema.user.id, email: schema.user.email, language: schema.user.language })",
     ],
     [
-      "    const shown = SHOWN[model]?.(tx, record);\n    if (!shown || !entry.to) return;\n",
-      `    if (!entry.to) return;
+      "    const shown = SHOWN[model]?.(tx, record);\n    if (!shown || !entry.to) continue;\n",
+      `    if (!entry.to) continue;
     const groups = new Map<string, Recipient[]>();
     for (const person of entry.to(tx, record)) {
       const spoken = person.language || language();

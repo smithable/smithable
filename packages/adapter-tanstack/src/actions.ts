@@ -17,7 +17,7 @@ import {
 } from "@smithable/core";
 import { checksLoaded, hasLocks, textBounds } from "./data.js";
 import { formulaCompiler, formulasName } from "./formulas.js";
-import { afterCustom, OUTGOING_IMPORT, outgoingOf, toldAbout } from "./outgoing.js";
+import { afterCustom, OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   attr,
   dataKey,
@@ -145,12 +145,11 @@ export type ${a.inputType} = z.infer<typeof ${a.input}>;
 /**
  * A custom action's fence (docs/design/intents.md §6): the data functions its contract's touches
  * name, by model (reads: get and list; writes: those and create, update, remove, the update
- * narrowed to the fields named), and \`fire\` for its triggers. The type goes to the action's module,
+ * narrowed to the fields named); its triggers are words only. The type goes to the action's module,
  * where the code reads it; the value is built in its server module. Undefined without touches.
  */
 export function touchesParts(action: ActionIR, ir: SpecIR, t: Texts) {
-  // Triggers alone are a fence too, of fire only.
-  if (!action.custom || (!action.touches && !action.triggers?.length)) return undefined;
+  if (!action.custom || !action.touches) return undefined;
   const a = actionNames(action);
   const touches = action.touches ?? { reads: [], writes: [] };
   const reads = touches.reads.filter((m) => !touches.writes.some((w) => w.model === m));
@@ -195,28 +194,21 @@ export function touchesParts(action: ActionIR, ir: SpecIR, t: Texts) {
       data: n.data,
     });
   }
-  // Those a record's change fires (the ones after a custom action fire by themselves when it returns).
-  const fired = new Set(outgoingOf(ir).map((o) => o.name));
-  const triggers = (action.triggers ?? []).filter((name) => fired.has(name));
   const typeImports = [...new Map(entries.map((e) => [e.data, e.module])).entries()]
     .map(([data, module]) => `import type { ${data} } from "${module}";\n`)
     .join("");
-  const type = `/** What the "${action.name}" code may reach (its contract's touches and triggers): a fence, not a wall. */
+  const type = `/** What the "${action.name}" code may reach (its contract's touches): a fence, not a wall. */
 export interface ${a.touches} {
-${entries.map((e) => `  ${e.key}: ${e.type};`).join("\n")}${
-  triggers.length
-    ? `\n  /** Queues one of the outgoing entries the contract names, for a record of its model. */\n  fire(name: ${triggers.map((x) => JSON.stringify(x)).join(" | ")}, record: { id: number } & Record<string, unknown>): void;`
-    : ""
-}
+${entries.map((e) => `  ${e.key}: ${e.type};`).join("\n")}
 }
 `;
   const valueImports = [...new Map(entries.map((e) => [e.data, e.module])).entries()].map(
     ([data, module]) => ({ data: data as string, module: module as string }),
   );
   const value = `{
-${entries.map((e) => `      ${e.key}: ${e.value},`).join("\n")}${triggers.length ? "\n      fire: (name, record) => db.transaction((tx) => fireOutgoing(tx, viewer, name, record))," : ""}
+${entries.map((e) => `      ${e.key}: ${e.value},`).join("\n")}
     }`;
-  return { type, typeImports, value, valueImports, triggers: triggers.length > 0 };
+  return { type, typeImports, value, valueImports };
 }
 
 /** A model's name as a key of the fence: Invoice → invoice, OrderLine → orderLine. */
@@ -242,7 +234,7 @@ function customRun(action: ActionIR, ir: SpecIR, t: Texts) {
     ...readers.map((n): [string, string] => [n.data, n.module.replace(/\.ts$/, "") + ".server"]),
     ...(fence?.valueImports ?? []).map((i): [string, string] => [i.data, i.module]),
   ]);
-  const runImports = `${rows || told || fence?.triggers ? 'import { db } from "#/db";\n' : ""}${fence?.triggers ? 'import { fireOutgoing } from "#/generated/outgoing.server";\n' : ""}${rows ? 'import { audit } from "#/kit/audit.server";\n' : ""}${told ? 'import { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";\n' : ""}import { ${action.name} as implementation } from "${a.custom}";
+  const runImports = `${rows || told ? 'import { db } from "#/db";\n' : ""}${rows ? 'import { audit } from "#/kit/audit.server";\n' : ""}${told ? 'import { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";\n' : ""}import { ${action.name} as implementation } from "${a.custom}";
 ${[...dataImports].map(([data, module]) => `import { ${data} } from "${module}";\n`).join("")}`;
   const body = `${records
     .map((f, i) =>
@@ -790,10 +782,10 @@ export function actionStub(action: ActionIR): string {
 // to the action's input or output shows up here as a type error.
 // \`viewer\` is the signed-in user (null for a visitor). The records the input refers to are ones
 // they may read; the data functions in src/generated/*.server.ts check access for them.
-import type { ${a.inputType}, ${a.outputType}${action.custom && (action.touches || action.triggers?.length) ? `, ${a.touches}` : ""} } from "${a.module}";
+import type { ${a.inputType}, ${a.outputType}${action.custom && action.touches ? `, ${a.touches}` : ""} } from "${a.module}";
 import type { Viewer } from "#/kit/access";
 
-${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null${action.custom && (action.touches || action.triggers?.length) ? `, _touched: ${a.touches}` : ""}): Promise<${a.outputType}> {
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null${action.custom && action.touches ? `, _touched: ${a.touches}` : ""}): Promise<${a.outputType}> {
   throw new Error(\`${action.name} is not implemented yet (input: \${JSON.stringify(input)}).\`);
 }
 `;

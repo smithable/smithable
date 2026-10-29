@@ -489,25 +489,11 @@ ${list.join("\n")}
  * Queues what a change asks for, in its transaction: \`what\` is created, changed, deleted or the
  * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
-export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: string, record: Row, before?: Row): void {${threading ? "\n  if (arriving.getStore()?.quiet) return;" : ""}
-  for (const entry of ENTRIES)
-    if (entry.model === model && counts(entry.when, what, entry.fits, record, before, entry.fields))
-      queueEntry(tx, viewer, entry, model, what, record, before);
-}
-
-/**
- * Queues one outgoing entry by its name for a record of its model, as custom code fires the
- * entries its contract's triggers name (docs/design/intents.md §6).
- */
-export function fireOutgoing(tx: Tx, viewer: Viewer | null, name: string, record: Row): void {
-  const entry = ENTRIES.find((e) => e.name === name);
-  if (entry) queueEntry(tx, viewer, entry, entry.model, name, record);
-}
-
-/** What one entry asks for, for one record: a call queued, or a mail. */
-function queueEntry(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | null, entry: (typeof ENTRIES)[number], model: string, ${calls.length ? "what" : "_what"}: string, record: Row, before?: Row): void {${
-        calls.length
-          ? `
+export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | null, model: string, what: string, record: Row, before?: Row): void {${threading ? "\n  if (arriving.getStore()?.quiet) return;" : ""}
+  for (const entry of ENTRIES) {
+    if (entry.model !== model || !counts(entry.when, what, entry.fits, record, before, entry.fields)) continue;${
+      calls.length
+        ? `
     if (entry.target) {
       const sent = SENT[model]?.(record);
       if (sent)
@@ -518,14 +504,14 @@ function queueEntry(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | nul
           target: entry.target,
           body: JSON.stringify({ event: entry.name, model, happened: what, at: new Date().toISOString(), record: picked(sent, entry.show), ...(entry.previous && before ? { before: changedBefore(SENT[model]?.(before) ?? {}, sent, entry.show) } : {}) }),
         });
-      return;
+      continue;
     }`
-          : ""
-      }${
-        mails.length
-          ? `
+        : ""
+    }${
+      mails.length
+        ? `
     const shown = SHOWN[model]?.(tx, record);
-    if (!shown || !entry.to) return;
+    if (!shown || !entry.to) continue;
     const { title, labels, values, ...rest } = shown;
     const prior = before && (entry.previous || entry.before) ? SHOWN[model]?.(tx, before) : undefined;
     const more = entry.more?.(tx, record);
@@ -539,8 +525,9 @@ function queueEntry(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer | nul
       entry.to(tx, record),
       entry.when === "created",
     );`
-          : ""
-      }
+        : ""
+    }
+  }
 }
 `
     : ""
