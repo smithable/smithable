@@ -635,9 +635,10 @@ export const w = {
           : `${other} stays, since you may not delete it`;
     return `${values}${moved}, and ${fate}.`;
   },
+  mergedIntoTitle: (title: string) => `merged into “${title}”`,
   mergeDone: (other: string, kept: string) => `${other} was merged into ${kept}.`,
   mergeStayed: (n: number) =>
-    `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge and stay as they are.`,
+    `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge, or ${n === 1 ? "is" : "are"} not yours to change, and stay as ${n === 1 ? "it is" : "they are"}.`,
 };
 
 export type Words = typeof w;
