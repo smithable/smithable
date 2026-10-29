@@ -978,6 +978,50 @@
             },
             "description": "A custom action's contract: the outgoing entries the code may fire."
           },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "given"
+              ],
+              "properties": {
+                "as": {
+                  "type": "string",
+                  "description": "The role the action runs as; the first admin when left out."
+                },
+                "now": {
+                  "type": "string",
+                  "description": "The clock, a date or a date and time; today when left out."
+                },
+                "given": {
+                  "type": "object",
+                  "description": "The records before, by model, with the example's own ids, e.g. { Invoice: [{ id: 1, total: 120 }] }; an empty map when none."
+                },
+                "input": {
+                  "type": "object",
+                  "description": "The input values; a file names one under samples/."
+                },
+                "after": {
+                  "type": "object",
+                  "description": "The records after, by model; fields not named are not checked."
+                },
+                "nothingElse": {
+                  "type": "boolean",
+                  "description": "Fail on any other record created, changed or deleted."
+                },
+                "output": {
+                  "type": [
+                    "object",
+                    "string"
+                  ],
+                  "description": "The values returned, or \"refused\" when the action must refuse."
+                }
+              }
+            },
+            "description": "A custom action's examples: tests the app runs (the records given, the input, the records and output after)."
+          },
           "split": {
             "type": "string",
             "description": "A split: one record of this model becomes two; the picked records of the list in move go to a new record, which takes the fields in copy."

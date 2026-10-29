@@ -472,7 +472,30 @@ export function validateAuth(
     checkGrants(ctx, auth, ir, grantNodes, roleNodes, roles?.keyNode ?? root);
   }
   if (ir && apiNodes) checkApi(ctx, auth, ir, apiNodes);
+  if (ir) checkExampleRoles(ctx, auth, ir, roles?.keyNode ?? root);
   return done();
+}
+
+/** An example's `as` names a role written here (docs/design/intents.md §6). */
+function checkExampleRoles(
+  ctx: ParseContext,
+  auth: AuthIR,
+  ir: SpecIR,
+  at: ParsedNode | null,
+): void {
+  const names = auth.roles.map((r) => r.name);
+  for (const action of ir.actions) {
+    if (!action.custom) continue;
+    (action.examples ?? []).forEach((example, i) => {
+      if (example.as !== undefined && !names.includes(example.as))
+        ctx.error(
+          at,
+          "unknown-role",
+          `Example ${i + 1} of the action ${action.name} runs as "${example.as}", which is not a role here.`,
+          didYouMean(example.as, names),
+        );
+    });
+  }
 }
 
 /** Where the `api` block's names are written, for errors about them. */

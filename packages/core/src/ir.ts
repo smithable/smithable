@@ -543,6 +543,28 @@ export interface CustomActionIR extends ActionBase {
   touches?: { reads: string[]; writes: { model: string; fields?: string[] }[] };
   /** The outgoing entries the code may fire. */
   triggers?: string[];
+  /** The examples the generated app tests the code by. */
+  examples?: ActionExampleIR[];
+}
+
+/**
+ * An example of a custom action (docs/design/intents.md §6): a test the generated app runs. The
+ * given records are seeded with the example's own ids (a field left out takes the sample data's
+ * value for its kind), the action runs as a person of the role `as` (the first admin when left
+ * out) at the clock `now` (today when left out), and the records and the output must match `after`
+ * and `output`: fields not named are not checked, records not named are not checked unless
+ * `nothingElse`, which fails on any other record created, changed or deleted.
+ */
+export interface ActionExampleIR {
+  as?: string;
+  now?: string;
+  given: Record<string, Record<string, FieldValue | null>[]>;
+  /** The input values; a file input names a file under samples/, the list input of an action on rows the ids picked. */
+  input?: Record<string, FieldValue | null | FieldValue[]>;
+  after?: Record<string, Record<string, FieldValue | null>[]>;
+  nothingElse?: boolean;
+  /** The values returned, or "refused" when the action must refuse. */
+  output?: Record<string, FieldValue | null> | "refused";
 }
 
 /** Changes one record of `on`, offered and allowed only when `when` fits it. */

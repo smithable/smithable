@@ -164,7 +164,8 @@ describe("setAction", () => {
     });
     expect(run(status, "setAction", ["resolve"])).toMatchObject({
       ok: false,
-      message: "Say what to change: --intent, --when, --set, --reads, --writes or --triggers.",
+      message:
+        "Say what to change: --intent, --when, --set, --reads, --writes, --triggers or --touches none.",
     });
     expect(run(status, "setAction", ["resolve", "--set", "status=gone"])).toMatchObject({
       ok: false,

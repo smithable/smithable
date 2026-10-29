@@ -152,10 +152,20 @@ test("addAction and setAction write the contract; renames follow it and removals
     writes: ["none"],
     triggers: ["none"],
   });
-  expect(cleared.ok && cleared.files.spec).toMatch(
-    /reads: \[\]\n {6}writes: \[\]\n {4}triggers: \[\]/,
-  );
+  // Triggers emptied is no triggers key; touches emptied stays, a fence that reaches nothing,
+  // and --touches none takes the fence away.
+  expect(cleared.ok && cleared.files.spec).toMatch(/reads: \[\]\n {6}writes: \[\]\n/);
+  expect(cleared.ok && cleared.files.spec).not.toContain("triggers");
   expect(cleared.ok && cleared.description).toBe("Change the contract of the action reconcile");
+  const unfenced = applyOperation(narrowed.files, "setAction", {
+    action: "reconcile",
+    touches: "none",
+  });
+  expect(unfenced.ok && unfenced.files.spec).not.toContain("touches");
+  expect(unfenced.ok && unfenced.files.spec).toContain("triggers: [paymentBooked]");
+  expect(
+    applyOperation(withIt, "setAction", { action: "reconcile", touches: "all" }),
+  ).toMatchObject({ ok: false });
   const renamedField = applyOperation(withIt, "renameField", {
     model: "Invoice",
     from: "status",

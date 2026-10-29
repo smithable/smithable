@@ -1,5 +1,6 @@
 import { conditionArgs } from "../condition.js";
-import type { ModelIR, SpecIR } from "../ir.js";
+import type { YamlValue } from "../edit.js";
+import type { CustomActionIR, ModelIR, SpecIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
 
@@ -365,7 +366,7 @@ const addAction: Operation<{
         ...(Object.keys(output).length ? { output } : {}),
         ...text,
         ...(contract?.touches ? { touches: contract.touches } : {}),
-        ...(contract?.triggers ? { triggers: contract.triggers } : {}),
+        ...(contract?.triggers?.length ? { triggers: contract.triggers } : {}),
       });
       // A rows action (one input a list of records) shows where a standard action would: on its
       // model's crud page, when there is just one (the page's "actions" is where an action shows).
@@ -438,6 +439,7 @@ const setAction: Operation<{
   reads?: string[];
   writes?: string[];
   triggers?: string[];
+  touches?: string;
 }> = {
   name: "setAction",
   summary:
@@ -466,30 +468,39 @@ const setAction: Operation<{
         'A standard action: the new values, all of them, e.g. { status: done, doneOn: "TODAY()" }.',
       ),
       ...CONTRACT_ARGS,
+      touches: {
+        type: "string",
+        enum: ["none"],
+        description: 'The one word "none": no touches at all, so no fence on the code.',
+      },
     },
   },
   positional: ["action"],
-  describe: ({ action, intent, when, set, reads, writes, triggers }) =>
+  describe: ({ action, intent, when, set, reads, writes, triggers, touches }) =>
     `Change ${
       [
         intent !== undefined && "the intent",
         when && "the condition",
         set && "the values",
-        (reads || writes || triggers) && "the contract",
+        (reads || writes || triggers || touches) && "the contract",
       ]
         .filter(Boolean)
         .join(" and ") || "nothing"
     } of the action ${action}`,
   destructive: () => false,
-  apply({ spec }, { action, intent, when, set, reads, writes, triggers }, ir) {
+  apply({ spec }, { action, intent, when, set, reads, writes, triggers, touches }, ir) {
     const found = ir.actions.find((a) => a.name === action);
     if (!found) throw new OperationError(`There is no action named "${action}".`);
+    if (touches !== undefined && touches !== "none")
+      throw new OperationError('"--touches" takes the one word none, which removes the fence.');
+    if (touches && (reads || writes))
+      throw new OperationError("--touches none goes alone: no --reads or --writes with it.");
     const contract = contractOf(ir, reads, writes, triggers);
-    if (intent === undefined && !when && !set && !contract)
+    if (intent === undefined && !when && !set && !contract && !touches)
       throw new OperationError(
-        "Say what to change: --intent, --when, --set, --reads, --writes or --triggers.",
+        "Say what to change: --intent, --when, --set, --reads, --writes, --triggers or --touches none.",
       );
-    if (contract && !found.custom)
+    if ((contract || touches) && !found.custom)
       throw new OperationError(
         `"${action}" is not a custom action: --reads, --writes and --triggers are a custom action's contract.`,
       );
@@ -515,8 +526,11 @@ const setAction: Operation<{
           ...(writes !== undefined ? { writes } : {}),
         });
       }
-      if (contract.triggers) put("triggers", contract.triggers);
+      // No triggers and an empty list say the same: the work sets off nothing.
+      if (contract.triggers)
+        put("triggers", contract.triggers.length ? contract.triggers : undefined);
     }
+    if (touches && found.custom) put("touches", undefined);
     if (!when && !set) return [];
     const model = found.custom ? undefined : ir.models.find((m) => m.name === found.on);
     if (!model)
@@ -561,4 +575,117 @@ const removeAction: Operation<{ action: string }> = {
   },
 };
 
-export const actionOperations: AnyOperation[] = [addAction, setAction, removeAction];
+const EXAMPLES = (action: string) => ["actions", action, "examples"];
+
+/** The custom action named, for an operation on its examples. */
+function customNamed(ir: SpecIR, action: string): CustomActionIR {
+  const found = ir.actions.find((a) => a.name === action);
+  if (!found) throw new OperationError(`There is no action named "${action}".`);
+  if (!found.custom)
+    throw new OperationError(
+      `${action} is a standard action: examples are for custom actions, whose code they test.`,
+    );
+  return found;
+}
+
+const addExample: Operation<{
+  action: string;
+  as?: string;
+  now?: string;
+  given: Record<string, unknown>;
+  input?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  nothingElse?: boolean;
+  output?: Record<string, unknown> | string;
+}> = {
+  name: "addExample",
+  summary:
+    "Add an example to a custom action: the records given, the input, and the records and output expected after. The app tests its code by it.",
+  schema: {
+    type: "object",
+    required: ["action", "given"],
+    additionalProperties: false,
+    properties: {
+      action: named,
+      as: {
+        type: "string",
+        description: "The role the action runs as; the first admin when left out.",
+      },
+      now: {
+        type: "string",
+        description: "The clock, a date or a date and time; today when left out.",
+      },
+      given: {
+        type: "object",
+        description:
+          'The records before, by model, with the example\'s own ids, e.g. { "Invoice": [{ "id": 1, "total": 120 }] }; {} when none.',
+      },
+      input: { type: "object", description: "The input values; a file names one under samples/." },
+      after: {
+        type: "object",
+        description: "The records after, by model; fields not named are not checked.",
+      },
+      nothingElse: {
+        type: "boolean",
+        description: "Fail on any other record created, changed or deleted.",
+      },
+      output: {
+        type: ["object", "string"],
+        description: 'The values returned, or "refused" when the action must refuse.',
+      },
+    },
+  },
+  positional: ["action"],
+  describe: ({ action }) => `Add an example to the action ${action}`,
+  destructive: () => false,
+  apply({ spec }, { action, ...example }, ir) {
+    const found = customNamed(ir, action);
+    const value = Object.fromEntries(
+      Object.entries(example).filter(([, v]) => v !== undefined),
+    ) as YamlValue;
+    const path = EXAMPLES(action);
+    if (spec.has(path)) spec.set(path, [...(spec.get(path) as YamlValue[]), value]);
+    else spec.add(["actions", action], "examples", [value]);
+    return [{ note: `example ${(found.examples?.length ?? 0) + 1} of ${action}` }];
+  },
+};
+
+const removeExample: Operation<{ action: string; example: number }> = {
+  name: "removeExample",
+  summary: "Remove one of a custom action's examples, by its number (the first is 1).",
+  schema: {
+    type: "object",
+    required: ["action", "example"],
+    additionalProperties: false,
+    properties: {
+      action: named,
+      example: { type: "integer", minimum: 1, description: "Which example, counting from 1." },
+    },
+  },
+  positional: ["action", "example"],
+  describe: ({ action, example }) => `Remove example ${example} of the action ${action}`,
+  destructive: () => false,
+  apply({ spec }, { action, example }, ir) {
+    const found = customNamed(ir, action);
+    const count = found.examples?.length ?? 0;
+    if (!Number.isInteger(example) || example < 1 || example > count)
+      throw new OperationError(
+        count
+          ? `${action} has ${count === 1 ? "one example" : `${count} examples`}: "${example}" is not one of them.`
+          : `${action} has no examples.`,
+      );
+    const path = EXAMPLES(action);
+    const rest = (spec.get(path) as YamlValue[]).filter((_, i) => i !== example - 1);
+    if (rest.length) spec.set(path, rest);
+    else spec.remove(path);
+    return [];
+  },
+};
+
+export const actionOperations: AnyOperation[] = [
+  addAction,
+  setAction,
+  removeAction,
+  addExample,
+  removeExample,
+];

@@ -1,4 +1,4 @@
-import { isScalar, type ParsedNode } from "yaml";
+import { isScalar, isSeq, type ParsedNode } from "yaml";
 import { followRenamed, lostValues, readCondition } from "../condition.js";
 import {
   checkKeys,
@@ -20,11 +20,13 @@ import {
 } from "../formula.js";
 import {
   type ActionAddIR,
+  type ActionExampleIR,
   type ActionIR,
   type ActionValueIR,
   type Condition,
   type CustomActionIR,
   type FieldIR,
+  type FieldValue,
   type MergeKeep,
   type MergeRule,
   type ModelIR,
@@ -172,6 +174,47 @@ export const actionsSection: SpecSection<"actions"> = {
           items: { type: "string" },
           description: "A custom action's contract: the outgoing entries the code may fire.",
         },
+        examples: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["given"],
+            properties: {
+              as: {
+                type: "string",
+                description: "The role the action runs as; the first admin when left out.",
+              },
+              now: {
+                type: "string",
+                description: "The clock, a date or a date and time; today when left out.",
+              },
+              given: {
+                type: "object",
+                description:
+                  "The records before, by model, with the example's own ids, e.g. { Invoice: [{ id: 1, total: 120 }] }; an empty map when none.",
+              },
+              input: {
+                type: "object",
+                description: "The input values; a file names one under samples/.",
+              },
+              after: {
+                type: "object",
+                description: "The records after, by model; fields not named are not checked.",
+              },
+              nothingElse: {
+                type: "boolean",
+                description: "Fail on any other record created, changed or deleted.",
+              },
+              output: {
+                type: ["object", "string"],
+                description: 'The values returned, or "refused" when the action must refuse.',
+              },
+            },
+          },
+          description:
+            "A custom action's examples: tests the app runs (the records given, the input, the records and output after).",
+        },
         split: {
           type: "string",
           description:
@@ -194,9 +237,40 @@ export const actionsSection: SpecSection<"actions"> = {
     },
   },
   follow(spec, effect, ir) {
-    // A custom action's contract: a written field follows its rename; its removal is refused.
+    // An example's records are by model: they follow the model's rename.
+    if (effect.kind === "rename-model")
+      for (const action of ir.actions) {
+        if (!action.custom) continue;
+        (action.examples ?? []).forEach((example, i) => {
+          for (const part of ["given", "after"] as const)
+            if (example[part]?.[effect.from])
+              spec.renameKey(
+                ["actions", action.name, "examples", String(i), part, effect.from],
+                effect.to,
+              );
+        });
+      }
+    // A custom action's contract: a written field follows its rename; its removal is refused. Its
+    // examples' records follow the rename too, and one naming the removed field is refused.
     if (effect.kind === "rename-field" || effect.kind === "remove-field") {
       const field = effect.kind === "rename-field" ? effect.from : effect.field;
+      for (const action of ir.actions) {
+        if (!action.custom) continue;
+        const examples = action.examples ?? [];
+        for (let i = 0; i < examples.length; i++)
+          for (const part of ["given", "after"] as const) {
+            const records = examples[i]?.[part]?.[effect.model] ?? [];
+            for (let j = 0; j < records.length; j++) {
+              if (!(field in (records[j] ?? {}))) continue;
+              if (effect.kind === "remove-field")
+                return {
+                  refusal: `Example ${i + 1} of the action "${action.name}" names ${effect.model}.${field}; change the example first.`,
+                };
+              const at = ["actions", action.name, "examples", String(i), part, effect.model];
+              spec.renameKey([...at, String(j), field], effect.to);
+            }
+          }
+      }
       for (const action of ir.actions) {
         if (!action.custom || !action.touches) continue;
         const written = action.touches.writes.some(
@@ -401,11 +475,12 @@ function readAction(
       "fields",
       "touches",
       "triggers",
+      "examples",
       "split",
       "move",
       ...TEXT_KEYS,
     ],
-    later: ["confirm", "examples"],
+    later: ["confirm"],
     content: ["label", "title"],
     moved: {
       allow: `who may run ${name} is said by the roles in smithable.auth.yml: a custom action under roles.<role>.actions, a standard one by "write" on its model.`,
@@ -426,7 +501,9 @@ function readAction(
     const other = [
       custom,
       ...standard,
-      ...["input", "output", "split", "move", "touches", "triggers"].map((k) => byKey.get(k)),
+      ...["input", "output", "split", "move", "touches", "triggers", "examples"].map((k) =>
+        byKey.get(k),
+      ),
     ].find((e) => e !== undefined);
     if (other) {
       ctx.error(
@@ -444,7 +521,9 @@ function readAction(
     const other = [
       custom,
       ...standard.filter((e) => e.key !== "copy"),
-      ...["input", "output", "keep", "fields"].map((k) => byKey.get(k)),
+      ...["input", "output", "keep", "fields", "touches", "triggers", "examples"].map((k) =>
+        byKey.get(k),
+      ),
     ].find((e) => e !== undefined);
     if (other) {
       ctx.error(
@@ -476,7 +555,7 @@ function readAction(
     );
     return undefined;
   }
-  for (const key of ["touches", "triggers"]) {
+  for (const key of ["touches", "triggers", "examples"]) {
     const entry = byKey.get(key);
     if (entry && !custom)
       ctx.error(
@@ -497,18 +576,238 @@ function readAction(
   const input = byKey.get("input");
   const output = byKey.get("output");
   const inputs = input ? readFields(ctx, input, `the input of ${where}`, "one") : [];
+  const outputs = output ? readFields(ctx, output, `the output of ${where}`, "none") : undefined;
   // The one list of records among the inputs: the action runs on the rows picked (A 171).
   const list = inputs.find((f) => f.type.kind === "relation" && f.type.many);
   return {
     ...common,
     custom: true,
     input: inputs,
-    ...(output ? { output: readFields(ctx, output, `the output of ${where}`, "none") } : {}),
+    ...(outputs ? { output: outputs } : {}),
     ...(list && list.type.kind === "relation"
       ? { rows: { field: list.name, model: list.type.model } }
       : {}),
     ...readContract(ctx, where, name, byKey, models),
+    ...readExamples(ctx, where, byKey, models, inputs, outputs ?? []),
   };
+}
+
+const EXAMPLE_KEYS = ["as", "now", "given", "input", "after", "nothingElse", "output"];
+/** A date, or a date and time with an optional zone: what "now" of an example takes. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2})?)?$/;
+
+/**
+ * A custom action's examples (docs/design/intents.md §6): each a map with `given`, the records
+ * before by model, and the rest optional. The models and fields named must exist and the values
+ * be single; the role in `as` is the access file's to check, since the roles are written there.
+ */
+function readExamples(
+  ctx: ParseContext,
+  where: string,
+  byKey: Map<string, Entry>,
+  models: ModelIR[],
+  inputs: FieldIR[],
+  outputs: FieldIR[],
+): { examples?: ActionExampleIR[] } {
+  const entry = byKey.get("examples");
+  if (!entry) return {};
+  if (!isSeq(entry.value)) {
+    ctx.error(
+      entry.value ?? entry.keyNode,
+      "expected-list",
+      `The examples of ${where} are a list, one map each (given, input, after, output).`,
+    );
+    return {};
+  }
+  const examples: ActionExampleIR[] = [];
+  (entry.value.items as ParsedNode[]).forEach((item, i) => {
+    const label = `example ${i + 1} of ${where}`;
+    const entries = mapEntries(ctx, item, label);
+    if (!entries) return;
+    const known = checkKeys(ctx, entries, label, { allowed: EXAMPLE_KEYS });
+    const by = new Map(known.map((e) => [e.key, e]));
+    const given = by.get("given");
+    if (!given) {
+      ctx.error(
+        item,
+        "missing-key",
+        `${capitalize(label)} needs "given": the records before, by model ({} when there are none).`,
+      );
+      return;
+    }
+    const example: ActionExampleIR = {
+      given: exampleRecords(ctx, given.value, `"given" of ${label}`, models, "given"),
+    };
+    const as = by.get("as");
+    if (as) {
+      const role = readString(ctx, as.value, `"as" of ${label}`);
+      if (role !== undefined) example.as = role;
+    }
+    const now = by.get("now");
+    if (now) {
+      const clock = readString(ctx, now.value, `"now" of ${label}`);
+      if (clock !== undefined) {
+        if (!ISO_DATE.test(clock) || Number.isNaN(Date.parse(clock)))
+          ctx.error(
+            now.value,
+            "invalid-example",
+            `"now" of ${label} is a date (2026-01-15) or a date and time (2026-01-15T09:00), not "${clock}".`,
+          );
+        else example.now = clock;
+      }
+    }
+    const input = by.get("input");
+    if (input)
+      example.input = exampleValues(ctx, input.value, `"input" of ${label}`, inputs, "input");
+    const after = by.get("after");
+    if (after)
+      example.after = exampleRecords(ctx, after.value, `"after" of ${label}`, models, "after");
+    const nothingElse = by.get("nothingElse");
+    if (nothingElse) {
+      const flag = readBoolean(ctx, nothingElse.value, `"nothingElse" of ${label}`);
+      if (flag !== undefined) example.nothingElse = flag;
+    }
+    const output = by.get("output");
+    if (output) {
+      if (isScalar(output.value) && output.value.value === "refused") example.output = "refused";
+      else if (isScalar(output.value))
+        ctx.error(
+          output.value,
+          "invalid-example",
+          `"output" of ${label} is the values returned, as a map, or the one word "refused".`,
+        );
+      else if (!outputs.length)
+        ctx.error(
+          output.value ?? output.keyNode,
+          "invalid-example",
+          `${capitalize(label)} expects an output, and ${where} returns nothing (no "output" on the action); "refused" is the one outcome to name there.`,
+        );
+      else
+        example.output = exampleValues(
+          ctx,
+          output.value,
+          `"output" of ${label}`,
+          outputs,
+          "output",
+        ) as Record<string, FieldValue | null>;
+    }
+    examples.push(example);
+  });
+  return { examples };
+}
+
+/** An example's records by model: each model known, each a list of maps of its stored fields. */
+function exampleRecords(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  what: string,
+  models: ModelIR[],
+  kind: "given" | "after",
+): Record<string, Record<string, FieldValue | null>[]> {
+  const records: Record<string, Record<string, FieldValue | null>[]> = {};
+  for (const { key, keyNode, value } of mapEntries(ctx, node, what) ?? []) {
+    const model = models.find((m) => m.name === key);
+    if (!model) {
+      ctx.error(
+        keyNode,
+        "unknown-model",
+        `${what}: there is no model named "${key}".`,
+        didYouMean(
+          key,
+          models.map((m) => m.name),
+        ),
+      );
+      continue;
+    }
+    if (!isSeq(value)) {
+      ctx.error(
+        value ?? keyNode,
+        "expected-list",
+        `${what}: ${key} is a list of records, e.g. [{ id: 1, name: Arctic }].`,
+      );
+      continue;
+    }
+    records[key] = (value.items as ParsedNode[]).map(
+      (item) =>
+        exampleValues(ctx, item, `a ${key} of ${what}`, model.fields, kind) as Record<
+          string,
+          FieldValue | null
+        >,
+    );
+  }
+  return records;
+}
+
+/**
+ * The values of an example's record, input or output: fields that exist (a record's `id` too),
+ * each a single value. A list is not given or checked (its records are); a computed field is
+ * checked in `then`, never given.
+ */
+function exampleValues(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  what: string,
+  fields: FieldIR[],
+  kind: "given" | "after" | "input" | "output",
+): Record<string, FieldValue | null | FieldValue[]> {
+  const values: Record<string, FieldValue | null | FieldValue[]> = {};
+  const record = kind === "given" || kind === "after";
+  for (const { key, keyNode, value } of mapEntries(ctx, node, what) ?? []) {
+    const field = fields.find((f) => f.name === key);
+    if (!field && !(record && key === "id")) {
+      ctx.error(
+        keyNode,
+        "unknown-field",
+        `${what}: there is no ${record ? "field" : kind} named "${key}".`,
+        didYouMean(key, [...(record ? ["id"] : []), ...fields.map((f) => f.name)]),
+      );
+      continue;
+    }
+    if (field && field.type.kind === "relation" && field.type.many) {
+      // The one list input of an action on rows: the ids of the records picked.
+      if (kind === "input" && isSeq(value)) {
+        values[key] = (value.items as ParsedNode[]).flatMap((item) => {
+          const id = exampleScalar(ctx, item, what);
+          return id === null ? [] : [id];
+        });
+        continue;
+      }
+      ctx.error(
+        keyNode,
+        "invalid-example",
+        kind === "input"
+          ? `${what}: ${key} is the records picked, a list of their ids, e.g. [1, 2].`
+          : `${what}: ${key} is a list; its records are given and checked as records of ${field.type.model}.`,
+      );
+      continue;
+    }
+    if (field?.formula && kind === "given") {
+      ctx.error(
+        keyNode,
+        "invalid-example",
+        `${what}: ${key} is computed, so it is not given; it can be checked in "after".`,
+      );
+      continue;
+    }
+    values[key] = exampleScalar(ctx, value, what);
+  }
+  return values;
+}
+
+function exampleScalar(
+  ctx: ParseContext,
+  node: ParsedNode | null,
+  what: string,
+): FieldValue | null {
+  if (node === null || (isScalar(node) && node.value === null)) return null;
+  if (isScalar(node) && ["string", "number", "boolean"].includes(typeof node.value))
+    return node.value as FieldValue;
+  ctx.error(
+    node,
+    "invalid-example",
+    `${what}: a value is a single value, like 150, "sent" or true; a reference is the id of a given record.`,
+  );
+  return null;
 }
 
 /**
@@ -674,7 +973,11 @@ function readMergeFields(
         ? "its records move with the merge"
         : field.sequence || field.byApp
           ? "the app gives it"
-          : undefined;
+          : field.name === model.ownedBy
+            ? "the owner stays the kept record's"
+            : field.type.kind === "relation" && field.type.model === model.name
+              ? `a reference to a ${model.name} moves like the records that point at it`
+              : undefined;
     if (why) {
       ctx.error(keyNode, "invalid-action", `${label}: ${key} takes no rule, ${why}.`);
       continue;
