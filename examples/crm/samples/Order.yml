@@ -15,3 +15,4 @@
 - { number: ORD-1015, customer: Arctic Outdoor Co, status: draft, total: 2750, shippingMethod: standard, placedAt: 2026-10-07 16:30 }
 - { number: ORD-1016, customer: Lemland Boatyard Ab, status: canceled, total: 410, shippingMethod: express, placedAt: 2026-10-08 09:05 }
 - { number: ORD-1017, customer: Tampere Print House, status: placed, total: 1180, shippingMethod: standard, placedAt: 2026-10-08 13:25 }
+- { number: ORD-1018, customer: Arctic Outdoor, status: draft, total: 1240, shippingMethod: express, placedAt: 2026-10-09 10:10 }

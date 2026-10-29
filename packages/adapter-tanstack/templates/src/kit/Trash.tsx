@@ -16,6 +16,8 @@ const NOTICE = "movedToTrash";
 export function rememberTrashed(model: string, id: number, title: string): void {
   try {
     sessionStorage.setItem(NOTICE, JSON.stringify({ model, id, title }));
+    // A list that stays open (a merge in its selection bar) shows it at once.
+    window.dispatchEvent(new Event(NOTICE));
   } catch {
     // Without storage there is no Undo notice; the Trash page still restores it.
   }
@@ -30,17 +32,31 @@ export function TrashNotice({
   onUndo: (id: number) => Promise<unknown>;
 }) {
   const [moved, setMoved] = useState<{ id: number; title: string }>();
+  const [stayed, setStayed] = useState<number>();
   useEffect(() => {
-    try {
-      const kept = JSON.parse(sessionStorage.getItem(NOTICE) ?? "null");
-      if (kept?.model === model) {
-        sessionStorage.removeItem(NOTICE);
-        setMoved({ id: kept.id, title: kept.title });
+    const read = () => {
+      try {
+        const kept = JSON.parse(sessionStorage.getItem(NOTICE) ?? "null");
+        if (kept?.model === model) {
+          sessionStorage.removeItem(NOTICE);
+          setMoved({ id: kept.id, title: kept.title });
+          setStayed(undefined);
+        }
+      } catch {
+        // Nothing to say.
       }
-    } catch {
-      // Nothing to say.
-    }
+    };
+    read();
+    window.addEventListener(NOTICE, read);
+    return () => window.removeEventListener(NOTICE, read);
   }, [model]);
+  // After undoing a merge: what was changed since stays, and is said (intents.md §3).
+  if (stayed)
+    return (
+      <p role="status" data-part="trash-notice" className="mb-4 rounded-md border bg-card px-4 py-2 text-sm">
+        {w.mergeStayed(stayed)}
+      </p>
+    );
   if (!moved) return null;
   return (
     <div
@@ -53,8 +69,9 @@ export function TrashNotice({
         variant="outline"
         size="sm"
         onClick={async () => {
-          await onUndo(moved.id);
+          const result = await onUndo(moved.id);
           setMoved(undefined);
+          setStayed((result as { stayed?: number } | undefined)?.stayed || undefined);
         }}
       >
         {w.undoIt}

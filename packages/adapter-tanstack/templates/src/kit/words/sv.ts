@@ -556,4 +556,40 @@ export const w = {
   orderSoldOut: (label: string) => `Slutsåld: ${label}`,
   orderEmpty: "Inget valt ännu.",
   orderTotal: "Totalt",
+  mergeInto: "Slå ihop med…",
+  mergeIntoWhich: (_label: string) => "Vilken post ska den här slås ihop med?",
+  mergeChoose: "Välj en",
+  mergeKeeps: "Behåll",
+  mergeDecide: "De två skiljer sig här: välj vad som blir kvar",
+  mergeSum: "Båda adderade",
+  mergeJoin: "Båda, den ena efter den andra",
+  mergeSame: "Välj två olika poster att slå ihop.",
+  mergeBothHave: (label: string) =>
+    `Båda har en egen post av typen ${label.toLowerCase()}, och det får bara finnas en: behåll en först.`,
+  mergeMayNotChange: (plural: string) =>
+    `Några poster av typen ${plural.toLowerCase()} som hänvisar till den får du inte ändra, så inget slogs ihop.`,
+  mergeSentence: (
+    kept: string,
+    moves: string[],
+    other: string,
+    goes: "trash" | "gone" | "stays",
+    taken: string[],
+  ) => {
+    const list = (items: string[]) =>
+      items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} och ${items.at(-1)}`;
+    const values = taken.length
+      ? `${kept} behåller sina värden och tar ${list(taken.map((t) => t.toLowerCase()))} från ${other}`
+      : `${kept} behåller sina värden`;
+    const moved = moves.length ? `; ${list(moves)} flyttas dit` : "";
+    const fate =
+      goes === "trash"
+        ? `${other} läggs i papperskorgen`
+        : goes === "gone"
+          ? `${other} tas bort för gott`
+          : `${other} blir kvar, eftersom du inte får ta bort den`;
+    return `${values}${moved}, och ${fate}.`;
+  },
+  mergeDone: (other: string, kept: string) => `${other} slogs ihop med ${kept}.`,
+  mergeStayed: (n: number) =>
+    `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen och blir som de är.`,
 } satisfies Words;

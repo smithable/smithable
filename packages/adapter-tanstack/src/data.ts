@@ -33,7 +33,7 @@ import {
 import { hasSignIn } from "./auth.js";
 import { aggregatedLists, defaultsName, hasFormulas, withFormulasName } from "./formulas.js";
 import { hasKeys } from "./keys.js";
-import { unmergeCode } from "./merge.js";
+import { mergesOf, unmergeCode } from "./merge.js";
 import { linesFunction, linesParts, nameColumns, nameFunction } from "./names.js";
 import {
   cancelMembers,
@@ -240,7 +240,10 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
     "createdAt",
     "updatedAt",
   ];
-  const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
+  // Its records are chosen from where a reference names one, and where a merge picks the other.
+  const referenced =
+    ir.models.some((m) => references(m).some((f) => f.type.model === model.name)) ||
+    mergesOf(ir, model.name).length > 0;
   const owner = ownerKey(model);
   const options = referenced
     ? `
@@ -815,7 +818,10 @@ export function dataModule(
     .map((f) => ({ f, target: modelNamed(ir, f.type.model) }))
     .map(({ f, target }) => ({ f, target, title: titleField(target) }))
     .filter(({ title }) => title !== "id");
-  const referenced = ir.models.some((m) => references(m).some((f) => f.type.model === model.name));
+  // Its records are chosen from where a reference names one, and where a merge picks the other.
+  const referenced =
+    ir.models.some((m) => references(m).some((f) => f.type.model === model.name)) ||
+    mergesOf(ir, model.name).length > 0;
   const access = modelAccess(model, auth);
   // A capacity: at most so many of these per referenced record (docs/design/booking.md),
   // checked in the same transaction as the write. And the records that hold a capacity for

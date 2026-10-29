@@ -21,6 +21,7 @@ import {
   names,
   ownerKey,
   SCHEMA_IMPORT,
+  shownTitleKey,
   type Texts,
 } from "./shared.js";
 
@@ -150,6 +151,15 @@ export function mergeActionServer(
     ]),
   );
   const title = titleField(model);
+  // A reference's value shown by its title: the field as the record page's row has it, and the key.
+  const refs = Object.fromEntries(
+    mergedFields(model)
+      .filter((f) => f.type.kind === "relation")
+      .map((f) => [
+        dataKey(f),
+        [f.name, f.type.kind === "relation" && f.type.model === USER_MODEL ? "name" : shownTitleKey(ir, (f.type as { model: string }).model)],
+      ]),
+  );
   const others = [...new Map(referrers.map((r) => [r.model.name, r.model])).values()].filter(
     (m) => m.name !== model.name,
   );
@@ -202,7 +212,12 @@ export function mergeActionServer(
   const keyOf = (m: ModelIR) => `TABLES[${JSON.stringify(m.name)}]`;
   const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${JSON.stringify(names(m, t).label)}, plural: ${JSON.stringify(names(m, t).pluralLabel)} }`).join(", ")}]`;
   const readers = others.map((m) => names(m, t));
-  return `${HEADER}import { and, eq, inArray, isNull } from "drizzle-orm";
+  const usesKept = referrers.some(
+    (r) => r.model.name === model.name || r.field.unique || r.pairs.length,
+  );
+  const live = referrers.some((r) => r.model.trash && (r.field.unique || r.pairs.length));
+  const pairNull = referrers.some((r) => r.pairs.length);
+  return `${HEADER}import { and, eq, inArray${live || pairNull ? ", isNull" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
 import { AccessDenied, allows, check, Conflict, ${signedIn ? "personOf, " : ""}type Viewer } from "#/kit/access";
@@ -219,10 +234,13 @@ ${tableOf}
  * empty side always takes the other's value.
  */
 const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append"; kind: "number" | "text" | "other" }> = ${literal(rules)};
+/** A reference the person decides, shown by its title: the row's field and the title's key. */
+const REFS: Record<string, [string, string]> = ${literal(refs)};
 /** The models whose records move, as the form names them. */
 const COUNTED = ${counted};
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+/** The database or a transaction in it: what the plan reads with. */
+type Tx = Pick<typeof db, "select">;
 type Raw = typeof ${n.table}.$inferSelect;
 
 /** No value: nothing, or an empty text (no and zero are values). */
@@ -289,7 +307,7 @@ async function pair(viewer: Viewer | null, first: number, second: number) {
 }
 
 /** What the merge does, worked out on the records as they are: refused here when it cannot be done. */
-function planOf(tx: Tx, viewer: Viewer | null, kept: Raw, other: Raw) {
+function planOf(${referrers.length ? "tx" : "_tx"}: Tx, ${referrers.length ? "viewer" : "_viewer"}: Viewer | null, ${usesKept ? "kept" : "_kept"}: Raw, ${referrers.length ? "other" : "_other"}: Raw) {
   const plan = {
     moved: [] as { model: keyof typeof TABLES; key: string; id: number }[],
     trashed: [] as { model: keyof typeof TABLES; id: number }[],
@@ -325,6 +343,12 @@ export async function ${a.preview}(viewer: Viewer | null, first: number, second:
       otherTitle: String(other.${title} ?? other.id),
       // The fields the person decides, and those that take the other's value by the spec's rule.
       asked: asked(raw.kept, raw.other).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
+      refs: Object.fromEntries(
+        Object.entries(REFS).map(([key, [field, titleKey]]) => {
+          const title = (row: Record<string, unknown>) => String((row[field] as Record<string, unknown> | null)?.[titleKey] ?? "");
+          return [key, [title(kept as Record<string, unknown>), title(other as Record<string, unknown>)]];
+        }),
+      ) as Record<string, [string, string]>,
       taken: Object.keys(valuesOf(raw.kept, raw.other, {})).filter((key) => !asked(raw.kept, raw.other).includes(key)),
       moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(ids(c.model)) ?? 0 })).filter((c) => c.count > 0),
       // Where the other goes: the trash, gone for good (no trash), or it stays (no right to delete).
@@ -333,7 +357,7 @@ export async function ${a.preview}(viewer: Viewer | null, first: number, second:
     };
   } catch (error) {
     if (!(error instanceof Conflict)) throw error;
-    return { kept: raw.kept, other: raw.other, keptTitle: String(kept.${title} ?? kept.id), otherTitle: String(other.${title} ?? other.id), asked: [], taken: [], moves: [], goes: "stays" as "trash" | "gone" | "stays", refused: error.message };
+    return { kept: raw.kept, other: raw.other, keptTitle: String(kept.${title} ?? kept.id), otherTitle: String(other.${title} ?? other.id), asked: [], refs: {}, taken: [], moves: [], goes: "stays" as "trash" | "gone" | "stays", refused: error.message };
   }
 }
 
@@ -411,17 +435,17 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: nu
   if (!merged) return 0;
   let stayed = 0;
   for (const m of merged.moved) {
-    const table = MERGED_TABLES[m.model] as typeof ${n.table};
+    const table = MERGED_TABLES[m.model] as unknown as typeof ${n.table};
     const column = table[m.key as keyof typeof table] as never;
     stayed += 1 - tx.update(table).set({ [m.key]: id } as never).where(and(eq(table.id, m.id), eq(column, merged.into))).run().changes;
   }
   for (const c of merged.cleared) {
-    const table = MERGED_TABLES[c.model] as typeof ${n.table};
+    const table = MERGED_TABLES[c.model] as unknown as typeof ${n.table};
     const column = table[c.key as keyof typeof table] as never;
     stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
   }
   for (const d of merged.trashed) {
-    const table = MERGED_TABLES[d.model] as typeof ${n.table};
+    const table = MERGED_TABLES[d.model] as unknown as typeof ${n.table};
     tx.update(table).set({ deletedAt: null, deletedBy: null } as never).where(eq(table.id, d.id)).run();
   }
   // A value the merge gave the kept one, still as it left it, goes back to what it was.

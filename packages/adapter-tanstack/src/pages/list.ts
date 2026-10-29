@@ -39,6 +39,7 @@ import {
   paramsUsed,
   relatedTitle,
   shownTitle,
+  mergeActions,
   standardActions,
   type Texts,
   tableRef,
@@ -565,6 +566,9 @@ export function listParts(
   if (offered.length > 2) view.add("#/kit/Overflow", "Overflow");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
+  // A merge: offered when exactly two are picked (intents.md §3).
+  // One per page: the bar has one place for it.
+  const merges = within ? [] : mergeActions(page, ir).slice(0, 1);
   // Custom actions on the rows picked (A 171): those the page lists whose list is of its records.
   const onRows = within
     ? []
@@ -581,7 +585,8 @@ export function listParts(
       .add("#/kit/Trash", "TrashNotice")
       .add(n.module, trashNames(model).restore);
   const selecting =
-    !within && (many.length > 0 || onRows.length > 0 || Boolean(auth && hasSignIn(auth)));
+    !within &&
+    (many.length > 0 || onRows.length > 0 || merges.length > 0 || Boolean(auth && hasSignIn(auth)));
   if (selecting) {
     view
       .add("react", "useState")
@@ -592,6 +597,11 @@ export function listParts(
       .add(n.module, n.removeMany, n.deleteRule);
     if (longTitle(model)) view.add("#/kit/format", "titleOf");
     for (const a of many) view.add(actionNames(a).module, actionNames(a).many);
+    for (const a of merges)
+      view
+        .add(actionNames(a).module, a.name, actionNames(a).access, actionNames(a).keep, actionNames(a).previewFn)
+        .add("#/kit/MergeDialog", "MergeButton")
+        .add("#/kit/Trash", "rememberTrashed");
     for (const a of onRows)
       view.add(
         actionNames(a).module,
@@ -761,7 +771,31 @@ ${
             },`,
             )
             .join("")}${many.length || onRows.length ? "\n          " : ""}]}
-          deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
+${merges
+  .map(
+    (a) => `          extra={
+            chosen.length === 2 && allows(${actionNames(a).access}, viewer) ? (
+              <MergeButton
+                label=${attr(t.action(a))}${t.actionHelp(a) ? `
+                help=${attr(t.actionHelp(a) as string)}` : ""}
+                concept="action:${a.name}"
+                ui={${n.ui}}
+                app={app}
+                keep={${actionNames(a).keep}}
+                sides={[chosen[0], chosen[1]].map((row) => ({ id: row.id, title: String(${shownTitle(model, `row.${titleField(model) === "id" ? "id" : keyOf(model, titleField(model))}`)}) })) as never}
+                preview={(keep, other) => ${actionNames(a).previewFn}({ data: { keep, other } })}
+                run={(keep, other, choices) => ${a.name}({ data: { keep, other, choices } })}
+                onDone={async (merged) => {
+                  ${model.trash ? `if (merged.goes === "trash") rememberTrashed(${JSON.stringify(model.name)}, merged.other.id, merged.other.title);
+                  ` : ""}setSelected(new Set());
+                  await router.invalidate();
+                }}
+              />
+            ) : null
+          }
+`,
+  )
+  .join("")}          deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
           onDelete={(together) => ${n.removeMany}({ data: { ids: chosen.map((row) => row.id), together } })}${trash ? "\n          trash" : ""}
           onDone={async () => {
             setSelected(new Set());

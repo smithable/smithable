@@ -47,6 +47,7 @@ import {
   ownerKey,
   parentRefs,
   references,
+  mergeActions,
   standardActions,
   type Texts,
   threadLists,
@@ -419,6 +420,19 @@ export function detailRoute(
       ...(askedFields(action).length ? [`${action.name}AskUi`, `${action.name}Asks`] : []),
       ...(askOptions(action, ir, t) ? [actionNames(action).askOptions] : []),
     ]);
+  // A merge: "Merge into…" the record picked, which stays (intents.md §3).
+  const merges = within ? [] : mergeActions(page, ir);
+  for (const action of merges)
+    imports.set(`#/generated/actions/${kebab(action.name)}`, [
+      action.name,
+      actionNames(action).access,
+      actionNames(action).keep,
+      actionNames(action).previewFn,
+    ]);
+  if (merges.length) {
+    imports.set("#/kit/MergeDialog", ["MergeButton"]);
+    imports.set(n.module, [...(imports.get(n.module) ?? []), n.options]);
+  }
   const contact =
     page.contact && auth && hasSignIn(auth) && !within
       ? contactParts(page, model, t, ir)
@@ -518,12 +532,29 @@ export function detailRoute(
   // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
   const history = Boolean(auth && hasSignIn(auth) && !within);
   const keys = history && auth ? hasKeys(ir, auth) : false;
-  const viewer = contact || favorite || offered.length > 0;
+  const viewer = contact || favorite || offered.length > 0 || merges.length > 0;
   const buttons = [
     ...offered.map(
       (a) =>
         `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row, viewer) && (
               ${actionButton(a, "row", page.route, t, ir)}
+            )}`,
+    ),
+    ...merges.map(
+      (a) => `{allows(${actionNames(a).access}, viewer) && (
+              <MergeButton
+                label=${attr(t.action(a))}${t.actionHelp(a) ? `\n                help=${attr(t.actionHelp(a) as string)}` : ""}
+                concept="action:${a.name}"
+                ui={${n.ui}}
+                app={app}
+                keep={${actionNames(a).keep}}
+                into={{ record: { id: row.id, title: String(${heading}) }, loadOptions: ${n.options} as never }}
+                preview={(keep, other) => ${actionNames(a).previewFn}({ data: { keep, other } })}
+                run={(keep, other, choices) => ${a.name}({ data: { keep, other, choices } })}
+                onDone={async (merged) => {${model.trash ? `\n                  if (merged.goes === "trash") rememberTrashed(${JSON.stringify(model.name)}, merged.other.id, merged.other.title);` : ""}
+                  await navigate({ to: ${JSON.stringify(join(page.route, "$id"))}, params: { id: String(merged.kept.id) } });
+                }}
+              />
             )}`,
     ),
     ...(favorite
@@ -545,7 +576,7 @@ ${
 }import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
-${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
+${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length || merges.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
