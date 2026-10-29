@@ -366,7 +366,7 @@ const addAction: Operation<{
         ...(Object.keys(output).length ? { output } : {}),
         ...text,
         ...(contract?.touches ? { touches: contract.touches } : {}),
-        ...(contract?.triggers ? { triggers: contract.triggers } : {}),
+        ...(contract?.triggers?.length ? { triggers: contract.triggers } : {}),
       });
       // A rows action (one input a list of records) shows where a standard action would: on its
       // model's crud page, when there is just one (the page's "actions" is where an action shows).
@@ -439,6 +439,7 @@ const setAction: Operation<{
   reads?: string[];
   writes?: string[];
   triggers?: string[];
+  touches?: string;
 }> = {
   name: "setAction",
   summary:
@@ -467,30 +468,39 @@ const setAction: Operation<{
         'A standard action: the new values, all of them, e.g. { status: done, doneOn: "TODAY()" }.',
       ),
       ...CONTRACT_ARGS,
+      touches: {
+        type: "string",
+        enum: ["none"],
+        description: 'The one word "none": no touches at all, so no fence on the code.',
+      },
     },
   },
   positional: ["action"],
-  describe: ({ action, intent, when, set, reads, writes, triggers }) =>
+  describe: ({ action, intent, when, set, reads, writes, triggers, touches }) =>
     `Change ${
       [
         intent !== undefined && "the intent",
         when && "the condition",
         set && "the values",
-        (reads || writes || triggers) && "the contract",
+        (reads || writes || triggers || touches) && "the contract",
       ]
         .filter(Boolean)
         .join(" and ") || "nothing"
     } of the action ${action}`,
   destructive: () => false,
-  apply({ spec }, { action, intent, when, set, reads, writes, triggers }, ir) {
+  apply({ spec }, { action, intent, when, set, reads, writes, triggers, touches }, ir) {
     const found = ir.actions.find((a) => a.name === action);
     if (!found) throw new OperationError(`There is no action named "${action}".`);
+    if (touches !== undefined && touches !== "none")
+      throw new OperationError('"--touches" takes the one word none, which removes the fence.');
+    if (touches && (reads || writes))
+      throw new OperationError("--touches none goes alone: no --reads or --writes with it.");
     const contract = contractOf(ir, reads, writes, triggers);
-    if (intent === undefined && !when && !set && !contract)
+    if (intent === undefined && !when && !set && !contract && !touches)
       throw new OperationError(
-        "Say what to change: --intent, --when, --set, --reads, --writes or --triggers.",
+        "Say what to change: --intent, --when, --set, --reads, --writes, --triggers or --touches none.",
       );
-    if (contract && !found.custom)
+    if ((contract || touches) && !found.custom)
       throw new OperationError(
         `"${action}" is not a custom action: --reads, --writes and --triggers are a custom action's contract.`,
       );
@@ -516,8 +526,11 @@ const setAction: Operation<{
           ...(writes !== undefined ? { writes } : {}),
         });
       }
-      if (contract.triggers) put("triggers", contract.triggers);
+      // No triggers and an empty list say the same: the work sets off nothing.
+      if (contract.triggers)
+        put("triggers", contract.triggers.length ? contract.triggers : undefined);
     }
+    if (touches && found.custom) put("touches", undefined);
     if (!when && !set) return [];
     const model = found.custom ? undefined : ir.models.find((m) => m.name === found.on);
     if (!model)

@@ -973,7 +973,11 @@ function readMergeFields(
         ? "its records move with the merge"
         : field.sequence || field.byApp
           ? "the app gives it"
-          : undefined;
+          : field.name === model.ownedBy
+            ? "the owner stays the kept record's"
+            : field.type.kind === "relation" && field.type.model === model.name
+              ? `a reference to a ${model.name} moves like the records that point at it`
+              : undefined;
     if (why) {
       ctx.error(keyNode, "invalid-action", `${label}: ${key} takes no rule, ${why}.`);
       continue;

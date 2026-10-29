@@ -25,6 +25,29 @@ const errors = (actions: string) =>
     .diagnostics.filter((d) => d.severity === "error")
     .map((d) => d.message);
 
+test("the owner and a reference to the model itself take no rule: the owner stays, the reference moves", () => {
+  const owned = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Owned }
+models:
+  Customer:
+    fields: { name: string!, manager: User, parent: Customer }
+    ownedBy: manager
+actions:
+  mergeCustomers: { merge: Customer, fields: { manager: keep, parent: other } }
+pages:
+  customers: { crud: Customer }
+`,
+  });
+  expect(owned.diagnostics.filter((d) => d.severity === "error").map((d) => d.message)).toEqual([
+    expect.stringContaining("manager takes no rule, the owner stays the kept record's."),
+    expect.stringContaining(
+      "parent takes no rule, a reference to a Customer moves like the records that point at it.",
+    ),
+  ]);
+});
+
 test("merge: <Model> is a standard action that sets nothing, with keep and a rule per field", () => {
   const { ir, diagnostics } = read(`  mergeCustomers:
     merge: Customer
