@@ -9,4 +9,4 @@ The engine is published as `smithable` (the CLI), `create-smithable` (`npm creat
 - **Licences:** Apache-2.0 for the engine; `@smithable/adapter-tanstack` is `Apache-2.0 AND 0BSD`, its app kit and templates being 0BSD (KIT-LICENSE).
 - **Needs:** nothing stored: npm trusts the workflow as a publisher of `smithable`, `create-smithable` and the `@smithable` packages (OIDC, `id-token: write`), all owned by the release account, not a personal one.
 - **Placeholders:** deprecated at 0.1.0 (0.0.3 of `smithable` and `create-smithable`, 0.0.0-stage and 0.0.1 of the four `@smithable` packages). Never unpublish every version of a package: that frees the name.
-- **Each release:** a section in [CHANGELOG.md](../CHANGELOG.md), with what breaks under **Breaking** ([CONTRIBUTING.md](../CONTRIBUTING.md#compatibility)).
+- **Each release:** a section in [CHANGELOG.md](../CHANGELOG.md), with what breaks under **Breaking** ([CONTRIBUTING.md](../.github/CONTRIBUTING.md#compatibility)).

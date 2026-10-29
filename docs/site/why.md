@@ -96,4 +96,4 @@ YAML because non-developers can read it and a model can write it reliably, and b
 
 ### How do I contribute or report a problem?
 
-Issues and pull requests on [GitHub](https://github.com/smithable/smithable); [CONTRIBUTING.md](../../CONTRIBUTING.md) says what to read first and how changes are checked. Vulnerabilities go to security@smithable.ai, as [SECURITY.md](../../SECURITY.md) explains, not to a public issue.
+Issues and pull requests on [GitHub](https://github.com/smithable/smithable); [CONTRIBUTING.md](../../.github/CONTRIBUTING.md) says what to read first and how changes are checked. Vulnerabilities go to security@smithable.ai, as [SECURITY.md](../../.github/SECURITY.md) explains, not to a public issue.

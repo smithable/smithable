@@ -1,6 +1,6 @@
 # Changelog
 
-One section per release of the `smithable` packages. Each section has a **Breaking** heading. It names which of the three contracts a change hits (see [CONTRIBUTING.md](CONTRIBUTING.md#compatibility)):
+One section per release of the `smithable` packages. Each section has a **Breaking** heading. It names which of the three contracts a change hits (see [CONTRIBUTING.md](.github/CONTRIBUTING.md#compatibility)):
 
 - **the spec**: `smithable.yml` and its companions, versioned by the file's `smithable:` line;
 - **the engine**: operations, CLI flags and the MCP tools, versioned by the packages' semver;

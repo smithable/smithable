@@ -64,7 +64,7 @@ smithable mcp                                   # the same operations as tools f
 smithable deploy --target docker                # release checks, then the container
 ```
 
-To work on Smithable itself, from a clone: `pnpm install`, `pnpm build`, then `node packages/cli/dist/bin.js` in place of `smithable` ([CONTRIBUTING.md](CONTRIBUTING.md)).
+To work on Smithable itself, from a clone: `pnpm install`, `pnpm build`, then `node packages/cli/dist/bin.js` in place of `smithable` ([CONTRIBUTING.md](.github/CONTRIBUTING.md)).
 
 The ten starters, with pictures: [docs.smithable.ai/starters](https://docs.smithable.ai/starters.html). `smithable --help` lists everything. Models for `ask`, `code` and `teach` are set up with environment variables: [docs/ai.md](docs/ai.md). `deploy`, `security --level release` and the container tests need Docker; [running an app on your own machine](https://docs.smithable.ai/self-host.html) covers deploying, backups and updates.
 
@@ -84,8 +84,8 @@ The ten starters, with pictures: [docs.smithable.ai/starters](https://docs.smith
 
 ## Working on it
 
-`pnpm check` is the gate: lint, build, unit tests, then every example generated, type-checked, built, served and regenerated, and Studio driven in a real browser. Before a change to the engine, the examples or the scripts it runs, run it locally through `scripts/gate.sh`, which lets only one full gate run on a machine at a time; for docs and tooling, CI's run on the pull request is the gate. `CLAUDE.md` holds the rules that keep the design honest, such as: `smithable.yml` is authoritative, every change goes through operations, generated apps never depend on Smithable, generation is byte-identical, and every change can be undone. How to contribute, and what to read first: [CONTRIBUTING.md](CONTRIBUTING.md); conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+`pnpm check` is the gate: lint, build, unit tests, then every example generated, type-checked, built, served and regenerated, and Studio driven in a real browser. Before a change to the engine, the examples or the scripts it runs, run it locally through `scripts/gate.sh`, which lets only one full gate run on a machine at a time; for docs and tooling, CI's run on the pull request is the gate. `CLAUDE.md` holds the rules that keep the design honest, such as: `smithable.yml` is authoritative, every change goes through operations, generated apps never depend on Smithable, generation is byte-identical, and every change can be undone. How to contribute, and what to read first: [CONTRIBUTING.md](.github/CONTRIBUTING.md); conduct: [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md).
 
 ## License
 
-Smithable is licensed under [Apache-2.0](LICENSE). The app kit and templates that are copied into every generated app are licensed under [0BSD](packages/adapter-tanstack/KIT-LICENSE), so a generated app carries no obligations from this repository. Contributions are accepted with a [DCO sign-off](CONTRIBUTING.md); vulnerabilities go to [security@smithable.ai](SECURITY.md).
+Smithable is licensed under [Apache-2.0](LICENSE). The app kit and templates that are copied into every generated app are licensed under [0BSD](packages/adapter-tanstack/KIT-LICENSE), so a generated app carries no obligations from this repository. Contributions are accepted with a [DCO sign-off](.github/CONTRIBUTING.md); vulnerabilities go to [security@smithable.ai](.github/SECURITY.md).
