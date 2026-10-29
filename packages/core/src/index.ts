@@ -151,14 +151,22 @@ export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export {
   type Actor,
+  choose,
+  coverageWalk,
+  emptyMemory,
+  type Memory,
   type Move,
   movesFor,
+  REFUSAL_REST,
   type Slot,
   type SlotKind,
   type Step as MoveStep,
   seeded,
+  type Variant,
   valueFor,
+  variantsOf,
   walk,
+  weightOf,
 } from "./moves.js";
 export { writeNamedBy } from "./named-by.js";
 export {
