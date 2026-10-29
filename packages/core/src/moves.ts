@@ -162,8 +162,8 @@ export function movesFor(ir: SpecIR, auth: AuthIR, actor: Actor): Move[] {
         continue;
       }
       const model = ir.models.find((m) => m.name === action.on);
-      // A merge takes two records; sample users do not merge yet.
-      if (!model || action.merge) continue;
+      // A merge takes two records and a split picks some of a list: sample users do neither yet.
+      if (!model || action.merge || action.split) continue;
       // An action on one's own records is open to whoever can own one.
       if (!reaches(allowed, actor, model, may(modelAccess(model, auth).create, actor))) continue;
       const names = new Set([

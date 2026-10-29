@@ -287,6 +287,9 @@ export function summarize(
       sentences.push(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
+    // A merge on it (intents.md §3): its own section says what it does.
+    if (ir.actions.some((a) => !a.custom && a.merge && a.on === model.name))
+      sentences.push(`${capitalize(many(model))} can be merged.`);
     if (model.nameParts?.length) {
       // "its class type", "its class type's name", "its start" (record-names.md §5).
       const words = model.nameParts.flatMap((p) => {
@@ -409,6 +412,21 @@ export function summarize(
       return [`${article(one(target))}${given.length ? ` (${given.join(", ")})` : ""}`];
     });
     const item = one(model);
+    // A split (intents.md §4): "Split an order: the picked lines go to a new order with the same
+    // customer; the order number is new."
+    if (action.split) {
+      const listField = field(action.split.move);
+      const moved = listField ? fieldLabel(model, listField) : action.split.move;
+      const copied = action.split.copy.flatMap((name) => {
+        const f = field(name);
+        return f ? [fieldLabel(model, f)] : [];
+      });
+      const counted = model.fields.filter((f) => f.sequence).map((f) => fieldLabel(model, f));
+      return [
+        `Split ${article(item)}: the picked ${moved} go to a new ${item}${copied.length ? ` with the same ${list(copied)}` : ""}${counted.length ? `; the ${list(counted)} ${counted.length === 1 ? "is" : "are"} new` : ""}.`,
+        ...(action.intent ? [action.intent] : []),
+      ];
+    }
     // A merge (intents.md §3): "Merge two customers: the other's orders and follow ups move to the
     // kept one, which keeps its values; the other goes to the trash."
     if (action.merge) {

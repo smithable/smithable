@@ -119,6 +119,9 @@ export function actionNames(action: ActionIR) {
     keep: `${action.name}Keep`,
     preview: `preview${type}`,
     previewFn: `${action.name}Preview`,
+    /** A split (intents.md §4): its undo, on the server and as the page calls it. */
+    undo: `undo${type}`,
+    undoFn: `${action.name}Undo`,
     module: `#/generated/actions/${kebab(action.name)}`,
     custom: `#/custom/actions/${kebab(action.name)}`,
   };

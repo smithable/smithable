@@ -154,6 +154,8 @@ type Trashed = Row & {
   /** The record it went to the trash with, by title, and how many went with it (delete-together.md). */
   withTitle?: string | null;
   withCount?: number;
+  /** The record it was merged into, by title (intents.md §3). */
+  mergedInto?: string | null;
 };
 
 /**
@@ -183,7 +185,7 @@ export function TrashTable<R extends Trashed>({
   const confirm = useRef<HTMLDialogElement>(null);
   const chosen = rows.filter((row) => selected.has(row.id));
   // A record that went with another is restored with it; one that others went with says how many.
-  const grouped = rows.some((row) => row.withTitle || row.withCount);
+  const grouped = rows.some((row) => row.withTitle || row.withCount || row.mergedInto);
   const shown: RecordUi<R> = {
     ...ui,
     columns: [...ui.columns, "deletedAt", "deletedByName", ...(grouped ? ["together"] : [])],
@@ -211,9 +213,11 @@ export function TrashTable<R extends Trashed>({
         get: (row) =>
           row.withTitle
             ? w.withRoot(row.withTitle)
-            : row.withCount
-              ? w.andRecords(row.withCount)
-              : null,
+            : row.mergedInto
+              ? w.mergedIntoTitle(row.mergedInto)
+              : row.withCount
+                ? w.andRecords(row.withCount)
+                : null,
       },
     ],
   };

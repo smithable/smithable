@@ -149,10 +149,12 @@ const addAction: Operation<{
   reads?: string[];
   writes?: string[];
   triggers?: string[];
+  split?: string;
+  move?: string;
 }> = {
   name: "addAction",
   summary:
-    "Add an action: standard with --on and --set (it sets fields of a record), a merge with --merge Model (two records become one), else custom (its behavior is code in src/custom/actions/).",
+    "Add an action: standard with --on and --set (it sets fields of a record), a merge with --merge Model (two records become one), a split with --split Model --move list (one record becomes two), else custom (its behavior is code in src/custom/actions/).",
   schema: {
     type: "object",
     required: ["action"],
@@ -214,13 +216,24 @@ const addAction: Operation<{
         type: "array",
         items: { type: "string" },
         description:
-          "For a merge: field=rule pairs, the rule keep, other, ask, add (numbers summed) or append (texts joined), e.g. email=ask revenue=add; a field not named is asked.",
+          "For a merge: field=rule pairs, the rule keep, other, ask, add (numbers summed) or append (texts joined), e.g. email=ask revenue=add; a field not named is asked. For a split: the fields the new record takes, e.g. customer deliverTo; unsaid, every stored field but the unique, the sequences and the lists.",
+      },
+      split: refTo(
+        { ref: "model", label: "Splits a record of" },
+        {
+          description:
+            "A split: one record of this model becomes two; the picked records of the list in --move go to a new record.",
+        },
+      ),
+      move: {
+        type: "string",
+        description: "For a split: the list whose picked records go to the new record, e.g. lines.",
       },
     },
   },
   positional: ["action", "...input"],
-  describe: ({ action, on, merge }) =>
-    `Add the ${merge ? "merge" : on ? "standard" : "custom"} action ${action}`,
+  describe: ({ action, on, merge, split }) =>
+    `Add the ${merge ? "merge" : split ? "split" : on ? "standard" : "custom"} action ${action}`,
   destructive: () => false,
   apply(
     { spec },
@@ -241,6 +254,8 @@ const addAction: Operation<{
       reads,
       writes,
       triggers,
+      split,
+      move,
     },
     ir,
   ) {
@@ -258,30 +273,60 @@ const addAction: Operation<{
       else if (page) spec.add(["pages", page.id], "actions", [action]);
     };
     const contract = contractOf(ir, reads, writes, triggers);
-    if (contract && (on || merge !== undefined))
+    if (contract && (on || merge !== undefined || split !== undefined))
       throw new OperationError(
-        "--reads, --writes and --triggers are a custom action's contract: not for a standard action or a merge.",
+        "--reads, --writes and --triggers are a custom action's contract: not for a standard action, a merge or a split.",
       );
+    const somethingElse =
+      on ||
+      Object.keys(set).length ||
+      Object.keys(when).length ||
+      Object.keys(add).length ||
+      copy ||
+      lists.length ||
+      Object.keys(input).length ||
+      Object.keys(output).length;
+    if (split !== undefined || move !== undefined) {
+      if (split === undefined) throw new OperationError('"--move" goes with --split <Model>.');
+      if (move === undefined)
+        throw new OperationError(
+          'A split needs "--move": the list whose picked records go to the new record.',
+        );
+      if (somethingElse || merge !== undefined || keep !== undefined)
+        throw new OperationError(
+          "A split names its model, its list and the fields the new record takes, nothing else: no --on, --merge, --set, --when, --add, --copy, --with, input or output.",
+        );
+      if (split === "User")
+        throw new OperationError("Users cannot be split: they are who signs in.");
+      const model = ir.models.find((m) => m.name === split);
+      if (!model) throw new OperationError(`There is no model named "${split}".`);
+      if (!model.fields.some((f) => f.name === move && f.type.kind === "relation" && f.type.many))
+        throw new OperationError(`${split} has no list named "${move}".`);
+      for (const field of rules)
+        if (!model.fields.some((f) => f.name === field))
+          throw new OperationError(`${split} has no field named "${field}".`);
+      spec.add(["actions"], action, {
+        split,
+        move,
+        ...(rules.length ? { copy: rules } : {}),
+        ...text,
+      });
+      offerOn(split);
+      return [];
+    }
     if (merge !== undefined || keep !== undefined || rules.length) {
       if (merge === undefined)
-        throw new OperationError('"--keep" and "--fields" go with --merge <Model>.');
-      if (
-        on ||
-        Object.keys(set).length ||
-        Object.keys(when).length ||
-        Object.keys(add).length ||
-        copy ||
-        lists.length ||
-        Object.keys(input).length ||
-        Object.keys(output).length
-      )
+        throw new OperationError(
+          '"--keep" goes with --merge <Model>, and "--fields" with --merge or --split.',
+        );
+      if (somethingElse)
         throw new OperationError(
           "A merge names its model and nothing else: no --on, --set, --when, --add, --copy, --with, input or output.",
         );
-      if (!ir.models.some((m) => m.name === merge))
-        throw new OperationError(`There is no model named "${merge}".`);
       if (merge === "User")
         throw new OperationError("Users cannot be merged: they are who signs in.");
+      if (!ir.models.some((m) => m.name === merge))
+        throw new OperationError(`There is no model named "${merge}".`);
       if (keep !== undefined && !["chosen", "oldest", "newest"].includes(keep))
         throw new OperationError('"--keep" is chosen, oldest or newest.');
       const fieldRules: Record<string, string> = {};

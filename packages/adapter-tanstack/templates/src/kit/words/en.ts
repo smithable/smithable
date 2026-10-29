@@ -635,9 +635,22 @@ export const w = {
           : `${other} stays, since you may not delete it`;
     return `${values}${moved}, and ${fate}.`;
   },
+  /** Splitting a record (docs/design/intents.md §4). */
+  splitIt: "Split…",
+  splitWhich: (plural: string) => `Which ${plural.toLowerCase()} go to the new record?`,
+  splitPickOne: (label: string) => `Pick at least one ${label.toLowerCase()} to move.`,
+  splitLeaveOne: (label: string) => `Leave at least one ${label.toLowerCase()} where it is.`,
+  splitMayNotChange: (plural: string) =>
+    `Some of the ${plural.toLowerCase()} picked are not yours to change, so nothing was split.`,
+  splitOriginalGone: "The record this was split from is gone, so there is nothing to undo into.",
+  splitNotSplit: "This record was not made by a split.",
+  splitDone: (from: string) => `Split off from ${from}.`,
+  splitStayed: (n: number) =>
+    `${n} ${n === 1 ? "record was" : "records were"} moved elsewhere since and stay there.`,
+  mergedIntoTitle: (title: string) => `merged into “${title}”`,
   mergeDone: (other: string, kept: string) => `${other} was merged into ${kept}.`,
   mergeStayed: (n: number) =>
-    `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge and stay as they are.`,
+    `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge, or ${n === 1 ? "is" : "are"} not yours to change, and stay as ${n === 1 ? "it is" : "they are"}.`,
 };
 
 export type Words = typeof w;

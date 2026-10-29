@@ -374,6 +374,8 @@ ${tests.join("\n\n")}
       : {};
     const values = JSON.stringify({ ...readable, ...fits });
     // A merge (intents.md §3): two of the viewer's own records, merged by whoever its rule lets.
+    // A split needs records of a list to pick: its rule is core's, its run the app's flows.
+    if (action.split) continue;
     if (action.merge) {
       const pairOf = (owner: string) =>
         `    const one = insert${model.name}(${owner}, ${values});\n    const two = insert${model.name}(${owner}, ${values});\n`;
@@ -550,10 +552,13 @@ ${roles.some((r) => r !== null && r !== "admin") ? `    expect(() => forgetInLog
   }
   const imports = [
     ...ir.models.map((m) => `import { ${camel(m.name)}Data } from "./${kebab(m.name)}.server";`),
-    ...standard.map(
-      (a) =>
-        `import { run${pascal(a.name)}${overMany.has(a.name) ? `, run${pascal(a.name)}Many` : ""} } from "./actions/${kebab(a.name)}.server";`,
-    ),
+    // A split has no test here (above): nothing of it is imported.
+    ...standard
+      .filter((a) => !a.split)
+      .map(
+        (a) =>
+          `import { run${pascal(a.name)}${overMany.has(a.name) ? `, run${pascal(a.name)}Many` : ""} } from "./actions/${kebab(a.name)}.server";`,
+      ),
   ];
   return `${HEADER}// For every model and role: which records a user can read, create, change and delete.
 // "Own" records are owned by the user; "others" by someone else.

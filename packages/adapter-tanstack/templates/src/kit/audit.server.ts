@@ -116,6 +116,21 @@ export function forgetInLog(viewer: Viewer | null, target: Forgotten): number {
             .update(auditLog)
             .set(blank)
             .where(and(eq(auditLog.model, target.model), eq(auditLog.recordId, target.record)))
+            .run().changes +
+          // A merge's line keeps the kept record's values from before and after it (intents.md
+          // §3): they go when either of the two is forgotten.
+          tx
+            .update(auditLog)
+            .set({ details: sql`json_remove(${auditLog.details}, '$.before', '$.after')` })
+            .where(
+              and(
+                eq(auditLog.model, target.model),
+                sql`${auditLog.action} in ('merged', 'merged, kept')`,
+                // Only lines that still hold values: one forgotten before is not counted again.
+                sql`(json_type(${auditLog.details}, '$.before') is not null or json_type(${auditLog.details}, '$.after') is not null)`,
+                sql`(${auditLog.recordId} = ${target.record} or json_extract(${auditLog.details}, '$.into') = ${target.record})`,
+              ),
+            )
             .run().changes;
     audit(tx, viewer, {
       action: "forgotten in the log",
