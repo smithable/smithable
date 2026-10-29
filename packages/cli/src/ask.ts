@@ -14,7 +14,7 @@ import {
   route,
   type Usage,
 } from "@smithable/ai";
-import { validateSpec } from "@smithable/core";
+import { PEOPLE_PATH, validateSpec } from "@smithable/core";
 import { buildContext } from "@smithable/index";
 import { anthropic } from "./anthropic.js";
 import { bedrock } from "./bedrock.js";
@@ -126,6 +126,8 @@ export async function proposeFor(
     ...(read("smithable.content.yml") ? { content: read("smithable.content.yml") } : {}),
     ...(read("smithable.auth.yml") ? { auth: read("smithable.auth.yml") } : {}),
     ...(read("smithable.ux.yml") ? { ux: read("smithable.ux.yml") } : {}),
+    // The sample users, so "add three customers" names new people and counts to five.
+    ...(read(PEOPLE_PATH) !== undefined ? { people: read(PEOPLE_PATH) } : {}),
     plugins: loadPlugins(dir),
     themes: projectThemes(dir),
   };

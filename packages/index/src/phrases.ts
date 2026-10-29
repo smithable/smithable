@@ -13,6 +13,7 @@ import {
   kebab,
   type ModelIR,
   type PageIR,
+  PEOPLE_MAX,
   pageModel,
   patternInfo,
   type RoleGrants,
@@ -52,8 +53,10 @@ export function matchRequest(
   request: string,
   roles: string[] = [],
   auth?: AuthIR,
+  /** The sample users' names (samples/people.yml), for "add three customers". */
+  people: string[] = [],
 ): PhraseMatch | undefined {
-  const read = readRequest(ir, request, roles, auth);
+  const read = readRequest(ir, request, roles, auth, people);
   return read && "operations" in read ? read : undefined;
 }
 
@@ -63,8 +66,9 @@ export function refusalOf(
   request: string,
   roles: string[] = [],
   auth?: AuthIR,
+  people: string[] = [],
 ): PhraseRefusal | undefined {
-  const read = readRequest(ir, request, roles, auth);
+  const read = readRequest(ir, request, roles, auth, people);
   return read && "refusal" in read ? read : undefined;
 }
 
@@ -73,11 +77,12 @@ function readRequest(
   request: string,
   roles: string[],
   auth?: AuthIR,
+  people: string[] = [],
 ): PhraseMatch | PhraseRefusal | undefined {
   const text = normalize(request);
   if (!text) return undefined;
   for (const rule of RULES) {
-    const result = rule.match(text, { ir, roles, auth });
+    const result = rule.match(text, { ir, roles, auth, people, said: request });
     if (Array.isArray(result)) return { operations: result, rule: rule.name };
     // Read, and it cannot be done as asked: the reason, in words the person can act on.
     if (result) return { refusal: result.refusal, rule: rule.name };
@@ -93,7 +98,27 @@ interface Scope {
   roles: string[];
   /** smithable.auth.yml, when the caller has it (sign-up requests need it). */
   auth?: AuthIR;
+  /** The sample users' names, as samples/people.yml has them. */
+  people?: string[];
+  /** The request as typed, for words kept as they were written (a persona). */
+  said?: string;
 }
+
+/** Names for sample users Smith adds, plain and in a few languages; the first ones not taken. */
+const SAMPLE_NAMES = [
+  "Maja Lindqvist",
+  "Tomas Berg",
+  "Sara Nyström",
+  "Jonas Ek",
+  "Elin Holm",
+  "Oskar Lund",
+  "Anna Sjöberg",
+  "Leo Dahl",
+  "Ida Wikström",
+  "Noah Fors",
+];
+
+const COUNTS: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5 };
 
 interface Rule {
   name: string;
@@ -564,6 +589,47 @@ const HEADER_PHRASES = [
 ];
 
 const RULES: Rule[] = [
+  {
+    // "add three customers who book over the week", "add two sample members", "add a visitor":
+    // sample users of a role (sample-users.md §5), named from a list and described by the rest
+    // of the sentence, or by the role's description when nothing follows.
+    name: "sample users",
+    match(text, scope) {
+      const m =
+        /^add (?<count>a|an|one|two|three|four|five|[1-5]) (?:more )?(?:sample )?(?<who>[a-z][a-z -]*?)(?: sample users?| as sample users?)?(?: who (?<what>.+))?$/.exec(
+          text,
+        );
+      if (!m?.groups) return undefined;
+      const count = COUNTS[m.groups.count as string] ?? Number(m.groups.count);
+      const who = (m.groups.who as string).trim();
+      const roles = ["visitor", ...scope.roles];
+      // A role by its name, one or several ("customers", "visitors").
+      const role = roles.find((r) =>
+        [r, `${r}s`, `${r}es`, r.replace(/y$/, "ies")].includes(who.replace(/ /g, "")),
+      );
+      if (!role) return undefined;
+      const people = scope.people ?? [];
+      if (people.length + count > PEOPLE_MAX)
+        return {
+          refusal: `A project has at most ${PEOPLE_MAX} sample users, and this one has ${people.length}: ${people.length < PEOPLE_MAX ? `add ${PEOPLE_MAX - people.length} or fewer, or ` : ""}remove one first.`,
+        };
+      const taken = new Set(people.map((p) => p.toLowerCase()));
+      const names = SAMPLE_NAMES.filter((n) => !taken.has(n.toLowerCase())).slice(0, count);
+      if (names.length < count) return null;
+      // The description as typed ("on Monday mornings"), not as the rules read it.
+      const what = m.groups.what
+        ? (/\bwho\s+(.+?)[\s.!?]*$/i.exec(scope.said ?? "")?.[1] ?? m.groups.what).trim()
+        : undefined;
+      const persona = what
+        ? // As said: "Customers who book over the week."
+          `${who[0]?.toUpperCase()}${who.slice(1)} who ${what}.`
+        : undefined;
+      return names.map((name) => ({
+        op: "addSampleUser",
+        args: { name, role, ...(persona ? { persona } : {}) },
+      }));
+    },
+  },
   {
     // "make the menu stick when I scroll down", "the header should stay at the top", "the top
     // menu should scroll away with the page": the landing pages' header (smithable.ux.yml

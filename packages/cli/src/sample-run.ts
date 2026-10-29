@@ -217,12 +217,11 @@ export function sampleRunner(options: {
       } else if (slot.required && (filled[slot.field] ?? null) === null)
         filled[slot.field] = valueFor(slot, rnd, new Date(appNow));
     }
-    const target =
-      move.records && move.records.length
-        ? move.kind === "run" && move.rows
-          ? { records: [one(move.records)] }
-          : { record: one(move.records) }
-        : {};
+    const target = move.records?.length
+      ? move.kind === "run" && move.rows
+        ? { records: [one(move.records)] }
+        : { record: one(move.records) }
+      : {};
     const answer = await options
       .door("act", { user: person.id, move: move.id, values: filled, ...target })
       .catch(() => undefined);
@@ -315,7 +314,7 @@ export function sampleRunner(options: {
     start(fast = false) {
       touched = now();
       delete state.stopped;
-      if (!load()) return stop("No sample users: add some to samples/people.yml.");
+      if (!load()) return stop("No sample users yet: add one, or ask Smith to add some.");
       if (!state.running) seed = options.seed ?? now() % 1_000_000;
       era++;
       state.running = true;
@@ -334,7 +333,7 @@ export function sampleRunner(options: {
     async step() {
       touched = now();
       if (!state.people.length && !load())
-        return stop("No sample users: add some to samples/people.yml.");
+        return stop("No sample users yet: add one, or ask Smith to add some.");
       const why = capped();
       if (why) return stop(why);
       const due = [...state.people].sort(

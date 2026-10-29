@@ -949,6 +949,7 @@ export function App() {
       {peopleOpen && (
         <PeoplePanel
           state={people}
+          auth={spec.auth}
           onState={setPeople}
           onFollow={(id) =>
             setGo((g) => ({

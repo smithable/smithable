@@ -254,9 +254,12 @@ export function viewerFor(who: unknown): Viewer | null | undefined {
   if (who === "visitor") return null;${
     people.length
       ? `
-  if (!SAMPLE_PEOPLE.some((p) => p.id === who)) return undefined;
+  const person = SAMPLE_PEOPLE.find((p) => p.id === who);
+  if (!person) return undefined;
+  // One added since the seed (Smith's "add three customers") becomes a user the first time.
+  db.insert(user).values({ ...person, emailVerified: true }).onConflictDoNothing().run();
   // The role as the database has it: a change on the users page counts.
-  return db.select({ id: user.id, name: user.name, email: user.email, role: user.role }).from(user).where(eq(user.id, String(who))).get();`
+  return db.select({ id: user.id, name: user.name, email: user.email, role: user.role }).from(user).where(eq(user.id, person.id)).get();`
       : `
   return undefined;`
   }

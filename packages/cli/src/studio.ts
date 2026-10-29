@@ -12,7 +12,6 @@ import {
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { samplePeople } from "@smithable/adapter-tanstack";
 import { type Assumption, describedWith, type Proposal } from "@smithable/ai";
 import {
   BUILT_IN_THEMES,
@@ -20,14 +19,13 @@ import {
   editAsOperations,
   editAsRename,
   findOperation,
-  humanize,
   type OperationArgs,
   sameContent,
   themeThumbnail,
   validateContent,
   validateSpec,
 } from "@smithable/core";
-import { describeChange, summarize } from "@smithable/index";
+import { describeChange } from "@smithable/index";
 import { applyProposal, proposalOutcome, proposeFor, providersFor, usageLine } from "./ask.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
@@ -57,6 +55,7 @@ import {
   traceIdOf,
 } from "./report.js";
 import { projectIndex } from "./rules.js";
+import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
 import { translate } from "./translate.js";
 import { undo, undoChange } from "./undo.js";
@@ -85,14 +84,6 @@ export function readBeta(
     return undefined;
   }
 }
-
-/** The files the sample users' runner reads: the people, and the spec they act in. */
-const PEOPLE_FILES = [
-  "samples/people.yml",
-  "smithable.yml",
-  "smithable.auth.yml",
-  "smithable.content.yml",
-];
 
 // Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
 // repository it is apps/studio's own build.
@@ -528,61 +519,9 @@ export async function studio(
   };
   const changed = (data: unknown) => void settled().then(() => send("changed", data));
   // The sample users (sample-users.md §4–§6), acting in the preview through its door.
-  let peopleLoaded:
-    | { stamp: string; value: ReturnType<Parameters<typeof sampleRunner>[0]["load"]> }
-    | undefined;
   const people = sampleRunner({
-    door: (path, body) =>
-      fetch(`http://127.0.0.1:${previewPort}/_dev/${path}`, {
-        method: body === undefined ? "GET" : "POST",
-        headers: {
-          ...previewHeaders,
-          "x-dev-door": doorSecret,
-          "Content-Type": "application/json",
-        },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        signal: AbortSignal.timeout(30_000),
-      }),
-    // Read again only when one of its files changed: the panel asks for it often.
-    load: () => {
-      const stamp = PEOPLE_FILES.map((f) => {
-        const path = join(dir, f);
-        return existsSync(path) ? statSync(path).mtimeMs : 0;
-      }).join(",");
-      if (peopleLoaded?.stamp === stamp) return peopleLoaded.value;
-      const {
-        ir,
-        auth,
-        content,
-        people: listed = [],
-      } = loadSpec(dir, { out: () => {}, err: () => {} });
-      // The app's ids for them, in the file's order (a visitor has none: the door knows it as such).
-      const ids = samplePeople(listed).map((u) => u.id);
-      const value = {
-        people: listed.map((p) => ({
-          ...p,
-          id: p.role === "visitor" ? "visitor" : (ids.shift() as string),
-        })),
-        summary: ir
-          ? summarize(ir, auth, content)
-              .map((s) => `${s.title}: ${s.sentences.join(" ")}`)
-              .join("\n")
-          : "",
-        // The words a move is said in: each model's and action's label.
-        labels: Object.fromEntries([
-          ...(ir?.models ?? []).map((m) => [
-            m.name,
-            content?.models[m.name]?.label ?? humanize(m.name),
-          ]),
-          ...(ir?.actions ?? []).map((a) => [
-            a.name,
-            content?.actions[a.name]?.label ?? humanize(a.name),
-          ]),
-        ]),
-      };
-      peopleLoaded = { stamp, value };
-      return value;
-    },
+    door: doorAt(`http://127.0.0.1:${previewPort}`, doorSecret, previewHeaders),
+    load: projectPeople(dir),
     providers: () => providersFor(),
     changed: (state) => send("people", state),
   });

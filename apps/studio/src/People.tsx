@@ -2,17 +2,21 @@
 // themselves in the preview. Who they are, what they did and the app's answers, with run, pause
 // and step, and Follow, which opens the preview signed in as one of them. A panel beside the
 // preview, not over it: the point is to watch the app while they act.
-import { useEffect, useRef } from "react";
+import { type AuthIR, PEOPLE_MAX, personaFor, sampleRoles } from "@smithable/core";
+import { useEffect, useRef, useState } from "react";
 import { api, type PeopleState } from "./api";
-import { Button, cx } from "./ui";
+import { Button, cx, Input, Select } from "./ui";
 
 export function PeoplePanel({
   state,
+  auth,
   onState,
   onFollow,
   onClose,
 }: {
   state?: PeopleState;
+  /** smithable.auth.yml as parsed: the roles a sample user may have, and their descriptions. */
+  auth?: AuthIR;
   onState: (state: PeopleState) => void;
   /** Opens the preview signed in as this sample user. */
   onFollow: (id: string) => void;
@@ -26,6 +30,20 @@ export function PeoplePanel({
   const act = (what: "run" | "fast" | "pause" | "step" | "clear") =>
     api.peopleDo(what).then(onState, () => {});
   const feed = [...(state?.feed ?? [])].reverse();
+  const [failure, setFailure] = useState<string>();
+  // Adding and removing are changes to samples/people.yml, through the operations like any other.
+  const change = async (name: string, args: Record<string, unknown>) => {
+    setFailure(undefined);
+    try {
+      const result = await api.operation(name, args);
+      if (!result.ok) setFailure(result.output);
+      else await api.people().then(onState);
+      return result.ok;
+    } catch (error) {
+      setFailure((error as Error).message);
+      return false;
+    }
+  };
   return (
     <dialog
       ref={dialog}
@@ -45,7 +63,10 @@ export function PeoplePanel({
           its own pages and rules. Only in this preview, never in the published app.
         </p>
         {state && state.people.length === 0 && !state.stopped && (
-          <p>No sample users yet: add them to samples/people.yml.</p>
+          <p>
+            No sample users yet. Add one here, or tell Smith "add three customers who book over the
+            week".
+          </p>
         )}
         {state?.stopped && (
           <p role="status" className="text-amber-800">
@@ -96,9 +117,26 @@ export function PeoplePanel({
                     Follow
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  className="h-6"
+                  title={`Remove ${p.name} from the sample users`}
+                  disabled={state.running}
+                  onClick={() => void change("removeSampleUser", { name: p.name })}
+                >
+                  Remove
+                </Button>
               </li>
             ))}
           </ul>
+        )}
+        {failure && (
+          <p role="alert" className="text-red-700">
+            {failure}
+          </p>
+        )}
+        {state && state.people.length < PEOPLE_MAX && !state.running && (
+          <AddPerson auth={auth} onAdd={(args) => change("addSampleUser", args)} />
         )}
         {feed.length > 0 && (
           <div className="space-y-1">
@@ -147,3 +185,74 @@ const time = (at: string) =>
     minute: "2-digit",
     second: "2-digit",
   });
+
+/** One more sample user: a name, a role, and a persona, suggested from the role. */
+function AddPerson({
+  auth,
+  onAdd,
+}: {
+  auth?: AuthIR;
+  onAdd: (args: { name: string; role: string; persona?: string }) => Promise<boolean>;
+}) {
+  const roles = sampleRoles(auth);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [role, setRole] = useState(roles.find((r) => r !== "visitor") ?? "visitor");
+  const [persona, setPersona] = useState(() => personaFor(role, auth));
+  if (!open)
+    return (
+      <Button variant="ghost" onClick={() => setOpen(true)}>
+        Add a sample user
+      </Button>
+    );
+  return (
+    <form
+      aria-label="Add a sample user"
+      className="space-y-2 rounded border border-line p-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        // An empty persona is the role's own description, as the operation gives it.
+        if (
+          await onAdd({
+            name: name.trim(),
+            role,
+            ...(persona.trim() ? { persona: persona.trim() } : {}),
+          })
+        ) {
+          setName("");
+          setOpen(false);
+        }
+      }}
+    >
+      <Input
+        aria-label="Name"
+        placeholder="Name"
+        required
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <Select
+        aria-label="Role"
+        value={role}
+        options={roles}
+        onChange={(e) => {
+          // The persona follows the role until it is written by hand.
+          if (persona === personaFor(role, auth)) setPersona(personaFor(e.target.value, auth));
+          setRole(e.target.value);
+        }}
+      />
+      <Input
+        aria-label="Persona"
+        placeholder="Who they are and what they do, in a sentence"
+        value={persona}
+        onChange={(e) => setPersona(e.target.value)}
+      />
+      <div className="flex gap-2">
+        <Button type="submit">Add</Button>
+        <Button variant="ghost" type="button" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}

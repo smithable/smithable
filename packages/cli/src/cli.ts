@@ -21,6 +21,7 @@ import { clarify, create } from "./new.js";
 import { op } from "./op.js";
 import { backupContinuous, restoreAt } from "./pitr.js";
 import { loadPlugins } from "./plugins.js";
+import { preview } from "./preview.js";
 import { redo } from "./redo.js";
 import { report } from "./report.js";
 import { type Level, security, updateSecurity } from "./security.js";
@@ -209,6 +210,20 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     }
     case "run":
       return runDev(dir, io, values.open !== false);
+    case "preview": {
+      const minutes = Number(values.for ?? 60);
+      const port = Number(values.port ?? 3000);
+      if (!(minutes > 0 && minutes <= 24 * 60) || !Number.isInteger(port)) {
+        io.err("--for is a number of minutes (at most a day), --port a port number.\n");
+        return 2;
+      }
+      return preview(dir, io, {
+        live: values.live === true,
+        fast: values.fast === true,
+        minutes,
+        port,
+      });
+    }
     case "build":
       return build(dir, io);
     case "test":
@@ -357,6 +372,9 @@ const CONFIG = {
     always: { type: "boolean" },
     never: { type: "boolean" },
     ask: { type: "boolean" },
+    live: { type: "boolean" },
+    fast: { type: "boolean" },
+    for: { type: "string" },
   },
 } as const;
 

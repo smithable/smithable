@@ -612,3 +612,34 @@ models:
     expect(matchRequest(read(two), "an appointment takes its barber's time")).toBeUndefined();
   });
 });
+
+test("Smith adds sample users of a role, named from his list, described by the rest of the sentence", () => {
+  expect(
+    matchRequest(ir(), "Add three sales who call customers over the week", ROLES)?.operations,
+  ).toEqual(
+    ["Maja Lindqvist", "Tomas Berg", "Sara Nyström"].map((name) => ({
+      op: "addSampleUser",
+      args: { name, role: "sales", persona: "Sales who call customers over the week." },
+    })),
+  );
+  // Without a description the role's own is used (the operation's default); names taken are skipped.
+  expect(
+    matchRequest(ir(), "add two sample visitors", ROLES, undefined, ["maja lindqvist"])?.operations,
+  ).toEqual([
+    { op: "addSampleUser", args: { name: "Tomas Berg", role: "visitor" } },
+    { op: "addSampleUser", args: { name: "Sara Nyström", role: "visitor" } },
+  ]);
+  expect(matchRequest(ir(), "add an admin", ROLES)?.operations).toHaveLength(1);
+  // At most five: said, not tried.
+  expect(refusalOf(ir(), "add three sales", ROLES, undefined, ["A", "B", "C"])?.refusal).toMatch(
+    /at most 5 sample users, and this one has 3/,
+  );
+  // Not a role: another rule's wording ("add a phone to customers").
+  expect(matchRequest(ir(), "add two customers", ROLES)?.rule).not.toBe("sample users");
+});
+
+test("a sample user's persona keeps the words as typed", () => {
+  expect(
+    matchRequest(ir(), "Add a sales who calls on Monday mornings.", ROLES)?.operations[0]?.args,
+  ).toMatchObject({ persona: "Sales who calls on Monday mornings." });
+});
