@@ -98,9 +98,9 @@ test("a value's fixed choices, and the app's own names where they fit", () => {
       "smithable.auth.yml",
     )?.suggestions.map((s) => s.label);
   };
-  expect(grant("pages: [‸")).toEqual(["all", "customers", "orders", "team"]);
+  expect(grant("pages: [‸")).toEqual(["all", "customers", "orders", "followUps", "team"]);
   expect(grant("write: [Cu‸")).toEqual(["Customer"]);
-  expect(grant("actions: [‸")).toEqual(["all", "mergeCustomers"]);
+  expect(grant("actions: [‸")).toEqual(["all", "mergeCustomers", "scheduleFollowUps"]);
   expect(at(withLine("  customers:", "    mine: ‸")).labels).toEqual(["true", "false"]);
   expect(at(crm.replace(/^navigation:.*$/m, "navigation: [customers, ‸")).labels).toEqual(
     expect.arrayContaining(["orders", "team"]),
@@ -188,8 +188,17 @@ test("a companion file is helped from its own schema, with the spec's names", ()
   expect(auth("smithableAuth: 0.1\n‸")).toEqual(
     expect.arrayContaining(["signIn", "defaultAccess", "roles", "public", "api", "assistant"]),
   );
-  expect(auth("smithableAuth: 0.1\npublic:\n  pages: [‸")).toEqual(["customers", "orders", "team"]);
-  expect(auth("smithableAuth: 0.1\npublic:\n  read: [‸")).toEqual(["Customer", "Order"]);
+  expect(auth("smithableAuth: 0.1\npublic:\n  pages: [‸")).toEqual([
+    "customers",
+    "orders",
+    "followUps",
+    "team",
+  ]);
+  expect(auth("smithableAuth: 0.1\npublic:\n  read: [‸")).toEqual([
+    "Customer",
+    "Order",
+    "FollowUp",
+  ]);
   expect(auth("smithableAuth: 0.1\ndefaultAccess: ‸")).toEqual(["shared", "private"]);
   expect(auth("smithableAuth: 0.1\nassistant:\n  for: [‸")).toEqual(["admin", "sales"]);
   // The ux file: a page's table takes its model's fields.
@@ -198,7 +207,7 @@ test("a companion file is helped from its own schema, with the spec's names", ()
     const found = completeSpec(marked.replace("‸", ""), offset, { spec }, "smithable.ux.yml");
     return found?.suggestions.map((s) => s.label) ?? [];
   };
-  expect(ux("smithableUx: 0.1\npages:\n  ‸")).toEqual(["customers", "orders", "team"]);
+  expect(ux("smithableUx: 0.1\npages:\n  ‸")).toEqual(["customers", "orders", "followUps", "team"]);
   expect(ux("smithableUx: 0.1\npages:\n  orders:\n    table:\n      columns: [‸")).toEqual(
     expect.arrayContaining(["number", "customer", "status", "total"]),
   );

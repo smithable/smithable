@@ -54,7 +54,11 @@ export function MergeDialog({
   keep: "chosen" | "oldest" | "newest";
   preview: (keep: number, other: number) => Promise<MergePreview>;
   run: (keep: number, other: number, choices: Record<string, Choice>) => Promise<unknown>;
-  onDone: (merged: { kept: MergeSide; other: MergeSide; goes: MergePreview["goes"] }) => Promise<unknown>;
+  onDone: (merged: {
+    kept: MergeSide;
+    other: MergeSide;
+    goes: MergePreview["goes"];
+  }) => Promise<unknown>;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -73,7 +77,8 @@ export function MergeDialog({
     setChoices({});
     preview(kept, other.id).then(
       (p) => current && setFacts(p),
-      (error) => current && setFailure(error instanceof Error ? error.message : w.somethingWentWrong),
+      (error) =>
+        current && setFailure(error instanceof Error ? error.message : w.somethingWentWrong),
     );
     return () => {
       current = false;
@@ -220,7 +225,10 @@ export function MergeButton({
   /** The two records picked in a list. */
   sides?: [MergeSide, MergeSide];
   /** On a record's page: the record, and the others it may merge into. */
-  into?: { record: MergeSide; loadOptions: () => Promise<{ value: number | string; label: string }[]> };
+  into?: {
+    record: MergeSide;
+    loadOptions: () => Promise<{ value: number | string; label: string }[]>;
+  };
 }) {
   const [open, setOpen] = useState<[MergeSide, MergeSide]>();
   const [choices, setChoices] = useState<{ value: number; label: string }[]>();

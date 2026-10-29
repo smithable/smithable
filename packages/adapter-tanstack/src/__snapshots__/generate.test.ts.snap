@@ -10118,7 +10118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -16231,7 +16231,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Slots.tsx": "0d049297 kit",
   "src/kit/Together.tsx": "66a45263 kit",
@@ -16265,7 +16265,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -28656,7 +28656,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/Reserve.tsx": "7bc01d86 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "45e867ad kit",
@@ -28695,7 +28695,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -29096,13 +29096,41 @@ export const orders = sqliteTable(
   (t) => [uniqueIndex("orders_number_unique").on(t.number).where(sql\`\${t.deletedAt} is null\`), index("orders_customer_id_idx").on(t.customerId), index("orders_live").on(t.ownerId).where(sql\`\${t.deletedAt} is null\`), index("orders_deleted_with").on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)],
 );
 
+export const followUps = sqliteTable(
+  "follow_ups",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    customerId: integer().notNull().references(() => customers.id, { onDelete: "restrict" }),
+    dueOn: text().notNull(),
+    done: integer({ mode: "boolean" }),
+    note: text(),
+    ownerId: text().references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer({ mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+    /** In the trash since, and by whom (docs/design/trash.md); live records have neither. */
+    deletedAt: integer({ mode: "timestamp_ms" }),
+    deletedBy: text(),
+    /** The record it went to the trash with ("Customer:12"), restored with it (docs/design/delete-together.md). */
+    deletedWith: text(),
+  },
+  (t) => [index("follow_ups_customer_id_idx").on(t.customerId), index("follow_ups_live").on(t.ownerId).where(sql\`\${t.deletedAt} is null\`), index("follow_ups_deleted_with").on(t.deletedWith).where(sql\`\${t.deletedWith} is not null\`)],
+);
+
 export const customersRelations = relations(customers, ({ one, many }) => ({
   accountManager: one(user, { fields: [customers.accountManagerId], references: [user.id] }),
   orders: many(orders),
+  followUps: many(followUps),
 }));
 
 export const ordersRelations = relations(orders, ({ one }) => ({
   customer: one(customers, { fields: [orders.customerId], references: [customers.id] }),
+}));
+
+export const followUpsRelations = relations(followUps, ({ one }) => ({
+  customer: one(customers, { fields: [followUps.customerId], references: [customers.id] }),
 }));
 "
 `;
@@ -29142,6 +29170,21 @@ if (db.select().from(schema.orders).limit(1).all().length === 0) {
     ])
     .run();
 }
+
+if (db.select().from(schema.followUps).limit(1).all().length === 0) {
+  db.insert(schema.followUps)
+    .values([
+    { customerId: 1, dueOn: "2026-04-15", done: false, note: "A short description of 2026-04-15." },
+    { customerId: 2, dueOn: "2026-05-08", done: true, note: "A short description of 2026-05-08." },
+    { customerId: 3, dueOn: "2026-05-31", done: true, note: "A short description of 2026-05-31." },
+    { customerId: 4, dueOn: "2026-06-23", done: false, note: "A short description of 2026-06-23." },
+    { customerId: 5, dueOn: "2026-07-16", done: true, note: "A short description of 2026-07-16." },
+    { customerId: 6, dueOn: "2026-08-08", done: true, note: "A short description of 2026-08-08." },
+    { customerId: 7, dueOn: "2026-08-31", done: false, note: "A short description of 2026-08-31." },
+    { customerId: 8, dueOn: "2026-09-23", done: true, note: "A short description of 2026-09-23." },
+    ])
+    .run();
+}
 "
 `;
 
@@ -29158,6 +29201,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import { forgetInLog, pruneAudit } from "#/kit/audit.server";
 import { customerData } from "./customer.server";
 import { orderData } from "./order.server";
+import { followUpData } from "./follow-up.server";
+import { runMergeCustomers } from "./actions/merge-customers.server";
 
 let counter = 0;
 const next = () => ++counter;
@@ -29222,6 +29267,18 @@ function insertOrder(owner: string | null, values: Record<string, unknown> = {})
   return db
     .insert(schema.orders)
     .values({ ...orderValues(owner), ...values, ownerId: owner })
+    .returning()
+    .get();
+}
+
+function followUpValues(owner: string | null) {
+  return { customerId: insertCustomer(owner).id, dueOn: "2099-01-15", done: null, note: null } as const;
+}
+
+function insertFollowUp(owner: string | null, values: Record<string, unknown> = {}) {
+  return db
+    .insert(schema.followUps)
+    .values({ ...followUpValues(owner), ...values, ownerId: owner })
     .returning()
     .get();
 }
@@ -29366,6 +29423,99 @@ describe("Order", () => {
   });
 });
 
+describe("FollowUp", () => {
+  test("admin", async () => {
+    const viewer = signedIn("admin");
+    const others = insertFollowUp(stranger.id);
+    const own = insertFollowUp(viewer.id);
+    expect({
+      readOthers: await reads(followUpData, viewer, others.id),
+      readOwn: await reads(followUpData, viewer, own.id),
+      create: await can(() => followUpData.create(viewer, followUpValues(viewer.id))),
+      changeOthers: await can(() => followUpData.update(viewer, others.id, followUpValues(stranger.id))),
+      changeOwn: await can(() => followUpData.update(viewer, own.id, followUpValues(viewer.id))),
+      deleteOthers: await can(() => followUpData.remove(viewer, others.id)),
+      deleteOwn: await can(() => followUpData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: true,
+      changeOthers: true,
+      changeOwn: true,
+      deleteOthers: true,
+      deleteOwn: true,
+    });
+  });
+
+  test("sales", async () => {
+    const viewer = signedIn("sales");
+    const others = insertFollowUp(stranger.id);
+    const own = insertFollowUp(viewer.id);
+    expect({
+      readOthers: await reads(followUpData, viewer, others.id),
+      readOwn: await reads(followUpData, viewer, own.id),
+      create: await can(() => followUpData.create(viewer, followUpValues(viewer.id))),
+      changeOthers: await can(() => followUpData.update(viewer, others.id, followUpValues(stranger.id))),
+      changeOwn: await can(() => followUpData.update(viewer, own.id, followUpValues(viewer.id))),
+      deleteOthers: await can(() => followUpData.remove(viewer, others.id)),
+      deleteOwn: await can(() => followUpData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: true,
+      changeOthers: true,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
+  test("a visitor who has not signed in", async () => {
+    const viewer = null;
+    const others = insertFollowUp(stranger.id);
+    expect({
+      readOthers: await reads(followUpData, viewer, others.id),
+      readOwn: false,
+      create: await can(() => followUpData.create(viewer, followUpValues(null))),
+      changeOthers: await can(() => followUpData.update(viewer, others.id, followUpValues(stranger.id))),
+      changeOwn: false,
+      deleteOthers: await can(() => followUpData.remove(viewer, others.id)),
+      deleteOwn: false,
+    }).toEqual({
+      readOthers: false,
+      readOwn: false,
+      create: false,
+      changeOthers: false,
+      changeOwn: false,
+      deleteOthers: false,
+      deleteOwn: false,
+    });
+  });
+});
+
+describe("the mergeCustomers action", () => {
+  test("admin", async () => {
+    const viewer = signedIn("admin");
+    const one = insertCustomer(viewer.id, {});
+    const two = insertCustomer(viewer.id, {});
+    expect(await can(() => runMergeCustomers(viewer, one.id, two.id))).toBe(true);
+  });
+
+  test("sales", async () => {
+    const viewer = signedIn("sales");
+    const one = insertCustomer(viewer.id, {});
+    const two = insertCustomer(viewer.id, {});
+    expect(await can(() => runMergeCustomers(viewer, one.id, two.id))).toBe(false);
+  });
+
+  test("a visitor who has not signed in", async () => {
+    const viewer = null;
+    const one = insertCustomer(stranger.id, {});
+    const two = insertCustomer(stranger.id, {});
+    expect(await can(() => runMergeCustomers(viewer, one.id, two.id))).toBe(false);
+  });
+});
+
 describe("the audit log", () => {
   test("names who created, changed and deleted a record, and what changed", async () => {
     const viewer = signedIn("admin");
@@ -29417,36 +29567,219 @@ describe("the audit log", () => {
 "
 `;
 
-exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/actions/merge-customers.input.ts 1`] = `
-"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { z } from "zod";
-
-/** What the "mergeCustomers" action needs. */
-export const mergeCustomersInput = z.object({
-  keep: z.number().int(),
-  duplicate: z.number().int(),
-});
-
-export type MergeCustomersInput = z.infer<typeof mergeCustomersInput>;
-"
-`;
-
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/actions/merge-customers.server.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { mergeCustomers as implementation } from "#/custom/actions/merge-customers";
-import { customerData } from "#/generated/customer.server";
-import { AccessDenied, check, type Viewer } from "#/kit/access";
-import { mergeCustomersAccess, type MergeCustomersOutput } from "./merge-customers";
-import type { MergeCustomersInput } from "./merge-customers.input";
+import { and, eq, inArray } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { AccessDenied, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
+import { audit } from "#/kit/audit.server";
+import { refusal } from "#/kit/log.server";
+import { w } from "#/kit/words";
+import { customerAccess, customerData } from "#/generated/customer.server";
+import { orderAccess, orderData } from "#/generated/order.server";
+import { followUpAccess, followUpData } from "#/generated/follow-up.server";
+import { orderUi } from "#/generated/order";
+import { followUpUi } from "#/generated/follow-up";
+import { mergeCustomersAccess, mergeCustomersKeep } from "./merge-customers";
 
-/** Runs "mergeCustomers" as \`viewer\`: its rule, the records it names, the run, what it records and tells. */
-export async function runMergeCustomers(viewer: Viewer | null, data: MergeCustomersInput): Promise<MergeCustomersOutput> {
+const TABLES = { "Order": schema.orders, "FollowUp": schema.followUps } as const;
+/**
+ * What becomes of each field (docs/design/intents.md §3): keep (the kept record's), other (the
+ * other's), ask (the person picks where the two differ), add (the sum), append (both texts); an
+ * empty side always takes the other's value.
+ */
+const RULES: Record<string, { rule: "keep" | "other" | "ask" | "add" | "append"; kind: "number" | "text" | "other" }> = {
+  name: { rule: "ask", kind: "text" },
+  email: { rule: "ask", kind: "other" },
+  phone: { rule: "ask", kind: "other" },
+  segment: { rule: "ask", kind: "other" },
+  creditLimit: { rule: "ask", kind: "number" },
+  notes: { rule: "ask", kind: "text" },
+};
+/** A reference the person decides, shown by its title: the row's field and the title's key. */
+const REFS: Record<string, [string, string]> = {  };
+/** The models whose records move, as the form names them. */
+const COUNTED = [{ model: "Order", label: orderUi.label, plural: orderUi.pluralLabel }, { model: "FollowUp", label: followUpUi.label, plural: followUpUi.pluralLabel }];
+
+/** The database or a transaction in it: what the plan reads with. */
+type Tx = Pick<typeof db, "select">;
+type Raw = typeof schema.customers.$inferSelect;
+
+/** No value: nothing, or an empty text (no and zero are values). */
+const empty = (value: unknown) => value === null || value === undefined || value === "";
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** What the person may pick for a field asked: either record's value, the sum or both texts. */
+export type Choice = "kept" | "other" | "sum" | "join";
+
+/** The fields the person decides: asked by the spec, and different on the two (an empty one is not). */
+function asked(kept: Raw, other: Raw): string[] {
+  return Object.keys(RULES).filter((key) => {
+    const a = kept[key as keyof Raw];
+    const b = other[key as keyof Raw];
+    return RULES[key]?.rule === "ask" && !empty(a) && !empty(b) && !same(a, b);
+  });
+}
+
+/** The kept record's new values: each field by its rule, or as the person chose; only what changes. */
+function valuesOf(kept: Raw, other: Raw, chosen: Record<string, Choice>): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+  for (const [key, { rule, kind }] of Object.entries(RULES)) {
+    const a = kept[key as keyof Raw];
+    const b = other[key as keyof Raw];
+    const pick: Choice = empty(a)
+      ? "other"
+      : empty(b)
+        ? "kept"
+        : rule === "ask"
+          ? (chosen[key] ?? "kept")
+          : rule === "other"
+            ? "other"
+            : rule === "add"
+              ? "sum"
+              : rule === "append"
+                ? "join"
+                : "kept";
+    const value =
+      pick === "other"
+        ? b
+        : pick === "sum" && kind === "number"
+          ? Number(a) + Number(b)
+          : pick === "join" && kind === "text"
+            ? \`\${String(a)}
+
+\${String(b)}\`
+            : a;
+    if (!same(value, a)) values[key] = value;
+  }
+  return values;
+}
+
+/** The two, as the viewer may read them: which stays and which goes, with the rights each needs. */
+async function pair(viewer: Viewer | null, first: number, second: number) {
   check(mergeCustomersAccess, viewer);
-  if (data.keep != null && !customerData.canRead(viewer, data.keep)) throw new AccessDenied(true);
-  if (data.duplicate != null && !customerData.canRead(viewer, data.duplicate)) throw new AccessDenied(true);
-  // The implementation may take the viewer too, e.g. to use the data functions as them.
-  const run: (input: MergeCustomersInput, viewer: Viewer | null) => Promise<MergeCustomersOutput> = implementation;
-  return run(data, viewer);
+  if (first === second) throw new Conflict(w.mergeSame);
+  const one = await customerData.get(viewer, first);
+  const two = await customerData.get(viewer, second);
+  if (!one || !two) throw new AccessDenied(viewer !== null);
+  const firstStays = mergeCustomersKeep === "chosen" ? true : mergeCustomersKeep === "oldest" ? one.id < two.id : one.id > two.id;
+  const [kept, other] = firstStays ? [one, two] : [two, one];
+  // Write on the one that stays; the other goes to the trash only where the viewer may delete it,
+  // else it stays, emptied of what moved.
+  if (!allows(customerAccess.write, viewer, kept.accountManagerId)) throw new AccessDenied(true);
+  return { kept, other, goes: allows(customerAccess.delete, viewer, other.accountManagerId) };
+}
+
+/** What the merge does, worked out on the records as they are: refused here when it cannot be done. */
+function planOf(tx: Tx, viewer: Viewer | null, _kept: Raw, other: Raw) {
+  const plan = {
+    moved: [] as { model: keyof typeof TABLES; key: string; id: number }[],
+    trashed: [] as { model: keyof typeof TABLES; id: number }[],
+    cleared: [] as { model: keyof typeof TABLES; key: string; id: number }[],
+  };
+  // Order.customer
+  const rows0 = tx.select({ id: schema.orders.id, owner: schema.orders.ownerId }).from(schema.orders).where(eq(schema.orders.customerId, other.id)).all();
+  for (const row of rows0) {
+    if (!allows(orderAccess.write, viewer, row.owner)) throw new Conflict(w.mergeMayNotChange(orderUi.pluralLabel));
+    plan.moved.push({ model: "Order", key: "customerId", id: row.id });
+  }
+  // FollowUp.customer
+  const rows1 = tx.select({ id: schema.followUps.id, owner: schema.followUps.ownerId }).from(schema.followUps).where(eq(schema.followUps.customerId, other.id)).all();
+  for (const row of rows1) {
+    if (!allows(followUpAccess.write, viewer, row.owner)) throw new Conflict(w.mergeMayNotChange(followUpUi.pluralLabel));
+    plan.moved.push({ model: "FollowUp", key: "customerId", id: row.id });
+  }
+  return plan;
+}
+
+/** The two stored rows, by the ids the viewer may read. */
+function rawOf(tx: Tx, keptId: number, otherId: number) {
+  const row = (id: number) => tx.select().from(schema.customers).where(eq(schema.customers.id, id)).get() as Raw;
+  return { kept: row(keptId), other: row(otherId) };
+}
+
+/**
+ * What merging the two would do, as the viewer may see it: which stays, the values it takes from
+ * the other, and how many records of each kind move; or why it cannot be done.
+ */
+export async function previewMergeCustomers(viewer: Viewer | null, first: number, second: number) {
+  const { kept, other, goes } = await pair(viewer, first, second);
+  const raw = rawOf(db, kept.id, other.id);
+  try {
+    const plan = planOf(db, viewer, raw.kept, raw.other);
+    const ids = (model: string) => plan.moved.filter((m) => m.model === model).map((m) => m.id);
+    // Only what the viewer may read is counted.
+    const readable = {
+      "Order": (moving: number[]) => moving.length ? db.select({ id: schema.orders.id }).from(schema.orders).where(and(inArray(schema.orders.id, moving), orderData.readable(viewer))).all().length : 0,
+      "FollowUp": (moving: number[]) => moving.length ? db.select({ id: schema.followUps.id }).from(schema.followUps).where(and(inArray(schema.followUps.id, moving), followUpData.readable(viewer))).all().length : 0,
+    } as Record<string, (moving: number[]) => number>;
+    return {
+      kept: raw.kept,
+      other: raw.other,
+      keptTitle: String(kept.name ?? kept.id),
+      otherTitle: String(other.name ?? other.id),
+      // The fields the person decides, and those that take the other's value by the spec's rule.
+      asked: asked(raw.kept, raw.other).map((key) => ({ key, kind: RULES[key]?.kind ?? "other" })),
+      refs: Object.fromEntries(
+        Object.entries(REFS).map(([key, [field, titleKey]]) => {
+          const title = (row: Record<string, unknown>) => String((row[field] as Record<string, unknown> | null)?.[titleKey] ?? "");
+          return [key, [title(kept as Record<string, unknown>), title(other as Record<string, unknown>)]];
+        }),
+      ) as Record<string, [string, string]>,
+      taken: Object.keys(valuesOf(raw.kept, raw.other, {})).filter((key) => !asked(raw.kept, raw.other).includes(key)),
+      moves: COUNTED.map((c) => ({ ...c, count: readable[c.model]?.(ids(c.model)) ?? 0 })).filter((c) => c.count > 0),
+      // Where the other goes: the trash, gone for good (no trash), or it stays (no right to delete).
+      goes: (!goes ? "stays" : "trash") as "trash" | "gone" | "stays",
+      refused: null as string | null,
+    };
+  } catch (error) {
+    if (!(error instanceof Conflict)) throw error;
+    return { kept: raw.kept, other: raw.other, keptTitle: String(kept.name ?? kept.id), otherTitle: String(other.name ?? other.id), asked: [], refs: {}, taken: [], moves: [], goes: "stays" as "trash" | "gone" | "stays", refused: error.message };
+  }
+}
+
+/**
+ * Merges the two as the viewer: every reference to the other moves to the kept record, which keeps
+ * the values its fields' rules and the person's choices give, and the other goes to the trash. Moved records are moved,
+ * not changed: no rules of a change, no "changed" events, nothing told.
+ */
+export async function runMergeCustomers(viewer: Viewer | null, first: number, second: number, chosen: Record<string, Choice> = {}) {
+  const { kept, other, goes } = await pair(viewer, first, second);
+  const when = new Date();
+  try {
+    db.transaction((tx) => {
+      const raw = rawOf(tx, kept.id, other.id);
+      const plan = planOf(tx, viewer, raw.kept, raw.other);
+      for (const m of plan.moved) {
+        const table = TABLES[m.model];
+        tx.update(table).set({ [m.key]: raw.kept.id }).where(eq(table.id, m.id)).run();
+      }
+      for (const c of plan.cleared) {
+        const table = TABLES[c.model];
+        tx.update(table).set({ [c.key]: null }).where(eq(table.id, c.id)).run();
+      }
+      for (const d of plan.trashed) {
+        const table = TABLES[d.model];
+        if ((["Order", "FollowUp"] as string[]).includes(d.model))
+          tx.update(table).set({ deletedAt: when, deletedBy: personOf(viewer) } as never).where(eq(table.id, d.id)).run();
+        else tx.delete(table).where(eq(table.id, d.id)).run();
+      }
+      const values = valuesOf(raw.kept, raw.other, chosen);
+      const changed = Object.keys(values);
+      // The other goes to the trash, its unique values released as a trashed record's are.
+      if (goes) tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(eq(schema.customers.id, raw.other.id)).run();
+      // After the other has gone, so a unique value it gives the kept one is free (one it keeps
+      // while it stays is refused as a taken value).
+      if (changed.length) tx.update(schema.customers).set(values as Partial<Raw>).where(eq(schema.customers.id, raw.kept.id)).run();
+      // What moved, so Restore can put it back (by ids and field names, never values).
+      audit(tx, viewer, { action: "merged", model: "Customer", record: raw.other.id, title: other.name, details: { into: raw.kept.id, by: "mergeCustomers", moved: plan.moved, trashed: plan.trashed, cleared: plan.cleared, before: Object.fromEntries(changed.map((key) => [key, raw.kept[key as keyof Raw]])), after: values } });
+      audit(tx, viewer, { action: "mergeCustomers", model: "Customer", record: raw.kept.id, fields: changed, details: { merged: raw.other.id } });
+    });
+  } catch (error) {
+    throw refusal(error);
+  }
+  return { kept: kept.id, other: other.id, stays: !goes };
 }
 "
 `;
@@ -29454,53 +29787,118 @@ export async function runMergeCustomers(viewer: Viewer | null, data: MergeCustom
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/actions/merge-customers.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { z } from "zod";
+import type { Rule } from "#/kit/access";
+import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+import { previewMergeCustomers, runMergeCustomers } from "./merge-customers.server";
+
+/** Who may run the "mergeCustomers" merge: its grant, with write on customers. */
+export const mergeCustomersAccess: Rule = { public: false, roles: ["admin"], owner: false };
+
+/** Which of the two stays: the person's choice, the oldest or the newest. */
+export const mergeCustomersKeep = "chosen";
+
+/** The two records: the one the person keeps (or the first picked) and the other. */
+const pair = z.object({ keep: z.number().int(), other: z.number().int() });
+/** And for each field asked, what the person picked. */
+const choices = z.record(z.string(), z.enum(["kept", "other", "sum", "join"])).default({});
+
+/** What merging the two would do, as the viewer may see it: the form's sentence. */
+export const mergeCustomersPreview = createServerFn({ method: "POST" })
+  .validator(pair)
+  .handler(async ({ data }) => previewMergeCustomers(await currentViewer(), data.keep, data.other));
+
+export const mergeCustomers = createServerFn({ method: "POST" })
+  .validator(pair.extend({ choices }))
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
+    return runMergeCustomers(viewer, data.keep, data.other, data.choices);
+  });
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/actions/schedule-follow-ups.input.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { z } from "zod";
+
+/** What the "scheduleFollowUps" action needs. */
+export const scheduleFollowUpsInput = z.object({
+  customer: z.number().int(),
+  count: z.number().int(),
+  everyDays: z.number().int(),
+});
+
+export type ScheduleFollowUpsInput = z.infer<typeof scheduleFollowUpsInput>;
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/actions/schedule-follow-ups.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { scheduleFollowUps as implementation } from "#/custom/actions/schedule-follow-ups";
+import { customerData } from "#/generated/customer.server";
+import { AccessDenied, check, type Viewer } from "#/kit/access";
+import { scheduleFollowUpsAccess, type ScheduleFollowUpsOutput } from "./schedule-follow-ups";
+import type { ScheduleFollowUpsInput } from "./schedule-follow-ups.input";
+
+/** Runs "scheduleFollowUps" as \`viewer\`: its rule, the records it names, the run, what it records and tells. */
+export async function runScheduleFollowUps(viewer: Viewer | null, data: ScheduleFollowUpsInput): Promise<ScheduleFollowUpsOutput> {
+  check(scheduleFollowUpsAccess, viewer);
+  if (data.customer != null && !customerData.canRead(viewer, data.customer)) throw new AccessDenied(true);
+  // The implementation may take the viewer too, e.g. to use the data functions as them.
+  const run: (input: ScheduleFollowUpsInput, viewer: Viewer | null) => Promise<ScheduleFollowUpsOutput> = implementation;
+  return run(data, viewer);
+}
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/actions/schedule-follow-ups.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createServerFn } from "@tanstack/react-start";
 import { check, type Rule } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
 import type { ModelUi } from "#/kit/model";
 import { currentViewer } from "#/lib/viewer.server";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { mergeCustomersInput } from "./merge-customers.input";
-import { runMergeCustomers } from "./merge-customers.server";
+import { scheduleFollowUpsInput } from "./schedule-follow-ups.input";
+import { runScheduleFollowUps } from "./schedule-follow-ups.server";
 
-export type { MergeCustomersInput } from "./merge-customers.input";
+export type { ScheduleFollowUpsInput } from "./schedule-follow-ups.input";
 
-/** Who may run the "mergeCustomers" action. */
-export const mergeCustomersAccess: Rule = { public: false, roles: ["admin"], owner: false };
+/** Who may run the "scheduleFollowUps" action. */
+export const scheduleFollowUpsAccess: Rule = { public: false, roles: ["admin"], owner: false };
 
-/** What the "mergeCustomers" action returns. */
-export type MergeCustomersOutput = void;
+/** What the "scheduleFollowUps" action returns. */
+export type ScheduleFollowUpsOutput = { created: number };
 
-export const mergeCustomersUi: ModelUi = {
-  label: "Merge customers",
-  pluralLabel: "Merge customers",
+export const scheduleFollowUpsUi: ModelUi = {
+  label: "Schedule follow ups",
+  pluralLabel: "Schedule follow ups",
   titleField: "id",
   columns: [],
   fields: [
     {
-      name: "keep",
-      label: "Keep",
+      name: "customer",
+      label: "Customer",
       kind: "relation",
       required: true,
-      relation: { key: "keep", titleField: "name" },
+      relation: { key: "customer", titleField: "name" },
     },
-    {
-      name: "duplicate",
-      label: "Duplicate",
-      kind: "relation",
-      required: true,
-      relation: { key: "duplicate", titleField: "name" },
-    },
+    { name: "count", label: "Count", kind: "int", required: true },
+    { name: "everyDays", label: "Every days", kind: "int", required: true },
   ],
 };
 
-export const mergeCustomers = createServerFn({ method: "POST" })
-  .validator(mergeCustomersInput)
+export const scheduleFollowUps = createServerFn({ method: "POST" })
+  .validator(scheduleFollowUpsInput)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    check(mergeCustomersAccess, viewer);
+    check(scheduleFollowUpsAccess, viewer);
     // A custom action changes things like any form: limited per person and address.
     writeAllowed(viewer, getRequestHeaders());
-    return runMergeCustomers(viewer, data);
+    return runScheduleFollowUps(viewer, data);
   });
 "
 `;
@@ -29529,11 +29927,14 @@ import type { Offer } from "#/kit/tools";
 
 import { customerData } from "./customer.server";
 import { orderData } from "./order.server";
+import { followUpData } from "./follow-up.server";
 import { customerUi } from "./customer";
+import { followUpUi } from "./follow-up";
 import { orderUi } from "./order";
 
 import { customerSchema } from "#/generated/customer.schema";
 import { orderSchema } from "#/generated/order.schema";
+import { followUpSchema } from "#/generated/follow-up.schema";
 
 const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
@@ -29649,13 +30050,48 @@ export function orderFromApi(body: unknown, current?: Record<string, unknown>) {
   return orderSchema.parse(values);
 }
 
+/** A follow up as the API gives it. */
+export function followUpToApi(row: Record<string, any>) {
+  return {
+    id: row.id as number,
+    customer: row.customerId ?? null,
+    dueOn: row.dueOn ?? null,
+    done: row.done ?? null,
+    note: row.note ?? null,
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : row.updatedAt,
+  };
+}
+
+/** A follow up's values from a body: all of them, or a change to \`current\`. */
+export function followUpFromApi(body: unknown, current?: Record<string, unknown>) {
+  const given = fieldsOf(body, ["customer", "dueOn", "done", "note"]);
+  const values: Record<string, unknown> = { ...current };
+  for (const [key, v] of Object.entries(given))
+    switch (key) {
+      case "customer":
+        values.customerId = v === null ? null : whole(v, "customer");
+        break;
+      case "dueOn":
+        values.dueOn = v;
+        break;
+      case "done":
+        values.done = v;
+        break;
+      case "note":
+        values.note = v;
+        break;
+    }
+  return followUpSchema.parse(values);
+}
+
 /**
  * What each caller is offered (by the key's role, and for a visitor without a key): the tools,
  * the summary, and what describe answers per kind, as that caller may use it.
  */
 const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
   "admin": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role admin.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -29670,7 +30106,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             },
             "where": {
@@ -29721,7 +30158,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             },
             "of": {
@@ -29761,7 +30199,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             },
             "id": {
@@ -29787,7 +30226,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             }
           }
@@ -29800,11 +30240,12 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     ],
     "describe": {
       "Customer": "Customer: A company we have a commercial relationship with.\\nFields:\\n- name*: Name.\\n- email: Email. Unique.\\n- phone: Phone.\\n- segment* (smb | enterprise | government): Segment. Starts as smb.\\n- creditLimit (money): Credit limit. Maximum outstanding balance before new orders are held.\\n- notes: Notes.\\n- accountManager -> User: Account manager.\\nA record belongs to its accountManager.",
-      "Order": "Order\\nFields:\\n- number*: Number. Unique.\\n- customer* -> Customer: Customer.\\n- status* (draft | placed | shipped | canceled): Status. Starts as draft.\\n- total* (money): Total.\\n- shippingMethod* (standard | express): Shipping method. Starts as standard.\\n- shippingCost (money, computed): Shipping cost. Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.\\n- placedAt (datetime): Placed at."
+      "Order": "Order\\nFields:\\n- number*: Number. Unique.\\n- customer* -> Customer: Customer.\\n- status* (draft | placed | shipped | canceled): Status. Starts as draft.\\n- total* (money): Total.\\n- shippingMethod* (standard | express): Shipping method. Starts as standard.\\n- shippingCost (money, computed): Shipping cost. Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.\\n- placedAt (datetime): Placed at.",
+      "FollowUp": "FollowUp\\nFields:\\n- customer* -> Customer: Customer.\\n- dueOn* (date): Due on.\\n- done (yes/no): Done.\\n- note: Note."
     }
   },
   "sales": {
-    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "summary": "Acme CRM: Lightweight CRM for a small B2B sales team.\\nCustomer (customers): name*, email, phone, segment* (smb | enterprise | government), creditLimit (money), notes, accountManager -> User. Title: name.\\nOrder (orders): number*, customer* -> Customer, status* (draft | placed | shipped | canceled), total* (money), shippingMethod* (standard | express), shippingCost (money, computed), placedAt (datetime). Title: number.\\nFollowUp (follow ups): customer* -> Customer, dueOn* (date), done (yes/no), note. Title: note.\\n* required. You act as someone with the role sales.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
       {
         "name": "find",
@@ -29819,7 +30260,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             },
             "where": {
@@ -29870,7 +30312,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             },
             "of": {
@@ -29910,7 +30353,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             },
             "id": {
@@ -29936,7 +30380,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
               "type": "string",
               "enum": [
                 "Customer",
-                "Order"
+                "Order",
+                "FollowUp"
               ]
             }
           }
@@ -29949,7 +30394,8 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
     ],
     "describe": {
       "Customer": "Customer: A company we have a commercial relationship with.\\nFields:\\n- name*: Name.\\n- email: Email. Unique.\\n- phone: Phone.\\n- segment* (smb | enterprise | government): Segment. Starts as smb.\\n- creditLimit (money): Credit limit. Maximum outstanding balance before new orders are held.\\n- notes: Notes.\\n- accountManager -> User: Account manager.\\nA record belongs to its accountManager.",
-      "Order": "Order\\nFields:\\n- number*: Number. Unique.\\n- customer* -> Customer: Customer.\\n- status* (draft | placed | shipped | canceled): Status. Starts as draft.\\n- total* (money): Total.\\n- shippingMethod* (standard | express): Shipping method. Starts as standard.\\n- shippingCost (money, computed): Shipping cost. Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.\\n- placedAt (datetime): Placed at."
+      "Order": "Order\\nFields:\\n- number*: Number. Unique.\\n- customer* -> Customer: Customer.\\n- status* (draft | placed | shipped | canceled): Status. Starts as draft.\\n- total* (money): Total.\\n- shippingMethod* (standard | express): Shipping method. Starts as standard.\\n- shippingCost (money, computed): Shipping cost. Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.\\n- placedAt (datetime): Placed at.",
+      "FollowUp": "FollowUp\\nFields:\\n- customer* -> Customer: Customer.\\n- dueOn* (date): Due on.\\n- done (yes/no): Done.\\n- note: Note."
     }
   }
 };
@@ -29962,8 +30408,9 @@ export function offerFor(viewer: Viewer | null): Offer & { describe: Record<stri
 
 /** Each kind's data functions and conversions, its title field, and its references' titles. */
 const KINDS = {
-  Customer: { data: customerData, toApi: customerToApi, fromApi: customerFromApi, title: "name", refs: {"accountManager":"name"}, searched: ["name","email","phone","notes"], lists: {"orders":{"kind":"Order","ref":"customer"}} as Record<string, { kind: string; ref: string }>, label: "customer", named: (viewer: Viewer | null, text: string) => customerData.named(viewer, text) },
+  Customer: { data: customerData, toApi: customerToApi, fromApi: customerFromApi, title: "name", refs: {"accountManager":"name"}, searched: ["name","email","phone","notes"], lists: {"orders":{"kind":"Order","ref":"customer"},"followUps":{"kind":"FollowUp","ref":"customer"}} as Record<string, { kind: string; ref: string }>, label: "customer", named: (viewer: Viewer | null, text: string) => customerData.named(viewer, text) },
   Order: { data: orderData, toApi: orderToApi, fromApi: orderFromApi, title: "number", refs: {"customer":"name"}, searched: ["number"], lists: {} as Record<string, { kind: string; ref: string }>, label: "order", named: (viewer: Viewer | null, text: string) => orderData.named(viewer, text) },
+  FollowUp: { data: followUpData, toApi: followUpToApi, fromApi: followUpFromApi, title: "note", refs: {"customer":"name"}, searched: ["note"], lists: {} as Record<string, { kind: string; ref: string }>, label: "follow up", named: (viewer: Viewer | null, text: string) => followUpData.named(viewer, text) },
 };
 type Kind = (typeof KINDS)[keyof typeof KINDS];
 
@@ -30153,6 +30600,12 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
         throw new NotFound(\`No order \${id} in the trash that you may restore.\`);
       return orderToApi((await orderData.get(viewer, id)) as Record<string, any>);
     }
+    case "restoreFollowUp": {
+      const id = Number(args.id);
+      if (!followUpData.restore(viewer, [id]).restored)
+        throw new NotFound(\`No follow up \${id} in the trash that you may restore.\`);
+      return followUpToApi((await followUpData.get(viewer, id)) as Record<string, any>);
+    }
         default:
           throw new NotFound(\`There is no action "\${String(args.action)}".\`);
       }
@@ -30188,10 +30641,12 @@ const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
     kindWords(customerUi, ["name","email","phone","segment","creditLimit","notes","accountManager"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"phone","by":"text"},{"field":"segment","by":"value","values":["smb","enterprise","government"]},{"field":"creditLimit","by":"number"},{"field":"accountManager","by":"reference","model":"User"}], ["creditLimit"], ["segment","accountManager"], "/customers"),
     kindWords(orderUi, ["number","customer","status","total","shippingMethod","placedAt"], [{"field":"number","by":"text"},{"field":"customer","by":"reference","model":"Customer"},{"field":"status","by":"value","values":["draft","placed","shipped","canceled"]},{"field":"total","by":"number"},{"field":"shippingMethod","by":"value","values":["standard","express"]},{"field":"placedAt","by":"date"}], ["total"], ["customer","status","shippingMethod","placedAt"], "/orders"),
+    kindWords(followUpUi, ["customer","dueOn","done","note"], [{"field":"customer","by":"reference","model":"Customer"},{"field":"dueOn","by":"date"},{"field":"done","by":"yesNo"}], [], ["customer","dueOn","done"], "/follow-ups"),
   ],
   "sales": () => [
     kindWords(customerUi, ["name","email","phone","segment","creditLimit","notes","accountManager"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"phone","by":"text"},{"field":"segment","by":"value","values":["smb","enterprise","government"]},{"field":"creditLimit","by":"number"},{"field":"accountManager","by":"reference","model":"User"}], ["creditLimit"], ["segment","accountManager"], "/customers"),
     kindWords(orderUi, ["number","customer","status","total","shippingMethod","placedAt"], [{"field":"number","by":"text"},{"field":"customer","by":"reference","model":"Customer"},{"field":"status","by":"value","values":["draft","placed","shipped","canceled"]},{"field":"total","by":"number"},{"field":"shippingMethod","by":"value","values":["standard","express"]},{"field":"placedAt","by":"date"}], ["total"], ["customer","status","shippingMethod","placedAt"], "/orders"),
+    kindWords(followUpUi, ["customer","dueOn","done","note"], [{"field":"customer","by":"reference","model":"Customer"},{"field":"dueOn","by":"date"},{"field":"done","by":"yesNo"}], [], ["customer","dueOn","done"], "/follow-ups"),
   ],
 };
 
@@ -30279,7 +30734,9 @@ import { BadInput } from "#/kit/refusal";
 import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
 import { afterChange, afterDelete } from "./hooks";
 import { orderData } from "./order.server";
+import { followUpData } from "./follow-up.server";
 import { orderUi } from "./order";
+import { followUpUi } from "./follow-up";
 import { customerUi, type CustomerSettable } from "./customer";
 import "./trash.server";
 
@@ -30293,6 +30750,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
     { model: "Order", label: orderUi.label, plural: orderUi.pluralLabel, from: "Customer", depth: 1, count: tx.select({ n: count() }).from(schema.orders).where(and(eq(schema.orders.customerId, id), isNull(schema.orders.deletedAt))).get()?.n ?? 0 },
+    { model: "FollowUp", label: followUpUi.label, plural: followUpUi.pluralLabel, from: "Customer", depth: 1, count: tx.select({ n: count() }).from(schema.followUps).where(and(eq(schema.followUps.customerId, id), isNull(schema.followUps.deletedAt))).get()?.n ?? 0 },
   ];
   // A deeper member is named when its parent has records ("and what belongs to them").
   const with_: typeof pointing = [];
@@ -30301,6 +30759,50 @@ function usedBy(tx: Tx, id: number, title: string) {
   if (!with_.length) return undefined;
   const loose = [] as { model: string; label: string; plural: string; count: number }[];
   return { id, title, model: "Customer", label: customerUi.label, with: with_, loose, together: true, missing: [] };
+}
+
+/** The tables a merge of customers moves records in, by model. */
+const MERGED_TABLES = { "Order": schema.orders, "FollowUp": schema.followUps } as const;
+
+/**
+ * Puts back what merging this customer away moved, as far as it is still as the merge left it;
+ * returns how many things were changed since and stay as they are.
+ */
+function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: number): number {
+  const line = tx.select({ details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, "Customer"), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "merged"))).orderBy(desc(schema.auditLog.id)).get();
+  const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; before: Record<string, unknown>; after: Record<string, unknown> } | undefined;
+  if (!merged) return 0;
+  let stayed = 0;
+  for (const m of merged.moved) {
+    const table = MERGED_TABLES[m.model] as unknown as typeof schema.customers;
+    const column = table[m.key as keyof typeof table] as never;
+    stayed += 1 - tx.update(table).set({ [m.key]: id } as never).where(and(eq(table.id, m.id), eq(column, merged.into))).run().changes;
+  }
+  for (const c of merged.cleared) {
+    const table = MERGED_TABLES[c.model] as unknown as typeof schema.customers;
+    const column = table[c.key as keyof typeof table] as never;
+    stayed += 1 - tx.update(table).set({ [c.key]: c.id === id ? merged.into : id } as never).where(and(eq(table.id, c.id), isNull(column))).run().changes;
+  }
+  for (const d of merged.trashed) {
+    const table = MERGED_TABLES[d.model] as unknown as typeof schema.customers;
+    tx.update(table).set({ deletedAt: null, deletedBy: null } as never).where(eq(table.id, d.id)).run();
+  }
+  // A value the merge gave the kept one, still as it left it, goes back to what it was.
+  const kept = tx.select().from(schema.customers).where(eq(schema.customers.id, merged.into)).get();
+  if (kept) {
+    // Dates were written as text in the line: compared as the line has them.
+    const now = JSON.parse(JSON.stringify(kept)) as Record<string, unknown>;
+    const keys = Object.keys(merged.after);
+    const untouched = keys.filter((key) => JSON.stringify(now[key]) === JSON.stringify(merged.after[key]));
+    stayed += keys.length - untouched.length;
+    if (untouched.length) tx.update(schema.customers).set(Object.fromEntries(untouched.map((key) => [key, revived(kept[key as keyof typeof kept], merged.before[key])]))).where(eq(schema.customers.id, merged.into)).run();
+  }
+  return stayed;
+}
+
+/** A value from the line as its column takes it: a date and time back from its text. */
+function revived(like: unknown, value: unknown): unknown {
+  return like instanceof Date && typeof value === "string" ? new Date(value) : value;
 }
 
 /** Who may read, create, change and delete customers. */
@@ -30636,10 +31138,10 @@ export const customerData = {
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.customers.findFirst({
       where: and(eq(schema.customers.id, id), customerData.readable(viewer)),
-      with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) } },
+      with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) }, followUps: { where: followUpData.readable(viewer) } },
     });
     const found = fetched && customerData.shownRefs(viewer, [fetched])[0];
-    const row = found && { ...found, orders: found.orders.map((r) => orderData.shownTo(viewer, r)) };
+    const row = found && { ...found, orders: found.orders.map((r) => orderData.shownTo(viewer, r)), followUps: found.followUps.map((r) => followUpData.shownTo(viewer, r)) };
     return row ? row : null;
   },
 
@@ -30715,6 +31217,7 @@ export const customerData = {
           if (used) {
             const tag = \`Customer:\${id}\`;
             orderData.trashWith(tx, viewer, eq(schema.orders.customerId, id), tag, when);
+            followUpData.trashWith(tx, viewer, eq(schema.followUps.customerId, id), tag, when);
           }
         }
       });
@@ -30747,6 +31250,7 @@ export const customerData = {
             if (used) {
               const tag = \`Customer:\${row.id}\`;
               orderData.trashWith(tx, viewer, eq(schema.orders.customerId, row.id), tag, when);
+              followUpData.trashWith(tx, viewer, eq(schema.followUps.customerId, row.id), tag, when);
             }
           }
         } catch (error) {
@@ -30782,6 +31286,8 @@ export const customerData = {
     const tags = rows.map((row) => \`Customer:\${row.id}\`);
     for (const r of db.select({ tag: schema.orders.deletedWith, n: count() }).from(schema.orders).where(inArray(schema.orders.deletedWith, tags)).groupBy(schema.orders.deletedWith).all())
       withCount.set(r.tag as string, (withCount.get(r.tag as string) ?? 0) + r.n);
+    for (const r of db.select({ tag: schema.followUps.deletedWith, n: count() }).from(schema.followUps).where(inArray(schema.followUps.deletedWith, tags)).groupBy(schema.followUps.deletedWith).all())
+      withCount.set(r.tag as string, (withCount.get(r.tag as string) ?? 0) + r.n);
     return rows.map((row) => ({ ...row, deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null, withCount: withCount.get(\`Customer:\${row.id}\`) ?? 0 }));
   },
 
@@ -30789,7 +31295,7 @@ export const customerData = {
   async trashed(viewer: Viewer | null, id: number) {
     const fetched = await db.query.customers.findFirst({
       where: and(eq(schema.customers.id, id), and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer))),
-      with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) } },
+      with: { accountManager: { columns: { id: true, name: true } }, orders: { where: orderData.readable(viewer) }, followUps: { where: followUpData.readable(viewer) } },
     });
     const row = fetched && customerData.shownRefs(viewer, [fetched])[0];
     if (!row || !allows(customerAccess.delete, viewer, row.accountManagerId)) return null;
@@ -30808,26 +31314,30 @@ export const customerData = {
   },
 
   /** Takes the chosen customers out of the trash, those the viewer may delete. */
-  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
+  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number; stayed: number } {
     const rows = db
       .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
       .where(and(inArray(schema.customers.id, ids), and(isNotNull(schema.customers.deletedAt), customerData.scoped(viewer))))
       .all().filter((row) => allows(customerAccess.delete, viewer, row.accountManagerId));
     // A unique value a live record has taken since refuses it, as it refuses a new record.
+    let stayed = 0;
     try {
       db.transaction((tx) => {
         for (const row of rows) {
+          // What a merge moved goes back first, so a value it gave the kept record is free again.
+          stayed += unmerge(tx, row.id);
           const back = tx.update(schema.customers).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(schema.customers.id, row.id)).returning().get();
           audit(tx, viewer, { action: "restored", model: "Customer", record: row.id, title: back.name });
           // What went to the trash with it comes back with it.
           orderData.restoreWith(tx, viewer, \`Customer:\${row.id}\`);
+          followUpData.restoreWith(tx, viewer, \`Customer:\${row.id}\`);
         }
       });
     } catch (error) {
       throw refusal(error);
     }
-    return { restored: rows.length, skipped: new Set(ids).size - rows.length };
+    return { restored: rows.length, skipped: new Set(ids).size - rows.length, stayed };
   },
 
   /** Removes the chosen customers in the trash for good, with their pictures and documents. */
@@ -30845,6 +31355,7 @@ export const customerData = {
   erase(viewer: Viewer | null, ids: number[]): void {
     if (ids.length === 0) return;
     // What is in the trash pointing to them goes first, deepest first (docs/design/delete-together.md).
+    followUpData.erase(viewer, db.select({ id: schema.followUps.id }).from(schema.followUps).where(and(isNotNull(schema.followUps.deletedAt), inArray(schema.followUps.customerId, ids))).all().map((r) => r.id));
     orderData.erase(viewer, db.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id));
 
     const rows = db
@@ -30913,6 +31424,7 @@ import { allows, type Rule } from "#/kit/access";
 import type { RecordUi } from "#/kit/model";
 import { customerAccess, customerData } from "./customer.server";
 import { orderAccess } from "./order.server";
+import { followUpAccess } from "./follow-up.server";
 import { writeAllowed } from "#/kit/limit";
 import { userChoices } from "./user-choices.server";
 import { currentViewer } from "#/lib/viewer.server";
@@ -31016,7 +31528,7 @@ export const getCustomer = createServerFn()
     // In the trash: its page shows it read-only, with when, by whom and Restore.
     if (!row) {
       const gone = await customerData.trashed(viewer, id);
-      return gone && { row: gone.row, canWrite: false, canDelete: false, canAdd: { orders: false }, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+      return gone && { row: gone.row, canWrite: false, canDelete: false, canAdd: { orders: false, followUps: false }, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
     }
     if (!row) return null;
     return {
@@ -31025,7 +31537,7 @@ export const getCustomer = createServerFn()
       canWrite: allows(customerAccess.write, viewer, row.accountManagerId),
       canDelete: allows(customerAccess.delete, viewer, row.accountManagerId),
       // Who may add to its related lists from here ("Add line" on an invoice).
-      canAdd: { orders: allows(orderAccess.create, viewer) },
+      canAdd: { orders: allows(orderAccess.create, viewer), followUps: allows(followUpAccess.create, viewer) },
     };
   });
 
@@ -31092,16 +31604,19 @@ import { customerAccess, customerData } from "#/generated/customer.server";
 import { customerSchema, customerSettable } from "#/generated/customer.schema";
 import { orderAccess, orderData } from "#/generated/order.server";
 import { orderSchema, orderSettable } from "#/generated/order.schema";
+import { followUpAccess, followUpData } from "#/generated/follow-up.server";
+import { followUpSchema, followUpSettable } from "#/generated/follow-up.schema";
 import { customerUi } from "#/generated/customer";
 import { orderUi } from "#/generated/order";
-import { runMergeCustomers } from "./actions/merge-customers.server";
-import { mergeCustomersInput } from "./actions/merge-customers.input";
+import { runScheduleFollowUps } from "./actions/schedule-follow-ups.server";
+import { scheduleFollowUpsInput } from "./actions/schedule-follow-ups.input";
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = {
   admin: [
     { id: "open:customers", kind: "open", page: "customers", route: "/customers" },
     { id: "open:orders", kind: "open", page: "orders", route: "/orders" },
+    { id: "open:followUps", kind: "open", page: "followUps", route: "/follow-ups" },
     { id: "open:team", kind: "open", page: "team", route: "/team" },
     {
       id: "add:Customer",
@@ -31188,18 +31703,43 @@ const MOVES: Record<string, DoorMove[]> = {
     },
     { id: "delete:Order", kind: "delete", model: "Order" },
     {
-      id: "run:mergeCustomers",
-      kind: "run",
-      action: "mergeCustomers",
+      id: "add:FollowUp",
+      kind: "add",
+      model: "FollowUp",
       slots: [
-        { field: "keep", required: true, kind: "reference", model: "Customer" },
-        { field: "duplicate", required: true, kind: "reference", model: "Customer" },
+        { field: "customer", required: true, kind: "reference", model: "Customer" },
+        { field: "dueOn", required: true, kind: "date" },
+        { field: "done", required: false, kind: "yesNo" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    {
+      id: "change:FollowUp",
+      kind: "change",
+      model: "FollowUp",
+      slots: [
+        { field: "customer", required: true, kind: "reference", model: "Customer" },
+        { field: "dueOn", required: true, kind: "date" },
+        { field: "done", required: false, kind: "yesNo" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    { id: "delete:FollowUp", kind: "delete", model: "FollowUp" },
+    {
+      id: "run:scheduleFollowUps",
+      kind: "run",
+      action: "scheduleFollowUps",
+      slots: [
+        { field: "customer", required: true, kind: "reference", model: "Customer" },
+        { field: "count", required: true, kind: "number" },
+        { field: "everyDays", required: true, kind: "number" },
       ],
     },
   ],
   sales: [
     { id: "open:customers", kind: "open", page: "customers", route: "/customers" },
     { id: "open:orders", kind: "open", page: "orders", route: "/orders" },
+    { id: "open:followUps", kind: "open", page: "followUps", route: "/follow-ups" },
     {
       id: "add:Customer",
       kind: "add",
@@ -31284,6 +31824,29 @@ const MOVES: Record<string, DoorMove[]> = {
       ],
     },
     { id: "delete:Order", kind: "delete", model: "Order" },
+    {
+      id: "add:FollowUp",
+      kind: "add",
+      model: "FollowUp",
+      slots: [
+        { field: "customer", required: true, kind: "reference", model: "Customer" },
+        { field: "dueOn", required: true, kind: "date" },
+        { field: "done", required: false, kind: "yesNo" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    {
+      id: "change:FollowUp",
+      kind: "change",
+      model: "FollowUp",
+      slots: [
+        { field: "customer", required: true, kind: "reference", model: "Customer" },
+        { field: "dueOn", required: true, kind: "date" },
+        { field: "done", required: false, kind: "yesNo" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    { id: "delete:FollowUp", kind: "delete", model: "FollowUp" },
   ],
   visitor: [],
 };
@@ -31311,6 +31874,7 @@ async function choices(viewer: Viewer | null, refs: [string, string, boolean][])
 const CHOOSE: Record<string, (viewer: Viewer | null) => Promise<number[]>> = {
   "Customer": async (viewer) => (await customerData.list(viewer)).map((row) => row.id),
   "Order": async (viewer) => (await orderData.list(viewer)).map((row) => row.id),
+  "FollowUp": async (viewer) => (await followUpData.list(viewer)).map((row) => row.id),
 };
 
 /** A move is open when it has a record to be made on, if it needs one, and a choice for each required reference. */
@@ -31324,6 +31888,7 @@ function ready(move: OpenMove): OpenMove | undefined {
 const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<OpenMove | undefined>> = {
   "open:customers": async (viewer, move) => (allows(pageAccess["customers"], viewer) ? move : undefined),
   "open:orders": async (viewer, move) => (allows(pageAccess["orders"], viewer) ? move : undefined),
+  "open:followUps": async (viewer, move) => (allows(pageAccess["followUps"], viewer) ? move : undefined),
   "open:team": async (viewer, move) => (allows(pageAccess["team"], viewer) ? move : undefined),
   "add:Customer": async (_viewer, move) => ready({ ...move,
     }),
@@ -31343,8 +31908,18 @@ const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<Op
   "delete:Order": async (viewer, move) => ready({ ...move,
       records: (await orderData.list(viewer)).filter((row) => allows(orderAccess.delete, viewer, row.ownerId as string | null)).slice(0, 50).map((row) => row.id),
     }),
-  "run:mergeCustomers": async (viewer, move) => ready({ ...move,
-      candidates: await choices(viewer, [["keep", "Customer", true], ["duplicate", "Customer", true]]),
+  "add:FollowUp": async (viewer, move) => ready({ ...move,
+      candidates: await choices(viewer, [["customer", "Customer", true]]),
+    }),
+  "change:FollowUp": async (viewer, move) => ready({ ...move,
+      records: (await followUpData.list(viewer)).filter((row) => allows(followUpAccess.write, viewer, row.ownerId as string | null)).slice(0, 50).map((row) => row.id),
+      candidates: await choices(viewer, [["customer", "Customer", true]]),
+    }),
+  "delete:FollowUp": async (viewer, move) => ready({ ...move,
+      records: (await followUpData.list(viewer)).filter((row) => allows(followUpAccess.delete, viewer, row.ownerId as string | null)).slice(0, 50).map((row) => row.id),
+    }),
+  "run:scheduleFollowUps": async (viewer, move) => ready({ ...move,
+      candidates: await choices(viewer, [["customer", "Customer", true]]),
     }),
 };
 
@@ -31380,6 +31955,10 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
     if (!allows(pageAccess["orders"], viewer)) throw new AccessDenied(viewer !== null);
     return { route: "/orders" };
   },
+  "open:followUps": async (viewer) => {
+    if (!allows(pageAccess["followUps"], viewer)) throw new AccessDenied(viewer !== null);
+    return { route: "/follow-ups" };
+  },
   "open:team": async (viewer) => {
     if (!allows(pageAccess["team"], viewer)) throw new AccessDenied(viewer !== null);
     return { route: "/team" };
@@ -31393,6 +31972,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   notes: "notes",
   accountManager: "accountManagerId",
   orders: "ordersId",
+  followUps: "followUpsId",
 }))),
   "change:Customer": async (viewer, move, body) => customerData.update(viewer, record(body), customerSettable.partial().parse(stored(move.slots ?? [], body.values, {
   name: "name",
@@ -31403,6 +31983,7 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   notes: "notes",
   accountManager: "accountManagerId",
   orders: "ordersId",
+  followUps: "followUpsId",
 }))),
   "delete:Customer": async (viewer, _move, body) => customerData.remove(viewer, record(body)),
   "add:Order": async (viewer, move, body) => orderData.create(viewer, orderSchema.parse(stored(move.slots ?? [], body.values, {
@@ -31424,7 +32005,10 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
   placedAt: "placedAt",
 }))),
   "delete:Order": async (viewer, _move, body) => orderData.remove(viewer, record(body)),
-  "run:mergeCustomers": async (viewer, move, body) => runMergeCustomers(viewer, mergeCustomersInput.parse({ ...stored(move.slots ?? [], body.values) })),
+  "add:FollowUp": async (viewer, move, body) => followUpData.create(viewer, followUpSchema.parse(stored(move.slots ?? [], body.values, { customer: "customerId", dueOn: "dueOn", done: "done", note: "note" }))),
+  "change:FollowUp": async (viewer, move, body) => followUpData.update(viewer, record(body), followUpSettable.partial().parse(stored(move.slots ?? [], body.values, { customer: "customerId", dueOn: "dueOn", done: "done", note: "note" }))),
+  "delete:FollowUp": async (viewer, _move, body) => followUpData.remove(viewer, record(body)),
+  "run:scheduleFollowUps": async (viewer, move, body) => runScheduleFollowUps(viewer, scheduleFollowUpsInput.parse({ ...stored(move.slots ?? [], body.values) })),
 };
 
 /** Performs one move as the viewer: a refusal is thrown as the app gives it. */
@@ -31454,6 +32038,821 @@ export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: He
 "
 `;
 
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/follow-up.formulas.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { F } from "#/kit/formula";
+
+type Row = Record<string, unknown>;
+
+/** Computed fields of FollowUp, on records as stored (money in cents). */
+export const followUpFormulas = {
+
+};
+
+/** Values suggested when a FollowUp is created. */
+export const followUpDefaults = {
+  dueOn: (_r: Row): string => F.TODAY(),
+};
+
+/** The record with its computed fields. */
+export function withFollowUpFormulas<T extends Row>(row: T): T {
+  return row;
+}
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/follow-up.schema.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createInsertSchema } from "drizzle-zod";
+import type { z } from "zod";
+import * as schema from "#/db/schema";
+import { w } from "#/kit/words";
+
+/** What a follow up may be given: a form's values and what the app fills (an action's set). */
+export const followUpSettable = createInsertSchema(schema.followUps, {
+  dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
+  note: (s) => s.max(10000, w.atMostCharacters(10000)),
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+/** What a follow up's form sends, checked. */
+export const followUpSchema = followUpSettable;
+
+export type FollowUpSettable = z.output<typeof followUpSettable>;
+export type FollowUpValues = z.output<typeof followUpSchema>;
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/follow-up.server.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { type AnyColumn, and, asc, avg, count, desc, eq, inArray, isNotNull, isNull, lt, max, min, sql, sum, type SQL } from "drizzle-orm";
+import { db } from "#/db";
+import * as schema from "#/db/schema";
+import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
+import { audit, changedFields } from "#/kit/audit.server";
+import { refusal } from "#/kit/log.server";
+import { titleOf } from "#/kit/format";
+import { contains } from "#/kit/search";
+import { BadInput } from "#/kit/refusal";
+import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";
+import { afterChange, afterDelete } from "./hooks";
+import { customerData } from "./customer.server";
+import { type FollowUpSettable } from "./follow-up";
+import { withFollowUpFormulas } from "./follow-up.formulas";
+import "./trash.server";
+
+/** A transaction, as the write checks and the group's functions are called inside one. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** The record one went to the trash with, while it is still there: its label and title, by the mark ("Customer:12"). */
+function rootInTrash(tag: string): string | undefined {
+  const [model, id] = tag.split(":");
+  switch (model) {
+    case "Customer": {
+      const root = db.select({ deletedAt: schema.customers.deletedAt, title: schema.customers.name }).from(schema.customers).where(eq(schema.customers.id, Number(id))).get();
+      return root?.deletedAt ? \`Customer:\${String(root.title ?? id)}\` : undefined;
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** Who may read, create, change and delete follow ups. */
+export const followUpAccess: ModelAccess = {
+  read: { public: false, roles: ["admin", "sales"], owner: false },
+  create: { public: false, roles: ["admin", "sales"], owner: false },
+  write: { public: false, roles: ["admin", "sales"], owner: true },
+  delete: { public: false, roles: ["admin"], owner: true },
+};
+
+/** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
+function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
+  if ((viewer && row.ownerId === viewer.id) || (!!viewer && (!!viewer.system || followUpAccess.read.roles.includes(viewer.role)))) return row;
+  return { ...row, ownerId: null };
+}
+
+
+/** What \`where\` may name, and how: the stored fields, by kind. */
+const FILTERABLE: Record<string, Filterable> = {
+  customer: { kind: "reference", column: schema.followUps.customerId },
+  dueOn: { kind: "date", column: schema.followUps.dueOn },
+  done: { kind: "bool", column: schema.followUps.done },
+  note: { kind: "text", column: schema.followUps.note },
+};
+
+/** What the records can be sorted by. */
+const SORTABLE = { id: schema.followUps.id, dueOn: schema.followUps.dueOn, done: schema.followUps.done, note: schema.followUps.note, createdAt: schema.followUps.createdAt };
+
+/** The number fields \`measure\` adds up; amounts are stored in cents. */
+const NUMBERS: Record<string, AnyColumn> = {  };
+const MONEY: string[] = [];
+
+/** Computed number fields \`measure\` adds up from the records themselves. */
+const COMPUTED: string[] = [];
+
+/** The titles of the referenced records \`measureBy\` splits by, to name its groups. */
+function titlesOf(viewer: Viewer | null, by: string, ids: number[]): Map<unknown, string> {
+  switch (by) {
+    case "customer":
+      return new Map(db.select({ id: schema.customers.id, title: schema.customers.name }).from(schema.customers).where(and(inArray(schema.customers.id, ids), customerData.readable(viewer))).all().map((r) => [r.id, String(r.title)]));
+    default:
+      return new Map();
+  }
+}
+
+/** What \`measureBy\` may split by: choices, yes/no, references, and dates by month. */
+const BY: string[] = ["customer","dueOn","done"];
+
+
+/** Checks that the viewer may read the records the values refer to. */
+function checkReferences(viewer: Viewer | null, values: Partial<FollowUpSettable>): void {
+  if (values.customerId != null && !customerData.canRead(viewer, values.customerId))
+    throw new AccessDenied(viewer !== null);
+}
+
+/** How long a record stays in the trash, and the most a trash view shows. */
+const TRASH_DAYS = 30;
+const DAY = 24 * 60 * 60 * 1000;
+/** \`rows\` with each \`field\` reference \`readable\` leaves out set to nothing (only its id stays). */
+function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, readable: (ids: number[]) => number[]): R[] {
+  const idOf = (row: R) => (row[field] as { id?: unknown } | null | undefined)?.id;
+  const ids = [...new Set(rows.map(idOf).filter((id): id is number => typeof id === "number"))];
+  if (!ids.length) return rows;
+  const shown = new Set(readable(ids));
+  return rows.map((row) => {
+    const id = idOf(row);
+    return typeof id === "number" && !shown.has(id) ? { ...row, [field]: null } : row;
+  });
+}
+
+export const followUpData = {
+  shownTo,
+  /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
+  shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
+    return hideRefs(rows, "customer", (ids, c = customerData.readable(viewer)) => (c ? db.select({ id: schema.customers.id }).from(schema.customers).where(and(inArray(schema.customers.id, ids), c)).all().map((r) => r.id) : ids));
+  },
+
+  /**
+   * What a new follow up must pass, in the transaction that adds it (A 153): its files and
+   * references, its rules, its capacity and time. create() and an action that adds one call it.
+   */
+  checkCreate(_tx: Tx, viewer: Viewer | null, given: FollowUpSettable): FollowUpSettable {
+    const values = given;
+    checkReferences(viewer, values);
+
+    return values;
+  },
+
+  /**
+   * What a change must pass, read with the record as it was, in the change's transaction (A 153):
+   * its files and references, holds, capacity, the record's rules and its time. update() and an
+   * action that changes it in a transaction of its own call it; access stays with the caller.
+   */
+  checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<FollowUpSettable>, _before: typeof schema.followUps.$inferSelect): Partial<FollowUpSettable> {
+    const updated = given;
+    checkReferences(viewer, updated);
+
+    return updated;
+  },
+
+  /** A condition for the follow ups the viewer may read. */
+  readable(viewer: Viewer | null) {
+    // What is in the trash is gone to every reader (docs/design/trash.md).
+    return and(isNull(schema.followUps.deletedAt), followUpData.scoped(viewer));
+  },
+
+  /** The records the viewer may read by the read rule, the trashed ones too. */
+  scoped(viewer: Viewer | null) {
+    const scope = readScope(followUpAccess.read, viewer);
+    if (scope === "all") return undefined;
+    return scope === "own" && viewer ? eq(schema.followUps.ownerId, viewer.id) : sql\`false\`;
+  },
+
+  canRead(viewer: Viewer | null, id: number): boolean {
+    const found = db
+      .select({ id: schema.followUps.id })
+      .from(schema.followUps)
+      .where(and(eq(schema.followUps.id, id), followUpData.readable(viewer)))
+      .get();
+    return found !== undefined;
+  },
+
+  /** The follow ups the viewer may read; \`where\` narrows them, e.g. to a search. */
+  async list(viewer: Viewer | null, where?: SQL) {
+    if (readScope(followUpAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const found = followUpData.shownRefs(viewer, await db.query.followUps.findMany({
+      where: and(followUpData.readable(viewer), where),
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
+      orderBy: (t, { desc }) => [desc(t.id)],
+    }));
+    const rows = found.map((row) => shownTo(viewer, row));
+    return rows.map(withFollowUpFormulas);
+  },
+
+  /**
+   * A page of the follow ups the viewer may read that fit \`where\`, newest first (or in
+   * \`order\`), and how many fit in all: for a list page. A page past the end is the last one.
+   */
+  async page(viewer: Viewer | null, where?: SQL, order?: SQL, page = 1, size = 50) {
+    if (readScope(followUpAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const condition = and(followUpData.readable(viewer), where);
+    const total = db.select({ n: count() }).from(schema.followUps).where(condition).get()?.n ?? 0;
+    const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
+    const found = followUpData.shownRefs(viewer, await db.query.followUps.findMany({
+      where: condition,
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
+      limit: size,
+      offset: (at - 1) * size,
+    }));
+    const rows = found.map((row) => shownTo(viewer, row));
+    return { rows: rows.map(withFollowUpFormulas), total, page: at, size };
+  },
+
+  /**
+   * The follow ups the viewer may read that fit \`where\` and \`search\`, in \`sort\`'s order (else newest
+   * first), a page of them and how many there are: for the API and the assistants' tools.
+   */
+  async find(
+    viewer: Viewer | null,
+    options: { where?: unknown; search?: string; sort?: string; limit?: number; offset?: number } = {},
+  ) {
+    if (readScope(followUpAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const condition = followUpData.fitting(viewer, options.where, options.search);
+    const order = sortOf(SORTABLE, options.sort);
+    const total = db.select({ n: count() }).from(schema.followUps).where(condition).get()?.n ?? 0;
+    const found = followUpData.shownRefs(viewer, await db.query.followUps.findMany({
+      where: condition,
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
+      limit: options.limit ?? 100,
+      offset: options.offset ?? 0,
+    }));
+    const rows = found.map((row) => shownTo(viewer, row));
+    return { items: rows.map(withFollowUpFormulas), total };
+  },
+
+  /**
+   * A number from the follow ups the viewer may read that fit \`where\`: how many, or the sum,
+   * average, smallest or largest of a number field.
+   */
+  async measure(
+    viewer: Viewer | null,
+    how: "count" | "sum" | "average" | "smallest" | "largest",
+    options: { field?: string; where?: unknown; search?: string } = {},
+  ): Promise<number | null> {
+    if (readScope(followUpAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const condition = followUpData.fitting(viewer, options.where, options.search);
+    if (how === "count")
+      return db.select({ n: count() }).from(schema.followUps).where(condition).get()?.n ?? 0;
+    const field = options.field ?? "";
+    const money = MONEY.includes(field);
+    if (COMPUTED.includes(field)) {
+      const rows = await followUpData.computedRows(condition);
+      const value = aggregate(rows.map((row) => row[field]), how);
+      return value === null ? null : money ? value / 100 : value;
+    }
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
+    if (!column)
+      throw new BadInput(
+        \`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`,
+      );
+    const pick = { sum, average: avg, smallest: min, largest: max }[how];
+    const value = db.select({ v: pick(column) }).from(schema.followUps).where(condition).get()?.v;
+    if (value === null || value === undefined) return null;
+    return money ? Number(value) / 100 : Number(value);
+  },
+
+  /** Which record holds the smallest or largest value of a number field (the first of a tie). */
+  async holder(
+    viewer: Viewer | null,
+    how: "smallest" | "largest",
+    options: { field?: string; where?: unknown; search?: string } = {},
+  ): Promise<{ id: number; title: string } | null> {
+    const condition = followUpData.fitting(viewer, options.where, options.search);
+    const field = options.field ?? "";
+    if (COMPUTED.includes(field)) {
+      let best: Record<string, unknown> | undefined;
+      for (const row of await followUpData.computedRows(condition)) {
+        const v = row[field];
+        if (typeof v !== "number") continue;
+        if (!best || (how === "largest" ? v > (best[field] as number) : v < (best[field] as number))) best = row;
+      }
+      return best ? { id: best.id as number, title: titleOf(best.note) } : null;
+    }
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
+    if (!column) return null;
+    const row = db
+      .select({ id: schema.followUps.id, title: schema.followUps.note })
+      .from(schema.followUps)
+      .where(and(condition, isNotNull(column)))
+      .orderBy(how === "largest" ? desc(column) : asc(column), asc(schema.followUps.id))
+      .limit(1)
+      .get();
+    return row ? { id: row.id, title: titleOf(row.title) } : null;
+  },
+
+  /**
+   * The same number per value of a field (a choice, yes/no, a reference) or per month of a date:
+   * \`[{ value, number }]\`, the most first.
+   */
+  async measureBy(
+    viewer: Viewer | null,
+    how: "count" | "sum" | "average" | "smallest" | "largest",
+    by: string,
+    options: { field?: string; where?: unknown; search?: string } = {},
+  ): Promise<{ value: unknown; title?: string; number: number | null }[]> {
+    if (readScope(followUpAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const split = Object.hasOwn(FILTERABLE, by) ? FILTERABLE[by] : undefined;
+    if (!split || split.kind === "text" || split.kind === "number" || split.kind === "money")
+      throw new BadInput(\`There is no field "\${by}" to split by. Fields: \${BY.join(", ")}.\`);
+    const field = options.field ?? "";
+    const money = MONEY.includes(field);
+    const condition = followUpData.fitting(viewer, options.where, options.search);
+    const amount = (n: number | null) => (n === null ? null : money ? n / 100 : n);
+    const most = (a: { number: number | null }, b: { number: number | null }) => (b.number ?? 0) - (a.number ?? 0);
+    // A reference's groups carry the referenced record's title beside its id.
+    const named = (rows: { value: unknown; number: number | null }[]) => {
+      if (split.kind !== "reference") return rows;
+      const titles = titlesOf(viewer, by, rows.map((r) => r.value).filter((v): v is number => typeof v === "number"));
+      return rows.map((r) => (titles.has(r.value) ? { value: r.value, title: titles.get(r.value), number: r.number } : r));
+    };
+    if (COMPUTED.includes(field)) {
+      // Each record's month or value, then the computed numbers added up per group.
+      const groups = new Map<unknown, unknown[]>();
+      for (const row of await followUpData.computedRows(condition)) {
+        const raw = row[split.kind === "reference" ? \`\${by}Id\` : by];
+        const value = split.kind === "date" ? String(raw ?? "").slice(0, 7) || null : split.kind === "instant" ? (raw instanceof Date ? raw.toISOString().slice(0, 7) : null) : raw;
+        groups.set(value, [...(groups.get(value) ?? []), row[field]]);
+      }
+      return named([...groups].map(([value, numbers]) => ({ value, number: amount(aggregate(numbers, how)) })).sort(most));
+    }
+    const key = split.kind === "date" ? sql<string>\`substr(\${split.column}, 1, 7)\` : split.kind === "instant" ? sql<string>\`strftime('%Y-%m', \${split.column} / 1000, 'unixepoch')\` : sql\`\${split.column}\`;
+    const column = Object.hasOwn(NUMBERS, field) ? NUMBERS[field] : undefined;
+    if (how !== "count" && !column)
+      throw new BadInput(\`\${how} needs a number field: \${[...Object.keys(NUMBERS), ...COMPUTED].join(", ") || "there are none"}.\`);
+    const pick = how === "count" || !column ? count() : { sum, average: avg, smallest: min, largest: max }[how](column);
+    return named(
+      db
+        .select({ value: key, number: pick })
+        .from(schema.followUps)
+        .where(condition)
+        .groupBy(key)
+        .all()
+        .map((r) => ({ value: r.value, number: r.number === null ? null : amount(Number(r.number)) }))
+        .sort(most),
+    );
+  },
+
+  /**
+   * The records that fit, with their computed fields worked out: for adding those up. At most
+   * 10,000, so one call never reads a whole large table; more are refused with how to narrow them.
+   */
+  async computedRows(condition: SQL | undefined): Promise<Record<string, unknown>[]> {
+    const rows = await db.query.followUps.findMany({ where: condition, with: { customer: { columns: { id: true, name: true, deletedAt: true } } }, limit: 10001 });
+    if (rows.length > 10000)
+      throw new BadInput("More than 10,000 records to add up a computed field over: narrow them with where.");
+    return rows.map((row) => withFollowUpFormulas(row as never) as Record<string, unknown>);
+  },
+
+  /** The follow ups the viewer may read whose note has the text: a few, for naming one. */
+  named(viewer: Viewer | null, text: string): { id: number; title: string }[] {
+    return db
+      .select({ id: schema.followUps.id, title: schema.followUps.note })
+      .from(schema.followUps)
+      .where(and(followUpData.readable(viewer), contains([schema.followUps.note], text)))
+      .limit(6)
+      .all()
+      .map((row) => ({ id: row.id, title: titleOf(row.title) }));
+  },
+
+  /** Every note the viewer may read (at most 2,000): the nearest when a name fits none. */
+  titles(viewer: Viewer | null): string[] {
+    return db
+      .select({ title: schema.followUps.note })
+      .from(schema.followUps)
+      .where(followUpData.readable(viewer))
+      .limit(2000)
+      .all()
+      .map((row) => titleOf(row.title));
+  },
+
+  /** Why \`where\` found none when it names a text no record has: the field's nearest values. */
+  whyNone(viewer: Viewer | null, where: unknown): string | undefined {
+    if (!where || typeof where !== "object") return undefined;
+    for (const [name, v] of Object.entries(where)) {
+      const field = Object.hasOwn(FILTERABLE, name) ? FILTERABLE[name] : undefined;
+      if (field?.kind !== "text" || (typeof v !== "string" && typeof v !== "number")) continue;
+      const values = db
+        .selectDistinct({ v: sql<string>\`\${field.column}\` })
+        .from(schema.followUps)
+        .where(and(followUpData.readable(viewer), isNotNull(field.column)))
+        .limit(2000)
+        .all()
+        .map((row) => String(row.v));
+      const asked = String(v);
+      if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
+        return \`No follow up has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+    }
+    return undefined;
+  },
+
+  /** The condition for records the viewer may read that fit \`where\` and \`search\`. */
+  fitting(viewer: Viewer | null, where?: unknown, search?: string) {
+    return and(
+      followUpData.readable(viewer),
+      whereOf(FILTERABLE, where, viewer ? eq(schema.followUps.ownerId, viewer.id) : undefined, viewer?.id, {customer: { find: (text: string) => customerData.named(viewer, text), titles: () => customerData.titles(viewer) }}),
+      // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
+      ...wordsOf(search).map((word) => contains([schema.followUps.note], word)),
+    );
+  },
+
+  async get(viewer: Viewer | null, id: number) {
+    const fetched = await db.query.followUps.findFirst({
+      where: and(eq(schema.followUps.id, id), followUpData.readable(viewer)),
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
+    });
+    const found = fetched && followUpData.shownRefs(viewer, [fetched])[0];
+    const row = found && shownTo(viewer, found);
+    return row ? withFollowUpFormulas(row) : null;
+  },
+
+  async create(viewer: Viewer | null, values: FollowUpSettable) {
+    check(followUpAccess.create, viewer);
+    let row: typeof schema.followUps.$inferSelect;
+    try {
+      // The checks and the insert in one transaction.
+      row = db.transaction((tx) => {
+        values = followUpData.checkCreate(tx, viewer, values);
+        const made = tx.insert(schema.followUps).values({ ...values, ownerId: personOf(viewer) }).returning().get();
+        audit(tx, viewer, { action: "created", model: "FollowUp", record: made.id });
+        return made;
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+    await afterChange("afterCreate", "FollowUp", row, viewer);
+    return row;
+  },
+
+  /** Changes the record; \`what\` names the change in the audit log (an action's name). */
+  /** Changes the fields given; what names the action ("changed" for a form), frees the fields it may change although locked (its own set). */
+  async update(viewer: Viewer | null, id: number, values: Partial<FollowUpSettable>, what = "changed", _frees: readonly string[] = []) {
+    const row = db
+      .select({ ownerId: schema.followUps.ownerId })
+      .from(schema.followUps)
+      .where(and(eq(schema.followUps.id, id), followUpData.readable(viewer)))
+      .get();
+    if (!row) throw new AccessDenied(viewer !== null);
+    // A form's change needs write on the record; an action (what names it) checked its own access
+    // first, which includes the roles its grant names (docs/design/actions.md, Access).
+    if (what === "changed") check(followUpAccess.write, viewer, row.ownerId);
+    let changed: typeof schema.followUps.$inferSelect;
+    const updated = values;
+    try {
+      changed = db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        const before = tx.select().from(schema.followUps).where(and(eq(schema.followUps.id, id), followUpData.readable(viewer))).get();
+        if (!before) throw new AccessDenied(viewer !== null);
+        const checked = followUpData.checkUpdate(tx, viewer, id, updated, before);
+        const after = tx.update(schema.followUps).set(checked).where(eq(schema.followUps.id, id)).returning().get();
+        audit(tx, viewer, { action: what, model: "FollowUp", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
+        return after;
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+    await afterChange("afterUpdate", "FollowUp", changed, viewer);
+    return changed;
+  },
+
+  /** Deletes the record; \`together\` takes the records that point to it along to the trash (delete-together.md). */
+  async remove(viewer: Viewer | null, id: number, _together = false): Promise<void> {
+    const row = db
+      .select({ ownerId: schema.followUps.ownerId })
+      .from(schema.followUps)
+      .where(and(eq(schema.followUps.id, id), followUpData.readable(viewer)))
+      .get();
+    if (!row) throw new AccessDenied(viewer !== null);
+    check(followUpAccess.delete, viewer, row.ownerId);
+    try {
+      db.transaction((tx) => {
+        // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
+        if (!tx.select({ id: schema.followUps.id }).from(schema.followUps).where(and(eq(schema.followUps.id, id), followUpData.readable(viewer))).get())
+          throw new AccessDenied(viewer !== null);
+        const when = new Date();
+        const gone = tx.update(schema.followUps).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.followUps.id, id), isNull(schema.followUps.deletedAt))).returning().get();
+        if (gone) {
+          audit(tx, viewer, { action: "trashed", model: "FollowUp", record: id, title: titleOf(gone.note) });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+    await afterDelete("FollowUp", id, viewer);
+  },
+
+  /**
+   * Deletes the chosen records the viewer may delete, all or none (one still in use stops them
+   * all, and is named); the others are skipped.
+   */
+  async removeMany(viewer: Viewer | null, ids: number[], _together = false): Promise<{ deleted: number; skipped: number }> {
+    const rows = db
+      .select({ id: schema.followUps.id, ownerId: schema.followUps.ownerId })
+      .from(schema.followUps)
+      .where(and(inArray(schema.followUps.id, ids), followUpData.readable(viewer)))
+      .all()
+      .filter((row) => allows(followUpAccess.delete, viewer, row.ownerId));
+    db.transaction((tx) => {
+      const when = new Date();
+      for (const row of rows)
+        try {
+          const gone = tx.update(schema.followUps).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.followUps.id, row.id), isNull(schema.followUps.deletedAt))).returning().get();
+          if (gone) {
+            audit(tx, viewer, { action: "trashed", model: "FollowUp", record: row.id, title: titleOf(gone.note) });
+          }
+        } catch (error) {
+          const refused = refusal(error);
+          throw refused instanceof Conflict && refused.message === "in-use" ? new Conflict(\`in-use:\${row.id}\`) : refused;
+        }
+    });
+    for (const row of rows) {
+      await afterDelete("FollowUp", row.id, viewer);
+    }
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /**
+   * The viewer's trash (docs/design/trash.md): the follow ups in it they may delete, the
+   * latest first, with when and by whom, kept for thirty days.
+   */
+  async trash(viewer: Viewer | null) {
+    const rows = followUpData.shownRefs(
+      viewer,
+      await db.query.followUps.findMany({
+        where: and(isNotNull(schema.followUps.deletedAt), followUpData.scoped(viewer)),
+        with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
+        orderBy: (t) => [desc(t.deletedAt)],
+        limit: 1000,
+      }),
+    ).filter((row) => allows(followUpAccess.delete, viewer, row.ownerId));
+    const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
+    const people = new Map(
+      db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
+    );
+    const withTitle = new Map<string, string>();
+    for (const r of db.select({ id: schema.customers.id, title: schema.customers.name }).from(schema.customers).where(inArray(schema.customers.id, rows.flatMap((row) => (row.deletedWith?.startsWith("Customer:") ? [Number(row.deletedWith.slice(9))] : [])))).all())
+      withTitle.set(\`Customer:\${r.id}\`, String(r.title ?? r.id));
+    return rows.map((row) => ({ ...shownTo(viewer, row), deletedByName: (row.deletedBy && people.get(row.deletedBy)) ?? null, withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null })).map(withFollowUpFormulas);
+  },
+
+  /** A follow up in the trash, as its page shows it read-only, with when and by whom; else nothing. */
+  async trashed(viewer: Viewer | null, id: number) {
+    const fetched = await db.query.followUps.findFirst({
+      where: and(eq(schema.followUps.id, id), and(isNotNull(schema.followUps.deletedAt), followUpData.scoped(viewer))),
+      with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
+    });
+    const row = fetched && followUpData.shownRefs(viewer, [fetched])[0];
+    if (!row || !allows(followUpAccess.delete, viewer, row.ownerId)) return null;
+    const rows = [row];
+    const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
+    const people = new Map(
+      db.select({ id: schema.user.id, name: schema.user.name }).from(schema.user).where(inArray(schema.user.id, ids)).all().map((p) => [p.id, p.name]),
+    );
+    const shown = shownTo(viewer, row);
+    return {
+      row: withFollowUpFormulas(shown),
+      deletedAt: row.deletedAt as Date,
+      by: (row.deletedBy && people.get(row.deletedBy)) ?? null,
+      until: new Date((row.deletedAt as Date).getTime() + TRASH_DAYS * DAY),
+    };
+  },
+
+  /** Takes the chosen follow ups out of the trash, those the viewer may delete. */
+  restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number } {
+    const rows = db
+      .select({ id: schema.followUps.id, deletedWith: schema.followUps.deletedWith, ownerId: schema.followUps.ownerId })
+      .from(schema.followUps)
+      .where(and(inArray(schema.followUps.id, ids), and(isNotNull(schema.followUps.deletedAt), followUpData.scoped(viewer))))
+      .all().filter((row) => allows(followUpAccess.delete, viewer, row.ownerId));
+    // One that went to the trash with another record comes back with it, not alone (delete-together.md).
+    for (const row of rows) {
+      const root = row.deletedWith && rootInTrash(row.deletedWith);
+      if (root) throw new Conflict(\`restore-root-first:\${root}\`);
+    }
+    // A unique value a live record has taken since refuses it, as it refuses a new record.
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const back = tx.update(schema.followUps).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(schema.followUps.id, row.id)).returning().get();
+          audit(tx, viewer, { action: "restored", model: "FollowUp", record: row.id, title: back.note });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+    return { restored: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Removes the chosen follow ups in the trash for good, with their pictures and documents. */
+  removeForGood(viewer: Viewer | null, ids: number[]): { deleted: number; skipped: number } {
+    const rows = db
+      .select({ id: schema.followUps.id, ownerId: schema.followUps.ownerId })
+      .from(schema.followUps)
+      .where(and(inArray(schema.followUps.id, ids), and(isNotNull(schema.followUps.deletedAt), followUpData.scoped(viewer))))
+      .all().filter((row) => allows(followUpAccess.delete, viewer, row.ownerId));
+    followUpData.erase(viewer, rows.map((row) => row.id));
+    return { deleted: rows.length, skipped: new Set(ids).size - rows.length };
+  },
+
+  /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
+  erase(viewer: Viewer | null, ids: number[]): void {
+    if (ids.length === 0) return;
+    const rows = db
+      .select({ id: schema.followUps.id, ownerId: schema.followUps.ownerId })
+      .from(schema.followUps)
+      .where(and(inArray(schema.followUps.id, ids), isNotNull(schema.followUps.deletedAt)))
+      .all();
+    try {
+      db.transaction((tx) => {
+        for (const row of rows) {
+          const gone = tx.delete(schema.followUps).where(eq(schema.followUps.id, row.id)).returning().get();
+          if (gone) audit(tx, viewer, { action: "removed", model: "FollowUp", record: row.id, title: titleOf(gone.note) });
+        }
+      });
+    } catch (error) {
+      throw refusal(error);
+    }
+  },
+
+  /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
+  purge(now = Date.now()): number {
+    const old = db
+      .select({ id: schema.followUps.id })
+      .from(schema.followUps)
+      .where(lt(schema.followUps.deletedAt, new Date(now - TRASH_DAYS * DAY)))
+      .all()
+      .map((row) => row.id);
+    followUpData.erase(null, old);
+    return old.length;
+  },
+
+  /**
+   * Moves the live follow ups the condition fits to the trash with another record
+   * (docs/design/delete-together.md), marked as its group; the viewer must be allowed to delete each.
+   */
+  trashWith(tx: Tx, viewer: Viewer | null, fits: SQL, tag: string, when: Date): void {
+    const rows = tx.select().from(schema.followUps).where(and(fits, isNull(schema.followUps.deletedAt))).all();
+    for (const row of rows)
+      if (!allows(followUpAccess.delete, viewer, row.ownerId)) throw new Conflict("no-right:Follow up");
+    if (rows.length === 0) return;
+    tx.update(schema.followUps).set({ deletedAt: when, deletedBy: personOf(viewer), deletedWith: tag }).where(and(fits, isNull(schema.followUps.deletedAt))).run();
+    for (const row of rows) {
+      audit(tx, viewer, { action: "trashed", model: "FollowUp", record: row.id, title: row.note, details: { with: tag } });
+    }
+  },
+
+  /** Takes the follow ups that went to the trash with a record out of it again. */
+  restoreWith(tx: Tx, viewer: Viewer | null, tag: string): void {
+    const back = tx.update(schema.followUps).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(schema.followUps.deletedWith, tag)).returning().all();
+    for (const row of back)
+      audit(tx, viewer, { action: "restored", model: "FollowUp", record: row.id, title: row.note, details: { with: tag } });
+  },
+};
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/follow-up.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { z } from "zod";
+import type * as schema from "#/db/schema";
+import { allows, type Rule } from "#/kit/access";
+import type { RecordUi } from "#/kit/model";
+import { followUpDefaults, withFollowUpFormulas } from "./follow-up.formulas";
+import { followUpAccess, followUpData } from "./follow-up.server";
+import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+import { followUpSchema } from "./follow-up.schema";
+
+export type { FollowUpSettable, FollowUpValues } from "./follow-up.schema";
+
+/** The viewer about to write, counted against how often one may (see src/kit/limit.ts). */
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
+/** FollowUp records as the kit reads them. */
+export type FollowUpRow = typeof schema.followUps.$inferSelect & {
+  customer?: { id: number; name: string; deletedAt?: Date | null } | null;
+};
+
+export const followUpUi: RecordUi<FollowUpRow> = {
+  model: "FollowUp",
+  label: "Follow up",
+  pluralLabel: "Follow ups",
+  titleField: "note",
+  columns: ["note", "customerId", "dueOn", "done"],
+  fields: [
+    {
+      name: "customerId",
+      label: "Customer",
+      kind: "relation",
+      required: true,
+      relation: { key: "customer", titleField: "name" },
+      get: (row) => (row.customer && !row.customer.deletedAt ? row.customer.name : null),
+    },
+    {
+      name: "dueOn",
+      label: "Due on",
+      kind: "date",
+      required: true,
+      get: (row) => row.dueOn,
+    },
+    {
+      name: "done",
+      label: "Done",
+      kind: "bool",
+      required: false,
+      get: (row) => row.done,
+    },
+    {
+      name: "note",
+      label: "Note",
+      kind: "text",
+      required: false,
+      get: (row) => row.note,
+    },
+  ],
+  compute: withFollowUpFormulas,
+  defaults: followUpDefaults,
+};
+
+/** Who may delete follow ups: a list's selection offers Delete by it (the server checks again). */
+export const followUpDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
+
+
+export const listFollowUps = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return { rows: await followUpData.list(viewer), canCreate: allows(followUpAccess.create, viewer) };
+});
+
+export const getFollowUp = createServerFn()
+  .validator(z.number().int())
+  .handler(async ({ data: id }) => {
+    const viewer = await currentViewer();
+    const row = await followUpData.get(viewer, id);
+    // In the trash: its page shows it read-only, with when, by whom and Restore.
+    if (!row) {
+      const gone = await followUpData.trashed(viewer, id);
+      return gone && { row: gone.row, canWrite: false, canDelete: false, trashed: { at: gone.deletedAt, by: gone.by, until: gone.until } };
+    }
+    if (!row) return null;
+    return {
+      row,
+      trashed: null,
+      canWrite: allows(followUpAccess.write, viewer, row.ownerId),
+      canDelete: allows(followUpAccess.delete, viewer, row.ownerId),
+    };
+  });
+
+export const createFollowUp = createServerFn({ method: "POST" })
+  .validator(followUpSchema)
+  .handler(async ({ data }) => followUpData.create(await writer(), data));
+
+export const updateFollowUp = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.number().int(), values: followUpSchema }))
+  .handler(async ({ data }) => followUpData.update(await writer(), data.id, data.values));
+
+/** Deletes a follow up; \`together\` takes what points to it along (docs/design/delete-together.md). */
+export const deleteFollowUp = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
+  .handler(async ({ data }) => followUpData.remove(await writer(), data.id, data.together));
+
+/** Deletes the chosen follow ups, all or none (at most 1,000 at once). */
+export const deleteFollowUps = createServerFn({ method: "POST" })
+  .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
+  .handler(async ({ data }) => followUpData.removeMany(await writer(), data.ids, data.together));
+
+/** The viewer's trash of follow ups (docs/design/trash.md). */
+export const trashedFollowUps = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return { rows: await followUpData.trash(viewer) };
+});
+
+/** Takes the chosen follow ups out of the trash. */
+export const restoreFollowUps = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => followUpData.restore(await writer(), ids));
+
+/** Removes the chosen follow ups in the trash for good. */
+export const eraseFollowUps = createServerFn({ method: "POST" })
+  .validator(z.array(z.number().int()).max(1000))
+  .handler(async ({ data: ids }) => followUpData.removeForGood(await writer(), ids));
+"
+`;
+
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/hooks.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 // Where the app reacts to changes: after a record is created, changed or deleted, and once a
@@ -31472,6 +32871,7 @@ export type Hook<Row> = (row: Row, viewer: Viewer | null) => void | Promise<void
 export interface Rows {
   Customer: typeof schema.customers.$inferSelect;
   Order: typeof schema.orders.$inferSelect;
+  FollowUp: typeof schema.followUps.$inferSelect;
 }
 
 export interface Hooks {
@@ -32416,6 +33816,7 @@ import { app } from "#/generated/app";
 export const pageAccess = {
   customers: { public: false, roles: ["admin", "sales"], owner: false },
   orders: { public: false, roles: ["admin", "sales"], owner: false },
+  followUps: { public: false, roles: ["admin", "sales"], owner: false },
   team: { public: false, roles: ["admin"], owner: false },
 } satisfies Record<string, Rule>;
 
@@ -32429,6 +33830,7 @@ interface PageUi {
 export const pageUi = {
   customers: { title: "Customers" },
   orders: { title: "Orders" },
+  followUps: { title: "Follow ups" },
   team: { title: "Team" },
 } satisfies Record<string, PageUi>;
 
@@ -32455,12 +33857,13 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 // for good, the models that point to others first (docs/design/delete-together.md).
 import { log } from "#/kit/log.server";
 import { orderData } from "./order.server";
+import { followUpData } from "./follow-up.server";
 import { customerData } from "./customer.server";
 
 /** Empties every trash of what is thirty days old; how many records went. */
 export function purgeTrash(now = Date.now()): number {
   let gone = 0;
-  for (const [model, data] of [["Order", orderData], ["Customer", customerData]] as const) {
+  for (const [model, data] of [["Order", orderData], ["FollowUp", followUpData], ["Customer", customerData]] as const) {
     try {
       gone += data.purge(now);
     } catch (error) {
@@ -32667,6 +34070,7 @@ export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
   const uses: UserUse[] = [
     { model: "Customer", field: "account manager", noun: ["customer", "customers"], required: false, count: db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.accountManagerId, userId)).all().length },
     { model: "Order", field: null, noun: ["order", "orders"], required: false, count: db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.ownerId, userId)).all().length },
+    { model: "FollowUp", field: null, noun: ["follow up", "follow ups"], required: false, count: db.select({ id: schema.followUps.id }).from(schema.followUps).where(eq(schema.followUps.ownerId, userId)).all().length },
   ];
   return uses.filter((use) => use.count > 0);
 }
@@ -32701,6 +34105,10 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
       {
         const moved = tx.update(schema.orders).set({ ownerId: heir?.id ?? null }).where(eq(schema.orders.ownerId, userId)).returning({ id: schema.orders.id }).all();
         if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "Order", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
+      }
+      {
+        const moved = tx.update(schema.followUps).set({ ownerId: heir?.id ?? null }).where(eq(schema.followUps.ownerId, userId)).returning({ id: schema.followUps.id }).all();
+        if (moved.length) audit(tx, by, { action: heir ? "records reassigned" : "records cleared", model: "FollowUp", details: { column: "ownerId", user: userId, to: heir?.id ?? null, records: moved.map((r) => r.id) } });
       }
       tx.delete(user).where(eq(user.id, userId)).run();
       audit(tx, by, { action: "user removed", model: "User", title: target.name, details: { user: userId, email: target.email, role: target.role } });
@@ -33243,7 +34651,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { createRootRoute, HeadContent, Scripts, ScriptOnce, useRouter, useRouterState } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { History, ShoppingCart, Trash2, Users } from "lucide-react";
+import { History, List, ShoppingCart, Trash2, Users } from "lucide-react";
 import { app } from "#/generated/app";
 import { pageAccess, pageUi } from "#/generated/pages";
 import { currentViewer } from "#/lib/viewer.server";
@@ -33275,6 +34683,12 @@ const menus: MenuUi[] = [
         icon: ShoppingCart,
         access: pageAccess["orders"],
       },
+      {
+        to: "/follow-ups",
+        label: pageUi["followUps"].title,
+        icon: List,
+        access: pageAccess["followUps"],
+      },
     ],
   },
   {
@@ -33304,7 +34718,12 @@ const menus: MenuUi[] = [
 ];
 
 /** Each page's route and name, longest route first. */
-const pageRoutes: [string, string][] = [["/customers", "customers"], ["/orders", "orders"], ["/team", "team"]];
+const pageRoutes: [string, string][] = [
+  ["/follow-ups", "followUps"],
+  ["/customers", "customers"],
+  ["/orders", "orders"],
+  ["/team", "team"],
+];
 
 /** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
 function pageOf(path: string): string | undefined {
@@ -33415,13 +34834,16 @@ import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
 import { pageAccess, pageHead } from "#/generated/pages";
-import { customerUi, deleteCustomer, getCustomer, restoreCustomers, updateCustomer } from "#/generated/customer";
+import { customerOptions, customerUi, deleteCustomer, getCustomer, restoreCustomers, updateCustomer } from "#/generated/customer";
 import { customerSchema } from "#/generated/customer.schema";
 import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
+import { mergeCustomers, mergeCustomersAccess, mergeCustomersKeep, mergeCustomersPreview } from "#/generated/actions/merge-customers";
+import { MergeButton } from "#/kit/MergeDialog";
 import { buttonVariants } from "#/components/ui/button";
 import { orderUi } from "#/generated/order";
+import { followUpUi } from "#/generated/follow-up";
 import { customerOwnerOptions } from "#/generated/customer";
-import { guardPage } from "#/kit/access";
+import { allows, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
@@ -33466,12 +34888,35 @@ export const Route = createFileRoute("/customers/$id")({
 
 function CustomerPage() {
   const { row, canWrite, canDelete, canAdd, trashed, options, history } = Route.useLoaderData();
+  const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
   const back = () => navigate({ to: "/customers" });
   return (
     <>
-      <PageHeader title={row.name || \`Customer #\${row.id}\`} />
+      <PageHeader
+        title={row.name || \`Customer #\${row.id}\`}
+        actions={
+          <>
+            {allows(mergeCustomersAccess, viewer) && (
+              <MergeButton
+                label="Merge customers"
+                concept="action:mergeCustomers"
+                ui={customerUi}
+                app={app}
+                keep={mergeCustomersKeep}
+                into={{ record: { id: row.id, title: String(row.name || \`Customer #\${row.id}\`) }, loadOptions: customerOptions as never }}
+                preview={(keep, other) => mergeCustomersPreview({ data: { keep, other } })}
+                run={(keep, other, choices) => mergeCustomers({ data: { keep, other, choices } })}
+                onDone={async (merged) => {
+                  if (merged.goes === "trash") rememberTrashed("Customer", merged.other.id, merged.other.title);
+                  await navigate({ to: "/customers/$id", params: { id: String(merged.kept.id) } });
+                }}
+              />
+            )}
+          </>
+        }
+      />
       {trashed && (
         <TrashedBanner
           {...trashed}
@@ -33531,6 +34976,29 @@ function CustomerPage() {
           emptyMessage={canAdd?.orders ? undefined : w.noneYet("orders")}
         />
       </section>
+      <section className="mt-10">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Follow ups</h2>
+          {row.followUps.length > 0 && canAdd?.followUps && (
+              <Link to="/follow-ups/new" search={{ customer: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("follow up")}
+              </Link>
+            )}
+        </div>
+        <ModelTable
+          ui={followUpUi}
+          app={app}
+          rows={row.followUps}
+          hide={["customerId"]}
+          onOpen={(item) => navigate({ to: "/follow-ups/$id", params: { id: String(item.id) } })}
+          emptyAction={canAdd?.followUps && (
+              <Link to="/follow-ups/new" search={{ customer: row.id }} className={buttonVariants({ variant: "outline" })}>
+                {w.addOne("follow up")}
+              </Link>
+            )}
+          emptyMessage={canAdd?.followUps ? undefined : w.noneYet("follow ups")}
+        />
+      </section>
       {history && history.length > 0 && (
         <section className="mt-10 max-w-3xl">
           <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
@@ -33543,38 +35011,38 @@ function CustomerPage() {
 "
 `;
 
-exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/customers/actions/merge-customers.tsx 1`] = `
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/customers/actions/schedule-follow-ups.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
-import { mergeCustomers, mergeCustomersAccess, mergeCustomersUi } from "#/generated/actions/merge-customers";
-import { mergeCustomersInput } from "#/generated/actions/merge-customers.input";
+import { scheduleFollowUps, scheduleFollowUpsAccess, scheduleFollowUpsUi } from "#/generated/actions/schedule-follow-ups";
+import { scheduleFollowUpsInput } from "#/generated/actions/schedule-follow-ups.input";
 import { customerOptions } from "#/generated/customer";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 
-export const Route = createFileRoute("/customers/actions/merge-customers")({
-  beforeLoad: ({ context, location }) => guardPage(mergeCustomersAccess, context.viewer, location.href),
-  loader: async () => ({ options: { keep: await customerOptions(), duplicate: await customerOptions() } }),
-  component: MergeCustomersPage,
+export const Route = createFileRoute("/customers/actions/schedule-follow-ups")({
+  beforeLoad: ({ context, location }) => guardPage(scheduleFollowUpsAccess, context.viewer, location.href),
+  loader: async () => ({ options: { customer: await customerOptions() } }),
+  component: ScheduleFollowUpsPage,
 });
 
-function MergeCustomersPage() {
+function ScheduleFollowUpsPage() {
   const { options } = Route.useLoaderData();
   const navigate = useNavigate();
   const back = () => navigate({ to: "/customers" });
   return (
     <>
-      <PageHeader title="Merge customers" />
+      <PageHeader title="Schedule follow ups" />
       <ModelForm
-        ui={mergeCustomersUi}
+        ui={scheduleFollowUpsUi}
         app={app}
-        schema={mergeCustomersInput}
+        schema={scheduleFollowUpsInput}
         options={options}
-        submitLabel="Merge customers"
+        submitLabel="Schedule follow ups"
         onSubmit={async (values) => {
-          await mergeCustomers({ data: values });
+          await scheduleFollowUps({ data: values });
           await back();
         }}
         onCancel={back}
@@ -33597,12 +35065,14 @@ import { contains } from "#/kit/search";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
-import { mergeCustomersAccess } from "#/generated/actions/merge-customers";
-import { TrashNotice } from "#/kit/Trash";
+import { scheduleFollowUpsAccess } from "#/generated/actions/schedule-follow-ups";
+import { TrashNotice, rememberTrashed } from "#/kit/Trash";
 import { restoreCustomers, deleteCustomers, customerDeleteRule, customerUi } from "#/generated/customer";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
 import { csvName, csvOf, download } from "#/kit/csv";
+import { mergeCustomers, mergeCustomersAccess, mergeCustomersKeep, mergeCustomersPreview } from "#/generated/actions/merge-customers";
+import { MergeButton } from "#/kit/MergeDialog";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
@@ -33646,9 +35116,9 @@ function CustomersPage() {
       {w.newOne("customer")}
     </Link>
   );
-  const mergeCustomersButton = allows(mergeCustomersAccess, viewer) && (
-    <Link to="/customers/actions/merge-customers" className={buttonVariants({ variant: "outline" })}>
-      Merge customers
+  const scheduleFollowUpsButton = allows(scheduleFollowUpsAccess, viewer) && (
+    <Link to="/customers/actions/schedule-follow-ups" className={buttonVariants({ variant: "outline" })}>
+      Schedule follow ups
     </Link>
   );
   return (
@@ -33656,7 +35126,7 @@ function CustomersPage() {
       <PageHeader
         page="customers"
         title={pageUi["customers"].title}
-        actions={<>{mergeCustomersButton}{newButton}</>}
+        actions={<>{scheduleFollowUpsButton}{newButton}</>}
       />
       <SearchBox
         value={q ?? ""}
@@ -33670,6 +35140,25 @@ function CustomersPage() {
           app={app}
           titleOf={(id) => String(rows.find((row) => row.id === id)?.name ?? id)}
           actions={[]}
+          extra={
+            chosen.length === 2 && allows(mergeCustomersAccess, viewer) ? (
+              <MergeButton
+                label="Merge customers"
+                concept="action:mergeCustomers"
+                ui={customerUi}
+                app={app}
+                keep={mergeCustomersKeep}
+                sides={[chosen[0], chosen[1]].map((row) => ({ id: row.id, title: String(String(row.name)) })) as never}
+                preview={(keep, other) => mergeCustomersPreview({ data: { keep, other } })}
+                run={(keep, other, choices) => mergeCustomers({ data: { keep, other, choices } })}
+                onDone={async (merged) => {
+                  if (merged.goes === "trash") rememberTrashed("Customer", merged.other.id, merged.other.title);
+                  setSelected(new Set());
+                  await router.invalidate();
+                }}
+              />
+            ) : null
+          }
           deletable={chosen.filter((row) => allows(customerDeleteRule, viewer, row.accountManagerId)).length}
           onDelete={(together) => deleteCustomers({ data: { ids: chosen.map((row) => row.id), together } })}
           trash
@@ -33789,6 +35278,344 @@ function CustomerTrashPage() {
         erase={(ids) => eraseCustomers({ data: ids })}
         onDone={() => router.invalidate()}
         onOpen={(row) => navigate({ to: "/customers/$id", params: { id: String(row.id) } })}
+      />
+    </>
+  );
+}
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/follow-ups/$id.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { and, desc, eq } from "drizzle-orm";
+import { db } from "#/db";
+import { auditLog, user } from "#/db/schema";
+import { app } from "#/generated/app";
+import { pageAccess, pageHead } from "#/generated/pages";
+import { titleOf } from "#/kit/format";
+import { deleteFollowUp, followUpUi, getFollowUp, restoreFollowUps, updateFollowUp } from "#/generated/follow-up";
+import { followUpSchema } from "#/generated/follow-up.schema";
+import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
+import { customerOptions } from "#/generated/customer";
+import { guardPage } from "#/kit/access";
+import { ActivityLog } from "#/kit/ActivityLog";
+import { PageHeader } from "#/kit/AppShell";
+import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** The record's lines in the audit log, newest first: administrators only, nobody else. */
+const getHistory = createServerFn()
+  .validator((id: number) => id)
+  .handler(async ({ data: id }) => {
+    const viewer = await currentViewer();
+    if (viewer?.role !== "admin") return null;
+    const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
+    return db
+      .select()
+      .from(auditLog)
+      .where(and(eq(auditLog.model, "FollowUp"), eq(auditLog.recordId, id)))
+      .orderBy(desc(auditLog.id))
+      .limit(50)
+      .all()
+      .map((r) => ({
+        id: r.id,
+        at: r.at,
+        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
+        action: r.action,
+        fields: r.fields,
+        details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
+      }));
+  });
+
+export const Route = createFileRoute("/follow-ups/$id")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["followUps"], context.viewer, location.href),
+  head: () => pageHead("followUps"),
+  loader: async ({ params }) => {
+    const found = await getFollowUp({ data: Number(params.id) });
+    if (!found) throw notFound();
+    return { ...found, options: { customerId: await customerOptions() }, history: await getHistory({ data: Number(params.id) }) };
+  },
+  component: FollowUpPage,
+});
+
+function FollowUpPage() {
+  const { row, canWrite, canDelete, trashed, options, history } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const back = () => navigate({ to: "/follow-ups" });
+  return (
+    <>
+      <PageHeader title={titleOf(row.note) || \`Follow up #\${row.id}\`} />
+      {trashed && (
+        <TrashedBanner
+          {...trashed}
+          app={app}
+          ui={followUpUi}
+          onRestore={async () => {
+            await restoreFollowUps({ data: [row.id] });
+            await router.invalidate();
+          }}
+        />
+      )}
+      <ModelForm
+        key={String(row.updatedAt)}
+        trash
+        ui={followUpUi}
+        app={app}
+        schema={followUpSchema}
+        initial={row}
+        readOnly={!canWrite}
+        options={options}
+        submitLabel={w.saveChanges}
+        onSubmit={async (values) => {
+          await updateFollowUp({ data: { id: row.id, values } });
+          await back();
+        }}
+        onCancel={back}
+        onDelete={
+          canDelete
+            ? async (together?: boolean) => {
+                await deleteFollowUp({ data: { id: row.id, together } });
+                rememberTrashed("FollowUp", row.id, String(titleOf(row.note) || \`Follow up #\${row.id}\`));
+                await back();
+              }
+            : undefined
+        }
+      />
+
+      {history && history.length > 0 && (
+        <section className="mt-10 max-w-3xl">
+          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
+          <ActivityLog lines={history} app={app} />
+        </section>
+      )}
+    </>
+  );
+}
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/follow-ups/index.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
+import { guardPage, allows } from "#/kit/access";
+import { createServerFn } from "@tanstack/react-start";
+import * as schema from "#/db/schema";
+import { followUpAccess, followUpData } from "#/generated/follow-up.server";
+import { or, inArray, and, eq } from "drizzle-orm";
+import { contains } from "#/kit/search";
+import { customerData } from "#/generated/customer.server";
+import { currentViewer } from "#/lib/viewer.server";
+import { type Search, count, listQuery, optional, text } from "#/kit/params";
+import { buttonVariants } from "#/components/ui/button";
+import { TrashNotice } from "#/kit/Trash";
+import { restoreFollowUps, deleteFollowUps, followUpDeleteRule, followUpUi } from "#/generated/follow-up";
+import { useState } from "react";
+import { SelectionBar } from "#/kit/SelectionBar";
+import { csvName, csvOf, download } from "#/kit/csv";
+import { titleOf } from "#/kit/format";
+import { app } from "#/generated/app";
+import { w } from "#/kit/words";
+import { PageHeader } from "#/kit/AppShell";
+import { ModelTable } from "#/kit/ModelTable";
+import { SearchBox } from "#/kit/SearchBox";
+import { Filters } from "#/kit/Filters";
+
+/** The follow ups matching the search and the filters, among those the viewer may read. */
+const searchFollowUps = createServerFn()
+  .validator(listQuery)
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    const where = and(
+      data.q ? or(contains([schema.followUps.note], data.q), inArray(schema.followUps.customerId, customerData.titled(viewer, data.q))) : undefined,
+      data.f?.done === "true" || data.f?.done === "false" ? eq(schema.followUps.done, data.f?.done === "true") : undefined,
+    );
+    return {
+      ...(await followUpData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(followUpAccess.create, viewer),
+      options: {  },
+    };
+  });
+
+export const Route = createFileRoute("/follow-ups/")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["followUps"], context.viewer, location.href),
+  head: () => pageHead("followUps"),
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), done: text(s.done), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchFollowUps({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
+  component: FollowUpsPage,
+});
+
+function FollowUpsPage() {
+  const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
+  const { viewer } = Route.useRouteContext();
+  const navigate = useNavigate({ from: "/follow-ups/" });
+  const router = useRouter();
+  // The chosen rows, offered when the viewer may do something to at least one row.
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const chosen = rows.filter((row) => selected.has(row.id));
+  const selectable = rows.some((row) => allows(followUpDeleteRule, viewer, row.ownerId));
+  const newButton = canCreate && (
+    <Link to="/follow-ups/new" className={buttonVariants()}>
+      {w.newOne("follow up")}
+    </Link>
+  );
+  return (
+    <>
+      <PageHeader
+        page="followUps"
+        title={pageUi["followUps"].title}
+        actions={newButton}
+      />
+      <SearchBox
+        value={q ?? ""}
+        placeholder="Search by customer or note"
+        onSearch={(text) => navigate({ to: "/follow-ups", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true, resetScroll: false })}
+      />
+      <Filters
+        filters={[{ name: "done", label: "Done", kind: "toggle" }]}
+        values={values}
+        onChange={(next) => navigate({ to: "/follow-ups", search: { q, ...next }, replace: true, resetScroll: false })}
+      />
+      {selectable && (
+        <SelectionBar
+          count={chosen.length}
+          noun={["follow up", "follow ups"]}
+          app={app}
+          titleOf={(id) => titleOf(rows.find((row) => row.id === id)?.note ?? id)}
+          actions={[]}
+          deletable={chosen.filter((row) => allows(followUpDeleteRule, viewer, row.ownerId)).length}
+          onDelete={(together) => deleteFollowUps({ data: { ids: chosen.map((row) => row.id), together } })}
+          trash
+          onDone={async () => {
+            setSelected(new Set());
+            await router.invalidate();
+          }}
+          onExport={() => download(csvName(followUpUi), csvOf(followUpUi, chosen))}
+        />
+      )}
+      <TrashNotice
+        model="FollowUp"
+        onUndo={async (id) => {
+          await restoreFollowUps({ data: [id] });
+          await router.invalidate();
+        }}
+      />
+      <ModelTable
+        ui={followUpUi}
+        page="followUps"
+        paging={{ page: at, size, total, to: (next) => navigate({ to: "/follow-ups", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
+        app={app}
+        exportRows={async () => (await searchFollowUps({ data: { q, sort, f: values, all: true } })).rows}
+        rows={rows}
+        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No follow ups match the search and filters." : undefined}
+        emptyAction={newButton || undefined}
+        onOpen={(row) => navigate({ to: "/follow-ups/$id", params: { id: String(row.id) } })}
+      />
+      {viewer && (
+        <p className="pt-2 text-right text-sm">
+          <Link to="/follow-ups/trash" className="text-muted-foreground hover:underline">
+            {w.trashView}
+          </Link>
+        </p>
+      )}
+    </>
+  );
+}
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/follow-ups/new.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess, pageHead } from "#/generated/pages";
+import { createFollowUp, followUpUi } from "#/generated/follow-up";
+import { followUpSchema } from "#/generated/follow-up.schema";
+import { customerOptions } from "#/generated/customer";
+import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { ModelForm } from "#/kit/ModelForm";
+import { w } from "#/kit/words";
+import { count, optional, type Search } from "#/kit/params";
+
+export const Route = createFileRoute("/follow-ups/new")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["followUps"], context.viewer, location.href),
+  head: () => pageHead("followUps"),
+  validateSearch: (s: Search) => optional({ customer: count(s.customer) }),
+  loader: async () => ({ options: { customerId: await customerOptions() } }),
+  component: NewFollowUpPage,
+});
+
+function NewFollowUpPage() {
+  const { options } = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const back = () => search.customer ? navigate({ to: "/customers/$id", params: { id: String(search.customer) } }) : navigate({ to: "/follow-ups" });
+  return (
+    <>
+      <PageHeader title={w.newOne("follow up")} />
+      <ModelForm
+        ui={followUpUi}
+        app={app}
+        schema={followUpSchema}
+        preset={{ ...(search.customer ? { customerId: search.customer } : {}) }}
+        fixed={[...(search.customer ? ["customerId"] : [])]}
+        options={options}
+        submitLabel={w.createOne("follow up")}
+        onSubmit={async (values) => {
+          await createFollowUp({ data: values });
+          await back();
+        }}
+        onCancel={back}
+      />
+    </>
+  );
+}
+"
+`;
+
+exports[`../../../examples/crm/smithable.yml > file list and generated code > src/routes/follow-ups/trash.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
+import { eraseFollowUps, followUpUi, restoreFollowUps, trashedFollowUps } from "#/generated/follow-up";
+import { guardPage } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { TrashTable } from "#/kit/Trash";
+import { w } from "#/kit/words";
+
+export const Route = createFileRoute("/follow-ups/trash")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["followUps"], context.viewer, location.href),
+  loader: () => trashedFollowUps(),
+  component: FollowUpTrashPage,
+});
+
+function FollowUpTrashPage() {
+  const { rows } = Route.useLoaderData();
+  const navigate = useNavigate();
+  const router = useRouter();
+  return (
+    <>
+      <PageHeader title={w.trashOf(followUpUi.pluralLabel)} subtitle={w.trashLead} />
+      <TrashTable
+        ui={followUpUi}
+        app={app}
+        rows={rows}
+        restore={(ids) => restoreFollowUps({ data: ids })}
+        erase={(ids) => eraseFollowUps({ data: ids })}
+        onDone={() => router.invalidate()}
+        onOpen={(row) => navigate({ to: "/follow-ups/$id", params: { id: String(row.id) } })}
       />
     </>
   );
@@ -34317,6 +36144,7 @@ import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
 import { customerUi } from "#/generated/customer";
 import { orderUi } from "#/generated/order";
+import { followUpUi } from "#/generated/follow-up";
 import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
@@ -34337,7 +36165,7 @@ const filters = (s: Search) => optional({
 });
 
 /** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = { Customer: customerUi.label, Order: orderUi.label };
+const LABELS: Record<string, string> = { Customer: customerUi.label, Order: orderUi.label, FollowUp: followUpUi.label };
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()
@@ -34387,6 +36215,17 @@ const getActivity = createServerFn()
             .select({ id: schema.orders.id, title: schema.orders.number })
             .from(schema.orders)
             .where(inArray(schema.orders.id, ids("Order")))
+            .all()
+            .map((r) => [r.id, String(r.title ?? r.id)]),
+        ),
+      ],
+      [
+        "FollowUp",
+        new Map(
+          db
+            .select({ id: schema.followUps.id, title: schema.followUps.note })
+            .from(schema.followUps)
+            .where(inArray(schema.followUps.id, ids("FollowUp")))
             .all()
             .map((r) => [r.id, String(r.title ?? r.id)]),
         ),
@@ -34593,6 +36432,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { customerUi, eraseCustomers, restoreCustomers, trashedCustomers } from "#/generated/customer";
 import { eraseOrders, orderUi, restoreOrders, trashedOrders } from "#/generated/order";
+import { eraseFollowUps, followUpUi, restoreFollowUps, trashedFollowUps } from "#/generated/follow-up";
 import { guardPage } from "#/kit/access";
 import { PageHeader } from "#/kit/AppShell";
 import { TrashTable } from "#/kit/Trash";
@@ -34601,8 +36441,8 @@ import { w } from "#/kit/words";
 export const Route = createFileRoute("/team/trash")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["team"], context.viewer, location.href),
   loader: async () => {
-    const [customer, order] = await Promise.all([trashedCustomers(), trashedOrders()]);
-    return { customer: customer.rows, order: order.rows };
+    const [customer, order, followUp] = await Promise.all([trashedCustomers(), trashedOrders(), trashedFollowUps()]);
+    return { customer: customer.rows, order: order.rows, followUp: followUp.rows };
   },
   component: TrashPage,
 });
@@ -34641,6 +36481,20 @@ function TrashPage() {
             erase={(ids) => eraseOrders({ data: ids })}
             onDone={() => router.invalidate()}
             onOpen={(row) => navigate({ to: "/orders/$id", params: { id: String(row.id) } })}
+          />
+        </section>
+      )}
+      {rows.followUp.length > 0 && (
+        <section data-model="FollowUp" className="space-y-3 pb-8">
+          <h2 className="text-lg font-semibold">{followUpUi.pluralLabel}</h2>
+          <TrashTable
+            ui={followUpUi}
+            app={app}
+            rows={rows.followUp}
+            restore={(ids) => restoreFollowUps({ data: ids })}
+            erase={(ids) => eraseFollowUps({ data: ids })}
+            onDone={() => router.invalidate()}
+            onOpen={(row) => navigate({ to: "/follow-ups/$id", params: { id: String(row.id) } })}
           />
         </section>
       )}
@@ -34833,7 +36687,7 @@ test.beforeAll(async ({ browser }) => {
     for (const route of routes) await open(route);
     await context.close();
   };
-  await warm("admin", ["/customers", "/orders", "/team"]);
+  await warm("admin", ["/customers", "/orders", "/follow-ups", "/team"]);
   if (slow.length) throw new Error(\`Pages that did not open while warming up: \${slow.join(", ")}\`);
 });
 
@@ -34843,6 +36697,10 @@ test("Customers needs sign-in", async ({ page }) => {
 });
 test("Orders needs sign-in", async ({ page }) => {
   await page.goto("/orders");
+  await expect(page).toHaveURL(/sign-in/);
+});
+test("Follow ups needs sign-in", async ({ page }) => {
+  await page.goto("/follow-ups");
   await expect(page).toHaveURL(/sign-in/);
 });
 test("Team needs sign-in", async ({ page }) => {
@@ -34861,6 +36719,9 @@ test.describe("signed in as admin", () => {
   test("Orders opens", async ({ page }) => {
     await visit(page, "/orders");
   });
+  test("Follow ups opens", async ({ page }) => {
+    await visit(page, "/follow-ups");
+  });
   test("Team opens", async ({ page }) => {
     await visit(page, "/team");
   });
@@ -34876,6 +36737,9 @@ test.describe("signed in as sales", () => {
   });
   test("Orders opens", async ({ page }) => {
     await visit(page, "/orders");
+  });
+  test("Follow ups opens", async ({ page }) => {
+    await visit(page, "/follow-ups");
   });
 });
 
@@ -34932,16 +36796,18 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/components/ui/card.tsx",
   "kit: src/components/ui/input.tsx",
   "kit: src/components/ui/table.tsx",
-  "custom: src/custom/actions/merge-customers.ts",
+  "custom: src/custom/actions/schedule-follow-ups.ts",
   "custom: src/custom/hooks.ts",
   "custom: src/custom/styles.css",
   "kit: src/db/index.ts",
   "generated: src/db/schema.ts",
   "generated: src/db/seed.ts",
   "generated: src/generated/access.test.ts",
-  "generated: src/generated/actions/merge-customers.input.ts",
   "generated: src/generated/actions/merge-customers.server.ts",
   "generated: src/generated/actions/merge-customers.ts",
+  "generated: src/generated/actions/schedule-follow-ups.input.ts",
+  "generated: src/generated/actions/schedule-follow-ups.server.ts",
+  "generated: src/generated/actions/schedule-follow-ups.ts",
   "generated: src/generated/app.ts",
   "generated: src/generated/ask.server.ts",
   "generated: src/generated/custom.ts",
@@ -34949,6 +36815,10 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "generated: src/generated/customer.server.ts",
   "generated: src/generated/customer.ts",
   "generated: src/generated/dev-door.server.ts",
+  "generated: src/generated/follow-up.formulas.ts",
+  "generated: src/generated/follow-up.schema.ts",
+  "generated: src/generated/follow-up.server.ts",
+  "generated: src/generated/follow-up.ts",
   "generated: src/generated/hooks.ts",
   "generated: src/generated/order.formulas.test.ts",
   "generated: src/generated/order.formulas.ts",
@@ -34974,6 +36844,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/FieldInput.tsx",
   "kit: src/kit/Filters.tsx",
   "kit: src/kit/Inspector.tsx",
+  "kit: src/kit/MergeDialog.tsx",
   "kit: src/kit/ModelForm.tsx",
   "kit: src/kit/ModelTable.tsx",
   "kit: src/kit/MoreOnScroll.tsx",
@@ -35027,10 +36898,14 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "generated: src/routes/__root.tsx",
   "kit: src/routes/api/auth/$.ts",
   "generated: src/routes/customers/$id.tsx",
-  "generated: src/routes/customers/actions/merge-customers.tsx",
+  "generated: src/routes/customers/actions/schedule-follow-ups.tsx",
   "generated: src/routes/customers/index.tsx",
   "generated: src/routes/customers/new.tsx",
   "generated: src/routes/customers/trash.tsx",
+  "generated: src/routes/follow-ups/$id.tsx",
+  "generated: src/routes/follow-ups/index.tsx",
+  "generated: src/routes/follow-ups/new.tsx",
+  "generated: src/routes/follow-ups/trash.tsx",
   "kit: src/routes/health.ts",
   "generated: src/routes/index.tsx",
   "generated: src/routes/orders/$id.tsx",
@@ -35076,34 +36951,40 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/components/ui/card.tsx": "70105365 kit",
   "src/components/ui/input.tsx": "bf810eb3 kit",
   "src/components/ui/table.tsx": "69a01130 kit",
-  "src/custom/actions/merge-customers.ts": "916a9b22 custom",
+  "src/custom/actions/schedule-follow-ups.ts": "f5749c9c custom",
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "e68874ae generated",
-  "src/db/seed.ts": "cfae0905 generated",
-  "src/generated/access.test.ts": "0901dddc generated",
-  "src/generated/actions/merge-customers.input.ts": "41880ca5 generated",
-  "src/generated/actions/merge-customers.server.ts": "3e219990 generated",
-  "src/generated/actions/merge-customers.ts": "1a507bb8 generated",
+  "src/db/schema.ts": "dfded9d9 generated",
+  "src/db/seed.ts": "962bef0c generated",
+  "src/generated/access.test.ts": "1b88484b generated",
+  "src/generated/actions/merge-customers.server.ts": "401c300c generated",
+  "src/generated/actions/merge-customers.ts": "6bd732b1 generated",
+  "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
+  "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
+  "src/generated/actions/schedule-follow-ups.ts": "09f0f811 generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "b5039af7 generated",
+  "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "611c2893 generated",
-  "src/generated/customer.ts": "d44b6a34 generated",
-  "src/generated/dev-door.server.ts": "5b92da66 generated",
-  "src/generated/hooks.ts": "b85320ca generated",
+  "src/generated/customer.server.ts": "adc5479b generated",
+  "src/generated/customer.ts": "79b283e3 generated",
+  "src/generated/dev-door.server.ts": "1262e2f3 generated",
+  "src/generated/follow-up.formulas.ts": "464cc51b generated",
+  "src/generated/follow-up.schema.ts": "4393010c generated",
+  "src/generated/follow-up.server.ts": "60c21496 generated",
+  "src/generated/follow-up.ts": "6e9b86d6 generated",
+  "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
   "src/generated/order.server.ts": "5685c42e generated",
   "src/generated/order.ts": "739e757f generated",
-  "src/generated/pages.ts": "f7f499ac generated",
+  "src/generated/pages.ts": "d027cb31 generated",
   "src/generated/roles.ts": "1cc6979a generated",
-  "src/generated/trash.server.ts": "1c432d97 generated",
+  "src/generated/trash.server.ts": "bd5ac85e generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "b7bb6e6e generated",
+  "src/generated/users.server.ts": "31c09fe7 generated",
   "src/generated/users.test.ts": "88e55585 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -35118,15 +36999,16 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
+  "src/kit/MergeDialog.tsx": "1efee082 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "6ba4c842 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Trash.tsx": "26ea3332 kit",
+  "src/kit/Trash.tsx": "86c54edc kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
   "src/kit/access.ts": "45e867ad kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -35157,7 +37039,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -35168,13 +37050,17 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/[_dev]/ask.ts": "bd24beb4 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "01060509 generated",
+  "src/routes/__root.tsx": "1910ac9a generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "edbb1090 generated",
-  "src/routes/customers/actions/merge-customers.tsx": "bbf7cf9f generated",
-  "src/routes/customers/index.tsx": "632d2f8c generated",
+  "src/routes/customers/$id.tsx": "642231d2 generated",
+  "src/routes/customers/actions/schedule-follow-ups.tsx": "c8c34df2 generated",
+  "src/routes/customers/index.tsx": "1925fead generated",
   "src/routes/customers/new.tsx": "630db072 generated",
   "src/routes/customers/trash.tsx": "732d5013 generated",
+  "src/routes/follow-ups/$id.tsx": "9fa97b96 generated",
+  "src/routes/follow-ups/index.tsx": "25525437 generated",
+  "src/routes/follow-ups/new.tsx": "ca6bd493 generated",
+  "src/routes/follow-ups/trash.tsx": "363b8042 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "cc2b5606 generated",
   "src/routes/orders/$id.tsx": "06572473 generated",
@@ -35183,13 +37069,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "8c938050 generated",
-  "src/routes/team/activity.tsx": "8f471a14 generated",
+  "src/routes/team/activity.tsx": "761fcfce generated",
   "src/routes/team/index.tsx": "5c4ec38b generated",
-  "src/routes/team/trash.tsx": "f6e5f5dd generated",
+  "src/routes/team/trash.tsx": "30f6bbf9 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "ea364037 kit",
   "src/theme.css": "8439b73a generated",
-  "tests/smoke.spec.ts": "1f2754d0 generated",
+  "tests/smoke.spec.ts": "63dfe494 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -43478,7 +45364,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "45e867ad kit",
@@ -43518,7 +45404,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -51349,7 +53235,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
@@ -51384,7 +53270,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -56125,7 +58011,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/Review.tsx": "5f595873 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "45e867ad kit",
@@ -56160,7 +58046,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -59618,7 +61504,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "45e867ad kit",
@@ -59650,7 +61536,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -71248,7 +73134,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
@@ -71284,7 +73170,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -78274,7 +80160,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SelectionBar.tsx": "04614292 kit",
+  "src/kit/SelectionBar.tsx": "05a08ff5 kit",
   "src/kit/SignIn.tsx": "2005a78e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
@@ -78313,7 +80199,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "983911a4 kit",
+  "src/kit/words/en.ts": "53c4b7dd kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",

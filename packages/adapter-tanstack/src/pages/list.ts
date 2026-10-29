@@ -33,13 +33,13 @@ import {
   keyOf,
   literal,
   longTitle,
+  mergeActions,
   modelNamed,
   names,
   ownerKey,
   paramsUsed,
   relatedTitle,
   shownTitle,
-  mergeActions,
   standardActions,
   type Texts,
   tableRef,
@@ -599,7 +599,13 @@ export function listParts(
     for (const a of many) view.add(actionNames(a).module, actionNames(a).many);
     for (const a of merges)
       view
-        .add(actionNames(a).module, a.name, actionNames(a).access, actionNames(a).keep, actionNames(a).previewFn)
+        .add(
+          actionNames(a).module,
+          a.name,
+          actionNames(a).access,
+          actionNames(a).keep,
+          actionNames(a).previewFn,
+        )
         .add("#/kit/MergeDialog", "MergeButton")
         .add("#/kit/Trash", "rememberTrashed");
     for (const a of onRows)
@@ -776,8 +782,12 @@ ${merges
     (a) => `          extra={
             chosen.length === 2 && allows(${actionNames(a).access}, viewer) ? (
               <MergeButton
-                label=${attr(t.action(a))}${t.actionHelp(a) ? `
-                help=${attr(t.actionHelp(a) as string)}` : ""}
+                label=${attr(t.action(a))}${
+                  t.actionHelp(a)
+                    ? `
+                help=${attr(t.actionHelp(a) as string)}`
+                    : ""
+                }
                 concept="action:${a.name}"
                 ui={${n.ui}}
                 app={app}
@@ -786,8 +796,12 @@ ${merges
                 preview={(keep, other) => ${actionNames(a).previewFn}({ data: { keep, other } })}
                 run={(keep, other, choices) => ${a.name}({ data: { keep, other, choices } })}
                 onDone={async (merged) => {
-                  ${model.trash ? `if (merged.goes === "trash") rememberTrashed(${JSON.stringify(model.name)}, merged.other.id, merged.other.title);
-                  ` : ""}setSelected(new Set());
+                  ${
+                    model.trash
+                      ? `if (merged.goes === "trash") rememberTrashed(${JSON.stringify(model.name)}, merged.other.id, merged.other.title);
+                  `
+                      : ""
+                  }setSelected(new Set());
                   await router.invalidate();
                 }}
               />
@@ -795,7 +809,9 @@ ${merges
           }
 `,
   )
-  .join("")}          deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
+  .join(
+    "",
+  )}          deletable={chosen.filter((row) => allows(${n.deleteRule}, viewer, ${owner})).length}
           onDelete={(together) => ${n.removeMany}({ data: { ids: chosen.map((row) => row.id), together } })}${trash ? "\n          trash" : ""}
           onDone={async () => {
             setSelected(new Set());

@@ -19,24 +19,30 @@ const auth = raw(
 );
 const actionOf = (text: string) =>
   validateSpec({ path: "smithable.yml", text }).ir?.actions.find(
-    (a) => a.name === "mergeCustomers",
+    (a) => a.name === "scheduleFollowUps",
   );
 
 describe("addAction", () => {
-  test("the CRM's mergeCustomers, written from the operation's words, is the same action", () => {
-    // The CRM without its action (and without the page's button that uses it).
+  test("the CRM's scheduleFollowUps, written from the operation's words, is the same action", () => {
+    // The CRM without its custom action (and without the page's button that uses it).
     const without = spec
-      .replace(/\nactions:\n {2}mergeCustomers:\n(?: {4}.*\n| {6}.*\n)+/, "\n")
-      .replace("    actions: [mergeCustomers]\n", "");
+      .replace(/\n {2}scheduleFollowUps:\n(?: {4}.*\n| {6}.*\n)+/, "\n")
+      .replace(
+        "    actions: [mergeCustomers, scheduleFollowUps]\n",
+        "    actions: [mergeCustomers]\n",
+      );
     expect(actionOf(without)).toBeUndefined();
     const operation = findOperation("addAction");
     if (!operation) throw new Error("no addAction");
     const args = parseOperationArgs(operation, [
-      "mergeCustomers",
-      "keep=Customer!",
-      "duplicate=Customer!",
+      "scheduleFollowUps",
+      "customer=Customer!",
+      "count=int!",
+      "everyDays=int!",
+      "--output",
+      "created=int!",
       "--intent",
-      "Merge a duplicate customer record into the one we keep.",
+      "Plan a series of follow-up notes for a customer, one every so many days.",
     ]);
     const result = applyOperation({ spec: without, auth }, "addAction", args);
     if (!result.ok) throw new Error(result.message);
@@ -163,13 +169,15 @@ describe("setAction", () => {
     expect(run(status, "setAction", ["resolve", "--set", "status=gone"])).toMatchObject({
       ok: false,
     });
-    expect(run({ spec, auth }, "setAction", ["mergeCustomers", "--when", "name=x"])).toMatchObject({
+    expect(
+      run({ spec, auth }, "setAction", ["scheduleFollowUps", "--when", "name=x"]),
+    ).toMatchObject({
       ok: false,
       message: expect.stringContaining("custom action"),
     });
     // A custom action's intent changes like any other.
     expect(
-      run({ spec, auth }, "setAction", ["mergeCustomers", "--intent", "Merge."]),
+      run({ spec, auth }, "setAction", ["scheduleFollowUps", "--intent", "Plan."]),
     ).toMatchObject({ ok: true });
   });
 });
@@ -188,13 +196,15 @@ describe("removeAction", () => {
   });
 
   test("the last action takes the page's list and the section with it; a custom one's code stays, and it says so", () => {
-    const result = run({ spec, auth }, "removeAction", ["mergeCustomers"]);
+    const first = run({ spec, auth }, "removeAction", ["mergeCustomers"]);
+    if (!first.ok) throw new Error(first.message);
+    const result = run({ spec: first.files.spec, auth }, "removeAction", ["scheduleFollowUps"]);
     if (!result.ok) throw new Error(result.message);
     expect(result.description).toBe(
-      "Remove the action mergeCustomers; its code in src/custom/actions/ stays",
+      "Remove the action scheduleFollowUps; its code in src/custom/actions/ stays",
     );
     expect(result.files.spec).not.toMatch(/^actions:/m);
-    expect(result.files.spec).not.toContain("actions: [mergeCustomers]");
+    expect(result.files.spec).not.toContain("actions: [");
     expect(validateSpec({ path: "smithable.yml", text: result.files.spec }).ir?.actions).toEqual(
       [],
     );
@@ -248,6 +258,6 @@ test("addAction lists a custom action on rows where a standard one goes: its mod
     input: { customers: "Customer[]", segment: "smb | enterprise" },
   });
   if (!made.ok) throw new Error(made.message);
-  expect(made.files.spec).toContain("actions: [mergeCustomers, tagCustomers]");
+  expect(made.files.spec).toContain("actions: [mergeCustomers, scheduleFollowUps, tagCustomers]");
   expect(made.files.spec).toContain("customers: Customer[]");
 });

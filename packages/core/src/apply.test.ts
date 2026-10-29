@@ -148,7 +148,9 @@ describe("operations", () => {
     const result = applyOperation(withModel, "addPage", { page: "products", model: "Product" });
     if (!result.ok) throw new Error(result.message);
     expect(result.files.spec).toContain("  products:\n    crud: Product\n");
-    expect(result.files.spec).toContain("navigation: [customers, orders, team, products]");
+    expect(result.files.spec).toContain(
+      "navigation: [customers, orders, followUps, team, products]",
+    );
   });
 
   test("setNavigation reorders, and a named menu turns the list into menus", () => {
@@ -157,11 +159,11 @@ describe("operations", () => {
     );
     // A page leaving the menu is named, so it is not missed when confirming.
     expect(ok("setNavigation", ["main", "orders"]).description).toBe(
-      "Set the main menu to orders (no longer in it: customers, team)",
+      "Set the main menu to orders (no longer in it: customers, followUps, team)",
     );
     const admin = ok("setNavigation", ["admin", "orders"]);
     expect(admin.files.spec).toContain(
-      "navigation:\n  main: [customers, orders, team]\n  admin: [orders]\n",
+      "navigation:\n  main: [customers, orders, followUps, team]\n  admin: [orders]\n",
     );
   });
 
@@ -202,23 +204,24 @@ describe("operations", () => {
   });
 
   test("setRuleId turns a plain rule into { id, rule } and reports the qualified id", () => {
-    const result = ok("setRuleId", ["action:mergeCustomers", "1", "move-orders"]);
+    const result = ok("setRuleId", ["action:scheduleFollowUps", "1", "first-today"]);
     expect(result.files.spec).toContain(
-      "      - { id: move-orders, rule: All orders of the duplicate move to the kept customer. }\n",
+      "      - { id: first-today, rule: The first note is due today; each next one everyDays later. }\n",
     );
     expect(result.effects).toEqual([
       {
         kind: "rule-identified",
-        rule: "mergeCustomers.move-orders",
-        text: "All orders of the duplicate move to the kept customer.",
+        rule: "scheduleFollowUps.first-today",
+        text: "The first note is due today; each next one everyDays later.",
       },
     ]);
-    expect(apply("setRuleId", ["action:mergeCustomer", "1", "x"])).toMatchObject({
+    expect(apply("setRuleId", ["action:scheduleFollowUp", "1", "x"])).toMatchObject({
       ok: false,
-      message: 'There is no concept "action:mergeCustomer". Did you mean "action:mergeCustomers"?',
+      message:
+        'There is no concept "action:scheduleFollowUp". Did you mean "action:scheduleFollowUps"?',
     });
-    expect(apply("setRuleId", ["action:mergeCustomers", "9", "x"])).toMatchObject({
-      message: "action:mergeCustomers has 3 rule(s), not 9.",
+    expect(apply("setRuleId", ["action:scheduleFollowUps", "9", "x"])).toMatchObject({
+      message: "action:scheduleFollowUps has 1 rule(s), not 9.",
     });
   });
 
@@ -602,7 +605,7 @@ test("removePage takes a page out of the spec, the menus and its texts", () => {
   expect(result.ok).toBe(true);
   if (!result.ok) return;
   expect(result.files.spec).not.toMatch(/^ {2}orders:/m);
-  expect(result.files.spec).toContain("navigation: [customers, team]");
+  expect(result.files.spec).toContain("navigation: [customers, followUps, team]");
   expect(result.files.content).not.toContain("Every order and where it stands.");
   expect(applyOperation(files, "removePage", { page: "nowhere" }).ok).toBe(false);
 });
@@ -754,7 +757,7 @@ test("addUsersPage adds one users page to the menu; setSignUp closes and reopens
   expect(result).toMatchObject({ ok: true });
   if (!result.ok) return;
   expect(result.files.spec).toContain("team:\n    users: manage");
-  expect(result.files.spec).toContain("navigation: [customers, orders, team]");
+  expect(result.files.spec).toContain("navigation: [customers, orders, followUps, team]");
   const again = applyOperation({ ...without, ...result.files }, "addUsersPage", { page: "people" });
   expect(again).toMatchObject({ ok: false, message: expect.stringContaining("team page") });
   const closed = applyOperation({ ...without, ...result.files }, "setSignUp", { who: "invited" });

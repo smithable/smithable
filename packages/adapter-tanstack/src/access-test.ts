@@ -380,7 +380,9 @@ ${tests.join("\n\n")}
       describes.push(`describe(${JSON.stringify(`the ${action.name} action`)}, () => {
 ${roles
   .map(
-    (role) => `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
+    (
+      role,
+    ) => `  test(${JSON.stringify(role === null ? "a visitor who has not signed in" : role)}, async () => {
     const viewer = ${role === null ? "null" : `signedIn(${JSON.stringify(role)})`};
 ${pairOf(role === null ? (signedIn ? "stranger.id" : "null") : "viewer.id")}    expect(await can(() => ${run}(viewer, one.id, two.id))).toBe(${role !== null && allowed.roles.includes(role)});
   });`,

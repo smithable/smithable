@@ -13,7 +13,7 @@ test("validate accepts a directory and summarizes a valid spec", async () => {
   expect(await run(["validate", path], io)).toBe(0);
   // The verdict first; then the notes (advice, with the operation that does it), the starter's one.
   expect(
-    io.stdout.startsWith(`${join(path, "smithable.yml")} is valid: 2 models, 3 pages.\n`),
+    io.stdout.startsWith(`${join(path, "smithable.yml")} is valid: 3 models, 4 pages.\n`),
   ).toBe(true);
   expect(io.stdout).toContain("1 note, advice the app is fine without:");
   expect(io.stdout).toContain("do: smithable op setFilters --page customers --fields segment");

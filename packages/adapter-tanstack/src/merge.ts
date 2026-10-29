@@ -157,7 +157,12 @@ export function mergeActionServer(
       .filter((f) => f.type.kind === "relation")
       .map((f) => [
         dataKey(f),
-        [f.name, f.type.kind === "relation" && f.type.model === USER_MODEL ? "name" : shownTitleKey(ir, (f.type as { model: string }).model)],
+        [
+          f.name,
+          f.type.kind === "relation" && f.type.model === USER_MODEL
+            ? "name"
+            : shownTitleKey(ir, (f.type as { model: string }).model),
+        ],
       ]),
   );
   const others = [...new Map(referrers.map((r) => [r.model.name, r.model])).values()].filter(
@@ -173,7 +178,12 @@ export function mergeActionServer(
     const ref = JSON.stringify(r.key);
     const lines = [
       `  // ${r.model.name}.${r.field.name}`,
-      `  const rows${i} = tx.select({ id: ${tb}.id${signedIn ? `, owner: ${tb}.${ownerKey(r.model)}` : ""}${r.pairs.flat().map((k) => `, ${k}: ${tb}.${k}`).join("")} }).from(${tb}).where(eq(${tb}.${r.key}, other.id)).all()${self ? ".filter((row) => row.id !== other.id)" : ""};`,
+      `  const rows${i} = tx.select({ id: ${tb}.id${signedIn ? `, owner: ${tb}.${ownerKey(r.model)}` : ""}${r.pairs
+        .flat()
+        .map((k) => `, ${k}: ${tb}.${k}`)
+        .join(
+          "",
+        )} }).from(${tb}).where(eq(${tb}.${r.key}, other.id)).all()${self ? ".filter((row) => row.id !== other.id)" : ""};`,
     ];
     if (self)
       lines.push(
@@ -184,12 +194,12 @@ export function mergeActionServer(
     const moving = self ? `rows${i}.filter((row) => row.id !== kept.id)` : `rows${i}`;
     lines.push(
       `  for (const row of ${moving}) {`,
-      `    if (!allows(${rn.access}.write, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${JSON.stringify(rn.pluralLabel)}));`,
+      `    if (!allows(${rn.access}.write, viewer${signedIn ? ", row.owner" : ""})) throw new Conflict(w.mergeMayNotChange(${rn.ui}.pluralLabel));`,
     );
     if (r.field.unique)
       lines.push(
         `    // A unique reference both have: one of them has to go first.`,
-        `    if (tx.select({ id: ${tb}.id }).from(${tb}).where(and(eq(${tb}.${r.key}, kept.id)${live})).get()) throw new Conflict(w.mergeBothHave(${JSON.stringify(rn.label)}));`,
+        `    if (tx.select({ id: ${tb}.id }).from(${tb}).where(and(eq(${tb}.${r.key}, kept.id)${live})).get()) throw new Conflict(w.mergeBothHave(${rn.ui}.label));`,
       );
     if (r.pairs.length)
       lines.push(
@@ -209,8 +219,8 @@ export function mergeActionServer(
   const tables = [...new Map(referrers.map((r) => [r.model.name, r.model])).values()];
   const tableOf = `const TABLES = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).table}`).join(", ")} } as const;`;
   const trashes = tables.filter((m) => m.trash).map((m) => JSON.stringify(m.name));
-  const keyOf = (m: ModelIR) => `TABLES[${JSON.stringify(m.name)}]`;
-  const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${JSON.stringify(names(m, t).label)}, plural: ${JSON.stringify(names(m, t).pluralLabel)} }`).join(", ")}]`;
+  // Their words are their models' own (words-once.md): read from each model's ui.
+  const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${names(m, t).ui}.label, plural: ${names(m, t).ui}.pluralLabel }`).join(", ")}]`;
   const readers = others.map((m) => names(m, t));
   const usesKept = referrers.some(
     (r) => r.model.name === model.name || r.field.unique || r.pairs.length,
@@ -225,6 +235,7 @@ import { audit } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 import { w } from "#/kit/words";
 ${[n, ...readers].map((x) => `import { ${x.access}, ${x.data} } from "${x.module}.server";`).join("\n")}
+${tables.map((m) => `import { ${names(m, t).ui} } from "${names(m, t).module}";`).join("\n")}
 import { ${a.access}, ${a.keep} } from "./${kebab(action.name)}";
 
 ${tableOf}
@@ -409,7 +420,6 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
   return { kept: kept.id, other: other.id, stays: !goes };
 }
 `;
-  void keyOf;
 }
 
 /**
@@ -420,7 +430,9 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
 export function unmergeCode(ir: SpecIR, model: ModelIR, t: Texts): string {
   if (!model.trash || !mergesOf(ir, model.name).length) return "";
   const n = names(model, t);
-  const tables = [...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values()];
+  const tables = [
+    ...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values(),
+  ];
   return `
 /** The tables a merge of ${n.pluralLabel.toLowerCase()} moves records in, by model. */
 const MERGED_TABLES = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).table}`).join(", ")} } as const;

@@ -15,6 +15,7 @@ test("the CRM's navigation as a role and as a visitor: what opens and what reads
   expect(sales.pages).toEqual([
     { id: "customers", menu: "main", open: "allowed", model: "Customer", read: "allowed" },
     { id: "orders", menu: "main", open: "allowed", model: "Order", read: "allowed" },
+    { id: "followUps", menu: "main", open: "allowed", model: "FollowUp", read: "allowed" },
     // The team page is the administrators'.
     { id: "team", menu: "main", open: "denied" },
   ]);

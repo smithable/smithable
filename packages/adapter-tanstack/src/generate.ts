@@ -41,9 +41,9 @@ import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formula
 import { hooksModule, hooksStub } from "./hooks.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
+import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
 import { outgoingModule } from "./outgoing.js";
-import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { hasInspector } from "./pages/data.js";
@@ -820,6 +820,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Chosen rows on a crud list (actions.md §9).
         files: ["src/kit/SelectionBar.tsx"],
         used: ({ ir, auth }) => selects(ir, auth) || ir.models.some((m) => m.trash),
+      },
+      {
+        // Merging two records (docs/design/intents.md §3): the button and its form.
+        files: ["src/kit/MergeDialog.tsx"],
+        used: ({ ir }) => ir.actions.some((a) => !a.custom && a.merge),
       },
       {
         // The trash (docs/design/trash.md): its page, the notice's Undo, a trashed record's banner.

@@ -36,7 +36,11 @@ export async function scheduleFollowUps(
   db.transaction((tx) => {
     for (let i = 0; i < count; i++)
       tx.insert(followUps)
-        .values({ customerId: customer, dueOn: daysAfter(today, i * everyDays), ownerId: viewer?.id })
+        .values({
+          customerId: customer,
+          dueOn: daysAfter(today, i * everyDays),
+          ownerId: viewer?.id,
+        })
         .run();
   });
   return { created: count };

@@ -740,11 +740,11 @@ try {
       await page.locator("label", { hasText: /^Map$/ }).click();
       await sub("What happens");
       const map = page.getByRole("region", { name: "What happens" });
-      const merge = map.locator('[data-behaviour-box="action:mergeCustomers"]');
-      await merge.getByText("custom code", { exact: true }).waitFor({ timeout: 30000 * P });
-      await merge.getByText(/^Merge a duplicate customer/).waitFor({ timeout: 10000 * P });
+      const custom = map.locator('[data-behaviour-box="action:scheduleFollowUps"]');
+      await custom.getByText("custom code", { exact: true }).waitFor({ timeout: 30000 * P });
+      await custom.getByText(/^Plan a series of follow-up notes/).waitFor({ timeout: 10000 * P });
       await map.locator(".react-flow__controls-fitview").click();
-      await merge.getByRole("button", { name: "mergeCustomers" }).click();
+      await custom.getByRole("button", { name: "scheduleFollowUps" }).click();
       await page
         .getByRole("tab", { name: "Behavior", selected: true })
         .waitFor({ timeout: 10000 * P });
