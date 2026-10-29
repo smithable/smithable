@@ -3481,6 +3481,7 @@ const MOVES: Record<string, DoorMove[]> = {
   visitor: [],
 };
 
+
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
   if (who === "visitor") return null;
@@ -10043,7 +10044,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/app.ts": "309f73cb generated",
   "src/generated/ask.server.ts": "20cf37d2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "1bd0cfb6 generated",
+  "src/generated/dev-door.server.ts": "81f98de0 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "2237f355 generated",
   "src/generated/keys.test.ts": "68c0a077 generated",
@@ -12587,6 +12588,7 @@ const MOVES: Record<string, DoorMove[]> = {
     { id: "open:privacy", kind: "open", page: "privacy", route: "/privacy" },
   ],
 };
+
 
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
@@ -16196,7 +16198,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/barber.server.ts": "2d15e0eb generated",
   "src/generated/barber.ts": "c6cb9e61 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "87ba71fa generated",
+  "src/generated/dev-door.server.ts": "e9b5540a generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/outgoing.server.ts": "fac1c733 generated",
   "src/generated/pages.ts": "0bc41f9d generated",
@@ -19915,10 +19917,11 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-import { AccessDenied, allows, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, Conflict, type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove, stored } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { writeAllowed } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { pageAccess } from "./pages";
 import { classTypeAccess, classTypeData } from "#/generated/class-type.server";
 import { classTypeSchema, classTypeSettable } from "#/generated/class-type.schema";
@@ -19932,6 +19935,8 @@ import { postAccess, postData } from "#/generated/post.server";
 import { postSchema, postSettable } from "#/generated/post.schema";
 import { messageAccess, messageData } from "#/generated/message.server";
 import { messageSchema, messageSettable } from "#/generated/message.schema";
+import { bookingUi } from "#/generated/booking";
+import { postUi } from "#/generated/post";
 import { runPublish } from "./actions/publish.server";
 import { publishAccess, publishFits } from "./actions/publish";
 
@@ -20186,6 +20191,13 @@ const MOVES: Record<string, DoorMove[]> = {
   ],
 };
 
+/** Each written model's unique fields by column, and its UI: a value taken, in words. */
+const TAKEN: Record<string, { ui: { label: string; fields: { name: string; label: string }[] }; fields: Record<string, string> }> = {
+  "Booking": { ui: bookingUi, fields: { session_id: "sessionId" } },
+  "Post": { ui: postUi, fields: { address: "address" } },
+};
+
+
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
   if (who === "visitor") return null;
@@ -20434,7 +20446,16 @@ export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: He
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
   if (move.kind !== "open") writeAllowed(viewer, headers);
-  return act(viewer, move, { ...body, values: body.values ?? {} });
+  try {
+    return await act(viewer, move, { ...body, values: body.values ?? {} });
+  } catch (error) {
+    // A unique value taken, as the form says it ("Another booking already has this session.").
+    const column = error instanceof Conflict ? /^taken:(\\w+)$/.exec(error.message)?.[1] : undefined;
+    const taken = move.model ? TAKEN[move.model] : undefined;
+    const name = column && taken?.fields[column];
+    const field = name ? taken?.ui.fields.find((f) => f.name === name) : undefined;
+    throw field && taken ? new Conflict(w.alreadyHas(taken.ui.label, field.label)) : error;
+  }
 }
 "
 `;
@@ -28581,7 +28602,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/class-type.server.ts": "00d73d14 generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "0607fee4 generated",
+  "src/generated/dev-door.server.ts": "d3acafca generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
@@ -31061,15 +31082,18 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-import { AccessDenied, allows, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, Conflict, type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove, stored } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { writeAllowed } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { pageAccess } from "./pages";
 import { customerAccess, customerData } from "#/generated/customer.server";
 import { customerSchema, customerSettable } from "#/generated/customer.schema";
 import { orderAccess, orderData } from "#/generated/order.server";
 import { orderSchema, orderSettable } from "#/generated/order.schema";
+import { customerUi } from "#/generated/customer";
+import { orderUi } from "#/generated/order";
 import { runMergeCustomers } from "./actions/merge-customers.server";
 import { mergeCustomersInput } from "./actions/merge-customers.input";
 
@@ -31264,6 +31288,13 @@ const MOVES: Record<string, DoorMove[]> = {
   visitor: [],
 };
 
+/** Each written model's unique fields by column, and its UI: a value taken, in words. */
+const TAKEN: Record<string, { ui: { label: string; fields: { name: string; label: string }[] }; fields: Record<string, string> }> = {
+  "Customer": { ui: customerUi, fields: { email: "email" } },
+  "Order": { ui: orderUi, fields: { number: "number" } },
+};
+
+
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
   if (who === "visitor") return null;
@@ -31409,7 +31440,16 @@ export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: He
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
   if (move.kind !== "open") writeAllowed(viewer, headers);
-  return act(viewer, move, { ...body, values: body.values ?? {} });
+  try {
+    return await act(viewer, move, { ...body, values: body.values ?? {} });
+  } catch (error) {
+    // A unique value taken, as the form says it ("Another booking already has this session.").
+    const column = error instanceof Conflict ? /^taken:(\\w+)$/.exec(error.message)?.[1] : undefined;
+    const taken = move.model ? TAKEN[move.model] : undefined;
+    const name = column && taken?.fields[column];
+    const field = name ? taken?.ui.fields.find((f) => f.name === name) : undefined;
+    throw field && taken ? new Conflict(w.alreadyHas(taken.ui.label, field.label)) : error;
+  }
 }
 "
 `;
@@ -35052,7 +35092,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "611c2893 generated",
   "src/generated/customer.ts": "d44b6a34 generated",
-  "src/generated/dev-door.server.ts": "e0ea3b0f generated",
+  "src/generated/dev-door.server.ts": "5b92da66 generated",
   "src/generated/hooks.ts": "b85320ca generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
@@ -38636,10 +38676,11 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-import { AccessDenied, allows, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, Conflict, type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove, stored } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { writeAllowed } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { pageAccess } from "./pages";
 import { businessProfileAccess, businessProfileData } from "#/generated/business-profile.server";
 import { businessProfileSchema, businessProfileSettable } from "#/generated/business-profile.schema";
@@ -38649,6 +38690,7 @@ import { invoiceAccess, invoiceData } from "#/generated/invoice.server";
 import { invoiceSchema, invoiceSettable } from "#/generated/invoice.schema";
 import { invoiceLineAccess, invoiceLineData } from "#/generated/invoice-line.server";
 import { invoiceLineSchema, invoiceLineSettable } from "#/generated/invoice-line.schema";
+import { invoiceUi } from "#/generated/invoice";
 import { runMarkSent } from "./actions/mark-sent.server";
 import { markSentAccess, markSentFits } from "./actions/mark-sent";
 import { runMarkPaid } from "./actions/mark-paid.server";
@@ -38949,6 +38991,12 @@ const MOVES: Record<string, DoorMove[]> = {
   visitor: [{ id: "open:home", kind: "open", page: "home", route: "/" }],
 };
 
+/** Each written model's unique fields by column, and its UI: a value taken, in words. */
+const TAKEN: Record<string, { ui: { label: string; fields: { name: string; label: string }[] }; fields: Record<string, string> }> = {
+  "Invoice": { ui: invoiceUi, fields: { number: "number" } },
+};
+
+
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
   if (who === "visitor") return null;
@@ -39168,7 +39216,16 @@ export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: He
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
   if (move.kind !== "open") writeAllowed(viewer, headers);
-  return act(viewer, move, { ...body, values: body.values ?? {} });
+  try {
+    return await act(viewer, move, { ...body, values: body.values ?? {} });
+  } catch (error) {
+    // A unique value taken, as the form says it ("Another booking already has this session.").
+    const column = error instanceof Conflict ? /^taken:(\\w+)$/.exec(error.message)?.[1] : undefined;
+    const taken = move.model ? TAKEN[move.model] : undefined;
+    const name = column && taken?.fields[column];
+    const field = name ? taken?.ui.fields.find((f) => f.name === name) : undefined;
+    throw field && taken ? new Conflict(w.alreadyHas(taken.ui.label, field.label)) : error;
+  }
 }
 "
 `;
@@ -43382,7 +43439,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/client.server.ts": "768541de generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "d6d2a60d generated",
+  "src/generated/dev-door.server.ts": "33a92ba5 generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
@@ -45532,10 +45589,11 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-import { AccessDenied, allows, type Viewer } from "#/kit/access";
+import { AccessDenied, allows, Conflict, type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove, stored } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { writeAllowed } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { pageAccess } from "./pages";
 import { dishAccess, dishData } from "#/generated/dish.server";
 import { dishSchema, dishSettable } from "#/generated/dish.schema";
@@ -45545,6 +45603,7 @@ import { orderLineAccess, orderLineData } from "#/generated/order-line.server";
 import { orderLineSchema, orderLineSettable } from "#/generated/order-line.schema";
 import { stopAccess, stopData } from "#/generated/stop.server";
 import { stopSchema, stopSettable } from "#/generated/stop.schema";
+import { orderUi } from "#/generated/order";
 import { runSoldOut } from "./actions/sold-out.server";
 import { soldOutAccess, soldOutFits } from "./actions/sold-out";
 import { runBackOn } from "./actions/back-on.server";
@@ -45964,6 +46023,12 @@ const MOVES: Record<string, DoorMove[]> = {
   ],
 };
 
+/** Each written model's unique fields by column, and its UI: a value taken, in words. */
+const TAKEN: Record<string, { ui: { label: string; fields: { name: string; label: string }[] }; fields: Record<string, string> }> = {
+  "Order": { ui: orderUi, fields: { number: "number" } },
+};
+
+
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
   if (who === "visitor") return null;
@@ -46197,7 +46262,16 @@ export async function doorAct(viewer: Viewer | null, body: DoorBody, headers: He
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
   if (move.kind !== "open") writeAllowed(viewer, headers);
-  return act(viewer, move, { ...body, values: body.values ?? {} });
+  try {
+    return await act(viewer, move, { ...body, values: body.values ?? {} });
+  } catch (error) {
+    // A unique value taken, as the form says it ("Another booking already has this session.").
+    const column = error instanceof Conflict ? /^taken:(\\w+)$/.exec(error.message)?.[1] : undefined;
+    const taken = move.model ? TAKEN[move.model] : undefined;
+    const name = column && taken?.fields[column];
+    const field = name ? taken?.ui.fields.find((f) => f.name === name) : undefined;
+    throw field && taken ? new Conflict(w.alreadyHas(taken.ui.label, field.label)) : error;
+  }
 }
 "
 `;
@@ -51233,7 +51307,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/actions/sold-out.ts": "d324a1d9 generated",
   "src/generated/app.ts": "26d2d3d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "9bf3121c generated",
+  "src/generated/dev-door.server.ts": "3204a49e generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
   "src/generated/dish.server.ts": "f5e71811 generated",
   "src/generated/dish.ts": "b7cb2173 generated",
@@ -52641,6 +52715,7 @@ const MOVES: Record<string, DoorMove[]> = {
     { id: "open:catalog", kind: "open", page: "catalog", route: "/" },
   ],
 };
+
 
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
@@ -56017,7 +56092,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/ask.server.ts": "1b72c788 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "5f63b63a generated",
+  "src/generated/dev-door.server.ts": "ee31ede4 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
   "src/generated/item.server.ts": "84d584a3 generated",
@@ -57317,6 +57392,7 @@ const MOVES: Record<string, DoorMove[]> = {
     { id: "open:items", kind: "open", page: "items", route: "/items" },
   ],
 };
+
 
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
@@ -59515,7 +59591,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/ask.server.ts": "994f1f1e generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "4b5053db generated",
+  "src/generated/dev-door.server.ts": "8943b74d generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
@@ -63891,6 +63967,7 @@ const MOVES: Record<string, DoorMove[]> = {
     { id: "open:history", kind: "open", page: "history", route: "/history" },
   ],
 };
+
 
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
@@ -71002,7 +71079,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/component.server.ts": "2f6960e5 generated",
   "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "c0ef9601 generated",
+  "src/generated/dev-door.server.ts": "ce9e7d19 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
   "src/generated/incident-update.server.ts": "becee6e2 generated",
@@ -73705,6 +73782,7 @@ const MOVES: Record<string, DoorMove[]> = {
   ],
   visitor: [],
 };
+
 
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
@@ -78033,7 +78111,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/app.ts": "50242584 generated",
   "src/generated/ask.server.ts": "43c8f6e1 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "6c1250a3 generated",
+  "src/generated/dev-door.server.ts": "3388ad3d generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "00275f2b generated",

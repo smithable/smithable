@@ -13,6 +13,7 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields } from "./actions.js";
 import { hasSignIn } from "./auth.js";
+import { columnOf } from "./migrations.js";
 import { dataKey, HEADER, literal, modelNamed, names, ownerKey, type Texts } from "./shared.js";
 
 /** A sample user as the development database has them: who signs in nowhere, the door acts as. */
@@ -191,19 +192,62 @@ export function doorModule(
     return `import { ${ruled ? `${mn.access}, ` : ""}${mn.data} } from "${mn.module}.server";${write ? `\nimport { ${[...(moves.some((m) => m.kind === "add" && m.model === model.name) ? [mn.schema] : []), ...(moves.some((m) => m.kind === "change" && m.model === model.name) ? [mn.settable] : [])].join(", ")} } from "${mn.module}.schema";` : ""}`;
   });
 
+  // A unique value taken, in the words a form says it: each written model's unique fields by the
+  // column the database names (a reference is stored in <field>_id); the labels are its UI's.
+  const taken = Object.fromEntries(
+    used.flatMap(({ model }) => {
+      if (!moves.some((m) => (m.kind === "add" || m.kind === "change") && m.model === model.name))
+        return [];
+      const fields = model.fields.filter((f) => f.unique || f.sequence);
+      if (!fields.length) return [];
+      return [
+        [
+          model.name,
+          Object.fromEntries(
+            fields.map((f) => [
+              columnOf(model.name, f.name, f.type.kind === "relation").column,
+              dataKey(f),
+            ]),
+          ),
+        ],
+      ];
+    }),
+  );
+  const words = Object.keys(taken).length > 0;
+
   return `${HEADER}// The development door (docs/design/sample-users.md §4): the moves each role and a visitor may
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("allows") ? "allows, " : ""}type Viewer } from "#/kit/access";
+${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove${uses("stored") ? ", stored" : ""} } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
-${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { pageAccess } from "./pages";
+${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}${words ? 'import { w } from "#/kit/words";\n' : ""}import { pageAccess } from "./pages";
 ${people.length ? 'import { SAMPLE_PEOPLE } from "./people";\n' : ""}${modelImports.join("\n")}
-${actionImports.join("\n")}
+${Object.keys(taken)
+  .map((model) => {
+    const mn = names(modelNamed(ir, model), t);
+    return `import { ${mn.ui} } from "${mn.module}";\n`;
+  })
+  .join("")}${actionImports.join("\n")}
 
 /** The moves of each role, and of a visitor without a session. */
 const MOVES: Record<string, DoorMove[]> = ${literal(byActor)};
+${
+  words
+    ? `
+/** Each written model's unique fields by column, and its UI: a value taken, in words. */
+const TAKEN: Record<string, { ui: { label: string; fields: { name: string; label: string }[] }; fields: Record<string, string> }> = {
+${Object.entries(taken)
+  .map(
+    ([model, fields]) =>
+      `  ${JSON.stringify(model)}: { ui: ${names(modelNamed(ir, model), t).ui}, fields: ${literal(fields)} },`,
+  )
+  .join("\n")}
+};
+`
+    : ""
+}
 
 /** The viewer a door call acts as: a sample user by id, or a visitor (null); anyone else, none. */
 export function viewerFor(who: unknown): Viewer | null | undefined {
@@ -292,7 +336,20 @@ export async function doorAct(viewer: Viewer | null, body: DoorBody, ${writes ? 
   const move = (MOVES[viewer?.role ?? "visitor"] ?? []).find((m) => m.id === body.move);
   const act = move && ACTS[move.id];
   if (!move || !act) throw new NotFound(\`No move "\${String(body.move)}" for this user.\`);
-${writes ? '  if (move.kind !== "open") writeAllowed(viewer, headers);\n' : ""}  return act(viewer, move, { ...body, values: body.values ?? {} });
+${writes ? '  if (move.kind !== "open") writeAllowed(viewer, headers);\n' : ""}${
+  words
+    ? `  try {
+    return await act(viewer, move, { ...body, values: body.values ?? {} });
+  } catch (error) {
+    // A unique value taken, as the form says it ("Another booking already has this session.").
+    const column = error instanceof Conflict ? /^taken:(\\w+)$/.exec(error.message)?.[1] : undefined;
+    const taken = move.model ? TAKEN[move.model] : undefined;
+    const name = column && taken?.fields[column];
+    const field = name ? taken?.ui.fields.find((f) => f.name === name) : undefined;
+    throw field && taken ? new Conflict(w.alreadyHas(taken.ui.label, field.label)) : error;
+  }`
+    : "  return act(viewer, move, { ...body, values: body.values ?? {} });"
+}
 }
 `;
 }

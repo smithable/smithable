@@ -20,6 +20,7 @@ import {
   editAsOperations,
   editAsRename,
   findOperation,
+  humanize,
   type OperationArgs,
   sameContent,
   themeThumbnail,
@@ -84,6 +85,15 @@ export function readBeta(
     return undefined;
   }
 }
+
+/** The files the sample users' runner reads: the people, and the spec they act in. */
+const PEOPLE_FILES = [
+  "samples/people.yml",
+  "smithable.yml",
+  "smithable.auth.yml",
+  "smithable.content.yml",
+];
+
 // Installed from npm, the Studio app travels in the package (studio/, scripts/prepack.mjs); in the
 // repository it is apps/studio's own build.
 const PACKAGED = new URL("../studio/", import.meta.url).pathname;
@@ -518,6 +528,9 @@ export async function studio(
   };
   const changed = (data: unknown) => void settled().then(() => send("changed", data));
   // The sample users (sample-users.md §4–§6), acting in the preview through its door.
+  let peopleLoaded:
+    | { stamp: string; value: ReturnType<Parameters<typeof sampleRunner>[0]["load"]> }
+    | undefined;
   const people = sampleRunner({
     door: (path, body) =>
       fetch(`http://127.0.0.1:${previewPort}/_dev/${path}`, {
@@ -530,7 +543,13 @@ export async function studio(
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(30_000),
       }),
+    // Read again only when one of its files changed: the panel asks for it often.
     load: () => {
+      const stamp = PEOPLE_FILES.map((f) => {
+        const path = join(dir, f);
+        return existsSync(path) ? statSync(path).mtimeMs : 0;
+      }).join(",");
+      if (peopleLoaded?.stamp === stamp) return peopleLoaded.value;
       const {
         ir,
         auth,
@@ -539,7 +558,7 @@ export async function studio(
       } = loadSpec(dir, { out: () => {}, err: () => {} });
       // The app's ids for them, in the file's order (a visitor has none: the door knows it as such).
       const ids = samplePeople(listed).map((u) => u.id);
-      return {
+      const value = {
         people: listed.map((p) => ({
           ...p,
           id: p.role === "visitor" ? "visitor" : (ids.shift() as string),
@@ -549,7 +568,20 @@ export async function studio(
               .map((s) => `${s.title}: ${s.sentences.join(" ")}`)
               .join("\n")
           : "",
+        // The words a move is said in: each model's and action's label.
+        labels: Object.fromEntries([
+          ...(ir?.models ?? []).map((m) => [
+            m.name,
+            content?.models[m.name]?.label ?? humanize(m.name),
+          ]),
+          ...(ir?.actions ?? []).map((a) => [
+            a.name,
+            content?.actions[a.name]?.label ?? humanize(a.name),
+          ]),
+        ]),
       };
+      peopleLoaded = { stamp, value };
+      return value;
     },
     providers: () => providersFor(),
     changed: (state) => send("people", state),
@@ -911,7 +943,11 @@ export async function studio(
       // What the preview kept instead of sending: invitations, sign-in codes, notifications.
       if (url.pathname === "/api/outbox") return json(readOutbox(dir));
       // The sample users, what they did and whether they run (Studio's People panel).
-      if (url.pathname === "/api/people" && req.method === "GET") return json(people.state());
+      if (url.pathname === "/api/people" && req.method === "GET") {
+        // Watching them is using Studio: an open panel keeps them going.
+        people.touch();
+        return json(people.state());
+      }
       // A picture of the project's (the Look tab shows its logo); an SVG may not run anything.
       const image =
         /^\/api\/images\/((?:[\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg))$/.exec(

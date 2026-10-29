@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { type PeopleState, sampleRunner } from "./sample-run.js";
+import { moveWords, type PeopleState, sampleRunner } from "./sample-run.js";
 
 const MOVES = [
   { id: "open:sessions", kind: "open", page: "sessions", route: "/sessions" },
@@ -241,4 +241,17 @@ test("a pause while a turn reads the moves makes no move; a turn that breaks is 
   release();
   await pending;
   expect(acts).toHaveLength(0);
+});
+
+test("a move is said with the app's labels", () => {
+  const labels = { Booking: "Booking", Instructor: "Instructor", cancel: "Cancel" };
+  expect(moveWords({ id: "a", kind: "add", model: "Booking", slots: [] }, labels)).toBe(
+    "Added a booking",
+  );
+  expect(moveWords({ id: "d", kind: "delete", model: "Instructor" }, labels)).toBe(
+    "Deleted an instructor",
+  );
+  expect(
+    moveWords({ id: "r", kind: "run", action: "cancel", model: "Booking", slots: [] }, labels),
+  ).toBe("Ran Cancel on a booking");
 });
