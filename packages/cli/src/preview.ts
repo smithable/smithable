@@ -1,8 +1,10 @@
-// `smithable preview [dir] [--live] [--fast] [--for <minutes>] [--port <n>]`: the app's development
+// `smithable preview [dir] [--live] [--fast] [--everything] [--for <minutes>] [--port <n>]`: the app's development
 // server with its door open to this process alone (a new secret each start), and with --live the
 // project's sample users acting in it (docs/design/sample-users.md §4), their moves printed as
-// they happen. With a model configured they act from their personas; --fast, or no model, is the
-// seeded random walk. A run ends after --for minutes (an hour unless said), or on Ctrl+C.
+// they happen. With a model configured they act from their personas; --fast, or no model, is each
+// person's draw from what they did; --everything tries every move's variants and reports what the
+// app took that its rules forbid, or refused that they allow (§3a). A run ends after --for
+// minutes (an hour unless said), or on Ctrl+C.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -21,7 +23,7 @@ export function feedText(line: FeedLine): string {
     line.outcome === "refused"
       ? ` Refused: ${line.message}`
       : line.outcome === "finding"
-        ? ` The app failed: ${line.message}${line.seed !== undefined ? ` (seed ${line.seed})` : ""}`
+        ? ` ${line.variant ? "Finding" : "The app failed"}: ${line.message}${line.seed !== undefined ? ` (seed ${line.seed})` : ""}`
         : line.message
           ? ` ${line.message}`
           : "";
@@ -31,7 +33,7 @@ export function feedText(line: FeedLine): string {
 export async function preview(
   dir: string,
   io: Io,
-  options: { live: boolean; fast: boolean; minutes: number; port: number },
+  options: { live: boolean; fast: boolean; everything?: boolean; minutes: number; port: number },
 ): Promise<number> {
   const code = await generate(dir, io, {
     tools: !existsSync(join(dir, "node_modules")),
@@ -93,7 +95,7 @@ export async function preview(
   const runner = sampleRunner({
     door: doorAt(base, secret),
     load: projectPeople(dir),
-    providers: () => (options.fast ? [] : providersFor()),
+    providers: () => (options.fast || options.everything ? [] : providersFor()),
     changed: (state) => {
       // Only the lines not printed yet (the feed keeps its last two hundred).
       for (const line of state.feed) if (line.n >= printed) io.out(feedText(line));
@@ -115,9 +117,9 @@ export async function preview(
     return 1;
   }
   io.out(
-    `${started.people.map((p) => p.name).join(", ")} use the app${options.fast ? " (fast: random moves, no model)" : ""}, for ${options.minutes} minutes. Ctrl+C stops.\n`,
+    `${started.people.map((p) => p.name).join(", ")} ${options.everything ? "try everything in the app (every move with the values its rules allow and forbid)" : `use the app${options.fast ? " (fast, no model)" : ""}`}, for ${options.minutes} minutes. Ctrl+C stops.\n`,
   );
-  runner.start(options.fast);
+  runner.start(options.fast, options.everything ? "everything" : "sensible");
   // Nobody uses Studio here: the run lasts as long as it was asked to.
   const keep = setInterval(() => runner.touch(), 60_000);
   await new Promise<void>((resolve) => {
@@ -129,8 +131,17 @@ export async function preview(
   });
   clearInterval(keep);
   runner.pause();
-  const { moves, cost, currency } = runner.state();
+  const { moves, cost, currency, coverage } = runner.state();
   io.out(`${moves} moves${cost > 0 ? `, ${cost.toFixed(3)} ${currency}` : ""}.\n`);
+  // Trying everything: the report (§3a), each finding with its seed.
+  if (coverage) {
+    io.out(
+      `Tried ${coverage.tried} of ${coverage.of} variants: ${coverage.passes} as the rules say, ${coverage.findings} ${coverage.findings === 1 ? "finding" : "findings"}.\n`,
+    );
+    // From the log, which keeps the whole run (the feed only its last lines).
+    for (const e of runner.log().filter((e) => e.outcome === "finding"))
+      io.out(`  turn ${e.turn}, ${e.id}: ${e.move ?? "no move"}: ${e.message ?? ""}\n`);
+  }
   stopServer();
   await exited;
   return 0;

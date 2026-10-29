@@ -78,10 +78,11 @@ export const COMMANDS: Command[] = [
     usage: "preview [dir]",
     text: [
       "Start the app with its development door open to this command; --live lets the project's",
-      "sample users (samples/people.yml) use it, their moves printed (--fast: random moves without",
-      "a model; --for <minutes>, an hour unless said; --port, 3000 unless said)",
+      "sample users (samples/people.yml) use it, their moves printed (--fast: without a model;",
+      "--everything: every move with the values the rules allow and forbid, to find faults;",
+      "--for <minutes>, an hour unless said; --port, 3000 unless said)",
     ],
-    options: ["live", "fast", "for", "port"],
+    options: ["live", "fast", "everything", "for", "port"],
   },
   {
     name: "generate",
