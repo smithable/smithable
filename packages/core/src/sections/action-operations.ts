@@ -41,12 +41,6 @@ function typed(of: ModelIR, field: string, value: Value): Value {
 const typedAll = (of: ModelIR, values: Record<string, Value>) =>
   Object.fromEntries(Object.entries(values).map(([k, v]) => [k, typed(of, k, v)]));
 
-/**
- * Adds an action. With `on` and `set` it is standard: it sets fields of one record, offered on
- * the model's crud page (when it has exactly one) for records `when` fits. Without, it is custom:
- * what it takes and returns, its behavior code in src/custom/actions/ that `smithable code`
- * starts as a stub.
- */
 /** A custom action's contract (docs/design/intents.md §6), as addAction and setAction take it. */
 const CONTRACT_ARGS = {
   reads: {
@@ -87,20 +81,38 @@ function contractOf(
   const w = noneOf(writes);
   const t = noneOf(triggers);
   if (r === undefined && w === undefined && t === undefined) return undefined;
-  for (const name of r ?? [])
+  const twice = (list: string[], name: string, flag: string) => {
+    if (list.indexOf(name) !== list.lastIndexOf(name))
+      throw new OperationError(`${name} is named twice in ${flag}.`);
+  };
+  for (const name of r ?? []) {
+    if (name.includes("."))
+      throw new OperationError(`"--reads" names models; a field is written, not read: "${name}".`);
     if (name !== "User" && !ir.models.some((m) => m.name === name))
       throw new OperationError(`There is no model named "${name}" to read.`);
+    twice(r ?? [], name, "--reads");
+  }
+  const whole = new Set((w ?? []).filter((n) => !n.includes(".")));
   for (const name of w ?? []) {
     const [modelName = "", field, more] = name.split(".");
     const model = ir.models.find((m) => m.name === modelName);
     if (more !== undefined || (!model && modelName !== "User"))
       throw new OperationError(`"${name}" is not a model or Model.field to write.`);
-    if (field !== undefined && !model?.fields.some((f) => f.name === field))
-      throw new OperationError(`${modelName} has no field named "${field}".`);
+    twice(w ?? [], name, "--writes");
+    if (field === undefined) continue;
+    const f = model?.fields.find((x) => x.name === field);
+    if (!f) throw new OperationError(`${modelName} has no field named "${field}".`);
+    if (f.formula) throw new OperationError(`${name} is computed, so nothing writes it.`);
+    if (f.type.kind === "relation" && f.type.many)
+      throw new OperationError(`${name} is a list, written through its records' reference.`);
+    if (whole.has(modelName))
+      throw new OperationError(`${modelName} is written whole, so ${name} adds nothing.`);
   }
-  for (const name of t ?? [])
+  for (const name of t ?? []) {
     if (!ir.outgoing.some((o) => o.name === name))
       throw new OperationError(`There is nothing named "${name}" under outgoing to fire.`);
+    twice(t ?? [], name, "--triggers");
+  }
   return {
     ...(r !== undefined || w !== undefined
       ? {
@@ -114,6 +126,12 @@ function contractOf(
   };
 }
 
+/**
+ * Adds an action. With `on` and `set` it is standard: it sets fields of one record, offered on
+ * the model's crud page (when it has exactly one) for records `when` fits. Without, it is custom:
+ * what it takes and returns, its behavior code in src/custom/actions/ that `smithable code`
+ * starts as a stub.
+ */
 const addAction: Operation<{
   action: string;
   on?: string;
@@ -439,23 +457,20 @@ const setAction: Operation<{
     };
     if (intent !== undefined) put("intent", intent.trim() || undefined);
     if (contract && found.custom) {
-      // Each list replaces its own; the other stays. Both empty: no touches at all.
+      // Each list replaces its own; the other stays as written. An empty list is kept: the code
+      // reaches nothing of that kind, where no touches at all would be no fence.
       if (contract.touches) {
-        const reads = contract.touches.reads ?? found.touches?.reads ?? [];
-        const writes =
-          contract.touches.writes ??
-          (found.touches?.writes ?? []).flatMap((w) =>
-            w.fields ? w.fields.map((f) => `${w.model}.${f}`) : [w.model],
-          );
-        put(
-          "touches",
-          reads.length || writes.length
-            ? { ...(reads.length ? { reads } : {}), ...(writes.length ? { writes } : {}) }
-            : undefined,
-        );
+        const at = ["actions", action, "touches"];
+        const kept = (key: "reads" | "writes") =>
+          spec.has([...at, key]) ? (spec.get([...at, key]) as string[]) : undefined;
+        const reads = contract.touches.reads ?? kept("reads");
+        const writes = contract.touches.writes ?? kept("writes");
+        put("touches", {
+          ...(reads !== undefined ? { reads } : {}),
+          ...(writes !== undefined ? { writes } : {}),
+        });
       }
-      if (contract.triggers)
-        put("triggers", contract.triggers.length ? contract.triggers : undefined);
+      if (contract.triggers) put("triggers", contract.triggers);
     }
     if (!when && !set) return [];
     const model = found.custom ? undefined : ir.models.find((m) => m.name === found.on);

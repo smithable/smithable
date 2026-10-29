@@ -196,7 +196,7 @@ export const actionsSection: SpecSection<"actions"> = {
         const at = ["actions", action.name, "touches", "writes"];
         spec.set(
           at,
-          (spec.get(at) as string[]).map((w) =>
+          (Array.isArray(spec.get(at)) ? (spec.get(at) as string[]) : []).map((w) =>
             w === `${effect.model}.${effect.from}` ? `${effect.model}.${effect.to}` : w,
           ),
         );
@@ -540,8 +540,16 @@ function readContract(
           }
         }
         const had = writes.get(modelName);
-        if (writes.has(modelName) && (field === undefined || had === undefined || had.has(field))) {
+        if (writes.has(modelName) && (field === undefined ? had === undefined : had?.has(field))) {
           ctx.error(at, "invalid-action", `${label}: ${name} is named twice.`);
+          continue;
+        }
+        if (writes.has(modelName) && (field === undefined || had === undefined)) {
+          ctx.error(
+            at,
+            "invalid-action",
+            `${label}: ${modelName} is written whole, so ${field === undefined ? "its fields add" : `${name} adds`} nothing; name one or the other.`,
+          );
           continue;
         }
         if (field === undefined) writes.set(modelName, undefined);

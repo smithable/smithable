@@ -79,8 +79,17 @@ test("a contract is checked: custom only, models and stored fields, entries that
     expect.stringContaining('"Invoice.status.x" is a model or Model.field.'),
   ]);
   expect(errors("  x: { custom: true, touches: { writes: [Invoice.status, Invoice] } }\n")).toEqual(
-    [expect.stringContaining("Invoice is named twice.")],
+    [expect.stringContaining("Invoice is written whole, so its fields add nothing")],
   );
+  expect(errors("  x: { custom: true, touches: { writes: [Invoice, Invoice.status] } }\n")).toEqual(
+    [expect.stringContaining("Invoice is written whole, so Invoice.status adds nothing")],
+  );
+  expect(errors("  x: { custom: true, touches: { writes: [Invoice, Invoice] } }\n")).toEqual([
+    expect.stringContaining("Invoice is named twice."),
+  ]);
+  // Empty lists are a contract that reaches nothing; no touches is no fence.
+  const empty = read("  x: { custom: true, touches: {} }\n").ir?.actions[0] as CustomActionIR;
+  expect(empty.touches).toEqual({ reads: [], writes: [] });
   expect(errors("  x: { custom: true, touches: { reads: [Invoice, Invoice] } }\n")).toEqual([
     expect.stringContaining("Invoice is named twice."),
   ]);
@@ -111,19 +120,25 @@ test("addAction and setAction write the contract; renames follow it and removals
   refused("addAction", { action: "y", reads: ["Nobody"] });
   refused("addAction", { action: "y", writes: ["Invoice.statu"] });
   refused("addAction", { action: "y", triggers: ["invoiceSent"] });
+  refused("addAction", { action: "y", writes: ["Invoice", "Invoice.status"] });
+  refused("addAction", { action: "y", reads: ["Invoice", "Invoice"] });
+  refused("addAction", { action: "y", writes: ["Invoice.due"] });
   refused("setAction", { action: "touch", reads: ["Invoice"] });
   const withIt = { ...files, ...added.files };
-  // Each list replaces its own; "none" removes it.
+  // Each list replaces its own; "none" empties it (the code then reaches nothing of that kind).
   const narrowed = applyOperation(withIt, "setAction", { action: "reconcile", writes: ["none"] });
   if (!narrowed.ok) throw new Error(narrowed.message);
-  expect(narrowed.files.spec).toMatch(/touches:\n {6}reads: \[Invoice, Payment\]\n {4}triggers/);
-  expect(narrowed.files.spec).not.toContain("writes");
+  expect(narrowed.files.spec).toMatch(
+    /touches:\n {6}reads: \[Invoice, Payment\]\n {6}writes: \[\]\n {4}triggers/,
+  );
   const cleared = applyOperation(narrowed.files, "setAction", {
     action: "reconcile",
     reads: ["none"],
     triggers: ["none"],
   });
-  expect(cleared.ok && cleared.files.spec).not.toMatch(/touches|triggers/);
+  expect(cleared.ok && cleared.files.spec).toMatch(
+    /reads: \[\]\n {6}writes: \[\]\n {4}triggers: \[\]/,
+  );
   expect(cleared.ok && cleared.description).toBe("Change the contract of the action reconcile");
   const renamedField = applyOperation(withIt, "renameField", {
     model: "Invoice",
