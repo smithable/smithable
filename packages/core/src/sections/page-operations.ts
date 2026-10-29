@@ -463,6 +463,12 @@ const addTile: Operation<{
   destructive: () => false,
   apply({ spec }, { page, tile, measure, of, where, by, period, limit }, ir) {
     if (period && !by) throw new OperationError('"--period" goes with "--by" a date field.');
+    if (period && by) {
+      const model = ir.models.find((m) => m.name === of.split(".")[0]);
+      const field = model?.fields.find((f) => f.name === by.split(".")[0]);
+      if (by.includes(".") || field?.type.kind === "choice")
+        throw new OperationError('"--period" goes with "--by" a date field, not a choice.');
+    }
     const value = {
       [measure]: of,
       ...(where && Object.keys(where).length ? { where: conditionArgs(where) } : {}),

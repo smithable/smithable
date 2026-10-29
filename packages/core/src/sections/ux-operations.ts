@@ -216,8 +216,13 @@ const setTotals: Operation<{ page: string; totals?: string[] }> = {
       if (!field) throw new OperationError(`${model?.name ?? page} has no field named "${name}".`);
       if (!(field.type.kind === "scalar" && NUMBERS.includes(field.type.name)))
         throw new OperationError(`"${name}" is not a number or an amount, so it has no total.`);
+      if (field.formula)
+        throw new OperationError(
+          `"${name}" is computed per record, so the list has no total of it.`,
+        );
     }
-    put(editors.ux, ["pages", page, "table", "totals"], totals?.length ? totals : undefined);
+    const once = [...new Set(totals ?? [])];
+    put(editors.ux, ["pages", page, "table", "totals"], once.length ? once : undefined);
     return [];
   },
 };

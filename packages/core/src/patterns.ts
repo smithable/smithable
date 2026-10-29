@@ -1740,11 +1740,21 @@ function readDashboard(
           const isDate = (f: FieldIR) => f.type.kind === "scalar" && DATES.includes(f.type.name);
           if (!field) {
             // fieldOf said so, or the model is unknown (said at the measure).
-          } else if (third !== undefined || (second !== undefined && !through)) {
+          } else if (third !== undefined) {
             ctx.error(
               option,
               "invalid-dashboard",
               `"by" goes one reference away at most, as in customer.segment.`,
+            );
+          } else if (second !== undefined && !through) {
+            ctx.error(
+              option,
+              "invalid-dashboard",
+              field.type.kind !== "relation"
+                ? `"by" reaches a choice through a reference, as in customer.segment: ${first} is not a reference.`
+                : field.type.many
+                  ? `"by" goes through a reference to one record, as in customer.segment: ${first} is a list.`
+                  : `"by" cannot group by a user's field: ${first} refers to a user.`,
             );
           } else if (second !== undefined && through && !far) {
             ctx.error(
@@ -1774,6 +1784,12 @@ function readDashboard(
               "invalid-dashboard",
               `"by" needs a date field (a bar per period) or a choice (a bar per value): ${first} is neither.`,
             );
+          } else if (field.formula || far?.formula) {
+            ctx.error(
+              option,
+              "invalid-dashboard",
+              `"by" needs a stored field: ${by} is computed per record.`,
+            );
           } else {
             item.by = by;
             item.kind = "chart";
@@ -1799,13 +1815,15 @@ function readDashboard(
       const period = readString(ctx, periodOption.value, `"period" in ${itemWhere}`);
       if (period !== undefined && !(PERIODS as readonly string[]).includes(period))
         ctx.error(periodOption.value, "invalid-value", `"period" is week, month, quarter or year.`);
-      else if (!item.by || item.choice)
+      else if (item.choice || (!item.by && !options.some((o) => o.key === "by")))
         ctx.error(
           periodOption.keyNode,
           "invalid-key",
           `"period" goes with "by" a date field: it is the span of each bar.`,
         );
-      else if (period !== undefined) item.period = period as ChartPeriod;
+      else if (!item.by) {
+        // "by" was given and refused above: one error is enough.
+      } else if (period !== undefined) item.period = period as ChartPeriod;
     }
     items.push(item);
   }

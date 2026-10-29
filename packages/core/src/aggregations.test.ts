@@ -17,6 +17,8 @@ models:
       status: sent | paid
       issuedOn: date
       total: money
+      due: { type: money, formula: "total" }
+      dueOn: { type: date, formula: "issuedOn" }
       note: text
 pages:
   invoices:
@@ -79,7 +81,14 @@ test("by a reference, a text, a far field that is no choice, two hops, or a peri
     expect.stringContaining('"by" goes one reference away at most'),
   ]);
   expect(errors("      x: { count: Invoice, by: status.more }\n")).toEqual([
-    expect.stringContaining('"by" goes one reference away at most'),
+    expect.stringContaining("status is not a reference"),
+  ]);
+  expect(errors("      x: { count: Invoice, by: dueOn }\n")).toEqual([
+    expect.stringContaining('"by" needs a stored field: dueOn is computed per record.'),
+  ]);
+  // A refused "by" is one error, not two.
+  expect(errors("      x: { count: Invoice, by: note, period: week }\n")).toEqual([
+    expect.stringContaining("note is neither"),
   ]);
   expect(errors("      x: { count: Invoice, by: status, period: month }\n")).toEqual([
     expect.stringContaining('"period" goes with "by" a date field'),
@@ -155,10 +164,11 @@ test("a table's totals name number and amount fields; setTotals writes them", ()
   expect(good.diagnostics).toEqual([]);
   expect(good.ux?.pages.invoices?.totals).toEqual(["total", "number"]);
   expect(
-    ux("  invoices:\n    table: { totals: [note, totl] }\n").diagnostics.map((d) => d.message),
+    ux("  invoices:\n    table: { totals: [note, totl, due] }\n").diagnostics.map((d) => d.message),
   ).toEqual([
     '"note" is not a number or an amount, so it has no total.',
     expect.stringContaining('Invoice has no field named "totl" to total.'),
+    '"due" is computed per record, so the list has no total of it.',
   ]);
   const files = { spec: spec("      open: { count: Invoice }"), ux: "smithableUx: 0.1\n" };
   const set = applyOperation(files, "setTotals", { page: "invoices", totals: ["total", "number"] });
@@ -171,4 +181,25 @@ test("a table's totals name number and amount fields; setTotals writes them", ()
   });
   const none = applyOperation({ ...files, ...set.files }, "setTotals", { page: "invoices" });
   expect(none.ok && none.files.ux).not.toContain("totals");
+});
+
+test("a table's totals follow a renamed field and drop a removed one", () => {
+  const files = { spec: spec("      open: { count: Invoice }"), ux: "smithableUx: 0.1\n" };
+  const set = applyOperation(files, "setTotals", { page: "invoices", totals: ["total", "number"] });
+  if (!set.ok) throw new Error(set.message);
+  const withIt = { ...files, ...set.files };
+  const renamed = applyOperation(withIt, "renameField", {
+    model: "Invoice",
+    from: "total",
+    to: "amount",
+  });
+  expect(renamed.ok && renamed.files.ux).toContain("totals: [amount, number]");
+  const removed = applyOperation(withIt, "removeField", { model: "Invoice", field: "number" });
+  expect(removed.ok && removed.files.ux).toContain("totals: [total]");
+  const both = applyOperation(
+    removed.ok ? { ...withIt, ...removed.files } : withIt,
+    "removeField",
+    { model: "Invoice", field: "total" },
+  );
+  expect(both.ok && both.files.ux).not.toContain("totals");
 });

@@ -803,6 +803,12 @@ export function validateUx(
                     "invalid-field",
                     `"${name}" is not a number or an amount, so it has no total.`,
                   );
+                else if (field.formula)
+                  ctx.error(
+                    at,
+                    "invalid-field",
+                    `"${name}" is computed per record, so the list has no total of it.`,
+                  );
                 else if (!totals.includes(name)) totals.push(name);
               }
               if (totals.length) result.totals = totals;
