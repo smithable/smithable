@@ -220,6 +220,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       return preview(dir, io, {
         live: values.live === true,
         fast: values.fast === true,
+        everything: values.everything === true,
         minutes,
         port,
       });
@@ -374,6 +375,7 @@ const CONFIG = {
     ask: { type: "boolean" },
     live: { type: "boolean" },
     fast: { type: "boolean" },
+    everything: { type: "boolean" },
     for: { type: "string" },
   },
 } as const;
