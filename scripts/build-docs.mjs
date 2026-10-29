@@ -131,13 +131,30 @@ const PAGES = [
     group: "Connect",
   },
   {
+    src: "docs/site/integrations.md",
+    out: "integrations.html",
+    description:
+      "Integrations: recipes for connecting an app to other services, from GitHub, Slack, Jira, Zapier and Make to a mail server and the API with a key.",
+    nav: "Integrations",
+    group: "Connect",
+  },
+  {
+    src: "docs/site/integrations/github.md",
+    out: "integrations/github.html",
+    description:
+      "GitHub webhooks and a Smithable app: each new issue in a repository becomes a record, signed with the webhook's secret, with a test call to try first.",
+    nav: "GitHub",
+    group: "Connect",
+    sub: true,
+  },
+  {
     src: "docs/site/integrations/slack.md",
     out: "integrations/slack.html",
     description:
       "Slack and a Smithable app: a slash command that opens a record, signed with Slack's signing secret, and events with the setup check Slack makes.",
     nav: "Slack",
     group: "Connect",
-    hidden: true,
+    sub: true,
   },
   {
     src: "docs/site/integrations/jira.md",
@@ -146,7 +163,34 @@ const PAGES = [
       "Jira and a Smithable app: an issue that becomes a record through a webhook with a secret, or an automation rule's web request.",
     nav: "Jira",
     group: "Connect",
-    hidden: true,
+    sub: true,
+  },
+  {
+    src: "docs/site/integrations/zapier-make.md",
+    out: "integrations/zapier-make.html",
+    description:
+      "Zapier, Make and a Smithable app: a step in a zap or scenario that adds a record, such as a lead from a form, with the secret, a test call and the refusals.",
+    nav: "Zapier and Make",
+    group: "Connect",
+    sub: true,
+  },
+  {
+    src: "docs/site/integrations/mail.md",
+    out: "integrations/mail.html",
+    description:
+      "Sending mail from a self-hosted Smithable app: the SMTP settings, the sender, the DNS records that keep it out of spam, and a test.",
+    nav: "Sending mail",
+    group: "Connect",
+    sub: true,
+  },
+  {
+    src: "docs/site/integrations/api-key.md",
+    out: "integrations/api-key.html",
+    description:
+      "Another service with a key: Make, Zapier, n8n or a monitoring tool that reads and changes an app's records through its API, as the key's role may.",
+    nav: "A service with a key",
+    group: "Connect",
+    sub: true,
   },
   {
     src: "docs/site/appointments.md",
@@ -292,9 +336,10 @@ for (const page of PAGES) {
 const problems = [];
 // Every page in docs/site is on the site. One left out of PAGES would only be linked as a file of
 // the repository, which a reader of the site cannot open (the assistants how-to, for a day).
-for (const file of readdirSync(join(root, "docs/site")))
-  if (file.endsWith(".md") && !PAGES.some((page) => page.src === `docs/site/${file}`))
-    problems.push(`docs/site/${file} is not in PAGES, so the site would not have it`);
+for (const dir of ["docs/site", "docs/site/integrations"])
+  for (const file of readdirSync(join(root, dir)))
+    if (file.endsWith(".md") && !PAGES.some((page) => page.src === `${dir}/${file}`))
+      problems.push(`${dir}/${file} is not in PAGES, so the site would not have it`);
 /** Where a link in `page` goes on the site: another page, a heading, the schema or the repository. */
 function target(page, href) {
   const [path, hash] = href.split("#");
