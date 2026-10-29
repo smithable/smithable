@@ -529,7 +529,16 @@ export interface StandardActionIR extends ActionBase {
   copy?: ActionValueIR[];
   /** Lists of the model whose records the copy takes along (§8). */
   with?: string[];
+  /**
+   * A merge (docs/design/intents.md §3): two records of `on` become one; `set` is then empty.
+   * `keep` says which record stays (the person's choice, the oldest or the newest), `fill`
+   * whether the kept record's empty fields take the other's values.
+   */
+  merge?: { keep: MergeKeep; fill: MergeFill };
 }
+
+export type MergeKeep = "chosen" | "oldest" | "newest";
+export type MergeFill = "empty" | "none";
 
 export type ActionValueIR =
   | { field: string; value: FieldValue }

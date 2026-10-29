@@ -831,6 +831,11 @@
                 ]
               }
             ]
+          },
+          {
+            "required": [
+              "merge"
+            ]
           }
         ],
         "additionalProperties": false,
@@ -906,6 +911,25 @@
               "type": "string"
             },
             "description": "Lists of the model whose records a copy takes along, e.g. [lines]."
+          },
+          "merge": {
+            "type": "string",
+            "description": "A merge: two records of this model become one; every reference to the other moves to the kept record, which keeps its values, and the other goes to the trash."
+          },
+          "keep": {
+            "enum": [
+              "chosen",
+              "oldest",
+              "newest"
+            ],
+            "description": "For a merge: which record stays; chosen (the person says) unless said."
+          },
+          "fill": {
+            "enum": [
+              "empty",
+              "none"
+            ],
+            "description": "For a merge: empty (the kept record's empty fields take the other's values) unless said, or none."
           },
           "input": {
             "type": "object",
