@@ -8,7 +8,14 @@
  */
 import { type Allowed, actionAccess, modelAccess, pageAccess } from "./access.js";
 import type { AuthIR } from "./auth.js";
-import type { Condition, FieldIR, FieldValue, ModelIR, SpecIR } from "./ir.js";
+import {
+  type Condition,
+  type FieldIR,
+  type FieldValue,
+  type ModelIR,
+  mergeAsked,
+  type SpecIR,
+} from "./ir.js";
 
 /** Who moves: a visitor without a session, or a signed-in person with a role. */
 export type Actor = "visitor" | { role: string };
@@ -54,6 +61,18 @@ export type Move =
       rows?: boolean;
       slots: Slot[];
     }
+  /**
+   * A merge of two records of `model`, open to the roles granted the action with write on the
+   * model: the app picks two records the user may write; `choices` are the fields it decides keep
+   * or other for where the two differ.
+   */
+  | { id: string; kind: "merge"; action: string; model: string; choices: string[] }
+  /**
+   * A split of a record of `model` with two or more in `list`, open to the roles granted the
+   * action with create on the model: the app picks the record and some of the list's records the
+   * user may write, leaving at least one.
+   */
+  | { id: string; kind: "split"; action: string; model: string; list: string }
   | { id: string; kind: "delete"; model: string };
 
 const may = (allowed: Allowed, actor: Actor): boolean =>
@@ -162,10 +181,29 @@ export function movesFor(ir: SpecIR, auth: AuthIR, actor: Actor): Move[] {
         continue;
       }
       const model = ir.models.find((m) => m.name === action.on);
-      // A merge takes two records and a split picks some of a list: sample users do neither yet.
-      if (!model || action.merge || action.split) continue;
+      if (!model) continue;
       // An action on one's own records is open to whoever can own one.
       if (!reaches(allowed, actor, model, may(modelAccess(model, auth).create, actor))) continue;
+      if (action.merge) {
+        moves.push({
+          id: `merge:${action.name}`,
+          kind: "merge",
+          action: action.name,
+          model: action.on,
+          choices: mergeAsked(action, model),
+        });
+        continue;
+      }
+      if (action.split) {
+        moves.push({
+          id: `split:${action.name}`,
+          kind: "split",
+          action: action.name,
+          model: action.on,
+          list: action.split.move,
+        });
+        continue;
+      }
       const names = new Set([
         ...action.set.flatMap((v) => ("asked" in v && v.asked ? [v.field] : [])),
         ...(action.asksRequired ?? []),

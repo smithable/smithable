@@ -250,22 +250,51 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
       post: {
         summary: action.intent ?? action.name,
-        ...(askedFields(action).length
+        ...(action.merge || action.split
           ? {
               requestBody: {
                 content: {
                   "application/json": {
-                    schema: {
-                      type: "object",
-                      description: `What the action asks for: ${askedKeys(action, ir)
-                        .map((x) => x.key)
-                        .join(", ")}`,
-                    },
+                    schema: action.merge
+                      ? {
+                          type: "object",
+                          required: ["other"],
+                          description: `A merge: the record in the path stays${action.merge?.keep === "chosen" ? "" : ` (it must be the ${action.merge?.keep} of the two)`}; other goes. choices: keep or other for each field the two differ in where the merge asks.`,
+                          properties: {
+                            other: { type: "integer" },
+                            choices: {
+                              type: "object",
+                              additionalProperties: { enum: ["keep", "other"] },
+                            },
+                          },
+                        }
+                      : {
+                          type: "object",
+                          required: ["move"],
+                          description:
+                            "A split: the ids of the records of its list that go to the new record (at least one goes, one stays).",
+                          properties: { move: { type: "array", items: { type: "integer" } } },
+                        },
                   },
                 },
               },
             }
-          : {}),
+          : askedFields(action).length
+            ? {
+                requestBody: {
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "object",
+                        description: `What the action asks for: ${askedKeys(action, ir)
+                          .map((x) => x.key)
+                          .join(", ")}`,
+                      },
+                    },
+                  },
+                },
+              }
+            : {}),
         responses: {
           200: { description: "Done: the record as it is now" },
           403: problem,
@@ -759,19 +788,35 @@ ${onRows
       files[`src/routes/api/v1/${path}/$id.actions.$action.ts`] =
         `${HEADER}// The standard actions offered on a ${n.label.toLowerCase()}, for programs with a key.
 import { createFileRoute } from "@tanstack/react-router";
-import { ${camelName}ToApi } from "#/generated/api.server";${own.some((a) => a.copy) ? `\nimport { ${n.data} } from "#/generated/${kebab(model.name)}.server";` : ""}
-${own.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";${askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "#/generated/actions/${kebab(a.name)}";` : ""}`).join("\n")}
-import { apiCall, NotFound } from "#/kit/api.server";
+import { ${camelName}ToApi } from "#/generated/api.server";${own.some((a) => a.copy || a.merge || a.split) ? `\nimport { ${n.data} } from "#/generated/${kebab(model.name)}.server";` : ""}
+${own.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";${!a.merge && !a.split && askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "#/generated/actions/${kebab(a.name)}";` : ""}`).join("\n")}
+import { apiCall, NotFound } from "#/kit/api.server";${own.some((a) => a.merge || a.split) ? '\nimport { BadInput } from "#/kit/refusal";' : ""}
 
 export const Route = createFileRoute("/api/v1/${path}/$id/actions/$action")({
   server: {
     handlers: {
       POST: ({ request, params }) =>
-        apiCall(request, async (viewer${own.some((a) => askedFields(a).length) ? ", body" : ""}) => {
+        apiCall(request, async (viewer${own.some((a) => askedFields(a).length || a.merge || a.split) ? ", body" : ""}) => {
           const id = Number(params.id);
           switch (params.action) {
 ${own
   .map((a) => {
+    // A merge (the record in the path stays) and a split (the new record): the answer is that record.
+    if (a.merge)
+      return `            case ${JSON.stringify(a.name)}: {
+              const { other, choices } = (body ?? {}) as { other?: unknown; choices?: unknown };
+              if (!Number.isInteger(other)) throw new BadInput("Say which record goes: other, its id.");
+              if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "other")))
+                throw new BadInput("choices: keep or other for each field the two differ in.");
+              const merged = await ${actionNames(a).run}(viewer, id, other as number, (choices ?? {}) as never);
+              return ${camelName}ToApi((await ${n.data}.get(viewer, merged.kept)) as Record<string, any>);
+            }`;
+    if (a.split)
+      return `            case ${JSON.stringify(a.name)}: {
+              const { move } = (body ?? {}) as { move?: unknown };
+              if (!Array.isArray(move) || !move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
+              return ${camelName}ToApi((await ${n.data}.get(viewer, await ${actionNames(a).run}(viewer, id, move as number[]))) as Record<string, any>);
+            }`;
     const ran = `await ${actionNames(a).run}(viewer, id${askedFields(a).length ? `, ${actionNames(a).asks}.parse(body)` : ""})`;
     // A copy gives the new record's id: the answer is that record.
     return `            case ${JSON.stringify(a.name)}:
@@ -887,8 +932,14 @@ function toolsModule(
   const proposals = actions.map((action) => {
     const a = actionNames(action);
     const words = action.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
-    const asks = askedFields(action).length ? `, asks: ${a.asks}` : "";
-    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${a.fits} as (row: never, viewer: { id: string } | null) => boolean, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks} },`;
+    const asks =
+      !action.merge && !action.split && askedFields(action).length ? `, asks: ${a.asks}` : "";
+    // A merge or a split fits any record its rule lets the viewer run it on.
+    const fits =
+      action.merge || action.split
+        ? "() => true"
+        : `${a.fits} as (row: never, viewer: { id: string } | null) => boolean`;
+    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${fits}, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks} },`;
   });
   // Out of the trash, as a built-in action per kind with a trash (docs/design/trash.md).
   const restores = models
@@ -906,6 +957,23 @@ function toolsModule(
     const model = modelNamed(ir, action.on);
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
     const asked = askedFields(action).length > 0;
+    // A merge keeps the record named and takes the other; a split answers with its new record.
+    if (action.merge || action.split)
+      return `    case ${JSON.stringify(action.name)}: {
+      const row = await found(KINDS.${model.name}, viewer, args.id, "change");
+      ${
+        action.merge
+          ? `// The other by its id or its title, as the record itself.
+      const other = await found(KINDS.${model.name}, viewer, args.other, "merge");
+      const choices = args.choices;
+      if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "other")))
+        throw new BadInput("choices: keep or other for each field the two differ in.");
+      const merged = await ${actionNames(action).run}(keyed(viewer), row.id, other.id, (choices ?? {}) as never);
+      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), merged.kept)) as Record<string, any>);`
+          : `if (!Array.isArray(args.move) || !args.move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
+      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), await ${actionNames(action).run}(keyed(viewer), row.id, args.move as number[]))) as Record<string, any>);`
+      }
+    }`;
     // The record by its id or its title, as the other tools take it.
     const ran = `await ${actionNames(action).run}(keyed(viewer), row.id${asked ? `, ${actionNames(action).asks}.parse(args.input ?? {})` : ""})`;
     // A copy gives the new record's id: the answer is that record.
@@ -973,10 +1041,11 @@ ${
 ${models.map(({ model, n }) => `import { ${confirms ? `${n.access}, ` : ""}${n.data} } from "./${kebab(model.name)}.server";`).join("\n")}${worded.size ? `\n${[...worded].sort().join("\n")}` : ""}
 ${actions
   .map((a) => {
+    const plain = !a.merge && !a.split;
     const fromModule = [
       ...(confirms ? [actionNames(a).access] : []),
-      ...(askedFields(a).length ? [actionNames(a).asks] : []),
-      ...(confirms ? [actionNames(a).fits] : []),
+      ...(plain && askedFields(a).length ? [actionNames(a).asks] : []),
+      ...(confirms && plain ? [actionNames(a).fits] : []),
     ];
     return `import { ${actionNames(a).run} } from "./actions/${kebab(a.name)}.server";${fromModule.length ? `\nimport { ${fromModule.join(", ")} } from "./actions/${kebab(a.name)}";` : ""}`;
   })

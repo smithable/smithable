@@ -5,7 +5,15 @@ import { type Allowed, actionAccess, modelAccess } from "./access.js";
 import { type AuthIR, apiOffers } from "./auth.js";
 import { conditionText } from "./condition.js";
 import { type ContentIR, emptyContent } from "./content.js";
-import { type FieldIR, type ModelIR, type SpecIR, storageOf, USER_MODEL } from "./ir.js";
+import {
+  type FieldIR,
+  type ModelIR,
+  mergeAsked,
+  type SpecIR,
+  type StandardActionIR,
+  storageOf,
+  USER_MODEL,
+} from "./ir.js";
 import { humanize, plural } from "./naming.js";
 import { titleField } from "./samples.js";
 import type { JsonSchema } from "./section.js";
@@ -159,10 +167,6 @@ export function assistantOffer(
   const actions = ir.actions.filter(
     (a) =>
       !a.custom &&
-      // A merge takes two records and a person's choice of which stays, a split a pick from a
-      // list: offered in the app only.
-      !a.merge &&
-      !a.split &&
       changes &&
       caller !== "visitor" &&
       (scope === "app" || offered.actions.includes(a.name)) &&
@@ -318,10 +322,14 @@ export function assistantOffer(
       },
       annotations: changing,
     });
+  // A merge runs on the record that stays, a split on the record that is split
+  // (docs/design/intents.md §3, §4).
+  const merges = actions.filter((a): a is StandardActionIR => !a.custom && a.merge !== undefined);
+  const splits = actions.filter((a): a is StandardActionIR => !a.custom && a.split !== undefined);
   if (actions.length || onRows.length || trashing.length)
     tools.push({
       name: "run",
-      description: `Run one of the app's actions on a record; \`input\` holds what it asks for.${onRows.length ? ` ${onRows.map((a) => a.name).join(", ")} run on the rows given as \`ids\` instead of one \`id\`.` : ""}${trashing.length ? ` ${trashing.map((m) => `restore${m}`).join(", ")} takes a record out of the trash.` : ""}`,
+      description: `Run one of the app's actions on a record; \`input\` holds what it asks for.${onRows.length ? ` ${onRows.map((a) => a.name).join(", ")} run on the rows given as \`ids\` instead of one \`id\`.` : ""}${merges.length ? ` ${merges.map((a) => `${a.name}${a.merge?.keep === "chosen" ? "" : ` (\`id\` must be the ${a.merge?.keep})`}`).join(", ")} merge two records: \`id\` stays, \`other\` goes into it; \`choices\` says per field where the two differ which value stays ("keep" or "other"), as the person decides; one missing is asked back.` : ""}${splits.length ? ` ${splits.map((a) => a.name).join(", ")} split a record: \`move\` holds the ids of the list's records that go to the new record, some but not all.` : ""}${trashing.length ? ` ${trashing.map((m) => `restore${m}`).join(", ")} takes a record out of the trash.` : ""}`,
       inputSchema: {
         type: "object",
         required: ["action"],
@@ -340,6 +348,17 @@ export function assistantOffer(
           },
           id,
           ...(onRows.length ? { ids: { type: "array", items: id, minItems: 1 } } : {}),
+          ...(merges.length
+            ? {
+                other: id,
+                choices: {
+                  type: "object",
+                  additionalProperties: { enum: ["keep", "other"] },
+                  description: 'Per field, "keep" (the record that stays) or "other".',
+                },
+              }
+            : {}),
+          ...(splits.length ? { move: { type: "array", items: id, minItems: 1 } } : {}),
           input: { type: "object" },
         },
       },
@@ -401,6 +420,8 @@ export function assistantOffer(
                 const inputs = a.input.filter((f) => f.name !== a.rows?.field).map((f) => f.name);
                 return `${a.name} (${a.rows?.model ?? ""} rows, by ids${inputs.length ? `; input: ${inputs.join(", ")}` : ""})`;
               }
+              if (a.merge) return `${a.name} (${a.on}: two into one)`;
+              if (a.split) return `${a.name} (${a.on}: one into two, moving ${a.split.move})`;
               const when = a.when ? `, when ${conditionText(a.when)}` : "";
               return `${a.name} (${a.on}${when})`;
             })
@@ -441,13 +462,25 @@ function describeKind(model: ModelIR, actions: SpecIR["actions"], content: Conte
       return `- ${fieldWord(f)}: ${label}.${about ? ` ${about}` : ""}${values}${filled}`;
     });
   const rules = (model.rules ?? []).map((r) => `- ${r.text}`);
-  const on = actions.flatMap((a) =>
-    !a.custom && !a.merge && !a.split && a.on === model.name
-      ? [
-          `- ${a.name}: ${[a.intent ?? a.description ?? humanize(a.name), ...(a.rules ?? []).map((r) => r.text)].join(" ")}${a.when ? ` Only when ${conditionText(a.when)}.` : ""}`,
-        ]
-      : [],
-  );
+  const on = actions.flatMap((a) => {
+    if (a.custom || a.on !== model.name) return [];
+    const words = [
+      a.intent ?? a.description ?? humanize(a.name),
+      ...(a.rules ?? []).map((r) => r.text),
+    ];
+    // The intent may end without a period; what follows is its own sentence.
+    if ((a.merge || a.split) && !/[.!?]$/.test(words[0] ?? "")) words[0] = `${words[0]}.`;
+    if (a.merge) {
+      const asked = mergeAsked(a, model);
+      words.push(
+        `Two records become one: everything that points to the other moves to the one that stays, and the other goes to the trash.${asked.length ? ` Asked when the two differ: ${asked.join(", ")}.` : ""}`,
+      );
+    } else if (a.split)
+      words.push(`One record becomes two: the picked ${a.split.move} go to the new record.`);
+    return [
+      `- ${a.name}: ${words.join(" ")}${a.when ? ` Only when ${conditionText(a.when)}.` : ""}`,
+    ];
+  });
   // What the caller may do is said by its tools and their kinds, not here: a description is
   // the same for every caller, so it can be kept once.
   return [

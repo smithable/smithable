@@ -605,6 +605,10 @@ export const w = {
   splitStayed: (n: number) =>
     `${n} ${n === 1 ? "post har" : "poster har"} flyttats någon annanstans sedan och blir kvar där.`,
   mergedIntoTitle: (title: string) => `ihopslagen med ”${title}”`,
+  mergeKeepIs: (which: "oldest" | "newest", title: string) =>
+    `Vid den här sammanslagningen blir den ${which === "oldest" ? "äldsta" : "nyaste"} av de två kvar: ${title}.`,
+  mergeChoiceMissing: (field: string) =>
+    `${field} skiljer sig mellan de två: säg vilket som blir kvar, den behållnas eller den andras.`,
   mergeDone: (other: string, kept: string) => `${other} slogs ihop med ${kept}.`,
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen, eller får inte ändras av dig, och blir som de är.`,

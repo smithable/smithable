@@ -102,10 +102,8 @@ export function apiOffers(auth: AuthIR, ir: SpecIR): ApiOffers {
     api.models === "all"
       ? known.filter((m) => !api.except.includes(m))
       : api.models.filter((m) => known.includes(m));
-  // A merge or a split is offered in the app only (docs/design/intents.md §3, §4).
-  const standard = ir.actions.filter(
-    (a) => !a.custom && !a.merge && !a.split && models.includes(a.on),
-  );
+  // A merge or a split goes with its model like any standard action (docs/design/intents.md §3, §4).
+  const standard = ir.actions.filter((a) => !a.custom && models.includes(a.on));
   const actions =
     api.actions === "all"
       ? standard.map((a) => a.name)
