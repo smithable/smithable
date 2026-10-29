@@ -29498,21 +29498,42 @@ describe("the mergeCustomers action", () => {
     const viewer = signedIn("admin");
     const one = insertCustomer(viewer.id, {});
     const two = insertCustomer(viewer.id, {});
-    expect(await can(() => runMergeCustomers(viewer, one.id, two.id))).toBe(true);
+    expect(await can(() => runMergeCustomers(viewer, one.id, two.id, {
+  name: "keep",
+  email: "keep",
+  phone: "keep",
+  segment: "keep",
+  creditLimit: "keep",
+  notes: "keep",
+}))).toBe(true);
   });
 
   test("sales", async () => {
     const viewer = signedIn("sales");
     const one = insertCustomer(viewer.id, {});
     const two = insertCustomer(viewer.id, {});
-    expect(await can(() => runMergeCustomers(viewer, one.id, two.id))).toBe(false);
+    expect(await can(() => runMergeCustomers(viewer, one.id, two.id, {
+  name: "keep",
+  email: "keep",
+  phone: "keep",
+  segment: "keep",
+  creditLimit: "keep",
+  notes: "keep",
+}))).toBe(false);
   });
 
   test("a visitor who has not signed in", async () => {
     const viewer = null;
     const one = insertCustomer(stranger.id, {});
     const two = insertCustomer(stranger.id, {});
-    expect(await can(() => runMergeCustomers(viewer, one.id, two.id))).toBe(false);
+    expect(await can(() => runMergeCustomers(viewer, one.id, two.id, {
+  name: "keep",
+  email: "keep",
+  phone: "keep",
+  segment: "keep",
+  creditLimit: "keep",
+  notes: "keep",
+}))).toBe(false);
   });
 });
 
@@ -37050,7 +37071,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
-  "src/generated/access.test.ts": "1b88484b generated",
+  "src/generated/access.test.ts": "5e2ca320 generated",
   "src/generated/actions/merge-customers.server.ts": "fc3fd69f generated",
   "src/generated/actions/merge-customers.ts": "8e6f8b19 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
