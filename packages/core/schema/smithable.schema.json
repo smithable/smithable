@@ -940,6 +940,34 @@
             },
             "description": "For a merge: what each field does (keep: the kept record's value, other, ask: the person picks when they differ, add: numbers summed, append: texts joined); a field not named is asked."
           },
+          "touches": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "reads": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The models the code reads, e.g. [Invoice, Payment]."
+              },
+              "writes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The models, or fields of them, the code writes, e.g. [Payment, Invoice.status]."
+              }
+            },
+            "description": "A custom action's contract: what the code reads and writes; it gets data functions for those alone."
+          },
+          "triggers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A custom action's contract: the outgoing entries the code may fire."
+          },
           "input": {
             "type": "object",
             "propertyNames": {
