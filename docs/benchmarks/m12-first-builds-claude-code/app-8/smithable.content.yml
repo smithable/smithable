@@ -1,17 +1,13 @@
 smithableContent: 0.1
 pages:
   home:
+    faq:
+      items: [{ question: How do I register for a talk?, answer: "Open the schedule, choose a talk and press Book. You sign in with your email address and receive a code, no password needed." }, { question: Can I attend several talks?, answer: "Yes. Register for as many talks as you like, as long as they still have places left." }, { question: What if a talk is full?, answer: "Every talk shows how many places remain. When none are left, keep an eye on it: places free up when others cancel." }, { question: Can I cancel my registration?, answer: "Yes, from My registrations, any time before the talk begins." }]
     hero:
-      title: Pick your talks, save your seat
-      subtitle: Browse the conference program, meet the speakers and register for the sessions you don't want to miss.
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
-    features:
-      items: [{ title: The full program, text: "See every talk by day and time, with its room and length." }, { title: Meet the speakers, text: "Read who is on stage, where they work and what they will cover." }, { title: Register in a click, text: Reserve a seat in the talks you want; the places left are shown as they fill up. }, { title: Your own schedule, text: "All your registrations in one list, and you can cancel until the talk begins." }]
-    faq:
-      items: [{ question: Do I need an account to register?, answer: You can browse the program freely; sign in with your email to register for talks. }, { question: What happens when a talk is full?, answer: "Registration closes once every seat is taken, so register early for popular talks." }, { question: Can I cancel a registration?, answer: "Yes, from your registrations, any time before the talk starts." }]
 logo:
   src: images/logo.webp
   alt: A ticket

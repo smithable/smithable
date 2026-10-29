@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: "The live state of our API: what works, what is being fixed and what maintenance is planned."
+  description: Is the API working? Live status of our API, its incidents and planned maintenance.
   timezone: Etc/UTC
 models:
   Component:
@@ -33,51 +33,6 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
-pages:
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
-  incidents:
-    crud: Incident
-    filters: [status]
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  maintenance:
-    crud: Maintenance
-  components:
-    crud: Component
-  home:
-    route: /
-    landing:
-      hero:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
-      footer:
-  privacy:
-    route: /privacy
-    legal: privacy
-  team:
-    users: manage
 actions:
   identified:
     on: Incident
@@ -101,7 +56,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix has been deployed and we are watching the results.
+        message: A fix has been deployed. We are watching the results before closing this incident.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -115,5 +70,49 @@ actions:
         at: NOW()
         status: resolved
         message: This incident has been resolved.
-    intent: The incident is over, with an update saying so.
+    intent: The incident is over, with an update saying so. The component's state stays what the team sets.
+pages:
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
+  incidents:
+    crud: Incident
+    filters: [status]
+  updates:
+    crud: IncidentUpdate
+  maintenance:
+    crud: Maintenance
+  components:
+    crud: Component
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      planned:
+        records: Maintenance
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  team:
+    users: manage
 navigation: [overview, incidents, updates, maintenance, components, team]

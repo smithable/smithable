@@ -2,6 +2,8 @@ smithable: 0.1
 app:
   name: Lotus Room Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
@@ -37,7 +39,7 @@ models:
       per: session
       max: session.capacity
       closes: session.startsAt
-      cancelUntil: 2 hours before session.startsAt
+      cancelUntil: session.startsAt
   Message:
     fields:
       name: string!
@@ -81,9 +83,12 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
+  admin:
+    data: all
 navigation:
-  main: [schedule, my-bookings, sessions, class-types, instructors, messages, home, privacy]
+  main: [schedule, my-bookings, sessions, class-types, instructors, messages, home, privacy, admin]
   schedule: [schedule, my-bookings, sessions]
   messages: [messages]
   studioSetup: [class-types, instructors]
   website: [home]
+  admin: [admin]

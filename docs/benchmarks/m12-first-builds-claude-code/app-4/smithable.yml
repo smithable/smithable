@@ -1,31 +1,45 @@
 smithable: 0.1
 app:
-  name: Toolshare
-  description: Neighbors lend each other the tools they have and borrow the ones they need.
+  name: Toolshed Commons
+  description: Neighbors list the tools they own and lend them to each other.
   currency: EUR
 models:
   Tool:
     fields:
-      name: string!
+      title: string!
       photos: pictures!
       description: text!
-      category: handTools | powerTools | garden | ladders | cleaning | other
+      category: power | garden | hand | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
     review: [photos]
+  Loan:
+    fields:
+      tool: Tool!
+      borrower: string!
+      borrowedOn: date!
+      dueOn: date
+      status: out | returned
+      note: text
 pages:
-  catalog:
+  tools:
     route: /
     crud: Tool
-    search: [name, description, place]
+    search: [title, description, place]
     filters: [category, condition, available]
-    sortable: [name, createdAt]
     favorites: true
     contact: owner
   myTools:
     crud: Tool
     mine: true
+  loans:
+    crud: Loan
+    mine: true
+    filters: [status, tool, dueOn]
+    defaultFilter:
+      status: out
+    actions: [markReturned]
   saved:
     crud: Tool
     favorites: only
@@ -35,7 +49,7 @@ pages:
     route: /welcome
     landing:
       hero:
-        button: catalog
+        button: tools
         secondButton: myTools
       features:
       faq:
@@ -43,4 +57,12 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [catalog, myTools, saved, review]
+actions:
+  markReturned:
+    on: Loan
+    when:
+      status: out
+    set:
+      status: returned
+    intent: Record that the borrowed tool has come back.
+navigation: [tools, myTools, loans, saved, review]

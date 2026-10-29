@@ -2,18 +2,21 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Good jobs for our members
-      subtitle: Browse the openings the union has gathered from fair employers, and apply in a few minutes.
+      title: Union work, posted first for our members
+      subtitle: Browse open positions with signatory employers and apply in a few minutes.
       button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
+    openJobs:
+      title: Open right now
     features:
-      title: How it works
-      items: [{ title: Vetted openings, text: "Every job is posted by union staff, with employers who respect our agreements." }, { title: Apply online, text: "Sign in, add a short note and your resume, and send your application straight to the union." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted or settled, all in one place." }]
+      title: How the board works
+      items: [{ title: Union-backed openings, text: "Every post comes from an employer working with the local, with fair pay listed up front." }, { title: Apply in one place, text: "Sign in, attach your resume and a short note, and your application goes straight to the hiring staff." }, { title: Know where you stand, text: Follow each application from submitted to shortlisted or hired. }]
     faq:
-      items: [{ question: Who can apply?, answer: Anyone who signs in can apply; most jobs are meant for members of our local. }, { question: Do I need a resume?, answer: "It helps, but a short message about your experience is enough to get started." }, { question: Who sees my application?, answer: Only you and union staff. Your details are never shown on the public job board. }, { question: How do I hear back?, answer: "Union staff update the status of your application, which you can check any time after signing in." }]
+      title: Questions
+      items: [{ question: Who can apply?, answer: Members of the local. Sign in with your email to apply for any open job. }, { question: Can anyone see my application?, answer: No. Only you and the union staff handling the job can see it. }, { question: How do I know a job is still open?, answer: Open jobs are listed here; once a position is filled or closed it comes off the board. }]
 logo:
   src: images/logo.webp
   alt: A map pin

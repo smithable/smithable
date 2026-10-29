@@ -1,27 +1,27 @@
 smithable: 0.1
 app:
-  name: Club Pitch
-  description: The football club's site with its teams, players, fixtures and results.
-  timezone: Europe/Mariehamn
+  name: Club Football
+  description: The club's public site with its teams, players, fixtures and results.
+  timezone: Europe/Stockholm
 models:
   Team:
     fields:
       name: string!
-      category: senior | youth | women | veterans
+      ageGroup: string
       coach: string
-      photo: picture
       about: text
+      photo: picture
       players: Player[]
       matches: Match[]
   Player:
     fields:
       name: string!
       team: Team!
+      position: goalkeeper | defender | midfielder | forward
       shirtNumber:
         type: int
         min: 1
         max: 99
-      position: goalkeeper | defender | midfielder | forward
       photo: picture
       bio: text
   Match:
@@ -29,10 +29,10 @@ models:
       team: Team!
       opponent: string!
       kickoff: datetime!
-      venue: home | away
-      ground: string
+      venue: home | away | neutral
+      location: string
       competition: string
-      status: scheduled | played | postponed | canceled
+      status: scheduled | played | postponed | cancelled
       goalsFor:
         type: int
         min: 0
@@ -44,24 +44,22 @@ models:
 pages:
   matches:
     crud: Match
-    search: [opponent, competition]
     filters: [team, status, venue, kickoff]
+    search: [opponent, competition]
     actions: [recordResult, postpone]
   teams:
     crud: Team
-    search: [name, coach]
-    filters: [category]
   players:
     crud: Player
-    search: [name]
     filters: [team, position]
+    search: [name]
   home:
     route: /
     landing:
       hero:
         button: matches
         secondButton: teams
-      fixtures:
+      upcoming:
         records: Match
         view: table
         where:
@@ -71,9 +69,8 @@ pages:
         view: table
         where:
           status: played
-      squads:
+      ourTeams:
         records: Team
-      faq:
       footer:
   privacy:
     route: /privacy
@@ -87,11 +84,11 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match that has been played.
+    intent: Enter the final score of a match and mark it played.
   postpone:
     on: Match
     when:
       status: scheduled
     set:
       status: postponed
-    intent: Mark a scheduled match as postponed.
+    intent: Mark a match as postponed.

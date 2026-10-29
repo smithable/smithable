@@ -1,3 +1,7 @@
 smithableUx: 0.1
+tones:
+  Loan.status:
+    out: warning
+    returned: success
 theme:
   preset: woodland

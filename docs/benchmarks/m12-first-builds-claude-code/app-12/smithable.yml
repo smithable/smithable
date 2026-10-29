@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is the shop working? The state of our web shop's services, outages and their updates, live.
+  description: Is the shop working? The state of our checkout, payments and delivery services, live.
 models:
   Component:
     fields:
@@ -24,47 +24,6 @@ models:
       at: datetime!
       status: investigating | identified | monitoring | resolved
       message: text!
-pages:
-  incidents:
-    crud: Incident
-    filters: [status, component]
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
-  home:
-    route: /
-    landing:
-      hero:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      footer:
-  privacy:
-    route: /privacy
-    legal: privacy
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
-  team:
-    users: manage
 actions:
   identified:
     on: Incident
@@ -88,7 +47,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is in place. We are keeping an eye on it before closing this.
+        message: A fix is live. We are keeping an eye on it before closing this.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -101,6 +60,46 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This outage is over. Everything is working again.
-    intent: The incident is over, with an update saying so.
+        message: This outage is over and everything works again.
+    intent: The incident is over, with an update saying so. The component's state stays what the team sets.
+pages:
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
+  incidents:
+    crud: Incident
+    filters: [status, component]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+  team:
+    users: manage
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
 navigation: [overview, incidents, updates, components, team]

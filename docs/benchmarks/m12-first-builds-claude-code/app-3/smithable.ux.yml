@@ -1,8 +1,19 @@
 smithableUx: 0.1
 pages:
+  settings:
+    icon: settings
+  invoices:
+    table:
+      columns: [number, client, issuedOn, dueOn, status, total, balance]
+      sort: -issuedOn
   payments:
     table:
       sort: -paidOn
+    icon: receipt
+theme:
+  preset: modern
+  brand:
+    primary: "#0f766e"
 tones:
   Invoice.status:
     paid: success

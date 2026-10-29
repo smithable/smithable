@@ -3,19 +3,15 @@ pages:
   home:
     hero:
       title: Get paid for your work, without the paperwork
-      subtitle: Paidup keeps your clients, invoices and incoming payments in one tidy place, so you always know who still owes you.
-      button: Start invoicing
+      subtitle: Keep your clients in one place, send clear invoices and see at a glance what has been paid and what is still owed.
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
-    callToAction:
-      title: Your next invoice takes two minutes
-      button: Sign in
     features:
-      items: [{ title: Clients in one list, text: Store each client's contact and VAT details once and reuse them on every invoice. }, { title: Invoices with lines, text: "Add hours, days or items with a price; totals add up on their own." }, { title: Payments tracked, text: Record full or partial payments and see what is still open on each invoice. }, { title: Overdue at a glance, text: "Invoices past their due date are flagged automatically, so nothing slips." }]
+      items: [{ title: Clients at hand, text: "Store each client's contact details, address and VAT number once, and reuse them on every invoice." }, { title: Invoices in minutes, text: Add lines with quantity and price; the totals add up by themselves. }, { title: Payments tracked, text: "Record each payment as it arrives, including partial ones, and always know the balance left." }, { title: Nothing slips by, text: Invoices still unpaid a week past their due date are marked overdue for you. }]
     faq:
-      items: [{ question: Who can see my clients and invoices?, answer: Only you. Every freelancer's records are private to their own account. }, { question: Can a client pay in instalments?, answer: Yes. Record each payment against the invoice and the remaining balance updates. }, { question: Does the client get the invoice by email?, answer: "When you mark an invoice as sent, your client receives it at the address you saved." }]
+      items: [{ question: Who can see my invoices?, answer: "Only you. Every freelancer's clients, invoices and payments are private to their own account." }, { question: Can a client pay in several parts?, answer: Yes. Record each payment against the invoice and the remaining balance updates right away. }, { question: Does my client get the invoice by mail?, answer: "When you mark an invoice as sent, your client is notified at the email address you keep for them." }]
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin
