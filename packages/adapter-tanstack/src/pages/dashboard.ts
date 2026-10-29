@@ -110,14 +110,52 @@ export function dashboardParts(
       };
     }
     if (item.kind === "chart") {
-      route.add("#/kit/aggregate", "byMonth");
       view.add("#/kit/Dashboard", "BarChart");
       const amount =
         item.measure === "count" ? "() => 1" : `(row) => Number(row.${item.field}) || 0`;
-      values.push(`${item.name}: byMonth(${filtered}, (row) => row.${item.by}, ${amount})`);
+      // By a choice (intents.md §5): a bar per value, on the model or one reference away.
+      const choice = item.choice;
+      if (choice) {
+        route.add("#/kit/aggregate", "byValue");
+        const target = modelNamed(ir, choice.model);
+        const field = target.fields.find((f) => f.name === choice.field);
+        const options = field?.type.kind === "choice" ? field.type.values : [];
+        const tn = names(target, t);
+        view.add(tn.module, tn.ui);
+        if (choice.reference) {
+          // The referred records as the viewer may read them; a tile grouped by a field they may
+          // not read is not shown.
+          route.add(`${tn.module}.server`, tn.data).add("#/kit/access", "AccessDenied");
+          const map = `${item.name}Of`;
+          values.push(
+            `${item.name}: await ${tn.data}.list(viewer).then((referred) => { const ${map} = new Map(referred.map((r) => [r.id, r.${choice.field}])); return byValue(${filtered}, (row) => ${map}.get(row.${choice.reference}Id as number), ${amount}, ${literal(options)}); }, (error) => { if (error instanceof AccessDenied) return null; throw error; })`,
+          );
+        } else
+          values.push(
+            `${item.name}: byValue(${filtered}, (row) => row.${choice.field}, ${amount}, ${literal(options)})`,
+          );
+        return {
+          block: "chart",
+          code: `{data.${item.name} && (
+          <BarChart
+            label=${attr(label)}
+            kind="${kind}"
+            app={app}
+            bars={data.${item.name}}
+            labels={Object.fromEntries((${tn.ui}.fields.find((f) => f.name === ${JSON.stringify(choice.field)})?.choices ?? []).map((c) => [c.value, c.label]))}
+          />
+        )}`,
+        };
+      }
+      // By a date: a bar per period, in the app's time zone.
+      route.add("#/kit/aggregate", "byPeriod");
+      const period = item.period ?? "month";
+      values.push(
+        `${item.name}: byPeriod(${filtered}, (row) => row.${item.by}, ${amount}, ${JSON.stringify(period)}, ${JSON.stringify(ir.app.timezone ?? "UTC")})`,
+      );
       return {
         block: "chart",
-        code: `<BarChart label=${attr(label)} kind="${kind}" app={app} bars={data.${item.name}} />`,
+        code: `<BarChart label=${attr(label)} kind="${kind}" app={app} bars={data.${item.name}} period="${period}" />`,
       };
     }
     view.add("#/kit/Dashboard", "StatCard", "formatNumber");

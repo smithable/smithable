@@ -185,6 +185,48 @@ const setColumns: Operation<{ page: string; columns?: string[] }> = {
   },
 };
 
+/** The field types a totals row adds up. */
+const NUMBERS = ["int", "decimal", "money"];
+
+const setTotals: Operation<{ page: string; totals?: string[] }> = {
+  name: "setTotals",
+  summary:
+    "Give a page's table a last row with the sum of these number or amount fields, and the count, over every record the viewer may see that fits the filters (none: no totals row).",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      totals: refTo({ ref: "field", page: "page", label: "Totals" }, {}, true),
+    },
+  },
+  positional: ["page", "...totals"],
+  describe: ({ page, totals }) =>
+    totals?.length
+      ? `Total ${totals.join(", ")} under the ${page} table`
+      : `No totals under the ${page} table`,
+  destructive: () => false,
+  apply(editors, { page, totals }, ir) {
+    const found = ir.pages.find((p) => p.id === page);
+    if (!found) throw new OperationError(`There is no page named "${page}".`);
+    const model = ir.models.find((m) => m.name === pageModel(found));
+    for (const name of totals ?? []) {
+      const field = model?.fields.find((f) => f.name === name);
+      if (!field) throw new OperationError(`${model?.name ?? page} has no field named "${name}".`);
+      if (!(field.type.kind === "scalar" && NUMBERS.includes(field.type.name)))
+        throw new OperationError(`"${name}" is not a number or an amount, so it has no total.`);
+      if (field.formula)
+        throw new OperationError(
+          `"${name}" is computed per record, so the list has no total of it.`,
+        );
+    }
+    const once = [...new Set(totals ?? [])];
+    put(editors.ux, ["pages", page, "table", "totals"], once.length ? once : undefined);
+    return [];
+  },
+};
+
 /** No detail parts: none given, or the one word "none". */
 const noDetail = (detail?: string[]) =>
   !detail?.length || (detail.length === 1 && detail[0] === "none");
@@ -751,6 +793,7 @@ export const uxOperations: AnyOperation[] = [
   setSectionLook,
   setFrame,
   setColumns,
+  setTotals,
   setRecordList,
   setRecordLines,
   setFieldOrder,

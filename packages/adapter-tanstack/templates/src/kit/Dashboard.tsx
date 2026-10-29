@@ -42,14 +42,37 @@ export function BarChart({
   kind,
   app,
   bars,
+  period,
+  labels,
 }: {
   label: string;
   kind: Kind;
   app: AppUi;
-  bars: { month: string; value: number }[];
+  /** One bar per period (its key from the kit's byPeriod) or per value of a choice. */
+  bars: { key: string; value: number }[];
+  /** A date's bars: their span; none for a choice's. */
+  period?: "week" | "month" | "quarter" | "year";
+  /** A choice's bars: each value's label. */
+  labels?: Record<string, string>;
 }) {
   const max = Math.max(...bars.map((b) => b.value), 1);
   const month = new Intl.DateTimeFormat(undefined, { month: "short", timeZone: "UTC" });
+  const day = new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+  // A bar's name: its week's Monday, its month, its quarter or year, or the choice's value.
+  const named = (key: string) =>
+    period === "week"
+      ? day.format(new Date(`${key}T00:00:00Z`))
+      : period === "month"
+        ? month.format(new Date(`${key}-01T00:00:00Z`))
+        : period === "quarter"
+          ? w.quarterOf(Number(key.slice(6)), key.slice(0, 4))
+          : period === "year"
+            ? key
+            : (labels?.[key] ?? key);
   return (
     <Card data-kit="tile" className="p-card">
       <h2 className="font-semibold">{label}</h2>
@@ -59,7 +82,7 @@ export function BarChart({
         <ol className="mt-6 flex h-56 items-end gap-2 sm:gap-4">
           {bars.map((bar) => (
             <li
-              key={bar.month}
+              key={bar.key}
               className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
             >
               <span className="text-xs font-semibold tabular-nums">
@@ -70,9 +93,7 @@ export function BarChart({
                 className="w-full max-w-16 rounded-t-md bg-chart-1"
                 style={{ height: `${(bar.value / max) * 100}%` }}
               />
-              <span className="text-xs text-muted-foreground">
-                {month.format(new Date(`${bar.month}-01T00:00:00Z`))}
-              </span>
+              <span className="text-xs text-muted-foreground">{named(bar.key)}</span>
             </li>
           ))}
         </ol>

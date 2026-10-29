@@ -28,6 +28,9 @@ import { threadBindings } from "./thread.js";
  * How the app looks, from smithable.ux.yml (ARCHITECTURE §3.2). Technology-neutral:
  * presets and choices, never CSS. Everything is optional.
  */
+/** The field types a table's totals row adds up. */
+const NUMBERS = ["int", "decimal", "money"];
+
 export interface UxIR {
   theme: {
     /** A built-in preset's name, or one of the project's themes (themes/<name>.yml). */
@@ -59,6 +62,11 @@ export interface PageUx {
   icon?: Icon;
   /** The table's columns, in order. */
   columns?: string[];
+  /**
+   * A last row with the sum of each of these number or amount fields, and the count, over every
+   * record the viewer may see that fits the filters and the search (docs/design/intents.md §5).
+   */
+  totals?: string[];
   /**
    * The filters shown when the list is first reached; the rest fold behind "More filters" (one
    * with a value in the address shows anyway). Without it, every filter shows.
@@ -698,7 +706,7 @@ export function validateUx(
             {
               allowed:
                 part.key === "table"
-                  ? ["columns", "below", "sort", "view"]
+                  ? ["columns", "below", "sort", "view", "totals"]
                   : ["fieldOrder", "sections", "columns", "control", "results"],
               later: part.key === "table" ? ["pageSize"] : [],
             },
@@ -769,7 +777,42 @@ export function validateUx(
               }
             } else if (option.key === "columns")
               result.columns = names(option.value, `the columns of ${where}`, true);
-            else if (option.key === "below") {
+            else if (option.key === "totals") {
+              const totals: string[] = [];
+              for (const { name, at } of readNameList(
+                ctx,
+                option.value,
+                `the totals of ${where}`,
+              )) {
+                const field = fields.find((f) => f.name === name);
+                if (!field) {
+                  ctx.error(
+                    at,
+                    "unknown-field",
+                    `${owner} has no field named "${name}" to total.`,
+                    didYouMean(
+                      name,
+                      fields.map((f) => f.name),
+                    ),
+                  );
+                  continue;
+                }
+                if (!(field.type.kind === "scalar" && NUMBERS.includes(field.type.name)))
+                  ctx.error(
+                    at,
+                    "invalid-field",
+                    `"${name}" is not a number or an amount, so it has no total.`,
+                  );
+                else if (field.formula)
+                  ctx.error(
+                    at,
+                    "invalid-field",
+                    `"${name}" is computed per record, so the list has no total of it.`,
+                  );
+                else if (!totals.includes(name)) totals.push(name);
+              }
+              if (totals.length) result.totals = totals;
+            } else if (option.key === "below") {
               result.below = {};
               for (const pair of mapEntries(ctx, option.value, `"below" of ${where}`) ?? []) {
                 const known = (name: string, at: ParsedNode | null) => {

@@ -413,6 +413,7 @@ const addTile: Operation<{
   of: string;
   where?: Record<string, string | boolean | string[]>;
   by?: string;
+  period?: string;
   limit?: number;
 }> = {
   name: "addTile",
@@ -443,7 +444,16 @@ const addTile: Operation<{
         description:
           'Only records with these values, e.g. { "status": "sent" } or { "status": "sent | overdue" }.',
       },
-      by: { type: "string", description: "A date field: one bar per month." },
+      by: {
+        type: "string",
+        description:
+          "A date field (one bar per period), a choice field, or a reference's choice field like customer.segment (one bar per value).",
+      },
+      period: {
+        type: "string",
+        enum: ["week", "month", "quarter", "year"],
+        description: "For a date by: the span of each bar; month unless said.",
+      },
       limit: { type: "integer", minimum: 1, description: "For a list or query: how many records." },
     },
   },
@@ -451,11 +461,19 @@ const addTile: Operation<{
   describe: ({ page, tile, measure, of }) =>
     `Add tile ${tile} (${measure} of ${of}) to ${page === "dashboard" ? "the dashboard" : `the ${page} dashboard`}`,
   destructive: () => false,
-  apply({ spec }, { page, tile, measure, of, where, by, limit }, ir) {
+  apply({ spec }, { page, tile, measure, of, where, by, period, limit }, ir) {
+    if (period && !by) throw new OperationError('"--period" goes with "--by" a date field.');
+    if (period && by) {
+      const model = ir.models.find((m) => m.name === of.split(".")[0]);
+      const field = model?.fields.find((f) => f.name === by.split(".")[0]);
+      if (by.includes(".") || field?.type.kind === "choice")
+        throw new OperationError('"--period" goes with "--by" a date field, not a choice.');
+    }
     const value = {
       [measure]: of,
       ...(where && Object.keys(where).length ? { where: conditionArgs(where) } : {}),
       ...(by ? { by } : {}),
+      ...(period ? { period } : {}),
       ...(limit ? { limit } : {}),
     };
     if (!FIELD_NAME_PATTERN.test(tile)) throw new OperationError(nameRule("tile", tile));
