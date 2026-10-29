@@ -29885,6 +29885,7 @@ export const scheduleFollowUpsAccess: Rule = { public: false, roles: ["admin"], 
 /** What the "scheduleFollowUps" action returns. */
 export type ScheduleFollowUpsOutput = { created: number };
 
+
 export const scheduleFollowUpsUi: ModelUi = {
   label: "Schedule follow ups",
   pluralLabel: "Schedule follow ups",
@@ -37025,7 +37026,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/merge-customers.ts": "6bd732b1 generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
   "src/generated/actions/schedule-follow-ups.server.ts": "b3847e01 generated",
-  "src/generated/actions/schedule-follow-ups.ts": "09f0f811 generated",
+  "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",

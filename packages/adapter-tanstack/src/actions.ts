@@ -113,6 +113,8 @@ export function actionNames(action: ActionIR) {
     askUi: `${action.name}AskUi`,
     askOptions: `${action.name}AskOptions`,
     run: `run${type}`,
+    /** A custom action's fence (intents.md §6): the type of what its code may reach. */
+    touches: `${type}Touches`,
     /** A merge (intents.md §3): which stays, and what merging two would do (the server's, the form's). */
     keep: `${action.name}Keep`,
     preview: `preview${type}`,
@@ -144,6 +146,78 @@ export type ${a.inputType} = z.infer<typeof ${a.input}>;
 }
 
 /**
+ * A custom action's fence (docs/design/intents.md §6): the data functions its contract's touches
+ * name, by model (reads: get and list; writes: those and create, update, remove, the update
+ * narrowed to the fields named); its triggers are words only. The type goes to the action's module,
+ * where the code reads it; the value is built in its server module. Undefined without touches.
+ */
+export function touchesParts(action: ActionIR, ir: SpecIR, t: Texts) {
+  if (!action.custom || !action.touches) return undefined;
+  const a = actionNames(action);
+  const touches = action.touches ?? { reads: [], writes: [] };
+  const reads = touches.reads.filter((m) => !touches.writes.some((w) => w.model === m));
+  const entries: { key: string; type: string; value: string; module?: string; data?: string }[] =
+    [];
+  for (const name of reads) {
+    if (name === USER_MODEL) {
+      entries.push({
+        key: "user",
+        type: "{ list: typeof listUsers }",
+        value: "{ list: listUsers }",
+        module: "#/generated/users.server",
+        data: "listUsers",
+      });
+      continue;
+    }
+    const n = names(modelNamed(ir, name), t);
+    entries.push({
+      key: camelKey(name),
+      type: `Pick<typeof ${n.data}, "get" | "list">`,
+      value: `{ get: (...args: Parameters<typeof ${n.data}.get>) => ${n.data}.get(...args), list: (...args: Parameters<typeof ${n.data}.list>) => ${n.data}.list(...args) }`,
+      module: `${n.module}.server`,
+      data: n.data,
+    });
+  }
+  // People are not written through a data function: who signs in is the users page's.
+  for (const write of touches.writes.filter((w) => w.model !== USER_MODEL)) {
+    const n = names(modelNamed(ir, write.model), t);
+    const model = modelNamed(ir, write.model);
+    const keys = write.fields?.map((f) =>
+      dataKey(model.fields.find((x) => x.name === f) as FieldIR),
+    );
+    // Narrowed to the fields named: an update of others does not type-check.
+    const update = keys
+      ? `(viewer: Viewer | null, id: number, values: Pick<Parameters<typeof ${n.data}.update>[2], ${keys.map((k) => JSON.stringify(k)).join(" | ")}>) => ReturnType<typeof ${n.data}.update>`
+      : `typeof ${n.data}.update`;
+    entries.push({
+      key: camelKey(write.model),
+      type: `Pick<typeof ${n.data}, "get" | "list"${keys ? "" : ' | "create" | "remove"'}> & { update: ${update} }`,
+      value: `{ get: (...args: Parameters<typeof ${n.data}.get>) => ${n.data}.get(...args), list: (...args: Parameters<typeof ${n.data}.list>) => ${n.data}.list(...args)${keys ? "" : `, create: (...args: Parameters<typeof ${n.data}.create>) => ${n.data}.create(...args), remove: (...args: Parameters<typeof ${n.data}.remove>) => ${n.data}.remove(...args)`}, update: (viewer: Viewer | null, id: number, values: Parameters<typeof ${n.data}.update>[2]) => ${n.data}.update(viewer, id, values) }`,
+      module: `${n.module}.server`,
+      data: n.data,
+    });
+  }
+  const typeImports = [...new Map(entries.map((e) => [e.data, e.module])).entries()]
+    .map(([data, module]) => `import type { ${data} } from "${module}";\n`)
+    .join("");
+  const type = `/** What the "${action.name}" code may reach (its contract's touches): a fence, not a wall. */
+export interface ${a.touches} {
+${entries.map((e) => `  ${e.key}: ${e.type};`).join("\n")}
+}
+`;
+  const valueImports = [...new Map(entries.map((e) => [e.data, e.module])).entries()].map(
+    ([data, module]) => ({ data: data as string, module: module as string }),
+  );
+  const value = `{
+${entries.map((e) => `      ${e.key}: ${e.value},`).join("\n")}
+    }`;
+  return { type, typeImports, value, valueImports };
+}
+
+/** A model's name as a key of the fence: Invoice → invoice, OrderLine → orderLine. */
+const camelKey = (name: string) => name.charAt(0).toLowerCase() + name.slice(1);
+
+/**
  * What running a custom action does once the viewer is known, in its own server module: its server
  * function, the API, the assistants' tools and the development door all run it.
  */
@@ -157,8 +231,14 @@ function customRun(action: ActionIR, ir: SpecIR, t: Texts) {
   // On the rows picked in a list (A 171): what it asks besides them, and one Activity line a run.
   const rows = action.custom ? action.rows : undefined;
   const told = afterCustom(ir, action.name).length > 0;
+  const fence = touchesParts(action, ir, t);
+  // The data functions it reads the input's records with, and its fence's, each imported once.
+  const dataImports = new Map<string, string>([
+    ...readers.map((n): [string, string] => [n.data, n.module.replace(/\.ts$/, "") + ".server"]),
+    ...(fence?.valueImports ?? []).map((i): [string, string] => [i.data, i.module]),
+  ]);
   const runImports = `${rows || told ? 'import { db } from "#/db";\n' : ""}${rows ? 'import { audit } from "#/kit/audit.server";\n' : ""}${told ? 'import { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";\n' : ""}import { ${action.name} as implementation } from "${a.custom}";
-${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(/\.ts$/, "")}.server";\n`))].join("")}`;
+${[...dataImports].map(([data, module]) => `import { ${data} } from "${module}";\n`).join("")}`;
   const body = `${records
     .map((f, i) =>
       f.type.kind === "relation" && f.type.many
@@ -168,10 +248,16 @@ ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(
     .join(
       "",
     )}    // The implementation may take the viewer too, e.g. to use the data functions as them.
-    const run: (input: ${a.inputType}, viewer: Viewer | null) => Promise<${a.outputType}> = implementation;${
+    const run: (input: ${a.inputType}, viewer: Viewer | null${fence ? `, touched: ${a.touches}` : ""}) => Promise<${a.outputType}> = implementation;${
+      fence
+        ? `
+    // What its contract lets the code reach, and nothing more (intents.md §6).
+    const touched: ${a.touches} = ${fence.value};`
+        : ""
+    }${
       rows || told
         ? `
-    const output = await run(data, viewer);${
+    const output = await run(data, viewer${fence ? ", touched" : ""});${
       rows
         ? `
     // One line in Activity for the run, with the rows it ran on.
@@ -191,7 +277,7 @@ ${[...new Set(readers.map((n) => `import { ${n.data} } from "${n.module.replace(
     }
     return output;`
         : `
-    return run(data, viewer);`
+    return run(data, viewer${fence ? ", touched" : ""});`
     }`;
   return { records, rows, runImports, body };
 }
@@ -226,7 +312,8 @@ export function actionModule(action: ActionIR, ir: SpecIR, auth: AuthIR, t: Text
   };
   const rows = action.custom ? action.rows : undefined;
   const asksMore = Boolean(rows && action.input.length > 1);
-  return `${HEADER}import { createServerFn } from "@tanstack/react-start";
+  const fence = touchesParts(action, ir, t);
+  return `${HEADER}${fence ? `${fence.typeImports}${fence.type.includes("viewer: Viewer") ? 'import type { Viewer } from "#/kit/access";\n' : ""}` : ""}import { createServerFn } from "@tanstack/react-start";
 import { w } from "#/kit/words";
 import { check, type Rule } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
@@ -243,6 +330,7 @@ export const ${a.access}: Rule = ${literal(actionAccess(action, auth))};
 
 /** What the "${action.name}" action returns. */
 export type ${a.outputType} = ${output};
+${fence ? `\n${fence.type}` : ""}
 
 export const ${a.ui}: ModelUi = ${literal(ui)};
 ${
@@ -274,7 +362,7 @@ export function customActionServer(action: ActionIR, ir: SpecIR, t: Texts): stri
   const a = actionNames(action);
   const { runImports, body } = customRun(action, ir, t);
   return `${HEADER}${runImports}import { AccessDenied, check, type Viewer } from "#/kit/access";
-import { ${a.access}, type ${a.outputType} } from "./${kebab(action.name)}";
+import { ${a.access}, type ${a.outputType}${touchesParts(action, ir, t) ? `, type ${a.touches}` : ""} } from "./${kebab(action.name)}";
 import type { ${a.inputType} } from "./${kebab(action.name)}.input";
 
 /** Runs "${action.name}" as \`viewer\`: its rule, the records it names, the run, what it records and tells. */
@@ -697,10 +785,10 @@ export function actionStub(action: ActionIR): string {
 // to the action's input or output shows up here as a type error.
 // \`viewer\` is the signed-in user (null for a visitor). The records the input refers to are ones
 // they may read; the data functions in src/generated/*.server.ts check access for them.
-import type { ${a.inputType}, ${a.outputType} } from "${a.module}";
+import type { ${a.inputType}, ${a.outputType}${action.custom && action.touches ? `, ${a.touches}` : ""} } from "${a.module}";
 import type { Viewer } from "#/kit/access";
 
-${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null): Promise<${a.outputType}> {
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null${action.custom && action.touches ? `, _touched: ${a.touches}` : ""}): Promise<${a.outputType}> {
   throw new Error(\`${action.name} is not implemented yet (input: \${JSON.stringify(input)}).\`);
 }
 `;

@@ -1,5 +1,5 @@
 import { conditionArgs } from "../condition.js";
-import type { ModelIR } from "../ir.js";
+import type { ModelIR, SpecIR } from "../ir.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { FIELD_NAME_PATTERN, nameRule } from "./names.js";
 
@@ -41,6 +41,91 @@ function typed(of: ModelIR, field: string, value: Value): Value {
 const typedAll = (of: ModelIR, values: Record<string, Value>) =>
   Object.fromEntries(Object.entries(values).map(([k, v]) => [k, typed(of, k, v)]));
 
+/** A custom action's contract (docs/design/intents.md §6), as addAction and setAction take it. */
+const CONTRACT_ARGS = {
+  reads: {
+    type: "array",
+    items: { type: "string" },
+    description:
+      'A custom action: the models its code reads, e.g. Invoice Payment; "none" for no list.',
+  },
+  writes: {
+    type: "array",
+    items: { type: "string" },
+    description:
+      'A custom action: the models, or fields of them, its code writes, e.g. Payment Invoice.status; "none" for no list.',
+  },
+  triggers: {
+    type: "array",
+    items: { type: "string" },
+    description:
+      'A custom action: the outgoing entries its code may fire, e.g. paymentBooked; "none" for no list.',
+  },
+};
+
+/** The one word "none": an empty list, which removes the key. */
+const noneOf = (list?: string[]) =>
+  list === undefined ? undefined : list.length === 1 && list[0] === "none" ? [] : list;
+
+/**
+ * The contract's lists checked against the spec: models (or User) in reads, models or Model.field
+ * in writes, outgoing entries in triggers. Nothing given is nothing; an empty list is removal.
+ */
+function contractOf(
+  ir: SpecIR,
+  reads?: string[],
+  writes?: string[],
+  triggers?: string[],
+): { touches?: { reads?: string[]; writes?: string[] }; triggers?: string[] } | undefined {
+  const r = noneOf(reads);
+  const w = noneOf(writes);
+  const t = noneOf(triggers);
+  if (r === undefined && w === undefined && t === undefined) return undefined;
+  const twice = (list: string[], name: string, flag: string) => {
+    if (list.indexOf(name) !== list.lastIndexOf(name))
+      throw new OperationError(`${name} is named twice in ${flag}.`);
+  };
+  for (const name of r ?? []) {
+    if (name.includes("."))
+      throw new OperationError(`"--reads" names models; a field is written, not read: "${name}".`);
+    if (name !== "User" && !ir.models.some((m) => m.name === name))
+      throw new OperationError(`There is no model named "${name}" to read.`);
+    twice(r ?? [], name, "--reads");
+  }
+  const whole = new Set((w ?? []).filter((n) => !n.includes(".")));
+  for (const name of w ?? []) {
+    const [modelName = "", field, more] = name.split(".");
+    const model = ir.models.find((m) => m.name === modelName);
+    if (more !== undefined || (!model && modelName !== "User"))
+      throw new OperationError(`"${name}" is not a model or Model.field to write.`);
+    twice(w ?? [], name, "--writes");
+    if (field === undefined) continue;
+    const f = model?.fields.find((x) => x.name === field);
+    if (!f) throw new OperationError(`${modelName} has no field named "${field}".`);
+    if (f.formula) throw new OperationError(`${name} is computed, so nothing writes it.`);
+    if (f.type.kind === "relation" && f.type.many)
+      throw new OperationError(`${name} is a list, written through its records' reference.`);
+    if (whole.has(modelName))
+      throw new OperationError(`${modelName} is written whole, so ${name} adds nothing.`);
+  }
+  for (const name of t ?? []) {
+    if (!ir.outgoing.some((o) => o.name === name))
+      throw new OperationError(`There is nothing named "${name}" under outgoing to fire.`);
+    twice(t ?? [], name, "--triggers");
+  }
+  return {
+    ...(r !== undefined || w !== undefined
+      ? {
+          touches: {
+            ...(r !== undefined ? { reads: r } : {}),
+            ...(w !== undefined ? { writes: w } : {}),
+          },
+        }
+      : {}),
+    ...(t !== undefined ? { triggers: t } : {}),
+  };
+}
+
 /**
  * Adds an action. With `on` and `set` it is standard: it sets fields of one record, offered on
  * the model's crud page (when it has exactly one) for records `when` fits. Without, it is custom:
@@ -61,6 +146,9 @@ const addAction: Operation<{
   merge?: string;
   keep?: string;
   fields?: string[];
+  reads?: string[];
+  writes?: string[];
+  triggers?: string[];
   split?: string;
   move?: string;
 }> = {
@@ -112,6 +200,7 @@ const addAction: Operation<{
       ),
       output: fields("A custom action: the values it returns, if any."),
       intent: { type: "string", description: "What it is for, in a sentence." },
+      ...CONTRACT_ARGS,
       merge: refTo(
         { ref: "model", label: "Merges two records of" },
         {
@@ -162,6 +251,9 @@ const addAction: Operation<{
       merge,
       keep,
       fields: rules = [],
+      reads,
+      writes,
+      triggers,
       split,
       move,
     },
@@ -180,6 +272,11 @@ const addAction: Operation<{
       if (page?.actions) spec.set(["pages", page.id, "actions"], [...page.actions, action]);
       else if (page) spec.add(["pages", page.id], "actions", [action]);
     };
+    const contract = contractOf(ir, reads, writes, triggers);
+    if (contract && (on || merge !== undefined || split !== undefined))
+      throw new OperationError(
+        "--reads, --writes and --triggers are a custom action's contract: not for a standard action, a merge or a split.",
+      );
     const somethingElse =
       on ||
       Object.keys(set).length ||
@@ -267,6 +364,8 @@ const addAction: Operation<{
         ...(Object.keys(input).length ? { input } : {}),
         ...(Object.keys(output).length ? { output } : {}),
         ...text,
+        ...(contract?.touches ? { touches: contract.touches } : {}),
+        ...(contract?.triggers ? { triggers: contract.triggers } : {}),
       });
       // A rows action (one input a list of records) shows where a standard action would: on its
       // model's crud page, when there is just one (the page's "actions" is where an action shows).
@@ -336,10 +435,13 @@ const setAction: Operation<{
   intent?: string;
   when?: Record<string, string | boolean | string[]>;
   set?: Record<string, Value>;
+  reads?: string[];
+  writes?: string[];
+  triggers?: string[];
 }> = {
   name: "setAction",
   summary:
-    "Change an action: its intent, the records it is for (--when) or the values it sets (--set). Each replaces what was there; an empty one removes it. Who may run it is grant <role> actions <name>.",
+    "Change an action: its intent, the records it is for (--when), the values it sets (--set), or a custom action's contract (--reads, --writes, --triggers). Each replaces what was there; an empty one (or none) removes it. Who may run it is grant <role> actions <name>.",
   schema: {
     type: "object",
     required: ["action"],
@@ -363,21 +465,34 @@ const setAction: Operation<{
       set: values(
         'A standard action: the new values, all of them, e.g. { status: done, doneOn: "TODAY()" }.',
       ),
+      ...CONTRACT_ARGS,
     },
   },
   positional: ["action"],
-  describe: ({ action, intent, when, set }) =>
+  describe: ({ action, intent, when, set, reads, writes, triggers }) =>
     `Change ${
-      [intent !== undefined && "the intent", when && "the condition", set && "the values"]
+      [
+        intent !== undefined && "the intent",
+        when && "the condition",
+        set && "the values",
+        (reads || writes || triggers) && "the contract",
+      ]
         .filter(Boolean)
         .join(" and ") || "nothing"
     } of the action ${action}`,
   destructive: () => false,
-  apply({ spec }, { action, intent, when, set }, ir) {
+  apply({ spec }, { action, intent, when, set, reads, writes, triggers }, ir) {
     const found = ir.actions.find((a) => a.name === action);
     if (!found) throw new OperationError(`There is no action named "${action}".`);
-    if (intent === undefined && !when && !set)
-      throw new OperationError("Say what to change: --intent, --when or --set.");
+    const contract = contractOf(ir, reads, writes, triggers);
+    if (intent === undefined && !when && !set && !contract)
+      throw new OperationError(
+        "Say what to change: --intent, --when, --set, --reads, --writes or --triggers.",
+      );
+    if (contract && !found.custom)
+      throw new OperationError(
+        `"${action}" is not a custom action: --reads, --writes and --triggers are a custom action's contract.`,
+      );
     const put = (key: string, value: Parameters<typeof spec.set>[1] | undefined) => {
       const at = ["actions", action, key];
       if (value === undefined) {
@@ -386,6 +501,22 @@ const setAction: Operation<{
       else spec.add(["actions", action], key, value);
     };
     if (intent !== undefined) put("intent", intent.trim() || undefined);
+    if (contract && found.custom) {
+      // Each list replaces its own; the other stays as written. An empty list is kept: the code
+      // reaches nothing of that kind, where no touches at all would be no fence.
+      if (contract.touches) {
+        const at = ["actions", action, "touches"];
+        const kept = (key: "reads" | "writes") =>
+          spec.has([...at, key]) ? (spec.get([...at, key]) as string[]) : undefined;
+        const reads = contract.touches.reads ?? kept("reads");
+        const writes = contract.touches.writes ?? kept("writes");
+        put("touches", {
+          ...(reads !== undefined ? { reads } : {}),
+          ...(writes !== undefined ? { writes } : {}),
+        });
+      }
+      if (contract.triggers) put("triggers", contract.triggers);
+    }
     if (!when && !set) return [];
     const model = found.custom ? undefined : ir.models.find((m) => m.name === found.on);
     if (!model)
