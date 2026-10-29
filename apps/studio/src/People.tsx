@@ -192,7 +192,7 @@ function AddPerson({
   onAdd,
 }: {
   auth?: AuthIR;
-  onAdd: (args: { name: string; role: string; persona: string }) => Promise<boolean>;
+  onAdd: (args: { name: string; role: string; persona?: string }) => Promise<boolean>;
 }) {
   const roles = sampleRoles(auth);
   const [open, setOpen] = useState(false);
@@ -211,7 +211,14 @@ function AddPerson({
       className="space-y-2 rounded border border-line p-2"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await onAdd({ name: name.trim(), role, persona: persona.trim() })) {
+        // An empty persona is the role's own description, as the operation gives it.
+        if (
+          await onAdd({
+            name: name.trim(),
+            role,
+            ...(persona.trim() ? { persona: persona.trim() } : {}),
+          })
+        ) {
           setName("");
           setOpen(false);
         }

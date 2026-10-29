@@ -611,7 +611,7 @@ const RULES: Rule[] = [
       const people = scope.people ?? [];
       if (people.length + count > PEOPLE_MAX)
         return {
-          refusal: `A project has at most ${PEOPLE_MAX} sample users, and this one has ${people.length}: remove one first, or add ${PEOPLE_MAX - people.length || "none"}.`,
+          refusal: `A project has at most ${PEOPLE_MAX} sample users, and this one has ${people.length}: ${people.length < PEOPLE_MAX ? `add ${PEOPLE_MAX - people.length} or fewer, or ` : ""}remove one first.`,
         };
       const taken = new Set(people.map((p) => p.toLowerCase()));
       const names = SAMPLE_NAMES.filter((n) => !taken.has(n.toLowerCase())).slice(0, count);

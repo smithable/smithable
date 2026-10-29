@@ -58,20 +58,38 @@ export async function preview(
       if (server.pid) process.kill(-server.pid);
     } catch {}
   };
-  for (let i = 0; i < 240; i++) {
-    const up = await fetch(`${base}/health`).then(
+  // The server is in a process group of its own: Ctrl+C stops it from here, whenever it comes.
+  let interrupted = () => {};
+  process.once("SIGINT", () => {
+    stopServer();
+    interrupted();
+  });
+  let gone = false;
+  void exited.then(() => {
+    gone = true;
+  });
+  let up = false;
+  for (let i = 0; i < 240 && !gone && !up; i++) {
+    up = await fetch(`${base}/health`).then(
       (r) => r.ok,
       () => false,
     );
-    if (up) break;
-    await new Promise((r) => setTimeout(r, 500));
+    if (!up) await new Promise((r) => setTimeout(r, 500));
+  }
+  if (!up) {
+    io.err(
+      gone
+        ? `The app did not start (is port ${options.port} taken?).\n`
+        : "The app did not answer.\n",
+    );
+    stopServer();
+    return 1;
   }
   io.out(`\nThe app is at ${base}.\n`);
-  if (!options.live) {
-    process.once("SIGINT", stopServer);
-    return exited;
-  }
+  if (!options.live) return exited;
   let printed = 0;
+  let ended = false;
+  let finish = () => {};
   const runner = sampleRunner({
     door: doorAt(base, secret),
     load: projectPeople(dir),
@@ -80,7 +98,12 @@ export async function preview(
       // Only the lines not printed yet (the feed keeps its last two hundred).
       for (const line of state.feed) if (line.n >= printed) io.out(feedText(line));
       printed = (state.feed.at(-1)?.n ?? printed - 1) + 1;
-      if (!state.running && state.stopped) io.err(`${state.stopped}\n`);
+      // A run that stopped by itself (a cap) ends the command.
+      if (!state.running && state.stopped && !ended) {
+        ended = true;
+        io.err(`${state.stopped}\n`);
+        finish();
+      }
     },
   });
   const started = runner.state();
@@ -97,14 +120,13 @@ export async function preview(
   runner.start(options.fast);
   // Nobody uses Studio here: the run lasts as long as it was asked to.
   const keep = setInterval(() => runner.touch(), 60_000);
-  const done = new Promise<void>((resolve) => {
+  await new Promise<void>((resolve) => {
     const end = setTimeout(resolve, options.minutes * 60_000);
-    process.once("SIGINT", () => {
+    finish = interrupted = () => {
       clearTimeout(end);
       resolve();
-    });
+    };
   });
-  await done;
   clearInterval(keep);
   runner.pause();
   const { moves, cost, currency } = runner.state();
