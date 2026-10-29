@@ -444,9 +444,10 @@ export async function ${a.run}(viewer: Viewer | null, first: number, second: num
  * what is still as the merge left it goes back, what was changed since stays and is counted.
  * Empty for a model no merge is on.
  */
-export function unmergeCode(ir: SpecIR, model: ModelIR, t: Texts): string {
+export function unmergeCode(ir: SpecIR, model: ModelIR, auth: AuthIR, t: Texts): string {
   if (!model.trash || !mergesOf(ir, model.name).length) return "";
   const n = names(model, t);
+  const signedIn = hasSignIn(auth);
   const tables = [
     ...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values(),
   ];
@@ -454,17 +455,34 @@ export function unmergeCode(ir: SpecIR, model: ModelIR, t: Texts): string {
 /** The tables a merge of ${n.pluralLabel.toLowerCase()} moves records in, by model. */
 const MERGED_TABLES = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).table}`).join(", ")} } as const;
 
+/** Who may change a record of each, read when asked (the modules import one another). */
+const mergedWrite = (model: keyof typeof MERGED_TABLES): ModelAccess["write"] =>
+  ({ ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).access}.write`).join(", ")} })[model];
+/** The owner's column of each, to check the rule on a record. */
+const MERGED_OWNERS: Record<keyof typeof MERGED_TABLES, string | null> = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${signedIn ? JSON.stringify(ownerKey(m)) : "null"}`).join(", ")} };
+
 /**
  * Puts back what merging this ${n.label.toLowerCase()} away moved, as far as it is still as the merge left it;
  * returns how many things were changed since and stay as they are.
  */
-function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: number, deletedAt: Date | null): number {
+function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer: Viewer | null, id: number, deletedAt: Date | null): number {
   const line = tx.select({ details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.recordId, id), eq(schema.auditLog.action, "merged"))).orderBy(desc(schema.auditLog.id)).get();
   const merged = line?.details as { into: number; moved: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; trashed: { model: keyof typeof MERGED_TABLES; id: number }[]; cleared: { model: keyof typeof MERGED_TABLES; key: string; id: number }[]; before: Record<string, unknown>; after: Record<string, unknown>; trashedAt: number | null } | undefined;
   // Only the merge that put it in the trash this time.
   if (!merged || merged.trashedAt !== deletedAt?.getTime()) return 0;
   let stayed = 0;
+  // A record the viewer may not change stays where the merge put it, and is counted.
+  const mayChange = (model: keyof typeof MERGED_TABLES, rowId: number) => {
+    const owner = MERGED_OWNERS[model];
+    const table = MERGED_TABLES[model] as unknown as typeof ${n.table};
+    const row = owner ? (tx.select().from(table).where(eq(table.id, rowId)).get() as Record<string, unknown> | undefined) : undefined;
+    return allows(mergedWrite(model), viewer, owner ? ((row?.[owner] as string | null | undefined) ?? null) : undefined);
+  };
   for (const m of merged.moved) {
+    if (!mayChange(m.model, m.id)) {
+      stayed++;
+      continue;
+    }
     const table = MERGED_TABLES[m.model] as unknown as typeof ${n.table};
     const column = table[m.key as keyof typeof table] as never;
     stayed += 1 - tx.update(table).set({ [m.key]: id } as never).where(and(eq(table.id, m.id), eq(column, merged.into))).run().changes;
@@ -485,7 +503,8 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: nu
   if (kept) {
     // Dates were written as text in the line: compared as the line has them.
     const now = JSON.parse(JSON.stringify(kept)) as Record<string, unknown>;
-    const keys = Object.keys(merged.after);
+    // Forgotten in the log since: the values are not there to put back.
+    const keys = Object.keys(merged.after ?? {});
     const untouched = keys.filter((key) => JSON.stringify(now[key]) === JSON.stringify(merged.after[key]));
     stayed += keys.length - untouched.length;
     if (untouched.length) tx.update(${n.table}).set(Object.fromEntries(untouched.map((key) => [key, revived(kept[key as keyof typeof kept], merged.before[key])]))).where(eq(${n.table}.id, merged.into)).run();
@@ -493,11 +512,34 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], id: nu
   return stayed;
 }
 
+/** The records the trashed ones were merged into, by title (the trash list's "merged into"). */
+function mergedIntoTitles(rows: { id: number; deletedAt?: Date | null }[]): Map<number, string> {
+  const titles = new Map<number, string>();
+  if (!rows.length) return titles;
+  const lines = db.select({ recordId: schema.auditLog.recordId, details: schema.auditLog.details }).from(schema.auditLog).where(and(eq(schema.auditLog.model, ${JSON.stringify(model.name)}), eq(schema.auditLog.action, "merged"), inArray(schema.auditLog.recordId, rows.map((r) => r.id)))).all();
+  for (const row of rows) {
+    // The merge that put it in the trash this time.
+    const line = lines.filter((l) => l.recordId === row.id && (l.details as { trashedAt?: number } | null)?.trashedAt === row.deletedAt?.getTime()).pop();
+    const into = (line?.details as { into?: number } | undefined)?.into;
+    const kept = into === undefined ? undefined : db.select().from(${n.table}).where(eq(${n.table}.id, into)).get();
+    if (kept) titles.set(row.id, String(kept.${titleField(model)} ?? kept.id));
+  }
+  return titles;
+}
+
 /** A value from the line as its column takes it: a date and time back from its text. */
 function revived(like: unknown, value: unknown): unknown {
   return like instanceof Date && typeof value === "string" ? new Date(value) : value;
 }
 `;
+}
+
+/** What the merged record's Restore imports: the other models' rules, to check a move back. */
+export function unmergeImports(ir: SpecIR, model: ModelIR, t: Texts): string {
+  return [...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values()]
+    .filter((m) => m.name !== model.name)
+    .map((m) => `import { ${names(m, t).access} } from "./${kebab(m.name)}.server";\n`)
+    .join("");
 }
 
 /** The user model is never merged; kept here so the check reads where the code is. */

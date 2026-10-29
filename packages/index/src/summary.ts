@@ -287,6 +287,9 @@ export function summarize(
       sentences.push(
         `Deleted ${many(model)} stay in the trash for thirty days, where they can be restored.`,
       );
+    // A merge on it (intents.md §3): its own section says what it does.
+    if (ir.actions.some((a) => !a.custom && a.merge && a.on === model.name))
+      sentences.push(`${capitalize(many(model))} can be merged.`);
     if (model.nameParts?.length) {
       // "its class type", "its class type's name", "its start" (record-names.md §5).
       const words = model.nameParts.flatMap((p) => {
