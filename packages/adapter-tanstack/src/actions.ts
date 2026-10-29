@@ -234,7 +234,7 @@ function customRun(action: ActionIR, ir: SpecIR, t: Texts) {
   const fence = touchesParts(action, ir, t);
   // The data functions it reads the input's records with, and its fence's, each imported once.
   const dataImports = new Map<string, string>([
-    ...readers.map((n): [string, string] => [n.data, n.module.replace(/\.ts$/, "") + ".server"]),
+    ...readers.map((n): [string, string] => [n.data, `${n.module.replace(/\.ts$/, "")}.server`]),
     ...(fence?.valueImports ?? []).map((i): [string, string] => [i.data, i.module]),
   ]);
   const runImports = `${rows || told ? 'import { db } from "#/db";\n' : ""}${rows ? 'import { audit } from "#/kit/audit.server";\n' : ""}${told ? 'import { outgoingAfter } from "#/generated/outgoing.server";\nimport { log } from "#/kit/log.server";\n' : ""}import { ${action.name} as implementation } from "${a.custom}";

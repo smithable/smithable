@@ -433,6 +433,16 @@ export async function writeCode(
     .filter((path) => existsSync(join(dir, path)))
     .map((path) => ({ path, text: readFileSync(join(dir, path), "utf8") }));
   const context = buildContext(index, `${instructions} (${concept})`, { implementation: code });
+  // A custom action's examples are the app's tests of it (docs/design/intents.md §6).
+  const action = concept.startsWith("action:")
+    ? ir.actions.find((a) => a.name === concept.slice("action:".length))
+    : undefined;
+  const examples = action?.custom ? (action.examples?.length ?? 0) : 0;
+  const testFile = file.replace("src/custom/", "src/generated/").replace(/\.ts$/, ".test.ts");
+  const examplesRule =
+    examples && existsSync(join(dir, testFile))
+      ? `- The ${examples === 1 ? "example" : `${examples} examples`} of the action in smithable.yml ${examples === 1 ? "is the test" : "are the tests"} in ${testFile}; Smithable runs them afterwards, and the code is not done until they pass.\n`
+      : "";
   const prompt = `You write the custom code of one part of a Smithable app. Smithable generates the rest of the app from smithable.yml.
 
 Task: ${instructions}
@@ -448,7 +458,7 @@ Rules:
 - Read and write data only through the functions in src/generated/*.server.ts: they apply the access rules for the viewer.
 - Keep the exported function's name and signature; its types come from src/generated/.
 - For each rule of this part that you implement, put "// implements rule <id>" above the code, and a Vitest test named "rule <id>: …" in src/custom/ next to it.
-- Finish when "pnpm typecheck" passes; Smithable runs the tests afterwards.
+${examplesRule}- Finish when "pnpm typecheck" passes; Smithable runs the tests afterwards.
 
 ${context.text}`;
   return runCoder(dir, io, coder, {
