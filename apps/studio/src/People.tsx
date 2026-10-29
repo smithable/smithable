@@ -27,8 +27,12 @@ export function PeoplePanel({
     dialog.current?.show();
     api.people().then(onState, () => {});
   }, [onState]);
-  const act = (what: "run" | "fast" | "pause" | "step" | "clear") =>
+  const act = (what: "run" | "fast" | "everything" | "pause" | "step" | "clear") =>
     api.peopleDo(what).then(onState, () => {});
+  // Sensible, or trying everything (sample-users.md §3a); the run's own mode while one is under way.
+  const [chosen, setChosen] = useState<"sensible" | "everything">("sensible");
+  const mode = state?.running ? state.mode : chosen;
+  const run = (next = mode) => act(next === "everything" ? "everything" : "run");
   const feed = [...(state?.feed ?? [])].reverse();
   const [failure, setFailure] = useState<string>();
   // Adding and removing are changes to samples/people.yml, through the operations like any other.
@@ -77,7 +81,7 @@ export function PeoplePanel({
           {state?.running ? (
             <Button onClick={() => void act("pause")}>Pause</Button>
           ) : (
-            <Button onClick={() => void act("run")}>Let them run</Button>
+            <Button onClick={() => void run()}>Let them run</Button>
           )}
           <Button variant="ghost" onClick={() => void act("step")} disabled={state?.running}>
             One move
@@ -90,11 +94,33 @@ export function PeoplePanel({
           >
             Fast
           </Button>
+          <select
+            aria-label="How they act"
+            className="h-7 rounded border border-line bg-panel px-1 text-xs"
+            title="Sensible: each does what makes sense next. Try everything: every move with every value the rules allow and forbid, to find faults."
+            value={mode}
+            onChange={(e) => {
+              const next = e.target.value as "sensible" | "everything";
+              setChosen(next);
+              // Switched while they run: the run goes on in the new mode.
+              if (state?.running) void run(next);
+            }}
+          >
+            <option value="sensible">Sensible</option>
+            <option value="everything">Try everything</option>
+          </select>
           <span className="ml-auto text-xs text-muted">
             {state?.moves ?? 0} moves
             {state && state.cost > 0 ? ` · ${state.cost.toFixed(3)} ${state.currency}` : ""}
           </span>
         </div>
+        {state?.coverage && (
+          <p role="status" className="text-xs">
+            Tried {state.coverage.tried} of {state.coverage.of} variants: {state.coverage.passes} as
+            the rules say, {state.coverage.findings}{" "}
+            {state.coverage.findings === 1 ? "finding" : "findings"}.
+          </p>
+        )}
         {state && state.people.length > 0 && (
           <ul className="space-y-2">
             {state.people.map((p) => (

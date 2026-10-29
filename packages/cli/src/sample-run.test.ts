@@ -178,7 +178,7 @@ test("touching Studio keeps a run going", async () => {
   }
 });
 
-test("the model's choice is used, and its miss forfeits the turn", async () => {
+test("the model's choice is used, and on its miss the person draws from their memory", async () => {
   const { door, acts } = fakeDoor();
   let answer = { move: "add:Booking", values: { places: 2 }, why: "Books for two." };
   const provider = {
@@ -204,8 +204,8 @@ test("the model's choice is used, and its miss forfeits the turn", async () => {
   expect(runner.state().feed[0]).toMatchObject({ outcome: "done", why: "Books for two." });
   answer = { move: "add:Booking", values: { owner: 1 } as never, why: "" };
   await runner.step();
-  expect(acts).toHaveLength(1);
-  expect(runner.state().feed[1]).toMatchObject({ outcome: "miss" });
+  expect(acts).toHaveLength(2);
+  expect(runner.state().feed[1]?.why).toMatch(/^Drawn from what they did/);
 });
 
 test("a pause while a turn reads the moves makes no move; a turn that breaks is a finding and the next goes on", async () => {
@@ -254,4 +254,97 @@ test("a move is said with the app's labels", () => {
   expect(
     moveWords({ id: "r", kind: "run", action: "cancel", model: "Booking", slots: [] }, labels),
   ).toBe("Ran Cancel on a booking");
+});
+
+test("sensible: a move the app refused rests for a few turns, and the log keeps every turn", async () => {
+  // Every booking is refused; deleting is done.
+  const { door, acts } = fakeDoor((n) => Response.json({ ok: true }, { status: 200 + n * 0 }));
+  const refusing = async (path: string, body?: unknown) => {
+    if (path.startsWith("moves?")) return door(path, body);
+    const act = body as { move: string };
+    acts.push(act);
+    return act.move === "add:Booking"
+      ? Response.json({ refused: true, message: "The session is full." }, { status: 409 })
+      : Response.json({ ok: true });
+  };
+  const runner = sampleRunner({
+    door: refusing,
+    load: () => ({ people: [PEOPLE[0] as (typeof PEOPLE)[number]], summary: "" }),
+    providers: () => [],
+    changed: () => {},
+    seed: 3,
+  });
+  for (let i = 0; i < 12; i++) await runner.step();
+  const log = runner.log();
+  expect(log).toHaveLength(12);
+  expect(log[0]).toMatchObject({
+    turn: 0,
+    id: "sample-maja",
+    listed: ["add:Booking", "delete:Booking"],
+  });
+  // Right after a refusal the same add rests: no move has touched bookings since.
+  expect(log.some((e) => e.outcome === "refused")).toBe(true);
+  for (const [i, entry] of log.entries())
+    if (entry.outcome === "refused") expect(log[i + 1]?.move).not.toBe("add:Booking");
+});
+
+test("everything: each variant is judged by what the app had to do with it", async () => {
+  const acts: Record<string, unknown>[] = [];
+  // An app that takes everything, also what its rules forbid.
+  const door = async (path: string, body?: unknown) => {
+    if (path.startsWith("moves?"))
+      return Response.json({ now: "2026-10-29T10:00:00.000Z", moves: MOVES });
+    acts.push(body as Record<string, unknown>);
+    return Response.json({ ok: true });
+  };
+  const runner = sampleRunner({
+    door,
+    load: () => ({ people: PEOPLE, summary: "" }),
+    providers: () => {
+      throw new Error("no model when trying everything");
+    },
+    changed: () => {},
+    seed: 5,
+  });
+  runner.start(false, "everything");
+  runner.pause();
+  expect(runner.state()).toMatchObject({ mode: "everything", fast: true });
+  for (let i = 0; i < 8; i++) await runner.step();
+  const feed = runner.state().feed;
+  // Every variant tried once before any twice.
+  const ids = feed.map((l) => l.variant?.id);
+  expect(new Set(ids.slice(0, 6)).size).toBe(6);
+  // A forbidden value taken is a finding that says why; a valid one taken passes.
+  const forbidden = feed.find((l) => l.variant?.expect === "refused");
+  expect(forbidden).toMatchObject({ outcome: "finding" });
+  expect(forbidden?.message).toMatch(/^Taken, but it should have been refused: /);
+  expect(feed.find((l) => l.variant?.expect === "done")).toMatchObject({ outcome: "done" });
+  const coverage = runner.state().coverage;
+  expect(coverage?.tried).toBeGreaterThan(5);
+  expect(coverage?.of).toBeGreaterThanOrEqual(coverage?.tried ?? 0);
+  expect((coverage?.passes ?? 0) + (coverage?.findings ?? 0)).toBe(8);
+});
+
+test("a replay performs the logged moves in order, with their values and records", async () => {
+  const first = fakeDoor();
+  const runner = sampleRunner({
+    door: first.door,
+    load: () => ({ people: PEOPLE, summary: "" }),
+    providers: () => [],
+    changed: () => {},
+    seed: 11,
+  });
+  for (let i = 0; i < 4; i++) await runner.step();
+  const log = runner.log();
+  const second = fakeDoor();
+  const again = sampleRunner({
+    door: second.door,
+    load: () => ({ people: PEOPLE, summary: "" }),
+    providers: () => [],
+    changed: () => {},
+    seed: 999,
+  });
+  again.replay(log);
+  for (let i = 0; i < 4; i++) await again.step();
+  expect(second.acts).toEqual(first.acts);
 });

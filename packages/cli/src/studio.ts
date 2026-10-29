@@ -932,10 +932,13 @@ export async function studio(
         const { do: what } = await body();
         if (what === "run") people.start();
         else if (what === "fast") people.start(true);
+        // Trying everything (sample-users.md §3a): the coverage walk, in the preview only.
+        else if (what === "everything") people.start(true, "everything");
         else if (what === "pause") people.pause();
         else if (what === "step") await people.step();
         else if (what === "clear") people.clear();
-        else return json({ ok: false, output: "Run, fast, pause, step or clear." }, 400);
+        else
+          return json({ ok: false, output: "Run, fast, everything, pause, step or clear." }, 400);
         return json(people.state());
       }
       // While a described app is being made, the project here is not the person's yet:
