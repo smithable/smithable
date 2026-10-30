@@ -77,10 +77,7 @@ const shapeOf =
         run("setAction", { action: String(model), [part]: value });
       const help = (topic: "condition" | "formula") => <HelpMark topic={topic} />;
       return (
-        <div
-          className="space-y-3"
-          key={`${String(model)}.${JSON.stringify([action.when, action.set])}`}
-        >
+        <div className="space-y-3">
           <p className="text-xs text-muted">
             On each {humanize(action.on).toLowerCase()}
             {action.intent ? `: ${action.intent}` : ""}
@@ -88,6 +85,8 @@ const shapeOf =
           <div className="space-y-1">
             <p className="text-xs font-medium">It sets</p>
             <ActionRowsEditor
+              // Each part made anew when it changes in the file, so the other keeps what is typed.
+              key={`set:${JSON.stringify(action.set)}`}
               part="set"
               model={on}
               set={action.set}
@@ -98,6 +97,7 @@ const shapeOf =
           <div className="space-y-1">
             <p className="text-xs font-medium">For records with</p>
             <ActionRowsEditor
+              key={`when:${JSON.stringify(action.when ?? null)}`}
               part="when"
               model={on}
               {...(action.when ? { when: action.when } : {})}

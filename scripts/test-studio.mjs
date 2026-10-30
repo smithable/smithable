@@ -705,6 +705,10 @@ try {
       await when.getByRole("checkbox", { name: "Draft", exact: true }).check();
       await cancel.getByRole("button", { name: "Change the condition" }).click();
       await until((a) => /draft/.test(a) && /placed/.test(a), "the condition has no draft");
+      // Studio has it: the rows show it as the file does, with nothing left to change.
+      await cancel
+        .getByRole("button", { name: "Change the condition" })
+        .waitFor({ state: "detached", timeout: 30000 * P });
       // The value from the field's own pick list.
       const set = cancel.getByRole("group", { name: "It sets" });
       await set.getByLabel("Status becomes").selectOption("shipped");
