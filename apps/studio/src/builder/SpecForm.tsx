@@ -6,6 +6,7 @@ import {
   buildJsonSchema,
   COMPANION_SCHEMAS,
   type EditableFile,
+  humanize,
   type JsonSchema,
   type SpecIR,
 } from "@smithable/core";
@@ -62,21 +63,45 @@ const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(a
 const Shape = createContext<(path: Path) => React.ReactNode>(() => undefined);
 const shapeOf = (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path: Path) => {
   const [first, model, third, name, key] = path;
-  // A standard action's condition and values as rows of controls (A 203).
-  if (file === "smithable.yml" && ir && first === "actions" && path.length === 3) {
+  // A standard action's condition and values as rows of controls (A 203), in place of its
+  // settings as text; a merge, split, copy or custom action keeps the text for now.
+  if (file === "smithable.yml" && ir && first === "actions" && path.length === 2) {
     const action = ir.actions.find((a) => a.name === model);
-    if (!action || action.custom || (third !== "when" && third !== "set")) return undefined;
-    if (action.merge || action.split || action.copy) return undefined;
+    if (!action || action.custom || action.merge || action.split || action.copy) return undefined;
+    const on = ir.models.find((m) => m.name === action.on);
+    const save = (part: "when" | "set") => (value: unknown) =>
+      run("setAction", { action: String(model), [part]: value });
+    const help = (topic: "condition" | "formula") => <HelpMark topic={topic} />;
     return (
-      <ActionRowsEditor
-        key={`${String(model)}.${third}.${JSON.stringify(third === "when" ? action.when : action.set)}`}
-        part={third}
-        model={ir.models.find((m) => m.name === action.on)}
-        {...(action.when ? { when: action.when } : {})}
-        set={action.set}
-        onSave={(value) => run("setAction", { action: String(model), [third]: value })}
-        help={(topic) => <HelpMark topic={topic} />}
-      />
+      <div
+        className="space-y-3"
+        key={`${String(model)}.${JSON.stringify([action.when, action.set])}`}
+      >
+        <p className="text-xs text-muted">
+          On each {humanize(action.on).toLowerCase()}
+          {action.intent ? `: ${action.intent}` : ""}
+        </p>
+        <div className="space-y-1">
+          <p className="text-xs font-medium">It sets</p>
+          <ActionRowsEditor
+            part="set"
+            model={on}
+            set={action.set}
+            onSave={save("set")}
+            help={help}
+          />
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs font-medium">For records with</p>
+          <ActionRowsEditor
+            part="when"
+            model={on}
+            {...(action.when ? { when: action.when } : {})}
+            onSave={save("when")}
+            help={help}
+          />
+        </div>
+      </div>
     );
   }
   if (file !== "smithable.yml" || !ir || first !== "models" || third !== "fields") return undefined;
