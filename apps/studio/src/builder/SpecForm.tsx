@@ -12,6 +12,7 @@ import {
 import { createContext, useContext, useId, useMemo, useState } from "react";
 import { parse } from "yaml";
 import type { Project } from "../api";
+import { HelpMark, type HelpTopic } from "../help";
 import { cx } from "../ui";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import {
@@ -597,10 +598,12 @@ function Key({
       {/* The label in words, the description as its tooltip, and where a text a model reads is
           explained, the docs page (opens in a new tab). */}
       <p
-        className="mb-1 text-xs font-medium"
+        className="mb-1 flex items-center gap-1.5 text-xs font-medium"
         title={typeof schema.description === "string" ? schema.description : undefined}
       >
         {labelOf(name, schema)}
+        {/* A key that is hard to grasp has its question mark (A 204). */}
+        {HARD[name] && <HelpMark topic={HARD[name]} />}
         {typeof schema["x-docs"] === "string" && (
           <a
             href={schema["x-docs"]}
@@ -616,6 +619,15 @@ function Key({
     </div>
   );
 }
+
+/** The keys whose meaning does not fit a tooltip, and their help (help.tsx). */
+const HARD: Record<string, HelpTopic> = {
+  formula: "formula",
+  when: "condition",
+  merge: "merge",
+  touches: "contract",
+  ai: "aiPolicy",
+};
 
 /** The schema of the part at `path`, walking groups, entries, lists and the value's alternative. */
 function schemaAt(root: JsonSchema, value: unknown, path: Path): JsonSchema | undefined {

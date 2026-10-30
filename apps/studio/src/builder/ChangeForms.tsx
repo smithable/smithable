@@ -17,6 +17,7 @@ import { useState } from "react";
 import { api } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
+import { HelpMark, type HelpTopic } from "../help";
 import { Button, Check, Input, Label, Select } from "../ui";
 import {
   conditionOf,
@@ -497,11 +498,16 @@ function SetActionIntent({ spec, run }: FormProps) {
       </Label>
       {standard && (
         <>
-          <Rows text="For records with">
+          <Rows text="For records with" help="condition">
             <WhenRows model={model} rows={when} onChange={setWhen} />
           </Rows>
           <Rows text="It sets">
-            <SetRows model={model} rows={set} onChange={setSet} />
+            <SetRows
+              model={model}
+              rows={set}
+              onChange={setSet}
+              help={<HelpMark topic="formula" />}
+            />
           </Rows>
         </>
       )}
@@ -548,10 +554,21 @@ function useModelField(spec: Spec, initial?: { model?: string; field?: string })
 }
 
 /** A group of rows under its name (the rows name their own controls). */
-function Rows({ text, children }: { text: string; children: React.ReactNode }) {
+function Rows({
+  text,
+  help,
+  children,
+}: {
+  text: string;
+  help?: HelpTopic;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1">
-      <p className="text-xs font-medium text-muted">{text}</p>
+      <p className="flex items-center justify-between text-xs font-medium text-muted">
+        {text}
+        {help && <HelpMark topic={help} />}
+      </p>
       {children}
     </div>
   );
@@ -946,9 +963,9 @@ function AddStandardAction({ spec, run }: FormProps) {
         />
       </Label>
       <Rows text="It sets">
-        <SetRows model={model} rows={set} onChange={setSet} />
+        <SetRows model={model} rows={set} onChange={setSet} help={<HelpMark topic="formula" />} />
       </Rows>
-      <Rows text="For records with">
+      <Rows text="For records with" help="condition">
         <WhenRows model={model} rows={when} onChange={setWhen} />
       </Rows>
       <SpecNote
