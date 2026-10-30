@@ -277,7 +277,7 @@ export function Ask({
   // how the last request went, and waiting while nothing is asked.
   const left = useMinutesLeft(beta?.until);
   // The presentation (smith-first.md §3): how many of its parts are said so far, and whether it
-  // is going on; a new project's starts at once, "What does this app do?" starts it again.
+  // is going on; a new project's starts at once.
   const parts = ready?.parts ?? [];
   const [partsSaid, setSaidParts] = useState(0);
   const [presenting, setPresenting] = useState(false);
@@ -358,6 +358,7 @@ export function Ask({
                 : docs || local
                   ? "pointing"
                   : "waiting";
+  const box = useRef<HTMLTextAreaElement>(null);
   const send = () => {
     if (!request.trim()) return;
     if (making)
@@ -383,7 +384,6 @@ export function Ask({
         {ready && !making && <Greeting ready={ready} />}
         {beta && !making && <BetaLines beta={beta} left={left} />}
         {trace && <Thread trace={trace} said={said} words={words} />}
-        {ready && !making && local && <ReadyAnswer shown={local} ready={ready} />}
         {ready && !making && partsSaid > 0 && (
           <Presentation
             parts={parts.slice(0, partsSaid)}
@@ -394,7 +394,6 @@ export function Ask({
               setPresenting(false);
               onPresented?.();
             }}
-            onJump={ready.onJump}
             questions={(part) => openAt(part)}
             onKeep={settle}
             onAnswer={answer}
@@ -517,6 +516,8 @@ export function Ask({
             </div>
           </div>
         )}
+        {/* A ready prompt's answer comes last, where the thread is scrolled to (A 200). */}
+        {ready && !making && local && <ReadyAnswer shown={local} ready={ready} />}
       </div>
       <form
         className="shrink-0 space-y-2 border-t border-line p-3"
@@ -528,6 +529,7 @@ export function Ask({
         <div className="flex items-end gap-2">
           <SmithFace mood={mood} />
           <textarea
+            ref={box}
             aria-label="Describe a change, or ask a question"
             value={request}
             onChange={(e) => setRequest(e.target.value)}
@@ -548,18 +550,18 @@ export function Ask({
           <ReadyChips
             // Words in the box are a request of their own: the prompts rest until it is sent.
             disabled={busy || Boolean(request.trim())}
+            resting={!busy && Boolean(request.trim())}
             leftOpen={leftOpen}
             onReask={setReasked}
             onPick={(prompt) => {
+              // The box gets the start of the request and the cursor after it.
               if (prompt === "add") {
                 setRequest("Help me add ");
-                return;
-              }
-              // What does this app do?: Smith presents it again, part by part.
-              if (prompt === "what") {
-                setLocal(undefined);
-                setSaidParts(1);
-                setPresenting(true);
+                setTimeout(() => {
+                  const at = box.current;
+                  at?.focus();
+                  at?.setSelectionRange(at.value.length, at.value.length);
+                });
                 return;
               }
               setLocal(prompt);
@@ -632,8 +634,6 @@ export interface Ready {
   home?: string;
   /** Applies a note's fix through the operation path, as any change. */
   apply: (op: string, args: Record<string, unknown>) => void;
-  /** Opens the part of the app a sentence is about (No code's Behavior). */
-  onJump: (concept: string) => void;
 }
 
 /**
@@ -696,14 +696,13 @@ function Greeting({ ready }: { ready: Ready }) {
 
 /**
  * Smith's presentation of the app (smith-first.md §3): the parts said so far, each one message
- * with a way to the places of Behavior it covers; while it goes on, Next and Skip as chips.
+ * while it goes on, Next and Skip as chips.
  */
 function Presentation({
   parts,
   going,
   onNext,
   onSkip,
-  onJump,
   questions,
   onKeep,
   onAnswer,
@@ -712,7 +711,6 @@ function Presentation({
   going: boolean;
   onNext: () => void;
   onSkip: () => void;
-  onJump: (concept: string) => void;
   /** The draft's open assumptions at a part, asked after it. */
   questions: (part: string) => Assumption[];
   onKeep: (a: Assumption) => void;
@@ -724,35 +722,24 @@ function Presentation({
         <li key={p.part} className="space-y-3">
           <div data-part={p.part} className={cx(SMITHS, "space-y-2")}>
             <p>{p.text}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {p.concepts[0] && (
+            {going && i === parts.length - 1 && (
+              <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
-                  onClick={() => onJump(p.concepts[0] as string)}
+                  onClick={onNext}
+                  className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
+                >
+                  Next
+                </button>
+                <button
+                  type="button"
+                  onClick={onSkip}
                   className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
                 >
-                  Show me
+                  Skip
                 </button>
-              )}
-              {going && i === parts.length - 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={onNext}
-                    className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
-                  >
-                    Next
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onSkip}
-                    className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
-                  >
-                    Skip
-                  </button>
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </div>
           {questions(p.part).map((a) => (
             <AssumptionLine key={a.question} a={a} onKeep={onKeep} onAnswer={onAnswer} />
@@ -885,23 +872,25 @@ function BetaLines({ beta, left }: { beta: Beta; left: number | undefined }) {
   );
 }
 
-/** The ready prompts, under the box: resting while words are in it. */
+/** The ready prompts, under the box: resting while words are in it, and saying so. */
 function ReadyChips({
   disabled,
+  resting = false,
   onPick,
   leftOpen = [],
   onReask,
 }: {
   disabled: boolean;
+  /** Off for the words in the box, which the person is told. */
+  resting?: boolean;
   /** The draft's assumptions nobody answered: offered again ("You left open: …"). */
   leftOpen?: Assumption[];
   onReask?: (a: Assumption) => void;
-  onPick: (prompt: "next" | "what" | "publish" | "add") => void;
+  onPick: (prompt: "next" | "publish" | "add") => void;
 }) {
-  const chips: ["next" | "what" | "publish" | "add", string][] = [
+  const chips: ["next" | "publish" | "add", string][] = [
     ["next", "What should I do next?"],
     ["add", "Help me add…"],
-    ["what", "What does this app do?"],
     ["publish", "How do I publish?"],
   ];
   return (
@@ -927,6 +916,7 @@ function ReadyChips({
           You left open: {a.question}
         </button>
       ))}
+      {resting && <p className="w-full text-xs text-quiet">Send or clear the box to use these.</p>}
     </fieldset>
   );
 }

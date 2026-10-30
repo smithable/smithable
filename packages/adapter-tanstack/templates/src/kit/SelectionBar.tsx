@@ -92,7 +92,7 @@ export function SelectionBar({
   };
   if (count === 0 && !message) return null;
   return (
-    <div data-kit="selection-bar" className="sticky top-0 z-20 mb-3">
+    <div data-kit="selection-bar" className="sticky top-18 z-20 mb-3 lg:top-0">
       {count > 0 && (
         <Card className="flex flex-wrap items-center gap-2 p-2 pl-4">
           <span className="mr-auto text-sm font-medium" role="status">

@@ -410,7 +410,6 @@ export function App() {
 
   const spec = useSpec(project);
   shownIR.current = spec.ir;
-  // The app in words, for Smith's "What does this app do?".
   // Smith's presentation of the app (smith-first.md §3).
   const parts = useMemo(
     () => (spec.ir ? present(spec.ir, spec.auth, spec.content) : []),
@@ -1157,15 +1156,6 @@ export function App() {
                                 ),
                                 ...(project.home ? { home: project.home } : {}),
                                 apply: (op, args) => void run(op, args),
-                                onJump: (concept) => {
-                                  guideStop("behavior");
-                                  // After No code is on screen to hear it.
-                                  setTimeout(() =>
-                                    window.dispatchEvent(
-                                      new CustomEvent(OPEN_PART, { detail: concept }),
-                                    ),
-                                  );
-                                },
                               }}
                             />
                           </div>

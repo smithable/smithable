@@ -1221,7 +1221,7 @@ try {
     },
   );
   await step(
-    "Smith's ready prompts are answered by Studio: the app in short with a way to each part, how to publish",
+    "Smith's ready prompts are answered by Studio: what to do next, help to add, how to publish",
     async () => {
       // Smith greets as an assistant does, by rule, with the app's name.
       await page
@@ -1235,23 +1235,20 @@ try {
         "https://docs.smithable.ai/self-host.html"
       )
         throw new Error("How do I publish? does not lead to the self-hosting page");
-      // What does this app do?: Smith presents it, part by part (smith-first.md §3); a part's
-      // Show me opens its place in Behavior.
-      await prompts.getByRole("button", { name: "What does this app do?" }).click();
-      const app = page.locator('[data-part="app"]');
-      await app.waitFor();
-      await app.getByRole("button", { name: "Skip" }).click();
-      await page.locator('[data-part="end"]').waitFor();
-      await page.locator('[data-part="pages"]').getByRole("button", { name: "Show me" }).click();
-      await page
-        .getByRole("tab", { name: "Behavior", selected: true })
-        .waitFor({ timeout: 10000 * P });
+      // The answer is the thread's last line, in view (A 200).
+      if (!(await how.evaluate((el) => el.parentElement?.lastElementChild === el)))
+        throw new Error("the ready prompt's answer is not the thread's last line");
       await prompts.getByRole("button", { name: "Help me add…" }).click();
-      if ((await page.getByLabel("Describe a change").inputValue()) !== "Help me add ")
+      const box = page.getByLabel("Describe a change");
+      if ((await box.inputValue()) !== "Help me add ")
         throw new Error("Help me add did not start the request");
-      // Words in the box rest the prompts until they are sent or cleared (Johan, 2026-10-27).
+      if (!(await box.evaluate((el) => el === document.activeElement)))
+        throw new Error("Help me add left the cursor out of the box");
+      // Words in the box rest the prompts until they are sent or cleared (Johan, 2026-10-27),
+      // and the prompts say so.
       if (!(await prompts.getByRole("button", { name: "How do I publish?" }).isDisabled()))
         throw new Error("the ready prompts stay active while words are in the box");
+      await prompts.getByText("Send or clear the box to use these.").waitFor();
       await page.getByLabel("Describe a change").fill("");
     },
   );
