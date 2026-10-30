@@ -118,7 +118,7 @@ export ASSISTANT_MODEL=mistral-small-latest      # or claude-haiku-5-5, through 
 
 Without them, Ask answers by its rules alone and says when a question needs a model.
 
-On smithable.ai, where a project's AI may run follows its region and, for an EU project, its level. Accounts and projects are **global** unless their owner chooses the EU (the account's page, "Region"); on smithable.eu every account is EU. A global project's Ask uses the best model for the job through Anthropic's own API: Claude Haiku 5.5 for a question, Claude Sonnet 5.5 when an answer's checks fail; Mistral Medium when the service's monthly allowance for Claude is used up. An EU project (every project on smithable.eu, and any project a global account marks EU) keeps its data stored and hosted in the EU at every level, while where its AI runs is the level's, set on the app's page under "Where your data and AI may go":
+On smithable.ai, where a project's AI may run follows its region and, for an EU project, its level. Accounts and projects are **global** unless their owner chooses the EU (the account's page, "Region"); on smithable.eu every account is EU. A global project's Ask uses the best model for the job through Anthropic's own API: Claude Haiku 5.5 for a question, Claude Sonnet 5.5 when an answer's checks fail; Mistral Medium when the service's monthly allowance for Claude is used up. An EU project (every project on smithable.eu, and any project a global account marks EU) is hosted in Sweden, with its data and backups, like every project; its level sets where its AI requests go, set on the app's page under "Where your data and AI may go":
 
 | Level | Ask's model | The app's connections |
 |---|---|---|
@@ -126,7 +126,7 @@ On smithable.ai, where a project's AI may run follows its region and, for an EU 
 | **Normal** (an EU project starts here) | Claude Haiku 5.5 run in the EU where an EU endpoint serves it; Mistral Medium until then | services served from an endpoint in the EU |
 | **Strict** | Mistral Small, moving to Mistral Medium when it gets stuck | only services run by EU companies; people sign in with an email code only (no Google or Facebook) |
 
-Projects made before the regions existed are global.
+Strict is about the AI and the services an app uses: it does not make every company behind the service an EU company (the hosting, on AWS, or the mail delivery). At Relaxed, and for a global project, a request to Claude goes through Anthropic's own API and may be processed in the USA, with the question and the records it needs. Projects made before the regions existed are global.
 
 Measured on 134 questions and changes across six starters ([bench-ask](benchmarks/bench-ask-seven-tools.md), [cascade](benchmarks/bench-ask-cascade.md)), with each answer checked against the records:
 
