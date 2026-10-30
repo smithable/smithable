@@ -71,23 +71,18 @@ const shapeOf =
       const action = ir.actions.find((a) => a.name === model);
       if (!action || action.custom) return undefined;
       const on = ir.models.find((m) => m.name === action.on);
-      // A merge, a split and a copy: their own pickers, each key written as the spec has it (A 206):
-      // a key the action has, at its path; one it has not yet, with the entry as written around it.
+      // A merge, a split and a copy: their own pickers, each key written at its path as the spec has
+      // it (A 206); editSpec adds a key the action has not written yet, its comments kept.
       const written = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+      // Taking away a key the action never wrote is nothing to do.
       const write = (key: string, next: unknown) =>
-        key in written
-          ? run("editSpec", {
+        next === undefined && !(key in written)
+          ? Promise.resolve(true)
+          : run("editSpec", {
               file: "smithable.yml",
               path: ["actions", String(model), key],
               value: next === undefined ? null : next,
-            })
-          : next === undefined
-            ? Promise.resolve(true)
-            : run("editSpec", {
-                file: "smithable.yml",
-                path: ["actions", String(model)],
-                value: { ...written, [key]: next },
-              });
+            });
       const intro = (
         <p className="text-xs text-muted">
           On each {humanize(action.on).toLowerCase()}
