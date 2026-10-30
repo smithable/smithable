@@ -105,12 +105,18 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
         "or",
       );
       const who = auth.signIn.selfSignUp === false ? "Invited people" : "People";
-      // The admin role first, then the others with what they are for (Johan, 2026-10-30).
-      const what = (r: (typeof roles)[number]) =>
-        r.description
-          ? `, which ${r.description.charAt(0).toLowerCase()}${r.description.slice(1).replace(/\.$/, "")}`
-          : "";
-      const each = roles.map((r) => `a ${r.name} role${what(r)}`);
+      // The admin role first, then the others with what they are for (Johan, 2026-10-30), by the
+      // description's shape: a noun phrase ("A student who books classes.") as an appositive, a
+      // verb phrase ("Works with customers.") after "which".
+      const what = (r: (typeof roles)[number]) => {
+        const d = r.description?.trim().replace(/\.$/, "");
+        if (!d) return "";
+        return /^(A|An|The) /.test(d)
+          ? `, ${d.charAt(0).toLowerCase()}${d.slice(1)}`
+          : `, which ${d.charAt(0).toLowerCase()}${d.slice(1)}`;
+      };
+      const article = (name: string) => (/^[aeiou]/i.test(name) ? "an" : "a");
+      const each = roles.map((r) => `${article(r.name)} ${r.name} role${what(r)}`);
       const named =
         roles.length === 1
           ? `There is an admin role, which can do everything, and ${each[0]}.`
@@ -156,7 +162,7 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
         : "Everyone who signs in works on their own records only";
     const roles = auth.roles
       .filter((r) => r.name !== "admin")
-      .map((r) => `${r.name}: ${grantWords(r)}`);
+      .map((r) => `the ${r.name} role ${list(grantWords(r).split("; "))}`);
     const pages = auth.roles.length
       ? ir.pages.filter(
           (p) => !auth.public.pages.includes(p.id) && pageAccess(p, auth).roles.length,
@@ -164,7 +170,7 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
       : [];
     parts.push({
       part: "signedIn",
-      text: `${rule}${roles.length ? `; ${list(roles, "and")}` : ""}. Admins do everything.`,
+      text: `${rule}${roles.length ? `; ${roles.join("; ")}` : ""}. Admins do everything.`,
       concepts: [...auth.roles.map((r) => `role:${r.name}`), ...pages.map((p) => `page:${p.id}`)],
       expression: "proud",
     });
