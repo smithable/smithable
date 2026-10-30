@@ -48,6 +48,7 @@ const SHAPE: Record<BehaviourNode["kind"], [string, string]> = {
   custom: ["[[", "]]"],
   timer: ["([", "])"],
   outgoing: [">", "]"],
+  input: ["[/", "/]"],
 };
 
 export function behaviourMermaid(map: { nodes: BehaviourNode[]; edges: BehaviourEdge[] }): string {

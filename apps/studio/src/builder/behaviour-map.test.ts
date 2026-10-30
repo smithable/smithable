@@ -1,7 +1,7 @@
 import { type SpecIR, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
 import invoicingSpec from "../../../../examples/invoicing/smithable.yml?raw";
-import { behaviourOf } from "./behaviour-map";
+import { behaviourOf, pictureOf } from "./behaviour-map";
 import { behaviourMermaid } from "./mermaid";
 
 const ir = validateSpec({ path: "smithable.yml", text: invoicingSpec }).ir as SpecIR;
@@ -70,4 +70,82 @@ test("the layout gives each box a place of its own", async () => {
     { width: 100, height: 40 },
   );
   expect(new Set(Object.values(at).map((p) => `${p.x},${p.y}`)).size).toBe(3);
+});
+
+test("a custom action's contract draws what it reads, writes and may send; its picture adds its input", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Books }
+models:
+  Invoice:
+    fields:
+      number: string!
+      status: draft | sent | paid
+  Payment:
+    fields:
+      amount: money!
+      invoice: Invoice
+  Client:
+    fields:
+      name: string!
+actions:
+  reconcilePayments:
+    custom: true
+    input: { statement: file!, note: string }
+    output: { matched: int! }
+    intent: Match a bank statement's lines to open invoices.
+    touches: { reads: [Invoice, Payment, Client], writes: [Payment, Invoice.status] }
+    triggers: [paymentBooked, paymentLogged]
+outgoing:
+  paymentBooked:
+    when: reconcilePayments
+    to: mail
+    recipient: admin
+  paymentLogged:
+    when: Payment created
+    to: mail
+    recipient: owner
+`,
+  });
+  const ir = spec.ir as SpecIR;
+  expect(spec.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  const { nodes, edges } = behaviourOf(ir);
+  expect(nodes.find((n) => n.id === "action:reconcilePayments")?.lines).toEqual([
+    "custom code",
+    "Match a bank statement's lines to open invoices.",
+    "gives matched",
+  ]);
+  const of = (id: string) => edges.filter((e) => e.source === id || e.target === id);
+  expect(of("action:reconcilePayments").map((e) => [e.source, e.target, e.label])).toEqual(
+    expect.arrayContaining([
+      ["action:reconcilePayments", "model:Payment", "writes"],
+      ["action:reconcilePayments", "model:Invoice", "writes status"],
+      // Read and not written: an arrow in; one written is read too, one arrow.
+      ["model:Client", "action:reconcilePayments", "reads"],
+      // Its own entry follows it already; one on a record it writes, it may set off.
+      ["action:reconcilePayments", "outgoing:paymentBooked", "returned"],
+      ["action:reconcilePayments", "outgoing:paymentLogged", "may send"],
+    ]),
+  );
+  expect(edges.filter((e) => e.label === "reads").map((e) => e.source)).toEqual(["model:Client"]);
+  const picture = pictureOf(ir, "reconcilePayments");
+  expect(picture.nodes[0]).toEqual({
+    id: "input:reconcilePayments",
+    kind: "input",
+    title: "Input",
+    lines: ["statement", "note (optional)"],
+  });
+  expect(picture.nodes.map((n) => n.id).sort()).toEqual(
+    [
+      "action:reconcilePayments",
+      "input:reconcilePayments",
+      "model:Client",
+      "model:Invoice",
+      "model:Payment",
+      "outgoing:paymentBooked",
+      "outgoing:paymentLogged",
+    ].sort(),
+  );
+  expect(pictureOf(ir, "nothing")).toEqual({ nodes: [], edges: [] });
 });

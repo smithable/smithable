@@ -21,8 +21,8 @@ import { type BehaviourNode, behaviourOf } from "./behaviour-map";
 import { laidOut, MapView, useDirection } from "./map-layout";
 import { behaviourMermaid } from "./mermaid";
 
-const WIDTH = 210;
-const HEIGHT = 72;
+export const WIDTH = 210;
+export const HEIGHT = 72;
 
 /** What each kind of box is, in words above its name. */
 const KIND: Record<BehaviourNode["kind"], string> = {
@@ -31,6 +31,7 @@ const KIND: Record<BehaviourNode["kind"], string> = {
   custom: "Action, custom code",
   timer: "Timer",
   outgoing: "Mail or call",
+  input: "What it takes",
 };
 /** Where a box opens in Behavior. */
 const PART: Record<BehaviourNode["kind"], string> = {
@@ -39,6 +40,7 @@ const PART: Record<BehaviourNode["kind"], string> = {
   custom: "action",
   timer: "timer",
   outgoing: "outgoing",
+  input: "action",
 };
 
 function Box({ data }: NodeProps<Node<{ box: BehaviourNode }>>) {
@@ -52,14 +54,16 @@ function Box({ data }: NodeProps<Node<{ box: BehaviourNode }>>) {
     >
       <Handle type="target" position={view.horizontal ? Position.Left : Position.Top} />
       <p className="text-[10px] uppercase tracking-wide text-quiet">{KIND[box.kind]}</p>
-      <button
-        type="button"
-        className="nodrag font-semibold text-accent hover:underline"
-        title={`Open ${box.title} in Behavior`}
-        onClick={() => view.open(`${PART[box.kind]}:${box.title}`)}
-      >
-        {box.title}
-      </button>
+      {box.kind === "input" ? null : (
+        <button
+          type="button"
+          className="nodrag font-semibold text-accent hover:underline"
+          title={`Open ${box.title} in Behavior`}
+          onClick={() => view.open(`${PART[box.kind]}:${box.title}`)}
+        >
+          {box.title}
+        </button>
+      )}
       {box.lines.map((line) => (
         <p key={line} className="text-muted">
           {line}
@@ -70,7 +74,7 @@ function Box({ data }: NodeProps<Node<{ box: BehaviourNode }>>) {
   );
 }
 
-const nodeTypes = { box: Box };
+export const nodeTypes = { box: Box };
 
 export function BehaviourMap({ ir, onOpen }: { ir: SpecIR; onOpen: (concept: string) => void }) {
   // The box's shape sets the direction: top to bottom when it is taller, left to right when wider.

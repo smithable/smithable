@@ -8,6 +8,7 @@ import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Panel, Tabs } from "../ui";
+import { ActionPicture } from "./ActionPicture";
 import type { Run } from "./ChangeForms";
 import { ImportRecords, OwnCode } from "./EntryTools";
 import { Languages } from "./Languages";
@@ -257,6 +258,18 @@ export function NoCode({
               const [area, name] = path;
               if (path.length !== 2 || typeof name !== "string") return undefined;
               if (area === "models") return <ImportRecords model={name} run={run} />;
+              // A custom action: the picture its contract draws (intents.md §7).
+              if (area === "actions" && spec.ir?.actions.some((a) => a.name === name && a.custom))
+                return (
+                  <ActionPicture
+                    ir={spec.ir}
+                    action={name}
+                    onOpen={(concept) => {
+                      const at = entryOf(concept);
+                      if (at) jumpTo(at);
+                    }}
+                  />
+                );
               if (area === "pages")
                 return (
                   <OwnCode
