@@ -466,8 +466,10 @@ const PAGES = [${workspace.join(", ")}] as const;
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context }) => {
     const page = PAGES.find((p) => allows(p.access, context.viewer));
-    // A visitor goes on to the first page, which asks them to sign in.
-    if (page || !context.viewer) throw redirect({ to: page?.to ?? ${JSON.stringify(target.route)} });
+    // A visitor goes on to the first page, which asks them to sign in; so does one who may open
+    // it though it is outside the workspace (a page in the site's frame).
+    if (page || !context.viewer || allows(pageAccess[${JSON.stringify(target.id)}], context.viewer))
+      throw redirect({ to: page?.to ?? ${JSON.stringify(target.route)} });
   },
   component: HomePage,
 });

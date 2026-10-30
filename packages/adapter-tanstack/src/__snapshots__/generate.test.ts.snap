@@ -9080,8 +9080,10 @@ const PAGES = [{ to: "/team", access: pageAccess["team"] }, { to: "/admin", acce
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context }) => {
     const page = PAGES.find((p) => allows(p.access, context.viewer));
-    // A visitor goes on to the first page, which asks them to sign in.
-    if (page || !context.viewer) throw redirect({ to: page?.to ?? "/team" });
+    // A visitor goes on to the first page, which asks them to sign in; so does one who may open
+    // it though it is outside the workspace (a page in the site's frame).
+    if (page || !context.viewer || allows(pageAccess["team"], context.viewer))
+      throw redirect({ to: page?.to ?? "/team" });
   },
   component: HomePage,
 });
@@ -10180,7 +10182,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "f54e0b6a generated",
+  "src/routes/index.tsx": "aafcc5e4 generated",
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "a86f791d generated",
@@ -35822,8 +35824,10 @@ const PAGES = [{ to: "/customers", access: pageAccess["customers"] }, { to: "/or
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context }) => {
     const page = PAGES.find((p) => allows(p.access, context.viewer));
-    // A visitor goes on to the first page, which asks them to sign in.
-    if (page || !context.viewer) throw redirect({ to: page?.to ?? "/customers" });
+    // A visitor goes on to the first page, which asks them to sign in; so does one who may open
+    // it though it is outside the workspace (a page in the site's frame).
+    if (page || !context.viewer || allows(pageAccess["customers"], context.viewer))
+      throw redirect({ to: page?.to ?? "/customers" });
   },
   component: HomePage,
 });
@@ -37267,7 +37271,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/follow-ups/new.tsx": "ca6bd493 generated",
   "src/routes/follow-ups/trash.tsx": "363b8042 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "f6d9382f generated",
+  "src/routes/index.tsx": "b027dccb generated",
   "src/routes/orders/$id.tsx": "06572473 generated",
   "src/routes/orders/index.tsx": "370dfed8 generated",
   "src/routes/orders/new.tsx": "ffa48b2d generated",
@@ -79438,8 +79442,10 @@ const PAGES = [{ to: "/cases", access: pageAccess["cases"] }, { to: "/team", acc
 export const Route = createFileRoute("/")({
   beforeLoad: ({ context }) => {
     const page = PAGES.find((p) => allows(p.access, context.viewer));
-    // A visitor goes on to the first page, which asks them to sign in.
-    if (page || !context.viewer) throw redirect({ to: page?.to ?? "/cases" });
+    // A visitor goes on to the first page, which asks them to sign in; so does one who may open
+    // it though it is outside the workspace (a page in the site's frame).
+    if (page || !context.viewer || allows(pageAccess["cases"], context.viewer))
+      throw redirect({ to: page?.to ?? "/cases" });
   },
   component: HomePage,
 });
@@ -80446,7 +80452,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/incoming/support.ts": "fca905e5 generated",
-  "src/routes/index.tsx": "8f0be4e4 generated",
+  "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "f15377e4 generated",
   "src/routes/team/activity.tsx": "7ddaee84 generated",
