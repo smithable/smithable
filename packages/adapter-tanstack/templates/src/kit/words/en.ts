@@ -239,6 +239,8 @@ export const w = {
   notRun: "Not run: a change the person would confirm first.",
   nothing: "Nothing",
   nothingHereYet: "Nothing here yet.",
+  /** Signed in with no page of the app to open (the app's start page). */
+  noPageForYou: "There is no page here for your role yet. An administrator can change that.",
   nothingMatches: "Nothing has happened that matches.",
   nothingThisMonth: "Nothing this month yet.",
   nothingThisWeek: "Nothing this week yet.",
