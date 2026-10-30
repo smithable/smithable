@@ -89,7 +89,7 @@ const shapeOf =
           <div className="space-y-3">
             {intro}
             <MergePicker
-              key={JSON.stringify(action.merge)}
+              key={JSON.stringify(action.merge.fields)}
               model={on}
               into={action.merge.into}
               fields={action.merge.fields}
@@ -115,7 +115,7 @@ const shapeOf =
           <div className="space-y-3">
             {intro}
             <CopyPicker
-              key={JSON.stringify([action.copy, action.with])}
+              key={JSON.stringify(action.copy)}
               model={on}
               copy={action.copy}
               lists={action.with ?? []}

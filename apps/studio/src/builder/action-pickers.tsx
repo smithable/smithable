@@ -50,7 +50,6 @@ export function MergePicker({
   write: Write;
 }) {
   const [rules, setRules] = useState(fields);
-  const [makes, setMakes] = useState(into);
   // Ask is what an unnamed field does: left out of the map.
   const named = Object.fromEntries(Object.entries(rules).filter(([, r]) => r !== "ask"));
   const changed = JSON.stringify(named) !== JSON.stringify(fields);
@@ -60,10 +59,9 @@ export function MergePicker({
         <span className="text-xs text-muted">It makes</span>
         <Select
           aria-label="It makes"
-          value={makes}
+          value={into}
           onChange={(e) => {
             const next = e.target.value as MergeInto;
-            setMakes(next);
             void write("into", next === "chosen" ? undefined : next);
           }}
           options={[
@@ -170,9 +168,24 @@ export function SplitPicker({
         )}
       </fieldset>
       {changed && (
-        <Button className="h-7 text-xs" onClick={() => void write("copy", taken)}>
-          Change what it takes
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            className="h-7 text-xs"
+            disabled={taken?.length === 0}
+            // In the model's order; none at all cannot be sent.
+            onClick={() =>
+              void write(
+                "copy",
+                taken && fields.map((f) => f.name).filter((n) => taken.includes(n)),
+              )
+            }
+          >
+            Change what it takes
+          </Button>
+          {taken?.length === 0 && (
+            <span className="text-xs text-quiet">Pick one at least, or every field it can.</span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -193,7 +206,6 @@ export function CopyPicker({
   help?: React.ReactNode;
 }) {
   const [rows, setRows] = useState<SetRow[]>(() => setRowsOf(copy));
-  const [along, setAlong] = useState(lists);
   const changed = JSON.stringify(valuesOf(rows)) !== JSON.stringify(valuesOf(setRowsOf(copy)));
   const all = (model?.fields ?? []).filter(list);
   return (
@@ -217,12 +229,12 @@ export function CopyPicker({
               <label key={f.name} className="flex items-center gap-1.5">
                 <input
                   type="checkbox"
-                  checked={along.includes(f.name)}
+                  checked={lists.includes(f.name)}
                   onChange={(e) => {
-                    const next = e.target.checked
-                      ? [...along, f.name]
-                      : along.filter((n) => n !== f.name);
-                    setAlong(next);
+                    // In the model's order, straight from the spec's list.
+                    const next = all
+                      .map((l) => l.name)
+                      .filter((n) => (n === f.name ? e.target.checked : lists.includes(n)));
                     void write("with", next.length ? next : undefined);
                   }}
                 />
