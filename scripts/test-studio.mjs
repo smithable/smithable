@@ -2951,13 +2951,17 @@ try {
             throw new Error("two suggestions cannot be chosen together");
           await form.getByRole("button", { name: "Make it" }).click();
           await form.waitFor({ state: "detached", timeout: 15000 * P });
-          // The request that waited is proposed once the app is there (Smith and Changes come
-          // into view for it), and waits for Apply.
+          // The request that waited is proposed once the app is there (Smith comes into view for
+          // it), and waits for Apply.
           await watcher
             .getByRole("region", { name: "Proposal" })
             .getByRole("button", { name: "Apply" })
             .click({ timeout: 90000 * P });
-          // In place: the request that waited is made, and nothing waits any more.
+          // In place: the request that waited is made, and nothing waits any more. Smith floats
+          // (a new page), so Changes is opened by its tab (smith-first.md §12.3).
+          await watcher
+            .getByRole("checkbox", { name: "Changes", exact: true })
+            .check({ force: true });
           const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
           await made.first().waitFor({ timeout: 90000 * P });
           const after = await (await fetch(`${other}/api/project`)).json();
