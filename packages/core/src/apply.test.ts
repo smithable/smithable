@@ -959,6 +959,35 @@ test("a boolean argument is a bare flag on the command line", () => {
   });
 });
 
+test("an object argument takes JSON on the command line, pairs otherwise; bad JSON is refused", () => {
+  const op = findOperation("addExample");
+  if (!op) throw new Error("no addExample");
+  expect(
+    parseOperationArgs(op, [
+      "x",
+      "--given",
+      '{"Customer":[{"id":1,"name":"Arctic"}]}',
+      "--input",
+      "keep=1",
+      "--output",
+      "refused",
+    ]),
+  ).toEqual({
+    action: "x",
+    given: { Customer: [{ id: 1, name: "Arctic" }] },
+    input: { keep: "1" },
+    output: "refused",
+  });
+  expect(parseOperationArgs(op, ["x", "--given", "{}", "--output", '{"created":2}'])).toEqual({
+    action: "x",
+    given: {},
+    output: { created: 2 },
+  });
+  expect(() => parseOperationArgs(op, ["x", "--given", '{"Customer":'])).toThrow(
+    "--given is not JSON",
+  );
+});
+
 test("an operation whose name is not text is refused, not thrown", () => {
   expect(applyOperation(files, 42 as unknown as string, {})).toMatchObject({
     ok: false,
