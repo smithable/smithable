@@ -105,16 +105,18 @@ export function present(ir: SpecIR, auth?: AuthIR, content: ContentIR = emptyCon
         "or",
       );
       const who = auth.signIn.selfSignUp === false ? "Invited people" : "People";
-      const count =
-        ["One role", "Two roles", "Three roles", "Four roles", "Five roles"][roles.length - 1] ??
-        `${roles.length} roles`;
-      const named = roles.length
-        ? `${count} beside the admins: ${list(
-            roles.map((r) =>
-              r.description ? `${r.name} (${r.description.replace(/\.$/, "")})` : r.name,
-            ),
-          )}.`
-        : "Everyone who signs in has the same role; admins do everything.";
+      // The admin role first, then the others with what they are for (Johan, 2026-10-30).
+      const what = (r: (typeof roles)[number]) =>
+        r.description
+          ? `, which ${r.description.charAt(0).toLowerCase()}${r.description.slice(1).replace(/\.$/, "")}`
+          : "";
+      const each = roles.map((r) => `a ${r.name} role${what(r)}`);
+      const named =
+        roles.length === 1
+          ? `There is an admin role, which can do everything, and ${each[0]}.`
+          : roles.length
+            ? `There is an admin role, which can do everything; ${each.slice(0, -1).join("; ")}; and ${each.at(-1)}.`
+            : "Everyone who signs in has the same role; admins do everything.";
       parts.push({
         part: "roles",
         text: `${who} sign in with ${how}. ${named}`,

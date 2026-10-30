@@ -446,8 +446,9 @@ try {
               await fresh
                 .locator(`[data-guide-lit="${place}"]`)
                 .waitFor({ state: "attached", timeout: 30000 * P });
+              // Smith says what he did once it is done: the field is there.
               if (place === "shown-smith" && spec() === before)
-                throw new Error("the shown change added no field");
+                throw new Error("Smith said his change before it was made");
               await card.getByRole("button", { name: "Next", exact: true }).click();
             }
             await card.getByRole("button", { name: "Undo", exact: true }).click();

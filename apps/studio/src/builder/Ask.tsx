@@ -361,9 +361,10 @@ export function Ask({
         </p>
       )}
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-        {ready && !making && <Greeting ready={ready} />}
+        {ready && !making && <Greeting ready={ready} presenting={partsSaid > 0} />}
         {beta && !making && <BetaLines beta={beta} left={left} />}
-        {trace && <Thread trace={trace} said={said} words={words} />}
+        {/* The presentation where it was said: after the lines before it, before the ones since. */}
+        {trace && <Thread trace={trace} said={said} words={words} upTo={show?.startedAt} />}
         {ready && !making && show && partsSaid > 0 && (
           <Presentation
             parts={parts.slice(0, partsSaid)}
@@ -380,6 +381,9 @@ export function Ask({
             onKeep={(a) => show.settle(a, a.chosen)}
             onAnswer={answer}
           />
+        )}
+        {trace && show?.startedAt && (
+          <Thread trace={trace} said={said} words={words} since={show.startedAt} />
         )}
         {reasked && (
           <AssumptionLine
@@ -574,8 +578,23 @@ const SMITHS =
  * The thread: the change log read as a conversation, oldest first, with what this tab's session
  * asked that left no change. Nothing new is stored but those lines.
  */
-function Thread({ trace, said, words }: { trace: TraceEntry[]; said: Said[]; words?: Words }) {
-  const lines = threadLines(trace, said, words);
+function Thread({
+  trace,
+  said,
+  words,
+  upTo,
+  since,
+}: {
+  trace: TraceEntry[];
+  said: Said[];
+  words?: Words;
+  /** Only the lines up to this time, or after it. */
+  upTo?: string;
+  since?: string;
+}) {
+  const lines = threadLines(trace, said, words).filter(
+    (l) => (!upTo || l.at <= upTo) && (!since || l.at > since),
+  );
   // Nothing yet: the greeting opens the conversation.
   if (!lines.length) return null;
   return (
@@ -677,10 +696,15 @@ export function followUp(
 }
 
 /** Smith's greeting, by rule, as an assistant opens a chat; no model is asked (Johan, 2026-10-23). */
-function Greeting({ ready }: { ready: Ready }) {
+function Greeting({ ready, presenting }: { ready: Ready; presenting: boolean }) {
   return (
     <div className={cx(SMITHS, "space-y-1")}>
-      <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
+      {presenting ? (
+        // Smith first, then the app, whose name the presentation's first part says (Johan).
+        <p>Hi! I'm Smith. I build this app with you; here is what it is, part by part.</p>
+      ) : (
+        <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
+      )}
     </div>
   );
 }
@@ -878,6 +902,8 @@ export interface Showing {
   leftOpen: Assumption[];
   /** How many parts were said when the preview started to run during the overlay. */
   runsAt?: number;
+  /** When it started: the thread's lines from then on come after it. */
+  startedAt?: string;
   start: () => void;
   next: () => void;
   stop: () => void;
@@ -897,6 +923,7 @@ export function usePresentation(parts: Part[], assumptions: Assumption[], hold: 
   const [going, setGoing] = useState(false);
   const [settled, setSettled] = useState<Map<string, string>>(() => new Map());
   const [runsAt, setRunsAt] = useState<number>();
+  const [startedAt, setStartedAt] = useState<string>();
   const next = () => {
     if (said < parts.length) setSaid(said + 1);
     else setGoing(false);
@@ -917,7 +944,9 @@ export function usePresentation(parts: Part[], assumptions: Assumption[], hold: 
     settled,
     leftOpen: going ? [] : assumptions.filter((a) => !settled.has(a.question)),
     ...(runsAt === undefined ? {} : { runsAt }),
+    ...(startedAt ? { startedAt } : {}),
     start: () => {
+      setStartedAt(new Date().toISOString());
       setSaid(1);
       setGoing(true);
       setRunsAt(undefined);

@@ -232,12 +232,13 @@ export function Guide({
               label: "Yes",
               main: true,
               act: () => {
+                // Smith says what he did once it is done.
                 if (applying.current) return;
                 applying.current = true;
-                setStep("smith");
                 void shown?.apply().then((ok) => {
                   applying.current = false;
-                  if (!ok) {
+                  if (ok) setStep("smith");
+                  else {
                     setStep(undefined);
                     onward();
                   }

@@ -70,7 +70,7 @@ test("the five parts say what the app is, its pages, the roles, visitors and the
   );
   expect(parts[1]?.concepts).toEqual(["page:home", "page:schedule", "page:bookings"]);
   expect(parts[2]?.text).toBe(
-    "People sign in with a code sent to their email. Two roles beside the admins: member (Books classes) and team.",
+    "People sign in with a code sent to their email. There is an admin role, which can do everything; a member role, which books classes; and a team role.",
   );
   expect(parts[3]?.text).toBe(
     "Anyone on the internet can see the home page and schedule, read sessions and add messages. Everything else needs an account.",
