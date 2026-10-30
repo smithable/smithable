@@ -55,10 +55,11 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         </p>
         <Navigation {...shell} />
       </aside>
-      {/* Phones and tablets: a header whose menu opens the same navigation as a drawer. */}
+      {/* Phones and tablets: a header whose menu opens the same navigation as a drawer, over the
+          rows' checkboxes and actions (z-10) that scroll under it (A 201). */}
       <header
         data-part="header"
-        className="sticky top-0 z-10 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground lg:hidden"
+        className="sticky top-0 z-30 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground lg:hidden"
       >
         {menu && (
           <button
