@@ -71,13 +71,23 @@ const shapeOf =
       const action = ir.actions.find((a) => a.name === model);
       if (!action || action.custom) return undefined;
       const on = ir.models.find((m) => m.name === action.on);
-      // A merge, a split and a copy: their own pickers, each key written as the spec has it (A 206).
+      // A merge, a split and a copy: their own pickers, each key written as the spec has it (A 206):
+      // a key the action has, at its path; one it has not yet, with the entry as written around it.
+      const written = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
       const write = (key: string, next: unknown) =>
-        run("editSpec", {
-          file: "smithable.yml",
-          path: ["actions", String(model), key],
-          value: next === undefined ? null : next,
-        });
+        key in written
+          ? run("editSpec", {
+              file: "smithable.yml",
+              path: ["actions", String(model), key],
+              value: next === undefined ? null : next,
+            })
+          : next === undefined
+            ? Promise.resolve(true)
+            : run("editSpec", {
+                file: "smithable.yml",
+                path: ["actions", String(model)],
+                value: { ...written, [key]: next },
+              });
       const intro = (
         <p className="text-xs text-muted">
           On each {humanize(action.on).toLowerCase()}
@@ -125,7 +135,6 @@ const shapeOf =
           </div>
         );
       // What the rows do not hold (who sees it, its add, its look…), shown as written.
-      const written = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
       const { on: _on, when: _when, set: _set, intent: _intent, ...rest } = written;
       const save = (part: "when" | "set") => (value: unknown) =>
         run("setAction", { action: String(model), [part]: value });
