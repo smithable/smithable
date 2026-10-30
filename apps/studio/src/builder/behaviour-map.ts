@@ -1,7 +1,8 @@
 // The behaviour view's content (A 127, docs/design/app-map.md): what the app does by itself or at a
 // press of a button, as boxes and arrows: standard actions on their kind of record with their
-// `when` and `set`, custom actions as opaque code, timers and what they run, and the outgoing
-// entries with what sets each off. Read from the IR only.
+// `when` and `set`, custom actions as code with what their contract says they read, write and
+// may send (intents.md §7), timers and what they run, and the outgoing entries with what sets
+// each off. Read from the IR only.
 import type {
   ActionValueIR,
   Condition,
@@ -13,7 +14,8 @@ import type {
 
 export interface BehaviourNode {
   id: string;
-  kind: "model" | "action" | "custom" | "timer" | "outgoing";
+  /** `input`: a custom action's input, on the left of its own picture. */
+  kind: "model" | "action" | "custom" | "timer" | "outgoing" | "input";
   title: string;
   /** What it does, a line each: its condition, what it sets, when it runs, who is told. */
   lines: string[];
@@ -67,13 +69,51 @@ export function behaviourOf(ir: SpecIR): { nodes: BehaviourNode[]; edges: Behavi
   const models = new Set<string>();
   for (const a of ir.actions) {
     if (a.custom) {
-      // Its code is not read here; what it is for, when the spec says so.
+      // Its code is not read here; what it is for, and what its contract says it touches.
       nodes.push({
         id: `action:${a.name}`,
         kind: "custom",
         title: a.name,
-        lines: ["custom code", ...(a.intent ? [a.intent] : [])],
+        lines: [
+          "custom code",
+          ...(a.intent ? [a.intent] : []),
+          ...(a.output?.length ? [`gives ${a.output.map((f) => f.name).join(", ")}`] : []),
+        ],
       });
+      const writes = a.touches?.writes ?? [];
+      for (const w of writes) {
+        models.add(w.model);
+        edges.push({
+          id: `writes:${a.name}:${w.model}`,
+          source: `action:${a.name}`,
+          target: `model:${w.model}`,
+          label: w.fields?.length ? `writes ${w.fields.join(", ")}` : "writes",
+        });
+      }
+      // One it writes is read too: one arrow, the write's.
+      for (const r of a.touches?.reads ?? []) {
+        if (writes.some((w) => w.model === r)) continue;
+        models.add(r);
+        edges.push({
+          id: `reads:${a.name}:${r}`,
+          source: `model:${r}`,
+          target: `action:${a.name}`,
+          label: "reads",
+        });
+      }
+      // Its own entry has its arrow already (returned); one on a record it writes, this one.
+      for (const name of a.triggers ?? [])
+        if (
+          ir.outgoing.some(
+            (o) => o.name === name && !("custom" in o.when && o.when.custom === a.name),
+          )
+        )
+          edges.push({
+            id: `may-send:${a.name}:${name}`,
+            source: `action:${a.name}`,
+            target: `outgoing:${name}`,
+            label: "may send",
+          });
       continue;
     }
     models.add(a.on);
@@ -165,5 +205,39 @@ export function behaviourOf(ir: SpecIR): { nodes: BehaviourNode[]; edges: Behavi
       ...nodes,
     ],
     edges,
+  };
+}
+
+/**
+ * One custom action's own picture (intents.md §7): its input on the left, the action, the kinds of
+ * record it reads and writes and the mails and calls it may send or that follow it, as its
+ * contract says; nothing the contract does not say, so without `touches` no kinds of record.
+ */
+export function pictureOf(
+  ir: SpecIR,
+  action: string,
+): { nodes: BehaviourNode[]; edges: BehaviourEdge[] } {
+  const a = ir.actions.find((x) => x.name === action && x.custom);
+  if (!a?.custom) return { nodes: [], edges: [] };
+  const map = behaviourOf(ir);
+  const id = `action:${action}`;
+  const edges = map.edges.filter((e) => e.source === id || e.target === id);
+  const near = new Set([id, ...edges.flatMap((e) => [e.source, e.target])]);
+  const input = a.input.length
+    ? [
+        {
+          id: `input:${action}`,
+          kind: "input" as const,
+          title: "Input",
+          lines: a.input.map((f) => `${f.name}${f.required ? "" : " (optional)"}`),
+        },
+      ]
+    : [];
+  return {
+    nodes: [...input, ...map.nodes.filter((n) => near.has(n.id))],
+    edges: [
+      ...(input.length ? [{ id: `takes:${action}`, source: `input:${action}`, target: id }] : []),
+      ...edges,
+    ],
   };
 }
