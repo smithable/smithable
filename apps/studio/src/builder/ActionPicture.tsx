@@ -64,13 +64,16 @@ export function ActionPicture({
       ),
     };
   }, [picture]);
-  const touches = ir.actions.some((a) => a.name === action && a.custom && a.touches);
+  // Something read or written: an empty contract says it reaches nothing, so nothing is drawn.
+  const touches = ir.actions.some(
+    (a) => a.name === action && a.custom && (a.touches?.reads.length || a.touches?.writes.length),
+  );
   return (
     <figure data-part="action-picture" className="space-y-1">
       <figcaption className="text-xs text-muted">
         {touches
           ? "What it takes, reads, writes and may send, as its contract says. A name opens it."
-          : "Its contract does not say what it reads or writes yet, so only what it takes is drawn."}
+          : "Its contract names nothing it reads or writes, so no kinds of record are drawn."}
       </figcaption>
       <div className="h-64 rounded border border-line">
         <MapView.Provider value={{ horizontal: true, open: onOpen }}>

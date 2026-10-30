@@ -211,7 +211,7 @@ export function behaviourOf(ir: SpecIR): { nodes: BehaviourNode[]; edges: Behavi
 /**
  * One custom action's own picture (intents.md §7): its input on the left, the action, the kinds of
  * record it reads and writes and the mails and calls it may send or that follow it, as its
- * contract says; nothing the contract does not say. An action without `touches` is its box alone.
+ * contract says; nothing the contract does not say, so without `touches` no kinds of record.
  */
 export function pictureOf(
   ir: SpecIR,
