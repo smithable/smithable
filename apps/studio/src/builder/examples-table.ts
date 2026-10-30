@@ -7,12 +7,21 @@ export interface ExampleRow {
   input: string[];
   after: string[];
   output: string[];
-  /** Who runs it and when, and whether nothing else may change: what changes the test. */
+  /** Who runs it and when: what changes the test. */
   how: string[];
 }
 
+/** A value as the example has it: empty for none, "" for an empty text, JSON for a nested one. */
 const value = (v: unknown): string =>
-  v === null ? "empty" : Array.isArray(v) ? v.map(value).join(", ") : String(v);
+  v === null || v === undefined
+    ? "empty"
+    : v === ""
+      ? '""'
+      : Array.isArray(v)
+        ? v.map(value).join(", ")
+        : typeof v === "object"
+          ? JSON.stringify(v)
+          : String(v);
 
 /** The records of each kind, a line each: "Invoice 1: number INV-1, status sent". */
 const records = (byKind?: Record<string, Record<string, unknown>[]>): string[] =>
@@ -28,16 +37,13 @@ export function exampleRows(examples: ActionExampleIR[]): ExampleRow[] {
   return examples.map((e) => ({
     given: records(e.given),
     input: Object.entries(e.input ?? {}).map(([k, v]) => `${k}: ${value(v)}`),
-    after: records(e.after),
+    // Nothing else may change: said with what must hold after.
+    after: [...records(e.after), ...(e.nothingElse ? ["nothing else changes"] : [])],
     // A refusal is its own word, not an empty output.
     output:
       e.output === "refused"
         ? ["refused"]
         : Object.entries(e.output ?? {}).map(([k, v]) => `${k}: ${value(v)}`),
-    how: [
-      ...(e.as ? [`as ${e.as}`] : []),
-      ...(e.now ? [`on ${e.now}`] : []),
-      ...(e.nothingElse ? ["nothing else changes"] : []),
-    ],
+    how: [...(e.as ? [`as ${e.as}`] : []), ...(e.now ? [`on ${e.now}`] : [])],
   }));
 }

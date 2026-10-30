@@ -45,7 +45,11 @@ export function ExamplesTable({ examples }: { examples: ActionExampleIR[] }) {
                         // Two records alike in an example are two lines alike: by place.
                         // biome-ignore lint/suspicious/noArrayIndexKey: lines may repeat
                         key={j}
-                        className={line === "refused" ? "font-medium text-red-700" : undefined}
+                        className={
+                          key === "output" && line === "refused"
+                            ? "font-medium text-red-700"
+                            : undefined
+                        }
                       >
                         {line}
                       </p>

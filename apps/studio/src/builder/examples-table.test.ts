@@ -38,9 +38,9 @@ actions:
     {
       given: ["Invoice 1: number INV-1, status sent"],
       input: ["invoice: 1"],
-      after: ["Invoice 1: status paid"],
+      after: ["Invoice 1: status paid", "nothing else changes"],
       output: ["paid: 1"],
-      how: ["nothing else changes"],
+      how: [],
     },
     {
       given: ["Invoice 2: status draft"],
