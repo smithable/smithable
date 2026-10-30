@@ -433,7 +433,31 @@ try {
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
             throw new Error(`the line for ${at} points at nothing`);
           await fresh.locator(`[data-guide-lit="${at}"]`).waitFor({ state: "attached" });
+          // Beside the place, a card with the same stop (smith-first.md §12.4).
+          await fresh.locator(`[data-guide-beside="${at}"]`).waitFor();
           await card.getByRole("button", { name: i === 6 ? "Done" : "Next", exact: true }).click();
+          if (at === "change") {
+            // One change shown three ways (§12.5): Smith adds a notes field, then it is shown by
+            // hand and in the text, and undone at the end.
+            const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
+            const before = spec();
+            await card.getByRole("button", { name: "Yes", exact: true }).click();
+            for (const place of ["shown-smith", "shown-byHand", "shown-code"]) {
+              await fresh
+                .locator(`[data-guide-lit="${place}"]`)
+                .waitFor({ state: "attached", timeout: 30000 * P });
+              // Smith says what he did once it is done: the field is there.
+              if (place === "shown-smith" && spec() === before)
+                throw new Error("Smith said his change before it was made");
+              await card.getByRole("button", { name: "Next", exact: true }).click();
+            }
+            await card.getByRole("button", { name: "Undo", exact: true }).click();
+            const deadline = Date.now() + 30000 * P;
+            while (spec() !== before) {
+              if (Date.now() > deadline) throw new Error("Undo left the shown change's field");
+              await fresh.waitForTimeout(200);
+            }
+          }
           if (i < 6)
             await fresh.waitForFunction(
               (seen) =>
