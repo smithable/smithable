@@ -168,6 +168,8 @@ Pictures for Johan after steps 1 and 2, through the human assistant; the Studio 
 
 ### 12.8 Decisions for Johan
 
+Johan, 2026-10-30: yes to all six. A builds the steps of §12.7.
+
 1. **The overlay closes on the person's word** (Show me the app, Skip, Esc), not by itself when the presentation ends. Recommended: yes; the one exception is an app with nothing to present, which goes straight to the guide.
 2. **Smith floating by default, docked as a choice** (§12.3), the overlay being the floating Smith at full size and his button the face in the top bar. Recommended: yes. The alternative is docked by default with the overlay only at the start; it keeps today's screen and answers less of the chaos.
 3. **The guide as Smith's line and a small card at the place, both** (§12.4). Recommended: yes.
