@@ -52,7 +52,7 @@ export function Making({
   project,
 }: {
   making: MakingState;
-  project: Pick<Project, "plugins" | "ownThemes" | "waiting">;
+  project: Pick<Project, "plugins" | "ownThemes" | "waiting" | "ai">;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
