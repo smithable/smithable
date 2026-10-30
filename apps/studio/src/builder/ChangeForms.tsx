@@ -8,7 +8,6 @@ import {
   identifier,
   type JsonSchema,
   kebab,
-  type ModelIR,
   pageModel,
   pascal,
   typeKey,
@@ -19,6 +18,19 @@ import { api } from "../api";
 import { ArgumentField, type ArgValues, argumentsOf } from "../arguments";
 import type { Spec } from "../engine";
 import { Button, Check, Input, Label, Select } from "../ui";
+import {
+  conditionOf,
+  firstValue,
+  type SetRow,
+  SetRows,
+  setRowsOf,
+  settable,
+  valuesOf,
+  type WhenRow,
+  WhenRows,
+  waysFor,
+  whenRowsOf,
+} from "./action-rows";
 import { CustomCode, customFile } from "./custom-code";
 import { UNIQUE, type UniqueChoice, uniqueOf, uniqueRule } from "./unique";
 
@@ -447,54 +459,27 @@ function SetActionIntent({ spec, run }: FormProps) {
   const actions = spec.ir?.actions ?? [];
   const found = (name: string) => actions.find((a) => a.name === name);
   const intentOf = (name: string) => found(name)?.intent ?? "";
-  const whenOf = (name: string) => {
+  const standardOf = (name: string) => {
     const a = found(name);
-    return Object.entries((a && "when" in a ? a.when : undefined) ?? {})
-      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(" | ") : String(v)}`)
-      .join("\n");
+    return a && !a.custom ? a : undefined;
   };
-  const setOf = (name: string) => {
-    const a = found(name);
-    return (a && "set" in a ? a.set : [])
-      .map((v) =>
-        "value" in v
-          ? `${v.field}: ${String(v.value)}`
-          : "text" in v
-            ? `${v.field}: ${v.text}`
-            : "me" in v
-              ? `${v.field}: ME()`
-              : `${v.field}:`,
-      )
-      .join("\n");
-  };
+  const whenOf = (name: string) => whenRowsOf(standardOf(name)?.when);
+  const setOf = (name: string) => setRowsOf(standardOf(name)?.set);
   const first = actions[0]?.name ?? "";
   const [action, setAction] = useState(first);
   const [intent, setIntent] = useState(intentOf(first));
   const [when, setWhen] = useState(whenOf(first));
   const [set, setSet] = useState(setOf(first));
-  const standard = (() => {
-    const a = found(action);
-    return Boolean(a && !a.custom);
-  })();
-  /** "field: value" lines as an object; "a | b" a list where a condition takes one. */
-  const read = (text: string, lists: boolean) =>
-    Object.fromEntries(
-      text
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const at = line.indexOf(":");
-          const key = (at < 0 ? line : line.slice(0, at)).trim();
-          const value = at < 0 ? "" : line.slice(at + 1).trim();
-          const many = lists && value.includes("|");
-          return [key, many ? value.split("|").map((v) => v.trim()) : value];
-        }),
-    );
+  const standard = standardOf(action);
+  const model = spec.ir?.models.find((m) => m.name === standard?.on);
+  // Only what changed is sent, compared as the arguments it would send.
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const changed = {
     ...(intent !== intentOf(action) ? { intent } : {}),
-    ...(standard && when !== whenOf(action) ? { when: read(when, true) } : {}),
-    ...(standard && set !== setOf(action) ? { set: read(set, false) } : {}),
+    ...(standard && !same(conditionOf(when), conditionOf(whenOf(action)))
+      ? { when: conditionOf(when) }
+      : {}),
+    ...(standard && !same(valuesOf(set), valuesOf(setOf(action))) ? { set: valuesOf(set) } : {}),
   };
   return (
     <Form onSubmit={() => run("setAction", { action, ...changed })}>
@@ -512,27 +497,12 @@ function SetActionIntent({ spec, run }: FormProps) {
       </Label>
       {standard && (
         <>
-          <Label
-            text="For records with"
-            hint="One field a line, e.g. status: todo | doing; empty means every record"
-          >
-            <textarea
-              aria-label="For records with"
-              value={when}
-              onChange={(e) => setWhen(e.target.value)}
-              rows={2}
-              className="w-full rounded-md border border-line bg-panel p-2 font-mono text-xs"
-            />
-          </Label>
-          <Label text="It sets" hint="One field a line, e.g. status: done or doneOn: TODAY()">
-            <textarea
-              aria-label="It sets"
-              value={set}
-              onChange={(e) => setSet(e.target.value)}
-              rows={3}
-              className="w-full rounded-md border border-line bg-panel p-2 font-mono text-xs"
-            />
-          </Label>
+          <Rows text="For records with">
+            <WhenRows model={model} rows={when} onChange={setWhen} />
+          </Rows>
+          <Rows text="It sets">
+            <SetRows model={model} rows={set} onChange={setSet} />
+          </Rows>
         </>
       )}
       <p className="text-xs text-quiet">
@@ -575,6 +545,16 @@ function useModelField(spec: Spec, initial?: { model?: string; field?: string })
     </>
   );
   return { model, field: current, pickers };
+}
+
+/** A group of rows under its name (the rows name their own controls). */
+function Rows({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-medium text-muted">{text}</p>
+      {children}
+    </div>
+  );
 }
 
 function Submit({ label, disabled }: { label: string; disabled?: boolean }) {
@@ -915,87 +895,32 @@ function AddAction(props: FormProps) {
   );
 }
 
-/** The fields a button can set or test: stored, one value each. */
-const settable = (model: ModelIR | undefined) =>
-  (model?.fields ?? []).filter((f) => !f.formula && !(f.type.kind === "relation" && f.type.many));
-
-/** A value control for a field: its choices, yes or no, or text ("" asks the person). */
-function ValueOf({
-  field,
-  value,
-  onChange,
-  label,
-  ask,
-}: {
-  field: FieldIR | undefined;
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  ask?: boolean;
-}) {
-  if (field?.type.kind === "choice")
-    return (
-      <Select
-        aria-label={label}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        options={[
-          ...(ask ? [["", "ask the person"] as [string, string]] : []),
-          ...field.type.values.map((v) => [v, humanize(v)] as [string, string]),
-        ]}
-      />
-    );
-  if (field?.type.kind === "scalar" && field.type.name === "bool")
-    return (
-      <Select
-        aria-label={label}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        options={[
-          ["true", "yes"],
-          ["false", "no"],
-        ]}
-      />
-    );
-  return (
-    <Input
-      aria-label={label}
-      value={value}
-      placeholder={ask ? "empty: ask the person" : ""}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  );
-}
-
 function AddStandardAction({ spec, run }: FormProps) {
   const models = spec.ir?.models ?? [];
   const [label, setLabel] = useState("");
   const [modelName, setModelName] = useState(models[0]?.name ?? "");
   const model = models.find((m) => m.name === modelName);
-  const fields = settable(model);
-  const [setName, setSetName] = useState("");
-  const setField = fields.find((f) => f.name === setName) ?? fields[0];
-  const [setValue, setSetValue] = useState("");
-  const conditions = fields.filter(
-    (f) => f.type.kind === "choice" || (f.type.kind === "scalar" && f.type.name === "bool"),
-  );
-  const [whenName, setWhenName] = useState("");
-  const whenField = conditions.find((f) => f.name === whenName);
-  const [whenValue, setWhenValue] = useState("");
+  // One value to start with, the first field it may set; the condition starts empty (always).
+  const start = (m: typeof model): SetRow[] => {
+    const field = settable(m)[0];
+    return field
+      ? [{ field: field.name, how: waysFor(field)[0] ?? "value", value: firstValue(field) }]
+      : [];
+  };
+  const [set, setSet] = useState<SetRow[]>(() => start(model));
+  const [when, setWhen] = useState<WhenRow[]>([]);
   const action = identifier(label);
-  const value =
-    setField?.type.kind === "choice" ? setValue || (setField.type.values[0] ?? "") : setValue;
-  const when = whenField
-    ? whenValue || (whenField.type.kind === "choice" ? (whenField.type.values[0] ?? "") : "true")
-    : "";
+  const values = valuesOf(set);
+  const condition = conditionOf(when);
+  const said = (v: string) => (v === "" ? "what the person enters" : humanize(v).toLowerCase());
   return (
     <Form
       onSubmit={() =>
         run("addAction", {
           action,
           on: modelName,
-          set: { [setField?.name ?? ""]: value },
-          ...(whenField ? { when: { [whenField.name]: when } } : {}),
+          set: values,
+          ...(Object.keys(condition).length ? { when: condition } : {}),
           intent: label,
         })
       }
@@ -1012,55 +937,31 @@ function AddStandardAction({ spec, run }: FormProps) {
           aria-label="On each"
           value={modelName}
           onChange={(e) => {
+            const next = models.find((m) => m.name === e.target.value);
             setModelName(e.target.value);
-            setSetName("");
-            setWhenName("");
+            setSet(start(next));
+            setWhen([]);
           }}
           options={models.map((m) => [m.name, humanize(m.name)])}
         />
       </Label>
-      <Label text="It sets">
-        <Select
-          aria-label="It sets"
-          value={setField?.name ?? ""}
-          onChange={(e) => {
-            setSetName(e.target.value);
-            setSetValue("");
-          }}
-          options={fields.map((f) => [f.name, humanize(f.name)] as [string, string])}
-        />
-      </Label>
-      <Label text="To">
-        <ValueOf field={setField} value={value} onChange={setSetValue} label="To" ask />
-      </Label>
-      <Label text="Only when (optional)">
-        <Select
-          aria-label="Only when"
-          value={whenField?.name ?? ""}
-          onChange={(e) => {
-            setWhenName(e.target.value);
-            setWhenValue("");
-          }}
-          options={[
-            ["", "always"] as [string, string],
-            ...conditions.map((f) => [f.name, humanize(f.name)] as [string, string]),
-          ]}
-        />
-      </Label>
-      {whenField && (
-        <Label text="Is">
-          <ValueOf field={whenField} value={when} onChange={setWhenValue} label="Is" />
-        </Label>
-      )}
+      <Rows text="It sets">
+        <SetRows model={model} rows={set} onChange={setSet} />
+      </Rows>
+      <Rows text="For records with">
+        <WhenRows model={model} rows={when} onChange={setWhen} />
+      </Rows>
       <SpecNote
         label="Will read:"
         text={
-          action && setField
-            ? `A "${label}" button on each ${modelName.toLowerCase()} sets ${humanize(setField.name).toLowerCase()} to ${value ? humanize(value).toLowerCase() : "what the person enters"}${whenField ? `, when ${humanize(whenField.name).toLowerCase()} is ${humanize(when).toLowerCase()}` : ""}.`
+          action && set.length
+            ? `A "${label}" button on each ${modelName.toLowerCase()} sets ${Object.entries(values)
+                .map(([k, v]) => `${humanize(k).toLowerCase()} to ${said(v)}`)
+                .join(", ")}${when.length ? ", for records with the condition above" : ""}.`
             : ""
         }
       />
-      <Submit label="Add button" disabled={!action || !setField} />
+      <Submit label="Add button" disabled={!action || !set.length} />
     </Form>
   );
 }
