@@ -446,6 +446,32 @@ test("setMine makes a page list only the viewer's own records, and back", () => 
   expect(apply("setMine", ["nowhere"])).toMatchObject({ ok: false });
 });
 
+test("editSpec with a path adds a key the part lacks under its parent, keeping the comment; a missing parent is refused", () => {
+  const added = applyOperation(files, "editSpec", {
+    path: ["actions", "mergeCustomers", "fields"],
+    value: { notes: "append" },
+  });
+  expect(added).toMatchObject({ ok: true, destructive: false });
+  const spec = (r: ReturnType<typeof applyOperation>) => (r.ok ? r.files.spec : "");
+  expect(spec(added)).toContain("# two customers become one");
+  expect(spec(added)).toMatch(
+    /mergeCustomers:\n {4}merge: Customer[^\n]*\n {4}fields:\n {6}notes: append\n/,
+  );
+  const again = applyOperation(added.ok ? added.files : files, "editSpec", {
+    path: ["actions", "mergeCustomers", "fields"],
+    value: { notes: "keep" },
+  });
+  expect(again).toMatchObject({ ok: true });
+  expect(spec(again)).toContain("notes: keep");
+  expect(spec(again)).not.toContain("notes: append");
+  expect(
+    applyOperation(files, "editSpec", { path: ["actions", "nobody", "fields"], value: {} }),
+  ).toMatchObject({
+    ok: false,
+    message: "actions.nobody is not in smithable.yml.",
+  });
+});
+
 test("editSpec replaces the spec; removing a stored field is destructive; broken YAML is refused", () => {
   const added = applyOperation(files, "editSpec", {
     text: files.spec.replace("      notes: text\n", "      notes: text\n      website: url\n"),

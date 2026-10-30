@@ -109,7 +109,16 @@ const editSpec: Operation<{
       if (value === null) {
         if (!editor.has(at)) throw new OperationError(`${path.join(".")} is not in ${file}.`);
         editor.remove(at);
-      } else editor.set(at, value as YamlValue);
+      } else if (editor.has(at)) editor.set(at, value as YamlValue);
+      else {
+        // A key the part does not have yet is added under its parent, which must exist (a form
+        // writing a merge's fields or a split's move for the first time), so the entry's comments
+        // and its neighbours stay as they are; a missing parent is still refused.
+        const parent = at.slice(0, -1);
+        if (!parent.length || !editor.has(parent))
+          throw new OperationError(`${parent.join(".") || file} is not in ${file}.`);
+        editor.add(parent, at[at.length - 1] as string, value as YamlValue);
+      }
       // A stored field lost with the part is a migration's, as with the whole text.
       return file === "smithable.yml" ? removedFields(ir, editors.spec.text) : [];
     }
