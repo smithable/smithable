@@ -1,12 +1,19 @@
-// The Studio guide (docs/design/studio-guide.md): each place lit in order, and what it is said
-// by Smith in his thread with Next and Skip as chips (smith-first.md §7, `asLine`); on a phone,
-// or with Smith off screen, a card beside the place, the rest of the screen dimmed. A stop whose
-// place is not on the screen is left out, except the preview, which is brought on screen (onStop).
+// The Studio guide (docs/design/studio-guide.md, smith-first.md §12.4): each place lit in order,
+// said by Smith in his thread with its chips (`asLine`) and, beside the place, a small card with
+// the stop's title, one sentence and the same chips; the rest of the screen dims a little and
+// takes no clicks, Smith's panel excepted. On a phone the card and the dimming are left out and a
+// stop scrolls its window into view (A 172). A stop whose place is not on the screen is left out,
+// except the preview, which is brought on screen (onStop). After "Ask me", Smith offers to show one
+// change made three ways (§12.5, `shown`).
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { doneKey, type Stop } from "./guide";
+import { doneKey, SHOWN, type Stop } from "./guide";
 import { Button } from "./ui";
 
-const CARD = { width: 320, height: 190, gap: 10 };
+const CARD = { width: 300, height: 170, gap: 10 };
+
+/** A control has the focus: Enter and Esc are the control's then (smith-first.md §12.2). */
+const inControl = (el: Element | null) =>
+  Boolean(el?.closest("button, a, input, textarea, select, label, [contenteditable]"));
 
 /**
  * The stops whose places are on the screen now, each with its element. A place marked
@@ -40,14 +47,43 @@ function cardAt(box: DOMRect): { top: number; left: number } {
   };
 }
 
-/** A stop as Smith says it: its words, where it is in the tour, and the chips' actions. */
+/** A chip under the stop: what it says and does; the main one is what Enter does. */
+export interface GuideChip {
+  label: string;
+  act: () => void;
+  main?: boolean;
+}
+
+/** A stop as Smith says it: its words, where it is in the tour, and its chips. */
 export interface GuideLine {
   stop: Stop;
   at: number;
   count: number;
-  next: () => void;
-  end: () => void;
+  chips: GuideChip[];
 }
+
+/**
+ * One change shown three ways (smith-first.md §12.5), made by Studio: Smith's own change, then the
+ * same change by hand and in the text, kept or undone at the end.
+ */
+export interface ShownChange {
+  /** The kind of record the field goes on, as the person reads it. */
+  label: string;
+  /** Smith's way: the field added, and the preview at the new record's form; false if refused. */
+  apply: () => Promise<boolean>;
+  /** No code at the kind of record, the new field's row lit. */
+  byHand: () => void;
+  /** Code at the field's line. */
+  inCode: () => void;
+  /** Kept or undone; the manual view closes and the preview is in front. */
+  end: (keep: boolean) => void;
+  /** Where each step's place is on the screen. */
+  places: { smith: string; byHand: string; code: string };
+}
+type Shown = "offer" | "smith" | "byHand" | "code" | "end";
+
+/** The first sentence of a stop's text, for its card. */
+const firstSentence = (text: string) => text.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? text;
 
 export function Guide({
   app,
@@ -56,6 +92,8 @@ export function Guide({
   onStop,
   onPlace,
   asLine,
+  cards = true,
+  shown,
 }: {
   app: string;
   /** The tour of the view's open sub-tab (guide.ts). */
@@ -65,15 +103,22 @@ export function Guide({
   onStop?: (anchor: string) => void;
   /** Where the stop's place is on the screen, as it is measured: Smith's panel moves off it. */
   onPlace?: (anchor: string, box: DOMRect) => void;
-  /** Smith says the stops (his thread shows the line); none for the cards. */
+  /** Smith says the stops (his thread shows the line). */
   asLine?: (line: GuideLine | undefined) => void;
+  /** The card beside the place, and the rest dimmed; a phone has neither. */
+  cards?: boolean;
+  /** The change Smith offers to show after "Ask me"; none when the app has nothing to add it to. */
+  shown?: ShownChange;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   // Found once the tour's mode is on the screen: after the render that may have just switched to
   // it, not during it.
   const [stops, setStops] = useState<{ stop: Stop; element: HTMLElement }[]>([]);
   const [at, setAt] = useState(0);
   const [box, setBox] = useState<DOMRect>();
+  // The shown change's step, while it runs, and its place once found.
+  const [step, setStep] = useState<Shown>();
+  const [stepPlace, setStepPlace] = useState<HTMLElement>();
+  const offered = useRef(false);
   const current = stops[at];
   // Back to where the person was when the tour ends.
   const before = useRef<Element | null>(null);
@@ -84,10 +129,23 @@ export function Guide({
     } catch {
       // Without storage the tour may show again next time; nothing else depends on it.
     }
-    dialog.current?.close();
     asLine?.(undefined);
     (before.current as HTMLElement | null)?.focus?.();
     onEnd();
+  };
+  const onward = () => (at === stops.length - 1 ? end() : setAt(at + 1));
+  const next = () => {
+    if (current?.stop.anchor === "change" && shown && !offered.current) {
+      offered.current = true;
+      return setStep("offer");
+    }
+    onward();
+  };
+  const leave = (keep: boolean) => {
+    shown?.end(keep);
+    setStep(undefined);
+    setStepPlace(undefined);
+    onward();
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the tour starts
@@ -104,23 +162,40 @@ export function Guide({
       }
       if (found.length === 0) return end();
       setStops(found);
-      if (!asLine && !dialog.current?.open) dialog.current?.showModal();
     };
     let timer: ReturnType<typeof setTimeout> | undefined;
     look();
     return () => clearTimeout(timer);
   }, []);
 
+  // A step of the shown change: its place looked for until it is on the screen (the preview's
+  // form, No code's row and Code's text come after the step's own action).
+  useEffect(() => {
+    setStepPlace(undefined);
+    if (!step || step === "offer" || step === "end" || !shown) return;
+    let tries = 0;
+    const look = () => {
+      const found = document.querySelector<HTMLElement>(shown.places[step]);
+      const seen = found?.getBoundingClientRect();
+      if (found && seen && seen.width > 0) return setStepPlace(found);
+      if (tries++ < 50) timer = setTimeout(look, 100);
+    };
+    let timer: ReturnType<typeof setTimeout> | undefined = setTimeout(look, 150);
+    return () => clearTimeout(timer);
+  }, [step, shown]);
+
+  const place = stepPlace ?? current?.element;
   // The place in view (on a phone, its panel scrolled to), then measured; again on resizing.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each stop once, as it opens (onStop is made anew each render)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each place once, as it opens (onStop is made anew each render)
   useLayoutEffect(() => {
-    if (!current) return;
-    onStop?.(current.stop.anchor);
-    current.element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (!current || !place) return;
+    if (!stepPlace) onStop?.(current.stop.anchor);
+    place.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const anchor = stepPlace ? `shown-${step}` : current.stop.anchor;
     const measure = () => {
-      const now = current.element.getBoundingClientRect();
+      const now = place.getBoundingClientRect();
       setBox(now);
-      onPlace?.(current.stop.anchor, now);
+      onPlace?.(anchor, now);
     };
     measure();
     const later = setTimeout(measure, 350);
@@ -131,108 +206,150 @@ export function Guide({
       clearTimeout(settled);
       window.removeEventListener("resize", measure);
     };
-  }, [current]);
+  }, [current, place]);
 
+  // The line said now: a stop of the tour, or a step of the shown change with its own chips.
   const last = at === stops.length - 1;
-  // Smith's line for the stop, with its chips; Esc ends the tour as on a card.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each stop once, as it opens
+  const line: GuideLine | undefined = current && {
+    stop: step
+      ? { anchor: current.stop.anchor, title: SHOWN.title, text: SHOWN[step](shown?.label ?? "") }
+      : current.stop,
+    at,
+    count: stops.length,
+    chips:
+      step === "offer"
+        ? [
+            {
+              label: "Yes",
+              main: true,
+              act: () => {
+                setStep("smith");
+                void shown?.apply().then((ok) => {
+                  if (!ok) {
+                    setStep(undefined);
+                    onward();
+                  }
+                });
+              },
+            },
+            {
+              label: "Skip",
+              act: () => {
+                setStep(undefined);
+                onward();
+              },
+            },
+          ]
+        : step === "smith"
+          ? [{ label: "Next", main: true, act: () => (shown?.byHand(), setStep("byHand")) }]
+          : step === "byHand"
+            ? [{ label: "Next", main: true, act: () => (shown?.inCode(), setStep("code")) }]
+            : step === "code"
+              ? [{ label: "Next", main: true, act: () => setStep("end") }]
+              : step === "end"
+                ? [
+                    { label: "Keep", main: true, act: () => leave(true) },
+                    { label: "Undo", act: () => leave(false) },
+                  ]
+                : [
+                    { label: last ? "Done" : "Next", main: true, act: next },
+                    ...(last ? [] : [{ label: "Skip guide", act: end }]),
+                  ],
+  };
+  // Esc: Skip on the offer, Undo during the shown change (and on), else the end of the tour.
+  const onEscape = () => {
+    if (step === "offer") {
+      setStep(undefined);
+      onward();
+    } else if (step) leave(false);
+    else end();
+  };
+  const keys = useRef({ line, onEscape });
+  keys.current = { line, onEscape };
+
+  // Smith's line for the stop, with its chips.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each stop and step once, as it opens
   useEffect(() => {
-    if (!asLine || !current) return;
-    asLine({
-      stop: current.stop,
-      at,
-      count: stops.length,
-      next: () => (last ? end() : setAt(at + 1)),
-      end,
-    });
+    if (line) asLine?.(line);
+  }, [current, step, asLine]);
+  // Enter is the main chip and Esc as above, while no control has the focus (§12.2).
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") end();
+      if (inControl(document.activeElement)) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        keys.current.onEscape();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        keys.current.line?.chips.find((c) => c.main)?.act();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [current, asLine]);
-  if (asLine)
-    return box ? (
-      // The place lit, nothing dimmed: the person reads Smith's line beside it and may go on
-      // working.
-      <div
-        key={current?.stop.anchor}
-        aria-hidden
-        data-guide-lit={current?.stop.anchor}
-        className="guide-lit pointer-events-none fixed z-30 rounded-md ring-2 ring-accent"
-        style={{
-          top: box.top - 4,
-          left: box.left - 4,
-          width: box.width + 8,
-          height: box.height + 8,
-        }}
-      />
-    ) : null;
-  const position = box && cardAt(box);
+  }, []);
+
+  if (!box || !line) return null;
+  const lit = step ? `shown-${step}` : current?.stop.anchor;
+  const ring = (
+    <div
+      key={lit}
+      aria-hidden
+      data-guide-lit={lit}
+      className="guide-lit pointer-events-none fixed z-[45] rounded-md ring-2 ring-accent"
+      style={{ top: box.top - 4, left: box.left - 4, width: box.width + 8, height: box.height + 8 }}
+    />
+  );
+  // A phone: the place lit, nothing dimmed; Smith's line says the stop.
+  if (!cards && asLine) return ring;
+  const hole = {
+    top: box.top - 4,
+    left: box.left - 4,
+    right: box.right + 4,
+    bottom: box.bottom + 4,
+  };
+  const dim = "fixed z-40 bg-black/25";
+  const position = cardAt(box);
   return (
-    <dialog
-      ref={dialog}
-      aria-label="Guide"
-      onCancel={(e) => {
-        e.preventDefault();
-        end();
-      }}
-      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-transparent"
-    >
-      {box && (
-        // The cut-out: the rest of the screen dimmed around the place.
-        <div
-          aria-hidden
-          className="pointer-events-none fixed rounded-md ring-2 ring-accent"
-          style={{
-            top: box.top - 4,
-            left: box.left - 4,
-            width: box.width + 8,
-            height: box.height + 8,
-            boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.35)",
-          }}
-        />
-      )}
-      {current && position && (
-        <section
-          aria-labelledby="guide-title"
-          aria-describedby="guide-text"
-          data-guide-card={current.stop.anchor}
-          className="fixed space-y-3 rounded-lg border border-line bg-panel p-4 shadow-lg"
-          style={{ ...position, width: CARD.width }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !(e.target instanceof HTMLButtonElement)) {
-              e.preventDefault();
-              if (last) end();
-              else setAt(at + 1);
-            }
-          }}
-        >
-          <p className="text-xs text-quiet">
-            {at + 1} of {stops.length}
-          </p>
-          <h2 id="guide-title" className="text-sm font-semibold">
-            {current.stop.title}
-          </h2>
-          <p id="guide-text" className="text-sm text-fg-soft">
-            {current.stop.text}
-          </p>
-          <div className="flex justify-end gap-2">
-            {!last && (
-              <Button variant="ghost" onClick={end}>
-                Skip
-              </Button>
-            )}
+    <>
+      {/* The rest dimmed a little and taking no clicks: four panes around the place. */}
+      <div aria-hidden className={dim} style={{ top: 0, left: 0, right: 0, height: hole.top }} />
+      <div aria-hidden className={dim} style={{ top: hole.bottom, left: 0, right: 0, bottom: 0 }} />
+      <div
+        aria-hidden
+        className={dim}
+        style={{ top: hole.top, left: 0, width: hole.left, height: hole.bottom - hole.top }}
+      />
+      <div
+        aria-hidden
+        className={dim}
+        style={{ top: hole.top, left: hole.right, right: 0, height: hole.bottom - hole.top }}
+      />
+      {ring}
+      <section
+        aria-label={`Guide: ${line.stop.title}`}
+        data-guide-beside={line.stop.anchor}
+        data-guide-step={step}
+        className="smith-line fixed z-[55] space-y-2 rounded-lg border border-line bg-panel p-3 shadow-lg"
+        style={{ ...position, width: CARD.width }}
+      >
+        <p className="text-xs text-quiet">
+          {at + 1} of {stops.length}
+        </p>
+        <h2 className="text-sm font-semibold">{line.stop.title}</h2>
+        <p className="text-sm text-fg-soft">{firstSentence(line.stop.text)}</p>
+        <div className="flex justify-end gap-2">
+          {[...line.chips].reverse().map((chip) => (
             <Button
-              // biome-ignore lint/a11y/noAutofocus: the card is the dialog's only content
-              autoFocus
-              onClick={() => (last ? end() : setAt(at + 1))}
+              key={chip.label}
+              variant={chip.main ? undefined : "ghost"}
+              className="smith-chip"
+              onClick={chip.act}
             >
-              {last ? "Done" : "Next"}
+              {chip.label}
             </Button>
-          </div>
-        </section>
-      )}
-    </dialog>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

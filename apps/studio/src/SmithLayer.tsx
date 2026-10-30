@@ -234,8 +234,9 @@ export type Bounds = { left: number; right: number };
 
 /**
  * The side for the panel while a guide's stop is lit (§12.3): the other side when the stop's place
- * is under it on this one and not on that one, else the right. The preview's stop is the place
- * the panel hangs over by design, and Smith's own stop is the panel.
+ * is under it on this one and not on that one, folded into his face when it is under it on both
+ * (the stop's card then says it alone), else the right. The preview's stop is the place the panel
+ * hangs over by design, and Smith's own stop is the panel.
  */
 export function sideFor(
   anchor: string | undefined,
@@ -254,7 +255,7 @@ export function sideFor(
       r.top + r.height > box.top
     );
   };
-  return hits("right") && !hits("left") ? "left" : "right";
+  return !hits("right") ? "right" : !hits("left") ? "left" : "fold";
 }
 
 /** Where Smith lives (§12.3): floating over the preview, or docked as the left window. Per device. */

@@ -473,7 +473,7 @@ export function Ask({
         {output && <p className={SMITHS}>{output}</p>}
         {guide && (
           <div
-            key={guide.stop.anchor}
+            key={`${guide.stop.anchor}|${guide.stop.text}`}
             data-guide-card={guide.stop.anchor}
             className={cx(SMITHS, "space-y-2")}
           >
@@ -483,14 +483,16 @@ export function Ask({
             <p className="font-medium">{guide.stop.title}</p>
             <p>{guide.stop.text}</p>
             <div className="flex flex-wrap gap-1.5">
-              <button type="button" onClick={guide.next} className={CHIP_MAIN}>
-                {guide.at === guide.count - 1 ? "Done" : "Next"}
-              </button>
-              {guide.at < guide.count - 1 && (
-                <button type="button" onClick={guide.end} className={CHIP}>
-                  Skip guide
+              {guide.chips.map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={chip.act}
+                  className={chip.main ? CHIP_MAIN : CHIP}
+                >
+                  {chip.label}
                 </button>
-              )}
+              ))}
             </div>
           </div>
         )}

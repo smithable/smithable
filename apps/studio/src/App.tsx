@@ -61,7 +61,7 @@ import {
 const Code = lazy(() => import("./studio/Code").then((m) => ({ default: m.Code })));
 const Guide = lazy(() => import("./GuideTour").then((m) => ({ default: m.Guide })));
 
-import type { GuideLine } from "./GuideTour";
+import type { GuideLine, ShownChange } from "./GuideTour";
 
 /** A change that stopped to ask, because it loses data. */
 interface Pending {
@@ -839,6 +839,52 @@ export function App() {
       />
     </div>
   );
+  // The floating panel's side for the guide's stop: off its place, or folded for it.
+  const side = guiding
+    ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
+    : "right";
+  // One change shown three ways after "Ask me" (smith-first.md §12.5): a notes field on the first
+  // kind of record without one, by Smith, then by hand and in the text, kept or undone.
+  const bare = spec.ir?.models.find((m) => !m.fields.some((f) => f.name === "notes"));
+  const showing: ShownChange | undefined = bare && {
+    label: spec.content?.models?.[bare.name]?.label ?? humanize(bare.name),
+    apply: async () => {
+      if (!(await run("addField", { model: bare.name, field: "notes", type: "text" })))
+        return false;
+      const form = spec.ir?.pages.find(
+        (p) => p.pattern.kind === "crud" && p.pattern.model === bare.name,
+      );
+      if (form) setGo((g) => ({ path: `${form.route}/new`, key: (g?.key ?? 0) + 1 }));
+      if (narrow) showWindow("preview");
+      return true;
+    },
+    byHand: () => {
+      nocodePlace({ sub: "behavior" });
+      if (narrow) showWindow("nocode");
+      else workIn("nocode");
+      setTimeout(() =>
+        window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: `model:${bare.name}` })),
+      );
+    },
+    inCode: () =>
+      window.dispatchEvent(
+        new CustomEvent(SHOW_CODE, {
+          detail: { file: "smithable.yml", path: `models.${bare.name}.fields.notes` },
+        }),
+      ),
+    end: (keep) => {
+      if (!keep) void undo();
+      // The manual view closes again and the preview is in front.
+      setArrangement({ ...arrangement, manual: "nocode" });
+      if (narrow) showWindow("preview");
+      else if (layout === "three") setHidden((h) => ({ ...h, right: true }));
+    },
+    places: {
+      smith: '[data-guide="preview"]',
+      byHand: `[data-path='${JSON.stringify(["models", bare.name, "fields", "notes"])}']`,
+      code: '[data-guide="files"]',
+    },
+  };
   const presentAgain = () => {
     show.start();
     if (narrow) showWindow("smith");
@@ -1156,6 +1202,8 @@ export function App() {
               }}
               onStop={guideStop}
               onPlace={(anchor, box) => setLit({ anchor, box })}
+              cards={!narrow}
+              {...(showing ? { shown: showing } : {})}
               asLine={smithSays ? setGuideLine : undefined}
             />
           </Suspense>
@@ -1254,6 +1302,11 @@ export function App() {
                       "flex flex-col border-line",
                       s > 0 && "border-l",
                       layout === "three-below" && s === 2 && "border-t border-l-0",
+                      // Docked Smith stays above the guide's dimming (smith-first.md §12.4).
+                      guiding &&
+                        !narrow &&
+                        (content === "smith" || content === "smith+changes") &&
+                        "relative z-50 bg-panel",
                     )}
                     style={{ gridArea: area(s) }}
                   >
@@ -1403,14 +1456,15 @@ export function App() {
                 <span className="min-w-0 flex-1 truncate">
                   {guideLine.stop.title}: {guideLine.stop.text}
                 </span>
-                <Button onClick={guideLine.next}>
-                  {guideLine.at === guideLine.count - 1 ? "Done" : "Next"}
-                </Button>
-                {guideLine.at < guideLine.count - 1 && (
-                  <Button variant="ghost" onClick={guideLine.end}>
-                    Skip guide
+                {guideLine.chips.map((chip) => (
+                  <Button
+                    key={chip.label}
+                    variant={chip.main ? undefined : "ghost"}
+                    onClick={chip.act}
+                  >
+                    {chip.label}
                   </Button>
-                )}
+                ))}
               </div>
             )}
           </PhoneRow>
@@ -1423,13 +1477,9 @@ export function App() {
           lighter={previewRuns}
           phone={narrow}
           motion={motion}
-          open={panelOpen}
+          open={panelOpen && side !== "fold"}
           {...(over ? { over } : {})}
-          side={
-            guiding
-              ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
-              : "right"
-          }
+          side={side === "left" ? "left" : "right"}
           {...(layer === "closing" && !floating ? { target: narrow ? undefined : dockedAt() } : {})}
           {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
           activity={project.trace.length}
