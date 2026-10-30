@@ -4,7 +4,7 @@
 
 import type { Diagnostic } from "@smithable/core";
 import type { Part, SummarySection } from "@smithable/index";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { type Assumption, api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
 import { Button, cx, Input } from "../ui";
@@ -34,8 +34,10 @@ interface Said {
 
 export function Ask({
   assumptions = [],
-  presentFirst = false,
-  onPresented,
+  show,
+  stage = "window",
+  previewRuns = false,
+  onClose,
   beta,
   guide,
   onDone,
@@ -53,12 +55,19 @@ export function Ask({
   guide?: GuideLine;
   /** The hosted beta, said in Smith's words (smith-first.md §8). */
   beta?: Beta;
-  /** A new project: Smith presents the app at once (smith-first.md §2). */
-  presentFirst?: boolean;
+  /** Smith's presentation of the app, as far as it has gone (usePresentation). */
+  show?: Showing;
+  /**
+   * Where the thread is: the overlay a new project opens on, the floating panel, or a window
+   * (smith-first.md §12.1, §12.3).
+   */
+  stage?: "overlay" | "panel" | "window";
+  /** The preview runs: the overlay's last part offers Show me the app. */
+  previewRuns?: boolean;
+  /** Show me the app: the overlay closes. */
+  onClose?: () => void;
   /** What the draft assumed, asked at the part each concerns (smith-first.md §4). */
   assumptions?: Assumption[];
-  /** The presentation is over (the guide comes next). */
-  onPresented?: () => void;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -276,88 +285,59 @@ export function Ask({
   // Smith's face says what is going on: hammering while he works or the app is made, then
   // how the last request went, and waiting while nothing is asked.
   const left = useMinutesLeft(beta?.until);
-  // The presentation (smith-first.md §3): how many of its parts are said so far, and whether it
-  // is going on; a new project's starts at once.
-  const parts = ready?.parts ?? [];
-  const [partsSaid, setSaidParts] = useState(0);
-  const [presenting, setPresenting] = useState(false);
-  const presentedOnce = useRef(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the parts are there
-  useEffect(() => {
-    if (!presentFirst || presentedOnce.current || making) return;
-    // The parts come once the spec is read in the tab; an app read with none to present lets
-    // the guide come at once.
-    if (!parts.length) {
-      if (!ready?.sections.length) return;
-      presentedOnce.current = true;
-      return void onPresented?.();
-    }
-    presentedOnce.current = true;
-    setSaidParts(1);
-    setPresenting(true);
-  }, [presentFirst, parts.length, making, ready?.sections.length]);
-  const nextPart = () => {
-    if (partsSaid < parts.length) setSaidParts(partsSaid + 1);
-    else {
-      setPresenting(false);
-      onPresented?.();
-    }
-  };
-  // The draft's assumptions (smith-first.md §4): each asked at the end of its part, with the
-  // draft's answer chosen; kept, answered (a change proposed as any other), or left open, which
-  // the ready prompts offer again.
-  const [settled, setSettled] = useState<Set<string>>(() => new Set());
+  // The presentation (smith-first.md §3, §12.1), held by Studio so it outlives the panel's moves.
+  const parts = show?.parts ?? [];
+  const partsSaid = show?.said ?? 0;
+  const presenting = show?.going ?? false;
+  const overlay = stage === "overlay";
+  // A question asked again from the ready prompts (smith-first.md §4).
   const [reasked, setReasked] = useState<Assumption>();
-  const openAt = (part: string) =>
-    assumptions.filter((a) => a.part === part && !settled.has(a.question));
-  const settle = (a: Assumption) => setSettled((s) => new Set([...s, a.question]));
   const answer = (a: Assumption, option: string) => {
-    settle(a);
+    show?.settle(a, option);
     setReasked(undefined);
     const text = `${a.question} ${option}`;
     setRequest(text);
     void propose(text);
   };
-  const leftOpen =
-    !presenting && partsSaid >= parts.length
-      ? assumptions.filter((a) => !settled.has(a.question))
-      : [];
-  // A part follows the one before after a moment to read it, and after the last the guide comes; a
-  // tap brings it at once.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each part once, as it is partsSaid, and again once its question is settled
-  useEffect(() => {
-    if (!presenting) return;
-    // A question at the part waits for its answer, or a tap.
-    if (openAt(parts[partsSaid - 1]?.part ?? "").length) return;
-    const later = setTimeout(nextPart, 4000);
-    return () => clearTimeout(later);
-  }, [presenting, partsSaid, settled]);
+  // The ready prompts rest during the presentation and the guide (smith-first.md §12.6).
+  const quiet = overlay || presenting || Boolean(guide);
+  const leftOpen = !quiet && partsSaid >= parts.length ? (show?.leftOpen ?? []) : [];
+  // The preview started to run during the presentation: said with the next part, or at once
+  // after the last (smith-first.md §12.1).
+  const runsAt = show?.runsAt;
+  const runsLine =
+    overlay && runsAt !== undefined && (partsSaid > runsAt || runsAt >= parts.length);
   // biome-ignore lint/correctness/useExhaustiveDependencies: when the conversation grows
   useEffect(() => {
     const box = scroller.current;
     if (box) box.scrollTop = box.scrollHeight;
   }, [grown, proposal, busy, docs, output, local, waiting.length, guide, partsSaid]);
+  const lastPart = overlay && presenting && partsSaid >= parts.length;
   const mood: Mood = guide
     ? "pointing"
-    : presenting && parts[partsSaid - 1]
-      ? (parts[partsSaid - 1]?.expression ?? "pointing")
-      : left !== undefined && left <= 15 && !busy && !proposal
-        ? left <= 0
-          ? "sad"
-          : "impatient"
-        : busy || making
-          ? "working"
-          : proposal?.kind === "question"
-            ? "confused"
-            : proposal?.kind === "change"
-              ? "pointing"
-              : output
-                ? output.startsWith("Done: ")
-                  ? "happy"
-                  : "sad"
-                : docs || local
+    : runsLine && runsAt !== undefined && (partsSaid === runsAt + 1 || runsAt >= parts.length)
+      ? "proud"
+      : lastPart && !previewRuns
+        ? "working"
+        : presenting && parts[partsSaid - 1]
+          ? (parts[partsSaid - 1]?.expression ?? "pointing")
+          : left !== undefined && left <= 15 && !busy && !proposal
+            ? left <= 0
+              ? "sad"
+              : "impatient"
+            : busy || making
+              ? "working"
+              : proposal?.kind === "question"
+                ? "confused"
+                : proposal?.kind === "change"
                   ? "pointing"
-                  : "waiting";
+                  : output
+                    ? output.startsWith("Done: ")
+                      ? "happy"
+                      : "sad"
+                    : docs || local
+                      ? "pointing"
+                      : "waiting";
   const box = useRef<HTMLTextAreaElement>(null);
   const send = () => {
     if (!request.trim()) return;
@@ -384,18 +364,19 @@ export function Ask({
         {ready && !making && <Greeting ready={ready} />}
         {beta && !making && <BetaLines beta={beta} left={left} />}
         {trace && <Thread trace={trace} said={said} words={words} />}
-        {ready && !making && partsSaid > 0 && (
+        {ready && !making && show && partsSaid > 0 && (
           <Presentation
             parts={parts.slice(0, partsSaid)}
             going={presenting}
-            onNext={nextPart}
-            onSkip={() => {
-              setSaidParts(parts.length);
-              setPresenting(false);
-              onPresented?.();
-            }}
-            questions={(part) => openAt(part)}
-            onKeep={settle}
+            overlay={overlay}
+            runsAt={runsLine ? runsAt : undefined}
+            previewRuns={previewRuns}
+            onNext={show.next}
+            onSkip={show.stop}
+            onShow={onClose}
+            questions={(part) => assumptions.filter((a) => a.part === part)}
+            settled={show.settled}
+            onKeep={(a) => show.settle(a, a.chosen)}
             onAnswer={answer}
           />
         )}
@@ -403,7 +384,7 @@ export function Ask({
           <AssumptionLine
             a={reasked}
             onKeep={(a) => {
-              settle(a);
+              show?.settle(a, a.chosen);
               setReasked(undefined);
             }}
             onAnswer={answer}
@@ -490,26 +471,22 @@ export function Ask({
         )}
         {output && <p className={SMITHS}>{output}</p>}
         {guide && (
-          <div data-guide-card={guide.stop.anchor} className={cx(SMITHS, "space-y-2")}>
+          <div
+            key={guide.stop.anchor}
+            data-guide-card={guide.stop.anchor}
+            className={cx(SMITHS, "space-y-2")}
+          >
             <p className="text-xs text-quiet">
               {guide.at + 1} of {guide.count}
             </p>
             <p className="font-medium">{guide.stop.title}</p>
             <p>{guide.stop.text}</p>
             <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={guide.next}
-                className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
-              >
+              <button type="button" onClick={guide.next} className={CHIP_MAIN}>
                 {guide.at === guide.count - 1 ? "Done" : "Next"}
               </button>
               {guide.at < guide.count - 1 && (
-                <button
-                  type="button"
-                  onClick={guide.end}
-                  className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
-                >
+                <button type="button" onClick={guide.end} className={CHIP}>
                   Skip guide
                 </button>
               )}
@@ -527,7 +504,8 @@ export function Ask({
         }}
       >
         <div className="flex items-end gap-2">
-          <SmithFace mood={mood} />
+          {/* Made anew when the face changes, so it bounces (smith-first.md §12.2). */}
+          <SmithFace key={mood} mood={mood} />
           <textarea
             ref={box}
             aria-label="Describe a change, or ask a question"
@@ -546,38 +524,48 @@ export function Ask({
             {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
           </Button>
         </div>
-        {ready && !making && (
-          <ReadyChips
-            // Words in the box are a request of their own: the prompts rest until it is sent.
-            disabled={busy || Boolean(request.trim())}
-            resting={!busy && Boolean(request.trim())}
-            leftOpen={leftOpen}
-            onReask={setReasked}
-            onPick={(prompt) => {
-              // The box gets the start of the request and the cursor after it.
-              if (prompt === "add") {
-                setRequest("Help me add ");
-                setTimeout(() => {
-                  const at = box.current;
-                  at?.focus();
-                  at?.setSelectionRange(at.value.length, at.value.length);
-                });
-                return;
-              }
-              setLocal(prompt);
-            }}
-          />
-        )}
+        {overlay || presenting
+          ? parts.length > 1 && <PartDots at={partsSaid} count={parts.length} />
+          : ready &&
+            !making &&
+            !quiet && (
+              <ReadyChips
+                // Words in the box are a request of their own: the prompts rest until it is sent.
+                disabled={busy || Boolean(request.trim())}
+                resting={!busy && Boolean(request.trim())}
+                leftOpen={leftOpen}
+                onReask={setReasked}
+                onPick={(prompt) => {
+                  // The box gets the start of the request and the cursor after it.
+                  if (prompt === "add") {
+                    setRequest("Help me add ");
+                    setTimeout(() => {
+                      const at = box.current;
+                      at?.focus();
+                      at?.setSelectionRange(at.value.length, at.value.length);
+                    });
+                    return;
+                  }
+                  setLocal(prompt);
+                }}
+              />
+            )}
       </form>
     </div>
   );
 }
 
-/** A message's bubble: the person's on the right, Smith's on the left. */
+/** A chip under a line of Smith's, and the one that goes on. */
+const CHIP =
+  "smith-chip rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent";
+const CHIP_MAIN =
+  "smith-chip rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft";
+
+/** A message's bubble: the person's on the right, Smith's on the left; Smith's rise as they come. */
 const MINE =
   "ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-accent-soft px-3 py-1.5 text-sm";
 const SMITHS =
-  "mr-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-subtle px-3 py-1.5 text-sm";
+  "smith-line mr-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-subtle px-3 py-1.5 text-sm";
 
 /**
  * The thread: the change log read as a conversation, oldest first, with what this tab's session
@@ -695,57 +683,104 @@ function Greeting({ ready }: { ready: Ready }) {
 }
 
 /**
- * Smith's presentation of the app (smith-first.md §3): the parts said so far, each one message
- * while it goes on, Next and Skip as chips.
+ * Smith's presentation of the app (smith-first.md §3): the parts said so far, each one message,
+ * with its questions after it. On the overlay (§12.1) the current part has Next, and the last
+ * Show me the app once the preview runs; in the thread, Next and Skip.
  */
 function Presentation({
   parts,
   going,
+  overlay,
+  runsAt,
+  previewRuns,
   onNext,
   onSkip,
+  onShow,
   questions,
+  settled,
   onKeep,
   onAnswer,
 }: {
   parts: Part[];
   going: boolean;
+  overlay: boolean;
+  /** How many parts were said when the preview started to run: its line comes after them. */
+  runsAt: number | undefined;
+  previewRuns: boolean;
   onNext: () => void;
   onSkip: () => void;
-  /** The draft's open assumptions at a part, asked after it. */
+  onShow?: () => void;
+  /** The draft's assumptions at a part, asked after it. */
   questions: (part: string) => Assumption[];
+  /** The questions answered, with the answer. */
+  settled: Map<string, string>;
   onKeep: (a: Assumption) => void;
   onAnswer: (a: Assumption, option: string) => void;
 }) {
+  const runs = (
+    <li className={SMITHS} data-part="runs">
+      Your app runs behind me.
+    </li>
+  );
   return (
-    <ol aria-label="What the app is" className="space-y-3">
-      {parts.map((p, i) => (
-        <li key={p.part} className="space-y-3">
-          <div data-part={p.part} className={cx(SMITHS, "space-y-2")}>
-            <p>{p.text}</p>
-            {going && i === parts.length - 1 && (
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={onNext}
-                  className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
-                >
-                  Next
-                </button>
-                <button
-                  type="button"
-                  onClick={onSkip}
-                  className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
-                >
-                  Skip
-                </button>
+    <ol
+      aria-label="What the app is"
+      aria-live={overlay ? "polite" : undefined}
+      className="space-y-3"
+    >
+      {parts.map((p, i) => {
+        const current = going && i === parts.length - 1;
+        const open = questions(p.part).some((a) => !settled.has(a.question));
+        return (
+          <Fragment key={p.part}>
+            {runsAt === i && runs}
+            <li className="space-y-3">
+              <div data-part={p.part} className={cx(SMITHS, "space-y-2")}>
+                <p>{p.text}</p>
+                {current && !overlay && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" onClick={onNext} className={CHIP_MAIN}>
+                      Next
+                    </button>
+                    <button type="button" onClick={onSkip} className={CHIP}>
+                      Skip
+                    </button>
+                  </div>
+                )}
+                {current && overlay && i < parts.length - 1 && !open && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" onClick={onNext} className={CHIP_MAIN}>
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {questions(p.part).map((a) => (
-            <AssumptionLine key={a.question} a={a} onKeep={onKeep} onAnswer={onAnswer} />
-          ))}
+              {questions(p.part).map((a) => (
+                <AssumptionLine
+                  key={a.question}
+                  a={a}
+                  answered={settled.get(a.question)}
+                  onKeep={onKeep}
+                  onAnswer={onAnswer}
+                />
+              ))}
+            </li>
+          </Fragment>
+        );
+      })}
+      {runsAt !== undefined && runsAt >= parts.length && runs}
+      {overlay && going && parts.length > 0 && (
+        // The last part said: the way out, once there is an app to show.
+        <li className={cx(SMITHS, "space-y-2")} data-part="last">
+          {previewRuns ? (
+            <button type="button" onClick={onShow} className={CHIP_MAIN}>
+              Show me the app
+            </button>
+          ) : (
+            <p>A moment, the app is still being made.</p>
+          )}
         </li>
-      ))}
+      )}
       {!going && (
         <li className={SMITHS} data-part="end">
           That is your app. Tell me what to change, or ask me anything about how it works.
@@ -755,19 +790,53 @@ function Presentation({
   );
 }
 
+/** Where the presentation is, as dots under the thread ("3 of 5"), filling as the parts come. */
+function PartDots({ at, count }: { at: number; count: number }) {
+  return (
+    <p className="flex items-center justify-center gap-1.5">
+      <span className="sr-only">
+        Part {at} of {count}
+      </span>
+      {Array.from({ length: count }, (_, i) => (
+        <span
+          // biome-ignore lint/suspicious/noArrayIndexKey: the dots are positions
+          key={i}
+          aria-hidden="true"
+          className={cx(
+            "size-1.5 rounded-full transition-colors",
+            i < at ? "bg-accent" : "bg-line-strong",
+          )}
+        />
+      ))}
+    </p>
+  );
+}
+
 /**
  * One of the draft's assumptions, asked (smith-first.md §4): the question, what the draft went
- * with, the other answers as chips, and Keep it. An answer is a change proposed as any other.
+ * with, the other answers as chips, and Keep it. An answer is a change proposed as any other;
+ * once answered the other options fold away and the answer stays as a tag (§12.2).
  */
 function AssumptionLine({
   a,
+  answered,
   onKeep,
   onAnswer,
 }: {
   a: Assumption;
+  answered?: string;
   onKeep: (a: Assumption) => void;
   onAnswer: (a: Assumption, option: string) => void;
 }) {
+  if (answered !== undefined)
+    return (
+      <div data-assumption={a.part} data-answered className={cx(SMITHS, "space-y-1.5")}>
+        <p>{a.question}</p>
+        <span className="inline-block rounded-full bg-accent-soft px-2.5 py-0.5 text-xs text-accent">
+          {answered}
+        </span>
+      </div>
+    );
   return (
     <div data-assumption={a.part} className={cx(SMITHS, "space-y-2")}>
       <p>{a.question}</p>
@@ -775,28 +844,83 @@ function AssumptionLine({
         I went with: <strong className="font-medium text-fg">{a.chosen}</strong>
       </p>
       <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => onKeep(a)}
-          className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
-        >
+        <button type="button" onClick={() => onKeep(a)} className={CHIP_MAIN}>
           Keep it
         </button>
         {a.options
           .filter((o) => o !== a.chosen)
           .map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => onAnswer(a, o)}
-              className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent"
-            >
+            <button key={o} type="button" onClick={() => onAnswer(a, o)} className={CHIP}>
               {o}
             </button>
           ))}
       </div>
     </div>
   );
+}
+
+/** Smith's presentation as Studio holds it (usePresentation). */
+export interface Showing {
+  parts: Part[];
+  /** How many parts are said. */
+  said: number;
+  /** Whether it is going on: the next part comes by itself after a moment to read. */
+  going: boolean;
+  /** The draft's questions answered, with the answer (Keep it is the draft's own). */
+  settled: Map<string, string>;
+  /** Those nobody answered, once the presentation is over: the ready prompts offer them. */
+  leftOpen: Assumption[];
+  /** How many parts were said when the preview started to run during the overlay. */
+  runsAt?: number;
+  start: () => void;
+  next: () => void;
+  stop: () => void;
+  settle: (a: Assumption, answer: string) => void;
+  /** The preview started to run: Smith says so with the next part. */
+  markRuns: () => void;
+}
+
+/**
+ * The presentation's state, held by Studio so the thread can move between the overlay, the
+ * floating panel and the window without losing it (smith-first.md §12.3). A part follows after a
+ * moment, unless a question at it waits; on the overlay the last part waits for the person's
+ * word (`hold`), elsewhere the presentation ends after it.
+ */
+export function usePresentation(parts: Part[], assumptions: Assumption[], hold: boolean): Showing {
+  const [said, setSaid] = useState(0);
+  const [going, setGoing] = useState(false);
+  const [settled, setSettled] = useState<Map<string, string>>(() => new Map());
+  const [runsAt, setRunsAt] = useState<number>();
+  const next = () => {
+    if (said < parts.length) setSaid(said + 1);
+    else setGoing(false);
+  };
+  const waits = assumptions.some(
+    (a) => a.part === parts[said - 1]?.part && !settled.has(a.question),
+  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each part once, and again once its question is settled
+  useEffect(() => {
+    if (!going || waits || (hold && said >= parts.length)) return;
+    const later = setTimeout(next, 4000);
+    return () => clearTimeout(later);
+  }, [going, said, waits, hold]);
+  return {
+    parts,
+    said,
+    going,
+    settled,
+    leftOpen: going ? [] : assumptions.filter((a) => !settled.has(a.question)),
+    ...(runsAt === undefined ? {} : { runsAt }),
+    start: () => {
+      setSaid(1);
+      setGoing(true);
+      setRunsAt(undefined);
+    },
+    next,
+    stop: () => setGoing(false),
+    settle: (a, answer) => setSettled((m) => new Map(m).set(a.question, answer)),
+    markRuns: () => setRunsAt((r) => r ?? said),
+  };
 }
 
 /** The hosted beta's facts (smith-first.md §8). */
@@ -823,12 +947,7 @@ function useMinutesLeft(until: string | undefined): number | undefined {
 /** "Ask for an invite": the invite page, the email filled in by the service where it knows it. */
 function InviteChip({ href }: { href: string }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft"
-    >
+    <a href={href} target="_blank" rel="noreferrer" className={CHIP_MAIN}>
       Ask for an invite
     </a>
   );
@@ -901,7 +1020,7 @@ function ReadyChips({
           key={id}
           type="button"
           onClick={() => onPick(id)}
-          className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-50"
+          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
         >
           {label}
         </button>
@@ -911,7 +1030,7 @@ function ReadyChips({
           key={a.question}
           type="button"
           onClick={() => onReask?.(a)}
-          className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent disabled:pointer-events-none disabled:opacity-50"
+          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
         >
           You left open: {a.question}
         </button>

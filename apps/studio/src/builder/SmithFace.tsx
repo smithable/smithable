@@ -18,7 +18,11 @@ export type Mood = keyof typeof FACES | "working";
 /** Smith at 48 px: the hammering frames as a sprite (styles.css .smith-working), or one face. */
 export function SmithFace({ mood }: { mood: Mood }) {
   return (
-    <span data-mood={mood} aria-hidden="true" className="grid size-12 shrink-0 place-items-center">
+    <span
+      data-mood={mood}
+      aria-hidden="true"
+      className="smith-face grid size-12 shrink-0 place-items-center"
+    >
       {mood === "working" ? (
         <span className="smith-working" style={{ backgroundImage: `url(${working})` }} />
       ) : (

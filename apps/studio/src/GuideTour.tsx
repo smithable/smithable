@@ -54,6 +54,7 @@ export function Guide({
   stops: tour,
   onEnd,
   onStop,
+  onPlace,
   asLine,
 }: {
   app: string;
@@ -62,6 +63,8 @@ export function Guide({
   onEnd: () => void;
   /** Each stop as it opens, so a place that is not shown (the preview) can be. */
   onStop?: (anchor: string) => void;
+  /** Where the stop's place is on the screen, as it is measured: Smith's panel moves off it. */
+  onPlace?: (anchor: string, box: DOMRect) => void;
   /** Smith says the stops (his thread shows the line); none for the cards. */
   asLine?: (line: GuideLine | undefined) => void;
 }) {
@@ -114,7 +117,11 @@ export function Guide({
     if (!current) return;
     onStop?.(current.stop.anchor);
     current.element.scrollIntoView({ block: "nearest", inline: "nearest" });
-    const measure = () => setBox(current.element.getBoundingClientRect());
+    const measure = () => {
+      const now = current.element.getBoundingClientRect();
+      setBox(now);
+      onPlace?.(current.stop.anchor, now);
+    };
     measure();
     const later = setTimeout(measure, 350);
     const settled = setTimeout(measure, 800);
@@ -149,9 +156,10 @@ export function Guide({
       // The place lit, nothing dimmed: the person reads Smith's line beside it and may go on
       // working.
       <div
+        key={current?.stop.anchor}
         aria-hidden
         data-guide-lit={current?.stop.anchor}
-        className="pointer-events-none fixed z-30 rounded-md ring-2 ring-accent"
+        className="guide-lit pointer-events-none fixed z-30 rounded-md ring-2 ring-accent"
         style={{
           top: box.top - 4,
           left: box.left - 4,

@@ -21,13 +21,14 @@ import {
 } from "./api";
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
-import { Ask } from "./builder/Ask";
+import { Ask, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART } from "./builder/NoCode";
+import { SmithFace } from "./builder/SmithFace";
 import { Visualize } from "./builder/Visualize";
 import { ASK_SMITH } from "./builder/Wizard";
 import { type CodeJump, SHOW_CODE } from "./code-jump";
 import { type Spec, useSpec } from "./engine";
-import { doneKey, guideOff, TOURS } from "./guide";
+import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
@@ -36,6 +37,7 @@ import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
+import { type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
@@ -168,6 +170,13 @@ export function App() {
   // across it: Smith, the preview, No code and Code, Changes as its settings say
   // (smith-first.md §6). It opens on Smith (smith-first.md §2).
   const narrow = useMedia("(max-width: 1023px)");
+  // The effects of the overlay and the guide (smith-first.md §12.2), off when the system asks.
+  const motion = !useMedia("(prefers-reduced-motion: reduce)");
+  // Smith floating over the preview, or docked as the left window (smith-first.md §12.3); a
+  // phone has him in its row of windows.
+  const [smithAt, setSmithAt] = useSmithPlace();
+  const floating = !narrow && smithAt === "floating";
+  const [panelOpen, setPanelOpen] = useState(true);
   const [phone, setPhone] = usePhoneSettings();
   const phoneList = phoneWindows(phone);
   const phoneWindow: PhoneWindow = phoneList.includes(place.window as PhoneWindow)
@@ -198,14 +207,27 @@ export function App() {
   // Smith's window on a phone: Smith or, under him, Changes, chosen by the tabs or a swipe.
   const [phoneSub, setPhoneSub] = useState<"smith" | "changes">("smith");
   // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
-  const [hidden, setHidden] = useState({ left: false, right: false });
+  // Floating, Smith leaves the first place and the preview takes the width: the window there
+  // (Changes) comes back by the arrow or its tab (smith-first.md §12.3).
+  const [hidden, setHidden] = useState({ left: floating, right: false });
   const layout = narrow ? "one" : arrangement.layout;
   // A phone has every window in one row, side by side, and shows one of them; a swipe moves the
   // row (A 173).
+  // Floating, his place holds Changes alone.
+  const laid = arrangement.slots.map((s) =>
+    floating && (s === "smith+changes" || s === "smith") ? "changes" : s,
+  );
   const slots: SlotContent[] = narrow
     ? phoneList.map((w) => (w === "smith" && phone.changesUnderSmith ? "smith+changes" : w))
-    : arrangement.slots;
-  const shown = (narrow ? slots.map((_, i) => i) : shownSlots(layout, hidden)) as (0 | 1 | 2)[];
+    : laid;
+  // One window with Smith floating shows the preview, wherever it is laid.
+  const shown = (
+    narrow
+      ? slots.map((_, i) => i)
+      : floating && layout === "one"
+        ? [Math.max(0, slots.indexOf("preview"))]
+        : shownSlots(layout, hidden)
+  ) as (0 | 1 | 2)[];
   const phoneIndex = Math.max(0, phoneList.indexOf(phoneWindow));
   /**
    * The slot a window is drawn in among those shown (the first that names it), or none. No code
@@ -290,6 +312,7 @@ export function App() {
               : anchor === "manual"
                 ? manual
                 : undefined;
+    if (floating && window === "smith") return setPanelOpen(true);
     if (!window || slotOf(window) !== undefined) return;
     if (narrow) showWindow(window);
     else workIn(window);
@@ -318,11 +341,12 @@ export function App() {
    */
   const workIn = (window: WindowId) => {
     setVisualize(false);
+    if (floating && window === "smith") return setPanelOpen(true);
     const sub = window === "nocode" || window === "code" ? window : undefined;
     const kept = { ...arrangement, ...(sub ? { manual: sub } : {}) };
     if (slotOf(window) !== undefined) return;
     const content: SlotContent = window === "nocode" || window === "code" ? "manual" : window;
-    const from = arrangement.slots.findIndex(
+    const from = laid.findIndex(
       (s) =>
         s === content || (s === "smith+changes" && (window === "smith" || window === "changes")),
     );
@@ -339,18 +363,20 @@ export function App() {
       layout === "one"
         ? (shown[0] ?? 0)
         : ([...shown].reverse().find((i) => slots[i] !== "preview") ?? shown[0] ?? 0);
-    const next = [...arrangement.slots] as typeof arrangement.slots;
+    const next = [...laid] as typeof arrangement.slots;
     if (from >= 0) [next[at], next[from]] = [next[from] as SlotContent, next[at] as SlotContent];
     else next[at] = content;
+    // Floating, the place Smith left keeps his name for when he is docked again.
+    const smithWas = arrangement.slots.findIndex((s) => s === "smith+changes" || s === "smith");
+    if (floating && smithWas >= 0 && next[smithWas] === "changes")
+      next[smithWas] = arrangement.slots[smithWas] as SlotContent;
     setArrangement({ ...kept, slots: next });
   };
   // The header's tabs: the windows of the arrangement in their order, the view with No code and
   // Code named by the one it shows, and a window off screen brought back by its tab.
   const tabs: WindowId[] = [
     ...new Set(
-      arrangement.slots.map(
-        (s): WindowId => (s === "smith+changes" ? "smith" : s === "manual" ? manual : s),
-      ),
+      laid.map((s): WindowId => (s === "smith+changes" ? "smith" : s === "manual" ? manual : s)),
     ),
   ];
 
@@ -625,8 +651,19 @@ export function App() {
   // The first tour waits for the preview's page (its second stop points at the running app),
   // or twenty seconds when the preview is slow to start.
   const [previewUp, setPreviewUp] = useState(false);
+  // The preview's page has said it is there: the overlay's way out (smith-first.md §12.1).
+  const [previewRuns, setPreviewRuns] = useState(false);
+  useEffect(() => {
+    if (previewRuns) return;
+    const ready = (e: MessageEvent) => {
+      if (isPreviewMessage(e) && e.data.type === "ready") setPreviewRuns(true);
+    };
+    window.addEventListener("message", ready);
+    return () => window.removeEventListener("message", ready);
+  }, [previewRuns]);
   useEffect(() => {
     if (previewUp) return;
+    if (previewRuns) return setPreviewUp(true);
     const ready = (e: MessageEvent) => {
       if (isPreviewMessage(e) && e.data.type === "ready") setPreviewUp(true);
     };
@@ -636,20 +673,26 @@ export function App() {
       clearTimeout(late);
       window.removeEventListener("message", ready);
     };
-  }, [previewUp]);
+  }, [previewUp, previewRuns]);
   // The tour visits every window: one not shown as it starts would be left out of it, so the
   // third window comes into view in the same render the tour starts in.
   // A phone shows each stop's window as the tour reaches it, and the preview after it (A 161).
   const startGuide = () => {
     // The view with No code and Code comes into view for the tour's stops in it.
     if (tour === "nocode" && !narrow) workIn("nocode");
+    // Floating, Smith's panel opens for his lines, and the window he left comes on screen for its
+    // stop.
+    setPanelOpen(true);
+    if (floating) setHidden((h) => ({ ...h, left: false }));
     setGuiding(true);
   };
   // Smith says the stops in his thread when he is on the screen (smith-first.md §7); a phone, or
   // an arrangement without him, shows the cards.
   const [guideLine, setGuideLine] = useState<GuideLine>();
+  // The lit place of the guide's stop, which the floating panel moves off (smith-first.md §12.3).
+  const [lit, setLit] = useState<{ anchor: string; box: DOMRect }>();
   // On a phone too: the guide switches to a stop's window and says it at the window's foot.
-  const smithSays = narrow || slotOf("smith") !== undefined;
+  const smithSays = narrow || floating || slotOf("smith") !== undefined;
   // What the draft assumed (smith-first.md §4), kept from the making for Smith to ask at its
   // part, for the browser tab's session.
   // Kept with the app's name: another app opened in the same tab has its own.
@@ -679,98 +722,151 @@ export function App() {
       );
     } catch {}
   }, [madeAssumptions]);
-  // A new project: Smith presents it first, then the guide (smith-first.md §2), once the
-  // preview is up.
+  // A new project: Smith presents it on the overlay, Studio loading behind; the overlay closes on
+  // the person's word, then the guide (smith-first.md §12.1). A reload between the two gives the
+  // guide alone; an app with nothing to present goes straight to the guide.
+  const [layer, setLayer] = useState<LayerMode>();
+  const overlaid = layer === "overlay" || layer === "closing";
+  const show = usePresentation(parts, assumptions, layer === "overlay");
   const [presented, setPresented] = useState(false);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up and Smith has presented
+  const decided = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the app is read
   useEffect(() => {
-    if (firstVisit && previewUp && (presented || !smithSays)) startGuide();
+    if (!firstVisit || decided.current || !spec.ir) return;
+    decided.current = true;
+    if (!parts.length || seenOverlay(project.name)) return setPresented(true);
+    setLayer("overlay");
+    show.start();
+  }, [firstVisit, spec.ir]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up and the overlay is closed
+  useEffect(() => {
+    if (firstVisit && previewUp && presented) startGuide();
   }, [firstVisit, previewUp, presented]);
+  // The preview running behind: said with the next part.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when it starts to run
+  useEffect(() => {
+    if (previewRuns && layer === "overlay") show.markRuns();
+  }, [previewRuns]);
+  // Closing: the parts not said are not said; the thread moves to Smith's place while the
+  // backdrop lifts.
+  const closeOverlay = () => {
+    if (layer !== "overlay") return;
+    try {
+      if (project) localStorage.setItem(presentedKey(project.name), "1");
+    } catch {}
+    show.stop();
+    setPanelOpen(true);
+    setLayer("closing");
+  };
+  // A failure behind the overlay closes it to Studio, with the failure's own notice.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when a failure is said
+  useEffect(() => {
+    if (message && !message.ok && layer === "overlay") closeOverlay();
+  }, [message]);
+  // Where the closing takes the thread: the panel's place, or the left window docked.
+  const dockedAt = () => {
+    const box = document.querySelector("[data-smith-dock]")?.getBoundingClientRect();
+    return box && box.width > 0
+      ? { top: box.top, left: box.left, width: box.width, height: box.height }
+      : undefined;
+  };
+  // After the guide, the floating panel folds into his face when nothing happens in it a while.
+  const [guided, setGuided] = useState(false);
+  // Docked again: his place back in the arrangement if a move took it, and the window shown.
+  const dock = () => {
+    if (!arrangement.slots.some((s) => s === "smith" || s === "smith+changes")) {
+      const next = [...arrangement.slots] as typeof arrangement.slots;
+      next[Math.max(0, next.indexOf("changes"))] = "smith+changes";
+      setArrangement({ ...arrangement, slots: next });
+    }
+    setHidden((h) => ({ ...h, left: false }));
+    setSmithAt("docked");
+  };
+  const float = () => {
+    setPanelOpen(true);
+    setSmithAt("floating");
+    setHidden((h) => ({ ...h, left: true }));
+  };
 
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
+  // Smith's thread, wherever it is: on the overlay, in the floating panel, or in a window.
+  const layerOn = !project.making && (overlaid || floating);
+  const smith = (stage: "overlay" | "panel" | "window") => (
+    <div data-guide="change" className="flex h-full min-h-0 flex-col">
+      <Ask
+        stage={stage}
+        show={show}
+        previewRuns={previewRuns}
+        onClose={closeOverlay}
+        peopleRunning={people?.running}
+        guide={guiding ? guideLine : undefined}
+        assumptions={assumptions}
+        {...(project.beta ? { beta: project.beta } : {})}
+        words={words}
+        waiting={project.waiting}
+        trace={project.trace}
+        ready={{
+          sections,
+          parts,
+          appName: project.name,
+          notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
+          ...(project.home ? { home: project.home } : {}),
+          apply: (op, args) => void run(op, args),
+        }}
+      />
+    </div>
+  );
+  const presentAgain = () => {
+    show.start();
+    if (narrow) showWindow("smith");
+    else workIn("smith");
+  };
   return (
-    <div className="flex h-full flex-col">
-      {/* On a phone the items wrap onto a second line instead of running off the screen. */}
-      <header
-        className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-1.5 sm:flex-nowrap sm:py-0"
-        // On a phone a swipe on the header moves the row of windows too (A 174).
-        style={narrow ? { touchAction: "pan-y" } : undefined}
-        {...rowPan.handlers}
-      >
-        {project.home ? (
-          // Hosted: back to the apps overview.
-          <a href={project.home} className="shrink-0">
+    <div className={cx("h-full", motion && "motion")}>
+      {/* Behind the overlay Studio loads as ever, taking no click or key (smith-first.md §12.1). */}
+      <div inert={overlaid || undefined} className="flex h-full flex-col">
+        {/* On a phone the items wrap onto a second line instead of running off the screen. */}
+        <header
+          className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-1.5 sm:flex-nowrap sm:py-0"
+          // On a phone a swipe on the header moves the row of windows too (A 174).
+          style={narrow ? { touchAction: "pan-y" } : undefined}
+          {...rowPan.handlers}
+        >
+          {project.home ? (
+            // Hosted: back to the apps overview.
+            <a href={project.home} className="shrink-0">
+              <Wordmark />
+            </a>
+          ) : (
             <Wordmark />
-          </a>
-        ) : (
-          <Wordmark />
-        )}
-        {/* While an app is being made, the project is a placeholder: its name says nothing. */}
-        <span className="min-w-0 truncate text-sm text-quiet">
-          {project.making ? "" : project.name}
-        </span>
-        {project.making ? null : narrow ? (
-          // A phone: one window at a time.
-          <fieldset className="flex rounded-md bg-subtle p-0.5">
-            <legend className="sr-only">Window</legend>
-            {phoneList.map((w) => (
-              <label
-                key={w}
-                className={cx(
-                  "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                  phoneWindow === w && !visualize ? "bg-panel shadow-xs" : "text-muted",
-                )}
-              >
-                <input
-                  type="radio"
-                  name="window"
-                  className="sr-only"
-                  checked={phoneWindow === w && !visualize}
-                  onChange={() => showWindow(w)}
-                />
-                {WINDOW_NAMES[w === "manual" ? manual : w]}
-              </label>
-            ))}
-            {/* Visualize on a narrow screen too, over the window shown (A 150). */}
-            <label
-              className={cx(
-                "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                visualize ? "bg-panel shadow-xs" : "text-muted",
-              )}
-            >
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={visualize}
-                onChange={() => setVisualize(!visualize)}
-              />
-              Map
-            </label>
-          </fieldset>
-        ) : (
-          <>
-            <LayoutBar arrangement={arrangement} onChange={setArrangement} />
-            {/* The windows of the arrangement, each brought into view by its tab; the view with
-                No code and Code named by the one it shows (smith-first.md §6). */}
+          )}
+          {/* While an app is being made, the project is a placeholder: its name says nothing. */}
+          <span className="min-w-0 truncate text-sm text-quiet">
+            {project.making ? "" : project.name}
+          </span>
+          {project.making ? null : narrow ? (
+            // A phone: one window at a time.
             <fieldset className="flex rounded-md bg-subtle p-0.5">
-              <legend className="sr-only">Windows</legend>
-              {tabs.map((mode) => (
+              <legend className="sr-only">Window</legend>
+              {phoneList.map((w) => (
                 <label
-                  key={mode}
+                  key={w}
                   className={cx(
                     "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
-                    slotOf(mode) !== undefined ? "bg-panel shadow-xs" : "text-muted",
+                    phoneWindow === w && !visualize ? "bg-panel shadow-xs" : "text-muted",
                   )}
                 >
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="window"
                     className="sr-only"
-                    checked={slotOf(mode) !== undefined}
-                    onChange={() => workIn(mode)}
+                    checked={phoneWindow === w && !visualize}
+                    onChange={() => showWindow(w)}
                   />
-                  {WINDOW_NAMES[mode]}
+                  {WINDOW_NAMES[w === "manual" ? manual : w]}
                 </label>
               ))}
+              {/* Visualize on a narrow screen too, over the window shown (A 150). */}
               <label
                 className={cx(
                   "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
@@ -786,450 +882,601 @@ export function App() {
                 Map
               </label>
             </fieldset>
-          </>
-        )}
-        {narrow && !project.making && <PhoneSettingsButton settings={phone} onChange={setPhone} />}
-        <div className="ml-auto flex items-center gap-3">
-          {busy && <span className="text-xs text-quiet">Working…</span>}
-          {project.making ? null : project.home ? (
-            <a
-              href={project.home}
-              data-guide="publish"
-              className="text-xs font-medium text-accent hover:underline"
-            >
-              Publish and share
-            </a>
           ) : (
-            // On your own machine an app is published as an ordinary container.
-            <a
-              href="https://docs.smithable.ai/self-host.html"
-              data-guide="publish"
-              target="_blank"
-              rel="noreferrer"
-              title="smithable deploy runs it, with its Release checks, as a container"
-              className="text-xs font-medium text-accent hover:underline"
-            >
-              How to publish
-            </a>
+            <>
+              <LayoutBar arrangement={arrangement} onChange={setArrangement} />
+              {/* The windows of the arrangement, each brought into view by its tab; the view with
+                No code and Code named by the one it shows (smith-first.md §6). */}
+              <fieldset className="flex rounded-md bg-subtle p-0.5">
+                <legend className="sr-only">Windows</legend>
+                {tabs.map((mode) => (
+                  <label
+                    key={mode}
+                    className={cx(
+                      "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                      slotOf(mode) !== undefined ? "bg-panel shadow-xs" : "text-muted",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={slotOf(mode) !== undefined}
+                      onChange={() => workIn(mode)}
+                    />
+                    {WINDOW_NAMES[mode]}
+                  </label>
+                ))}
+                <label
+                  className={cx(
+                    "flex h-7 cursor-pointer items-center rounded px-2 text-xs font-medium has-focus-visible:ring-2 has-focus-visible:ring-accent/30",
+                    visualize ? "bg-panel shadow-xs" : "text-muted",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={visualize}
+                    onChange={() => setVisualize(!visualize)}
+                  />
+                  Map
+                </label>
+              </fieldset>
+            </>
           )}
-          {!project.making && !guideOff() && (
+          {narrow && !project.making && (
+            <PhoneSettingsButton settings={phone} onChange={setPhone} />
+          )}
+          <div className="ml-auto flex items-center gap-3">
+            {busy && <span className="text-xs text-quiet">Working…</span>}
+            {project.making ? null : project.home ? (
+              <a
+                href={project.home}
+                data-guide="publish"
+                className="text-xs font-medium text-accent hover:underline"
+              >
+                Publish and share
+              </a>
+            ) : (
+              // On your own machine an app is published as an ordinary container.
+              <a
+                href="https://docs.smithable.ai/self-host.html"
+                data-guide="publish"
+                target="_blank"
+                rel="noreferrer"
+                title="smithable deploy runs it, with its Release checks, as a container"
+                className="text-xs font-medium text-accent hover:underline"
+              >
+                How to publish
+              </a>
+            )}
+            {!project.making && !guideOff() && (
+              <GuideMenu onTour={startGuide} onPresent={parts.length ? presentAgain : undefined} />
+            )}
             <button
               type="button"
-              // The tour of the first window.
-              onClick={startGuide}
+              title="People of the sample data who use the app by themselves in the preview"
+              onClick={() => setPeopleOpen(true)}
               className="text-xs font-medium text-muted hover:underline"
             >
-              Guide
+              Sample users{people?.running ? " (running)" : ""}
             </button>
-          )}
-          <button
-            type="button"
-            title="People of the sample data who use the app by themselves in the preview"
-            onClick={() => setPeopleOpen(true)}
-            className="text-xs font-medium text-muted hover:underline"
-          >
-            Sample users{people?.running ? " (running)" : ""}
-          </button>
-          <button
-            type="button"
-            title="The mail the preview kept instead of sending: invitations, sign-in codes"
-            onClick={() => setOutbox(true)}
-            className="text-xs font-medium text-muted hover:underline"
-          >
-            Outbox
-          </button>
-          <a
-            href="https://docs.smithable.ai/start.html"
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs font-medium text-muted hover:underline"
-          >
-            Help
-          </a>
-          <Button
-            variant="ghost"
-            onClick={undo}
-            disabled={
-              busy || Boolean(project.making) || !project.trace.some((t) => !t.undone && !t.isUndo)
-            }
-          >
-            Undo
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={redo}
-            disabled={busy || Boolean(project.making) || !project.canRedo}
-          >
-            Redo
-          </Button>
-        </div>
-      </header>
-      {wakingNow && (
-        // A hosted workspace waking (B 58): a bar that goes by itself once it answers.
-        <div role="status" className="border-b border-line bg-accent-soft px-4 py-1.5 text-xs">
-          <div className="mb-1 h-1 overflow-hidden rounded bg-panel">
-            <div className="h-full w-1/3 animate-pulse rounded bg-accent" />
-          </div>
-          {wakingNow === "busy"
-            ? "Every workspace is busy; yours starts as soon as one is free."
-            : wakingNow === "preparing"
-              ? "Your workspace is starting; its packages are installed first, which takes about half a minute."
-              : "Your workspace is starting…"}
-        </div>
-      )}
-      {(message || pending) && (
-        // Hovering or focusing the notice keeps it while it is read.
-        // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
-        <div
-          role={message?.ok === false || pending ? "alert" : "status"}
-          onMouseEnter={() => setHolding(true)}
-          onMouseLeave={() => setHolding(false)}
-          onFocus={() => setHolding(true)}
-          onBlur={() => setHolding(false)}
-          className={cx(
-            "flex items-center gap-3 border-b px-4 py-2 text-sm",
-            pending
-              ? "border-amber-200 bg-amber-50"
-              : message?.ok
-                ? "border-green-200 bg-green-50"
-                : "border-red-200 bg-red-50",
-          )}
-        >
-          <span className="min-w-0 flex-1 whitespace-pre-wrap">
-            {pending ? pending.impact : message?.text}
-          </span>
-          {pending ? (
-            <>
-              <Button
-                variant="danger"
-                disabled={busy}
-                onClick={() =>
-                  pending.undo
-                    ? undoChanges(pending.undo, true)
-                    : run(pending.name, pending.args, true)
-                }
-              >
-                Apply anyway
-              </Button>
-              <Button variant="ghost" onClick={() => setPending(undefined)}>
-                Cancel
-              </Button>
-            </>
-          ) : message?.change ? (
-            // The change is the latest one, so undo takes back exactly it.
-            <Button variant="ghost" disabled={busy} onClick={() => void undo()}>
-              Undo this change
-            </Button>
-          ) : (
-            <>
-              {message?.failure && (
-                <Button variant="ghost" onClick={() => setTroubleshooting(true)}>
-                  Troubleshoot
-                </Button>
-              )}
-              <Button variant="ghost" onClick={() => setMessage(undefined)}>
-                Dismiss
-              </Button>
-            </>
-          )}
-        </div>
-      )}
-      {reporting && <ReportDialog onClose={() => setReporting(false)} />}
-      {troubleshooting && message && (
-        <TroubleshootDialog
-          error={message.text}
-          canUndo={project.trace.some((t) => !t.undone && !t.isUndo)}
-          onReport={() => setReporting(true)}
-          onUndo={() => void undo()}
-          onClose={() => setTroubleshooting(false)}
-        />
-      )}
-      {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
-      {peopleOpen && (
-        <PeoplePanel
-          state={people}
-          auth={spec.auth}
-          onState={setPeople}
-          onFollow={(id) =>
-            setGo((g) => ({
-              path: `/sign-in?as=${encodeURIComponent(id)}&redirect=/`,
-              key: (g?.key ?? 0) + 1,
-            }))
-          }
-          onClose={() => setPeopleOpen(false)}
-        />
-      )}
-      {guiding && !project.making && (
-        // Made again for the other way's tour, which finds its own places.
-        <Suspense fallback={null}>
-          <Guide
-            key={tour}
-            app={project.name}
-            stops={TOURS[tour]}
-            onEnd={() => {
-              setGuiding(false);
-              if (narrow) showWindow("smith");
-            }}
-            onStop={guideStop}
-            asLine={smithSays ? setGuideLine : undefined}
-          />
-        </Suspense>
-      )}
-      {project.making ? (
-        // Until the described app is in place: what is being made, not the placeholder.
-        <main className="min-h-0 flex-1 overflow-auto">
-          <Making making={project.making} project={project} />
-        </main>
-      ) : (
-        // The windows in one grid (studio-v3.md §1, §8). The preview is always its first child
-        // and only placed, so its frame is made once and keeps its page whatever moves; a window
-        // in no slot shown is not drawn, except the preview, hidden.
-        <PhoneRow narrow={narrow} pan={rowPan.handlers}>
-          <main
-            className={cx(
-              "relative grid min-h-0 flex-1 divide-line *:min-h-0 *:min-w-0",
-              narrow && "h-full",
-            )}
-            style={
-              narrow
-                ? {
-                    gridTemplateAreas: `"${slots.map((_, i) => area(i)).join(" ")}"`,
-                    gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))`,
-                    gridTemplateRows: "minmax(0, 1fr)",
-                    width: `${slots.length * 100}%`,
-                    transform: `translateX(calc(${(-phoneIndex * 100) / slots.length}% + ${rowPan.dx}px))`,
-                    transition: rowPan.dx ? "none" : "transform 250ms ease-out",
-                  }
-                : gridOf(layout, shown, slots)
-            }
-          >
-            <div
-              key="preview"
-              data-guide-view
-              className={cx(
-                "relative flex flex-col border-line bg-panel",
-                placed("preview") === undefined && "hidden",
-              )}
-              style={{ gridArea: area(placed("preview")) }}
+            <button
+              type="button"
+              title="The mail the preview kept instead of sending: invitations, sign-in codes"
+              onClick={() => setOutbox(true)}
+              className="text-xs font-medium text-muted hover:underline"
             >
-              <Preview
-                url={project.preview}
-                version={version}
-                updating={updating || busy}
-                selecting={selecting}
-                inCode={slotOf("code") !== undefined && slotOf("nocode") === undefined}
-                onSelecting={setSelecting}
-                highlight={highlight}
-                pages={pages}
-                go={go}
-              />
-              {!narrow && (
-                <PreviewArrows
-                  left={
-                    layout !== "one" && slotOf("preview") !== 0
-                      ? {
-                          hidden: hidden.left,
-                          toggle: () => setHidden((h) => ({ ...h, left: !h.left })),
-                        }
-                      : undefined
+              Outbox
+            </button>
+            <a
+              href="https://docs.smithable.ai/start.html"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-medium text-muted hover:underline"
+            >
+              Help
+            </a>
+            <Button
+              variant="ghost"
+              onClick={undo}
+              disabled={
+                busy ||
+                Boolean(project.making) ||
+                !project.trace.some((t) => !t.undone && !t.isUndo)
+              }
+            >
+              Undo
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={redo}
+              disabled={busy || Boolean(project.making) || !project.canRedo}
+            >
+              Redo
+            </Button>
+            {!project.making && (
+              // Smith's button, his face (smith-first.md §12.3): opens and closes the floating
+              // panel, or brings his window on screen.
+              <button
+                type="button"
+                aria-label="Smith"
+                aria-pressed={floating ? panelOpen : undefined}
+                title={floating ? (panelOpen ? "Close Smith" : "Ask Smith") : "Ask Smith"}
+                onClick={() =>
+                  floating
+                    ? setPanelOpen(!panelOpen)
+                    : narrow
+                      ? showWindow("smith")
+                      : workIn("smith")
+                }
+                className={cx(
+                  "smith-chip -my-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border",
+                  floating && panelOpen
+                    ? "border-accent bg-accent-soft"
+                    : "border-line hover:border-accent",
+                )}
+              >
+                <span className="scale-[0.8]">
+                  <SmithFace mood={guiding ? "pointing" : "waiting"} />
+                </span>
+              </button>
+            )}
+          </div>
+        </header>
+        {wakingNow && (
+          // A hosted workspace waking (B 58): a bar that goes by itself once it answers.
+          <div role="status" className="border-b border-line bg-accent-soft px-4 py-1.5 text-xs">
+            <div className="mb-1 h-1 overflow-hidden rounded bg-panel">
+              <div className="h-full w-1/3 animate-pulse rounded bg-accent" />
+            </div>
+            {wakingNow === "busy"
+              ? "Every workspace is busy; yours starts as soon as one is free."
+              : wakingNow === "preparing"
+                ? "Your workspace is starting; its packages are installed first, which takes about half a minute."
+                : "Your workspace is starting…"}
+          </div>
+        )}
+        {(message || pending) && (
+          // Hovering or focusing the notice keeps it while it is read.
+          // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
+          <div
+            role={message?.ok === false || pending ? "alert" : "status"}
+            onMouseEnter={() => setHolding(true)}
+            onMouseLeave={() => setHolding(false)}
+            onFocus={() => setHolding(true)}
+            onBlur={() => setHolding(false)}
+            className={cx(
+              "flex items-center gap-3 border-b px-4 py-2 text-sm",
+              pending
+                ? "border-amber-200 bg-amber-50"
+                : message?.ok
+                  ? "border-green-200 bg-green-50"
+                  : "border-red-200 bg-red-50",
+            )}
+          >
+            <span className="min-w-0 flex-1 whitespace-pre-wrap">
+              {pending ? pending.impact : message?.text}
+            </span>
+            {pending ? (
+              <>
+                <Button
+                  variant="danger"
+                  disabled={busy}
+                  onClick={() =>
+                    pending.undo
+                      ? undoChanges(pending.undo, true)
+                      : run(pending.name, pending.args, true)
                   }
-                  right={
-                    // In two windows the arrow opens the third (No code and Code by default).
-                    layout === "two" && slotOf("preview") === 1
-                      ? {
-                          hidden: true,
-                          toggle: () => {
-                            setHidden((h) => ({ ...h, right: false }));
-                            setArrangement({ ...arrangement, layout: "three" });
-                          },
-                        }
-                      : layout === "three" && slotOf("preview") !== 2
+                >
+                  Apply anyway
+                </Button>
+                <Button variant="ghost" onClick={() => setPending(undefined)}>
+                  Cancel
+                </Button>
+              </>
+            ) : message?.change ? (
+              // The change is the latest one, so undo takes back exactly it.
+              <Button variant="ghost" disabled={busy} onClick={() => void undo()}>
+                Undo this change
+              </Button>
+            ) : (
+              <>
+                {message?.failure && (
+                  <Button variant="ghost" onClick={() => setTroubleshooting(true)}>
+                    Troubleshoot
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => setMessage(undefined)}>
+                  Dismiss
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+        {reporting && <ReportDialog onClose={() => setReporting(false)} />}
+        {troubleshooting && message && (
+          <TroubleshootDialog
+            error={message.text}
+            canUndo={project.trace.some((t) => !t.undone && !t.isUndo)}
+            onReport={() => setReporting(true)}
+            onUndo={() => void undo()}
+            onClose={() => setTroubleshooting(false)}
+          />
+        )}
+        {outbox && <OutboxDialog onClose={() => setOutbox(false)} />}
+        {peopleOpen && (
+          <PeoplePanel
+            state={people}
+            auth={spec.auth}
+            onState={setPeople}
+            onFollow={(id) =>
+              setGo((g) => ({
+                path: `/sign-in?as=${encodeURIComponent(id)}&redirect=/`,
+                key: (g?.key ?? 0) + 1,
+              }))
+            }
+            onClose={() => setPeopleOpen(false)}
+          />
+        )}
+        {guiding && !project.making && (
+          // Made again for the other way's tour, which finds its own places.
+          <Suspense fallback={null}>
+            <Guide
+              key={tour}
+              app={project.name}
+              stops={TOURS[tour]}
+              onEnd={() => {
+                setGuiding(false);
+                setGuided(true);
+                setLit(undefined);
+                if (narrow) showWindow("smith");
+              }}
+              onStop={guideStop}
+              onPlace={(anchor, box) => setLit({ anchor, box })}
+              asLine={smithSays ? setGuideLine : undefined}
+            />
+          </Suspense>
+        )}
+        {project.making ? (
+          // Until the described app is in place: what is being made, not the placeholder.
+          <main className="min-h-0 flex-1 overflow-auto">
+            <Making making={project.making} project={project} />
+          </main>
+        ) : (
+          // The windows in one grid (studio-v3.md §1, §8). The preview is always its first child
+          // and only placed, so its frame is made once and keeps its page whatever moves; a window
+          // in no slot shown is not drawn, except the preview, hidden.
+          <PhoneRow narrow={narrow} pan={rowPan.handlers}>
+            <main
+              className={cx(
+                "relative grid min-h-0 flex-1 divide-line *:min-h-0 *:min-w-0",
+                narrow && "h-full",
+              )}
+              style={
+                narrow
+                  ? {
+                      gridTemplateAreas: `"${slots.map((_, i) => area(i)).join(" ")}"`,
+                      gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))`,
+                      gridTemplateRows: "minmax(0, 1fr)",
+                      width: `${slots.length * 100}%`,
+                      transform: `translateX(calc(${(-phoneIndex * 100) / slots.length}% + ${rowPan.dx}px))`,
+                      transition: rowPan.dx ? "none" : "transform 250ms ease-out",
+                    }
+                  : gridOf(layout, shown, slots)
+              }
+            >
+              <div
+                key="preview"
+                data-guide-view
+                className={cx(
+                  "relative flex flex-col border-line bg-panel",
+                  placed("preview") === undefined && "hidden",
+                )}
+                style={{ gridArea: area(placed("preview")) }}
+              >
+                <Preview
+                  url={project.preview}
+                  version={version}
+                  updating={updating || busy}
+                  selecting={selecting}
+                  inCode={slotOf("code") !== undefined && slotOf("nocode") === undefined}
+                  onSelecting={setSelecting}
+                  highlight={highlight}
+                  pages={pages}
+                  go={go}
+                />
+                {!narrow && (
+                  <PreviewArrows
+                    left={
+                      layout !== "one" && slotOf("preview") !== 0
                         ? {
-                            hidden: hidden.right,
-                            toggle: () => setHidden((h) => ({ ...h, right: !h.right })),
+                            hidden: hidden.left,
+                            toggle: () => setHidden((h) => ({ ...h, left: !h.left })),
                           }
                         : undefined
-                  }
-                />
-              )}
-            </div>
-            {shown.map((s) => {
-              const content = slots[s] as SlotContent;
-              if (content === "preview" || placed(windowsIn(content, manual)[0] as WindowId) !== s)
-                return null;
-              return (
-                <div
-                  key={content}
-                  data-window={content}
-                  className={cx(
-                    "flex flex-col border-line",
-                    s > 0 && "border-l",
-                    layout === "three-below" && s === 2 && "border-t border-l-0",
-                  )}
-                  style={{ gridArea: area(s) }}
-                >
-                  {narrow && content === "smith+changes" && (
-                    // A phone: Smith or Changes, by these tabs or a swipe in the window.
-                    <div
-                      data-subtabs
-                      className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
-                    >
-                      <Tabs
-                        tabs={[
-                          ["smith", WINDOW_NAMES.smith],
-                          ["changes", "Changes"],
-                        ]}
-                        value={phoneSub}
-                        onChange={setPhoneSub}
-                      />
-                    </div>
-                  )}
-                  {content === "manual" && (
-                    // No code and Code: the view's two sub-tabs (smith-first.md §6).
-                    <div
-                      data-guide="manual"
-                      data-subtabs
-                      className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
-                    >
-                      <Tabs
-                        tabs={[
-                          ["nocode", WINDOW_NAMES.nocode],
-                          ...(narrow && !phone.code
-                            ? []
-                            : [["code", WINDOW_NAMES.code] as [ManualView, string]]),
-                        ]}
-                        value={manual}
-                        onChange={(sub) => setArrangement({ ...arrangement, manual: sub })}
-                      />
-                    </div>
-                  )}
-                  {(content === "manual" ? [manual] : windowsIn(content)).map((w) => {
-                    const made =
-                      w === "nocode" ? (
-                        <NoCode
-                          key={w}
-                          project={project}
-                          spec={spec}
-                          run={run}
-                          place={place.nocode}
-                          onPlace={nocodePlace}
+                    }
+                    right={
+                      // In two windows the arrow opens the third (No code and Code by default).
+                      layout === "two" && slotOf("preview") === 1
+                        ? {
+                            hidden: true,
+                            toggle: () => {
+                              setHidden((h) => ({ ...h, right: false }));
+                              setArrangement({ ...arrangement, layout: "three" });
+                            },
+                          }
+                        : layout === "three" && slotOf("preview") !== 2
+                          ? {
+                              hidden: hidden.right,
+                              toggle: () => setHidden((h) => ({ ...h, right: !h.right })),
+                            }
+                          : undefined
+                    }
+                  />
+                )}
+              </div>
+              {shown.map((s) => {
+                const content = slots[s] as SlotContent;
+                if (
+                  content === "preview" ||
+                  placed(windowsIn(content, manual)[0] as WindowId) !== s
+                )
+                  return null;
+                return (
+                  <div
+                    key={content}
+                    data-window={content}
+                    className={cx(
+                      "flex flex-col border-line",
+                      s > 0 && "border-l",
+                      layout === "three-below" && s === 2 && "border-t border-l-0",
+                    )}
+                    style={{ gridArea: area(s) }}
+                  >
+                    {narrow && content === "smith+changes" && (
+                      // A phone: Smith or Changes, by these tabs or a swipe in the window.
+                      <div
+                        data-subtabs
+                        className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
+                      >
+                        <Tabs
+                          tabs={[
+                            ["smith", WINDOW_NAMES.smith],
+                            ["changes", "Changes"],
+                          ]}
+                          value={phoneSub}
+                          onChange={setPhoneSub}
                         />
-                      ) : w === "code" ? (
-                        <Suspense
-                          key={w}
-                          fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
-                        >
-                          <Code
+                      </div>
+                    )}
+                    {content === "manual" && (
+                      // No code and Code: the view's two sub-tabs (smith-first.md §6).
+                      <div
+                        data-guide="manual"
+                        data-subtabs
+                        className="shrink-0 border-b border-line bg-panel px-3 py-1.5"
+                      >
+                        <Tabs
+                          tabs={[
+                            ["nocode", WINDOW_NAMES.nocode],
+                            ...(narrow && !phone.code
+                              ? []
+                              : [["code", WINDOW_NAMES.code] as [ManualView, string]]),
+                          ]}
+                          value={manual}
+                          onChange={(sub) => setArrangement({ ...arrangement, manual: sub })}
+                        />
+                      </div>
+                    )}
+                    {(content === "manual" ? [manual] : windowsIn(content)).map((w) => {
+                      const made =
+                        w === "nocode" ? (
+                          <NoCode
+                            key={w}
                             project={project}
                             spec={spec}
                             run={run}
-                            place={place.code}
-                            onPlace={codePlace}
-                            jumpTo={codeJump}
-                            onJumped={forgetJump}
-                            onLook={() => {
-                              nocodePlace({ sub: "look" });
-                              if (narrow) showWindow("nocode");
-                              else workIn("nocode");
-                            }}
+                            place={place.nocode}
+                            onPlace={nocodePlace}
                           />
-                        </Suspense>
-                      ) : w === "smith" ? (
-                        <Panel key={w} title="Ask Smith" className="min-h-0 flex-[3]">
-                          <div data-guide="change" className="flex h-full min-h-0 flex-col">
-                            <Ask
-                              peopleRunning={people?.running}
-                              guide={guiding ? guideLine : undefined}
-                              presentFirst={Boolean(firstVisit)}
-                              assumptions={assumptions}
-                              onPresented={() => setPresented(true)}
-                              {...(project.beta ? { beta: project.beta } : {})}
-                              words={words}
-                              waiting={project.waiting}
-                              trace={project.trace}
-                              ready={{
-                                sections,
-                                parts,
-                                appName: project.name,
-                                notes: (spec.diagnostics ?? []).filter(
-                                  (d) => d.severity === "note",
-                                ),
-                                ...(project.home ? { home: project.home } : {}),
-                                apply: (op, args) => void run(op, args),
+                        ) : w === "code" ? (
+                          <Suspense
+                            key={w}
+                            fallback={<p className="p-3 text-sm text-quiet">Opening Code…</p>}
+                          >
+                            <Code
+                              project={project}
+                              spec={spec}
+                              run={run}
+                              place={place.code}
+                              onPlace={codePlace}
+                              jumpTo={codeJump}
+                              onJumped={forgetJump}
+                              onLook={() => {
+                                nocodePlace({ sub: "look" });
+                                if (narrow) showWindow("nocode");
+                                else workIn("nocode");
                               }}
                             />
-                          </div>
-                        </Panel>
+                          </Suspense>
+                        ) : w === "smith" ? (
+                          <Panel
+                            key={w}
+                            title="Ask Smith"
+                            className="min-h-0 flex-[3]"
+                            actions={
+                              !narrow && (
+                                <button
+                                  type="button"
+                                  onClick={float}
+                                  title="Smith over the preview, opened from his face in the top bar"
+                                  className="text-xs font-medium text-muted hover:underline"
+                                >
+                                  Float
+                                </button>
+                              )
+                            }
+                          >
+                            {/* While the overlay is on, the thread is there; this is where it comes. */}
+                            {layerOn ? <div data-smith-dock className="h-full" /> : smith("window")}
+                          </Panel>
+                        ) : (
+                          <Panel
+                            key={w}
+                            title="Changes"
+                            className={cx(
+                              "min-h-0",
+                              content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
+                            )}
+                          >
+                            <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
+                              <Trace
+                                entries={project.trace}
+                                words={words}
+                                plugins={spec.plugins}
+                                onUndo={(ids) => void undoChanges(ids)}
+                              />
+                            </div>
+                          </Panel>
+                        );
+                      // On a phone Smith and Changes share a window: the one not shown stays,
+                      // hidden, so Smith's presentation and the guide's line go on.
+                      return narrow && content === "smith+changes" ? (
+                        <div key={w} className={w === phoneSub ? "contents" : "hidden"}>
+                          {made}
+                        </div>
                       ) : (
-                        <Panel
-                          key={w}
-                          title="Changes"
-                          className={cx(
-                            "min-h-0",
-                            content === "smith+changes" ? "flex-[2] border-t" : "flex-1",
-                          )}
-                        >
-                          <div data-guide="changes" className="min-h-0 flex-1 overflow-auto">
-                            <Trace
-                              entries={project.trace}
-                              words={words}
-                              plugins={spec.plugins}
-                              onUndo={(ids) => void undoChanges(ids)}
-                            />
-                          </div>
-                        </Panel>
+                        made
                       );
-                    // On a phone Smith and Changes share a window: the one not shown stays,
-                    // hidden, so Smith's presentation and the guide's line go on.
-                    return narrow && content === "smith+changes" ? (
-                      <div key={w} className={w === phoneSub ? "contents" : "hidden"}>
-                        {made}
-                      </div>
-                    ) : (
-                      made
-                    );
-                  })}
+                    })}
+                  </div>
+                );
+              })}
+              {visualize && (
+                // Over the whole window below the header; the windows keep their state underneath.
+                <div className="absolute inset-0 z-20">
+                  <Visualize
+                    ir={spec.ir}
+                    auth={spec.auth}
+                    onOpen={(concept) => {
+                      workIn("nocode");
+                      // After No code is on screen to hear it.
+                      setTimeout(() =>
+                        window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: concept })),
+                      );
+                    }}
+                  />
                 </div>
-              );
-            })}
-            {visualize && (
-              // Over the whole window below the header; the windows keep their state underneath.
-              <div className="absolute inset-0 z-20">
-                <Visualize
-                  ir={spec.ir}
-                  auth={spec.auth}
-                  onOpen={(concept) => {
-                    workIn("nocode");
-                    // After No code is on screen to hear it.
-                    setTimeout(() =>
-                      window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: concept })),
-                    );
-                  }}
-                />
+              )}
+            </main>
+            {narrow && guiding && guideLine && phoneWindow !== "smith" && (
+              // The guide's line where Smith's thread is not on screen: one line at the window's
+              // foot, with its chips (A 172).
+              <div
+                data-guide-card={guideLine.stop.anchor}
+                className="absolute inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-line bg-panel px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {guideLine.stop.title}: {guideLine.stop.text}
+                </span>
+                <Button onClick={guideLine.next}>
+                  {guideLine.at === guideLine.count - 1 ? "Done" : "Next"}
+                </Button>
+                {guideLine.at < guideLine.count - 1 && (
+                  <Button variant="ghost" onClick={guideLine.end}>
+                    Skip guide
+                  </Button>
+                )}
               </div>
             )}
-          </main>
-          {narrow && guiding && guideLine && phoneWindow !== "smith" && (
-            // The guide's line where Smith's thread is not on screen: one line at the window's
-            // foot, with its chips (A 172).
-            <div
-              data-guide-card={guideLine.stop.anchor}
-              className="absolute inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-line bg-panel px-3 py-2 text-sm"
-            >
-              <span className="min-w-0 flex-1 truncate">
-                {guideLine.stop.title}: {guideLine.stop.text}
-              </span>
-              <Button onClick={guideLine.next}>
-                {guideLine.at === guideLine.count - 1 ? "Done" : "Next"}
-              </Button>
-              {guideLine.at < guideLine.count - 1 && (
-                <Button variant="ghost" onClick={guideLine.end}>
-                  Skip guide
-                </Button>
-              )}
-            </div>
-          )}
-        </PhoneRow>
+          </PhoneRow>
+        )}
+      </div>
+      {layerOn && (
+        <SmithLayer
+          mode={layer ?? "panel"}
+          appName={project.name}
+          lighter={previewRuns}
+          phone={narrow}
+          motion={motion}
+          open={panelOpen}
+          side={
+            guiding
+              ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight)
+              : "right"
+          }
+          {...(layer === "closing" && !floating ? { target: narrow ? undefined : dockedAt() } : {})}
+          {...(guided && !guiding && !show.going ? { foldAfter: 90_000 } : {})}
+          activity={project.trace.length}
+          onNext={() => (show.said >= parts.length ? previewRuns && closeOverlay() : show.next())}
+          onSkip={closeOverlay}
+          onClosed={() => {
+            setLayer(floating ? "panel" : undefined);
+            setPresented(true);
+            if (narrow) showWindow("smith");
+          }}
+          onFold={() => setPanelOpen(false)}
+          onDock={dock}
+        >
+          {smith(layer === "overlay" ? "overlay" : "panel")}
+        </SmithLayer>
+      )}
+    </div>
+  );
+}
+
+/** Guide in the top bar: the tour of Studio, and Smith's presentation again (smith-first.md §12.6). */
+function GuideMenu({ onTour, onPresent }: { onTour: () => void; onPresent?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => {
+      if (!menu.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+  const item = (label: string, act: () => void) => (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={() => {
+        setOpen(false);
+        act();
+      }}
+      className="block w-full px-3 py-1.5 text-left text-sm whitespace-nowrap hover:bg-subtle"
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div ref={menu} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="text-xs font-medium text-muted hover:underline"
+      >
+        Guide
+      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label="Guide"
+          className="absolute top-full right-0 z-40 mt-2 rounded-md border border-line bg-panel py-1 shadow-lg"
+        >
+          {item("Tour Studio", onTour)}
+          {onPresent && item("Present the app again", onPresent)}
+        </div>
       )}
     </div>
   );
@@ -1314,6 +1561,15 @@ function Wordmark() {
       <img src={wordmark} alt="Smithable" className="h-5 w-auto" />
     </picture>
   );
+}
+
+/** Whether this browser has seen Smith present this app on the overlay. */
+function seenOverlay(app: string): boolean {
+  try {
+    return localStorage.getItem(presentedKey(app)) === "1";
+  } catch {
+    return false;
+  }
 }
 
 /** Whether this browser has seen the guide for this app. */
