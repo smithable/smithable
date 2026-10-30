@@ -1,8 +1,7 @@
 smithable: 0.1
 app:
-  name: Toolshed Commons
-  description: Neighbors list the tools they own and lend them to each other.
-  currency: EUR
+  name: Tool Shed
+  description: Neighbors lend each other the tools they own instead of everyone buying their own.
 models:
   Tool:
     fields:
@@ -14,32 +13,18 @@ models:
       place: string
       available: bool = true
     review: [photos]
-  Loan:
-    fields:
-      tool: Tool!
-      borrower: string!
-      borrowedOn: date!
-      dueOn: date
-      status: out | returned
-      note: text
 pages:
   tools:
     route: /
     crud: Tool
     search: [title, description, place]
     filters: [category, condition, available]
+    sortable: [title, createdAt]
     favorites: true
     contact: owner
   myTools:
     crud: Tool
     mine: true
-  loans:
-    crud: Loan
-    mine: true
-    filters: [status, tool, dueOn]
-    defaultFilter:
-      status: out
-    actions: [markReturned]
   saved:
     crud: Tool
     favorites: only
@@ -51,18 +36,12 @@ pages:
       hero:
         button: tools
         secondButton: myTools
+      latest:
+        records: Tool
       features:
       faq:
       footer:
   privacy:
     route: /privacy
     legal: privacy
-actions:
-  markReturned:
-    on: Loan
-    when:
-      status: out
-    set:
-      status: returned
-    intent: Record that the borrowed tool has come back.
-navigation: [tools, myTools, loans, saved, review]
+navigation: [tools, myTools, saved, review]

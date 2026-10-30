@@ -1,87 +1,99 @@
 smithable: 0.1
-
 app:
-  name: Acme CRM
-  description: Lightweight CRM for a small B2B sales team.
+  name: Pipeline CRM
+  description: A simple CRM where a small sales team tracks companies, contacts, deals and follow-ups.
   currency: EUR
-  timezone: Europe/Mariehamn
-
 models:
-  Customer:
-    description: A company we have a commercial relationship with.
-    trash: true                       # a deleted customer can be restored for thirty days
-    fields:
-      name: string!
-      email: email unique
-      phone: phone
-      segment: smb | enterprise | government      # first value is the default
-      creditLimit:
-        type: money
-        min: 0
-        description: Maximum outstanding balance before new orders are held.
-      notes: text
-      accountManager: User
-      orders: Order[]                # every order that refers to this customer
-    ownedBy: accountManager          # the account manager owns the customer
-
-  Order:
-    trash: true
-    fields:
-      number: string! unique
-      customer: Customer!
-      status: draft | placed | shipped | canceled
-      total: money!
-      shippingMethod: standard | express
-      shippingCost:
-        type: money
-        formula: IF(AND(shippingMethod = "standard", total > 100), 0, IF(shippingMethod = "express", 15, 5))
-        description: Standard shipping is free above 100 EUR, otherwise 5 EUR. Express always costs 15 EUR.
-        examples:
-          - input: { total: 150, shippingMethod: standard }
-            expected: 0
-          - input: { total: 80, shippingMethod: standard }
-            expected: 5
-          - input: { total: 150, shippingMethod: express }
-            expected: 15
-      placedAt: datetime = NOW()
   Company:
     fields:
       name: string!
+      website: url
+      phone: phone
+      industry: string
       notes: text
+      accountManager: User
+      contacts: Contact[]
+      deals: Deal[]
+      followUps: FollowUp[]
+    ownedBy: accountManager
+    trash: true
   Contact:
     fields:
       name: string!
+      company: Company
+      jobTitle: string
+      email: email
+      phone: phone
       notes: text
+    trash: true
   Deal:
     fields:
-      name: string!
+      title: string!
+      company: Company!
+      contact: Contact
+      stage: lead | qualified | proposal | negotiation | won | lost
+      value:
+        type: money
+        min: 0
+      expectedClose: date
+      closedOn:
+        type: date
+        by: app
       notes: text
+    trash: true
   FollowUp:
     fields:
-      name: string!
-      notes: text
-
-actions:
-  mergeCustomers:
-    custom: true
-    input: { keep: Customer!, duplicate: Customer! }
-    intent: Merge a duplicate customer record into the one we keep.
-    rules:
-      - All orders of the duplicate move to the kept customer.
-      - Empty fields on the kept customer are filled from the duplicate.
-      - The duplicate is deleted afterwards.
-
+      company: Company!
+      deal: Deal
+      contact: Contact
+      dueOn: date! = TODAY()
+      assignee: User = ME()
+      done: bool
+      note: text
+    trash: true
 pages:
-  team:
-    intent: Invite colleagues and manage who has access.
-    users: manage
   companies:
     crud: Company
+    search: [name, industry]
+    actions: [mergeCompanies]
   contacts:
     crud: Contact
+    search: [name, email, jobTitle]
+    filters: [company]
   deals:
     crud: Deal
-  follow-ups:
+    search: [title]
+    filters: [stage, company, expectedClose]
+    actions: [markWon, markLost]
+  team:
+    users: manage
+  followUps:
     crud: FollowUp
-
-navigation: [team, companies, contacts, deals, follow-ups]
+    search: [note]
+    filters: [done, dueOn, assignee]
+    defaultFilter:
+      done: false
+    actions: [completeFollowUp]
+actions:
+  markWon:
+    on: Deal
+    when:
+      stage: [lead, qualified, proposal, negotiation]
+    set:
+      stage: won
+      closedOn: TODAY()
+  markLost:
+    on: Deal
+    when:
+      stage: [lead, qualified, proposal, negotiation]
+    set:
+      stage: lost
+      closedOn: TODAY()
+  mergeCompanies:
+    merge: Company
+  completeFollowUp:
+    on: FollowUp
+    when:
+      done: false
+    set:
+      done: true

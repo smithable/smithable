@@ -3,8 +3,8 @@
   "starter": "booking",
   "wordStarter": "records",
   "questions": [
-    "Who registers attendees?",
+    "What do attendees register for?",
     "What can visitors see without signing in?",
-    "What do attendees register for?"
+    "Who manages talks and speakers?"
   ]
 }

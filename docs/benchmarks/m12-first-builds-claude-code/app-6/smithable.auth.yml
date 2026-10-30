@@ -4,22 +4,21 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
+  member:
+    description: A union member who browses jobs and applies for them.
+    pages: [home, jobs, myApplications, privacy]
+    create: [Application]
   staff:
-    description: Union staff who post jobs and review applications.
+    description: Union office staff who post jobs and handle applications.
     pages: all
     create: [Job]
-    read: all
-    write: all
+    read: [Application]
+    write: [Job, Application]
     delete: [Job]
-  member:
-    description: Union members who browse jobs and apply.
-    pages: [jobs, applications]
-    create: [Application]
-    read: [Job]
 assistant:
   for: signed-in
-defaultRole: member
 public:
   pages: [home, jobs, privacy]
   read: [{ Job: { where: { status: open } } }]
+defaultRole: member
 admins: [johan@smithable.ai]

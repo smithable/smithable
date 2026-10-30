@@ -6,7 +6,7 @@ defaultAccess: shared
 roles:
   admin: all
   agent:
-    description: "Works the tickets: takes them, passes them on and closes them."
+    description: "Works the tickets: takes them, handles them and passes them on."
     pages: [tickets]
     create: all
     write: all

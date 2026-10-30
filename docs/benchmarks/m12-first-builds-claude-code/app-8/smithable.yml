@@ -1,14 +1,11 @@
 smithable: 0.1
 app:
-  name: Confhub
-  description: "Programme and registration for a conference: browse the talks and speakers, and sign up for the talks you want to attend."
-  currency: EUR
-  timezone: Europe/Stockholm
+  name: Northlight Conference
+  description: Talks, speakers and registration for a conference, where attendees reserve their seat in the talks they want to hear.
 models:
   Speaker:
     fields:
       name: string!
-      title: string
       company: string
       bio: markdown
       portrait: picture
@@ -21,7 +18,6 @@ models:
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
-      track: keynote | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -39,26 +35,25 @@ models:
       closes: talk.startsAt
       cancelUntil: talk.startsAt
 pages:
-  schedule:
-    calendar:
-      model: Talk
-      starts: startsAt
-  my-registrations:
-    crud: Registration
   talks:
     crud: Talk
-    filters: [speaker, track, startsAt]
+    filters: [speaker, startsAt]
     defaultFilter:
       startsAt: upcoming
   speakers:
     crud: Speaker
+  my-registrations:
+    crud: Registration
+  schedule:
+    calendar:
+      model: Talk
+      starts: startsAt
   home:
     route: /
     landing:
       hero:
         button: schedule
-        secondButton: speakers
-      programme:
+      program:
         records: Talk
       lineup:
         records: Speaker
@@ -71,4 +66,3 @@ pages:
     legal: privacy
   admin:
     data: all
-navigation: [schedule, my-registrations, talks, speakers, home, admin]

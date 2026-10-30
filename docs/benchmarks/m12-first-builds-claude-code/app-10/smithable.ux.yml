@@ -3,6 +3,11 @@ pages:
   recipes:
     table:
       view: cards
+    icon: book
+  shoppingLists:
+    table:
+      sort: -shopOn
+    icon: cart
 tones:
   ShoppingList.status:
     done: success

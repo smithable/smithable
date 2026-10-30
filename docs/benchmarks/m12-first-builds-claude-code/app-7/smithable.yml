@@ -1,13 +1,13 @@
 smithable: 0.1
 app:
-  name: Club Football
+  name: Club Pitch
   description: The club's public site with its teams, players, fixtures and results.
-  timezone: Europe/Stockholm
+  timezone: Europe/Mariehamn
 models:
   Team:
     fields:
       name: string!
-      ageGroup: string
+      category: senior | youth | women | veterans
       coach: string
       about: text
       photo: picture
@@ -17,11 +17,11 @@ models:
     fields:
       name: string!
       team: Team!
-      position: goalkeeper | defender | midfielder | forward
-      shirtNumber:
+      number:
         type: int
         min: 1
         max: 99
+      position: goalkeeper | defender | midfielder | forward
       photo: picture
       bio: text
   Match:
@@ -29,10 +29,10 @@ models:
       team: Team!
       opponent: string!
       kickoff: datetime!
-      venue: home | away | neutral
+      venue: home | away
       location: string
       competition: string
-      status: scheduled | played | postponed | cancelled
+      status: scheduled | played | postponed | canceled
       goalsFor:
         type: int
         min: 0
@@ -44,32 +44,31 @@ models:
 pages:
   matches:
     crud: Match
-    filters: [team, status, venue, kickoff]
     search: [opponent, competition]
+    filters: [team, status, venue, kickoff]
     actions: [recordResult, postpone]
   teams:
     crud: Team
+    filters: [category]
   players:
     crud: Player
-    filters: [team, position]
     search: [name]
+    filters: [team, position]
   home:
     route: /
     landing:
       hero:
         button: matches
         secondButton: teams
-      upcoming:
+      fixtures:
         records: Match
-        view: table
         where:
           status: scheduled
       results:
         records: Match
-        view: table
         where:
           status: played
-      ourTeams:
+      squads:
         records: Team
       footer:
   privacy:
@@ -84,11 +83,10 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match and mark it played.
+    intent: Enter the final score of a match once it has been played.
   postpone:
     on: Match
     when:
       status: scheduled
     set:
       status: postponed
-    intent: Mark a match as postponed.

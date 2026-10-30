@@ -3,7 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "invoicing",
   "questions": [
-    "How should payments be tracked?",
-    "Can clients see their invoices without signing in?"
+    "Who uses the app?",
+    "Can clients see their invoices without signing in?",
+    "How are payments recorded against an invoice?"
   ]
 }

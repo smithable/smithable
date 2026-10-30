@@ -4,11 +4,14 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member: { pages: [schedule, my-bookings], create: [Booking] }
+  member:
+    description: A student who books classes.
+    pages: [schedule, my-bookings]
+    create: [Booking]
 assistant:
   for: signed-in
 public:
   pages: [home, schedule, privacy]
   read: [ClassType, Instructor, Session]
-  create: [Message]
+defaultRole: member
 admins: [johan@smithable.ai]

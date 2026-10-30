@@ -1,6 +1,10 @@
 {
   "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
-  "starter": "?",
+  "starter": "crm",
   "wordStarter": "crm",
-  "questions": []
+  "questions": [
+    "Who on the team can see which companies and deals?",
+    "What should a deal hold?",
+    "What is a follow-up attached to?"
+  ]
 }

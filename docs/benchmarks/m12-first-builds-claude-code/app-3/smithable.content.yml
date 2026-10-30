@@ -3,15 +3,19 @@ pages:
   home:
     hero:
       title: Get paid for your work, without the paperwork
-      subtitle: Keep your clients in one place, send clear invoices and see at a glance what has been paid and what is still owed.
+      subtitle: Ledgerly keeps your clients, invoices and payments in one tidy place, so you always know who owes you what.
+      button: Start invoicing
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
+    callToAction:
+      title: Send your next invoice in minutes
+      button: Sign in
     features:
-      items: [{ title: Clients at hand, text: "Store each client's contact details, address and VAT number once, and reuse them on every invoice." }, { title: Invoices in minutes, text: Add lines with quantity and price; the totals add up by themselves. }, { title: Payments tracked, text: "Record each payment as it arrives, including partial ones, and always know the balance left." }, { title: Nothing slips by, text: Invoices still unpaid a week past their due date are marked overdue for you. }]
+      items: [{ title: Clients at hand, text: "Keep each client's contact details, address and VAT number ready for every invoice." }, { title: Invoices with lines, text: Add lines with quantity and price; the totals add themselves up. }, { title: Payments tracked, text: Record full or partial payments and see the balance left on each invoice. }, { title: Late invoices flagged, text: Invoices still unpaid a week past their due date are marked overdue for you. }]
     faq:
-      items: [{ question: Who can see my invoices?, answer: "Only you. Every freelancer's clients, invoices and payments are private to their own account." }, { question: Can a client pay in several parts?, answer: Yes. Record each payment against the invoice and the remaining balance updates right away. }, { question: Does my client get the invoice by mail?, answer: "When you mark an invoice as sent, your client is notified at the email address you keep for them." }]
+      items: [{ question: Who can see my invoices?, answer: "Only you. Every freelancer sees just their own clients, invoices and payments." }, { question: Can a client pay in parts?, answer: Yes. Record each payment as it arrives and the invoice shows what is still due. }, { question: Is the client told when I send an invoice?, answer: "Yes, marking an invoice as sent mails the client at their address." }]
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

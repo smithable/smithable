@@ -1,8 +1,8 @@
 smithable: 0.1
 app:
-  name: Lotus Room Yoga
+  name: Saltwind Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
-  currency: EUR
+  currency: SEK
   timezone: Europe/Stockholm
 models:
   ClassType:
@@ -39,12 +39,7 @@ models:
       per: session
       max: session.capacity
       closes: session.startsAt
-      cancelUntil: session.startsAt
-  Message:
-    fields:
-      name: string!
-      email: email!
-      message: text!
+      cancelUntil: 2 hours before session.startsAt
 pages:
   schedule:
     calendar:
@@ -57,14 +52,11 @@ pages:
     filters: [classType, instructor, startsAt]
     defaultFilter:
       startsAt: upcoming
-    sortable: [startsAt, capacity]
   class-types:
     crud: ClassType
     filters: [level]
   instructors:
     crud: Instructor
-  messages:
-    crud: Message
   home:
     route: /
     landing:
@@ -77,18 +69,8 @@ pages:
       faq:
       callToAction:
         button: schedule
-      contact:
-        form: Message
       footer:
   privacy:
     route: /privacy
     legal: privacy
-  admin:
-    data: all
-navigation:
-  main: [schedule, my-bookings, sessions, class-types, instructors, messages, home, privacy, admin]
-  schedule: [schedule, my-bookings, sessions]
-  messages: [messages]
-  studioSetup: [class-types, instructors]
-  website: [home]
-  admin: [admin]
+navigation: [schedule, my-bookings, sessions, class-types, instructors, home]
