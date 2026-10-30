@@ -18,6 +18,7 @@ import { Wizard, type WizardKind } from "../builder/Wizard";
 import type { CodeJump } from "../code-jump";
 import { FILE_DOCS } from "../docs";
 import { checkFile, type Spec } from "../engine";
+import { HelpMark } from "../help";
 import { isPreviewMessage, type Place } from "../preview";
 import { Button, Select } from "../ui";
 
@@ -317,15 +318,11 @@ function SpecEditor({
         {project.files[EDITABLE_FILES[file]] === undefined && (
           <span className="text-quiet">Not in the project yet: saving adds it.</span>
         )}
-        <Button
-          variant="ghost"
-          className="ml-auto h-6 whitespace-nowrap text-xs"
-          // Keeps the editor's focus (and a phone's keyboard) where it is.
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setAsk((n) => n + 1)}
-        >
-          What goes here?
-        </Button>
+        {/* "What goes here?" is a question mark (Johan, A 204): the editor's list at the cursor,
+            and a card saying what it is, with Ctrl-Space. */}
+        <span className="ml-auto">
+          <HelpMark topic="code" onOpen={() => setAsk((n) => n + 1)} />
+        </span>
       </div>
       {nothing && (
         <p role="status" className="border-b border-line bg-subtle px-2 py-1 text-xs text-muted">
@@ -339,8 +336,8 @@ function SpecEditor({
           className="flex flex-wrap items-center gap-x-2 border-b border-line bg-subtle px-2 py-1 text-xs text-muted"
         >
           <span>
-            Ctrl-Space (⌃Space on a Mac) lists what fits where the cursor is, and "What goes here?"
-            does the same.
+            Ctrl-Space (⌃Space on a Mac) lists what fits where the cursor is, and the question mark
+            above does the same.
           </span>
           <Button variant="ghost" className="h-6 whitespace-nowrap text-xs" onClick={hintSeen}>
             Got it
