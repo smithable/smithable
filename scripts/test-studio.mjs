@@ -724,6 +724,10 @@ try {
       await set.getByLabel("Status becomes").selectOption("shipped");
       await cancel.getByRole("button", { name: "Change the values" }).click();
       await until((a) => /status: shipped/.test(a), "the values do not set shipped");
+      // Studio has it too: the rows are drawn again from the file, nothing left to change.
+      await cancel
+        .getByRole("button", { name: "Change the values" })
+        .waitFor({ state: "detached", timeout: 30000 * P });
       // The formula has its question mark, a card with the docs (A 204).
       await set.getByRole("radio", { name: "a formula" }).check();
       await set.getByRole("button", { name: "A formula" }).click();
