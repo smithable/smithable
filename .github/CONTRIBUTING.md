@@ -39,7 +39,7 @@ Smithable has three contracts. Each has its own version, and they are kept separ
 - **The engine** (operations, CLI flags and the MCP tools) follows the packages' semver. An operation, an argument or a CLI flag that goes away is still accepted for one minor release, with a message that names its replacement.
 - **A generated app's API** (`/api/v1`) moves to `v2` only when the generator changes the API's shape incompatibly.
 
-During 0.x, every breaking change gets a line under **Breaking** in [CHANGELOG.md](../CHANGELOG.md) that names which contract it hits. Nothing breaks a generated app that is not upgraded: an app is its owner's, and `smithable upgrade` is the only way forward. It is checked like any change, and it can be undone. Hosted apps are offered engine upgrades, never forced to take them ([ARCHITECTURE §14.3](../docs/ARCHITECTURE.md)).
+During 0.x, every breaking change gets a line under **Breaking** in [CHANGELOG.md](../CHANGELOG.md) that names which contract it hits. Nothing breaks a generated app that is not upgraded: an app is its owner's, and `smithable upgrade` is the only way forward. It is checked like any change, and it can be undone. Hosted apps are offered engine upgrades, never forced to take them ([ARCHITECTURE §14.3](../docs/ARCHITECTURE.md)); security updates to the app kit and the platform are the exception: Smithable applies them and tells the owner, as [SECURITY.md](SECURITY.md) says.
 
 ## Sign-off
 
