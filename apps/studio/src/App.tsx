@@ -698,7 +698,10 @@ export function App() {
   // A phone shows each stop's window as the tour reaches it, and the preview after it (A 161).
   // Floating, the screen as it was before the tour comes back after it (the preview alone).
   const beforeGuide = useRef<{ arrangement: typeof arrangement; hidden: typeof hidden }>(undefined);
+  // The tour as it started: the shown change opens Code on the way, which is not Code's tour.
+  const [touring, setTouring] = useState<keyof typeof TOURS>("nocode");
   const startGuide = () => {
+    setTouring(tour);
     if (floating && !guiding) beforeGuide.current = { arrangement, hidden };
     // The view with No code and Code comes into view for the tour's stops in it.
     if (tour === "nocode" && !narrow) workIn("nocode");
@@ -1191,9 +1194,9 @@ export function App() {
           // Made again for the other way's tour, which finds its own places.
           <Suspense fallback={null}>
             <Guide
-              key={tour}
+              key={touring}
               app={project.name}
-              stops={TOURS[tour]}
+              stops={TOURS[touring]}
               onEnd={() => {
                 setGuiding(false);
                 setGuided(true);

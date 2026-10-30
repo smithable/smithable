@@ -93,7 +93,7 @@ export function Guide({
   onPlace,
   asLine,
   cards = true,
-  shown,
+  shown: offer,
 }: {
   app: string;
   /** The tour of the view's open sub-tab (guide.ts). */
@@ -119,6 +119,9 @@ export function Guide({
   const [step, setStep] = useState<Shown>();
   const [stepPlace, setStepPlace] = useState<HTMLElement>();
   const offered = useRef(false);
+  // The shown change as it was offered: Studio makes it anew each render, and once its field is
+  // added the next kind of record without one would be the one named.
+  const [shown, setShown] = useState<ShownChange>();
   const current = stops[at];
   // Back to where the person was when the tour ends.
   const before = useRef<Element | null>(null);
@@ -135,8 +138,9 @@ export function Guide({
   };
   const onward = () => (at === stops.length - 1 ? end() : setAt(at + 1));
   const next = () => {
-    if (current?.stop.anchor === "change" && shown && !offered.current) {
+    if (current?.stop.anchor === "change" && offer && !offered.current) {
       offered.current = true;
+      setShown(offer);
       return setStep("offer");
     }
     onward();

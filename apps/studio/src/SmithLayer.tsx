@@ -247,7 +247,7 @@ export function sideFor(
   h: number,
   over?: Bounds,
 ) {
-  if (!anchor || !box || anchor === "preview" || anchor === "change") return "right";
+  if (!anchor || !box || ["preview", "shown-smith", "change"].includes(anchor)) return "right";
   const hits = (side: "left" | "right") => {
     const r = panelRect(side, w, h, over);
     return (
