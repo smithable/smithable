@@ -11,6 +11,7 @@ import { Panel, Tabs } from "../ui";
 import { ActionPicture } from "./ActionPicture";
 import type { Run } from "./ChangeForms";
 import { ImportRecords, OwnCode } from "./EntryTools";
+import { ExamplesTable } from "./ExamplesTable";
 import { Languages } from "./Languages";
 import { Look } from "./Look";
 import { OutgoingTemplate } from "./OutgoingTemplate";
@@ -258,17 +259,21 @@ export function NoCode({
               const [area, name] = path;
               if (path.length !== 2 || typeof name !== "string") return undefined;
               if (area === "models") return <ImportRecords model={name} run={run} />;
-              // A custom action: the picture its contract draws (intents.md §7).
-              if (area === "actions" && spec.ir?.actions.some((a) => a.name === name && a.custom))
+              // A custom action: the picture its contract draws (intents.md §7), and its examples (§6).
+              const custom = spec.ir?.actions.find((a) => a.name === name && a.custom);
+              if (area === "actions" && spec.ir && custom?.custom)
                 return (
-                  <ActionPicture
-                    ir={spec.ir}
-                    action={name}
-                    onOpen={(concept) => {
-                      const at = entryOf(concept);
-                      if (at) jumpTo(at);
-                    }}
-                  />
+                  <div className="space-y-3">
+                    <ActionPicture
+                      ir={spec.ir}
+                      action={name}
+                      onOpen={(concept) => {
+                        const at = entryOf(concept);
+                        if (at) jumpTo(at);
+                      }}
+                    />
+                    <ExamplesTable examples={custom.examples ?? []} />
+                  </div>
                 );
               if (area === "pages")
                 return (
