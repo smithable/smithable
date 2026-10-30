@@ -180,11 +180,11 @@ export function App() {
   const floating = !narrow && smithAt === "floating";
   const [panelOpen, setPanelOpen] = useState(true);
   // The preview's edges on the screen, which the floating panel hangs between.
-  const previewBox = useRef<HTMLDivElement>(null);
+  const [previewBox, setPreviewBox] = useState<HTMLDivElement | null>(null);
   const [over, setOver] = useState<Bounds>();
   // biome-ignore lint/correctness/useExhaustiveDependencies: measured again as the preview's box changes
   useEffect(() => {
-    const box = previewBox.current;
+    const box = previewBox;
     if (!box) return;
     const measure = () => {
       const r = box.getBoundingClientRect();
@@ -198,7 +198,7 @@ export function App() {
       watch.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [Boolean(previewBox.current)]);
+  }, [previewBox]);
   const [phone, setPhone] = usePhoneSettings();
   const phoneList = phoneWindows(phone);
   const phoneWindow: PhoneWindow = phoneList.includes(place.window as PhoneWindow)
@@ -239,17 +239,14 @@ export function App() {
   const laid = arrangement.slots.map((s) =>
     floating && (s === "smith+changes" || s === "smith") ? "changes" : s,
   );
+  // One window with Smith floating shows the preview first.
+  const previewAt = laid.indexOf("preview");
+  if (floating && arrangement.layout === "one" && previewAt > 0)
+    [laid[0], laid[previewAt]] = [laid[previewAt] as SlotContent, laid[0] as SlotContent];
   const slots: SlotContent[] = narrow
     ? phoneList.map((w) => (w === "smith" && phone.changesUnderSmith ? "smith+changes" : w))
     : laid;
-  // One window with Smith floating shows the preview, wherever it is laid.
-  const shown = (
-    narrow
-      ? slots.map((_, i) => i)
-      : floating && layout === "one"
-        ? [Math.max(0, slots.indexOf("preview"))]
-        : shownSlots(layout, hidden)
-  ) as (0 | 1 | 2)[];
+  const shown = (narrow ? slots.map((_, i) => i) : shownSlots(layout, hidden)) as (0 | 1 | 2)[];
   const phoneIndex = Math.max(0, phoneList.indexOf(phoneWindow));
   /**
    * The slot a window is drawn in among those shown (the first that names it), or none. No code
@@ -699,7 +696,10 @@ export function App() {
   // The tour visits every window: one not shown as it starts would be left out of it, so the
   // third window comes into view in the same render the tour starts in.
   // A phone shows each stop's window as the tour reaches it, and the preview after it (A 161).
+  // Floating, the screen as it was before the tour comes back after it (the preview alone).
+  const beforeGuide = useRef<{ arrangement: typeof arrangement; hidden: typeof hidden }>(undefined);
   const startGuide = () => {
+    if (floating && !guiding) beforeGuide.current = { arrangement, hidden };
     // The view with No code and Code comes into view for the tour's stops in it.
     if (tour === "nocode" && !narrow) workIn("nocode");
     // Floating, Smith's panel opens for his lines, and the window he left comes on screen for its
@@ -756,7 +756,7 @@ export function App() {
   useEffect(() => {
     if (!firstVisit || decided.current || !spec.ir) return;
     decided.current = true;
-    if (!parts.length || seenOverlay(project.name)) return setPresented(true);
+    if (!parts.length || seenOverlay(project?.name ?? "")) return setPresented(true);
     setLayer("overlay");
     show.start();
   }, [firstVisit, spec.ir]);
@@ -1197,6 +1197,11 @@ export function App() {
               onEnd={() => {
                 setGuiding(false);
                 setGuided(true);
+                if (floating && beforeGuide.current) {
+                  setArrangement(beforeGuide.current.arrangement);
+                  setHidden(beforeGuide.current.hidden);
+                }
+                beforeGuide.current = undefined;
                 setLit(undefined);
                 if (narrow) showWindow("smith");
               }}
@@ -1238,7 +1243,7 @@ export function App() {
             >
               <div
                 key="preview"
-                ref={previewBox}
+                ref={setPreviewBox}
                 data-guide-view
                 className={cx(
                   "relative flex flex-col border-line bg-panel",
@@ -1547,7 +1552,7 @@ function GuideMenu({ onTour, onPresent }: { onTour: () => void; onPresent?: () =
         <div
           role="menu"
           aria-label="Guide"
-          className="absolute top-full right-0 z-40 mt-2 rounded-md border border-line bg-panel py-1 shadow-lg"
+          className="absolute top-full right-0 z-[60] mt-2 rounded-md border border-line bg-panel py-1 shadow-lg"
         >
           {item("Tour Studio", onTour)}
           {onPresent && item("Present the app again", onPresent)}
