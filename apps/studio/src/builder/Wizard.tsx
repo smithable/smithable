@@ -3,11 +3,15 @@
 // with their types), each part editable, and Create. Nothing is written before Create. The same
 // flow in Code (from the editor's suggestions) and in Behavior (its Add): one look, one set of
 // words. Esc closes it; Dismiss goes back to the words; Ask Smith for help hands them to Smith.
+
+import type { ModelIR } from "@smithable/core";
 import { useEffect, useRef, useState } from "react";
 import { api, type Proposal } from "../api";
+import { HelpMark } from "../help";
 import { plainRefusal } from "../refusal";
 import { Button } from "../ui";
 import type { Words } from "./Ask";
+import { ProposedActionRows } from "./action-rows";
 import type { Run } from "./ChangeForms";
 
 export type WizardKind = "model" | "page" | "action";
@@ -50,11 +54,14 @@ export function Wizard({
   kind,
   run,
   words,
+  models = [],
   onClose,
 }: {
   kind: WizardKind;
   run: Run;
   words?: Words;
+  /** The app's kinds of record: a proposed action on one shows its condition and values as rows. */
+  models?: ModelIR[];
   onClose: () => void;
 }) {
   const { title, asked, placeholder } = KINDS[kind];
@@ -174,6 +181,22 @@ export function Wizard({
                 onArgs={(args) => setArgs(i, args)}
                 onProblem={setProblem}
               />
+            ) : o.op === "addAction" &&
+              typeof o.args.on === "string" &&
+              models.some((m) => m.name === o.args.on) &&
+              !o.args.merge &&
+              !o.args.split &&
+              !o.args.copy ? (
+              // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
+              <div key={i} className="space-y-1">
+                <p className="text-sm">{words?.(o.op, o.args) ?? o.description}</p>
+                <ProposedActionRows
+                  args={o.args}
+                  model={models.find((m) => m.name === o.args.on) as ModelIR}
+                  onArgs={(args) => setArgs(i, args)}
+                  help={(topic) => <HelpMark topic={topic} />}
+                />
+              </div>
             ) : (
               // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
               <p key={i} className="text-sm">

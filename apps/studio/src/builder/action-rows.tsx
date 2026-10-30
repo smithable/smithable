@@ -439,3 +439,69 @@ export function ActionRowsEditor({
     </div>
   );
 }
+
+/** setAction's or addAction's values as rows: "" or nothing asks, ME() the person, "(" a formula. */
+export const setRowsFromArgs = (set: Record<string, unknown> | undefined): SetRow[] =>
+  Object.entries(set ?? {}).map(([field, v]) =>
+    v === null || v === undefined || v === ""
+      ? { field, how: "ask", value: "" }
+      : String(v).replace(/\s/g, "") === "ME()"
+        ? { field, how: "me", value: "" }
+        : typeof v === "string" && v.includes("(")
+          ? { field, how: "formula", value: v }
+          : { field, how: "value", value: String(v) },
+  );
+
+/**
+ * A standard action as the creation wizard proposes it (A 203): its condition and values as the
+ * same rows, giving back addAction's arguments as edited.
+ */
+export function ProposedActionRows({
+  args,
+  model,
+  onArgs,
+  help,
+}: {
+  args: Record<string, unknown>;
+  model: ModelIR;
+  onArgs: (args: Record<string, unknown>) => void;
+  help?: (topic: "condition" | "formula") => React.ReactNode;
+}) {
+  const [when, setWhen] = useState(() => whenRowsOf(args.when as Condition | undefined));
+  const [set, setSet] = useState(() => setRowsFromArgs(args.set as Record<string, unknown>));
+  const put = (nextWhen: WhenRow[], nextSet: SetRow[]) => {
+    const condition = conditionOf(nextWhen);
+    const { when: _, ...rest } = args;
+    onArgs({
+      ...rest,
+      set: valuesOf(nextSet),
+      ...(Object.keys(condition).length ? { when: condition } : {}),
+    });
+  };
+  return (
+    <div className="space-y-2 rounded-md border border-line bg-panel p-2">
+      <p className="text-xs font-medium text-muted">It sets</p>
+      <SetRows
+        model={model}
+        rows={set}
+        onChange={(rows) => {
+          setSet(rows);
+          put(when, rows);
+        }}
+        help={help?.("formula")}
+      />
+      <p className="flex items-center justify-between text-xs font-medium text-muted">
+        For records with
+        {help?.("condition")}
+      </p>
+      <WhenRows
+        model={model}
+        rows={when}
+        onChange={(rows) => {
+          setWhen(rows);
+          put(rows, set);
+        }}
+      />
+    </div>
+  );
+}
