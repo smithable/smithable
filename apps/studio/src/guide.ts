@@ -71,6 +71,13 @@ export const TOURS = { nocode: NOCODE, code: CODE };
 /** The key that says this browser has seen the tour for this app. */
 export const doneKey = (app: string) => `guideDone:${app}`;
 
+/**
+ * The key that says this browser has seen Smith present this app on the overlay
+ * (smith-first.md §12.1): written when the overlay closes, so a reload before the tour's end
+ * gives the tour without the overlay.
+ */
+export const presentedKey = (app: string) => `presented:${app}`;
+
 /** Whether the address turns the tour off (the screenshot scripts and most of the tests). */
 export const guideOff = () =>
   typeof location !== "undefined" && new URLSearchParams(location.search).get("guide") === "off";

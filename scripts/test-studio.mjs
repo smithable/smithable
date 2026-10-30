@@ -229,9 +229,25 @@ try {
 
   console.log("No code");
   await step(
-    "Studio opens on Smith beside the preview; the arrow at its edge opens No code and Code",
+    "Studio opens on the preview with Smith floating over it, opened and closed by his face; Dock puts him in the left window, and it is kept",
     async () => {
       await page.goto(`${base}/?guide=off`);
+      // Floating by default (smith-first.md §12.3): his panel over the preview, which takes the
+      // width; no window beside it.
+      const panel = page.getByRole("complementary", { name: "Smith" });
+      await panel.getByLabel("Describe a change").waitFor();
+      await page.locator("iframe[title='App preview']").waitFor();
+      if (await page.getByRole("heading", { name: "Ask Smith", exact: true }).count())
+        throw new Error("Smith is docked by default");
+      if (await page.getByText("No changes yet.").count())
+        throw new Error("the window Smith left is on screen beside the preview");
+      // His face in the top bar folds the panel and opens it again.
+      const face = page.locator("header").getByRole("button", { name: "Smith", exact: true });
+      await face.click();
+      await panel.waitFor({ state: "hidden" });
+      await face.click();
+      await panel.getByLabel("Describe a change").waitFor();
+      await panel.getByRole("button", { name: "Dock" }).click();
       await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
       await page.locator("iframe[title='App preview']").waitFor();
       // Nothing to choose between No code and Code in the header (smith-first.md §6).
@@ -382,9 +398,30 @@ try {
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
         await fresh.goto(base);
-        // A new project: Smith presents it first (smith-first.md §2), then the guide.
-        await fresh.locator('[data-part="app"]').waitFor({ timeout: 30000 * P });
-        await fresh.locator('[data-part="app"]').getByRole("button", { name: "Skip" }).click();
+        // A new project: Smith presents it on the overlay, Studio behind it (smith-first.md
+        // §12.1); Enter brings the next part, Skip closes it into his floating panel, then the
+        // guide.
+        const overlay = fresh.getByRole("dialog", { name: /^Smith presents / });
+        await overlay.locator('[data-part="app"]').waitFor({ timeout: 30000 * P });
+        if (await overlay.getByRole("group", { name: "Ready prompts" }).count())
+          throw new Error("the ready prompts show on the overlay");
+        const parts = () => overlay.locator("[data-part]").count();
+        const before = await parts();
+        await fresh.keyboard.press("Enter");
+        await fresh.waitForFunction(
+          (n) => document.querySelectorAll('[data-smith-layer="overlay"] [data-part]').length > n,
+          before,
+          { timeout: 5000 * P },
+        );
+        // Nothing behind it takes a click.
+        if (!(await fresh.locator("main").evaluate((m) => Boolean(m.closest("[inert]")))))
+          throw new Error("Studio behind the overlay is not inert");
+        await overlay.getByRole("button", { name: "Skip", exact: true }).click();
+        await fresh
+          .getByRole("complementary", { name: "Smith" })
+          .locator('[data-part="app"]')
+          .waitFor();
+        await overlay.waitFor({ state: "detached" });
         // Smith's line for the stop, in his thread (smith-first.md §7).
         const card = fresh.locator("[data-guide-card]");
         const seen = [];
@@ -409,10 +446,17 @@ try {
         if (seen.join() !== "preview,manual,behavior,change,changes,look,publish")
           throw new Error(seen.join());
         await card.waitFor({ state: "detached" });
+        // Floating, the tour gives back the screen it found: the preview alone (§12.3).
+        await fresh.getByRole("tab", { name: "Code", exact: true }).waitFor({ state: "detached" });
         // With Code open, Guide is Code's own tour.
+        await fresh.getByRole("checkbox", { name: "No code", exact: true }).check({ force: true });
         await fresh.getByRole("tab", { name: "Code", exact: true }).click();
         await fresh.getByRole("region", { name: "Code" }).waitFor();
-        await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
+        const tour = async () => {
+          await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
+          await fresh.getByRole("menuitem", { name: "Tour Studio" }).click();
+        };
+        await tour();
         const code = [];
         for (let i = 0; i < 2; i++) {
           await fresh.waitForFunction(
@@ -433,7 +477,7 @@ try {
         }
         if (code.join() !== "files,problems") throw new Error(`Code's tour: ${code.join()}`);
         await card.waitFor({ state: "detached" });
-        await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
+        await tour();
         await card.waitFor();
         if ((await card.getAttribute("data-guide-card")) !== "files")
           throw new Error("Guide with Code open did not start Code's tour");
@@ -444,6 +488,17 @@ try {
         await fresh.getByRole("region", { name: "Code" }).waitFor();
         await fresh.waitForTimeout(1000);
         if (await card.count()) throw new Error("the guide came back after a reload");
+        if (await fresh.getByRole("dialog", { name: /^Smith presents / }).count())
+          throw new Error("the overlay came back after a reload");
+        // Present the app again: in Smith's thread, without the overlay (smith-first.md §12.6).
+        await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
+        await fresh.getByRole("menuitem", { name: "Present the app again" }).click();
+        await fresh
+          .getByRole("complementary", { name: "Smith" })
+          .locator('[data-part="app"]')
+          .waitFor();
+        if (await fresh.getByRole("dialog", { name: /^Smith presents / }).count())
+          throw new Error("Present the app again opened the overlay");
       } finally {
         await fresh.close();
       }
@@ -2896,13 +2951,17 @@ try {
             throw new Error("two suggestions cannot be chosen together");
           await form.getByRole("button", { name: "Make it" }).click();
           await form.waitFor({ state: "detached", timeout: 15000 * P });
-          // The request that waited is proposed once the app is there (Smith and Changes come
-          // into view for it), and waits for Apply.
+          // The request that waited is proposed once the app is there (Smith comes into view for
+          // it), and waits for Apply.
           await watcher
             .getByRole("region", { name: "Proposal" })
             .getByRole("button", { name: "Apply" })
             .click({ timeout: 90000 * P });
-          // In place: the request that waited is made, and nothing waits any more.
+          // In place: the request that waited is made, and nothing waits any more. Smith floats
+          // (a new page), so Changes is opened by its tab (smith-first.md §12.3).
+          await watcher
+            .getByRole("checkbox", { name: "Changes", exact: true })
+            .check({ force: true });
           const made = watcher.getByLabel("Change trace").getByText("Sessions: added a phone");
           await made.first().waitFor({ timeout: 90000 * P });
           const after = await (await fetch(`${other}/api/project`)).json();

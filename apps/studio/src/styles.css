@@ -136,3 +136,47 @@ body {
     animation: none;
   }
 }
+
+/*
+ * The effects of Smith's overlay and the guide (smith-first.md §12.2): a line rises as it fades
+ * in, his face bounces when it changes, a chip presses down, a lit place pulses once. They run
+ * only under .motion, which App sets unless the system asks for reduced motion; none takes longer
+ * than a third of a second.
+ */
+@keyframes smith-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes smith-bounce {
+  0% {
+    transform: scale(0.88);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+}
+@keyframes guide-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+.motion .smith-line {
+  animation: smith-rise 250ms ease-out both;
+}
+.motion .smith-face {
+  animation: smith-bounce 250ms ease-out;
+}
+.motion .smith-chip {
+  transition: transform 80ms ease-out;
+}
+.motion .smith-chip:active {
+  transform: translateY(1px) scale(0.96);
+}
+.motion .guide-lit {
+  animation: guide-pulse 320ms ease-out;
+}
