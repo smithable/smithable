@@ -63,6 +63,21 @@ const CODE: Stop[] = [
 ];
 
 /**
+ * Smith's words for one change shown three ways (smith-first.md §12.5), after "Ask me": the offer,
+ * his own way, the same change by hand and in the text, and the end.
+ */
+export const SHOWN = {
+  title: "One change, three ways",
+  offer: () => "Shall I show you one change made three ways?",
+  smith: (label: string) =>
+    `My way: I added a notes field to each ${label}. Here it is, in the form for a new one.`,
+  byHand: () =>
+    "The same change, by hand: this row is the field I added; any setting of the app is a row like it.",
+  code: () => "And this is the line it became; a change here is the same change.",
+  end: () => "Keep the field, or take it back?",
+};
+
+/**
  * The tour of the view's open sub-tab: No code's walks every window, Code's the editor. Nobody
  * is asked to choose between them (smith-first.md §7).
  */
@@ -70,6 +85,13 @@ export const TOURS = { nocode: NOCODE, code: CODE };
 
 /** The key that says this browser has seen the tour for this app. */
 export const doneKey = (app: string) => `guideDone:${app}`;
+
+/**
+ * The key that says this browser has seen Smith present this app on the overlay
+ * (smith-first.md §12.1): written when the overlay closes, so a reload before the tour's end
+ * gives the tour without the overlay.
+ */
+export const presentedKey = (app: string) => `presented:${app}`;
 
 /** Whether the address turns the tour off (the screenshot scripts and most of the tests). */
 export const guideOff = () =>

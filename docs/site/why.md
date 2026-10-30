@@ -72,7 +72,7 @@ Yes, and what you build stays yours: a private beta at [smithable.ai](https://sm
 
 ### Where does my data live?
 
-On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region. Model calls go to the models the service lists as its [sub-processors](https://smithable.ai/legal/sub-processors). An account is global unless its owner makes it an EU account (**Region** on the account page, [getting started](start-hosted.md)); an EU app keeps its data in the EU, and its AI at the level the app chooses. The hosted service's privacy notice and terms are drafts until the public beta; they will say what is kept and for how long.
+On your machine, when you run Smithable yourself. On the hosted service, in Sweden (AWS Stockholm), with backups in the same region. Model calls go to the models the service lists as its [sub-processors](https://smithable.ai/legal/sub-processors). An account is global unless its owner makes it an EU account (**Region** on the account page, [getting started](start-hosted.md)); every app is hosted in Sweden either way, and an EU app's AI requests stay in the EU unless its level is Relaxed, while a Relaxed or a global app's may go to the USA ([the levels](../ai.md#the-apps-assistant-ask)). The hosted service's privacy notice and terms are drafts until the public beta; they will say what is kept and for how long.
 
 ### What can it build today?
 

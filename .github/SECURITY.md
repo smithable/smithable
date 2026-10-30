@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report vulnerabilities in Smithable, in the apps it generates, or in the hosted service at smithable.ai by email to **security@smithable.ai**, not in a public issue. Include what you found, how to reproduce it, and what you think it allows. You will get an acknowledgement within three working days and a fix or a plan within thirty; we credit reporters in the release notes unless they prefer not to be named.
+Please report vulnerabilities in Smithable, in the apps it generates, or in the hosted service at smithable.ai by email to **security@smithable.ai**, not in a public issue. Include what you found, how to reproduce it, and what you think it allows. You will get an acknowledgement within three working days and a fix or a plan within thirty; urgent issues are triaged sooner, according to their risk, and these targets do not extend any statutory deadline. We credit reporters in the release notes unless they prefer not to be named.
 
 Fixed vulnerabilities are published as [GitHub security advisories](https://github.com/smithable/smithable/security/advisories) on this repository, naming the affected versions; owners of apps on the hosted service are told by email as well.
 
@@ -10,7 +10,7 @@ Fixed vulnerabilities are published as [GitHub security advisories](https://gith
 
 - The engine, CLI, Studio and MCP server in this repository.
 - The code Smithable generates: the app kit, the generated data functions and access rules, the production image and its headers.
-- The hosted beta (smithable.ai) and published apps (smithable.app). Please test only against projects you created, and do not run scanners against other people's apps.
+- The hosted service (smithable.ai and smithable.eu) and published apps (smithable.app). Please test only against projects you created, and do not run scanners against other people's apps.
 
 ## How Smithable keeps generated apps safe
 
@@ -18,4 +18,4 @@ Every generated app checks access in its data functions (never only in the UI), 
 
 ## Supported versions
 
-Until 1.0, only the latest release is supported. Generated apps record the Smithable version and stack profile they were generated with (`smithable.lock`); `smithable update --security` and `smithable upgrade` bring an app forward through the normal change pipeline.
+Until 1.0, only the latest release is supported. Generated apps record the Smithable version and stack profile they were generated with (`smithable.lock`); `smithable update --security` and `smithable upgrade` bring an app forward through the normal change pipeline. On the hosted service, security updates to the app kit and the platform are applied by Smithable and the owner is told; optional feature upgrades are offered, never forced.

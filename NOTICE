@@ -1,16 +1,21 @@
 Smithable
 Copyright 2026 Johan Ekenlycka
 
-Licensed under the Apache License, Version 2.0 (see LICENSE). The app kit and
-templates in packages/adapter-tanstack/templates are licensed under the
-Zero-Clause BSD licence instead (see packages/adapter-tanstack/KIT-LICENSE), so
-generated applications carry no obligations from this repository.
+The Smithable engine is licensed under the Apache License, Version 2.0 (see LICENSE).
+The app kit and templates identified in packages/adapter-tanstack/KIT-LICENSE are
+licensed under the Zero-Clause BSD licence, which imposes no attribution condition;
+third-party components retain their own licences and notices, including the notices
+distributed with generated apps.
 
-Pictures. The photographs and the app marks in this repository (the starters' sample
-pictures under examples/*/public/images, the pictures the generated apps show) come from the
-Smithable image library (github.com/smithable/smithable-images): generated with an image
-model, no people photographed, and dedicated to the public domain under CC0 1.0, so they may
-be used for anything without credit. The screenshots in docs/site/starters are of those apps
-and are under this repository's licence. The Smithable name, the wordmark, the icon and the
-smithy pictures in docs/site/brand and apps/studio/src/brand are Smithable's brand: they are
-not covered by the licences above and may not be used to mark another product or service.
+Pictures in the Smithable image library (github.com/smithable/smithable-images), used
+as the starters' sample pictures under examples/*/public/images and shown by the
+generated apps, include AI-generated images and selected real photographs. Consult each
+asset's provenance and licence metadata and the accompanying credits. For its own
+CC0-designated images, Smithable waives only the rights it holds under CC0 1.0;
+third-party trademark, personality and other rights may remain. The screenshots in
+docs/site/starters are of those apps and are under this repository's licence.
+
+The Smithable name, wordmark, icon and designated brand artwork in docs/site/brand and
+apps/studio/src/brand are not licensed for branding another product by the licences
+above. This does not restrict lawful descriptive reference or notices required by
+open-source licences.
