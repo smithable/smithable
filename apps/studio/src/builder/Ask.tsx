@@ -368,6 +368,7 @@ export function Ask({
           <Presentation
             parts={parts.slice(0, partsSaid)}
             going={presenting}
+            last={partsSaid >= parts.length}
             overlay={overlay}
             runsAt={runsLine ? runsAt : undefined}
             previewRuns={previewRuns}
@@ -690,6 +691,7 @@ function Greeting({ ready }: { ready: Ready }) {
 function Presentation({
   parts,
   going,
+  last,
   overlay,
   runsAt,
   previewRuns,
@@ -703,6 +705,8 @@ function Presentation({
 }: {
   parts: Part[];
   going: boolean;
+  /** The last part is said. */
+  last: boolean;
   overlay: boolean;
   /** How many parts were said when the preview started to run: its line comes after them. */
   runsAt: number | undefined;
@@ -769,7 +773,7 @@ function Presentation({
         );
       })}
       {runsAt !== undefined && runsAt >= parts.length && runs}
-      {overlay && going && parts.length > 0 && (
+      {overlay && going && last && (
         // The last part said: the way out, once there is an app to show.
         <li className={cx(SMITHS, "space-y-2")} data-part="last">
           {previewRuns ? (

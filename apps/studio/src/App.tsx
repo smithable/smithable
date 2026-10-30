@@ -37,7 +37,7 @@ import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
-import { type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
+import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
@@ -105,6 +105,8 @@ export function App() {
     report?: "sent" | "offer";
     /** Something went wrong (not a change refused): the bar offers Troubleshoot. */
     failure?: boolean;
+    /** Left for Studio by the making or the daemon (a description that could not be used). */
+    notice?: boolean;
   }>();
   const [reporting, setReporting] = useState(false);
   const [troubleshooting, setTroubleshooting] = useState(false);
@@ -177,6 +179,26 @@ export function App() {
   const [smithAt, setSmithAt] = useSmithPlace();
   const floating = !narrow && smithAt === "floating";
   const [panelOpen, setPanelOpen] = useState(true);
+  // The preview's edges on the screen, which the floating panel hangs between.
+  const previewBox = useRef<HTMLDivElement>(null);
+  const [over, setOver] = useState<Bounds>();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: measured again as the preview's box changes
+  useEffect(() => {
+    const box = previewBox.current;
+    if (!box) return;
+    const measure = () => {
+      const r = box.getBoundingClientRect();
+      setOver(r.width > 0 ? { left: r.left, right: r.right } : undefined);
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(box);
+    window.addEventListener("resize", measure);
+    return () => {
+      watch.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [Boolean(previewBox.current)]);
   const [phone, setPhone] = usePhoneSettings();
   const phoneList = phoneWindows(phone);
   const phoneWindow: PhoneWindow = phoneList.includes(place.window as PhoneWindow)
@@ -389,7 +411,7 @@ export function App() {
     // While the daemon restarts, what is shown stays; the next event brings it up to date.
     const next = await api.project().catch(() => undefined);
     if (!next) return;
-    if (next.notice) setMessage({ ok: false, text: next.notice });
+    if (next.notice) setMessage({ ok: false, text: next.notice, notice: true });
     setProject((p) => keepWaiting(p, next));
     // The preview loads again only when the change touches the page it shows (studio-v2 §2):
     // another kind of record's field leaves it, and the person's place in it, as it is.
@@ -758,10 +780,11 @@ export function App() {
     setPanelOpen(true);
     setLayer("closing");
   };
-  // A failure behind the overlay closes it to Studio, with the failure's own notice.
+  // A failure behind the overlay closes it to Studio, with the failure's own notice; a change
+  // refused (an answer to a question) is Smith's to say on the overlay.
   // biome-ignore lint/correctness/useExhaustiveDependencies: when a failure is said
   useEffect(() => {
-    if (message && !message.ok && layer === "overlay") closeOverlay();
+    if ((message?.failure || message?.notice) && layer === "overlay") closeOverlay();
   }, [message]);
   // Where the closing takes the thread: the panel's place, or the left window docked.
   const dockedAt = () => {
@@ -1167,6 +1190,7 @@ export function App() {
             >
               <div
                 key="preview"
+                ref={previewBox}
                 data-guide-view
                 className={cx(
                   "relative flex flex-col border-line bg-panel",
@@ -1400,9 +1424,10 @@ export function App() {
           phone={narrow}
           motion={motion}
           open={panelOpen}
+          {...(over ? { over } : {})}
           side={
             guiding
-              ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight)
+              ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
               : "right"
           }
           {...(layer === "closing" && !floating ? { target: narrow ? undefined : dockedAt() } : {})}

@@ -20,6 +20,7 @@ export function SmithLayer({
   phone,
   motion,
   side = "right",
+  over,
   open = true,
   target,
   foldAfter,
@@ -41,6 +42,8 @@ export function SmithLayer({
   motion: boolean;
   /** The panel's side: the left when a guide's stop is under it on the right. */
   side?: "left" | "right";
+  /** What the panel hangs over: the preview. */
+  over?: Bounds;
   /** The panel open, or folded into Smith's face in the top bar. */
   open?: boolean;
   /** Where the closing takes the thread; the panel's place when not given. */
@@ -64,7 +67,7 @@ export function SmithLayer({
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
-  const panel: Rect = panelRect(side, size.w, size.h);
+  const panel: Rect = panelRect(side, size.w, size.h, over);
   const overlay: Rect = phone
     ? { top: 0, left: 0, width: size.w, height: size.h }
     : (() => {
@@ -214,16 +217,20 @@ export function SmithLayer({
   );
 }
 
-/** The floating panel's place on a side of a window this size. */
-export function panelRect(side: "left" | "right", w: number, h: number) {
-  const width = Math.min(400, w - 24);
+/** The floating panel's place on a side of what it hangs over, in a window this size. */
+export function panelRect(side: "left" | "right", w: number, h: number, over?: Bounds) {
+  const { left, right } = over ?? { left: 0, right: w };
+  const width = Math.min(400, right - left - 24);
   return {
     width,
     height: Math.min(640, h - 72),
     top: 60,
-    left: side === "right" ? w - width - 12 : 12,
+    left: side === "right" ? right - width - 12 : left + 12,
   };
 }
+
+/** Where the panel hangs: over the preview, between its edges; the window without one. */
+export type Bounds = { left: number; right: number };
 
 /**
  * The side for the panel while a guide's stop is lit (§12.3): the other side when the stop's place
@@ -235,10 +242,11 @@ export function sideFor(
   box: DOMRect | undefined,
   w: number,
   h: number,
+  over?: Bounds,
 ) {
   if (!anchor || !box || anchor === "preview" || anchor === "change") return "right";
   const hits = (side: "left" | "right") => {
-    const r = panelRect(side, w, h);
+    const r = panelRect(side, w, h, over);
     return (
       r.left < box.right &&
       r.left + r.width > box.left &&
