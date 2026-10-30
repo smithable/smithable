@@ -814,6 +814,10 @@ export function App() {
     setHidden((h) => ({ ...h, left: true }));
   };
 
+  // What the shown change does, as it is now: the guide keeps the change as offered (its kind of
+  // record), and its steps act on Studio as it is when they run.
+  const live = useRef({ run, undo, workIn, nocodePlace, showWindow, arrangement, layout, narrow });
+  live.current = { run, undo, workIn, nocodePlace, showWindow, arrangement, layout, narrow };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   // Smith's thread, wherever it is: on the overlay, in the floating panel, or in a window.
   const layerOn = !project.making && (overlaid || floating);
@@ -843,30 +847,35 @@ export function App() {
     </div>
   );
   // The floating panel's side for the guide's stop: off its place, or folded for it.
-  const side = guiding
-    ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
-    : "right";
+  const side =
+    guiding && !narrow
+      ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
+      : "right";
   // One change shown three ways after "Ask me" (smith-first.md §12.5): a notes field on the first
   // kind of record without one, by Smith, then by hand and in the text, kept or undone.
   const bare = spec.ir?.models.find((m) => !m.fields.some((f) => f.name === "notes"));
   const showing: ShownChange | undefined = bare && {
     label: spec.content?.models?.[bare.name]?.label ?? humanize(bare.name),
     apply: async () => {
-      if (!(await run("addField", { model: bare.name, field: "notes", type: "text" })))
+      const now = live.current;
+      if (!(await now.run("addField", { model: bare.name, field: "notes", type: "text" })))
         return false;
       const form = spec.ir?.pages.find(
         (p) => p.pattern.kind === "crud" && p.pattern.model === bare.name,
       );
       if (form) setGo((g) => ({ path: `${form.route}/new`, key: (g?.key ?? 0) + 1 }));
-      if (narrow) showWindow("preview");
+      if (now.narrow) now.showWindow("preview");
       return true;
     },
     byHand: () => {
-      nocodePlace({ sub: "behavior" });
-      if (narrow) showWindow("nocode");
-      else workIn("nocode");
-      setTimeout(() =>
-        window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: `model:${bare.name}` })),
+      const now = live.current;
+      now.nocodePlace({ sub: "behavior" });
+      if (now.narrow) now.showWindow("nocode");
+      else now.workIn("nocode");
+      // Once No code is on screen to hear it.
+      setTimeout(
+        () => window.dispatchEvent(new CustomEvent(OPEN_PART, { detail: `model:${bare.name}` })),
+        150,
       );
     },
     inCode: () =>
@@ -876,11 +885,12 @@ export function App() {
         }),
       ),
     end: (keep) => {
-      if (!keep) void undo();
+      const now = live.current;
+      if (!keep) void now.undo();
       // The manual view closes again and the preview is in front.
-      setArrangement({ ...arrangement, manual: "nocode" });
-      if (narrow) showWindow("preview");
-      else if (layout === "three") setHidden((h) => ({ ...h, right: true }));
+      setArrangement({ ...now.arrangement, manual: "nocode" });
+      if (now.narrow) now.showWindow("preview");
+      else if (now.layout === "three") setHidden((h) => ({ ...h, right: true }));
     },
     places: {
       smith: '[data-guide="preview"]',

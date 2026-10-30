@@ -119,6 +119,8 @@ export function Guide({
   const [step, setStep] = useState<Shown>();
   const [stepPlace, setStepPlace] = useState<HTMLElement>();
   const offered = useRef(false);
+  // Smith's change is being made: Esc and Next wait for it (no Undo of nothing, no field left).
+  const applying = useRef(false);
   // The shown change as it was offered: Studio makes it anew each render, and once its field is
   // added the next kind of record without one would be the one named.
   const [shown, setShown] = useState<ShownChange>();
@@ -188,14 +190,17 @@ export function Guide({
     return () => clearTimeout(timer);
   }, [step, shown]);
 
-  const place = stepPlace ?? current?.element;
+  // A step of the shown change is lit at its own place once found; the offer and the end at the
+  // stop's.
+  const own = step === "smith" || step === "byHand" || step === "code";
+  const place = own ? stepPlace : current?.element;
   // The place in view (on a phone, its panel scrolled to), then measured; again on resizing.
   // biome-ignore lint/correctness/useExhaustiveDependencies: each place once, as it opens (onStop is made anew each render)
   useLayoutEffect(() => {
     if (!current || !place) return;
-    if (!stepPlace) onStop?.(current.stop.anchor);
+    if (!step) onStop?.(current.stop.anchor);
     place.scrollIntoView({ block: "nearest", inline: "nearest" });
-    const anchor = stepPlace ? `shown-${step}` : current.stop.anchor;
+    const anchor = own ? `shown-${step}` : current.stop.anchor;
     const measure = () => {
       const now = place.getBoundingClientRect();
       setBox(now);
@@ -227,8 +232,11 @@ export function Guide({
               label: "Yes",
               main: true,
               act: () => {
+                if (applying.current) return;
+                applying.current = true;
                 setStep("smith");
                 void shown?.apply().then((ok) => {
+                  applying.current = false;
                   if (!ok) {
                     setStep(undefined);
                     onward();
@@ -245,7 +253,17 @@ export function Guide({
             },
           ]
         : step === "smith"
-          ? [{ label: "Next", main: true, act: () => (shown?.byHand(), setStep("byHand")) }]
+          ? [
+              {
+                label: "Next",
+                main: true,
+                act: () => {
+                  if (applying.current) return;
+                  shown?.byHand();
+                  setStep("byHand");
+                },
+              },
+            ]
           : step === "byHand"
             ? [{ label: "Next", main: true, act: () => (shown?.inCode(), setStep("code")) }]
             : step === "code"
@@ -262,6 +280,7 @@ export function Guide({
   };
   // Esc: Skip on the offer, Undo during the shown change (and on), else the end of the tour.
   const onEscape = () => {
+    if (applying.current) return;
     if (step === "offer") {
       setStep(undefined);
       onward();
@@ -275,7 +294,7 @@ export function Guide({
   // biome-ignore lint/correctness/useExhaustiveDependencies: each stop and step once, as it opens
   useEffect(() => {
     if (line) asLine?.(line);
-  }, [current, step, asLine]);
+  }, [current, step, shown, asLine]);
   // Enter is the main chip and Esc as above, while no control has the focus (§12.2).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -293,7 +312,7 @@ export function Guide({
   }, []);
 
   if (!box || !line) return null;
-  const lit = step ? `shown-${step}` : current?.stop.anchor;
+  const lit = own ? `shown-${step}` : current?.stop.anchor;
   const ring = (
     <div
       key={lit}
