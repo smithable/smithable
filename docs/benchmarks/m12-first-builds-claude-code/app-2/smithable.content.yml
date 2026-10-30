@@ -1,17 +1,5 @@
-# Visible text. Only what differs from the texts Smithable derives from names.
 smithableContent: 0.1
-logo: { src: images/logo.webp, alt: Two interlinked rings, generated: true }
-
-models:
-  Customer:
-    fields:
-      segment:
-        values: { smb: Small business }
-      creditLimit:
-        help: Orders are held when the outstanding balance goes above this amount. Agree a higher limit with the customer before you change it.
-  Order:
-    fields:
-      placedAt: { label: Placed on }
-
-pages:
-  team: { subtitle: Who has access and who is invited. }
+logo:
+  src: images/logo.webp
+  alt: Two interlinked rings
+  generated: true

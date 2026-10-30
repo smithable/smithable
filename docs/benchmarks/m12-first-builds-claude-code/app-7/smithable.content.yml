@@ -2,10 +2,19 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      title: Welcome to the club
+      subtitle: Follow our teams, meet the players and catch every fixture and result.
+      button: See matches
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
+    fixtures:
+      title: Upcoming fixtures
+    results:
+      title: Latest results
+    squads:
+      title: Our teams
 logo:
   src: images/logo.webp
   alt: A football

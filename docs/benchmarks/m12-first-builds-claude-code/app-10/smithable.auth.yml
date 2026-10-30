@@ -5,7 +5,12 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: all
+  member:
+    description: A family member who adds recipes and shops from the lists.
+    pages: all
+    create: all
+    write: [ShoppingList, ShoppingItem]
+    delete: [ShoppingItem]
 assistant:
   for: signed-in
 defaultRole: member

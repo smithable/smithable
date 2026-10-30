@@ -2,7 +2,7 @@ smithableContent: 0.1
 pages:
   home:
     faq:
-      items: [{ question: How do I register for a talk?, answer: "Open the schedule, choose a talk and press Book. You sign in with your email address and receive a code, no password needed." }, { question: Can I attend several talks?, answer: "Yes. Register for as many talks as you like, as long as they still have places left." }, { question: What if a talk is full?, answer: "Every talk shows how many places remain. When none are left, keep an eye on it: places free up when others cancel." }, { question: Can I cancel my registration?, answer: "Yes, from My registrations, any time before the talk begins." }]
+      items: [{ question: How do I register for a talk?, answer: "Sign in with your email address, open the talk in the schedule and reserve your seat. You will find it under My registrations." }, { question: Is there a limit on seats?, answer: "Every talk has a set number of seats. The schedule shows how many are left, and registration closes when the talk begins." }, { question: Can I cancel a registration?, answer: "Yes. You can cancel any time before the talk starts, which frees the seat for someone else." }, { question: Where can I read about the speakers?, answer: "Each speaker has a short bio on the home page, along with the talks they are giving." }]
     hero:
       image:
         src: images/hero.webp

@@ -3,7 +3,8 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Who should be able to see the status page without signing in?",
-    "How should the API be split into components on the page?"
+    "Who can see the status page without signing in?",
+    "How should the API be split into components?",
+    "Should visitors be able to subscribe to updates?"
   ]
 }

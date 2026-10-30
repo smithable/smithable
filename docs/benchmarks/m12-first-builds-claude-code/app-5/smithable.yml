@@ -1,13 +1,14 @@
 smithable: 0.1
 app:
   name: Bakery Stock
-  description: Keeps track of the bakery's ingredients, their suppliers and how much of each is in stock.
+  description: Keeps track of a small bakery's ingredients, their suppliers and how much is in stock.
   currency: EUR
+  timezone: Europe/Mariehamn
 models:
   Supplier:
     fields:
       name: string!
-      contactName: string
+      contactPerson: string
       email: email
       phone: phone
       website: url
@@ -15,24 +16,26 @@ models:
       ingredients: Ingredient[]
   Ingredient:
     fields:
-      name: string!
-      category: flour | dairy | sugar | fats | eggs | flavorings | packaging | other
+      name: string! unique
+      category: flour | sugar | dairy | eggs | fats | yeast | flavorings | nutsAndFruit | packaging | other
+      supplier: Supplier
       unit: kg | g | l | ml | pieces
       inStock: decimal! = 0
-      reorderAt:
-        type: decimal
-        description: When the stock in hand falls to this amount or below, the ingredient should be reordered from its supplier.
-      costPerUnit: money
-      supplier: Supplier
+      reorderLevel: decimal = 0
+      unitPrice: money
+      stockValue:
+        type: money
+        formula: inStock * unitPrice
+      storage: dry | fridge | freezer
       lastCounted: date = TODAY()
       notes: text
 pages:
   ingredients:
     crud: Ingredient
     search: [name, notes]
-    filters: [category, supplier]
+    filters: [category, supplier, storage]
   suppliers:
     crud: Supplier
-    search: [name, contactName, email]
+    search: [name, contactPerson, email]
   team:
     users: manage
