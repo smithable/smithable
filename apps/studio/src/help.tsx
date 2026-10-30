@@ -15,7 +15,7 @@ export interface Help {
 export const HELP = {
   formula: {
     title: "A formula",
-    text: "A formula works a value out from the record's other fields when the button is pressed, like a spreadsheet's: TODAY() for today's date, total * 0.25 for a quarter of the total, IF(paid, 0, total) to choose. It is checked as you type: a field it names must exist, and what it gives must fit the field it fills.",
+    text: "A formula works a value out from the record's other fields when the button is pressed, like a spreadsheet's: TODAY() for today's date, ROUND(total * 0.25, 2) for a quarter of the total, IF(paid, 0, total) to choose. A formula has parentheses; anything else is a value as written. It is checked when the change is made: a field it names must exist, and what it gives must fit the field it fills.",
     links: [
       ["Formulas in the spec", `${DOCS}/spec.html#formulas`],
       ["Buttons that change a record", `${DOCS}/actions.html`],
@@ -107,7 +107,7 @@ export function HelpMark({
         ?
       </button>
       {open && (
-        <section
+        <div
           id={id}
           role="dialog"
           aria-label={help.title}
@@ -125,7 +125,7 @@ export function HelpMark({
               </li>
             ))}
           </ul>
-        </section>
+        </div>
       )}
     </span>
   );

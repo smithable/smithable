@@ -191,6 +191,7 @@ export function Wizard({
               <div key={i} className="space-y-1">
                 <p className="text-sm">{words?.(o.op, o.args) ?? o.description}</p>
                 <ProposedActionRows
+                  key={proposal.id}
                   args={o.args}
                   model={models.find((m) => m.name === o.args.on) as ModelIR}
                   onArgs={(args) => setArgs(i, args)}

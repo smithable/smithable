@@ -23,6 +23,22 @@ export const whenable = (model: ModelIR | undefined): Field[] =>
 export const settable = (model: ModelIR | undefined): Field[] =>
   (model?.fields ?? []).filter((f) => !f.formula && !(f.type.kind === "relation" && f.type.many));
 
+/** A row's field choices: the fields no other row has, and its own even when not offered. */
+const optionsFor = (
+  fields: Field[],
+  rows: { field: string }[],
+  own: string,
+): [string, string][] => [
+  ...(fields.some((f) => f.name === own) ? [] : ([[own, humanize(own)]] as [string, string][])),
+  ...fields
+    .filter((f) => f.name === own || !rows.some((r) => r.field === f.name))
+    .map((f) => [f.name, humanize(f.name)] as [string, string]),
+];
+
+/** A row still to be filled in: a value or a formula left empty (empty means asked). */
+export const unfinished = (rows: SetRow[]) =>
+  rows.some((r) => (r.how === "value" || r.how === "formula") && !r.value.trim());
+
 /** A row of the condition: a field and what it wants (a choice's values, yes or no, a text). */
 export interface WhenRow {
   field: string;
@@ -117,9 +133,7 @@ export function WhenRows({
                 onChange={(e) =>
                   put(i, { field: e.target.value, value: startOf(fields, e.target.value) })
                 }
-                options={fields
-                  .filter((f) => f.name === row.field || !rows.some((r) => r.field === f.name))
-                  .map((f) => [f.name, humanize(f.name)] as [string, string])}
+                options={optionsFor(fields, rows, row.field)}
               />
               <Button
                 variant="ghost"
@@ -138,7 +152,7 @@ export function WhenRows({
           </div>
         );
       })}
-      {fields.length > rows.length && (
+      {fields.some((f) => !rows.some((r) => r.field === f.name)) && (
         <Button
           variant="ghost"
           className="h-7 text-xs"
@@ -266,9 +280,7 @@ export function SetRows({
                 className="flex-1"
                 value={row.field}
                 onChange={(e) => put(i, fresh(e.target.value))}
-                options={fields
-                  .filter((f) => f.name === row.field || !rows.some((r) => r.field === f.name))
-                  .map((f) => [f.name, humanize(f.name)] as [string, string])}
+                options={optionsFor(fields, rows, row.field)}
               />
               <Button
                 variant="ghost"
@@ -320,7 +332,7 @@ export function SetRows({
           </div>
         );
       })}
-      {fields.length > rows.length && (
+      {fields.some((f) => !rows.some((r) => r.field === f.name)) && (
         <Button
           variant="ghost"
           className="h-7 text-xs"
@@ -421,6 +433,7 @@ export function ActionRowsEditor({
   const value = part === "when" ? conditionOf(whenRows) : valuesOf(setRows);
   const was = part === "when" ? conditionOf(whenRowsOf(when)) : valuesOf(setRowsOf(set));
   const changed = JSON.stringify(value) !== JSON.stringify(was);
+  const empty = part === "set" && unfinished(setRows);
   return (
     <div className="space-y-2">
       {part === "when" ? (
@@ -432,9 +445,12 @@ export function ActionRowsEditor({
         <SetRows model={model} rows={setRows} onChange={setSetRows} help={help?.("formula")} />
       )}
       {changed && (
-        <Button className="h-7 text-xs" onClick={() => void onSave(value)}>
-          {part === "when" ? "Change the condition" : "Change the values"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button className="h-7 text-xs" disabled={empty} onClick={() => void onSave(value)}>
+            {part === "when" ? "Change the condition" : "Change the values"}
+          </Button>
+          {empty && <span className="text-xs text-quiet">Fill in each value, or ask for it.</span>}
+        </div>
       )}
     </div>
   );
@@ -490,10 +506,10 @@ export function ProposedActionRows({
         }}
         help={help?.("formula")}
       />
-      <p className="flex items-center justify-between text-xs font-medium text-muted">
+      <div className="flex items-center justify-between text-xs font-medium text-muted">
         For records with
         {help?.("condition")}
-      </p>
+      </div>
       <WhenRows
         model={model}
         rows={when}
