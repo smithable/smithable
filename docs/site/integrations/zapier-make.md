@@ -2,7 +2,7 @@
 
 Zapier and Make connect thousands of services that have no page here: a form, a spreadsheet, a calendar, a shop. A zap's or scenario's last step can call the app, and the app makes a record from what the call carries. In this example, each new form entry becomes a lead.
 
-On smithable.ai, these calls can't be set up yet ([why](../integrations.md#on-smithableai-and-on-your-own-server)). There, the same step can add the lead through [the API with a key](api-key.md) instead.
+The same step can also add the lead through [the API with a key](api-key.md).
 
 ## 1. What the app gets
 
@@ -38,10 +38,10 @@ The app now answers at `/incoming/newLead`. A value in braces is taken from the 
 
 ## 3. The secret
 
-Make a long random secret, for example with `openssl rand -hex 32`. The app reads it from the setting `INCOMING_NEWLEAD_SECRET`, which is the entry's name in capitals:
+The app reads the secret from the setting `INCOMING_NEWLEAD_SECRET`, which is the entry's name in capitals:
 
-- **On your own server:** an environment variable where the app runs, then restart the app.
-- **On smithable.ai:** there's no place to set it yet (see [Integrations](../integrations.md#on-smithableai-and-on-your-own-server)).
+- **On your own server:** make a long random secret, for example with `openssl rand -hex 32`. Set it as an environment variable where the app runs, then restart the app.
+- **On smithable.ai:** publish the app, then open the **Calls in** card on the project's page. It shows the entry's address, live and staging. **Make a secret** makes one and shows it once: paste it into the service there and then. The app gets it as `INCOMING_NEWLEAD_SECRET` and restarts to use it ([more](../integrations.md#on-smithableai-and-on-your-own-server)).
 
 The call sends it in the `Authorization` header: the word `Bearer`, a space, then the secret.
 
