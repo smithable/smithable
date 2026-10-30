@@ -1242,8 +1242,12 @@ try {
       const box = page.getByLabel("Describe a change");
       if ((await box.inputValue()) !== "Help me add ")
         throw new Error("Help me add did not start the request");
-      if (!(await box.evaluate((el) => el === document.activeElement)))
-        throw new Error("Help me add left the cursor out of the box");
+      // The cursor follows a moment later, once the words are in.
+      await page.waitForFunction(
+        () => document.activeElement?.getAttribute("aria-label")?.startsWith("Describe a change"),
+        null,
+        { timeout: 5000 * P },
+      );
       // Words in the box rest the prompts until they are sent or cleared (Johan, 2026-10-27),
       // and the prompts say so.
       if (!(await prompts.getByRole("button", { name: "How do I publish?" }).isDisabled()))
