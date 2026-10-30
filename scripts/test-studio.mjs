@@ -446,7 +446,10 @@ try {
         if (seen.join() !== "preview,manual,behavior,change,changes,look,publish")
           throw new Error(seen.join());
         await card.waitFor({ state: "detached" });
+        // Floating, the tour gives back the screen it found: the preview alone (§12.3).
+        await fresh.getByRole("tab", { name: "Code", exact: true }).waitFor({ state: "detached" });
         // With Code open, Guide is Code's own tour.
+        await fresh.getByRole("checkbox", { name: "No code", exact: true }).check({ force: true });
         await fresh.getByRole("tab", { name: "Code", exact: true }).click();
         await fresh.getByRole("region", { name: "Code" }).waitFor();
         const tour = async () => {

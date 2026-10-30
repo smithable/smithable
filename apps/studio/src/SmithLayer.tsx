@@ -1,8 +1,9 @@
 // Smith floating (docs/design/smith-first.md §12.1, §12.3): one layer that is first the overlay a
 // new project opens on, Smith's thread alone at reading width over a calm backdrop with Studio
 // loading behind, and then, closed, the panel hanging from the top bar's right over the preview.
-// The thread is the same element all along: closing moves it to its place (the panel, or the left
-// window when Smith is docked) while the backdrop lifts, so nothing said is lost.
+// Closing moves the thread to its place while the backdrop lifts: floating, it stays the same
+// element; docked, it moves to the left window, where it is drawn anew with everything said and
+// the presentation as it was (Studio holds those), a proposal not yet applied being asked again.
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cx } from "./ui";
 
@@ -88,13 +89,14 @@ export function SmithLayer({
   // A dialog while it is the overlay: the focus in it, and back where it was when it closes.
   const layer = useRef<HTMLDivElement>(null);
   const before = useRef<Element | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: as it opens and closes
+  // The focus goes back once the closing is over, when Studio takes it again.
+  const overlaid = mode !== "panel";
   useEffect(() => {
-    if (mode !== "overlay") return;
+    if (!overlaid) return;
     before.current = document.activeElement;
     layer.current?.focus();
     return () => (before.current as HTMLElement | null)?.focus?.();
-  }, [mode === "overlay"]);
+  }, [overlaid]);
 
   // The overlay's keys (§12.2): Enter or Space is Next and Esc is Skip while no control has the
   // focus, so nothing typed is eaten; no key reaches Studio behind it.
