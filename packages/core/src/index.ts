@@ -139,6 +139,7 @@ export {
   isPictures,
   isUpload,
   mergeAsked,
+  mergedFields,
   PICTURES_MAX,
   SCALAR_TYPES,
   SECTION_KINDS,

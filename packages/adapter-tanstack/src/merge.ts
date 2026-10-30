@@ -6,6 +6,7 @@ import {
   type FieldIR,
   kebab,
   type ModelIR,
+  mergedFields,
   type SpecIR,
   type StandardActionIR,
   titleField,
@@ -57,21 +58,6 @@ export function referrersOf(ir: SpecIR, model: string): Referrer[] {
               .map((name) => dataKey(m.fields.find((f) => f.name === name) as FieldIR)),
           ),
       })),
-  );
-}
-
-/**
- * The fields a merge decides between the two records: stored values a person gives, not computed,
- * counting up, the owner or a reference to the model itself.
- */
-export function mergedFields(model: ModelIR): FieldIR[] {
-  return model.fields.filter(
-    (f) =>
-      !f.formula &&
-      !f.sequence &&
-      !f.byApp &&
-      f.name !== model.ownedBy &&
-      !(f.type.kind === "relation" && (f.type.many || f.type.model === model.name)),
   );
 }
 

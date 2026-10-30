@@ -217,24 +217,28 @@ export function storageOf(field: Pick<FieldIR, "type" | "formula">): Storage {
 }
 
 /**
- * The fields of a merge the person decides when the two records differ: the stored ones with no
- * rule or `ask` (docs/design/intents.md §3). Computed fields are worked out, lists move, sequences,
- * the app's fields and the owner stay the kept record's, and a reference to the model itself moves
- * like the records that point at it.
+ * The fields a merge decides between the records (docs/design/intents.md §3): the stored values a
+ * person gives. Computed fields are worked out, lists move, sequences, the app's fields and the
+ * owner stay the kept record's, and a reference to the model itself moves like the records that
+ * point at it.
  */
+export function mergedFields(model: ModelIR): FieldIR[] {
+  return model.fields.filter(
+    (f) =>
+      storageOf(f) !== "none" &&
+      !f.sequence &&
+      !f.byApp &&
+      f.name !== model.ownedBy &&
+      !(f.type.kind === "relation" && f.type.model === model.name),
+  );
+}
+
+/** Of those, the fields the person decides when the records differ: with no rule, or `ask`. */
 export function mergeAsked(action: StandardActionIR, model: ModelIR): string[] {
   if (!action.merge) return [];
   const { fields } = action.merge;
-  return model.fields
-    .filter(
-      (f) =>
-        storageOf(f) !== "none" &&
-        !f.sequence &&
-        !f.byApp &&
-        f.name !== model.ownedBy &&
-        !(f.type.kind === "relation" && f.type.model === model.name) &&
-        (fields[f.name] ?? "ask") === "ask",
-    )
+  return mergedFields(model)
+    .filter((f) => (fields[f.name] ?? "ask") === "ask")
     .map((f) => f.name);
 }
 
