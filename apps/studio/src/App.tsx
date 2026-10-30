@@ -1497,7 +1497,7 @@ function GuideMenu({ onTour, onPresent }: { onTour: () => void; onPresent?: () =
         <div
           role="menu"
           aria-label="Guide"
-          className="absolute top-full right-0 z-40 mt-2 rounded-md border border-line bg-panel py-1 shadow-lg"
+          className="absolute top-full right-0 z-[60] mt-2 rounded-md border border-line bg-panel py-1 shadow-lg"
         >
           {item("Tour Studio", onTour)}
           {onPresent && item("Present the app again", onPresent)}
