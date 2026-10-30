@@ -13,6 +13,8 @@ Status: draft for Johan, 2026-10-27 (Fable). From Johan's words of 2026-10-27, t
 
 ## 2. The flow, moment by moment
 
+(Steps 1 to 5 are revised in §12 after Johan's second look of 2026-10-30: the presentation runs on an overlay, Studio loading behind it.)
+
 1. **Start.** A new project (a description, a starter, a page's address, or the demo's sandbox) opens Studio on Smith: on a wide screen Smith left and the preview's place right, on a phone Smith alone. Nothing else is on the screen yet: no Behavior, no tabs to choose from. While the app is being made (the stage of while-it-is-made.md), Smith is already talking.
 2. **The draft comes first, then the presentation.** Today a described app gets `clarify`'s questions before the draft; here the draft is made at once from the description, with its assumptions kept (§4), and Smith presents the drafted app part by part (§3). Each assumption is asked at the part it belongs to, with the draft's own answer already chosen, so the person sees something real within seconds and corrects it rather than filling a form first. A starter has no assumptions; its presentation has no questions.
 3. **The preview appears on the right** when the app runs (the stage hands over, as today), and Smith says so in one line. From then on every answer to a question is a change the person watches land in the preview.
@@ -58,12 +60,16 @@ The figures are A's bench of 2026-10-26 ([claude-5-5.md](../benchmarks/claude-5-
 
 ## 6. The layout
 
+(The default arrangement is revised in §12.3: Smith floating by default, docked as a choice.)
+
 - **Default arrangement:** Smith in the first slot with Changes under him, the preview in the second; the two-window layout on a wide screen. The manual view is not on the screen until the "show" arrow at the preview's edge opens it as the third slot (or, in the one-window layout, in place of Smith). The layouts stay as studio-v3.md §8 has them; only the defaults and the top bar change.
 - **The top bar:** no "No code | Code" choice. Its tabs are the windows of the current layout, with Map beside them, as A 161 made them; the manual view appears as one tab, named by its open sub-tab ("Behavior", "Code"). Inside the manual view, two sub-tabs: **No code** (Behavior, Look, Who can, Content as today) and **Code** (the files, the wizard). Nothing says "manual".
 - **Phone:** Smith first, the preview next, the manual view third; the swipe order follows.
 - **Kept per device** as today; a person who moved the windows keeps their arrangement, and the presentation still runs in Smith wherever he is.
 
 ## 7. The guide as part of Smith
+
+(Revised in §12.4: the guide's stop is Smith's line and a small card at the place, both.)
 
 The tour's stops stay the stops of studio-guide.md (the running app, what it does, every change in words, the look, publish and share; the code stops when Code is open), but each is a line of Smith's in his thread, the mascot pointing, the place lit as the cards lit it; Next and Skip are chips, Esc skips. The first stop, "How do you want to work?", is removed: when the manual view is first opened, Smith says "Here you can change the app by hand: No code, or the code itself" and points at the two sub-tabs. The stops' texts stay in `guide.ts` as Studio's words, with Smith's voice; "Guide" in the top bar runs it again. It shows when studio-guide.md §2 says, after the presentation and the questions; a stop whose place is not on the screen is left out, as today.
 
@@ -95,3 +101,78 @@ No construct is added: the presentation reads the spec, the questions are operat
 3. **The manual view's two sub-tabs are "No code" and "Code"**, the view itself named by the open one, nothing called "manual". Recommended: yes.
 4. **The beta message at step 4**, again at fifteen minutes left and at the end of a sandbox; the landing page drops the beta block and the invite link. Recommended: yes.
 5. **The guide's "How do you want to work?" is removed**; Smith names both ways when the manual view first opens. Recommended: yes.
+
+## 12. The second look (Johan, 2026-10-30): an overlay, then the guide
+
+Johan tried Studio with Smith first and found it a bit too chaotic: Smith talking in one window while the windows, the preview and the ready prompts all arrive around him. His direction, in his words: Smith presents the app on an overlay and Studio loads behind; when the app has been presented and the overlay is closed, the guide goes on; the "Show me" links go; some effects on the chat bubbles, a bit more like a video game, still professional; the guide somewhere between the old cards and the new lines, still led by Smith; Smith may offer to show one change in every way, skippable; no suggestion buttons in the overlay nor in the guide. This section replaces §2's steps 1 to 5 and refines §6 (the default arrangement) and §7; §2's "Typing in the middle" and "What an answer does to the preview", §3, §4, §5 and §8 stand.
+
+### 12.1 The overlay
+
+- **What is on the screen.** Studio opens on one layer over everything: a calm backdrop (the brand's dark tone, the app's name in the brand type at the top), Smith's thread alone in the middle at reading width, the mascot beside his lines. Behind the layer Studio is loading as it does today (the stage of while-it-is-made.md, then the windows and the preview), dimmed and softened so the person senses an app being made without being asked to look at it; nothing behind takes a click or a key. The layer is a dialog: focus stays in it and goes back to where it was when it closes; Smith's lines are read out as they come (a polite live region).
+- **What happens on it.** The presentation of §3, part by part, with each part's questions of §4 asked where they belong. The chips are only the presentation's own: **Next** on the current part, a question's options and **Keep it**, and one **Skip** for the whole overlay. No ready prompts, no "Show me" (Johan). A line typed is answered as §2's "Typing in the middle" says.
+- **When the preview is ready behind**, the backdrop lets a little more of it through, at once and without a word, so an open question is not interrupted; at the next part Smith says it in one line ("Your app runs behind me") with his proud face. The last part's chip is **Show me the app** once the preview runs; until then the last part ends with Smith's working face and "A moment, the app is still being made", and the chip comes when it runs. A build that fails behind the overlay closes it to Studio as it is today, with the failure's own notice; the guide waits until the preview runs.
+- **Closing.** Show me the app at the end, or **Skip** or Esc at any time (not a click on the backdrop: too easy beside an open question). Closing early ends the presentation: the parts not said are not said, and "Present the app again" (§12.6) gives them. The thread does not vanish: it slides into Smith's place (§12.3) while the backdrop lifts, so every line said and every question left open is still there; a question answered afterwards is a change like any other and resumes nothing.
+- **Who sees it.** The first opening of a project in a browser, as the guide's rule in studio-guide.md §2. Two keys: `presented:<app>` is written when the overlay closes, `guideDone:<app>` when the guide ends or is skipped; a reload between the two gives the guide without the overlay. A returning person opens Studio directly. An app with nothing to present (no parts) skips straight to the guide. `?guide=off` turns both off, as today.
+- **On a phone** the overlay is the whole screen, and the rest of this section is the phone's order of A 172 (the guide on a phone: Smith's lines, no cards, a stop scrolls its window into view).
+
+### 12.2 Effects, the game feeling without the game
+
+A bit more like a video game is the rhythm, not the props. In the overlay and in the guide:
+
+- A line of Smith's arrives as one piece, rising a few pixels while it fades in; the next comes after a pause to read the first (as today), or at once on a tap, Enter or Space. No letter-by-letter typing: it slows reading and looks like a chatbot.
+- The mascot's face changes with a small bounce when the expression changes; the part's place in the whole shows as dots under the thread ("3 of 5"), filling as the parts come.
+- A chip presses down a little when clicked; a question answered folds its other options away and leaves the chosen one as a tag on the line.
+- In the guide, the place a stop is about lights with one soft pulse of the accent when the stop arrives, then stays lit.
+- No sound, no confetti, no score, no badges, nothing that counts the person (studio-guide.md §6 stands). Every motion is off under `prefers-reduced-motion`, which is the only switch (no setting of Studio's own), and no motion takes longer than a third of a second; the one named exception is the overlay's closing, half a second, since it carries the thread to its place.
+- **Keys.** Enter is Next and Esc is Skip only while the box is empty and no control has the focus, so nothing typed is eaten; the keys never reach Studio behind the overlay or the dimmed rest during the guide.
+
+### 12.3 Where Smith lives after the overlay
+
+Johan's question: should Smith always be on the overlay rather than in the left window, or more like the app's Ask, or should the person have the choice? The recommendation:
+
+- **One Smith, two sizes.** Smith's thread is one thing that can be **floating**, a panel over the preview opened from his face at the right end of the top bar (the feel of the kit's Ask, which the people who use the app meet in the app; his button is not at the bottom right, where the previewed app's own Ask sits), or **docked**, the window on the left as today with Changes under him. The overlay is the floating Smith at full size; closing it shrinks the thread into the open panel, hanging from the top right over the preview, so the guide has his lines in view; the panel folds into the face when the person closes it or when nothing has happened in it for a while after the guide, and opens again from the face. The switch between floating and docked is one button in Smith's header, remembered per device like the windows' arrangement. On a phone there is no choice: Smith is a window in the swipe row (A 172).
+- **The default is floating.** What Johan called chaotic is the number of things arriving at once; with Smith floating, the first screen after the overlay is the app, the top bar and his panel, and the manual view and Changes come when the "show" arrow at the preview's edge (§2 step 5) or a tab is opened; floating, Smith leaves the layout's first slot and the preview takes the width, Changes and the manual view being the windows behind the arrow and the tabs as §6 has them. Docking is for a long sitting of changes, where watching the preview beside the thread pays. A person who docks him keeps it.
+- **The guide runs in whichever he is.** A stop about a place the floating panel covers moves the panel to the other side for that stop and back afterwards; when no side has room (a narrow window, a split layout) the panel folds into the face for the stop and the card at the place carries the stop alone.
+- The left window is not removed: docked is the layout of §6; floating is a second state of the same component, not a second Smith.
+
+### 12.4 The guide, between the cards and the lines
+
+Each stop is Smith's line in his thread **and** a small card at the place it is about: the card carries the stop's title and one sentence, with **Next** and **Skip**; the thread's line carries the same title, the full text, the same chips, and the mascot pointing. The two Next are one action, as are the two Skip. The place is lit and the rest dims a little, as the cards did (studio-guide.md §1); the dimmed rest takes no clicks, Smith's panel excepted. Esc skips, Enter is Next (§12.2's rule), **Guide** in the top bar runs it again. On a phone the card is left out and the stop scrolls its window into view (A 172). The stops are those of `guide.ts`; the ready prompts are not shown while the guide runs (Johan), and come back under the box when it ends or is skipped.
+
+### 12.5 One change, shown every way
+
+After the stop "Ask me", Smith offers: "Shall I show you one change made three ways?" with **Yes** and **Skip** (Esc skips). On Yes:
+
+1. **Smith's way.** He proposes a small, visible, harmless change chosen by rule from the IR: a text field `notes` added to the first model that has none (`addField <model> notes text`). An app with no model, or where every model has one, gets no offer. He applies it himself, Yes having been the person's word and Undo being one chip away, and the preview is taken to that model's new-record form (as Select takes the preview to a part), where the field shows.
+2. **No code.** The manual view opens on Behavior at that model (every kind of record lives there), the new field's row lit: "The same change, by hand: this row is the field I added; any setting of the app is a row like it." A floating Smith covering the row moves as §12.3 says.
+3. **Code.** The manual view's Code sub-tab opens `smithable.yml` at the field's line, lit: "And this is the line it became; a change here is the same change."
+4. **Undo.** "Keep the field, or take it back?" with **Keep** and **Undo**; Undo reverts the one change as any undo (Changes holds it, wherever its window is). Either way the manual view closes again and the preview is in front, so nobody is left before the raw file, and the guide goes on with its next stop. Esc during steps 1 to 4 is Undo and goes on.
+
+Nothing here is a new mechanism: a proposed change, the manual view opened at a concept (as a "Show me" did), the editor at a line (the concept tree's Show in smithable.yml), and undo.
+
+### 12.6 What goes
+
+- The "Show me" buttons under the presentation's parts (the concept keys stay on the parts for the guide and for "that page" in the next line, §5).
+- "What does this app do?" among the ready prompts (A 200, the ready prompts that did not work for Johan). **Guide** in the top bar becomes a small menu with two lines, "Tour Studio" and "Present the app again"; the presentation again runs in Smith's thread, with no overlay and no dimming, see decision 5.
+- The ready prompts in the overlay and during the guide; they come back under the box afterwards, three of them: What should I do next?, Help me add…, How do I publish?
+
+### 12.7 Steps (A; Studio only)
+
+1. The overlay with the presentation and its questions, the closing transition into Smith's panel, the two first-visit keys (§12.1); the effects of §12.2 under one `motion` flag that `prefers-reduced-motion` turns off.
+2. Floating and docked Smith, the switch, the default, the move for a stop (§12.3).
+3. The guide's cards beside the lines, no ready prompts while it runs (§12.4).
+4. The shown change (§12.5), with the stop's words in `guide.ts`.
+5. The removals (§12.6). A 200 (the ready prompts) and A 201 (the CRM's checkboxes painting over the header) are bugs and go first, on their own.
+
+Pictures for Johan after steps 1 and 2, through the human assistant; the Studio check walks the new order (overlay, close, guide, the shown change kept or undone).
+
+### 12.8 Decisions for Johan
+
+1. **The overlay closes on the person's word** (Show me the app, Skip, Esc), not by itself when the presentation ends. Recommended: yes; the one exception is an app with nothing to present, which goes straight to the guide.
+2. **Smith floating by default, docked as a choice** (§12.3), the overlay being the floating Smith at full size and his button the face in the top bar. Recommended: yes. The alternative is docked by default with the overlay only at the start; it keeps today's screen and answers less of the chaos.
+3. **The guide as Smith's line and a small card at the place, both** (§12.4). Recommended: yes.
+4. **The shown change is a notes field on the first model without one**, undone or kept at the end (§12.5). Recommended: yes; the alternative, a look change (an accent color), shows the Look tab rather than the three ways of the same change.
+5. **The presentation again from the Guide menu** ("Present the app again"), in the thread without the overlay, since the chip goes. Recommended: yes; the alternative is no way back to it, which a returning person may miss.
+6. **No sound** in the effects, now or as a setting. Recommended: no sound.
+
+Two second reviewers read the section; their points (Skip meaning two things, the floating Smith hidden when the guide starts, the last part before the preview runs, the backdrop click, keys against typing, the shown change's end and empty cases, phones) are in the text.
