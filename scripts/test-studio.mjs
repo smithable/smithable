@@ -546,7 +546,12 @@ try {
         await page.locator('[data-beta="intro"]').waitFor({ timeout: 30000 * P });
         // Smith says he is AI and where a question may go, or that nothing leaves Studio
         // (legal-1.0 U6).
-        await page.locator('[data-part="ai-notice"]').first().waitFor();
+        await page
+          .locator('[data-part="ai-notice"]', {
+            hasText: "may be sent to a model on this computer",
+          })
+          .first()
+          .waitFor();
         await page.getByText(/^Sandbox: (9|10) min left$/).waitFor({ timeout: 10000 * P });
         await page.locator('[data-beta="soon"]').waitFor();
         const invite = page.getByRole("link", { name: "Ask for an invite" }).first();

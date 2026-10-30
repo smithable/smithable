@@ -55,4 +55,12 @@ test("Smith's AI notice names where the policy's models run, and nothing without
       SMITHABLE_AI_POLICY: "local-only",
     }),
   ).toEqual([]);
+  // An inference profile's prefix decides, whatever the region the calls start from.
+  expect(
+    aiDestinations({
+      SMITHABLE_FRONTIER: "bedrock",
+      SMITHABLE_FRONTIER_MODEL: "global.anthropic.claude-sonnet-5-5",
+      AWS_REGION: "eu-north-1",
+    }),
+  ).toEqual(["Anthropic's Claude on Amazon Bedrock, outside the EU"]);
 });

@@ -33,6 +33,7 @@ interface Said {
 }
 
 export function Ask({
+  ai,
   assumptions = [],
   show,
   stage = "window",
@@ -68,6 +69,8 @@ export function Ask({
   onClose?: () => void;
   /** What the draft assumed, asked at the part each concerns (smith-first.md §4). */
   assumptions?: Assumption[];
+  /** Where Smith's requests may go, for his AI notice (legal-1.0 U6); empty: no model in use. */
+  ai?: string[];
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -361,7 +364,8 @@ export function Ask({
         </p>
       )}
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-        {ready && !making && ready.ai && <AiNotice to={ready.ai} />}
+        {/* Whenever Smith can be asked, the app being made included (legal-1.0 U6). */}
+        {ai && <AiNotice to={ai} />}
         {ready && !making && <Greeting ready={ready} presenting={partsSaid > 0} />}
         {beta && !making && <BetaLines beta={beta} left={left} />}
         {/* The presentation where it was said: after the lines before it, before the ones since. */}
@@ -646,8 +650,7 @@ export interface Ready {
   /** The service's state, said at publishing (legal-1.0 U4), with its Acceptable Use Policy. */
   data?: "test" | "live";
   aup?: string;
-  /** Where Smith's requests may go (U6); empty when no model is configured. */
-  ai?: string[];
+
   /** Applies a note's fix through the operation path, as any change. */
   apply: (op: string, args: Record<string, unknown>) => void;
 }
@@ -1148,8 +1151,8 @@ function AiNotice({ to }: { to: string[] }) {
   return (
     <p data-part="ai-notice" className="rounded-md bg-subtle px-3 py-2 text-xs text-muted">
       {to.length
-        ? `AI assistant — answers may be wrong. Your question and relevant records you are allowed to access may be sent to ${to.join(" or ")}. Do not include prohibited sensitive information.`
-        : "No AI model is set up here: Smith answers by rule, and nothing you type leaves Studio."}
+        ? `AI assistant — answers may be wrong. What you ask, with the app's files and this conversation, may be sent to ${to.join(" or ")}. Do not include prohibited sensitive information.`
+        : "No AI model is in use here: Smith answers by rule, and nothing you type leaves Studio."}
     </p>
   );
 }

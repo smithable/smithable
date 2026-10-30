@@ -194,8 +194,8 @@ export function Ask({
               className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground"
             >
               {w.aiNotice(
-                ai.provider && ai.region
-                  ? w.aiIn(ai.provider, ai.region)
+                ai.region
+                  ? w.aiIn(ai.provider ?? w.aiConfigured, ai.region)
                   : (ai.provider ?? w.aiConfigured),
               )}
             </p>

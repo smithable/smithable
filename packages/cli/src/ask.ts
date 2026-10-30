@@ -110,11 +110,16 @@ export function aiDestinations(env: NodeJS.ProcessEnv = process.env): string[] {
         : "the Smithable model, in the EU",
     anthropic: "Anthropic's Claude, in the USA",
     "claude-code": "Anthropic's Claude through your Claude Code, in the USA",
-    bedrock: `Anthropic's Claude on Amazon Bedrock, ${
-      /^eu\./.test(env.SMITHABLE_FRONTIER_MODEL ?? "") || bedrock.startsWith("eu-")
-        ? "in the EU"
-        : `in ${bedrock}`
-    }`,
+    // A cross-region inference profile's prefix says where it routes (eu., us., global.…); without
+    // one, the region the calls go to.
+    bedrock: `Anthropic's Claude on Amazon Bedrock, ${((prefix) =>
+      prefix
+        ? prefix === "eu"
+          ? "in the EU"
+          : "outside the EU"
+        : bedrock.startsWith("eu-")
+          ? "in the EU"
+          : `in ${bedrock}`)(/^([a-z]+)\./.exec(env.SMITHABLE_FRONTIER_MODEL ?? "")?.[1])}`,
   };
   return [...new Set(providersFor(env).map((p) => where[p.name] ?? p.name))];
 }

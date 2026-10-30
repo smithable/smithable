@@ -824,6 +824,7 @@ export function App() {
   const smith = (stage: "overlay" | "panel" | "window") => (
     <div data-guide="change" className="flex h-full min-h-0 flex-col">
       <Ask
+        {...(project.ai ? { ai: project.ai } : {})}
         stage={stage}
         show={show}
         previewRuns={previewRuns}
@@ -843,7 +844,6 @@ export function App() {
           ...(project.home ? { home: project.home } : {}),
           ...(project.beta?.data ? { data: project.beta.data } : {}),
           ...(project.beta?.aup ? { aup: project.beta.aup } : {}),
-          ...(project.ai ? { ai: project.ai } : {}),
           apply: (op, args) => void run(op, args),
         }}
       />
