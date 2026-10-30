@@ -31,10 +31,7 @@ function present(stops: Stop[]): { stop: Stop; element: HTMLElement }[] {
   });
 }
 
-/**
- * Where the card goes: below its place, else above, else inside its top edge (a tall place, the
- * preview, shows what matters lower down: a form's new field); always on screen.
- */
+/** Where the card goes: below its place, else above, else over its lower edge; always on screen. */
 function cardAt(box: DOMRect): { top: number; left: number } {
   const room = window.innerHeight;
   const top =
@@ -42,7 +39,7 @@ function cardAt(box: DOMRect): { top: number; left: number } {
       ? box.bottom + CARD.gap
       : box.top - CARD.gap - CARD.height >= 0
         ? box.top - CARD.gap - CARD.height
-        : box.top + CARD.gap;
+        : box.bottom - CARD.height - 2 * CARD.gap;
   const left = Math.min(Math.max(box.left, CARD.gap), window.innerWidth - CARD.width - CARD.gap);
   return {
     top: Math.min(Math.max(top, CARD.gap), room - CARD.height - CARD.gap),
