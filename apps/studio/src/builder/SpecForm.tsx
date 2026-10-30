@@ -14,6 +14,7 @@ import { parse } from "yaml";
 import type { Project } from "../api";
 import { HelpMark, type HelpTopic } from "../help";
 import { cx } from "../ui";
+import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import {
   alternativeFor,
@@ -61,6 +62,23 @@ const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(a
 const Shape = createContext<(path: Path) => React.ReactNode>(() => undefined);
 const shapeOf = (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path: Path) => {
   const [first, model, third, name, key] = path;
+  // A standard action's condition and values as rows of controls (A 203).
+  if (file === "smithable.yml" && ir && first === "actions" && path.length === 3) {
+    const action = ir.actions.find((a) => a.name === model);
+    if (!action || action.custom || (third !== "when" && third !== "set")) return undefined;
+    if (action.merge || action.split || action.copy) return undefined;
+    return (
+      <ActionRowsEditor
+        key={`${String(model)}.${third}.${JSON.stringify(third === "when" ? action.when : action.set)}`}
+        part={third}
+        model={ir.models.find((m) => m.name === action.on)}
+        {...(action.when ? { when: action.when } : {})}
+        set={action.set}
+        onSave={(value) => run("setAction", { action: String(model), [third]: value })}
+        help={(topic) => <HelpMark topic={topic} />}
+      />
+    );
+  }
   if (file !== "smithable.yml" || !ir || first !== "models" || third !== "fields") return undefined;
   if (!(path.length === 4 || (path.length === 5 && key === "type"))) return undefined;
   const field = ir.models.find((m) => m.name === model)?.fields.find((f) => f.name === name);
@@ -223,7 +241,8 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const tools = useContext(Tools);
   const adder = useContext(Adder);
   const shaped = useContext(Shape)(path);
-  if (shaped && (typeof value === "string" || value === undefined)) return shaped;
+  if (shaped && (typeof value === "string" || value === undefined || path[0] === "actions"))
+    return shaped;
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;
   const label = String(path.at(-1) ?? "");

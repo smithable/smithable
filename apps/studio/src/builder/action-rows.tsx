@@ -3,6 +3,7 @@
 // core: the rows read the action's IR and give back setAction's and addAction's arguments.
 import type { ActionValueIR, Condition, ModelIR } from "@smithable/core";
 import { humanize } from "@smithable/core";
+import { useState } from "react";
 import { Button, Input, Select } from "../ui";
 
 type Field = ModelIR["fields"][number];
@@ -392,5 +393,49 @@ function SetControl({
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
+  );
+}
+
+/**
+ * An action's condition or values in Behavior's entry (A 203): its rows, and Change, which sends
+ * only that part through setAction; unchanged rows send nothing.
+ */
+export function ActionRowsEditor({
+  part,
+  model,
+  when,
+  set,
+  onSave,
+  help,
+}: {
+  part: "when" | "set";
+  model: ModelIR | undefined;
+  when?: Condition;
+  set?: ActionValueIR[];
+  onSave: (value: Condition | Record<string, string>) => Promise<boolean>;
+  /** The help beside the rows and a formula (A 204). */
+  help?: (topic: "condition" | "formula") => React.ReactNode;
+}) {
+  const [whenRows, setWhenRows] = useState(() => whenRowsOf(when));
+  const [setRows, setSetRows] = useState(() => setRowsOf(set));
+  const value = part === "when" ? conditionOf(whenRows) : valuesOf(setRows);
+  const was = part === "when" ? conditionOf(whenRowsOf(when)) : valuesOf(setRowsOf(set));
+  const changed = JSON.stringify(value) !== JSON.stringify(was);
+  return (
+    <div className="space-y-2">
+      {part === "when" ? (
+        <>
+          {help && <div className="flex justify-end">{help("condition")}</div>}
+          <WhenRows model={model} rows={whenRows} onChange={setWhenRows} />
+        </>
+      ) : (
+        <SetRows model={model} rows={setRows} onChange={setSetRows} help={help?.("formula")} />
+      )}
+      {changed && (
+        <Button className="h-7 text-xs" onClick={() => void onSave(value)}>
+          {part === "when" ? "Change the condition" : "Change the values"}
+        </Button>
+      )}
+    </div>
   );
 }
