@@ -4165,6 +4165,9 @@ async function askPanelFlow(dir, base) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
     await signInAs(page, base, "member");
+    // The first page is the team page, which a member may not open: they land on the first
+    // they may, not on a refusal.
+    await page.waitForURL(`${base}/admin`, { timeout: 10000 * P });
     await page.getByRole("button", { name: "Ask", exact: true }).click();
     const sheet = page.getByRole("dialog", { name: "Ask" });
     await sheet.getByLabel("Question").fill("how many tasks");
@@ -4222,7 +4225,7 @@ async function askPanelFlow(dir, base) {
     if (await page.getByRole("button", { name: "Ask", exact: true }).count())
       throw new Error("a visitor has Ask");
     console.log(
-      "  ✓ browser: Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a greeting is answered by rule with questions to try, one picked is answered, and the conversation stays on a reload; a change the model proposes is a card made only once confirmed, logged as through Ask; a role the assistant block does not name and a visitor have no Ask",
+      "  ✓ browser: a member lands on the first page they may open; Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a greeting is answered by rule with questions to try, one picked is answered, and the conversation stays on a reload; a change the model proposes is a card made only once confirmed, logged as through Ask; a role the assistant block does not name and a visitor have no Ask",
     );
   } catch (error) {
     console.log(

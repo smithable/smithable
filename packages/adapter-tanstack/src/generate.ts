@@ -683,7 +683,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("tests/smoke.spec.ts", smokeTests(ir, t, auth)),
       ...(ir.pages.some((p) => p.route === "/")
         ? []
-        : [generated("src/routes/index.tsx", indexRoute(ir))]),
+        : [generated("src/routes/index.tsx", indexRoute(ir, ux, auth))]),
     ],
   },
   {

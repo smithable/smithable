@@ -424,7 +424,12 @@ export function workspaceEntries(ir: SpecIR, ux: UxIR, auth: AuthIR): string[] {
     .map((p) => `{ to: ${JSON.stringify(p.route)}, access: pageAccess[${JSON.stringify(p.id)}] }`);
 }
 
-export function indexRoute(ir: SpecIR): string {
+/**
+ * "/" when no page is there: on to the app's first page, or for one signed in to the first page
+ * of the workspace they may open; one who may open none is told so on a page of its own, not
+ * refused on a page that is not theirs.
+ */
+export function indexRoute(ir: SpecIR, ux: UxIR, auth: AuthIR): string {
   const first = ir.navigation[0]?.pages[0] ?? ir.pages[0]?.id;
   const target = ir.pages.find((p) => p.id === first);
   if (!target) {
@@ -438,13 +443,44 @@ function HomePage() {
 }
 `;
   }
-  return `${HEADER}import { createFileRoute, redirect } from "@tanstack/react-router";
+  const workspace = hasSignIn(auth) ? workspaceEntries(ir, ux, auth) : [];
+  if (!workspace.length)
+    return `${HEADER}import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
     throw redirect({ to: ${JSON.stringify(target.route)} });
   },
 });
+`;
+  return `${HEADER}import { createFileRoute, redirect } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess } from "#/generated/pages";
+import { allows } from "#/kit/access";
+import { PageHeader } from "#/kit/AppShell";
+import { w } from "#/kit/words";
+
+/** The workspace's pages in the menu's order, each with who may open it. */
+const PAGES = [${workspace.join(", ")}] as const;
+
+export const Route = createFileRoute("/")({
+  beforeLoad: ({ context }) => {
+    const page = PAGES.find((p) => allows(p.access, context.viewer));
+    // A visitor goes on to the first page, which asks them to sign in.
+    if (page || !context.viewer) throw redirect({ to: page?.to ?? ${JSON.stringify(target.route)} });
+  },
+  component: HomePage,
+});
+
+/** Signed in, with no page of the app to open: said here, not refused elsewhere. */
+function HomePage() {
+  return (
+    <>
+      <PageHeader title={app.name} />
+      <p className="text-muted-foreground">{w.noPageForYou}</p>
+    </>
+  );
+}
 `;
 }
 

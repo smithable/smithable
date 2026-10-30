@@ -231,6 +231,7 @@ export const w = {
   notRun: "Inte utfört: en ändring som personen skulle bekräfta först.",
   nothing: "Inget",
   nothingHereYet: "Inget här ännu.",
+  noPageForYou: "Det finns ingen sida här för din roll ännu. En administratör kan ändra det.",
   nothingMatches: "Inget som matchar har hänt.",
   nothingThisMonth: "Inget den här månaden ännu.",
   nothingThisWeek: "Inget den här veckan ännu.",

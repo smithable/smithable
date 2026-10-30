@@ -29,6 +29,17 @@ import { checkPorts } from "./ports.mjs";
 // not read as a failure.
 const P = Math.max(1, Number(process.env.TEST_PATIENCE) || 1);
 
+// A request on a kept-alive connection the server closed as idle at the same moment is reset
+// (ECONNRESET) before it is read: under load the client's own idle timer fires late, so it
+// reuses a connection the server has just let go. Nothing was done with it, so a GET is sent
+// again once; any other request, and a second failure, are the server's answer.
+const fetch = (url, init) =>
+  globalThis.fetch(url, init).catch((error) => {
+    const reset = error?.cause?.code === "ECONNRESET" || error?.cause?.code === "UND_ERR_SOCKET";
+    if (!reset || (init?.method && init.method !== "GET")) throw error;
+    return globalThis.fetch(url, init);
+  });
+
 const repo = new URL("..", import.meta.url).pathname;
 const cli = join(repo, "packages/cli/dist/bin.js");
 const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
