@@ -351,23 +351,27 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
     }
     const value = words[++i] as string;
     lastList = type === "array" ? key : undefined;
+    const takesObject = type === "object" || (Array.isArray(type) && type.includes("object"));
     args[key] =
-      type === "array"
-        ? // Repeated ("--pages home --pages items") adds to the list given before.
-          [
-            ...((args[key] as string[] | undefined) ?? []),
-            ...value
-              .split(",")
-              .map((v) => v.trim())
-              .filter(Boolean),
-          ]
-        : type === "object"
-          ? // Repeated ("--set a=1 --set b=2") adds to the pairs given before.
-            {
-              ...(args[key] as object | undefined),
-              ...Object.fromEntries(pairsOf(value).map(pairOf)),
-            }
-          : scalarOf(value, type);
+      takesObject && /^\s*[[{]/.test(value)
+        ? // Records and nested values come as JSON: --given '{"Customer":[{"id":1}]}'.
+          jsonOf(key, value)
+        : type === "array"
+          ? // Repeated ("--pages home --pages items") adds to the list given before.
+            [
+              ...((args[key] as string[] | undefined) ?? []),
+              ...value
+                .split(",")
+                .map((v) => v.trim())
+                .filter(Boolean),
+            ]
+          : type === "object"
+            ? // Repeated ("--set a=1 --set b=2") adds to the pairs given before.
+              {
+                ...(args[key] as object | undefined),
+                ...Object.fromEntries(pairsOf(value).map(pairOf)),
+              }
+            : scalarOf(value, type);
   }
   op.positional.forEach((spec, index) => {
     if (spec.startsWith("...")) {
@@ -410,6 +414,16 @@ export function parseOperationArgs(op: AnyOperation, words: string[]): Operation
     }
   }
   return args;
+}
+
+/** A JSON value given on the command line for an object argument; bad JSON is refused naming the option. */
+function jsonOf(key: string, text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const flag = `--${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+    throw new OperationError(`${flag} is not JSON: ${(error as Error).message}.`);
+  }
 }
 
 /** A word as the schema's type: a number or a boolean when it says so and the word is one. */
