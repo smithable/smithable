@@ -88,7 +88,16 @@ export interface Project {
   /** A message for the first to open Studio, e.g. why a description could not be used. */
   notice?: string;
   /** The hosted beta's facts (smith-first.md §8): a sandbox's end, the invite page, the tester guide. */
-  beta?: { until?: string; invite?: string; guide?: string };
+  beta?: {
+    until?: string;
+    invite?: string;
+    guide?: string;
+    /** The service's state (legal-1.0 item 1.11): test-only, or live within the AUP at `aup`. */
+    data?: "test" | "live";
+    aup?: string;
+  };
+  /** Where Smith's requests may go, in words, one per model the AI policy allows (U6). */
+  ai?: string[];
   /** A described app being made: until it is gone, `files` and `name` are a placeholder's. */
   making?: Making;
   /** Requests typed while the app was made, made in order once it is in place. */

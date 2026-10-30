@@ -529,7 +529,7 @@ try {
     },
   );
   await step(
-    "the hosted beta in Smith's words: a sandbox's minutes in his header from fifteen left, with the invite",
+    "the hosted beta in Smith's words: a sandbox's minutes in his header from fifteen left, with the invite; Smith's AI notice",
     async () => {
       const file = join(dir, "data/.smithable/beta.json");
       writeFileSync(
@@ -538,10 +538,20 @@ try {
           until: new Date(Date.now() + 10 * 60_000).toISOString(),
           invite: "https://smithable.ai/invite",
           guide: "https://docs.smithable.ai/beta.html",
+          data: "test",
+          aup: "https://smithable.ai/legal/acceptable-use",
         }),
       );
       try {
         await page.locator('[data-beta="intro"]').waitFor({ timeout: 30000 * P });
+        // Smith says he is AI and where a question may go, or that nothing leaves Studio
+        // (legal-1.0 U6).
+        await page
+          .locator('[data-part="ai-notice"]', {
+            hasText: "may be sent to a model on this computer",
+          })
+          .first()
+          .waitFor();
         await page.getByText(/^Sandbox: (9|10) min left$/).waitFor({ timeout: 10000 * P });
         await page.locator('[data-beta="soon"]').waitFor();
         const invite = page.getByRole("link", { name: "Ask for an invite" }).first();

@@ -824,6 +824,7 @@ export function App() {
   const smith = (stage: "overlay" | "panel" | "window") => (
     <div data-guide="change" className="flex h-full min-h-0 flex-col">
       <Ask
+        {...(project.ai ? { ai: project.ai } : {})}
         stage={stage}
         show={show}
         previewRuns={previewRuns}
@@ -841,6 +842,8 @@ export function App() {
           appName: project.name,
           notes: (spec.diagnostics ?? []).filter((d) => d.severity === "note"),
           ...(project.home ? { home: project.home } : {}),
+          ...(project.beta?.data ? { data: project.beta.data } : {}),
+          ...(project.beta?.aup ? { aup: project.beta.aup } : {}),
           apply: (op, args) => void run(op, args),
         }}
       />
@@ -1030,6 +1033,16 @@ export function App() {
               >
                 How to publish
               </a>
+            )}
+            {!project.making && project.home && project.beta?.data === "test" && (
+              // The service's state beside its publishing, as it is (legal-1.0 U4).
+              <span
+                data-part="test-only"
+                title="Test hosting only. Use fictional data. Do not collect real bookings, customer records or mailbox messages."
+                className="rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-950"
+              >
+                Test hosting only
+              </span>
             )}
             {!project.making && !guideOff() && (
               <GuideMenu onTour={startGuide} onPresent={parts.length ? presentAgain : undefined} />

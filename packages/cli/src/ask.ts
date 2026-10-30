@@ -95,6 +95,35 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
   return folder ? providers.map((p) => cached(p, folderStore(folder))) : providers;
 }
 
+/**
+ * Where the models the AI policy allows run, in words, for Smith's AI notice (legal-1.0 U6): each
+ * provider and its region; none when no model is configured, so Smith answers by rule and nothing
+ * leaves Studio.
+ */
+export function aiDestinations(env: NodeJS.ProcessEnv = process.env): string[] {
+  const bedrock = env.SMITHABLE_BEDROCK_REGION || env.AWS_REGION || "eu-north-1";
+  const where: Record<string, string> = {
+    local: "a model on this computer",
+    smithable:
+      env.SMITHABLE_MODEL_LOCATION === "elsewhere"
+        ? "the Smithable model, outside the EU"
+        : "the Smithable model, in the EU",
+    anthropic: "Anthropic's Claude, in the USA",
+    "claude-code": "Anthropic's Claude through your Claude Code, in the USA",
+    // A cross-region inference profile's prefix says where it routes (eu., us., global.…); without
+    // one, the region the calls go to.
+    bedrock: `Anthropic's Claude on Amazon Bedrock, ${((prefix) =>
+      prefix
+        ? prefix === "eu"
+          ? "in the EU"
+          : "outside the EU"
+        : bedrock.startsWith("eu-")
+          ? "in the EU"
+          : `in ${bedrock}`)(/^([a-z]+)\./.exec(env.SMITHABLE_FRONTIER_MODEL ?? "")?.[1])}`,
+  };
+  return [...new Set(providersFor(env).map((p) => where[p.name] ?? p.name))];
+}
+
 /** Answers kept as files in a folder, by their key. */
 function folderStore(folder: string): ResponseStore {
   const path = (key: string) => join(folder, key.slice(0, 2), `${key}.json`);
