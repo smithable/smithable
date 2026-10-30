@@ -688,6 +688,41 @@ try {
     },
   );
   await step(
+    "a standard action's condition and values are rows of controls in Behavior, each sent as the action's change (A 203)",
+    async () => {
+      const cancel = await entry(await area("actions"), "cancelOrder");
+      const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
+      const action = () => spec().match(/\n {2}cancelOrder:\n((?: {4}.*\n)*)/)?.[1] ?? "";
+      const until = async (test, what) => {
+        const deadline = Date.now() + 60000 * P;
+        while (!test(action())) {
+          if (Date.now() > deadline) throw new Error(`${what}: ${action()}`);
+          await page.waitForTimeout(200);
+        }
+      };
+      // A choice's values as checkboxes: draft orders too.
+      const when = cancel.getByRole("group", { name: "For records with" });
+      await when.getByRole("checkbox", { name: "Draft", exact: true }).check();
+      await cancel.getByRole("button", { name: "Change the condition" }).click();
+      await until((a) => /draft/.test(a) && /placed/.test(a), "the condition has no draft");
+      // Studio has it: the rows show it as the file does, with nothing left to change.
+      await cancel
+        .getByRole("button", { name: "Change the condition" })
+        .waitFor({ state: "detached", timeout: 30000 * P });
+      // The value from the field's own pick list.
+      const set = cancel.getByRole("group", { name: "It sets" });
+      await set.getByLabel("Status becomes").selectOption("shipped");
+      await cancel.getByRole("button", { name: "Change the values" }).click();
+      await until((a) => /status: shipped/.test(a), "the values do not set shipped");
+      // The formula has its question mark, a card with the docs (A 204).
+      await set.getByRole("radio", { name: "a formula" }).check();
+      await set.getByRole("button", { name: "A formula" }).click();
+      await page.getByRole("dialog", { name: "A formula" }).getByRole("link").first().waitFor();
+      await page.keyboard.press("Escape");
+      await page.getByRole("dialog", { name: "A formula" }).waitFor({ state: "detached" });
+    },
+  );
+  await step(
     "removing a field in Behavior asks first, with what data it loses; its notice's Undo brings it back",
     async () => {
       const customer = await entry(await area("models"), "Customer");

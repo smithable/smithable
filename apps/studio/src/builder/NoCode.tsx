@@ -2,6 +2,7 @@
 // Who can and Content (the texts, with Languages under them). What the preview reports in it
 // lands here: a part picked in Select opens Behavior at it, columns dragged and texts changed in
 // place are made as changes.
+import type { ModelIR } from "@smithable/core";
 import { describeChange, type SummarySection, summarize } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
@@ -128,17 +129,19 @@ function AddByWizard({
   kind,
   run,
   words,
+  models,
 }: {
   kind: WizardKind;
   run: Run;
   words: (op: string, args: Record<string, unknown>) => string | undefined;
+  models: ModelIR[];
 }) {
   const [open, setOpen] = useState(false);
   const label = { model: "Add a kind of record…", page: "Add a page…", action: "Add an action…" }[
     kind
   ];
   return open ? (
-    <Wizard kind={kind} run={run} words={words} onClose={() => setOpen(false)} />
+    <Wizard kind={kind} run={run} words={words} models={models} onClose={() => setOpen(false)} />
   ) : (
     <button type="button" className="text-xs text-accent underline" onClick={() => setOpen(true)}>
       {label}
@@ -252,7 +255,7 @@ export function NoCode({
                 { models: "model", pages: "page", actions: "action" } as Record<string, WizardKind>
               )[String(path[0])];
               return path.length === 1 && kind ? (
-                <AddByWizard kind={kind} run={run} words={words} />
+                <AddByWizard kind={kind} run={run} words={words} models={spec.ir?.models ?? []} />
               ) : undefined;
             }}
             tools={(path) => {

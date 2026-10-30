@@ -53,7 +53,7 @@ const CODE: Stop[] = [
   {
     anchor: "files",
     title: "Your app as text",
-    text: "smithable.yml says what your app does; its companions say who may sign in, how it looks and what it says. Ctrl-Space, or What goes here?, lists what can be written at the cursor.",
+    text: "smithable.yml says what your app does; its companions say who may sign in, how it looks and what it says. Ctrl-Space, or the question mark above it, lists what can be written at the cursor.",
   },
   {
     anchor: "problems",

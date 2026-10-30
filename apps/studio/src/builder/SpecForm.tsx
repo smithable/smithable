@@ -6,13 +6,16 @@ import {
   buildJsonSchema,
   COMPANION_SCHEMAS,
   type EditableFile,
+  humanize,
   type JsonSchema,
   type SpecIR,
 } from "@smithable/core";
 import { createContext, useContext, useId, useMemo, useState } from "react";
 import { parse } from "yaml";
 import type { Project } from "../api";
+import { HelpMark, type HelpTopic } from "../help";
 import { cx } from "../ui";
+import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import {
   alternativeFor,
@@ -57,31 +60,82 @@ const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(a
  * kind, required, unique, a choice's values, through changeField. Undefined for any other key,
  * a calculated field and a list of related records, which keep the plain text.
  */
-const Shape = createContext<(path: Path) => React.ReactNode>(() => undefined);
-const shapeOf = (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path: Path) => {
-  const [first, model, third, name, key] = path;
-  if (file !== "smithable.yml" || !ir || first !== "models" || third !== "fields") return undefined;
-  if (!(path.length === 4 || (path.length === 5 && key === "type"))) return undefined;
-  const field = ir.models.find((m) => m.name === model)?.fields.find((f) => f.name === name);
-  if (!field || field.formula || (field.type.kind === "relation" && field.type.many))
-    return undefined;
-  return (
-    <FieldShapeForm
-      key={`${String(model)}.${String(name)}`}
-      field={field}
-      models={ir.models.map((m) => m.name)}
-      run={(type, renames) =>
-        run("changeField", {
-          model: String(model),
-          field: String(name),
-          type,
-          ...(renames.length ? { renames } : {}),
-        })
-      }
-      rule={(unique) => run("setFieldRules", { model: String(model), field: String(name), unique })}
-    />
-  );
-};
+const Shape = createContext<(path: Path, value?: unknown) => React.ReactNode>(() => undefined);
+const shapeOf =
+  (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path: Path, value?: unknown) => {
+    const [first, model, third, name, key] = path;
+    // A standard action's condition and values as rows of controls (A 203), in place of its
+    // settings as text; a merge, split, copy or custom action keeps the text for now.
+    if (file === "smithable.yml" && ir && first === "actions" && path.length === 2) {
+      const action = ir.actions.find((a) => a.name === model);
+      if (!action || action.custom || action.merge || action.split || action.copy) return undefined;
+      const on = ir.models.find((m) => m.name === action.on);
+      // What the rows do not hold (who sees it, its add, its look…), shown as written.
+      const written = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+      const { on: _on, when: _when, set: _set, intent: _intent, ...rest } = written;
+      const save = (part: "when" | "set") => (value: unknown) =>
+        run("setAction", { action: String(model), [part]: value });
+      const help = (topic: "condition" | "formula") => <HelpMark topic={topic} />;
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted">
+            On each {humanize(action.on).toLowerCase()}
+            {action.intent ? `: ${action.intent}` : ""}
+          </p>
+          <div className="space-y-1">
+            <p className="text-xs font-medium">It sets</p>
+            <ActionRowsEditor
+              // Each part made anew when it changes in the file, so the other keeps what is typed.
+              key={`set:${JSON.stringify(action.set)}`}
+              part="set"
+              model={on}
+              set={action.set}
+              onSave={save("set")}
+              help={help}
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium">For records with</p>
+            <ActionRowsEditor
+              key={`when:${JSON.stringify(action.when ?? null)}`}
+              part="when"
+              model={on}
+              {...(action.when ? { when: action.when } : {})}
+              onSave={save("when")}
+              help={help}
+            />
+          </div>
+          {Object.keys(rest).length > 0 && (
+            <code className="block text-xs text-quiet">{JSON.stringify(rest)}</code>
+          )}
+        </div>
+      );
+    }
+    if (file !== "smithable.yml" || !ir || first !== "models" || third !== "fields")
+      return undefined;
+    if (!(path.length === 4 || (path.length === 5 && key === "type"))) return undefined;
+    const field = ir.models.find((m) => m.name === model)?.fields.find((f) => f.name === name);
+    if (!field || field.formula || (field.type.kind === "relation" && field.type.many))
+      return undefined;
+    return (
+      <FieldShapeForm
+        key={`${String(model)}.${String(name)}`}
+        field={field}
+        models={ir.models.map((m) => m.name)}
+        run={(type, renames) =>
+          run("changeField", {
+            model: String(model),
+            field: String(name),
+            type,
+            ...(renames.length ? { renames } : {}),
+          })
+        }
+        rule={(unique) =>
+          run("setFieldRules", { model: String(model), field: String(name), unique })
+        }
+      />
+    );
+  };
 
 /** Renames the entry at a path through its operation; undefined where there is none. */
 const Renamer = createContext<(path: Path) => ((to: string) => Promise<boolean>) | undefined>(
@@ -221,8 +275,9 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const inContent = useContext(InContent);
   const tools = useContext(Tools);
   const adder = useContext(Adder);
-  const shaped = useContext(Shape)(path);
-  if (shaped && (typeof value === "string" || value === undefined)) return shaped;
+  const shaped = useContext(Shape)(path, value);
+  if (shaped && (typeof value === "string" || value === undefined || path[0] === "actions"))
+    return shaped;
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;
   const label = String(path.at(-1) ?? "");
@@ -596,11 +651,12 @@ function Key({
     <div className={cx(nested && "rounded-md border border-line p-2")} data-key={name}>
       {/* The label in words, the description as its tooltip, and where a text a model reads is
           explained, the docs page (opens in a new tab). */}
-      <p
-        className="mb-1 text-xs font-medium"
-        title={typeof schema.description === "string" ? schema.description : undefined}
-      >
-        {labelOf(name, schema)}
+      <div className="mb-1 flex items-center gap-1.5 text-xs font-medium">
+        <span title={typeof schema.description === "string" ? schema.description : undefined}>
+          {labelOf(name, schema)}
+        </span>
+        {/* A key that is hard to grasp has its question mark (A 204). */}
+        {HARD[name] && <HelpMark topic={HARD[name]} />}
         {typeof schema["x-docs"] === "string" && (
           <a
             href={schema["x-docs"]}
@@ -611,11 +667,20 @@ function Key({
             What this is for
           </a>
         )}
-      </p>
+      </div>
       <Value schema={schema} value={value} path={path} />
     </div>
   );
 }
+
+/** The keys whose meaning does not fit a tooltip, and their help (help.tsx). */
+const HARD: Record<string, HelpTopic> = {
+  formula: "formula",
+  when: "condition",
+  merge: "merge",
+  touches: "contract",
+  ai: "aiPolicy",
+};
 
 /** The schema of the part at `path`, walking groups, entries, lists and the value's alternative. */
 function schemaAt(root: JsonSchema, value: unknown, path: Path): JsonSchema | undefined {
