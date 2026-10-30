@@ -24,6 +24,10 @@ export const w = {
   adding: "Lägger till…",
   address: "Adress",
   ai: "AI",
+  aiNotice: (to: string) =>
+    `AI-assistent – svaren kan vara fel. Din fråga och relevanta uppgifter du får läsa kan skickas till ${to}. Ta inte med förbjudna känsliga uppgifter.`,
+  aiIn: (provider: string, region: string) => `${provider} i ${region}`,
+  aiConfigured: "den AI-tjänst appen är inställd på",
   aiGenerated: "AI-genererad",
   aiMayBeWrong: "Svaren kan komma från en AI och kan vara fel. Kontrollera det som är viktigt.",
   all: "Alla",

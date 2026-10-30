@@ -214,7 +214,7 @@ import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 import { APPEARANCE_SCRIPT } from "#/kit/appearance";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
+import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
@@ -243,7 +243,9 @@ ${
     viewer,
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
-    asks: asks(viewer),${reviews.length ? `\n    counts: ${reviewCounts},` : ""}
+    asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),${reviews.length ? `\n    counts: ${reviewCounts},` : ""}
   };
 });`
     : reviews.length
@@ -313,7 +315,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo${asking ? ", asks" : ""}${reviews.length ? ", counts" : ""} } = Route.useRouteContext();
+  const { viewer, asOf, demo${asking ? ", asks, ai" : ""}${reviews.length ? ", counts" : ""} } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -394,7 +396,7 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           {children}
         </AppShell>`
         }
-${asking ? `        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}${t.translated ? "        <LanguageSwitch path={pathname} />\n" : ""}        <Consent${consentProps} />
+${asking ? `        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}${t.translated ? "        <LanguageSwitch path={pathname} />\n" : ""}        <Consent${consentProps} />
         <Scripts />
       </body>
     </html>

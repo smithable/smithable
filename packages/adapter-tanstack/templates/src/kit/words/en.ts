@@ -23,6 +23,11 @@ export const w = {
   adding: "Adding…",
   address: "Address",
   ai: "AI",
+  // Said at the assistant's first interaction (legal-1.0 U6, the AI Act's Article 50).
+  aiNotice: (to: string) =>
+    `AI assistant — answers may be wrong. Your question and relevant records you are allowed to access may be sent to ${to}. Do not include prohibited sensitive information.`,
+  aiIn: (provider: string, region: string) => `${provider} in ${region}`,
+  aiConfigured: "the AI service this app is set up with",
   aiGenerated: "AI-generated",
   aiMayBeWrong: "Answers may come from an AI and can be wrong. Check what matters.",
   all: "All",

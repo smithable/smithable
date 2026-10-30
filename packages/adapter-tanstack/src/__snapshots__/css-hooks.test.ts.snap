@@ -38,6 +38,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="article"",
     "data-part="title"",
   ],
+  "src/kit/Ask.tsx": [
+    "data-part="ai-notice"",
+  ],
   "src/kit/Calculator.tsx": [
     "data-kit="calculator"",
     "data-part="results"",

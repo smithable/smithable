@@ -7522,6 +7522,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
@@ -7578,6 +7579,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
   };
 });
 
@@ -7614,7 +7617,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -7653,7 +7656,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename}>
           {children}
         </AppShell>
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -10093,7 +10096,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -10115,7 +10118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -10141,7 +10144,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -10152,7 +10155,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/[_dev]/ask.ts": "7266fbb2 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "d036a1bb generated",
+  "src/routes/__root.tsx": "13ade15a generated",
   "src/routes/admin/activity.tsx": "e816502d generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "e9662e56 generated",
@@ -16288,7 +16291,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -24129,6 +24132,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { Consent } from "#/kit/Consent";
@@ -24268,6 +24272,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
   };
 });
 
@@ -24304,7 +24310,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -24351,7 +24357,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent privacy="/privacy" />
         <Scripts />
       </body>
@@ -28659,7 +28665,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
@@ -28687,7 +28693,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -28718,7 +28724,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -28729,7 +28735,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "b9438c31 generated",
+  "src/routes/__root.tsx": "d8ea4a70 generated",
   "src/routes/about/index.tsx": "6c4dd63e generated",
   "src/routes/admin/activity.tsx": "db85c43e generated",
   "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
@@ -34841,6 +34847,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
@@ -34920,6 +34927,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
   };
 });
 
@@ -34956,7 +34965,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -34995,7 +35004,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename}>
           {children}
         </AppShell>
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -37202,7 +37211,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -37224,7 +37233,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -37248,7 +37257,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -37259,7 +37268,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/[_dev]/ask.ts": "bd24beb4 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "1910ac9a generated",
+  "src/routes/__root.tsx": "d72bf57b generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "d8d2768e generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "c8c34df2 generated",
@@ -43573,6 +43582,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { Consent } from "#/kit/Consent";
@@ -43649,6 +43659,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
   };
 });
 
@@ -43685,7 +43697,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -43732,7 +43744,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -45557,7 +45569,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "22ca5dcb kit",
@@ -45582,7 +45594,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
@@ -45613,7 +45625,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -45624,7 +45636,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "d287a838 generated",
+  "src/routes/__root.tsx": "566c0853 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "350b3d17 generated",
   "src/routes/clients/index.tsx": "0ab3c03f generated",
@@ -53479,7 +53491,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "a4d49d3f kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -56544,6 +56556,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { Consent } from "#/kit/Consent";
@@ -56613,6 +56626,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
     counts: { "/review": waitingCount(viewer, ["Item"]) },
   };
 });
@@ -56650,7 +56665,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks, counts } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai, counts } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -56697,7 +56712,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -58204,7 +58219,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
@@ -58228,7 +58243,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -58255,7 +58270,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -58267,7 +58282,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "fb4e1e0e generated",
+  "src/routes/__root.tsx": "1054f6cd generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "9bcaa091 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -60672,6 +60687,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { Consent } from "#/kit/Consent";
@@ -60716,6 +60732,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
   };
 });
 
@@ -60752,7 +60770,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -60799,7 +60817,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -61701,7 +61719,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -61721,7 +61739,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -61745,7 +61763,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -61756,7 +61774,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "5e4c2437 generated",
+  "src/routes/__root.tsx": "573329ba generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "9e421604 generated",
@@ -70131,6 +70149,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { Consent } from "#/kit/Consent";
@@ -70228,6 +70247,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
   };
 });
 
@@ -70264,7 +70285,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -70311,7 +70332,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </AppShell>
         )}
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -73327,7 +73348,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "22ca5dcb kit",
@@ -73354,7 +73375,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "3db5c78a kit",
@@ -73379,7 +73400,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -73390,7 +73411,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/[_dev]/ask.ts": "4a0b13f2 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "b94262ff generated",
+  "src/routes/__root.tsx": "af6facd2 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
@@ -78641,6 +78662,7 @@ import { Ask, forgetAsked } from "#/kit/Ask";
 import { turnsOf } from "#/kit/ask";
 import { field } from "#/kit/params";
 import { ask, asks } from "#/generated/ask.server";
+import { aiFacts } from "#/kit/assistant.server";
 import { Consent } from "#/kit/Consent";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
@@ -78697,6 +78719,8 @@ const getViewer = createServerFn().handler(async () => {
     asOf: process.env.DATA_AS_OF,
     demo: process.env.DEMO_SIGN_IN === "1",
     asks: asks(viewer),
+    // Where the assistant's model runs, for its notice (legal-1.0 U6).
+    ai: aiFacts(),
   };
 });
 
@@ -78733,7 +78757,7 @@ export const Route = createRootRoute({
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { viewer, asOf, demo, asks } = Route.useRouteContext();
+  const { viewer, asOf, demo, asks, ai } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Set once React has taken over the page in the browser, for tests that must not type or
   // click before the page's handlers are attached (body[data-hydrated]).
@@ -78772,7 +78796,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename}>
           {children}
         </AppShell>
-        {asks && <Ask who={viewer?.id ?? "visitor"} ask={(question, turns) => askApp({ data: { question, turns } })} />}
+        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
         <Consent />
         <Scripts />
       </body>
@@ -80379,7 +80403,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Ask.tsx": "38bc886e kit",
+  "src/kit/Ask.tsx": "7bd68367 kit",
   "src/kit/Combobox.tsx": "ef1fe469 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
@@ -80401,7 +80425,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "77ffcea6 kit",
+  "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -80431,7 +80455,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "be185bd1 kit",
+  "src/kit/words/en.ts": "53be3b2c kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",
@@ -80442,7 +80466,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "76641e97 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "07b6bb15 generated",
+  "src/routes/__root.tsx": "b42589d4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "c5ea4e91 generated",
   "src/routes/cases/index.tsx": "f7f09d40 generated",

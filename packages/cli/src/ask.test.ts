@@ -36,3 +36,23 @@ test("a proposal's outcome is logged under its id, for training data", () => {
     outcome: "declined",
   });
 });
+
+test("Smith's AI notice names where the policy's models run, and nothing without a model (legal-1.0 U6)", async () => {
+  const { aiDestinations } = await import("./ask.js");
+  expect(aiDestinations({})).toEqual([]);
+  expect(
+    aiDestinations({
+      SMITHABLE_MODEL: "mistral-medium-latest",
+      SMITHABLE_MODEL_URL: "https://api.mistral.ai/v1",
+      SMITHABLE_FRONTIER: "bedrock",
+      SMITHABLE_FRONTIER_MODEL: "eu.anthropic.claude-sonnet-5-5",
+    }),
+  ).toEqual(["the Smithable model, in the EU", "Anthropic's Claude on Amazon Bedrock, in the EU"]);
+  expect(
+    aiDestinations({
+      SMITHABLE_MODEL: "m",
+      SMITHABLE_MODEL_URL: "https://x",
+      SMITHABLE_AI_POLICY: "local-only",
+    }),
+  ).toEqual([]);
+});

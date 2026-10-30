@@ -56,6 +56,20 @@ export interface Answer {
   timeZone?: string;
 }
 
+/**
+ * Where the assistant's model runs, for its notice (legal-1.0 U6): the provider and the region the
+ * host names (ASSISTANT_PROVIDER, _REGION); none when no model is set up, so answers come from the
+ * records alone and nothing is sent anywhere.
+ */
+export function aiFacts(): { provider?: string; region?: string } | null {
+  const { ASSISTANT_URL, ASSISTANT_MODEL, ASSISTANT_PROVIDER, ASSISTANT_REGION } = process.env;
+  if (!ASSISTANT_URL || !ASSISTANT_MODEL) return null;
+  return {
+    ...(ASSISTANT_PROVIDER ? { provider: ASSISTANT_PROVIDER } : {}),
+    ...(ASSISTANT_REGION ? { region: ASSISTANT_REGION } : {}),
+  };
+}
+
 /** A chat service that can call tools, as the host gives it (ASSISTANT_URL, _KEY, _MODEL). */
 export interface Model {
   url: string;

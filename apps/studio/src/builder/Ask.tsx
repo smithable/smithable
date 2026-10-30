@@ -361,6 +361,7 @@ export function Ask({
         </p>
       )}
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+        {ready && !making && ready.ai && <AiNotice to={ready.ai} />}
         {ready && !making && <Greeting ready={ready} presenting={partsSaid > 0} />}
         {beta && !making && <BetaLines beta={beta} left={left} />}
         {/* The presentation where it was said: after the lines before it, before the ones since. */}
@@ -642,6 +643,11 @@ export interface Ready {
   notes: Diagnostic[];
   /** Hosted: where the app is published and shared. */
   home?: string;
+  /** The service's state, said at publishing (legal-1.0 U4), with its Acceptable Use Policy. */
+  data?: "test" | "live";
+  aup?: string;
+  /** Where Smith's requests may go (U6); empty when no model is configured. */
+  ai?: string[];
   /** Applies a note's fix through the operation path, as any change. */
   apply: (op: string, args: Record<string, unknown>) => void;
 }
@@ -1111,7 +1117,9 @@ function ReadyAnswer({ shown, ready }: { shown: "next" | "publish"; ready: Ready
               </a>{" "}
               gives the app its address, with sign-in and backups.
             </p>
-          ) : (
+          ) : null}
+          {ready.home && ready.data && <PublishState data={ready.data} aup={ready.aup} />}
+          {ready.home ? null : (
             <p>
               On your own machine an app is published as a container:{" "}
               <a
@@ -1128,6 +1136,48 @@ function ReadyAnswer({ shown, ready }: { shown: "next" | "publish"; ready: Ready
         </section>
       )}
     </>
+  );
+}
+
+/**
+ * That Smith is AI, at the first interaction and on (legal-1.0 U6, the AI Act's Article 50):
+ * answers may be wrong, and where the question and the records it needs may be sent. With no
+ * model configured Smith answers by rule, and says nothing leaves Studio.
+ */
+function AiNotice({ to }: { to: string[] }) {
+  return (
+    <p data-part="ai-notice" className="rounded-md bg-subtle px-3 py-2 text-xs text-muted">
+      {to.length
+        ? `AI assistant — answers may be wrong. Your question and relevant records you are allowed to access may be sent to ${to.join(" or ")}. Do not include prohibited sensitive information.`
+        : "No AI model is set up here: Smith answers by rule, and nothing you type leaves Studio."}
+    </p>
+  );
+}
+
+/**
+ * The service's state at publishing, as it is (legal-1.0 U4): test hosting only while the service
+ * refuses real data, or live within the Acceptable Use Policy.
+ */
+export function PublishState({ data, aup }: { data: "test" | "live"; aup?: string | undefined }) {
+  const policy = aup ? (
+    <a href={aup} target="_blank" rel="noreferrer" className="text-accent underline">
+      Acceptable Use Policy
+    </a>
+  ) : (
+    "Acceptable Use Policy"
+  );
+  return data === "test" ? (
+    <p data-part="publish-state" data-state="test">
+      Test hosting only. Use fictional data. Do not collect real bookings, customer records or
+      mailbox messages. Public demo visitors may still generate technical logs, which are covered by
+      the stated privacy arrangements.
+    </p>
+  ) : (
+    <p data-part="publish-state" data-state="live">
+      Visitors will be able to use the public pages and forms. Real data is permitted within the{" "}
+      {policy}. Review access rules, your app's privacy notice and any AI features before
+      publishing. This plan has no contractual uptime SLA. Keep an export of important data.
+    </p>
   );
 }
 

@@ -92,6 +92,7 @@ export function Ask({
   ask,
   confirm,
   texts = {},
+  ai,
 }: {
   /** Who is asking (a person's id, or "visitor"): whose conversation the tab keeps. */
   who: string;
@@ -99,6 +100,8 @@ export function Ask({
   /** With may: change: makes a proposed change once the person confirms it. */
   confirm?: (proposal: string) => Promise<unknown>;
   texts?: AskTexts;
+  /** Where the model runs (aiFacts): said at the first interaction; none when there is no model. */
+  ai?: { provider?: string; region?: string } | null;
 }) {
   const name = texts.name ?? w.ask;
   const sheet = useRef<HTMLDialogElement>(null);
@@ -183,6 +186,19 @@ export function Ask({
               {texts.greeting && <p>{texts.greeting}</p>}
               {texts.about && <p className="text-muted-foreground">{texts.about}</p>}
             </div>
+          )}
+          {ai && (
+            // That it is AI, where the question goes, at the first interaction and on (U6).
+            <p
+              data-part="ai-notice"
+              className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground"
+            >
+              {w.aiNotice(
+                ai.provider && ai.region
+                  ? w.aiIn(ai.provider, ai.region)
+                  : (ai.provider ?? w.aiConfigured),
+              )}
+            </p>
           )}
           <ol className="space-y-3">
             {asked.map((a, i) => (
