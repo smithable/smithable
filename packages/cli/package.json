@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "description": "The smithable command-line interface.",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/smithable/smithable.git",
