@@ -4,7 +4,7 @@ Nothing to install: the app and its editor run in your browser, on our servers. 
 
 ## Try it in a sandbox
 
-On [smithable.ai](https://smithable.ai), write what you want in the box under "Let's smith something", or pick a card under "Or start from an example", which fills in the box for you. Then press **Build it**.
+On [smithable.ai](https://smithable.ai), write what you want in the box "What do you want to build?" and press **Build it**. Or pick a card under "Or start from an example": it opens that starter's page, with its description already in the box and its own **Build it**.
 
 ![smithable.ai's start page with the Booking example in the box and the Build it button](start-hosted/start.webp)
 
