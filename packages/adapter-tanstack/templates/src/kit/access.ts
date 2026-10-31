@@ -1,6 +1,9 @@
 // Smithable app kit: who may read, create, change and delete records, and open pages.
 // Every generated data function checks access here, so the rules live in one place.
+
 import { redirect } from "@tanstack/react-router";
+import { createIsomorphicFn } from "@tanstack/react-start";
+import { setResponseStatus } from "@tanstack/react-start/server";
 import { w } from "./words";
 
 /** The signed-in user, or null for a visitor who has not signed in. */
@@ -45,9 +48,13 @@ export class AccessDenied extends Error {
   }
 }
 
-/** A refusal, also once it has crossed from the server as plain data (its name kept). */
+/**
+ * A refusal, also once it has crossed from the server as plain data: by its name where that
+ * survives, else by the kit's own words for it (the error page's message, a page's refusal).
+ */
 export const isRefusal = (error: unknown): boolean =>
-  error instanceof AccessDenied || (error instanceof Error && error.name === "AccessDenied");
+  error instanceof AccessDenied ||
+  (error instanceof Error && (error.name === "AccessDenied" || error.message === w.notAllowed));
 
 /** A change the database refused, as a code the form turns into words: "taken:<column>" or "in-use". */
 export class Conflict extends Error {}
@@ -89,5 +96,10 @@ export function readScope(rule: Rule, viewer: Viewer | null): "all" | "own" | "p
 export function guardPage(rule: Rule, viewer: Viewer | null, href: string): void {
   if (allows(rule, viewer)) return;
   if (!viewer) throw redirect({ href: `/sign-in?redirect=${encodeURIComponent(href)}` });
+  // Rendered on the server, the page answers 403 as it shows the refusal (A 214).
+  refusedStatus();
   throw new AccessDenied(true);
 }
+
+/** The status a refused page answers with, set where the page is rendered on the server. */
+const refusedStatus = createIsomorphicFn().server(() => setResponseStatus(403));

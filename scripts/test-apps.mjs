@@ -2477,6 +2477,23 @@ async function productionFormFlow(dir, port) {
   }
 }
 
+/** A page the role may not open, in the production build: the refusal, answered 403 (A 214). */
+async function productionRefusalFlow(dir, port) {
+  const stop = await serve(dir, port, "production", { DEMO_SIGN_IN: "1" });
+  const browser = await chromium.launch();
+  try {
+    const base = `http://localhost:${port}`;
+    const page = await browser.newPage();
+    await signInAs(page, base, "member");
+    const answer = await page.goto(`${base}/sessions`);
+    if (answer?.status() !== 403) throw new Error(`answered ${answer?.status()}, not 403`);
+    await page.getByRole("heading", { name: "Not for your role" }).waitFor({ timeout: 10000 * P });
+  } finally {
+    await browser.close();
+    stop();
+  }
+}
+
 /**
  * A demo (DEMO_VISITORS=1) gives each visitor a copy of the app's data of their own
  * (src/kit/visitor.ts): what one visitor adds, another never sees, and the app's own data is left
@@ -6535,6 +6552,11 @@ for (const [index, example] of examples.entries()) {
       await asyncStep(
         "in the production build an administrator opens a new customer from its address and gets the form, with whom to give it to",
         () => productionFormFlow(dir, port + 450),
+      );
+    if (example === "booking")
+      await asyncStep(
+        "in the production build a member who opens a staff page by its address gets the refusal, answered 403 (A 214)",
+        () => productionRefusalFlow(dir, port + 450),
       );
 
     if (example === "crm")
