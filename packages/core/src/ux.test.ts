@@ -378,3 +378,36 @@ test("the ux file says where the menu sits and its surface; setMenuLayout and se
   expect(back.files.ux).not.toContain("navigation");
   expect(applyOperation(files, "setChrome", { chrome: "grey" }).ok).toBe(false);
 });
+
+test("a list's mark before each title and its rows' actions as a menu (look-gap §4)", () => {
+  const read = (table: string) =>
+    validateUx(
+      {
+        path: "smithable.ux.yml",
+        text: `smithableUx: 0.1\npages:\n  customers:\n    table: ${table}\n`,
+      },
+      ir,
+    );
+  const said = read("{ mark: initials, actions: menu }");
+  expect(said.diagnostics).toEqual([]);
+  expect(said.ux?.pages.customers).toMatchObject({ mark: "initials", rowActions: "menu" });
+  expect(read("{ actions: below }").ux?.pages.customers?.rowActions).toBeUndefined();
+  expect(read("{ mark: picture }").diagnostics[0]?.message).toBe(
+    'Customer has no picture field to show; "initials" works for any model.',
+  );
+  expect(read("{ mark: logo }").diagnostics[0]?.message).toBe(
+    '"mark" of page "customers" is initials or picture.',
+  );
+  const files = { spec: crm, ux: "smithableUx: 0.1\n" };
+  const marked = applyOperation(files, "setTableMark", { page: "customers", mark: "initials" });
+  if (!marked.ok) throw new Error(marked.message);
+  const menu = applyOperation(marked.files, "setRowActions", {
+    page: "customers",
+    actions: "menu",
+  });
+  if (!menu.ok) throw new Error(menu.message);
+  expect(menu.files.ux).toContain("    table:\n      mark: initials\n      actions: menu\n");
+  const back = applyOperation(menu.files, "setTableMark", { page: "customers", mark: "none" });
+  if (!back.ok) throw new Error(back.message);
+  expect(back.files.ux).not.toContain("mark");
+});

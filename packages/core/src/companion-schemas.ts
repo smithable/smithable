@@ -318,6 +318,16 @@ export const UX_SCHEMA: JsonSchema = {
                 enum: ["table", "cards"],
                 description: "On a wide screen: a table, or cards (a phone shows cards anyway).",
               },
+              mark: {
+                enum: ["initials", "picture"],
+                description:
+                  "A round mark before each record's title: its initials on a colour of their own, or the model's first picture.",
+              },
+              actions: {
+                enum: ["below", "menu"],
+                description:
+                  "Each row's actions as buttons (below, the default) or in a … menu at the row's end.",
+              },
             },
           },
           filters: {
