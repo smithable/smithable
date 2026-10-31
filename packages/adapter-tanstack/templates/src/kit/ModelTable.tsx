@@ -73,7 +73,7 @@ interface ModelTableProps<R extends Row> {
    */
   totals?: { count: number; sums: Record<string, number> };
   /** The whole list as it is filtered, for "Export CSV" (the selection bar exports chosen rows). */
-  exportRows?: () => Promise<R[]>;
+  exportRows?: () => Promise<{ rows: R[]; total?: number }>;
   /**
    * Sorting by a column's header (the page's sortable fields): each column's key in the address,
    * the order now ("key", or "-key" for largest or latest first) and choosing another.
@@ -641,18 +641,37 @@ export function ModelTable<R extends Row>({
 }
 
 /** "Export CSV" under a list: every record it shows as filtered, not only this page. */
-function ExportCsv<R extends Row>({ ui, all }: { ui: RecordUi<R>; all: () => Promise<R[]> }) {
+/**
+ * Export CSV: the list as it is filtered and sorted, up to the app's cap; past it, the file's first
+ * line and the page say how many of how many were exported, never a silent cut.
+ */
+function ExportCsv<R extends Row>({
+  ui,
+  all,
+}: {
+  ui: RecordUi<R>;
+  all: () => Promise<{ rows: R[]; total?: number }>;
+}) {
   const [busy, setBusy] = useState(false);
+  const [cut, setCut] = useState<string>();
   const save = async () => {
     setBusy(true);
     try {
-      download(csvName(ui), csvOf(ui, await all()));
+      const { rows, total = rows.length } = await all();
+      const note = total > rows.length ? w.exportedSome(rows.length, total) : undefined;
+      setCut(note);
+      download(csvName(ui), csvOf(ui, rows, note));
     } finally {
       setBusy(false);
     }
   };
   return (
-    <div data-part="export" className="flex justify-end py-1">
+    <div data-part="export" className="flex items-center justify-end gap-2 py-1">
+      {cut && (
+        <span role="status" className="text-xs text-muted-foreground">
+          {cut}
+        </span>
+      )}
       <Button variant="ghost" size="sm" disabled={busy} onClick={() => void save()}>
         <Download aria-hidden />
         {w.exportCsv}

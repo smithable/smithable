@@ -18,3 +18,21 @@ test("a cell is quoted when it must be, and a formula is written as text, a numb
   expect(cell("-2+3")).toBe("'-2+3");
   expect(cell(" =1+1")).toBe("' =1+1");
 });
+
+test("an export cut at the cap says so on its first line, before the header", async () => {
+  const { csvOf } = (await import(path)) as {
+    csvOf(ui: unknown, rows: unknown[], note?: string): string;
+  };
+  const ui = {
+    pluralLabel: "Customers",
+    fields: [{ name: "name", label: "Name", kind: "string", get: (r: { name: string }) => r.name }],
+  };
+  const rows = [{ id: 1, name: "Nordic Timber Oy" }];
+  const cut = csvOf(ui, rows, "Exported 1 of 2 matching records").replace(/^﻿/, "");
+  expect(cut.split("\r\n").slice(0, 3)).toEqual([
+    "Exported 1 of 2 matching records",
+    "Name",
+    "Nordic Timber Oy",
+  ]);
+  expect(csvOf(ui, rows).replace(/^﻿/, "").split("\r\n")[0]).toBe("Name");
+});

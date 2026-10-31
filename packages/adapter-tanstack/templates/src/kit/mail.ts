@@ -46,6 +46,9 @@ function smtp() {
   return undefined;
 }
 
+/** How long one mail may take at the mail server before the outbox goes on. */
+const MAIL_WAIT = 30_000;
+
 /** Whether mail leaves the machine: the app has SMTP settings. */
 export function mailConfigured(): boolean {
   return smtp() !== undefined;
@@ -62,7 +65,18 @@ export async function sendMail(mail: Mail): Promise<void> {
   };
   const settings = smtp();
   if (settings) {
-    await createTransport(settings).sendMail(message);
+    // A mail server that does not answer holds the outbox no longer than this (the review,
+    // 2026-10-30): the mail is tried again later, as on any failure.
+    let late: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      createTransport(settings).sendMail(message),
+      new Promise((_, refuse) => {
+        late = setTimeout(
+          () => refuse(new Error("The mail server did not answer in time.")),
+          MAIL_WAIT,
+        );
+      }),
+    ]).finally(() => clearTimeout(late));
     return;
   }
   const transport = createTransport({ streamTransport: true, buffer: true, newline: "unix" });

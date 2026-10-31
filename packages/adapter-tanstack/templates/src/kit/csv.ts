@@ -34,10 +34,12 @@ function fieldValue<R extends Row>(field: RecordUi<R>["fields"][number], row: R)
 }
 
 /** The rows as CSV text, a header line first; with a BOM so spreadsheets read it as UTF-8. */
-export function csvOf<R extends Row>(ui: RecordUi<R>, rows: R[]): string {
+export function csvOf<R extends Row>(ui: RecordUi<R>, rows: R[], note?: string): string {
   const fields = ui.fields.filter((f) => !SKIPPED.has(f.kind));
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const lines = [
+    // An export cut at the cap says so first ("Exported 10,000 of 14,200 matching records").
+    ...(note ? [cell(note)] : []),
     fields.map((f) => cell(f.label)).join(","),
     ...shown.map((row) => fields.map((f) => cell(fieldValue(f, row))).join(",")),
   ];

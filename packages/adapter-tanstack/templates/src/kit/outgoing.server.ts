@@ -234,8 +234,11 @@ export async function sendDue(now = Date.now()): Promise<number> {
   if (outbox.sending) return 0;
   outbox.sending = true;
   let done = 0;
+  // More due than one batch: the rest goes at once after this one, not at the next tick.
+  let more = false;
   try {
-    done += await sendCalls(now);
+    // Mail first (a booking's confirmation), then the calls, a bounded batch of each, oldest due
+    // first, so one slow webhook never holds a person's mail (the review, 2026-10-30).
     const due = db
       .select()
       .from(outgoingMail)
@@ -246,7 +249,10 @@ export async function sendDue(now = Date.now()): Promise<number> {
           lte(outgoingMail.nextAt, new Date(now)),
         ),
       )
+      .orderBy(outgoingMail.nextAt)
+      .limit(BATCH)
       .all();
+    more = due.length === BATCH;
     for (const mail of due) {
       const about = { model: mail.model ?? undefined, record: mail.recordId ?? undefined };
       try {
@@ -299,11 +305,18 @@ export async function sendDue(now = Date.now()): Promise<number> {
         log.warn("A mail could not be sent", { mail: mail.id, tries, error: why });
       }
     }
+    const calls = await sendCalls(now);
+    done += calls.done;
+    more ||= calls.more;
   } finally {
     outbox.sending = false;
   }
+  if (more) sendSoon();
   return done;
 }
+
+/** How many mails, and then calls, one turn of the outbox takes. */
+const BATCH = 50;
 
 /** Sends what is due once the change that queued it is done, outside its request. */
 function sendSoon() {
@@ -315,7 +328,7 @@ function sendSoon() {
 }
 
 /** Sends the calls that are due, signed; a target without its settings waits for them. */
-async function sendCalls(now: number): Promise<number> {
+async function sendCalls(now: number): Promise<{ done: number; more: boolean }> {
   let done = 0;
   const due = db
     .select()
@@ -327,6 +340,8 @@ async function sendCalls(now: number): Promise<number> {
         lte(outgoingCall.nextAt, new Date(now)),
       ),
     )
+    .orderBy(outgoingCall.nextAt)
+    .limit(BATCH)
     .all();
   for (const call of due) {
     const settings = targetSettings(call.target);
@@ -421,7 +436,7 @@ async function sendCalls(now: number): Promise<number> {
       });
     }
   }
-  return done;
+  return { done, more: due.length === BATCH };
 }
 
 /**
