@@ -1891,8 +1891,7 @@ async function callFlow(dir, base, receiver) {
     )
       await page.waitForTimeout(100);
     if (
-      !query(dir, "select id from outgoing_call where sent_at is null and error is not null")
-        .length
+      !query(dir, "select id from outgoing_call where sent_at is null and error is not null").length
     )
       throw new Error("the slow call was not given up on, to be tried again");
     console.log(
