@@ -439,6 +439,16 @@ export const UX_SCHEMA: JsonSchema = {
         },
       },
     },
+    navigation: {
+      enum: ["sidebar", "topbar", "topbar-centered"],
+      description:
+        "Where the menu sits on a wide screen: sidebar (the default), topbar (a bar across the top, the name at the start) or topbar-centered (the name centred between the links).",
+    },
+    chrome: {
+      enum: ["light", "dark"],
+      description:
+        "The menu's surface: light (the page's own colours) or dark (the text colour as its surface); unsaid, the theme's own menu colours.",
+    },
     aiBadge: {
       type: "boolean",
       description:

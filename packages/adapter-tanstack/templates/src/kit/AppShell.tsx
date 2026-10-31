@@ -34,6 +34,11 @@ interface ShellProps {
   onRename?: (name: string) => Promise<void>;
   /** A number beside a menu entry, by its route: the files waiting on the review page. */
   counts?: Record<string, number>;
+  /**
+   * Where the menu sits on a wide screen (the ux file's navigation): the sidebar, or a bar across
+   * the top with the name at the start or centred between the links. Phones always have the bar.
+   */
+  navigation?: "sidebar" | "topbar" | "topbar-centered";
 }
 
 // Links and buttons on the sidebar's own colors, with 44 px targets.
@@ -46,40 +51,55 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
   // Sign in, the page they are on, so there is none.
   const anyPage = shell.menus.some((m) => m.items.some((i) => allows(i.access, shell.viewer)));
   const menu = Boolean(shell.viewer) || anyPage;
+  const top = shell.navigation === "topbar" || shell.navigation === "topbar-centered";
+  const centered = shell.navigation === "topbar-centered";
   return (
-    <div data-kit="app-shell" className="min-h-screen lg:flex">
-      {/* Desktop: a sidebar. */}
-      <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
-        <p className="px-6 pt-7 pb-6 text-2xl font-bold [overflow-wrap:anywhere]">
-          <AppName {...shell} wrap />
-        </p>
-        <Navigation {...shell} />
-      </aside>
+    <div data-kit="app-shell" className={top ? "min-h-screen" : "min-h-screen lg:flex"}>
+      {/* Desktop: a sidebar, unless the menu sits in the bar across the top. */}
+      {!top && (
+        <aside className="hidden border-r bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:shrink-0 lg:flex-col">
+          <p className="px-6 pt-7 pb-6 text-2xl font-bold [overflow-wrap:anywhere]">
+            <AppName {...shell} wrap />
+          </p>
+          <Navigation {...shell} />
+        </aside>
+      )}
       {/* Phones and tablets: a header whose menu opens the same navigation as a drawer, over the
-          rows' checkboxes and actions (z-10) that scroll under it (A 201). */}
+          rows' checkboxes and actions (z-10) that scroll under it (A 201). With the menu at the
+          top, the same header on a wide screen too, its links in a row and the rest (the person,
+          the appearance) behind the menu button at its end. */}
       <header
         data-part="header"
-        className="sticky top-0 z-30 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground lg:hidden"
+        data-navigation={top ? shell.navigation : undefined}
+        className={`sticky top-0 z-30 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground ${top ? `lg:gap-6 lg:px-6 ${centered ? "lg:grid lg:grid-cols-[1fr_auto_1fr]" : ""}` : "lg:hidden"}`}
       >
         {menu && (
           <button
             type="button"
             aria-label={w.openMenu}
-            className={`${sidebarItem} size-11 justify-center px-0`}
+            className={`${sidebarItem} size-11 justify-center px-0 ${top ? "lg:hidden" : ""}`}
             onClick={() => drawer.current?.showModal()}
           >
             <Menu aria-hidden className="size-6" />
           </button>
         )}
+        {centered && <TopLinks {...shell} half="start" />}
         <p className="min-w-0 truncate text-lg font-bold" title={shell.appName}>
           <AppName {...shell} />
         </p>
+        {top && (
+          <TopLinks
+            {...shell}
+            half={centered ? "end" : undefined}
+            onMenu={menu ? () => drawer.current?.showModal() : undefined}
+          />
+        )}
       </header>
       <dialog
         ref={drawer}
         aria-label={w.menu}
         data-kit="drawer"
-        className="m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col rounded-r-xl bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex lg:hidden"
+        className={`m-0 h-dvh max-h-none w-72 max-w-[85vw] flex-col rounded-r-xl bg-sidebar text-sidebar-foreground backdrop:bg-black/50 open:flex ${top ? "" : "lg:hidden"}`}
       >
         <div className="flex min-h-18 shrink-0 items-center justify-between gap-2 pr-2 pl-5">
           <p className="min-w-0 text-lg font-bold [overflow-wrap:anywhere]">
@@ -97,6 +117,74 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
         <Navigation {...shell} onNavigate={() => drawer.current?.close()} />
       </dialog>
       <main className="min-w-0 flex-1 px-5 py-6 lg:px-9 lg:py-8">{children}</main>
+    </div>
+  );
+}
+
+// A link in the bar across the top: the page's name, the open one marked under it.
+const topItem =
+  "flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-hover outline-none focus-visible:ring-2 focus-visible:ring-sidebar-foreground";
+
+/**
+ * The menu's pages in a row, for the bar across the top on a wide screen: all of them, or half
+ * on each side of a centred name. The rest of the menu (the person, the appearance, signing out)
+ * stays behind the menu button, which ends the row.
+ */
+function TopLinks({
+  menus,
+  viewer,
+  counts,
+  half,
+  onMenu,
+}: ShellProps & { half?: "start" | "end"; onMenu?: () => void }) {
+  const items = menus.flatMap((m) => m.items).filter((item) => allows(item.access, viewer));
+  const cut = Math.ceil(items.length / 2);
+  const shown = half === "start" ? items.slice(0, cut) : half === "end" ? items.slice(cut) : items;
+  const routes = items.map((item) => String(item.to));
+  const hasBelow = (to: string) =>
+    routes.some((other) => other !== to && other.startsWith(to.endsWith("/") ? to : `${to}/`));
+  return (
+    <div
+      className={`hidden min-w-0 items-center gap-1 lg:flex ${half === "start" ? "justify-end" : "flex-1"}`}
+    >
+      <nav
+        aria-label={w.mainMenu}
+        data-kit="nav-top"
+        className="flex min-w-0 items-center gap-1 overflow-x-auto"
+      >
+        {shown.map((item) => (
+          <Link
+            key={String(item.to)}
+            to={item.to}
+            className={topItem}
+            activeOptions={{ exact: hasBelow(String(item.to)) }}
+            activeProps={{
+              "aria-current": "page",
+              className: "font-semibold underline decoration-2 underline-offset-8",
+            }}
+          >
+            {tx(item.label)}
+            {(counts?.[String(item.to)] ?? 0) > 0 && (
+              <span
+                data-part="count"
+                className="rounded-full bg-primary px-2 text-xs text-primary-foreground"
+              >
+                {counts?.[String(item.to)]}
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+      {onMenu && (
+        <button
+          type="button"
+          aria-label={w.openMenu}
+          className={`${sidebarItem} ml-auto size-11 shrink-0 justify-center px-0`}
+          onClick={onMenu}
+        >
+          <Menu aria-hidden className="size-6" />
+        </button>
+      )}
     </div>
   );
 }

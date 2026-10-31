@@ -49,9 +49,23 @@ export interface UxIR {
   tones: Record<string, Record<string, Tone>>;
   /** Whether pictures an AI made carry the badge (AiMark.tsx); on unless the owner switches it off. */
   aiBadge: boolean;
+  /**
+   * Where the app's menu sits on a wide screen (docs/design/look-gap.md §4): the sidebar, or a bar
+   * across the top with the name at the start or centred between the links. Unsaid, the sidebar.
+   */
+  navigation?: (typeof NAVIGATIONS)[number];
+  /**
+   * The menu's surface, apart from where it sits: light (the page's own colours) or dark (the
+   * text colour as its surface). Unsaid, the theme's own menu colours.
+   */
+  chrome?: (typeof CHROMES)[number];
   /** Ask's manner (docs/design/ask-defaults.md §2): a fixed set of prompt lines each, plain by default. */
   assistant: { voice: Voice };
 }
+
+/** Where the menu sits, and its surface (look-gap.md §4). */
+export const NAVIGATIONS = ["sidebar", "topbar", "topbar-centered"] as const;
+export const CHROMES = ["light", "dark"] as const;
 
 /** The assistant's voices: plain (short, no pleasantries), friendly, formal. */
 export const VOICES = ["plain", "friendly", "formal"] as const;
@@ -514,13 +528,33 @@ export function validateUx(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.ux.yml", {
-    allowed: ["smithableUx", "theme", "pages", "tones", "aiBadge", "assistant"],
+    allowed: [
+      "smithableUx",
+      "theme",
+      "pages",
+      "tones",
+      "aiBadge",
+      "assistant",
+      "navigation",
+      "chrome",
+    ],
     later: ["menus", "sections"],
   });
 
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
     if (key === "aiBadge") ux.aiBadge = readBoolean(ctx, value, '"aiBadge"') ?? true;
+    if (key === "navigation" || key === "chrome") {
+      const allowed: readonly string[] = key === "navigation" ? NAVIGATIONS : CHROMES;
+      const said = readString(ctx, value, `"${key}"`);
+      if (said !== undefined && allowed.includes(said)) ux[key] = said as never;
+      else if (said !== undefined)
+        ctx.error(
+          value,
+          "invalid-value",
+          `"${key}" is ${allowed.join(", ").replace(/, ([^,]*)$/, " or $1")}.`,
+        );
+    }
     if (key === "assistant")
       for (const option of checkKeys(
         ctx,
