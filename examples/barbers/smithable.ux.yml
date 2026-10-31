@@ -17,7 +17,7 @@ pages:
       columns: [startsAt, service, barber, name, status]
       sort: startsAt                     # a booking list reads in time order
     form:
-      sections:                          # the chair first, then the time, then who comes
+      sections:                          # the service and the barber first, then the time, then who comes
         - { name: what, fields: [service, barber] }
         - { name: when, fields: [startsAt] }
         - { name: who, fields: [name, phone, note] }

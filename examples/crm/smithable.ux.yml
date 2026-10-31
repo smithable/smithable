@@ -7,7 +7,7 @@ theme:
 pages:
   customers:
     table:
-      columns: [name, email, segment, accountManager, creditLimit]   # who looks after them, as both references show
+      columns: [name, email, segment, accountManager, creditLimit]   # who looks after each customer
       below: { email: phone }   # the phone number under the email
       sort: name
       mark: initials            # each customer's initials before their name
