@@ -37,7 +37,8 @@ test("a list tile of what is due names its date field; within is 7 days unsaid (
     amount: 2,
     unit: "week",
   });
-  const message = (tiles: string) => read(tiles).diagnostics[0]?.message;
+  const message = (tiles: string) =>
+    read(tiles).diagnostics.find((d) => d.severity === "error")?.message;
   expect(message("      due: { count: FollowUp, when: dueOn }\n")).toBe(
     '"when" makes a list of what is due: it goes with "list", as in { list: FollowUp, when: dueOn }.',
   );
@@ -61,13 +62,20 @@ test("the latest changes are a tile of their own kind, by its key, never by its 
   });
   // A tile named "activity" that says count is a count: the name decides nothing.
   expect(tile("      activity: { count: FollowUp }\n")?.kind).toBe("stat");
-  const message = (tiles: string) => read(tiles).diagnostics[0]?.message;
+  const message = (tiles: string) =>
+    read(tiles).diagnostics.find((d) => d.severity === "error")?.message;
   expect(message("      recent: { activity: all }\n")).toBe(
     '"activity" is changes: the app\'s latest changes.',
   );
   expect(message("      recent: { activity: changes, where: { done: false } }\n")).toBe(
     '"where" does not apply to the latest changes.',
   );
+  // Without a team page there is no Activity page to read: said in validation, not refused.
+  const lonely = read("      recent: { activity: changes }\n");
+  expect(lonely.ir).toBeDefined();
+  expect(lonely.diagnostics.map((d) => [d.severity, d.code])).toEqual([
+    ["warning", "activity-no-page"],
+  ]);
 });
 
 test("a due list follows its renamed date field, and holds the field from removal", () => {
