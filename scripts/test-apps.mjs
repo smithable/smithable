@@ -241,6 +241,9 @@ async function detachFlow(dir, port) {
     run("git", ["commit", "-q", "--allow-empty", "-m", "work before detaching"], dir);
     const out = smithable(dir, "detach");
     if (out.code !== 0) throw new Error(out.out);
+    // One change, left to review: detach says how to keep it or take it back.
+    if (!out.out.includes("git diff") || !out.out.includes("git checkout ."))
+      throw new Error(`detach does not say how to keep or take back its change: ${out.out}`);
     const mentions = spawnSync("grep", ["-rli", "smithable", "src", "README.md", "package.json"], {
       cwd: dir,
       encoding: "utf8",
