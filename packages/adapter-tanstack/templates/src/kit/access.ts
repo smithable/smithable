@@ -51,7 +51,10 @@ export class AccessDenied extends Error {
  */
 export const isRefusal = (error: unknown): boolean =>
   error instanceof AccessDenied ||
-  (error instanceof Error && (error.name === "AccessDenied" || error.message === w.notAllowed));
+  (error instanceof Error &&
+    (error.name === "AccessDenied" ||
+      error.message === w.notAllowed ||
+      error.message === w.signInFirst));
 
 /** A change the database refused, as a code the form turns into words: "taken:<column>" or "in-use". */
 export class Conflict extends Error {}

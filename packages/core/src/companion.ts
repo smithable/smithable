@@ -233,6 +233,38 @@ const ux: Companion = {
       if (to) editor.renameKey(tones, `${m}.${to}`);
       else editor.removeAndPrune(tones, 0);
     }
+    // A calendar's colour and capacity (look-gap §4) follow their fields; a removed one takes its key.
+    for (const page of ir.pages) {
+      if (page.pattern.kind !== "calendar") continue;
+      const calendarModel = page.pattern.model;
+      const owner = ir.models.find((x) => x.name === calendarModel);
+      if (!owner) continue;
+      const at = ["pages", page.id, "calendar"];
+      const color = editor.has([...at, "colorBy"]) ? editor.get([...at, "colorBy"]) : undefined;
+      if (typeof color === "string") {
+        const [first = "", second] = color.split(".");
+        const ref = owner.fields.find((f) => f.name === first);
+        const refModel = ref?.type.kind === "relation" ? ref.type.model : undefined;
+        const own = owner.name === m && first === from;
+        const far = second !== undefined && refModel === m && second === from;
+        if ((own || far) && !to) editor.removeAndPrune([...at, "colorBy"], 0);
+        else if (own || far)
+          editor.set(
+            [...at, "colorBy"],
+            own ? [to, ...(second ? [second] : [])].join(".") : `${first}.${to}`,
+          );
+      }
+      if (owner.name === m)
+        for (const key of ["left", "of"]) {
+          const path = [...at, "capacity", key];
+          if (!editor.has(path) || editor.get(path) !== from) continue;
+          if (to) editor.set(path, to);
+          else {
+            editor.removeAndPrune([...at, "capacity"], 0);
+            break;
+          }
+        }
+    }
     // The lines under a record's name (record-names.md §3): a part of the page's model, or one
     // reference away; a removed part is taken out, the key with the last one.
     for (const page of ir.pages) {

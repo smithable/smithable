@@ -347,6 +347,12 @@ async function calendarFlow(base) {
       .locator("section ol button")
       .first()
       .waitFor({ timeout: 10000 * P });
+    // The ux file's calendar (look-gap §4): each class coloured by its level, its places a dot each.
+    if (!(await page.locator('section ol button[style*="color-mix"]').count()))
+      throw new Error("the blocks have no colour of their level");
+    const pips = page.locator('section ol button [data-part="places"][role="img"]').first();
+    if (!/^\d+ of \d+ places? left$/.test((await pips.getAttribute("aria-label")) ?? ""))
+      throw new Error("a block shows no places left");
     const { nth } = await openClass(page, page.getByRole("dialog"));
     // The week the class was found in: next week's once this week's have all closed (a Sunday).
     const shown = await week.innerText();
@@ -412,7 +418,7 @@ async function calendarFlow(base) {
     if (!starts.endsWith("T07:00"))
       throw new Error(`the new session starts at ${starts}, from ${label}`);
     console.log(
-      "  ✓ browser: the schedule shows this week's sessions to a visitor, in the site's frame, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; signed in, it keeps the site's frame with a Workspace link, and an admin's click on an empty hour starts a new session then",
+      "  ✓ browser: the schedule shows this week's sessions to a visitor, in the site's frame, coloured by level with their places as dots, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; signed in, it keeps the site's frame with a Workspace link, and an admin's click on an empty hour starts a new session then",
     );
   } catch (error) {
     console.log(

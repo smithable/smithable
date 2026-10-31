@@ -162,6 +162,88 @@ const setFrame: Operation<{ page: string; frame: "site" | "app" | "none" | "defa
   },
 };
 
+/** A calendar's blocks coloured by a field (look-gap §4); none takes the colour away. */
+const setCalendarColor: Operation<{ page: string; field: string }> = {
+  name: "setCalendarColor",
+  summary:
+    "Colour a calendar's blocks by a choice field (its values' tones), a reference (each record its own colour) or a choice one reference away (classType.level); none takes it away.",
+  schema: {
+    type: "object",
+    required: ["page", "field"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      field: {
+        type: "string",
+        description: "A field of the calendar's model, a.b one reference away, or none.",
+      },
+    },
+  },
+  positional: ["page", "field"],
+  describe: ({ page, field }) =>
+    field === "none"
+      ? `Show the ${page} calendar in one colour`
+      : `Colour the ${page} calendar by ${field}`,
+  destructive: () => false,
+  apply({ ux }, { page, field }, ir) {
+    calendarPage(ir, page);
+    put(ux, ["pages", page, "calendar", "colorBy"], field === "none" ? undefined : field);
+    return [];
+  },
+};
+
+/** The places left on each of a calendar's blocks (look-gap §4); none takes them away. */
+const setCalendarCapacity: Operation<{ page: string; left: string; of?: string; look?: string }> = {
+  name: "setCalendarCapacity",
+  summary:
+    "Show the places left on a calendar's blocks, from two number fields, as a number, pips or a bar; none takes it away.",
+  schema: {
+    type: "object",
+    required: ["page", "left"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      left: {
+        type: "string",
+        description: "The number field of places left (placesLeft), or none.",
+      },
+      of: { type: "string", description: "The number field of places there are (capacity)." },
+      look: {
+        type: "string",
+        enum: ["number", "pips", "bar"],
+        description: "number (default), pips or bar.",
+      },
+    },
+  },
+  positional: ["page", "left", "of"],
+  describe: ({ page, left, of }) =>
+    left === "none"
+      ? `Show no places left on the ${page} calendar`
+      : `Show ${left} of ${of} on the ${page} calendar`,
+  destructive: () => false,
+  apply({ ux }, { page, left, of, look }, ir) {
+    calendarPage(ir, page);
+    if (left !== "none" && !of)
+      throw new OperationError("Name both fields: the places left and the places there are.");
+    put(
+      ux,
+      ["pages", page, "calendar", "capacity"],
+      left === "none"
+        ? undefined
+        : { left, of: of as string, ...(look && look !== "number" ? { look } : {}) },
+    );
+    return [];
+  },
+};
+
+/** A calendar page by its name, or the refusal that says what it is instead. */
+function calendarPage(ir: SpecIR, page: string) {
+  const found = ir.pages.find((p) => p.id === page);
+  if (!found) throw new OperationError(`There is no page named "${page}".`);
+  if (found.pattern.kind !== "calendar")
+    throw new OperationError(`${page} is not a calendar page.`);
+}
+
 const setColumns: Operation<{ page: string; columns?: string[] }> = {
   name: "setColumns",
   summary: "Choose which fields a page's table shows, in order (none: back to the default).",
@@ -954,4 +1036,6 @@ export const uxOperations: AnyOperation[] = [
   setFiltersLook,
   setMenuLayout,
   setChrome,
+  setCalendarColor,
+  setCalendarCapacity,
 ];

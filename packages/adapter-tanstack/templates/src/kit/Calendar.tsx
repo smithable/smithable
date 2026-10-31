@@ -21,6 +21,93 @@ export interface CalendarItem {
   title: string;
   /** The person (or room) whose time it takes: its column in the day view. */
   lane?: number;
+  /** The block's colour: a choice value's tone, or a hue of the chart's (look-gap §4). */
+  tone?: "success" | "warning" | "danger";
+  hue?: number;
+  /** The places left of the places there are. */
+  places?: { left: number; of: number };
+}
+
+/**
+ * A choice value's colour for a block: its tone where the ux file gives one, else a chart hue by
+ * the value's place among the choice's values; none for no value or a neutral tone.
+ */
+export function colorOf(
+  value: unknown,
+  values: readonly string[],
+  tones: Record<string, string>,
+): { tone?: "success" | "warning" | "danger"; hue?: number } {
+  if (value === null || value === undefined || value === "") return {};
+  const tone = tones[String(value)];
+  if (tone === "success" || tone === "warning" || tone === "danger") return { tone };
+  if (tone === "neutral") return {};
+  const at = values.indexOf(String(value));
+  return at < 0 ? {} : { hue: at };
+}
+
+/** A block's colour as CSS: the tone's or the hue's, on a soft surface with a strong edge. */
+function accentStyle(item: CalendarItem): React.CSSProperties | undefined {
+  const accent =
+    item.tone !== undefined
+      ? `var(--${item.tone === "danger" ? "destructive" : item.tone})`
+      : item.hue !== undefined
+        ? `var(--chart-${(item.hue % 5) + 1})`
+        : undefined;
+  return accent
+    ? {
+        backgroundColor: `color-mix(in oklch, ${accent} 16%, var(--card))`,
+        boxShadow: `inset 3px 0 0 ${accent}`,
+      }
+    : undefined;
+}
+
+/** The places left: a number, a dot a place (filled when taken, up to 20), or a thin bar. */
+function Places({
+  places,
+  look,
+}: {
+  places: { left: number; of: number };
+  look: "number" | "pips" | "bar";
+}) {
+  const taken = Math.max(0, places.of - places.left);
+  const label = w.placesLeft(places.left, places.of);
+  if (look === "pips" && places.of > 0 && places.of <= 20)
+    return (
+      <span
+        data-part="places"
+        role="img"
+        aria-label={label}
+        className="mt-1 flex flex-wrap gap-0.5"
+      >
+        {Array.from({ length: places.of }, (_, i) => (
+          <span
+            key={i}
+            aria-hidden
+            className={`size-1.5 rounded-full ${i < taken ? "bg-foreground/70" : "border border-foreground/40"}`}
+          />
+        ))}
+      </span>
+    );
+  if (look === "bar" && places.of > 0)
+    return (
+      <span
+        data-part="places"
+        role="img"
+        aria-label={label}
+        className="mt-1 block h-1 overflow-hidden rounded-full bg-foreground/15"
+      >
+        <span
+          aria-hidden
+          className="block h-full bg-foreground/60"
+          style={{ width: `${(taken * 100) / places.of}%` }}
+        />
+      </span>
+    );
+  return (
+    <span data-part="places" className="block text-muted-foreground">
+      {label}
+    </span>
+  );
 }
 
 const DAY = 86_400_000;
@@ -167,6 +254,7 @@ export function Calendar({
   newLabel,
   details,
   lanes,
+  places = "number",
 }: {
   search: CalendarSearch;
   items: CalendarItem[];
@@ -185,6 +273,8 @@ export function Calendar({
   details?: (id: number) => React.ReactNode;
   /** The people (or rooms) whose time the records take: the day view has a column for each. */
   lanes?: { id: number; title: string }[];
+  /** How a block's places left show (the ux file's calendar capacity look). */
+  places?: "number" | "pips" | "bar";
 }) {
   const range = calendarRange(search, timeZone);
   const panel = useRef<HTMLDialogElement>(null);
@@ -431,6 +521,7 @@ export function Calendar({
                           type="button"
                           onClick={() => open(p)}
                           className="block h-full w-full overflow-hidden rounded-md bg-primary/10 px-2 py-1 text-left text-sm text-foreground hover:bg-primary/20 md:text-xs"
+                          style={accentStyle(p)}
                         >
                           <span className="font-medium">{p.title}</span>
                           <span className="sr-only">, {when(p)}</span>
@@ -439,6 +530,7 @@ export function Calendar({
                               {clock(p.from)}
                             </span>
                           )}
+                          {p.places && <Places places={p.places} look={places} />}
                         </button>
                       </li>
                     ))}

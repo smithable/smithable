@@ -282,6 +282,44 @@
               }
             }
           },
+          "calendar": {
+            "type": "object",
+            "description": "A calendar page's blocks: their colour, and the places left on each.",
+            "additionalProperties": false,
+            "properties": {
+              "colorBy": {
+                "type": "string",
+                "description": "A choice field (its values' tones), a reference (each record its own colour), or a choice one reference away, e.g. classType.level."
+              },
+              "capacity": {
+                "type": "object",
+                "description": "The places left of the places there are, from two number fields.",
+                "additionalProperties": false,
+                "required": [
+                  "left",
+                  "of"
+                ],
+                "properties": {
+                  "left": {
+                    "type": "string",
+                    "description": "The number field of places left, e.g. placesLeft."
+                  },
+                  "of": {
+                    "type": "string",
+                    "description": "The number field of places there are, e.g. capacity."
+                  },
+                  "look": {
+                    "enum": [
+                      "number",
+                      "pips",
+                      "bar"
+                    ],
+                    "description": "number (4 of 12 left, the default), pips (a dot a place, up to 20) or bar."
+                  }
+                }
+              }
+            }
+          },
           "frame": {
             "enum": [
               "site",
