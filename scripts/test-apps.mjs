@@ -730,9 +730,20 @@ async function sessionsListFlow(base) {
     if (await page.getByRole("group", { name: "Instructor" }).count())
       throw new Error("the instructor filter is not folded");
     await page.getByRole("button", { name: "More filters" }).click();
-    await page.getByRole("group", { name: "Instructor" }).waitFor({ timeout: 10000 * P });
+    const instructors = page.getByRole("group", { name: "Instructor" });
+    await instructors.waitFor({ timeout: 10000 * P });
+    // filters.look: chips: each instructor a chip with their portrait; one filters the list.
+    const emma = instructors.getByRole("button", { name: "Emma Lindqvist" });
+    if (!(await emma.locator("img").count()))
+      throw new Error("the instructor's chip has no portrait");
+    await emma.click();
+    await page.waitForURL(/[?&]instructor=/, { timeout: 10000 * P });
+    await page
+      .getByRole("cell", { name: "Oskar Berg" })
+      .first()
+      .waitFor({ state: "detached", timeout: 10000 * P });
     console.log(
-      "  ✓ browser: the sessions list opens on upcoming ones, a chip with All shows the past too, and the instructor filter waits behind More filters",
+      "  ✓ browser: the sessions list opens on upcoming ones, a chip with All shows the past too, the instructor filter waits behind More filters, and its chips have the instructors' portraits",
     );
   } catch (error) {
     console.log(

@@ -312,6 +312,11 @@ export const UX_SCHEMA: JsonSchema = {
               shown: strings(
                 "The filters shown at once, from the page's filters in smithable.yml.",
               ),
+              look: {
+                enum: ["default", "chips"],
+                description:
+                  "How the filters show: default (chips up to eight values, a list to pick from above) or chips (every choice and reference as a row of chips, with a referenced record's picture).",
+              },
               pick: {
                 type: "object",
                 description:

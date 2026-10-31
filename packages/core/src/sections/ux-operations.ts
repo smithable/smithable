@@ -747,6 +747,37 @@ const setFiltersShown: Operation<{ page: string; fields?: string[] }> = {
   },
 };
 
+/** How a page's filters show (look-gap §4): today's controls (default) or a row of chips. */
+const setFiltersLook: Operation<{ page: string; look: "default" | "chips" }> = {
+  name: "setFiltersLook",
+  summary:
+    "Show a page's filters as today's controls (default: chips up to eight values, a list to pick from above) or every choice and reference as a row of chips (chips).",
+  schema: {
+    type: "object",
+    required: ["page", "look"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      look: { type: "string", enum: ["default", "chips"], description: "default or chips." },
+    },
+  },
+  positional: ["page", "look"],
+  describe: ({ page, look }) =>
+    look === "chips"
+      ? `Show the filters of ${page} as chips`
+      : `Show the filters of ${page} as they are by default`,
+  destructive: () => false,
+  apply(editors, { page, look }, ir) {
+    pageNamed(ir, page);
+    if (!ir.pages.find((p) => p.id === page)?.filters?.length)
+      throw new OperationError(
+        `${page} has no filters (smithable.yml's filters) to show as chips.`,
+      );
+    put(editors.ux, ["pages", page, "filters", "look"], look === "chips" ? look : undefined);
+    return [];
+  },
+};
+
 /** How a filter on a reference is picked (backlog A 208): list, search, or by the count (auto). */
 const setFilterPick: Operation<{ page: string; filter: string; pick: "list" | "search" | "auto" }> =
   {
@@ -853,4 +884,5 @@ export const uxOperations: AnyOperation[] = [
   setSort,
   setFiltersShown,
   setFilterPick,
+  setFiltersLook,
 ];

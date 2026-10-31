@@ -172,3 +172,51 @@ pages:
   expect(listed).not.toContain("pickRoom");
   expect(listed).toContain("options: { room: (await roomData.list(viewer))");
 });
+
+test("filters.look: chips makes every choice and reference a row of chips, a picture on a related record's (look-gap §4)", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Instructor:
+    fields:
+      name: string!
+      portrait: picture
+  Lesson:
+    fields:
+      instructor: Instructor!
+      level: beginner | allLevels | advanced
+pages:
+  lessons:
+    crud: Lesson
+    filters: [instructor, level]
+`,
+  }).ir as SpecIR;
+  const route = (look?: string) => {
+    const ux = look
+      ? validateUx(
+          {
+            path: "smithable.ux.yml",
+            text: `smithableUx: 0.1\npages:\n  lessons:\n    filters: { look: ${look} }\n`,
+          },
+          spec,
+        ).ux
+      : undefined;
+    const files = generateApp(spec, {
+      smithableVersion: "0.0.0",
+      auth,
+      content: emptyContent(),
+      ux,
+    });
+    return files.find((f) => f.path === "src/routes/lessons/index.tsx")?.content ?? "";
+  };
+  const chips = route("chips");
+  expect(chips).toMatch(/name: "instructor"[^}]*chips: true/);
+  expect(chips).toMatch(/name: "level"[^}]*chips: true/);
+  expect(chips).toContain("picture: r.portrait ? `/files/instructor/${r.id}/portrait` : undefined");
+  // Unsaid: today's controls, no pictures asked for.
+  const plain = route();
+  expect(plain).not.toContain("chips: true");
+  expect(plain).not.toContain("/files/instructor/");
+});

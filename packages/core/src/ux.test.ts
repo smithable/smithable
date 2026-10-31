@@ -324,3 +324,28 @@ test("addTheme adds themes/<name>.yml, --use applies it, and a bad file or a tak
     applyOperation({ spec: crm }, "addTheme", { name: "woods", text: `name: forest\n${text}` }),
   ).toMatchObject({ ok: false, message: expect.stringContaining('The file says "name: forest"') });
 });
+
+test("a page's filters may show as a row of chips; setFiltersLook writes it (look-gap §4)", () => {
+  const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
+  const said = read("smithableUx: 0.1\npages:\n  orders:\n    filters: { look: chips }\n");
+  expect(said.diagnostics).toEqual([]);
+  expect(said.ux?.pages.orders?.filtersLook).toBe("chips");
+  // default is today's look, written or not.
+  expect(
+    read("smithableUx: 0.1\npages:\n  orders:\n    filters: { look: default }\n").ux?.pages.orders
+      ?.filtersLook,
+  ).toBeUndefined();
+  expect(
+    read("smithableUx: 0.1\npages:\n  orders:\n    filters: { look: panel }\n").diagnostics[0]
+      ?.message,
+  ).toBe('"look" of the filters of page "orders" is default or chips.');
+  const files = { spec: crm, ux: "smithableUx: 0.1\n" };
+  const chips = applyOperation(files, "setFiltersLook", { page: "orders", look: "chips" });
+  if (!chips.ok) throw new Error(chips.message);
+  expect(chips.files.ux).toContain("    filters:\n      look: chips\n");
+  const back = applyOperation(chips.files, "setFiltersLook", { page: "orders", look: "default" });
+  if (!back.ok) throw new Error(back.message);
+  expect(back.files.ux).not.toContain("look");
+  const none = applyOperation(files, "setFiltersLook", { page: "team", look: "chips" });
+  expect(none.ok ? "" : none.message).toContain("has no filters");
+});

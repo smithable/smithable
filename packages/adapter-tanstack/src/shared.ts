@@ -640,3 +640,7 @@ export function sequenceEntries(
       return `${dataKey(f)}: nextInSequence(tx, ${key}, ${top})`;
     });
 }
+
+/** A model's first stored field of one of these scalar kinds (a picture, a text), if any. */
+export const scalarField = (model: ModelIR, ...kinds: string[]) =>
+  model.fields.find((f) => !f.formula && f.type.kind === "scalar" && kinds.includes(f.type.name));
