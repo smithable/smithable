@@ -344,9 +344,10 @@
                         "plain",
                         "cover",
                         "photo",
-                        "inset"
+                        "inset",
+                        "stage"
                       ],
-                      "description": "One of split, centered, plain, cover, photo, inset; the first is the default."
+                      "description": "One of split, centered, plain, cover, photo, inset, stage; the first is the default."
                     },
                     "image": {
                       "enum": [
@@ -375,6 +376,10 @@
                         "type": "string"
                       },
                       "description": "Models whose records are counted in a row of figures under the hero's text (on a public page, ones visitors may read)."
+                    },
+                    "stage": {
+                      "type": "string",
+                      "description": "A stage hero's list page, drawn with its first six records; unsaid, the first list page in the navigation."
                     }
                   }
                 },
