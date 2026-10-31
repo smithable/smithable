@@ -2,13 +2,23 @@
 smithableUx: 0.1
 
 theme:
-  preset: minimal
+  preset: softbox                      # the page's own: small titles so the status comes first, soft boxes, pill buttons
 
 pages:
   home:
     sections:
       recent: { layout: list }         # the resolved incidents as quiet rows
+      hero: { layout: plain }          # no picture: the state of the services comes first
       planned: { band: muted }
+  incidents:
+    table: { sort: -detectedAt }       # newest first, by when it happened
+    form:
+      columns: 2                       # detected and resolved side by side
+      control: { status: radio }       # the four states shown at once
+  updates:
+    table: { sort: -at }               # a timeline, newest first
+  components:
+    table: { view: cards }             # few, and read as a set
 
 tones:
   Component.status: { operational: success, degraded: warning, down: danger, maintenance: neutral }

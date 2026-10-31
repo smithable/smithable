@@ -7,7 +7,7 @@ theme:
 pages:
   customers:
     table:
-      columns: [name, email, segment, creditLimit]
+      columns: [name, email, segment, accountManager, creditLimit]   # who looks after them, as both references show
       below: { email: phone }   # the phone number under the email
       sort: name
       mark: initials            # each customer's initials before their name
@@ -17,7 +17,7 @@ pages:
         - { name: terms, fields: [segment, creditLimit, accountManager] }
         - { name: notes, fields: [notes] }
       columns: 2
-      control: { notes: textarea }
+      control: { accountManager: combobox, notes: textarea }   # a searchable picker for the person
 
 tones:
   Order.status: { shipped: success, canceled: danger }

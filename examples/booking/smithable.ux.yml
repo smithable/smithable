@@ -2,7 +2,7 @@
 smithableUx: 0.1
 
 theme:
-  preset: stillwater                   # the studio's own theme: one ink on warm paper
+  preset: stillwater                   # the studio's own theme: ink on warm paper, one terracotta accent, a light display serif
 
 pages:
   home:

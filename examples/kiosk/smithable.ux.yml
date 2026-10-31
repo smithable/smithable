@@ -6,13 +6,18 @@ theme:
   brand: { primary: "#b0402f", background: "#e8a33d" }   # the red a notch quieter; the string lights' amber: cream in light, a warm deep brown in dark
 
 tones:
-  Order.status: { new: warning, accepted: neutral, ready: success, collected: neutral, declined: danger }
+  Order.status: { new: warning, accepted: warning, ready: success, collected: neutral, declined: danger }   # accepted is work in progress; collected, done, stays quiet
 
 pages:
   where:
     sections:
       hero: { layout: photo }          # the evening by the truck across the window, the text on a dark scrim
-      stops: { band: muted }           # the week's stops apart from the hero; the cards read better than on the red
+      stops: { layout: list, band: muted }   # the week as rows of day, place and hours, apart from the hero
   orders:
     table:
       columns: [number, name, status, wanted, total]
+      sort: wanted                       # the kitchen works to pickup time
+  dishes:
+    table: { view: cards }             # dishes are pictures and prices, not rows
+  stops:
+    table: { view: cards }
