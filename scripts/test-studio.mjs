@@ -738,6 +738,46 @@ try {
     },
   );
   await step(
+    "a merge's rules and a copy's values are pickers in Behavior, written to the spec (A 206)",
+    async () => {
+      const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
+      const block = (name) =>
+        spec().match(new RegExp(`\n {2}${name}:\n((?: {4}.*\n)*)`))?.[1] ?? "";
+      const until = async (name, test, what) => {
+        const deadline = Date.now() + 60000 * P;
+        while (!test(block(name))) {
+          if (Date.now() > deadline) throw new Error(`${what}: ${block(name)}`);
+          await page.waitForTimeout(200);
+        }
+      };
+      // The CRM's merge: a field's rule from its pick list.
+      const merge = await entry(await area("actions"), "mergeCustomers");
+      await merge.getByLabel("Segment takes").selectOption("keep");
+      const before = await changeCount();
+      await merge.getByRole("button", { name: "Change the rules" }).click();
+      await until(
+        "mergeCustomers",
+        (b) => /segment: keep/.test(b),
+        "the merge has no rule for segment",
+      );
+      // The change is made (committed) before the next one starts.
+      for (const deadline = Date.now() + 60000 * P; (await changeCount()) <= before; ) {
+        if (Date.now() > deadline) throw new Error("the merge's rule is not a change yet");
+        await page.waitForTimeout(200);
+      }
+      // A copy: what differs, as a standard action's values.
+      await op("addAction", {
+        action: "copyOrder",
+        on: "Order",
+        copy: { status: "draft", number: "" },
+      });
+      const copy = await entry(await area("actions"), "copyOrder");
+      await copy.getByLabel("Status becomes").selectOption("placed");
+      await copy.getByRole("button", { name: "Change what differs" }).click();
+      await until("copyOrder", (b) => /status: placed/.test(b), "the copy does not set placed");
+    },
+  );
+  await step(
     "removing a field in Behavior asks first, with what data it loses; its notice's Undo brings it back",
     async () => {
       const customer = await entry(await area("models"), "Customer");

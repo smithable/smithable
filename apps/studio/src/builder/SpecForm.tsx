@@ -15,6 +15,7 @@ import { parse } from "yaml";
 import type { Project } from "../api";
 import { HelpMark, type HelpTopic } from "../help";
 import { cx } from "../ui";
+import { CopyPicker, MergePicker, SplitPicker } from "./action-pickers";
 import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import {
@@ -68,10 +69,67 @@ const shapeOf =
     // settings as text; a merge, split, copy or custom action keeps the text for now.
     if (file === "smithable.yml" && ir && first === "actions" && path.length === 2) {
       const action = ir.actions.find((a) => a.name === model);
-      if (!action || action.custom || action.merge || action.split || action.copy) return undefined;
+      if (!action || action.custom) return undefined;
       const on = ir.models.find((m) => m.name === action.on);
-      // What the rows do not hold (who sees it, its add, its look…), shown as written.
+      // A merge, a split and a copy: their own pickers, each key written at its path as the spec has
+      // it (A 206); editSpec adds a key the action has not written yet, its comments kept.
       const written = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+      // Taking away a key the action never wrote is nothing to do.
+      const write = (key: string, next: unknown) =>
+        next === undefined && !(key in written)
+          ? Promise.resolve(true)
+          : run("editSpec", {
+              file: "smithable.yml",
+              path: ["actions", String(model), key],
+              value: next === undefined ? null : next,
+            });
+      const intro = (
+        <p className="text-xs text-muted">
+          On each {humanize(action.on).toLowerCase()}
+          {action.intent ? `: ${action.intent}` : ""}
+        </p>
+      );
+      if (action.merge)
+        return (
+          <div className="space-y-3">
+            {intro}
+            <MergePicker
+              key={JSON.stringify(action.merge.fields)}
+              model={on}
+              into={action.merge.into}
+              fields={action.merge.fields}
+              write={write}
+            />
+          </div>
+        );
+      if (action.split)
+        return (
+          <div className="space-y-3">
+            {intro}
+            <SplitPicker
+              key={JSON.stringify(action.split)}
+              model={on}
+              move={action.split.move}
+              copy={action.split.copy}
+              write={write}
+            />
+          </div>
+        );
+      if (action.copy)
+        return (
+          <div className="space-y-3">
+            {intro}
+            <CopyPicker
+              key={JSON.stringify(action.copy)}
+              model={on}
+              copy={action.copy}
+              lists={action.with ?? []}
+              write={write}
+              help={<HelpMark topic="formula" />}
+            />
+          </div>
+        );
+      // What the rows do not hold (who sees it, its add, its look…), shown as written.
       const { on: _on, when: _when, set: _set, intent: _intent, ...rest } = written;
       const save = (part: "when" | "set") => (value: unknown) =>
         run("setAction", { action: String(model), [part]: value });
