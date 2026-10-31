@@ -115,4 +115,4 @@ Start `smithable.yml` with this line for autocomplete and checking (VS Code with
 
 ## Running it elsewhere
 
-`smithable deploy --target docker` runs the release checks and builds the app's container, which keeps its data in a `/data` volume. `smithable backup` copies the data, and `smithable detach` removes what only Smithable uses, as one commit, when you want to continue without it. `deploy` needs Docker. [Run an app on your own machine](self-host.md) walks through deploying, backing up, restoring and updating.
+`smithable deploy --target docker` runs the release checks and builds the app's container, which keeps its data in a `/data` volume. `smithable backup` copies the data, and `smithable detach` removes what only Smithable uses, leaving the changes for you to review and commit as one, when you want to continue without it. `deploy` needs Docker. [Run an app on your own machine](self-host.md) walks through deploying, backing up, restoring and updating.

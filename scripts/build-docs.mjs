@@ -241,6 +241,14 @@ const PAGES = [
     group: "Run",
   },
   {
+    src: "docs/site/leave.md",
+    out: "leave.html",
+    description:
+      "Leave Smithable with an app, tried for real: a sample export of the booking starter, run with Docker without Smithable, changed and tested, and what it needs set up of its own.",
+    nav: "Leaving, tried out",
+    group: "Run",
+  },
+  {
     src: "docs/site/google-sign-in.md",
     out: "google-sign-in.html",
     description:
@@ -366,6 +374,13 @@ function target(page, href) {
   if (to) {
     check(to, to.src);
     return `/${to.out === "index.html" ? "" : to.out}${hash ? `#${hash}` : ""}`;
+  }
+  // A file next to the pages that is no page (a download), copied into the site; its path stays as written.
+  if (file.startsWith("docs/site/") && !file.endsWith(".md") && existsSync(join(root, file))) {
+    const to = join(out, relative(join(root, "docs/site"), join(root, file)));
+    mkdirSync(dirname(to), { recursive: true });
+    copyFileSync(join(root, file), to);
+    return href;
   }
   if (!existsSync(join(root, file))) problems.push(`${page.src}: ${href} does not exist`);
   return REPO + file + (hash ? `#${hash}` : "");
