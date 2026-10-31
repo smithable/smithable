@@ -144,6 +144,10 @@ test("look breadth (docs/design/look-breadth.md §2–3): the new faces and fiel
   ).toContain("400 to 400");
   const body = read("fonts: { body: Big Shoulders Display }\n");
   expect(body.diagnostics.map((d) => d.message)).toEqual([expect.stringContaining("display face")]);
+  expect(codes("font: Oswald\n")).toEqual(["invalid-value"]);
+  // A one-weight heading face with no weight said takes its one weight; said wrong, refused.
+  expect(read("fonts: { heading: Young Serif }\n").theme?.style.headings.weight).toBe(400);
+  expect(read("fonts: { heading: Zilla Slab }\n").theme?.style.headings.weight).toBe(700);
   // The weight range: 300 to 900 within the face's own.
   expect(
     read("fonts: { heading: Mona Sans }\nheadings: { weight: 300 }\n").theme?.style.headings.weight,
@@ -204,8 +208,9 @@ test("a one-mode theme (modes: light | dark) carries one block and fills the oth
     path: "themes/dusk.yml",
     text: `smithableTheme: 0.1\nmodes: dark\nlight: { primary: "#2f5d50", background: "#f7f3ec", foreground: "#1f2420" }\ndark: { primary: "#9fcbb8", background: "#171a18", foreground: "#ebe7df" }\n`,
   });
-  expect(both.diagnostics.map((d) => d.code)).toContain("unknown-key");
-  expect(codes("modes: dusk\n")).toContain("invalid-value");
+  expect(both.diagnostics.map((d) => d.code)).toContain("invalid-value");
+  // A wrong word for modes is one error, and both blocks still read.
+  expect(codes("modes: dusk\n")).toEqual(["invalid-value"]);
   expect(read("").theme?.modes).toBe("both");
   for (const t of BUILT_IN_THEMES) expect(t.modes, t.name).toBe("both");
 });

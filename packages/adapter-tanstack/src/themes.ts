@@ -121,6 +121,7 @@ export function themeFonts(ux: UxIR, themes: readonly ThemeIR[] = []): string[] 
       [ux, ...themedPages(ux).map((id) => pageUx(ux, id))].flatMap((u) => [
         themeFont(u, themes),
         themeOf(u, themes).style.headingFont ?? themeFont(u, themes),
+        themeOf(u, themes).style.labelsFont ?? themeFont(u, themes),
       ]),
     ),
   ];

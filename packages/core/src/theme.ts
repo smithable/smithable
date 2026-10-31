@@ -267,13 +267,15 @@ export function parseTheme(
       : 0.22;
   if (chromaNode && (typeof chroma !== "number" || chroma < 0 || chroma > 0.4))
     ctx.error(chromaNode, "invalid-value", `"chroma" is a number between 0 and 0.4.`);
-  const modesName = optional("modes") ?? "both";
-  if (modesName !== "both" && modesName !== "light" && modesName !== "dark")
+  let modesName = optional("modes") ?? "both";
+  if (modesName !== "both" && modesName !== "light" && modesName !== "dark") {
     ctx.error(
       byKey.get("modes")?.value ?? root,
       "invalid-value",
       `"modes" is both, light or dark.`,
     );
+    modesName = "both";
+  }
   const modes = {} as Record<Mode, Tokens>;
   for (const mode of ["light", "dark"] as const) {
     const given: Partial<Tokens> = {};
@@ -283,7 +285,7 @@ export function parseTheme(
       if (node)
         ctx.error(
           byKey.get(mode)?.keyNode ?? node,
-          "unknown-key",
+          "invalid-value",
           `"modes: ${modesName}" shows one mode: the "${mode}" colours would never be seen; take them out or say "modes: both".`,
         );
       continue;
@@ -328,14 +330,24 @@ export function parseTheme(
       for (const problem of hardToRead(modes[mode], mode))
         if (options.contrast === "error") ctx.error(node, "theme-contrast", problem);
         else ctx.warning(node, "theme-contrast", problem);
-      // Text on a glass card is read on the card's tint at the kit's least opacity over a band.
+      // Text on a glass card is read on the card's tint at the kit's least opacity over what is
+      // behind it: the page, a soft band (muted) or a strong one (a step further from the page).
       if (style.surfaces.cards === "glass") {
         const t = modes[mode];
-        const tint = towards(t.muted, t.card, GLASS_OPACITY);
-        if (contrast(t["card-foreground"], tint) < 4.5) {
-          const problem = `In ${mode} mode, text on a glass card over a band may be hard to read.`;
-          if (options.contrast === "error") ctx.error(node, "theme-contrast", problem);
-          else ctx.warning(node, "theme-contrast", problem);
+        const behind = [
+          t.background,
+          t.muted,
+          ...(style.surfaces.bands === "strong" ? [towards(t.muted, t.foreground, 0.12)] : []),
+        ];
+        for (const text of ["card-foreground", "muted-foreground"] as const) {
+          const worst = Math.min(
+            ...behind.map((b) => contrast(t[text], towards(b, t.card, GLASS_OPACITY))),
+          );
+          if (worst < 4.5) {
+            const problem = `In ${mode} mode, ${text === "card-foreground" ? "the text" : "the muted text"} on a glass card may be hard to read (${worst.toFixed(1)}:1 at its worst; 4.5:1 is the floor).`;
+            if (options.contrast === "error") ctx.error(node, "theme-contrast", problem);
+            else ctx.warning(node, "theme-contrast", problem);
+          }
         }
       }
     }

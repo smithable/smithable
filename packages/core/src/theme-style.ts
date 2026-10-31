@@ -188,6 +188,12 @@ export function readStyle(
     return name;
   };
   let body = font;
+  if (font !== undefined && DISPLAY_FONTS.includes(font))
+    ctx.error(
+      (byKey.get("font")?.value ?? null) as never,
+      "invalid-value",
+      `${font} is a display face, made for titles: long text in it does not read. Name it under "fonts.heading" or "fonts.labels".`,
+    );
   const fonts = byKey.get("fonts");
   if (fonts) {
     const entries = mapEntries(ctx, fonts.value as never, `"fonts"`) ?? [];
@@ -214,6 +220,7 @@ export function readStyle(
   }
   // Each group of choices: its keys, each one of its values (the heading weight a number).
   const labelsGiven = new Set<string>();
+  let weightGiven = false;
   for (const group of Object.keys(STYLE_VALUES) as (keyof typeof STYLE_VALUES)[]) {
     const node = byKey.get(group);
     if (!node) continue;
@@ -232,7 +239,10 @@ export function readStyle(
             "invalid-value",
             `"headings.weight" is 300 to 900, in hundreds.`,
           );
-        else target.weight = value;
+        else {
+          target.weight = value;
+          weightGiven = true;
+        }
         continue;
       }
       const values = (STYLE_VALUES[group] as Record<string, readonly string[]>)[e.key] ?? [];
@@ -265,7 +275,10 @@ export function readStyle(
   const heading = style.headingFont ?? body ?? "Inter";
   const [lightest, heaviest] = FONT_WEIGHTS[heading as (typeof FONTS)[number]] ?? [100, 900];
   const weight = style.headings.weight;
-  if (weight < lightest || weight > heaviest)
+  // A weight nobody said moves to the nearest the face has (Instrument Serif has 400 alone).
+  if (!weightGiven && (weight < lightest || weight > heaviest))
+    style.headings.weight = Math.min(Math.max(weight, lightest), heaviest);
+  else if (weight < lightest || weight > heaviest)
     ctx.error(
       (byKey.get("headings")?.value ?? byKey.get("fonts")?.value ?? null) as never,
       "invalid-value",

@@ -10,10 +10,19 @@ const GROUPS = ["headings", "labels", "surfaces", "buttons", "pictures", "tables
 /** A built-in theme as a file, to start from: what makes it, the defaults left out. */
 export function themeText(theme: ThemeIR): string {
   const shadow = Object.entries(SHADOWS).find(([, css]) => css === theme.shadow)?.[0] ?? "none";
+  // Labels left unsaid follow the headings (their case; wide tracking with capitals), so that
+  // is the default they are compared with, not the modern shape's.
+  const labelsDefault = {
+    case: theme.style.headings.case,
+    tracking: theme.style.headings.case === "upper" ? "wide" : "normal",
+  };
   const changed = (group: (typeof GROUPS)[number]) =>
     Object.fromEntries(
       Object.entries(theme.style[group]).filter(
-        ([key, value]) => (DEFAULT_STYLE[group] as Record<string, unknown>)[key] !== value,
+        ([key, value]) =>
+          ((group === "labels" ? labelsDefault : DEFAULT_STYLE[group]) as Record<string, unknown>)[
+            key
+          ] !== value,
       ),
     );
   const colors = (mode: "light" | "dark") =>
@@ -36,8 +45,8 @@ export function themeText(theme: ThemeIR): string {
     ...Object.fromEntries(
       GROUPS.map((group) => [group, changed(group)]).filter(([, v]) => Object.keys(v).length),
     ),
-    light: colors("light"),
-    dark: colors("dark"),
+    ...(theme.modes !== "dark" ? { light: colors("light") } : {}),
+    ...(theme.modes !== "light" ? { dark: colors("dark") } : {}),
   });
 }
 
