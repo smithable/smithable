@@ -75,6 +75,7 @@ function Slots({
       timeZone: "UTC",
       hour: "2-digit",
       minute: "2-digit",
+      hourCycle: "h23",
     }).format(new Date(`${wall}:00Z`));
   const dayName = (date: string) =>
     new Intl.DateTimeFormat(language(), {

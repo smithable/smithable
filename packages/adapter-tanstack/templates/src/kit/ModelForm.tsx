@@ -707,6 +707,7 @@ function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string 
             timeZone,
             hour: "2-digit",
             minute: "2-digit",
+            hourCycle: "h23",
           }).format(new Date(at)),
         )
         .join(", "),
