@@ -28,3 +28,6 @@ pages:
         src: images/hero.webp
         alt: An outdoor market with stalls of vegetables and flowers
         generated: true
+    latest:
+      eyebrow: Near you
+      title: Like new

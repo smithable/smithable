@@ -1419,9 +1419,9 @@ function readSectionLooks(
             `${page.id} is public, and visitors may not read ${pageModel(shown)}: the stage would show what they may not see.`,
           );
         else {
-          // The same records twice on one page (a warning: a section with a where of its own shows others).
+          // The same records twice on one page (a warning; a section with a where of its own shows others).
           const again = page.sections.find(
-            (s) => s.kind === "records" && s.model === pageModel(shown),
+            (s) => s.kind === "records" && s.model === pageModel(shown) && !s.where,
           );
           if (again)
             ctx.warning(
