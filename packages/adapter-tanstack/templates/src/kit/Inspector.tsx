@@ -401,6 +401,7 @@ function cell(value: unknown, timeZone?: string): string {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "short",
+      hourCycle: "h23",
       timeZone,
     }).format(new Date(value));
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
