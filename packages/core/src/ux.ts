@@ -1418,6 +1418,19 @@ function readSectionLooks(
             "invalid-value",
             `${page.id} is public, and visitors may not read ${pageModel(shown)}: the stage would show what they may not see.`,
           );
+        else {
+          // The same records twice on one page (a warning: a section with a where of its own shows others).
+          const again = page.sections.find(
+            (s) => s.kind === "records" && s.model === pageModel(shown),
+          );
+          if (again)
+            ctx.warning(
+              stageOption?.value ?? entry.value,
+              "invalid-value",
+              `The hero shows the first records of ${shown.id}; the ${again.name} section lists them again below.`,
+              `Remove the ${again.name} section, or give it a where of its own.`,
+            );
+        }
       }
       if (look.eyebrow && !page.sections.some((s) => s.kind === "contact")) {
         const eyebrow = options.find((o) => o.key === "eyebrow");

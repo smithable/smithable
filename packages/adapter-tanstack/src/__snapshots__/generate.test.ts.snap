@@ -58448,25 +58448,18 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
 import { createFileRoute } from "@tanstack/react-router";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/page-guard";
-import { LandingLayout, Hero, RecordCards } from "#/kit/Landing";
+import { LandingLayout, Hero } from "#/kit/Landing";
 import { w } from "#/kit/words";
 import { site } from "#/generated/site";
-import { listItems, itemUi } from "#/generated/item";
 import { app } from "#/generated/app";
-import { Package } from "lucide-react";
 
 export const Route = createFileRoute("/welcome/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["home"], context.viewer, location.href),
   head: () => pageHead("home"),
-  loader: async () => {
-    const items = (await listItems()).rows;
-    return { "latest": items.slice(0, 6) };
-  },
   component: HomePage,
 });
 
 function HomePage() {
-  const data = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   return (
     <LandingLayout appName={app.name} link={viewer ? { to: "/", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer}>
@@ -58476,40 +58469,6 @@ function HomePage() {
           subtitle="Buy and sell second-hand things in your neighborhood."
           link={{ to: "/", label: "Get started" }}
           secondLink={{ to: "/my-items", label: pageUi["myItems"].title }}
-          more
-        />
-      <RecordCards
-          texts="pages.home.latest"
-          id="latest"
-          icon={Package}
-          door={{
-  to: "/",
-  search: { label: "Search items", placeholder: "Search by title, description or place" },
-  chips: [
-    {
-      name: "category",
-      label: "Category",
-      options: [
-        { value: "furniture", label: "Furniture" },
-        { value: "bikes", label: "Bikes" },
-        { value: "electronics", label: "Electronics" },
-        { value: "sports", label: "Sports" },
-        { value: "kids", label: "Kids" },
-        { value: "other", label: "Other" },
-      ],
-    },
-  ],
-}}
-          title={itemUi.pluralLabel}
-          cards={data["latest"].map((row) => ({
-            key: row.id,
-            title: String(row.title),
-            href: \`/\${row.id}\`,
-            picture: row.photos?.[0] ? { src: \`/files/item/\${row.id}/photos/0\`, alt: row.photos[0].alt, width: row.photos[0].width, height: row.photos[0].height, generated: row.photos[0].generated } : undefined,
-            text: row.description ?? undefined,
-            badge: itemUi.fields.find((f) => f.name === "category")?.choices?.find((c) => c.value === row.category)?.label,
-            amount: row.price == null ? undefined : new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(row.price / 100),
-          }))}
         />
     </LandingLayout>
   );
@@ -59071,7 +59030,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "59f878f7 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
-  "src/routes/welcome/index.tsx": "92089879 generated",
+  "src/routes/welcome/index.tsx": "cb9a5b5f generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "c501d393 kit",
   "src/theme.css": "bdcdfdd1 generated",

@@ -2779,10 +2779,11 @@ async function marketplaceFlow(dir, base) {
           ?.trim(),
     );
   try {
+    // The landing's stage hero is the catalog's first screen; its button leads to the catalog.
     await open(page, `${base}/welcome`);
-    await page.getByRole("searchbox", { name: "Search items" }).fill("bike");
-    await page.getByRole("button", { name: "Search", exact: true }).click();
-    await page.waitForURL(/\/\?q=bike/);
+    await page.getByRole("link", { name: "Browse items" }).first().click();
+    await page.waitForURL(`${base}/`);
+    await open(page, `${base}/?q=bike`);
     if (await page.locator('[data-kit="app-shell"]').count())
       throw new Error("a visitor sees the catalog in the app's frame");
     await page
@@ -2799,7 +2800,7 @@ async function marketplaceFlow(dir, base) {
       .click();
     await page.waitForURL(/\/sign-in\?redirect=/);
     console.log(
-      "  ✓ browser: a visitor starts on the catalog in the site's frame, searches from the landing page, filters and sorts in the address, and a heart asks them to sign in",
+      "  ✓ browser: a visitor starts on the catalog in the site's frame, comes to it from the landing page, searches, filters and sorts in the address, and a heart asks them to sign in",
     );
     // A visitor who may only read gets the item as a page, not a disabled form.
     await open(page, `${base}/1`);

@@ -3832,16 +3832,6 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
             "secondButton": "myItems",
           },
           {
-            "filters": [
-              "category",
-            ],
-            "kind": "records",
-            "limit": 6,
-            "model": "Item",
-            "name": "latest",
-            "search": true,
-          },
-          {
             "kind": "footer",
             "name": "footer",
           },
@@ -3854,16 +3844,6 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
           "kind": "hero",
           "name": "hero",
           "secondButton": "myItems",
-        },
-        {
-          "filters": [
-            "category",
-          ],
-          "kind": "records",
-          "limit": 6,
-          "model": "Item",
-          "name": "latest",
-          "search": true,
         },
         {
           "kind": "footer",
