@@ -165,7 +165,7 @@ export function landingRoute(
       alternate.has(section.name) && given.band === undefined ? { ...given, band: "muted" } : given,
     )
       // A hero's facts and its line from the contact section are props of their own (below).
-      .filter(([key]) => key !== "facts" && key !== "eyebrow")
+      .filter(([key]) => key !== "facts" && key !== "eyebrow" && key !== "stage")
       // The hero's "image" (which side) is imageSide: its image is the picture itself.
       .map(
         ([key, value]) =>

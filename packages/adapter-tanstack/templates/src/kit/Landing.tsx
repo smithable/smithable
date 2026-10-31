@@ -494,7 +494,9 @@ function HeroView({
    * its first records, a picture of the list beside the headline, not a list to use.
    */
   stage?: {
-    ui: RecordUi<Row>;
+    // Any model's list: the stage draws whichever list page the ux file names.
+    // biome-ignore lint/suspicious/noExplicitAny: a record of any model, drawn as a picture
+    ui: RecordUi<any>;
     app: AppUi;
     rows: Row[];
     label: string;

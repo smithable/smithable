@@ -5213,7 +5213,10 @@ async function aiMarkCheck(dir, base) {
         .join("\n")
     : "";
   const gallery = (content.match(/- image: \{[^}]*generated: true/g) ?? []).length;
-  const hero = /image:\n\s+src: .*\n\s+alt: .*\n\s+generated: true/.test(content);
+  // A stage hero shows the app's own list, not its picture (look-breadth §3).
+  const hero =
+    /image:\n\s+src: .*\n\s+alt: .*\n\s+generated: true/.test(content) &&
+    !/hero: \{[^}]*layout: stage/.test(ux);
   const sampled = samples.includes("generated: true");
   // Switched off by the owner (aiBadge: false), the theme hides every mark.
   if ((!gallery && !hero && !sampled) || /^aiBadge: false/m.test(ux)) return;
