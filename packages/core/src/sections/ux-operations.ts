@@ -649,6 +649,15 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       );
       return [];
     }
+    // A page by its name (a stage hero's list): the ux check says whether it is one.
+    if (allowed === "page") {
+      put(
+        editors.ux,
+        ["pages", page, "sections", section, key],
+        value === "default" ? undefined : value,
+      );
+      return [];
+    }
     const number = Number(value);
     const typed = allowed !== "text" && typeof allowed[0] === "number" ? number : value;
     if (value !== "default" && allowed !== "text" && !allowed.includes(typed))

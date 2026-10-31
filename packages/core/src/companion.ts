@@ -173,6 +173,18 @@ const ux: Companion = {
   follow(editor, effect, ir) {
     if (effect.kind === "rename-page") {
       if (editor.has(["pages", effect.from])) editor.renameKey(["pages", effect.from], effect.to);
+      // A stage hero names the list page it shows (look-breadth §3).
+      for (const page of ir.pages)
+        for (const section of page.sections) {
+          const at = [
+            "pages",
+            page.id === effect.from ? effect.to : page.id,
+            "sections",
+            section.name,
+            "stage",
+          ];
+          if (editor.has(at) && editor.get(at) === effect.from) editor.set(at, effect.to);
+        }
       return undefined;
     }
     if (effect.kind === "rename-model") {

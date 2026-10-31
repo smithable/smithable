@@ -18,6 +18,7 @@ import {
   type SamplesIR,
   type SpecIR,
   type SpecPlugin,
+  stagePage,
   type ThemeIR,
   threadBindings,
   titleField,
@@ -429,6 +430,15 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
             `${page.id} tile ${item.name}: due by ${item.when}, within ${span}${item.within ? " (within)" : " (unsaid)"}`,
           );
         }
+  // A stage hero's list page (look-breadth §3): the one named, else the navigation's first.
+  for (const page of ir.pages)
+    for (const [name, look] of Object.entries(ux?.pages[page.id]?.looks ?? {}))
+      if (look.layout === "stage") {
+        const shown = stagePage(ir, look.stage);
+        lines.push(
+          `${page.id} ${name} stage: ${shown?.id ?? "no list page"}${look.stage ? " (stage)" : " (the first list page in the navigation)"}`,
+        );
+      }
   // Where the menu sits and its surface (look-gap §4): the ux file's word, else the default.
   lines.push(ux?.navigation ? `menu: ${ux.navigation} (navigation)` : "menu: sidebar (unsaid)");
   lines.push(
