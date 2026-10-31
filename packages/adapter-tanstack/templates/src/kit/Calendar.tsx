@@ -65,9 +65,12 @@ function accentStyle(item: CalendarItem): React.CSSProperties | undefined {
 function Places({
   places,
   look,
+  plain,
 }: {
   places: { left: number; of: number };
   look: "number" | "pips" | "bar";
+  /** On the block's plain surface the number may be muted; on a coloured one it may not. */
+  plain: boolean;
 }) {
   const taken = Math.max(0, places.of - places.left);
   const label = w.placesLeft(places.left, places.of);
@@ -104,7 +107,10 @@ function Places({
       </span>
     );
   return (
-    <span data-part="places" className="block text-muted-foreground">
+    <span
+      data-part="places"
+      className={`block ${plain ? "text-muted-foreground" : "text-foreground"}`}
+    >
       {label}
     </span>
   );
@@ -526,11 +532,17 @@ export function Calendar({
                           <span className="font-medium">{p.title}</span>
                           <span className="sr-only">, {when(p)}</span>
                           {!dateOnly && (
-                            <span aria-hidden className="block text-muted-foreground">
+                            // On a coloured block the muted text would not read: the text's own colour.
+                            <span
+                              aria-hidden
+                              className={`block ${accentStyle(p) ? "text-foreground" : "text-muted-foreground"}`}
+                            >
                               {clock(p.from)}
                             </span>
                           )}
-                          {p.places && <Places places={p.places} look={places} />}
+                          {p.places && (
+                            <Places places={p.places} look={places} plain={!accentStyle(p)} />
+                          )}
                         </button>
                       </li>
                     ))}
