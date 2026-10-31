@@ -36,7 +36,19 @@ if (!source || !from || !["hallmark", "tweakcn"].includes(source)) {
   process.exit(2);
 }
 const core = await import(resolve(opts.core));
-const { parseTheme, themeThumbnail, gamutMap, hexOf, FONTS, deriveTokens, oppositeMode } = core;
+const {
+  parseTheme,
+  themeThumbnail,
+  gamutMap,
+  hexOf,
+  FONTS,
+  deriveTokens,
+  oppositeMode,
+  themeNames,
+} = core;
+/** A candidate named like a built-in theme takes the catalog's name in front (addTheme refuses the clash). */
+const BUILT_IN = new Set(themeNames());
+const freeName = (name) => (BUILT_IN.has(name) ? `${source}-${name}` : name);
 const stamp = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
 const out = opts.out ?? `/mnt/c/Users/johan/Pictures/claude/themes/${stamp}-import-${source}`;
 const dir = join(out, "themes");
@@ -483,6 +495,7 @@ for (const entry of entries) {
     dropped.push(`${entry.name}: ${entry.error}`);
     continue;
   }
+  entry.name = freeName(entry.name);
   let text = themeText(entry);
   let { theme, diagnostics } = parseTheme(
     { path: `${entry.name}.yml`, text },
