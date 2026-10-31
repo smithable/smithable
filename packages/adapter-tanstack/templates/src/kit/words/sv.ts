@@ -18,6 +18,9 @@ export const w = {
   sampleUser: "Exempelanvändare",
   activeFilters: "Aktiva filter",
   activity: "Aktivitet",
+  overdue: "Försenad",
+  nothingDue: "Inget förfaller.",
+  nothingYet: "Inget har hänt än.",
   activityLead:
     "Vem som gjorde vad, och när. Sparas i 12 månader; uppgifter om anslutningen i 90 dagar.",
   addPictures: "Lägg till bilder",

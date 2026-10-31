@@ -226,12 +226,14 @@ test("setTone colors a choice value; the tone follows renames and goes with its 
     ok: true,
     files: { ux: expect.stringContaining("Order.state:") },
   });
-  const removed = applyOperation({ spec: crm, ux }, "removeField", {
+  // The start page's open orders count by status, which holds the field: that tile out first.
+  const untiled = crm.replace(/^ {6}openOrders:.*\n/m, "");
+  const removed = applyOperation({ spec: untiled, ux }, "removeField", {
     model: "Order",
     field: "status",
   });
   expect(removed).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
-  const changed = applyOperation({ spec: crm, ux }, "changeField", {
+  const changed = applyOperation({ spec: untiled, ux }, "changeField", {
     model: "Order",
     field: "status",
     type: "draft | placed | sent",
@@ -323,6 +325,31 @@ test("addTheme adds themes/<name>.yml, --use applies it, and a bad file or a tak
   expect(
     applyOperation({ spec: crm }, "addTheme", { name: "woods", text: `name: forest\n${text}` }),
   ).toMatchObject({ ok: false, message: expect.stringContaining('The file says "name: forest"') });
+});
+
+test("a page's filters may show as a row of chips; setFiltersLook writes it (look-gap §4)", () => {
+  const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
+  const said = read("smithableUx: 0.1\npages:\n  orders:\n    filters: { look: chips }\n");
+  expect(said.diagnostics).toEqual([]);
+  expect(said.ux?.pages.orders?.filtersLook).toBe("chips");
+  // default is today's look, written or not.
+  expect(
+    read("smithableUx: 0.1\npages:\n  orders:\n    filters: { look: default }\n").ux?.pages.orders
+      ?.filtersLook,
+  ).toBeUndefined();
+  expect(
+    read("smithableUx: 0.1\npages:\n  orders:\n    filters: { look: panel }\n").diagnostics[0]
+      ?.message,
+  ).toBe('"look" of the filters of page "orders" is default or chips.');
+  const files = { spec: crm, ux: "smithableUx: 0.1\n" };
+  const chips = applyOperation(files, "setFiltersLook", { page: "orders", look: "chips" });
+  if (!chips.ok) throw new Error(chips.message);
+  expect(chips.files.ux).toContain("    filters:\n      look: chips\n");
+  const back = applyOperation(chips.files, "setFiltersLook", { page: "orders", look: "default" });
+  if (!back.ok) throw new Error(back.message);
+  expect(back.files.ux).not.toContain("look");
+  const none = applyOperation(files, "setFiltersLook", { page: "team", look: "chips" });
+  expect(none.ok ? "" : none.message).toContain("has no filters");
 });
 
 test("the ux file says where the menu sits and its surface; setMenuLayout and setChrome write them (look-gap §4)", () => {

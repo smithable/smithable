@@ -356,6 +356,22 @@ const dashboard: PagePattern<"dashboard"> = {
         average: { type: "string", description: "Average a number field." },
         list: { type: "string", description: "Show a model's latest records." },
         query: { type: "string", description: "Show a custom query's records." },
+        activity: {
+          type: "string",
+          enum: ["changes"],
+          description:
+            "The app's latest changes, for those who may open Activity (changes is the only value).",
+        },
+        when: {
+          type: "string",
+          description:
+            "A list of what is due: the date field, e.g. dueOn; the overdue records come first, marked.",
+        },
+        within: {
+          type: "string",
+          pattern: "^[1-9][0-9]* (day|days|week|weeks)$",
+          description: "How far ahead what is due reaches, e.g. 7 days or 2 weeks; 7 days unsaid.",
+        },
         where: {
           type: "object",
           description: "Only records with these choice values or yes/no values.",
@@ -379,7 +395,7 @@ const dashboard: PagePattern<"dashboard"> = {
     kind: "dashboard",
     items: readDashboard(ctx, value, where, parsed),
   }),
-  models: (p) => p.items.map((i) => i.model),
+  models: (p) => p.items.flatMap((i) => (i.model ? [i.model] : [])),
   icon: "chart",
   inMenu: true,
   parts: (p) => Object.fromEntries(p.items.map((i) => [i.name, "tile"])),
@@ -421,7 +437,10 @@ const dashboard: PagePattern<"dashboard"> = {
         item.choice.field === f.from;
       const uses =
         (own &&
-          (item.field === f.from || byFirst === f.from || (item.where && f.from in item.where))) ||
+          (item.field === f.from ||
+            byFirst === f.from ||
+            item.when === f.from ||
+            (item.where && f.from in item.where))) ||
         away;
       if (!uses) continue;
       if (!f.to)
@@ -434,6 +453,7 @@ const dashboard: PagePattern<"dashboard"> = {
       if (own && byFirst === f.from)
         spec.set([...tile, "by"], bySecond === undefined ? f.to : `${f.to}.${bySecond}`);
       if (away) spec.set([...tile, "by"], `${byFirst}.${f.to}`);
+      if (own && item.when === f.from) spec.set([...tile, "when"], f.to);
       if (own && item.where && f.from in item.where)
         spec.renameKey([...tile, "where", f.from], f.to);
     }
@@ -1632,19 +1652,63 @@ function readDashboard(
       continue;
     }
     const options = checkKeys(ctx, mapEntries(ctx, value, itemWhere) ?? [], itemWhere, {
-      allowed: ["count", "sum", "average", "list", "query", "where", "by", "period", "limit"],
+      allowed: [
+        "count",
+        "sum",
+        "average",
+        "list",
+        "query",
+        "activity",
+        "where",
+        "by",
+        "period",
+        "limit",
+        "when",
+        "within",
+      ],
       content: ["label", "title"],
     });
     const measures = options.filter((o) =>
-      ["count", "sum", "average", "list", "query"].includes(o.key),
+      ["count", "sum", "average", "list", "query", "activity"].includes(o.key),
     );
     const measure = measures[0];
     if (measures.length !== 1 || !measure) {
       ctx.error(
         keyNode,
         "invalid-dashboard",
-        `${capitalize(itemWhere)} needs one of count, sum, average, list or query.`,
+        `${capitalize(itemWhere)} needs one of count, sum, average, list, query or activity.`,
       );
+      continue;
+    }
+    // A due list's keys belong to a list of a model's records (look-gap §4).
+    const dueKeys = options.filter((o) => o.key === "when" || o.key === "within");
+    if (measure.key !== "list")
+      for (const o of dueKeys)
+        ctx.error(
+          o.keyNode,
+          "invalid-key",
+          `"${o.key}" makes a list of what is due: it goes with "list", as in { list: FollowUp, when: dueOn }.`,
+        );
+    if (measure.key === "activity") {
+      // The app's latest changes, as the Activity page has them: the kind of tile is its key.
+      if (readString(ctx, measure.value, `"activity" in ${itemWhere}`) !== "changes") {
+        ctx.error(
+          measure.value,
+          "invalid-value",
+          `"activity" is changes: the app's latest changes.`,
+        );
+        continue;
+      }
+      const item: DashboardItem = { name, kind: "activity", model: "" };
+      for (const o of options)
+        if (o.key === "where" || o.key === "by" || o.key === "period")
+          ctx.error(o.keyNode, "invalid-key", `"${o.key}" does not apply to the latest changes.`);
+      const limit = options.find((o) => o.key === "limit");
+      const n = limit ? readNumber(ctx, limit.value, `"limit" in ${itemWhere}`) : undefined;
+      if (n !== undefined && (!Number.isInteger(n) || n < 1))
+        ctx.error(limit?.value ?? null, "invalid-value", `"limit" must be a whole number above 0.`);
+      else if (n !== undefined) item.limit = n;
+      items.push(item);
       continue;
     }
     const target = readString(ctx, measure.value, `"${measure.key}" in ${itemWhere}`);
@@ -1808,6 +1872,41 @@ function readDashboard(
           ctx.error(option, "invalid-value", `"limit" must be a whole number above 0.`);
         else if (limit !== undefined) item.limit = limit;
       }
+    }
+    // What is due: a date field of the listed model, and how far ahead (7 days unsaid).
+    const when = options.find((o) => o.key === "when");
+    const within = options.find((o) => o.key === "within");
+    if (measure.key === "list" && when) {
+      const name = readString(ctx, when.value, `"when" in ${itemWhere}`);
+      const field = name === undefined ? undefined : fieldOf(name, when.value);
+      if (field && !(field.type.kind === "scalar" && DATES.includes(field.type.name)))
+        ctx.error(
+          when.value,
+          "invalid-dashboard",
+          `"when" needs a date field: ${name} is not one.`,
+        );
+      else if (field) item.when = field.name;
+    }
+    if (measure.key === "list" && within) {
+      const text = readString(ctx, within.value, `"within" in ${itemWhere}`);
+      const said = /^(\d+) (day|days|week|weeks)$/.exec(text ?? "");
+      if (!when)
+        ctx.error(
+          within.keyNode,
+          "invalid-key",
+          `"within" goes with "when": how far ahead what is due reaches.`,
+        );
+      else if (!said || Number(said[1]) < 1)
+        ctx.error(
+          within.value,
+          "invalid-value",
+          `"within" is a number of days or weeks, as in 7 days or 2 weeks.`,
+        );
+      else if (item.when)
+        item.within = {
+          amount: Number(said[1]),
+          unit: said[2]?.startsWith("week") ? "week" : "day",
+        };
     }
     // The span of a date chart's bars, read once "by" is known.
     const periodOption = options.find((o) => o.key === "period");

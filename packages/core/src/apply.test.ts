@@ -149,7 +149,7 @@ describe("operations", () => {
     if (!result.ok) throw new Error(result.message);
     expect(result.files.spec).toContain("  products:\n    crud: Product\n");
     expect(result.files.spec).toContain(
-      "navigation: [customers, orders, followUps, team, products]",
+      "navigation: [start, customers, orders, followUps, team, products]",
     );
   });
 
@@ -159,11 +159,11 @@ describe("operations", () => {
     );
     // A page leaving the menu is named, so it is not missed when confirming.
     expect(ok("setNavigation", ["main", "orders"]).description).toBe(
-      "Set the main menu to orders (no longer in it: customers, followUps, team)",
+      "Set the main menu to orders (no longer in it: start, customers, followUps, team)",
     );
     const admin = ok("setNavigation", ["admin", "orders"]);
     expect(admin.files.spec).toContain(
-      "navigation:\n  main: [customers, orders, followUps, team]\n  admin: [orders]\n",
+      "navigation:\n  main: [start, customers, orders, followUps, team]\n  admin: [orders]\n",
     );
   });
 
@@ -674,7 +674,7 @@ test("removePage takes a page out of the spec, the menus and its texts", () => {
   expect(result.ok).toBe(true);
   if (!result.ok) return;
   expect(result.files.spec).not.toMatch(/^ {2}orders:/m);
-  expect(result.files.spec).toContain("navigation: [customers, followUps, team]");
+  expect(result.files.spec).toContain("navigation: [start, customers, followUps, team]");
   expect(result.files.content).not.toContain("Every order and where it stands.");
   expect(applyOperation(files, "removePage", { page: "nowhere" }).ok).toBe(false);
 });
@@ -801,14 +801,21 @@ test("setShortcuts gives a hero up to four shortcuts to pages, and takes them aw
 });
 
 test("addLandingPage makes a public landing page with a hero and a footer", () => {
-  const result = applyOperation(files, "addLandingPage", { page: "home" });
+  // The CRM's start page holds "/": here it moves aside, so the first landing page takes "/".
+  const unrooted = {
+    ...files,
+    spec: files.spec.replace("    route: /\n    dashboard:", "    dashboard:"),
+  };
+  const result = applyOperation(unrooted, "addLandingPage", { page: "home" });
   expect(result).toMatchObject({ ok: true });
   if (!result.ok) return;
   expect(result.files.spec).toMatch(/home:\n\s+route: \/\n\s+landing:\n\s+hero:\n\s+footer:/);
   expect(result.files.auth).toMatch(/pages: \[.*home\]|pages:\n(\s+- .*\n)*\s+- home/);
-  const again = applyOperation({ ...files, ...result.files }, "addLandingPage", { page: "about" });
+  const again = applyOperation({ ...unrooted, ...result.files }, "addLandingPage", {
+    page: "about",
+  });
   expect(again.ok && again.files.spec).toContain("route: /about");
-  const closed = applyOperation(files, "addLandingPage", { page: "intro", public: false });
+  const closed = applyOperation(unrooted, "addLandingPage", { page: "intro", public: false });
   expect(closed.ok && closed.files.auth).not.toContain("intro");
 });
 
@@ -826,7 +833,7 @@ test("addUsersPage adds one users page to the menu; setSignUp closes and reopens
   expect(result).toMatchObject({ ok: true });
   if (!result.ok) return;
   expect(result.files.spec).toContain("team:\n    users: manage");
-  expect(result.files.spec).toContain("navigation: [customers, orders, followUps, team]");
+  expect(result.files.spec).toContain("navigation: [start, customers, orders, followUps, team]");
   const again = applyOperation({ ...without, ...result.files }, "addUsersPage", { page: "people" });
   expect(again).toMatchObject({ ok: false, message: expect.stringContaining("team page") });
   const closed = applyOperation({ ...without, ...result.files }, "setSignUp", { who: "invited" });

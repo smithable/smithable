@@ -83,5 +83,12 @@ pages:
   team:
     intent: Invite colleagues and manage who has access.
     users: manage
+  start:                             # the start page: what needs you today (look-gap §4)
+    route: /
+    dashboard:
+      customers: { count: Customer }
+      openOrders: { count: Order, where: { status: [draft, placed] } }
+      followUpsDue: { list: FollowUp, when: dueOn, within: 2 weeks, where: { done: false } }   # the overdue first, marked
+      recent: { activity: changes }  # the latest changes, for administrators
 
-navigation: [customers, orders, followUps, team]
+navigation: [start, customers, orders, followUps, team]

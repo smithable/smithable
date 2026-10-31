@@ -18,6 +18,7 @@ test("the CRM's navigation as a role and as a visitor: what opens and what reads
     { id: "followUps", menu: "main", open: "allowed", model: "FollowUp", read: "allowed" },
     // The team page is the administrators'.
     { id: "team", menu: "main", open: "denied" },
+    { id: "start", menu: "main", open: "allowed" },
   ]);
   expect(navOf(ir, auth).pages.every((p) => p.open === "denied")).toBe(true);
 });

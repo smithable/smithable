@@ -2212,6 +2212,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
     {
       "name": "main",
       "pages": [
+        "start",
         "customers",
         "orders",
         "followUps",
@@ -2304,6 +2305,58 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
         {
           "kind": "users",
           "name": "users",
+          "own": true,
+        },
+      ],
+    },
+    {
+      "id": "start",
+      "pattern": {
+        "items": [
+          {
+            "kind": "stat",
+            "measure": "count",
+            "model": "Customer",
+            "name": "customers",
+          },
+          {
+            "kind": "stat",
+            "measure": "count",
+            "model": "Order",
+            "name": "openOrders",
+            "where": {
+              "status": [
+                "draft",
+                "placed",
+              ],
+            },
+          },
+          {
+            "kind": "list",
+            "model": "FollowUp",
+            "name": "followUpsDue",
+            "when": "dueOn",
+            "where": {
+              "done": false,
+            },
+            "within": {
+              "amount": 2,
+              "unit": "week",
+            },
+          },
+          {
+            "kind": "activity",
+            "model": "",
+            "name": "recent",
+          },
+        ],
+        "kind": "dashboard",
+      },
+      "route": "/",
+      "sections": [
+        {
+          "kind": "tiles",
+          "name": "dashboard",
           "own": true,
         },
       ],

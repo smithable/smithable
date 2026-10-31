@@ -4,10 +4,7 @@
 import { kebab, type ModelIR, type PageIR, type PatternOf, titleField } from "@smithable/core";
 import { fieldUi } from "../data.js";
 import type { GenContext } from "../shared.js";
-import { guard, HEADER, importList, indexPath, literal, names } from "../shared.js";
-
-const scalarField = (model: ModelIR, ...kinds: string[]) =>
-  model.fields.find((f) => !f.formula && f.type.kind === "scalar" && kinds.includes(f.type.name));
+import { guard, HEADER, importList, indexPath, literal, names, scalarField } from "../shared.js";
 
 export function orderRoute(
   page: PageIR & { pattern: PatternOf<"order"> },

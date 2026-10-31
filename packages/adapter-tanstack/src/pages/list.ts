@@ -39,6 +39,7 @@ import {
   ownerKey,
   paramsUsed,
   relatedTitle,
+  scalarField,
   shownTitle,
   standardActions,
   type Texts,
@@ -75,8 +76,11 @@ function filterCode(
   shown?: string[],
   /** How a filter on a reference is picked (the ux file's filters.pick); unsaid, by the count. */
   pick?: Record<string, "list" | "search">,
+  /** Every choice and reference as chips, however many values (the ux file's filters.look). */
+  look?: "chips",
 ) {
   const n = names(model, t);
+  const chips = look === "chips" ? { chips: true } : {};
   const conditions: string[] = [];
   // What the server function works out before its query (a filter's count and its chosen records),
   // and the server functions a filter's search calls (A 208).
@@ -149,6 +153,7 @@ function filterCode(
         name,
         label,
         kind: "chips",
+        ...chips,
         options: code(
           `${n.ui}.fields.find((f) => f.name === ${JSON.stringify(dataKey(field))})?.choices`,
         ),
@@ -168,7 +173,9 @@ function filterCode(
       const column = `${n.table}.${dataKey(field)}`;
       const ids = `${value}.split(",").map(Number).filter(Number.isInteger)`;
       // The related records the viewer may read, by their names.
-      const all = `(await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)} }))`;
+      // With chips, a related record's picture on its chip when its model has one.
+      const picture = look === "chips" ? scalarField(target, "picture") : undefined;
+      const all = `(await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)}${picture ? `, picture: r.${dataKey(picture)} ? \`/files/${kebab(target.name)}/\${r.id}/${picture.name}\` : undefined` : ""} }))`;
       const how = pick?.[name];
       if (how === "list" || titleField(target) === "id") {
         conditions.push(`${value} ? inArray(${column}, ${ids}) : undefined`);
@@ -177,6 +184,7 @@ function filterCode(
           name,
           label,
           kind: "chips",
+          ...chips,
           options: code(`options.${name}`),
           ...fold(name),
         });
@@ -202,6 +210,7 @@ const ${v} = createServerFn()
           name,
           label,
           kind: "chips",
+          ...chips,
           options: code(`options.${name}`),
           search: code(
             `options.${name}Search ? (text: string) => ${v}({ data: { text } }) : undefined`,
@@ -229,6 +238,7 @@ const ${v} = createServerFn()
         name,
         label,
         kind: "person",
+        ...chips,
         options: code(`options.${name}`),
         ...fold(name),
       });
@@ -326,12 +336,14 @@ export function searchCode(
   shown?: string[],
   /** How a filter on a reference is picked (the ux file). */
   pick?: Record<string, "list" | "search">,
+  /** How the filters show (the ux file). */
+  look?: "chips",
 ) {
   const n = names(model, t);
   // Filters and sorting live beside the search, in the address too (not inside a data page).
   const filtering =
     !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly || unread)
-      ? filterCode(page, model, t, ir, favorites, ownOnly, unread, shown, pick)
+      ? filterCode(page, model, t, ir, favorites, ownOnly, unread, shown, pick, look)
       : undefined;
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
@@ -525,6 +537,7 @@ export function listParts(
           Boolean(threadField),
           ux.pages[page.id]?.filtersShown,
           ux.pages[page.id]?.filterPick,
+          ux.pages[page.id]?.filtersLook,
         )
       : undefined;
   const filtering = search && "filtering" in search ? search.filtering : undefined;

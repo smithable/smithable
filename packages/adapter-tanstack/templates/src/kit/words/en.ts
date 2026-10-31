@@ -18,6 +18,10 @@ export const w = {
   sampleUser: "Sample user",
   activeFilters: "Active filters",
   activity: "Activity",
+  // A dashboard's list of what is due and its latest changes (look-gap §4).
+  overdue: "Overdue",
+  nothingDue: "Nothing is due.",
+  nothingYet: "Nothing has happened yet.",
   activityLead: "Who did what, and when. Kept 12 months; the client's details 90 days.",
   addPictures: "Add pictures",
   adding: "Adding…",

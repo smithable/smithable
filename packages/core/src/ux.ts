@@ -93,6 +93,12 @@ export interface PageUx {
    * list (backlog A 208).
    */
   filterPick?: Record<string, "list" | "search">;
+  /**
+   * How the page's filters show (docs/design/look-gap.md §4): unsaid, today's controls (chips up to
+   * eight values, a list to pick from above); `chips`, every choice and reference as a row of
+   * chips, a referenced record's picture on its chip when it has one.
+   */
+  filtersLook?: "chips";
   /** A second field shown under a column's value, e.g. { email: "phone" }. */
   below?: Record<string, string>;
   /** The list's order until someone sorts it: a field, or "-field" for descending. */
@@ -688,8 +694,19 @@ export function validateUx(
               ctx,
               mapEntries(ctx, part.value, `the filters of ${where}`) ?? [],
               `the filters of ${where}`,
-              { allowed: ["shown", "pick"] },
+              { allowed: ["shown", "pick", "look"] },
             )) {
+              if (option.key === "look") {
+                const look = readString(ctx, option.value, `"look" of the filters of ${where}`);
+                if (look === "chips") result.filtersLook = look;
+                else if (look !== undefined && look !== "default")
+                  ctx.error(
+                    option.value,
+                    "invalid-value",
+                    `"look" of the filters of ${where} is default or chips.`,
+                  );
+                continue;
+              }
               if (option.key === "pick") {
                 const model = ir.models.find((m) => m.name === pageModel(spec));
                 const pick: Record<string, "list" | "search"> = {};

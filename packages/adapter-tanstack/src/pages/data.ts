@@ -44,7 +44,7 @@ export function dataRoutes(
   const inspector = hasInspector({ ir, auth });
   const files: Record<string, string> = {
     "index.tsx": overviewRoute(page, within, { ir, t }, activity, inspector),
-    ...(activity ? { "activity.tsx": activityRoute(page, { ir, t }, hasKeys(ir, auth)) } : {}),
+    ...(activity ? { "activity.tsx": activityRoute(page, { ir }) } : {}),
     ...(inspector ? { "ask.tsx": askRoute(page, { ir, auth, options }) } : {}),
   };
   for (const name of page.pattern.models) {
@@ -256,32 +256,20 @@ function AskPage() {
  * and when, newest first, filtered from the address; a record by its title now, a deleted one or
  * a removed user by their id, with Forget in the log on their lines.
  */
-export function activityRoute(
-  page: PageIR,
-  { ir, t }: Pick<GenContext, "ir" | "t">,
-  keys: boolean,
-): string {
+export function activityRoute(page: PageIR, { ir }: Pick<GenContext, "ir">): string {
   const route = `${page.route}/activity`.replace("//", "/");
-  const models = ir.models.map((model) => ({
-    model,
-    n: names(model, t),
-    title: titleField(model),
-  }));
   const mails = outgoingOf(ir).length > 0;
   // The targets outgoing calls go to: Activity filtered to one is its deliveries (integrations.md §4.1).
   const targets = [...new Set(outgoingOf(ir).flatMap((o) => (o.to === "mail" ? [] : [o.to])))];
   return `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { and, desc, eq, gte, inArray, lt${targets.length ? ", sql" : ""} } from "drizzle-orm";
+import { and, desc, eq, gte, lt${targets.length ? ", sql" : ""} } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "#/db";
-import { ${["auditLog", "user", ...(keys ? ["apiKey"] : [])].sort().join(", ")} } from "#/db/schema";
-${models.length ? SCHEMA_IMPORT : ""}
+import { auditLog } from "#/db/schema";
+import { describeActivity, LABELS } from "#/generated/activity.server";
 import { app } from "#/generated/app";
-${models.map(({ n }) => `import { ${n.ui} } from "${n.module}";\n`).join("")}${models
-  .filter(({ model }) => composedName(model))
-  .map(({ model, n }) => `import { ${nameFunction(model)} } from "${n.module}.name";\n`)
-  .join("")}import { pageAccess } from "#/generated/pages";
+import { pageAccess } from "#/generated/pages";
 import { AccessDenied, guardPage } from "#/kit/access";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
@@ -299,9 +287,6 @@ const filters = (s: Search) => optional({
   from: text(s.from),
   to: text(s.to),${targets.length ? "\n  target: text(s.target)," : ""}
 });
-
-/** Each model's label, for the filter and the lines. */
-const LABELS: Record<string, string> = ${literal(Object.fromEntries(models.map(({ model, n }) => [model.name, code(`${n.ui}.label`)])))};
 
 /** The newest lines that match, named for people (administrators only). */
 const getActivity = createServerFn()
@@ -326,97 +311,11 @@ const getActivity = createServerFn()
       .orderBy(desc(auditLog.id))
       .limit(200)
       .all();
-    const people = db.select({ id: user.id, name: user.name }).from(user).orderBy(user.name).all();
-    const named = new Map(people.map((p) => [p.id, p.name]));
-    // A record by its title now; a deleted one keeps the title its delete line has, or its id.
-    const ids = (model: string) => [
-      ...new Set(rows.filter((r) => r.model === model && r.recordId != null).map((r) => r.recordId as number)),
-    ];
-    const titles = new Map<string, Map<number, string>>([
-${models
-  .map(({ model, n, title }) =>
-    // A name made of parts (record-names.md): read with what it needs, named by its function.
-    composedName(model)
-      ? `      [
-        ${JSON.stringify(model.name)},
-        new Map(
-          db.query.${n.tableKey}
-            .findMany({ where: (t, { inArray }) => inArray(t.id, ids(${JSON.stringify(model.name)})), ...${nameColumns(ir, model)} })
-            .sync()
-            .map((r) => [r.id, ${nameFunction(model)}(r)]),
-        ),
-      ],`
-      : `      [
-        ${JSON.stringify(model.name)},
-        new Map(
-          db
-            .select({ id: ${n.table}.id, title: ${n.table}.${title} })
-            .from(${n.table})
-            .where(inArray(${n.table}.id, ids(${JSON.stringify(model.name)})))
-            .all()
-            .map((r) => [r.id, String(r.title ?? r.id)]),
-        ),
-      ],`,
-  )
-  .join("\n")}
-    ]);
-${
-  keys
-    ? `    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
-    for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
-      named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
-`
-    : ""
-}    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
-    // a timer's line names the timer (docs/design/timed-actions.md §2).
-    const removedUser = (id: string) =>
-      named.get(id) ??
-      (id.startsWith("key:")
-        ? w.aKey(id.slice(4))
-        : id.startsWith("timer:")
-          ? w.byTimer(id.slice(6))
-          : w.aRemovedUser(id));
-    const lines = rows.map((r) => {
-      const label = r.model ? LABELS[r.model] : undefined;
-      const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
-      const gone = label && r.recordId != null && now === undefined;
-      const removed = r.action === "user removed" ? String(r.details?.user ?? "") : "";
-      return {
-        id: r.id,
-        at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (removedUser(r.who) ?? r.who),
-        action: r.action,
-        record: now
-          ? \`\${label} "\${now}"\`
-          : gone
-            ? r.title
-              ? w.deletedNamed(label ?? "", r.title)
-              : w.aDeletedOne(label ?? "", String(r.recordId))
-            : undefined,
-        fields: r.fields,
-        // As text: what touches security, by name and value.
-        details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
-        forget:
-          gone && r.action === "deleted" && r.model
-            ? { model: r.model, record: r.recordId as number }
-            : removed && !named.has(removed)
-              ? { user: removed }
-              : undefined,${
-                mails
-                  ? `
-        // A mail or call given up after a day of tries can be sent again.
-        resend:
-          r.action === "mail not sent" && typeof r.details?.mail === "number"
-            ? { mail: r.details.mail }
-            : r.action === "call not made" && typeof r.details?.call === "number"
-              ? { call: r.details.call }
-              : undefined,`
-                  : ""
-              }
-      };
-    });
+    const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -439,7 +338,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  validateSearch: filters,
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -450,7 +349,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}${targets.length ? `\n        targets={${JSON.stringify(targets)}}` : ""}
         app={app}
         onFilter={(next) => navigate({ to: ${JSON.stringify(route)}, search: next, replace: true, resetScroll: false })}
@@ -469,6 +368,126 @@ function ActivityPage() {
       />
     </>
   );
+}
+`;
+}
+
+/**
+ * The activity's lines as people read them (docs/design/admin.md): who by name, the record by its
+ * title now or as it was deleted. The Activity page and a dashboard's latest changes (look-gap
+ * §4) both describe their rows with it; each checks first that the viewer may read the activity.
+ */
+export function activityModule({ ir, t }: Pick<GenContext, "ir" | "t">, keys: boolean): string {
+  const models = ir.models.map((model) => ({
+    model,
+    n: names(model, t),
+    title: titleField(model),
+  }));
+  const mails = outgoingOf(ir).length > 0;
+  // A model named by one column is read with a select; one named by parts, by its function.
+  const plain = models.some(({ model }) => !composedName(model));
+  return `${HEADER}${plain ? 'import { inArray } from "drizzle-orm";\n' : ""}import { db } from "#/db";
+import { ${["auditLog", "user", ...(keys ? ["apiKey"] : [])].sort().join(", ")} } from "#/db/schema";
+${plain ? `${SCHEMA_IMPORT}\n` : ""}${models.map(({ n }) => `import { ${n.ui} } from "${n.module}";\n`).join("")}${models
+  .filter(({ model }) => composedName(model))
+  .map(({ model, n }) => `import { ${nameFunction(model)} } from "${n.module}.name";\n`)
+  .join("")}import { w } from "#/kit/words";
+
+/** Each model's label, for the filter and the lines. */
+export const LABELS: Record<string, string> = ${literal(Object.fromEntries(models.map(({ model, n }) => [model.name, code(`${n.ui}.label`)])))};
+
+/** The rows of the activity log, described; the people, for the filter. */
+export function describeActivity(rows: (typeof auditLog.$inferSelect)[]) {
+  const people = db.select({ id: user.id, name: user.name }).from(user).orderBy(user.name).all();
+  const named = new Map(people.map((p) => [p.id, p.name]));
+  // A record by its title now; a deleted one keeps the title its delete line has, or its id.
+  const ids = (model: string) => [
+    ...new Set(rows.filter((r) => r.model === model && r.recordId != null).map((r) => r.recordId as number)),
+  ];
+  const titles = new Map<string, Map<number, string>>([
+${models
+  .map(({ model, n, title }) =>
+    // A name made of parts (record-names.md): read with what it needs, named by its function.
+    composedName(model)
+      ? `      [
+      ${JSON.stringify(model.name)},
+      new Map(
+        db.query.${n.tableKey}
+          .findMany({ where: (t, { inArray }) => inArray(t.id, ids(${JSON.stringify(model.name)})), ...${nameColumns(ir, model)} })
+          .sync()
+          .map((r) => [r.id, ${nameFunction(model)}(r)]),
+      ),
+    ],`
+      : `      [
+      ${JSON.stringify(model.name)},
+      new Map(
+        db
+          .select({ id: ${n.table}.id, title: ${n.table}.${title} })
+          .from(${n.table})
+          .where(inArray(${n.table}.id, ids(${JSON.stringify(model.name)})))
+          .all()
+          .map((r) => [r.id, String(r.title ?? r.id)]),
+      ),
+    ],`,
+  )
+  .join("\n")}
+  ]);
+${
+  keys
+    ? `    // A key's lines name the key ("key:3" is the key made as "Uptime monitor").
+  for (const k of db.select({ id: apiKey.id, name: apiKey.name }).from(apiKey).all())
+    named.set(\`key:\${k.id}\`, w.keyNamed(k.name));
+`
+    : ""
+}    // A key's line once keys are gone from the app (the API turned off) still says it was a key;
+  // a timer's line names the timer (docs/design/timed-actions.md §2).
+  const removedUser = (id: string) =>
+    named.get(id) ??
+    (id.startsWith("key:")
+      ? w.aKey(id.slice(4))
+      : id.startsWith("timer:")
+        ? w.byTimer(id.slice(6))
+        : w.aRemovedUser(id));
+  const lines = rows.map((r) => {
+    const label = r.model ? LABELS[r.model] : undefined;
+    const now = r.model && r.recordId != null ? titles.get(r.model)?.get(r.recordId) : undefined;
+    const gone = label && r.recordId != null && now === undefined;
+    const removed = r.action === "user removed" ? String(r.details?.user ?? "") : "";
+    return {
+      id: r.id,
+      at: r.at,
+      who: r.who === "visitor" || r.who === "the app" ? r.who : (removedUser(r.who) ?? r.who),
+      action: r.action,
+      record: now
+        ? \`\${label} "\${now}"\`
+        : gone
+          ? r.title
+            ? w.deletedNamed(label ?? "", r.title)
+            : w.aDeletedOne(label ?? "", String(r.recordId))
+          : undefined,
+      fields: r.fields,
+      // As text: what touches security, by name and value.
+      details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
+      forget:
+        gone && r.action === "deleted" && r.model
+          ? { model: r.model, record: r.recordId as number }
+          : removed && !named.has(removed)
+            ? { user: removed }
+            : undefined,${
+              mails
+                ? `
+      // A mail or call given up after a day of tries can be sent again.
+      resend:
+        r.action === "mail not sent" && typeof r.details?.mail === "number"
+          ? { mail: r.details.mail }
+          : r.action === "call not made" && typeof r.details?.call === "number"
+            ? { call: r.details.call }
+            : undefined,`
+                : ""
+            }
+    };
+  });
+  return { lines, people };
 }
 `;
 }
