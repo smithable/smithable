@@ -10,6 +10,7 @@ tones:
 pages:
   home:
     sections:
+      services: { layout: ledger }     # the price list as ruled rows, the prices in a column
       barbers: { band: muted }         # the team on the muted band, apart from the price list
   appointments:
     table:

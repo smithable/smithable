@@ -285,7 +285,7 @@ test("a companion file is helped from its own schema, with the spec's names", ()
   );
   expect(
     home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      classes:\n        layout: ‸"),
-  ).toEqual(["cards", "list", "grid"]);
+  ).toEqual(["cards", "list", "grid", "ledger"]);
   expect(
     home("smithableUx: 0.1\npages:\n  home:\n    sections:\n      faq:\n        layout: ‸"),
   ).toEqual(["accordion", "list"]);
