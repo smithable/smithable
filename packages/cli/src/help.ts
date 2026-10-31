@@ -344,7 +344,7 @@ export const COMMANDS: Command[] = [
   },
 ];
 
-const GLOBAL_OPTIONS = [
+export const GLOBAL_OPTIONS = [
   "-h, --help       Show this help (after a command: that command's help)",
   "-v, --version    Show the Smithable version",
   "--dir <path>     Project directory for op, undo, redo, report, inspect and test (default: current)",

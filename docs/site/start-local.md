@@ -11,7 +11,7 @@ npm install -g smithable
 smithable --version       # smithable 0.1.0 (spec 0.1)
 ```
 
-Or run any command once without installing, as `npx smithable@latest new my-crm`. `smithable --help` lists every command.
+Or run any command once without installing, as `npx smithable@latest new my-crm`. `smithable --help` lists every command, and so does the [command reference](commands.md).
 
 ## A first app
 

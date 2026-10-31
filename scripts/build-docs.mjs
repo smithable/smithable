@@ -17,6 +17,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { Marked } from "marked";
+import { commandsPage } from "./commands-page.mjs";
 import { operationsPage } from "./operations-page.mjs";
 
 const root = resolve(import.meta.dirname, "..");
@@ -265,6 +266,16 @@ const PAGES = [
     nav: "Operations",
     group: "Reference",
     generate: operationsPage,
+  },
+  // Generated from the command line's own help at build time, not a file in the repository.
+  {
+    src: "docs/site/commands.md",
+    out: "commands.html",
+    description:
+      "Every smithable command, from new and studio to deploy and detach: what it does and its options, from the command line's own help.",
+    nav: "Commands",
+    group: "Reference",
+    generate: commandsPage,
   },
   {
     src: "docs/site/why.md",
