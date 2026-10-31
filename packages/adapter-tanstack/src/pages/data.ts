@@ -83,7 +83,7 @@ function overviewRoute(
 import { createServerFn } from "@tanstack/react-start";
 import { pageAccess } from "#/generated/pages";
 ${models.map(({ n }) => `import { ${n.data} } from "${n.module}.server";\nimport { ${n.ui} } from "${n.module}";`).join("\n")}
-import { guardPage } from "#/kit/access";
+import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -193,7 +193,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { callTool, offerFor } from "#/generated/mcp.server";
 import { pageAccess } from "#/generated/pages";
-import { AccessDenied, guardPage, type Viewer } from "#/kit/access";
+import { AccessDenied, type Viewer } from "#/kit/access";
+import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import type { AskKind } from "#/kit/ask";
 import { answer, hostModel } from "#/kit/assistant.server";
@@ -270,7 +271,8 @@ import { auditLog } from "#/db/schema";
 import { describeActivity, LABELS } from "#/generated/activity.server";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
-import { AccessDenied, guardPage } from "#/kit/access";
+import { AccessDenied } from "#/kit/access";
+import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";

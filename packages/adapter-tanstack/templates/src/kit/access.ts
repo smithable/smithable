@@ -1,9 +1,6 @@
 // Smithable app kit: who may read, create, change and delete records, and open pages.
 // Every generated data function checks access here, so the rules live in one place.
 
-import { redirect } from "@tanstack/react-router";
-import { createIsomorphicFn } from "@tanstack/react-start";
-import { setResponseStatus } from "@tanstack/react-start/server";
 import { w } from "./words";
 
 /** The signed-in user, or null for a visitor who has not signed in. */
@@ -91,15 +88,3 @@ export function readScope(rule: Rule, viewer: Viewer | null): "all" | "own" | "p
   if (viewer && rule.owner) return "own";
   return rule.public ? "public" : "none";
 }
-
-/** For a page's beforeLoad: sends visitors to sign in, and refuses users without the role. */
-export function guardPage(rule: Rule, viewer: Viewer | null, href: string): void {
-  if (allows(rule, viewer)) return;
-  if (!viewer) throw redirect({ href: `/sign-in?redirect=${encodeURIComponent(href)}` });
-  // Rendered on the server, the page answers 403 as it shows the refusal (A 214).
-  refusedStatus();
-  throw new AccessDenied(true);
-}
-
-/** The status a refused page answers with, set where the page is rendered on the server. */
-const refusedStatus = createIsomorphicFn().server(() => setResponseStatus(403));

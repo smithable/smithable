@@ -103,7 +103,8 @@ function listRoute(page: ArticlesPage, ctx: GenContext): string {
     .add("#/kit/Articles", "ArticleList")
     .add("#/kit/params", "count", "optional", "type Search")
     .add("#/generated/pages", "pageAccess")
-    .add("#/kit/access", "allows", "guardPage");
+    .add("#/kit/access", "allows")
+    .add("#/kit/page-guard", "guardPage");
   if (framed)
     imports
       .add("#/kit/Landing", "LandingLayout")
@@ -172,7 +173,8 @@ function articleRoute(page: ArticlesPage, ctx: GenContext): string {
     .add("@tanstack/react-router", "createFileRoute", "notFound")
     .add("@tanstack/react-start/server", "getRequestHeaders")
     .add("#/kit/Articles", "ArticleView")
-    .add("#/kit/access", "allows", "guardPage");
+    .add("#/kit/access", "allows")
+    .add("#/kit/page-guard", "guardPage");
   imports.add("#/generated/pages", "pageAccess");
   if (framed)
     imports

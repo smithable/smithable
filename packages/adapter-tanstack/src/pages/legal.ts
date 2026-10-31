@@ -112,7 +112,7 @@ export function legalRoute(
     .add("@tanstack/react-router", "createFileRoute")
     .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
-    .add("#/kit/access", "guardPage")
+    .add("#/kit/page-guard", "guardPage")
     .add("#/kit/LegalPage", "LegalPage", "type LegalFacts");
   // The records' kinds by their plural, from their modules.
   for (const m of ir.models)

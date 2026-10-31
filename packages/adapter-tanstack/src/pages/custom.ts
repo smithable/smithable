@@ -154,7 +154,7 @@ export function customRoute(
   const imports = importList()
     .add("@tanstack/react-router", "createFileRoute")
     .add("#/generated/pages", "pageAccess")
-    .add("#/kit/access", "guardPage")
+    .add("#/kit/page-guard", "guardPage")
     .add(`#/custom/pages/${c}`, c);
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({

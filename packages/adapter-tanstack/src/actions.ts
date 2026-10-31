@@ -821,7 +821,7 @@ export function actionRoute(page: PageIR, action: ActionIR, ir: SpecIR, t: Texts
 import { app } from "#/generated/app";
 import { ${action.name}, ${a.access}, ${a.ui} } from "${a.module}";
 import { ${a.input} } from "${a.module}.input";
-${[...optionFns].map(([fn, module]) => `import { ${fn} } from "${module}";`).join("\n")}${optionFns.size ? "\n" : ""}import { guardPage } from "#/kit/access";
+${[...optionFns].map(([fn, module]) => `import { ${fn} } from "${module}";`).join("\n")}${optionFns.size ? "\n" : ""}import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 

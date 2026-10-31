@@ -294,7 +294,7 @@ import { z } from "zod";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { decide, reviewList } from "#/generated/review.server";
-import { guardPage } from "#/kit/access";
+import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import { Review } from "#/kit/Review";
 import { w } from "#/kit/words";

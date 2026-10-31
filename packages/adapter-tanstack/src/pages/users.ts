@@ -45,7 +45,7 @@ import {
   usesOf,
   withdrawInvitation,
 } from "#/generated/users.server";
-${keys ? 'import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";\n' : ""}import { guardPage } from "#/kit/access";
+${keys ? 'import { listKeys, makeKey, revokeKey } from "#/generated/keys.server";\n' : ""}import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";${keys ? '\nimport { Keys } from "#/kit/Keys";' : ""}
 import { inviteAllowed } from "#/kit/limit";
 import { mailConfigured } from "#/kit/mail";

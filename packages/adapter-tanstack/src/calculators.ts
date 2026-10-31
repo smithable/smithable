@@ -124,7 +124,7 @@ export function calculatorRoute(
     .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
     .add(`#/generated/${kebab(model.name)}`, ui)
-    .add("#/kit/access", "guardPage")
+    .add("#/kit/page-guard", "guardPage")
     .add("#/kit/AppShell", "PageHeader")
     .add("#/kit/Calculator", "Calculator");
   const results = t.section(page.id, "results").title;

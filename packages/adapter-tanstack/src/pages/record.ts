@@ -85,7 +85,8 @@ export function recordPageRoute(
     .add(n.module, n.create, n.ui)
     .add(`${n.module}.schema`, n.schema)
     .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
-    .add("#/kit/access", "allows", "guardPage")
+    .add("#/kit/access", "allows")
+    .add("#/kit/page-guard", "guardPage")
     .add("#/kit/ModelForm", "ModelForm")
     .add("#/kit/words", "w")
     .add("#/lib/viewer.server", "currentViewer");
@@ -272,7 +273,7 @@ import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { ${n.create}, ${n.ui} } from "${n.module}";
 import { ${n.schema} } from "${n.module}.schema";
-${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/access";
+${options ? `${options.imports.join("\n")}\n` : ""}import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
@@ -619,7 +620,7 @@ ${
 }import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
-${options ? `${options.imports.join("\n")}\n` : ""}import { ${offered.length || merges.length || splits.length ? "allows, " : ""}guardPage } from "#/kit/access";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
+${options ? `${options.imports.join("\n")}\n` : ""}${offered.length || merges.length || splits.length ? 'import { allows } from "#/kit/access";\n' : ""}import { guardPage } from "#/kit/page-guard";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
@@ -935,7 +936,7 @@ export function allTrashRoute(team: PageIR, ir: SpecIR, t: Texts): string {
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${lists.map(({ n, fns }) => `import { ${[fns.erase, fns.restore, fns.list, n.ui].sort().join(", ")} } from "${n.module}";`).join("\n")}
-import { guardPage } from "#/kit/access";
+import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import { TrashTable } from "#/kit/Trash";
 import { w } from "#/kit/words";
@@ -992,7 +993,7 @@ export function trashRoute(page: PageIR, model: ModelIR, t: Texts): string {
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 import { ${[fns.erase, fns.restore, fns.list, n.ui].sort().join(", ")} } from "${n.module}";
-import { guardPage } from "#/kit/access";
+import { guardPage } from "#/kit/page-guard";
 import { PageHeader } from "#/kit/AppShell";
 import { TrashTable } from "#/kit/Trash";
 import { w } from "#/kit/words";
