@@ -460,8 +460,10 @@ function HeroView({
   image,
   more,
   shortcuts = [],
-  layout = "split",
+  layout: given = "split",
   imageSide = "right",
+  overlay,
+  facts = [],
 }: {
   title: string;
   subtitle?: string;
@@ -478,13 +480,24 @@ function HeroView({
    * picture across the width with the theme's primary washing over it under the text; photo:
    * the picture across the width, a dark scrim from the start side, white text at the start.
    */
-  layout?: "split" | "centered" | "plain" | "cover" | "photo";
+  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset";
+  /**
+   * A cover or photo hero's wash: brand (the primary, the cover's own) or dark (a scrim, the
+   * photo's own); each layout keeps its size and takes the other's wash (look-gap §4).
+   */
+  overlay?: "brand" | "dark";
+  /** A row of figures under the text: each model's count of the records the viewer may read. */
+  facts?: { label: string; value: number }[];
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
   /** A short line over the title, e.g. who the app is for ("For small studios"). */
   eyebrow?: string;
 }) {
+  const layout = given;
+  // Over a picture across the width: the brand's wash (the cover's own) or a dark scrim (the
+  // photo's own); each layout keeps its size and takes the wash it is given (look-gap §4).
+  const wash = overlay ?? (layout === "cover" ? "brand" : "dark");
   const after = useId();
   // A link to where the next section starts, so it works by keyboard and without JavaScript.
   const cue = more && (
@@ -526,10 +539,11 @@ function HeroView({
       className={cn(
         buttonVariants({ variant: "outline" }),
         "h-12 px-6 text-base",
-        (shown === "centered" || shown === "photo") &&
+        (shown === "centered" || ((shown === "photo" || shown === "cover") && wash === "dark")) &&
           "border-white/70 bg-transparent text-white hover:bg-white/10",
         // Over the cover's rule for its links (the first button's fill), so marked as important.
-        shown === "cover" &&
+        (shown === "cover" || shown === "photo") &&
+          wash === "brand" &&
           "border-primary-foreground/70 bg-transparent! text-primary-foreground! hover:bg-primary-foreground/10! dark:border-foreground/70 dark:text-foreground! dark:hover:bg-foreground/10!",
       )}
     >
@@ -569,6 +583,18 @@ function HeroView({
           {second}
         </div>
       )}
+      {facts.length > 0 && (
+        <dl data-part="facts" className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
+          {facts.map((fact) => (
+            <div key={fact.label} className="flex flex-col-reverse">
+              <dt className="text-sm label-text opacity-80">{fact.label}</dt>
+              <dd className="text-3xl font-(--heading-weight) tabular-nums">
+                {new Intl.NumberFormat(undefined, { minimumIntegerDigits: 2 }).format(fact.value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
   // Without a picture every look is plain, so a missing picture never breaks the page.
@@ -601,17 +627,26 @@ function HeroView({
             fetchPriority="high"
             className="absolute inset-0 -z-10 size-full object-cover"
           />
+          {wash === "dark" ? (
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 to-black/20 sm:bg-linear-to-r sm:from-black/85 sm:via-black/60 sm:to-black/5 sm:rtl:bg-linear-to-l"
+            />
+          ) : (
+            <div
+              aria-hidden
+              className={cn(
+                "absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10",
+                "[--cover-wash:color-mix(in_oklch,var(--primary)_35%,var(--background))] dark:bg-(--cover-wash)/90 dark:sm:bg-transparent dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10",
+              )}
+            />
+          )}
           <div
-            aria-hidden
             className={cn(
-              "absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10",
-              "[--cover-wash:color-mix(in_oklch,var(--primary)_35%,var(--background))] dark:bg-(--cover-wash)/90 dark:sm:bg-transparent dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10",
-            )}
-          />
-          <div
-            className={cn(
-              "mx-auto max-w-6xl px-5 py-24 text-primary-foreground sm:py-32 [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90",
-              "dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90",
+              "mx-auto max-w-6xl px-5 py-24 sm:py-32",
+              wash === "dark"
+                ? "text-white [&_p]:text-white/90"
+                : "text-primary-foreground [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90 dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90",
               shortcutList && "pb-28 sm:pb-36",
             )}
           >
@@ -655,11 +690,18 @@ function HeroView({
         />
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 to-black/20 sm:bg-linear-to-r sm:from-black/85 sm:via-black/60 sm:to-black/5 sm:rtl:bg-linear-to-l"
+          className={
+            wash === "brand"
+              ? "absolute inset-0 -z-10 bg-primary/90 [--cover-wash:color-mix(in_oklch,var(--primary)_35%,var(--background))] sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10 dark:bg-(--cover-wash)/90 dark:sm:bg-transparent dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10"
+              : "absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 to-black/20 sm:bg-linear-to-r sm:from-black/85 sm:via-black/60 sm:to-black/5 sm:rtl:bg-linear-to-l"
+          }
         />
         <div
           className={cn(
-            "mx-auto w-full max-w-6xl px-5 py-16 text-white sm:py-24 [&_h1]:max-w-2xl [&_p]:text-white/90",
+            "mx-auto w-full max-w-6xl px-5 py-16 sm:py-24 [&_h1]:max-w-2xl",
+            wash === "brand"
+              ? "text-primary-foreground [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90 dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90"
+              : "text-white [&_p]:text-white/90",
             shortcutList && "pb-28 sm:pb-36",
           )}
         >
@@ -692,6 +734,45 @@ function HeroView({
           {!shortcutList && cue && <div className="mt-12 text-white/80">{cue}</div>}
           {!shortcutList && end}
         </div>
+      </section>,
+    );
+  // The picture as a tall card on the page beside the text (look-gap §4): in the card's surface,
+  // with its edge and shadow; on a phone the card comes first, wider than tall.
+  if (layout === "inset")
+    return framed(
+      <section
+        {...sectionHooks(texts)}
+        data-hero=""
+        data-layout="inset"
+        className={cn(
+          "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
+          shortcutList && "pb-20 sm:pb-28",
+        )}
+      >
+        <div
+          className={cn(
+            "rounded-[var(--radius-xl)] border-(length:--card-border) border-(--card-border-color) bg-(--card-surface) p-3 shadow-card lg:col-span-5",
+            imageSide === "right" ? "lg:order-2" : "",
+          )}
+        >
+          <AiMarked generated={image.generated} full>
+            <img
+              src={image.src}
+              alt={image.alt}
+              width={960}
+              height={1200}
+              fetchPriority="high"
+              className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover lg:aspect-[4/5]"
+            />
+          </AiMarked>
+        </div>
+        <div className="lg:col-span-7">{text}</div>
+        {!shortcutList && more && (
+          <div className="lg:order-3 lg:col-span-12">
+            {cue}
+            {end}
+          </div>
+        )}
       </section>,
     );
   // Beside the text on wide screens, above it on narrow ones; the first thing loaded.

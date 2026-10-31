@@ -161,7 +161,12 @@ export function loadSpec(
   let ux: UxIR | undefined;
   const uxPath = join(dirname(path), "smithable.ux.yml");
   if (existsSync(uxPath)) {
-    const result = validateUx({ path: uxPath, text: readFileSync(uxPath, "utf8") }, ir, themes);
+    const result = validateUx(
+      { path: uxPath, text: readFileSync(uxPath, "utf8") },
+      ir,
+      themes,
+      auth,
+    );
     print(result.diagnostics);
     if (!result.ux) return failed(uxPath, result.diagnostics);
     ux = result.ux;

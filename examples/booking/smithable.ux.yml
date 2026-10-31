@@ -7,7 +7,7 @@ theme:
 pages:
   home:
     sections:
-      hero: { layout: photo }          # the picture across the window, the text on a dark scrim
+      hero: { layout: inset, facts: [Instructor, ClassType], eyebrow: address }   # the picture as a tall card, the teachers and classes counted, the city over the title
       classes: { layout: cards }
       estimate: { band: muted }        # every second section on the muted band, as a club's site
       faq: { layout: accordion, band: muted }

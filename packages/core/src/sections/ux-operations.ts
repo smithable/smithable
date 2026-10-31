@@ -538,9 +538,13 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       key: {
         type: "string",
         description:
-          "layout, image, columns, highlight or band, as the section takes; position for the header.",
+          "layout, image, columns, highlight or band, as the section takes (a hero also overlay, eyebrow and facts); position for the header.",
       },
-      value: { type: "string", description: 'A value the key allows, or "default".' },
+      value: {
+        type: "string",
+        description:
+          'A value the key allows, models for a hero\'s facts ("Instructor ClassType"), or "default".',
+      },
     },
   },
   positional: ["page", "section", "key", "value"],
@@ -577,6 +581,16 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       throw new OperationError(
         `A ${kind} section has no "${key}"${SECTION_LOOKS[kind] ? `: it takes ${Object.keys(SECTION_LOOKS[kind] ?? {}).join(", ")}` : ""}.`,
       );
+    // A list of models (a hero's facts): the ux check says whether each may be counted there.
+    if (allowed === "models") {
+      const models = value === "default" ? [] : value.split(/[\s,]+/).filter(Boolean);
+      put(
+        editors.ux,
+        ["pages", page, "sections", section, key],
+        models.length ? models : undefined,
+      );
+      return [];
+    }
     const number = Number(value);
     const typed = allowed !== "text" && typeof allowed[0] === "number" ? number : value;
     if (value !== "default" && allowed !== "text" && !allowed.includes(typed))
@@ -586,6 +600,9 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       ["pages", page, "sections", section, key],
       value === "default" ? undefined : typed,
     );
+    // A hero's wash goes with a picture under the text: a layout without one takes it away.
+    if (kind === "hero" && key === "layout" && value !== "cover" && value !== "photo")
+      put(editors.ux, ["pages", page, "sections", section, "overlay"], undefined);
     return [];
   },
 };

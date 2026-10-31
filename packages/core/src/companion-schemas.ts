@@ -210,17 +210,28 @@ const look = Object.fromEntries(
           option,
           values === "text"
             ? { type: "string", description: "The name of the item to set apart." }
-            : {
-                enum: [...values],
-                description:
-                  kind === "records" && option === "columns"
-                    ? `One of ${values.join(", ")}, side by side on a wide screen: ${values[0]} for cards and ${RECORD_GRID_COLUMNS} for a grid when not said; a list has none.`
-                    : kind === "faq" && option === "columns"
-                      ? `One of ${values.join(", ")}, for the list layout; the first is the default.`
-                      : option === "band"
-                        ? `The section across the width on a surface of the theme: ${values.join(", ")}; none (the default) is an open section, or the muted band a banded theme gives every second section.`
-                        : `One of ${values.join(", ")}; the first is the default.`,
-              },
+            : values === "models"
+              ? {
+                  type: "array",
+                  items: { type: "string" },
+                  description:
+                    "Models whose records are counted in a row of figures under the hero's text (on a public page, ones visitors may read).",
+                }
+              : {
+                  enum: [...values],
+                  description:
+                    kind === "records" && option === "columns"
+                      ? `One of ${values.join(", ")}, side by side on a wide screen: ${values[0]} for cards and ${RECORD_GRID_COLUMNS} for a grid when not said; a list has none.`
+                      : kind === "faq" && option === "columns"
+                        ? `One of ${values.join(", ")}, for the list layout; the first is the default.`
+                        : kind === "hero" && option === "overlay"
+                          ? "A cover or photo hero's wash: brand or dark; unsaid, the layout's own."
+                          : kind === "hero" && option === "eyebrow"
+                            ? "A line over the title from the page's contact section: address (its city) or hours (the first line of its hours)."
+                            : option === "band"
+                              ? `The section across the width on a surface of the theme: ${values.join(", ")}; none (the default) is an open section, or the muted band a banded theme gives every second section.`
+                              : `One of ${values.join(", ")}; the first is the default.`,
+                },
         ]),
       ),
     } satisfies JsonSchema,
