@@ -48,6 +48,19 @@ export const FONT_PACKAGES: Record<string, string> = {
   "Archivo Narrow": "@fontsource-variable/archivo-narrow",
   "DM Sans": "@fontsource-variable/dm-sans",
   Outfit: "@fontsource-variable/outfit",
+  // The twelve of docs/design/look-breadth.md §2; a one-weight face is a plain package.
+  "Hanken Grotesk": "@fontsource-variable/hanken-grotesk",
+  "Instrument Sans": "@fontsource-variable/instrument-sans",
+  "Mona Sans": "@fontsource-variable/mona-sans",
+  "Bricolage Grotesque": "@fontsource-variable/bricolage-grotesque",
+  Oswald: "@fontsource-variable/oswald",
+  "Big Shoulders Display": "@fontsource-variable/big-shoulders-display",
+  "Instrument Serif": "@fontsource/instrument-serif",
+  "Young Serif": "@fontsource/young-serif",
+  Newsreader: "@fontsource-variable/newsreader",
+  "Bodoni Moda": "@fontsource-variable/bodoni-moda",
+  "Zilla Slab": "@fontsource/zilla-slab",
+  "JetBrains Mono": "@fontsource-variable/jetbrains-mono",
 };
 
 /** The theme the ux file names, among the built-ins and the project's own. */
@@ -122,7 +135,7 @@ export function themeFonts(ux: UxIR, themes: readonly ThemeIR[] = []): string[] 
  */
 const TRACKING = { tight: "-0.02em", normal: "-0.01em", wide: "0.05em" };
 /** The size of a page title and a section title against today's (regular). */
-const SCALE = { small: "0.875", regular: "1", large: "1.2" };
+const SCALE = { small: "0.875", regular: "1", large: "1.2", huge: "1.45" };
 const DIVIDER = {
   light: "var(--border)",
   strong: "color-mix(in oklch, var(--foreground) 35%, transparent)",
@@ -130,12 +143,31 @@ const DIVIDER = {
 };
 const BUTTON_RADIUS = { rounded: "calc(var(--radius) - 2px)", pill: "9999px", square: "0" };
 
-/** A font and what stands in for it before it loads: a serif face falls back to a serif. */
-const SERIFS = ["Fraunces", "Source Serif 4"];
-const fontStack = (font: string) =>
-  SERIFS.includes(font)
-    ? `"${font} Variable", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`
-    : `"${font} Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+/**
+ * A font and what stands in for it before it loads: a serif face falls back to a serif, a mono
+ * face to a mono. A variable package registers its family as "<Name> Variable"; a plain one as
+ * its name.
+ */
+const SERIFS = [
+  "Fraunces",
+  "Source Serif 4",
+  "Instrument Serif",
+  "Young Serif",
+  "Newsreader",
+  "Bodoni Moda",
+  "Zilla Slab",
+];
+const MONOS = ["JetBrains Mono"];
+const fontStack = (font: string) => {
+  const family = FONT_PACKAGES[font]?.startsWith("@fontsource-variable/")
+    ? `"${font} Variable"`
+    : `"${font}"`;
+  if (SERIFS.includes(font))
+    return `${family}, ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`;
+  if (MONOS.includes(font))
+    return `${family}, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+  return `${family}, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+};
 
 function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string> {
   const { style } = theme;

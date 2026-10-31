@@ -62,8 +62,14 @@ export interface ThemeIR {
   motion: "none" | "subtle" | "lively";
   /** The most chroma a brand color keeps on this theme (quiet themes stay quiet). */
   chroma: number;
-  /** Headings, surfaces, buttons, pictures and tables (theme-style.ts). */
+  /** Headings, labels, surfaces, buttons, pictures, tables and texture (theme-style.ts). */
   style: ThemeStyle;
+  /**
+   * Both modes, or one by design (docs/design/look-breadth.md §3): a one-mode theme carries that
+   * mode's colours alone, the app shows it whatever the device says, and no mode switch is made.
+   * Both `light` and `dark` are filled either way, so a reader needs no case.
+   */
+  modes: "both" | "light" | "dark";
   light: Tokens;
   dark: Tokens;
 }
@@ -186,15 +192,18 @@ export function parseTheme(
       "font",
       "fonts",
       "headings",
+      "labels",
       "surfaces",
       "buttons",
       "pictures",
       "tables",
+      "texture",
       "radius",
       "shadow",
       "density",
       "motion",
       "chroma",
+      "modes",
       "light",
       "dark",
     ],
@@ -258,10 +267,27 @@ export function parseTheme(
       : 0.22;
   if (chromaNode && (typeof chroma !== "number" || chroma < 0 || chroma > 0.4))
     ctx.error(chromaNode, "invalid-value", `"chroma" is a number between 0 and 0.4.`);
+  const modesName = optional("modes") ?? "both";
+  if (modesName !== "both" && modesName !== "light" && modesName !== "dark")
+    ctx.error(
+      byKey.get("modes")?.value ?? root,
+      "invalid-value",
+      `"modes" is both, light or dark.`,
+    );
   const modes = {} as Record<Mode, Tokens>;
   for (const mode of ["light", "dark"] as const) {
     const given: Partial<Tokens> = {};
     const node = byKey.get(mode)?.value;
+    if (modesName !== "both" && modesName !== mode) {
+      // A one-mode theme: the other mode's colours would never show.
+      if (node)
+        ctx.error(
+          byKey.get(mode)?.keyNode ?? node,
+          "unknown-key",
+          `"modes: ${modesName}" shows one mode: the "${mode}" colours would never be seen; take them out or say "modes: both".`,
+        );
+      continue;
+    }
     if (!node) {
       ctx.error(
         root,
@@ -302,8 +328,21 @@ export function parseTheme(
       for (const problem of hardToRead(modes[mode], mode))
         if (options.contrast === "error") ctx.error(node, "theme-contrast", problem);
         else ctx.warning(node, "theme-contrast", problem);
+      // Text on a glass card is read on the card's tint at the kit's least opacity over a band.
+      if (style.surfaces.cards === "glass") {
+        const t = modes[mode];
+        const tint = towards(t.muted, t.card, GLASS_OPACITY);
+        if (contrast(t["card-foreground"], tint) < 4.5) {
+          const problem = `In ${mode} mode, text on a glass card over a band may be hard to read.`;
+          if (options.contrast === "error") ctx.error(node, "theme-contrast", problem);
+          else ctx.warning(node, "theme-contrast", problem);
+        }
+      }
     }
   }
+  // One mode by design: the other is the same colours, so every reader finds both.
+  if (modesName === "light" && modes.light) modes.dark = { ...modes.light };
+  if (modesName === "dark" && modes.dark) modes.light = { ...modes.dark };
   if (ctx.diagnostics.some((d) => d.severity === "error")) return { diagnostics: ctx.diagnostics };
   return {
     theme: {
@@ -316,12 +355,16 @@ export function parseTheme(
       motion: motion as ThemeIR["motion"],
       chroma,
       style,
+      modes: modesName as ThemeIR["modes"],
       light: modes.light as Tokens,
       dark: modes.dark as Tokens,
     },
     diagnostics: ctx.diagnostics,
   };
 }
+
+/** The least opaque a glass card gets in the kit: what its text is checked against. */
+const GLASS_OPACITY = 0.65;
 
 /** A color moved towards another in OKLCH by a share of the way (0 stays, 1 arrives). */
 function towards(from: string, to: string, share: number): string {
@@ -579,6 +622,7 @@ export const BUILT_IN_THEMES: readonly ThemeIR[] = [
       name,
       source: "built-in",
       ...FOUNDATIONS[name],
+      modes: "both",
       light: { ...PRESET_TOKENS[name].light },
       dark: { ...PRESET_TOKENS[name].dark },
     }),

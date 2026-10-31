@@ -29,7 +29,7 @@ export const STACK_PROFILE = {
   markdown: { "react-markdown": "10.1.0" },
   /**
    * Self-hosted fonts, every one under the SIL Open Font License 1.1 (OFL-1.1): every app has
-   * the eight, and imports the ones its theme uses (body and headings).
+   * the twenty, and imports the ones its theme uses (body, headings and labels).
    */
   fonts: {
     "@fontsource-variable/inter": "5.3.0", // OFL-1.1, Rasmus Andersson
@@ -40,6 +40,18 @@ export const STACK_PROFILE = {
     "@fontsource-variable/archivo-narrow": "5.3.0", // OFL-1.1, Omnibus-Type
     "@fontsource-variable/dm-sans": "5.3.0", // OFL-1.1, Colophon Foundry
     "@fontsource-variable/outfit": "5.3.0", // OFL-1.1, Rodrigo Fuenzalida
+    "@fontsource-variable/hanken-grotesk": "5.3.0", // OFL-1.1, Hanken Design Co.
+    "@fontsource-variable/instrument-sans": "5.3.0", // OFL-1.1, Rodrigo Fuenzalida, Jordan Egstad
+    "@fontsource-variable/mona-sans": "5.3.0", // OFL-1.1, GitHub, Degarism
+    "@fontsource-variable/bricolage-grotesque": "5.3.0", // OFL-1.1, Mathieu Triay
+    "@fontsource-variable/oswald": "5.3.0", // OFL-1.1, Vernon Adams, Kalapi Gajjar, Cyreal
+    "@fontsource-variable/big-shoulders-display": "5.3.0", // OFL-1.1, Patric King
+    "@fontsource/instrument-serif": "5.3.0", // OFL-1.1, Rodrigo Fuenzalida, Jordan Egstad
+    "@fontsource/young-serif": "5.3.0", // OFL-1.1, Bastien Sozeau, uplaod.fr
+    "@fontsource-variable/newsreader": "5.3.0", // OFL-1.1, Production Type
+    "@fontsource-variable/bodoni-moda": "5.3.0", // OFL-1.1, indestructible type*
+    "@fontsource/zilla-slab": "5.3.0", // OFL-1.1, Typotheque, Mozilla
+    "@fontsource-variable/jetbrains-mono": "5.3.0", // OFL-1.1, JetBrains, Philipp Nurullin, Konstantin Bulenkov
   },
   /**
    * Security fixes for dependencies of dependencies, kept in the project's pnpm-workspace.yaml

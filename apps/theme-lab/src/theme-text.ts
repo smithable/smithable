@@ -5,7 +5,7 @@ import { parseDocument, stringify } from "yaml";
 
 /** The colors a theme gives in each mode; the parser derives the rest from them. */
 const GIVEN = ["background", "foreground", "card", "primary", "muted", "border", "accent"] as const;
-const GROUPS = ["headings", "surfaces", "buttons", "pictures", "tables"] as const;
+const GROUPS = ["headings", "labels", "surfaces", "buttons", "pictures", "tables"] as const;
 
 /** A built-in theme as a file, to start from: what makes it, the defaults left out. */
 export function themeText(theme: ThemeIR): string {
@@ -24,12 +24,15 @@ export function themeText(theme: ThemeIR): string {
     fonts: {
       body: theme.font,
       ...(theme.style.headingFont ? { heading: theme.style.headingFont } : {}),
+      ...(theme.style.labelsFont ? { labels: theme.style.labelsFont } : {}),
     },
     radius: theme.radius,
     shadow,
     density: theme.density,
     motion: theme.motion,
+    ...(theme.style.texture !== DEFAULT_STYLE.texture ? { texture: theme.style.texture } : {}),
     chroma: theme.chroma,
+    ...(theme.modes !== "both" ? { modes: theme.modes } : {}),
     ...Object.fromEntries(
       GROUPS.map((group) => [group, changed(group)]).filter(([, v]) => Object.keys(v).length),
     ),
