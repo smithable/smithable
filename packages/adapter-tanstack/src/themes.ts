@@ -391,12 +391,17 @@ ${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.ligh
 ${[app.dark, ...pages.map((p) => p.dark)].join("\n")}${
   chrome
     ? `
-/* The menu's surface: ${ux.chrome} (chrome in the ux file). */
+/* The menu's surface: ${ux.chrome} (chrome in the ux file), its hover read on it. */
 :root {
 ${chrome.light}
 }
 :root[data-appearance="dark"] {
 ${chrome.dark}
+}
+[data-kit="app-shell"] > aside,
+[data-kit="app-shell"] > header,
+[data-kit="drawer"] {
+  --hover: color-mix(in oklch, var(--sidebar-foreground) 12%, transparent);
 }
 `
     : ""

@@ -4421,8 +4421,9 @@ async function topbarFlow(dir, base) {
       if (i === 20 * P) throw new Error("no bar across the top");
       await page.waitForTimeout(500);
     }
-    if (await page.locator("aside").isVisible()) throw new Error("the sidebar is still there");
-    await bar.locator('[data-kit="nav-top"]').getByRole("link", { name: "Orders" }).click();
+    if (await page.locator('[data-kit="app-shell"] > aside').isVisible())
+      throw new Error("the sidebar is still there");
+    await bar.getByRole("link", { name: "Orders", exact: true }).click();
     await page.waitForURL(`${base}/orders`, { timeout: 10000 * P });
     await bar.getByRole("button", { name: "Open menu" }).filter({ visible: true }).click();
     await page
@@ -4442,6 +4443,16 @@ async function topbarFlow(dir, base) {
     if (set) {
       const back = smithable(dir, "undo");
       if (back.code !== 0) failures.push(`topbar put back: ${back.out}`);
+      // The sidebar back before the next step: the dev server takes the undo up by itself.
+      const check = await (await chromium.launch()).newPage({
+        viewport: { width: 1280, height: 900 },
+      });
+      for (let i = 0; i < 20 * P; i++) {
+        await open(check, `${base}/sign-in`);
+        if (!(await check.locator('[data-part="header"][data-navigation]').count())) break;
+        await check.waitForTimeout(500);
+      }
+      await check.context().browser()?.close();
     }
   }
 }

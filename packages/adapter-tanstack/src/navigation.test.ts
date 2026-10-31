@@ -37,7 +37,7 @@ test("the ux file's navigation puts the menu in a bar across the top, and chrome
   const top = files("navigation: topbar-centered\nchrome: dark\n");
   expect(top.root).toContain(' navigation="topbar-centered" menus={menus}');
   expect(top.theme).toContain(
-    "/* The menu's surface: dark (chrome in the ux file). */\n:root {\n  --sidebar: var(--foreground);",
+    "/* The menu's surface: dark (chrome in the ux file), its hover read on it. */\n:root {\n  --sidebar: var(--foreground);",
   );
   // Unsaid: the sidebar, and the theme's own menu colours.
   const plain = files("");

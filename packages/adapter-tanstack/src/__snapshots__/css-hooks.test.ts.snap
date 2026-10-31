@@ -19,8 +19,8 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/AppShell.tsx": [
     "data-kit="app-shell"",
     "data-part="header"",
-    "data-kit="drawer"",
     "data-kit="nav-top"",
+    "data-kit="drawer"",
     "data-part="count"",
     "data-part="logo"",
     "data-kit="nav"",

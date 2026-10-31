@@ -688,7 +688,12 @@ const setMenuLayout: Operation<{ navigation: string }> = {
         : "Put the menu in a bar across the top, the name centred",
   destructive: () => false,
   apply(editors, { navigation }) {
-    put(editors.ux, ["navigation"], navigation === "default" ? undefined : navigation);
+    // The sidebar is the default, so it is written as nothing.
+    put(
+      editors.ux,
+      ["navigation"],
+      navigation === "default" || navigation === "sidebar" ? undefined : navigation,
+    );
     return [];
   },
 };
@@ -894,8 +899,6 @@ const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
 };
 
 export const uxOperations: AnyOperation[] = [
-  setMenuLayout,
-  setChrome,
   addTheme,
   setTheme,
   setSectionLook,
@@ -917,4 +920,6 @@ export const uxOperations: AnyOperation[] = [
   setSort,
   setFiltersShown,
   setFilterPick,
+  setMenuLayout,
+  setChrome,
 ];

@@ -83,16 +83,23 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
             <Menu aria-hidden className="size-6" />
           </button>
         )}
-        {centered && <TopLinks {...shell} half="start" />}
-        <p className="min-w-0 truncate text-lg font-bold" title={shell.appName}>
-          <AppName {...shell} />
-        </p>
-        {top && (
-          <TopLinks
-            {...shell}
-            half={centered ? "end" : undefined}
-            onMenu={menu ? () => drawer.current?.showModal() : undefined}
-          />
+        {top ? (
+          // One landmark around the name and the links, however they are laid out.
+          <nav aria-label={w.mainMenu} data-kit="nav-top" className="contents">
+            {centered && <TopLinks {...shell} half="start" />}
+            <p className="min-w-0 truncate text-lg font-bold" title={shell.appName}>
+              <AppName {...shell} />
+            </p>
+            <TopLinks
+              {...shell}
+              half={centered ? "end" : undefined}
+              onMenu={menu ? () => drawer.current?.showModal() : undefined}
+            />
+          </nav>
+        ) : (
+          <p className="min-w-0 truncate text-lg font-bold" title={shell.appName}>
+            <AppName {...shell} />
+          </p>
         )}
       </header>
       <dialog
@@ -123,7 +130,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
 
 // A link in the bar across the top: the page's name, the open one marked under it.
 const topItem =
-  "flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-hover outline-none focus-visible:ring-2 focus-visible:ring-sidebar-foreground";
+  "flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 text-sm whitespace-nowrap transition-colors hover:bg-hover outline-none focus-visible:ring-2 focus-visible:ring-sidebar-foreground";
 
 /**
  * The menu's pages in a row, for the bar across the top on a wide screen: all of them, or half
@@ -147,21 +154,15 @@ function TopLinks({
     <div
       className={`hidden min-w-0 items-center gap-1 lg:flex ${half === "start" ? "justify-end" : "flex-1"}`}
     >
-      <nav
-        aria-label={w.mainMenu}
-        data-kit="nav-top"
-        className="flex min-w-0 items-center gap-1 overflow-x-auto"
-      >
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
         {shown.map((item) => (
           <Link
             key={String(item.to)}
             to={item.to}
             className={topItem}
             activeOptions={{ exact: hasBelow(String(item.to)) }}
-            activeProps={{
-              "aria-current": "page",
-              className: "font-semibold underline decoration-2 underline-offset-8",
-            }}
+            inactiveProps={{ className: "font-medium" }}
+            activeProps={{ className: "font-semibold underline decoration-2 underline-offset-8" }}
           >
             {tx(item.label)}
             {(counts?.[String(item.to)] ?? 0) > 0 && (
@@ -174,7 +175,7 @@ function TopLinks({
             )}
           </Link>
         ))}
-      </nav>
+      </div>
       {onMenu && (
         <button
           type="button"
