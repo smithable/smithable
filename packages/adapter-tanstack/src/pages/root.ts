@@ -96,6 +96,11 @@ export function rootRoute(
   /** A theme with one mode by design shows it whatever the device says (look-breadth.md §3). */
   modes: "both" | "light" | "dark" = "both",
 ): string {
+  // Where the menu sits on a wide screen (ux navigation); the sidebar is the kit's default.
+  const layout =
+    ux.navigation && ux.navigation !== "sidebar"
+      ? ` navigation=${JSON.stringify(ux.navigation)}`
+      : "";
   // The appearance resolved before the first paint: the visitor's, or the theme's one mode.
   const appearance =
     modes === "both"
@@ -396,11 +401,11 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
         ) : `
                   : ""
               }(
-          <AppShell appName={app.name}${t.logo}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+          <AppShell appName={app.name}${t.logo}${home}${layout} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
             {children}
           </AppShell>
         )}`
-            : `<AppShell appName={app.name}${t.logo}${home} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+            : `<AppShell appName={app.name}${t.logo}${home}${layout} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
           {children}
         </AppShell>`
         }

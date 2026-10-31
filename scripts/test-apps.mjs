@@ -4408,6 +4408,66 @@ async function calculatorFlow(base) {
   }
 }
 
+/**
+ * The menu in a bar across the top (look-gap §4, the ux file's navigation): on a wide screen the
+ * pages are links in the bar and the menu button at its end opens the rest, signing out among it;
+ * back to the sidebar after, by undo, so the later steps' undo history is as it was.
+ */
+async function topbarFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  let set = false;
+  try {
+    ok(smithable(dir, "op", "setMenuLayout", "topbar"));
+    set = true;
+    await signInAs(page, base, "admin");
+    const bar = page.locator('[data-part="header"][data-navigation="topbar"]');
+    // The dev server takes the change up by itself; asked again until it has.
+    for (let i = 0; ; i++) {
+      await open(page, `${base}/customers`);
+      if (await bar.isVisible()) break;
+      if (i === 20 * P) throw new Error("no bar across the top");
+      await page.waitForTimeout(500);
+    }
+    if (await page.locator('[data-kit="app-shell"] > aside').isVisible())
+      throw new Error("the sidebar is still there");
+    await bar.getByRole("link", { name: "Orders", exact: true }).click();
+    await page.waitForURL(`${base}/orders`, { timeout: 10000 * P });
+    await bar.getByRole("button", { name: "Open menu" }).filter({ visible: true }).click();
+    await page
+      .locator('[data-kit="drawer"]')
+      .getByRole("button", { name: "Sign out" })
+      .waitFor({ timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: with navigation: topbar the pages are links in a bar across the top, and its menu button opens the rest",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("topbar flow");
+  } finally {
+    await browser.close();
+    if (set) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`topbar put back: ${back.out}`);
+      // The sidebar back before the next step: the dev server takes the undo up by itself.
+      const check = await (await chromium.launch()).newPage({
+        viewport: { width: 1280, height: 900 },
+      });
+      for (let i = 0; i < 20 * P; i++) {
+        await open(check, `${base}/sign-in`);
+        if (!(await check.locator('[data-part="header"][data-navigation]').count())) break;
+        await check.waitForTimeout(500);
+      }
+      await check.context().browser()?.close();
+    }
+  }
+}
+
 async function landingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -7635,6 +7695,7 @@ test("the session cookie's name and attributes", async () => {
         await pagingFlow(dir, base);
         await favoritesFlow(base);
         await contactFlow(dir, base);
+        await topbarFlow(dir, base);
       }
       if (example === "booking") {
         await landingFlow(dir, base);

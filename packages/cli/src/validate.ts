@@ -424,5 +424,10 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
             `${page.id} tile ${item.name}: due by ${item.when}, within ${span}${item.within ? " (within)" : " (unsaid)"}`,
           );
         }
+  // Where the menu sits and its surface (look-gap §4): the ux file's word, else the default.
+  lines.push(ux?.navigation ? `menu: ${ux.navigation} (navigation)` : "menu: sidebar (unsaid)");
+  lines.push(
+    ux?.chrome ? `menu surface: ${ux.chrome} (chrome)` : "menu surface: the theme's (unsaid)",
+  );
   return `${lines.join("\n")}\n`;
 }

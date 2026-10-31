@@ -263,6 +263,7 @@ export {
   deriveTokens,
   hardToRead,
   lowContrast,
+  oppositeMode,
   parseTheme,
   SHADOWS,
   TOKEN_NAMES,

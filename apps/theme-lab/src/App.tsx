@@ -13,10 +13,12 @@ import {
   FONTS,
   hardToRead,
   hexOf,
+  oppositeMode,
   parseTheme,
   SHADOWS,
   STYLE_VALUES,
   type ThemeIR,
+  TOKEN_NAMES,
   themeFit,
 } from "@smithable/core";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -558,6 +560,16 @@ function Controls({
     set([mode, "card"], value);
     follow(mode, shownColor(mode, "background"), value);
   };
+  // The other mode made from this one: the same hues, the lightness turned over (oppositeMode),
+  // written as the seven colours a theme file gives.
+  const otherMode = (mode: "light" | "dark") => {
+    const other = mode === "light" ? "dark" : "light";
+    const made = oppositeMode(theme[mode], mode);
+    const given = ["background", "foreground", "card", "primary", "muted", "border", "accent"];
+    // The seven given colours written; any other colour the block had goes, so the rest derives.
+    for (const token of TOKEN_NAMES)
+      set([other, token], given.includes(token) ? hexOf(made[token]) : undefined);
+  };
   const follow = (mode: "light" | "dark", bg: string, card: string) => {
     const reads = (fg: string) => Math.min(contrast(fg, bg), contrast(fg, card));
     if (!follows || reads(shownColor(mode, "foreground")) >= 4.5) return;
@@ -590,6 +602,9 @@ function Controls({
           <input type="checkbox" checked={follows} onChange={(e) => setFollows(e.target.checked)} />{" "}
           Text colour follows the others
         </label>
+        <button type="button" onClick={() => otherMode(mode)}>
+          Make the {mode === "light" ? "dark" : "light"} mode from this one (replaces it)
+        </button>
         <p className="hint">
           {follows
             ? "The text changes to white or ink when a background or surface would make it hard to read."
