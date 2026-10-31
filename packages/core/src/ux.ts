@@ -1010,7 +1010,10 @@ export function validateUx(
               // A picture mark needs a picture to show: the model's first picture field.
               const mark = readString(ctx, option.value, `"mark" of ${where}`);
               const picture = fields.some(
-                (f) => !f.formula && f.type.kind === "scalar" && f.type.name === "picture",
+                (f) =>
+                  !f.formula &&
+                  f.type.kind === "scalar" &&
+                  (f.type.name === "picture" || f.type.name === "pictures"),
               );
               if (mark === "initials" || (mark === "picture" && picture)) result.mark = mark;
               else if (mark === "picture")

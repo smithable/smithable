@@ -214,6 +214,12 @@ export function ModelTable<R extends Row>({
     : rows;
   const visible = (chosen ?? ui.columns)
     .filter((name) => !(hide as string[]).includes(name))
+    // A picture mark is the picture: not again in a column of its own.
+    .filter(
+      (name) =>
+        mark !== "picture" ||
+        !ui.fields.some((f) => f.name === name && (f.kind === "picture" || f.kind === "pictures")),
+    )
     .flatMap((name) => ui.fields.filter((f) => f.name === name));
   // Every column hidden (a related list whose only field is the record it is on): the record's
   // own title, so each row can still be told apart and opened.
@@ -461,6 +467,9 @@ export function ModelTable<R extends Row>({
                 {selection && !(view === "cards" && pictureField) && (
                   <span className="-ml-1 shrink-0">{check(row, index, "size-6")}</span>
                 )}
+                {/* The mark before the title, on a card too (a phone shows cards); a cards view
+                    with a picture shows it on top instead. */}
+                {mark && !(view === "cards" && pictureField) && markOf(row)}
                 <div className="min-w-0 flex-1 space-y-1">
                   {named(row) !== undefined
                     ? open(row, named(row), "break-words text-base font-semibold")
