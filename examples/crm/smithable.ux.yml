@@ -2,16 +2,21 @@
 smithableUx: 0.1
 
 theme:
-  preset: corporate
-  density: compact          # an internal tool: more rows on screen
+  preset: workbench         # the CRM's own theme: compact, quiet, a light sidebar
 
 pages:
   customers:
     table:
-      columns: [name, email, segment, creditLimit]
+      columns: [name, email, segment, accountManager, creditLimit]
       below: { email: phone }   # the phone number under the email
+      sort: name
     form:
-      fieldOrder: [name, segment, email, phone]
+      sections:                 # groups with headings; their texts are in the content file
+        - { name: contact, fields: [name, email, phone] }
+        - { name: terms, fields: [segment, creditLimit, accountManager] }
+        - { name: notes, fields: [notes] }
+      columns: 2
+      control: { notes: textarea }
 
 tones:
   Order.status: { shipped: success, canceled: danger }

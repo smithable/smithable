@@ -26369,10 +26369,10 @@ import { w } from "#/kit/words";
 import { site } from "#/generated/site";
 import { listClassTypes, classTypeUi } from "#/generated/class-type";
 import { listPosts, postUi } from "#/generated/post";
-import { Calendar, BookOpen } from "lucide-react";
 import { Calculator } from "#/kit/Calculator";
 import { homeEstimateCalculatorUi } from "#/generated/home-estimate-calculator";
 import { app } from "#/generated/app";
+import { BookOpen } from "lucide-react";
 import { createMessage, messageUi } from "#/generated/message";
 import { messageSchema } from "#/generated/message.schema";
 import { ModelForm } from "#/kit/ModelForm";
@@ -26399,7 +26399,6 @@ function HomePage() {
           subtitle="Class schedule and online booking for a small yoga studio."
           link={{ to: "/schedule", label: "Get started" }}
           secondLink={{ to: "/blog", label: pageUi["blog"].title }}
-          shortcuts={[{ to: "/schedule", label: pageUi["schedule"].title, icon: Calendar }, { to: "/blog", label: pageUi["blog"].title, icon: BookOpen }]}
           more
         />
       <RecordCards
@@ -28775,7 +28774,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "02564f4f generated",
+  "src/routes/index.tsx": "512fe7be generated",
   "src/routes/instructors/$id.tsx": "1105deb4 generated",
   "src/routes/instructors/index.tsx": "6b4a8754 generated",
   "src/routes/instructors/new.tsx": "891761b2 generated",

@@ -1424,9 +1424,13 @@ test("removePage takes the page off a landing hero too, and says so", () => {
     eager: true,
   }) as Record<string, string>;
   const at = (name: string) => raw[`../../../examples/booking/${name}`] as string;
+  // With round links under the hero, as the booking starter had until 2026-10-31.
+  const spec = at("smithable.yml")
+    .split("hero: { button: schedule, secondButton: blog }")
+    .join("hero: { button: schedule, secondButton: blog, shortcuts: [schedule, blog] }");
   const removed = applyOperation(
     {
-      spec: at("smithable.yml"),
+      spec,
       auth: at("smithable.auth.yml"),
       content: at("smithable.content.yml"),
     },

@@ -344,10 +344,21 @@ export const UX_SCHEMA: JsonSchema = {
             properties: {
               fieldOrder: strings("The fields in the order the form shows them."),
               sections: {
-                type: "object",
+                type: "array",
                 description:
-                  "Headings over groups of fields: { contact: [email, phone] }; the heading's text is in smithable.content.yml.",
-                additionalProperties: strings("The fields under the heading."),
+                  "Groups of fields with headings: - { name: contact, fields: [email, phone] }; the heading's text is in smithable.content.yml.",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["name", "fields"],
+                  properties: {
+                    name: {
+                      type: "string",
+                      description: "The group's name; its heading is in smithable.content.yml.",
+                    },
+                    fields: strings("The fields under the heading."),
+                  },
+                },
               },
               columns: {
                 enum: [1, 2],

@@ -296,6 +296,8 @@ export const THEME_PRESETS = [
   "warm-service",
   "quiet-workspace",
   "ink-and-brass",
+  "workbench",
+  "stillwater",
 ] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
