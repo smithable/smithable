@@ -324,3 +324,30 @@ test("addTheme adds themes/<name>.yml, --use applies it, and a bad file or a tak
     applyOperation({ spec: crm }, "addTheme", { name: "woods", text: `name: forest\n${text}` }),
   ).toMatchObject({ ok: false, message: expect.stringContaining('The file says "name: forest"') });
 });
+
+test("the ux file says where the menu sits and its surface; setMenuLayout and setChrome write them (look-gap §4)", () => {
+  const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
+  const said = read("smithableUx: 0.1\nnavigation: topbar-centered\nchrome: light\n");
+  expect(said.diagnostics).toEqual([]);
+  expect(said.ux?.navigation).toBe("topbar-centered");
+  expect(said.ux?.chrome).toBe("light");
+  // Unsaid: the sidebar and the theme's own menu colours.
+  expect(read("smithableUx: 0.1\n").ux?.navigation).toBeUndefined();
+  expect(read("smithableUx: 0.1\nnavigation: top\n").diagnostics[0]?.message).toBe(
+    '"navigation" is sidebar, topbar or topbar-centered.',
+  );
+  expect(read("smithableUx: 0.1\nchrome: grey\n").diagnostics[0]?.message).toBe(
+    '"chrome" is light or dark.',
+  );
+  const files = { spec: crm, ux: "smithableUx: 0.1\n" };
+  const top = applyOperation(files, "setMenuLayout", { navigation: "topbar" });
+  if (!top.ok) throw new Error(top.message);
+  expect(top.files.ux).toContain("navigation: topbar\n");
+  const light = applyOperation(top.files, "setChrome", { chrome: "light" });
+  if (!light.ok) throw new Error(light.message);
+  expect(light.files.ux).toContain("chrome: light\n");
+  const back = applyOperation(light.files, "setMenuLayout", { navigation: "default" });
+  if (!back.ok) throw new Error(back.message);
+  expect(back.files.ux).not.toContain("navigation");
+  expect(applyOperation(files, "setChrome", { chrome: "grey" }).ok).toBe(false);
+});

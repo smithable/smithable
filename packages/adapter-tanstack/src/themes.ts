@@ -341,6 +341,20 @@ ${HOVER.dark}
   // Dark as the visitor's appearance resolves on <html> (src/kit/appearance.ts): the device's
   // setting, or the one chosen.
   const app = scope(":root", ':root[data-appearance="dark"]', ux);
+  // The menu's surface apart from the theme (ux chrome): the page's own colours, or the text
+  // colour as its surface (in dark mode, a step below the page, which is dark already).
+  const chrome = ux.chrome
+    ? {
+        light:
+          ux.chrome === "light"
+            ? "  --sidebar: var(--background);\n  --sidebar-foreground: var(--foreground);"
+            : "  --sidebar: var(--foreground);\n  --sidebar-foreground: var(--background);",
+        dark:
+          ux.chrome === "light"
+            ? "  --sidebar: var(--background);\n  --sidebar-foreground: var(--foreground);"
+            : "  --sidebar: color-mix(in oklch, var(--background), black 40%);\n  --sidebar-foreground: var(--foreground);",
+      }
+    : undefined;
   // A landing page's own theme: the same variables on its body (data-page), so only it changes.
   const pages = themedPages(ux).map((id) => ({
     id,
@@ -374,7 +388,24 @@ ${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.ligh
   }
 }
 
-${[app.dark, ...pages.map((p) => p.dark)].join("\n")}
+${[app.dark, ...pages.map((p) => p.dark)].join("\n")}${
+  chrome
+    ? `
+/* The menu's surface: ${ux.chrome} (chrome in the ux file), its hover read on it. */
+:root {
+${chrome.light}
+}
+:root[data-appearance="dark"] {
+${chrome.dark}
+}
+[data-kit="app-shell"] > aside,
+[data-kit="app-shell"] > header,
+[data-kit="drawer"] {
+  --hover: color-mix(in oklch, var(--sidebar-foreground) 12%, transparent);
+}
+`
+    : ""
+}
 ${
   themeOf(ux, themes).modes === "both"
     ? ""

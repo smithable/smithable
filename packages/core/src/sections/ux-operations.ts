@@ -5,10 +5,12 @@ import { type AnyOperation, type Operation, OperationError, refTo } from "../ope
 import { pageModel } from "../patterns.js";
 import { parseTheme } from "../theme.js";
 import {
+  CHROMES,
   CONTROLS,
   FONTS,
   HEADER_LOOKS,
   ICONS,
+  NAVIGATIONS,
   notPickable,
   SECTION_LOOKS,
   THEME_PRESETS,
@@ -660,6 +662,71 @@ const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
   },
 };
 
+/** Where the app's menu sits (look-gap.md §4); default removes the key, back to the sidebar. */
+const setMenuLayout: Operation<{ navigation: string }> = {
+  name: "setMenuLayout",
+  summary:
+    "Put the app's menu in a sidebar (the default), a bar across the top (topbar) or a bar with the name centred between the links (topbar-centered).",
+  schema: {
+    type: "object",
+    required: ["navigation"],
+    additionalProperties: false,
+    properties: {
+      navigation: {
+        type: "string",
+        enum: [...NAVIGATIONS, "default"],
+        description: "sidebar, topbar, topbar-centered, or default.",
+      },
+    },
+  },
+  positional: ["navigation"],
+  describe: ({ navigation }) =>
+    navigation === "default" || navigation === "sidebar"
+      ? "Put the menu in a sidebar"
+      : navigation === "topbar"
+        ? "Put the menu in a bar across the top"
+        : "Put the menu in a bar across the top, the name centred",
+  destructive: () => false,
+  apply(editors, { navigation }) {
+    // The sidebar is the default, so it is written as nothing.
+    put(
+      editors.ux,
+      ["navigation"],
+      navigation === "default" || navigation === "sidebar" ? undefined : navigation,
+    );
+    return [];
+  },
+};
+
+/** The menu's surface (look-gap.md §4); default removes the key, back to the theme's colours. */
+const setChrome: Operation<{ chrome: string }> = {
+  name: "setChrome",
+  summary:
+    "Give the menu a light surface (the page's colours) or a dark one (the text colour as its surface); default returns to the theme's own menu colours.",
+  schema: {
+    type: "object",
+    required: ["chrome"],
+    additionalProperties: false,
+    properties: {
+      chrome: {
+        type: "string",
+        enum: [...CHROMES, "default"],
+        description: "light, dark, or default.",
+      },
+    },
+  },
+  positional: ["chrome"],
+  describe: ({ chrome }) =>
+    chrome === "default"
+      ? "Give the menu the theme's own colours"
+      : `Give the menu a ${chrome} surface`,
+  destructive: () => false,
+  apply(editors, { chrome }) {
+    put(editors.ux, ["chrome"], chrome === "default" ? undefined : chrome);
+    return [];
+  },
+};
+
 /** Ask's manner (docs/design/ask-defaults.md §2): plain, the default, is written as nothing. */
 const setAssistantVoice: Operation<{ voice: Voice }> = {
   name: "setAssistantVoice",
@@ -853,4 +920,6 @@ export const uxOperations: AnyOperation[] = [
   setSort,
   setFiltersShown,
   setFilterPick,
+  setMenuLayout,
+  setChrome,
 ];
