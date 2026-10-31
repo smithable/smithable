@@ -19,6 +19,7 @@ export const w = {
   activeFilters: "Aktiva filter",
   activity: "Aktivitet",
   overdue: "Försenad",
+  previewOf: (list: string) => `En förhandsvisning av ${list}`,
   nothingDue: "Inget förfaller.",
   nothingYet: "Inget har hänt än.",
   activityLead:

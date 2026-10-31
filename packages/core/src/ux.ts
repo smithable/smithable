@@ -212,6 +212,11 @@ export interface SectionLook {
   eyebrow?: "address" | "hours";
   /** A hero's row of figures: the count of each model's records the viewer may read. */
   facts?: string[];
+  /**
+   * A stage hero's list page (look-breadth §3), drawn beside the headline with its first six
+   * records in its own order; unsaid, the first list page in the navigation (stagePage).
+   */
+  stage?: string;
 }
 
 /**
@@ -228,14 +233,15 @@ export type Band = (typeof BANDS)[number];
  * is the kind's own look, used when none is given.
  */
 export const SECTION_LOOKS: Partial<
-  Record<string, Record<string, readonly (string | number)[] | "text" | "models">>
+  Record<string, Record<string, readonly (string | number)[] | "text" | "models" | "page">>
 > = {
   hero: {
-    layout: ["split", "centered", "plain", "cover", "photo", "inset"],
+    layout: ["split", "centered", "plain", "cover", "photo", "inset", "stage"],
     image: ["right", "left"],
     overlay: ["brand", "dark"],
     eyebrow: ["address", "hours"],
     facts: "models",
+    stage: "page",
   },
   features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
@@ -513,6 +519,21 @@ export function notPickable(name: string, field: FieldIR | undefined): string | 
         ? `a ${field.type.kind === "scalar" ? field.type.name : "list"}`
         : "not a field";
   return `${name} is ${kind}; only a filter on a reference can be a search.`;
+}
+
+/**
+ * The list page a stage hero shows (look-breadth §3): the one named, if it is a list page, else
+ * (unsaid) the first list page in the navigation.
+ */
+export function stagePage(ir: SpecIR, named?: string): PageIR | undefined {
+  if (named !== undefined) {
+    const page = ir.pages.find((p) => p.id === named);
+    return page?.pattern.kind === "crud" ? page : undefined;
+  }
+  return ir.navigation
+    .flatMap((m) => m.pages)
+    .map((id) => ir.pages.find((p) => p.id === id))
+    .find((p) => p?.pattern.kind === "crud");
 }
 
 export function validateUx(
@@ -1248,6 +1269,12 @@ function readSectionLooks(
       allowed: Object.keys(allowed),
     })) {
       const values = allowed[option.key];
+      if (values === "page") {
+        // A list page of the app, for a stage hero; read with the layout below.
+        const name = readString(ctx, option.value, `"${option.key}" of ${at}`);
+        if (name !== undefined) (look as Record<string, unknown>)[option.key] = name;
+        continue;
+      }
       if (values === "models") {
         // The spec's models, each counted; on a public page, only ones visitors may read.
         const open = auth?.public.pages.includes(page.id);
@@ -1314,6 +1341,41 @@ function readSectionLooks(
           "invalid-key",
           `"overlay" goes with cover or photo, where the text stands on the picture.`,
         );
+      }
+      // The stage: the list page named, or the navigation's first, which visitors of a public
+      // page may read.
+      const stageOption = options.find((o) => o.key === "stage");
+      if (look.stage !== undefined && look.layout !== "stage") {
+        ctx.error(stageOption?.keyNode ?? null, "invalid-key", `"stage" goes with layout: stage.`);
+        delete look.stage;
+      } else if (look.layout === "stage") {
+        const shown = stagePage(ir, look.stage);
+        if (look.stage !== undefined && !shown)
+          ctx.error(
+            stageOption?.value ?? null,
+            "invalid-value",
+            `${look.stage} is not a list page; the stage shows one (${
+              ir.pages
+                .filter((p) => p.pattern.kind === "crud")
+                .map((p) => p.id)
+                .join(", ") || "none here"
+            }).`,
+          );
+        else if (!shown)
+          ctx.error(
+            entry.value,
+            "invalid-value",
+            `The stage shows a list page, and the app has none in its navigation.`,
+          );
+        else if (
+          auth?.public.pages.includes(page.id) &&
+          !auth.public.read.includes(pageModel(shown) ?? "")
+        )
+          ctx.error(
+            stageOption?.value ?? entry.value,
+            "invalid-value",
+            `${page.id} is public, and visitors may not read ${pageModel(shown)}: the stage would show what they may not see.`,
+          );
       }
       if (look.eyebrow && !page.sections.some((s) => s.kind === "contact")) {
         const eyebrow = options.find((o) => o.key === "eyebrow");

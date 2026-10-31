@@ -25,9 +25,8 @@ import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
-import { PicturePlaceholder } from "./ModelTable";
-import { textMarker } from "./model";
-import { tx, w } from "./words";
+import { ModelTable, PicturePlaceholder } from "./ModelTable";
+import { type AppUi, type RecordUi, type Row, textMarker } from "./model";
 
 export interface LandingLink {
   to: LinkProps["to"];
@@ -464,6 +463,7 @@ function HeroView({
   imageSide = "right",
   overlay,
   facts = [],
+  stage,
 }: {
   title: string;
   subtitle?: string;
@@ -480,7 +480,7 @@ function HeroView({
    * picture across the width with the theme's primary washing over it under the text; photo:
    * the picture across the width, a dark scrim from the start side, white text at the start.
    */
-  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset";
+  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset" | "stage";
   /**
    * A cover or photo hero's wash: brand (the primary, the cover's own) or dark (a scrim, the
    * photo's own); each layout keeps its size and takes the other's wash (look-gap §4).
@@ -488,6 +488,11 @@ function HeroView({
   overlay?: "brand" | "dark";
   /** A row of figures under the text: each model's count of the records the viewer may read. */
   facts?: { label: string; value: number }[];
+  /**
+   * A stage hero's list (look-breadth §3): the app's own list page drawn by the kit's table with
+   * its first records, a picture of the list beside the headline, not a list to use.
+   */
+  stage?: { ui: RecordUi<Row>; app: AppUi; rows: Row[]; label: string; columns?: string[] };
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
@@ -734,6 +739,46 @@ function HeroView({
           {!shortcutList && cue && <div className="mt-12 text-white/80">{cue}</div>}
           {!shortcutList && end}
         </div>
+      </section>,
+    );
+  // The app's own list beside the headline (look-breadth §3), on the card's surface (glass where
+  // the theme's cards are), as a picture: nothing in it opens or is chosen.
+  if (layout === "stage" && stage)
+    return framed(
+      <section
+        {...sectionHooks(texts)}
+        data-hero=""
+        data-layout="stage"
+        className={cn(
+          "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
+          shortcutList && "pb-20 sm:pb-28",
+        )}
+      >
+        <div className="lg:col-span-5">{text}</div>
+        <div
+          data-part="stage"
+          role="img"
+          aria-label={w.previewOf(stage.label)}
+          className="pointer-events-none overflow-hidden rounded-[var(--radius-xl)] border-(length:--card-border) border-(--card-border-color) bg-(--card-surface) p-4 shadow-card [backdrop-filter:var(--card-blur)] lg:col-span-7"
+        >
+          <p aria-hidden className="mb-3 text-sm font-semibold">
+            {stage.label}
+          </p>
+          <div aria-hidden inert>
+            <ModelTable
+              ui={stage.ui}
+              app={stage.app}
+              rows={stage.rows}
+              {...(stage.columns ? { columns: stage.columns } : {})}
+            />
+          </div>
+        </div>
+        {!shortcutList && more && (
+          <div className="lg:col-span-12">
+            {cue}
+            {end}
+          </div>
+        )}
       </section>,
     );
   // The picture as a tall card on the page beside the text (look-gap §4): in the card's surface,

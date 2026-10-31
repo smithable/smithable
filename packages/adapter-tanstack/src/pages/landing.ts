@@ -9,10 +9,12 @@ import {
   type LandingSection,
   type PageIR,
   pageIcon,
+  pageModel,
   pascal,
   plural,
   SECTION_LOOKS,
   type SpecIR,
+  stagePage,
   storesPictures,
   type UxIR,
 } from "@smithable/core";
@@ -25,6 +27,7 @@ import {
   HEADER,
   importList,
   indexPath,
+  keyOf,
   literal,
   modelNamed,
   names,
@@ -102,7 +105,17 @@ export function landingRoute(
   // The hero's facts (look-gap §4): each model's count, read with the same lists.
   const hero = sections.find((s) => s.kind === "hero");
   const facts = (hero && ux.pages[page.id]?.looks?.[hero.name]?.facts) || [];
-  const lists = [...new Set([...records.map((s) => s.model as string), ...facts])].map((name) => {
+  // A stage hero (look-breadth §3): its list page's first six records in the list's own order.
+  const heroLook = hero ? ux.pages[page.id]?.looks?.[hero.name] : undefined;
+  const staged = heroLook?.layout === "stage" ? stagePage(ir, heroLook.stage) : undefined;
+  const stagedModel = staged ? pageModel(staged) : undefined;
+  const lists = [
+    ...new Set([
+      ...records.map((s) => s.model as string),
+      ...facts,
+      ...(stagedModel ? [stagedModel] : []),
+    ]),
+  ].map((name) => {
     const n = names(modelNamed(ir, name), t);
     imports.add(n.module, n.list);
     return `    const ${camel(plural(name))} = (await ${n.list}()).rows;`;
@@ -122,7 +135,18 @@ export function landingRoute(
         })
         .join(", ")}]`,
     );
-  const loaded = records.length > 0 || facts.length > 0;
+  if (hero && staged && stagedModel) {
+    // The list's own order: the ux file's sort, else the newest first.
+    const sort = ux.pages[staged.id]?.sort;
+    const key = sort?.replace(/^-/, "");
+    const order = key
+      ? `(a, b) => { const x = a.${key} ?? ""; const y = b.${key} ?? ""; return (x < y ? -1 : x > y ? 1 : 0) * ${sort?.startsWith("-") ? -1 : 1}; }`
+      : "(a, b) => b.id - a.id";
+    shown.push(
+      `${JSON.stringify(`${hero.name}Stage`)}: [...${camel(plural(stagedModel))}].sort(${order}).slice(0, 6)`,
+    );
+  }
+  const loaded = records.length > 0 || facts.length > 0 || Boolean(staged);
   const loader = loaded
     ? `  loader: async () => {\n${lists.join("\n")}\n    return { ${shown.join(", ")} };\n  },\n`
     : "";
@@ -212,6 +236,21 @@ export function landingRoute(
             facts.length
               ? `
           facts={data[${JSON.stringify(`${section.name}Facts`)}]}`
+              : ""
+          }${
+            staged && stagedModel
+              ? (
+                  () => {
+                    const n = names(modelNamed(ir, stagedModel), t);
+                    imports
+                      .add(n.module, n.ui)
+                      .add("#/generated/app", "app")
+                      .add("#/generated/pages", "pageUi");
+                    const columns = ux.pages[staged.id]?.columns;
+                    return `
+          stage={{ ui: ${n.ui}, app, rows: data[${JSON.stringify(`${section.name}Stage`)}], label: pageUi[${JSON.stringify(staged.id)}].title${columns ? `, columns: ${literal(columns.map((c) => keyOf(modelNamed(ir, stagedModel), c)))}` : ""} }}`;
+                  }
+                )()
               : ""
           }
         />`,
