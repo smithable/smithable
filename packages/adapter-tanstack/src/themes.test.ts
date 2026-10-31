@@ -1,4 +1,4 @@
-import { emptyUx, FONTS } from "@smithable/core";
+import { emptyUx, FONTS, parseTheme, type ThemeIR } from "@smithable/core";
 import { expect, test } from "vitest";
 import { FONT_PACKAGES, themeCss } from "./themes.js";
 
@@ -96,4 +96,72 @@ test("the three densities size the kit's controls, rows, cells and cards; standa
   expect(sizes("comfortable")).toEqual(["2.75rem", "4rem", "1rem", "1.5rem"]);
   expect(sizes("standard")).toEqual(["2.5rem", "3.5rem", "0.875rem", "1.25rem"]);
   expect(sizes("compact")).toEqual(["2.25rem", "3.25rem", "0.75rem", "1.25rem"]);
+});
+
+test("the style layer's new fields render, in the combinations where misses would show (look-breadth.md §3)", () => {
+  const theme = (name: string, body: string) => {
+    const parsed = parseTheme({
+      path: `themes/${name}.yml`,
+      text: `smithableTheme: 0.1\nname: ${name}\n${body}`,
+    });
+    expect(parsed.diagnostics, name).toEqual([]);
+    return parsed.theme as ThemeIR;
+  };
+  const colors = (mode: string, background: string, foreground: string, primary: string) =>
+    `${mode}:\n  background: "${background}"\n  foreground: "${foreground}"\n  primary: "${primary}"\n`;
+  const both =
+    colors("light", "#f4f1ea", "#1b1d22", "#3346c8") +
+    colors("dark", "#14161b", "#eceef2", "#e8b04a");
+  const themes = [
+    // Glass in dark: the card's tint over the page and a strong band, blurred, a lit top edge.
+    theme(
+      "glassy",
+      `surfaces: { cards: glass, sections: banded, bands: strong }\nmodes: dark\n${colors("dark", "#101218", "#eef0f5", "#8fb4ff")}`,
+    ),
+    // Duotone in both modes: each mode's primary washes the pictures.
+    theme("toned", `pictures: { treatment: duotone }\n${both}`),
+    // A condensed display face, huge, in capitals: labels follow in capitals, tracked wide.
+    theme(
+      "poster",
+      `fonts: { body: Inter, heading: Oswald, labels: JetBrains Mono }\nheadings: { weight: 700, tracking: normal, scale: huge, case: upper }\n${both}`,
+    ),
+    // Texture with bands.
+    theme("papery", `texture: paper\nsurfaces: { sections: banded, bands: strong }\n${both}`),
+  ];
+  const css = (name: string) =>
+    themeCss({ ...emptyUx(), theme: { ...emptyUx().theme, preset: name as never } }, themes);
+  const root = (text: string, name: string) =>
+    new RegExp(`:root \\{[^}]*--${name}: ([^;]+);`).exec(text)?.[1];
+  const dark = (text: string, name: string) =>
+    new RegExp(`:root\\[data-appearance="dark"\\] \\{[^}]*--${name}: ([^;]+);`).exec(text)?.[1];
+
+  const glassy = css("glassy");
+  expect(root(glassy, "card-surface")).toBe("color-mix(in oklch, var(--card) 65%, transparent)");
+  expect(root(glassy, "card-blur")).toBe("blur(14px) saturate(1.2)");
+  expect(root(glassy, "band-step")).toBe("12%");
+  // One mode by design: the same colours under both, and no appearance to choose.
+  expect(root(glassy, "background")).toBe(dark(glassy, "background"));
+  expect(glassy).toContain('[data-part="appearance"] {\n  display: none;');
+  expect(css("toned")).not.toContain('[data-part="appearance"]');
+
+  const toned = css("toned");
+  expect(root(toned, "picture-filter")).toMatch(
+    /^grayscale\(1\) sepia\(1\) hue-rotate\(-?\d+deg\)/,
+  );
+  expect(root(toned, "picture-filter")).not.toBe(dark(toned, "picture-filter"));
+  expect(root(css("papery"), "picture-filter")).toBe("none");
+
+  const poster = css("poster");
+  expect(root(poster, "heading-scale")).toBe("1.45");
+  expect(root(poster, "font-heading")).toContain('"Oswald Variable"');
+  expect(root(poster, "font-labels")).toContain('"JetBrains Mono Variable", ui-monospace');
+  expect(root(poster, "label-case")).toBe("uppercase");
+  expect(root(poster, "label-tracking")).toBe("0.05em");
+  expect(poster).toContain('@import "@fontsource-variable/jetbrains-mono/wght-italic.css";');
+  expect(poster).not.toContain("oswald/wght-italic");
+
+  expect(root(css("papery"), "texture")).toMatch(/^url\("data:image\/svg\+xml,/);
+  // Labels unsaid follow the headings: sentence case under headings in sentence case.
+  expect(root(css("papery"), "label-case")).toBe("none");
+  for (const t of themes) expect(css(t.name)).toMatchSnapshot(t.name);
 });

@@ -71,7 +71,7 @@ import { smokeTests } from "./smoke.js";
 import { splitActionModule, splitActionServer } from "./split.js";
 import { STACK_PROFILE } from "./stack.js";
 import { TEMPLATES } from "./templates.gen.js";
-import { themeCss } from "./themes.js";
+import { themeCss, themeOf } from "./themes.js";
 import { timersModule } from "./timers.js";
 import { rolesModule, usersReadme, usersServerModule, usersTestSource } from "./users.js";
 
@@ -674,6 +674,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           options.analytics,
           options.content?.consent,
           options.content?.assistant,
+          themeOf(ux, options.themes).modes,
         ),
       ),
       generated("src/routes/robots[.]txt.ts", robotsRoute(ir, auth)),

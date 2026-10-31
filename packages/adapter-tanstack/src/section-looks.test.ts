@@ -71,7 +71,7 @@ test("a landing page's own theme is a second scope in theme.css, and its font is
   const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent(), ux });
   const css = files.find((f) => f.path === "src/theme.css")?.content ?? "";
   expect(css).toContain(
-    '@import "@fontsource-variable/source-sans-3";\n@import "@fontsource-variable/nunito-sans";',
+    '@import "@fontsource-variable/source-sans-3";\n@import "@fontsource-variable/source-sans-3/wght-italic.css";\n@import "@fontsource-variable/nunito-sans";\n@import "@fontsource-variable/nunito-sans/wght-italic.css";',
   );
   expect(css).toContain("/* The home page's own theme: playful");
   expect(css).toContain('[data-page="home"] {');

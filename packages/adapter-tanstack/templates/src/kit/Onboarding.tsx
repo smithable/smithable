@@ -28,7 +28,7 @@ export function OnboardingLayout({
     <main data-kit="onboarding" className="mx-auto max-w-3xl px-5 py-12 sm:py-20">
       <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
       {subtitle && <p className="mt-2 text-muted-foreground">{subtitle}</p>}
-      <p className="mt-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mt-8 text-xs font-semibold label-text text-muted-foreground">
         {w.stepOf(step + 1, count)}
       </p>
       <div aria-hidden className="mt-2 flex gap-2">
