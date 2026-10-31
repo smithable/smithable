@@ -65,7 +65,7 @@ test("each section kind takes its own looks, checked by name and value", () => {
     "{ hero: { layout: wavy }, footer: { layout: list }, nope: {} }",
   ).diagnostics.map((d) => d.message);
   expect(messages).toContain(
-    '"layout" of the look of hero on page "home" is one of split, centered, plain, cover, photo, inset.',
+    '"layout" of the look of hero on page "home" is one of split, centered, plain, cover, photo, inset, stage.',
   );
   expect(messages.join()).toContain('Unknown key "layout" in the look of footer');
   expect(messages).toContain('home has no section named "nope".');

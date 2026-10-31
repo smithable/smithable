@@ -305,6 +305,7 @@ export {
   ICONS,
   pageIcon,
   SECTION_LOOKS,
+  stagePage,
   THEME_PRESETS,
   TONES,
   UX_VERSION,

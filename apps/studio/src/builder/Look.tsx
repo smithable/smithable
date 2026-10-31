@@ -817,6 +817,7 @@ function LandingLook({
         Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
           const label = `${humanize(key)} of ${humanize(section.name)}`;
           const current = ux.looks?.[section.name]?.[key as "layout"];
+          const heroLayoutOf = (name: string) => ux.looks?.[name]?.layout;
           const set = (value: string) =>
             run("setSectionLook", { page, section: section.name, key, value });
           // Choices the check would refuse are not offered: a wash without a picture under the
@@ -826,6 +827,24 @@ function LandingLook({
             return null;
           if (key === "eyebrow" && !sections.some((s) => s.kind === "contact") && !current)
             return null;
+          // A stage hero's list page, by its name (unsaid, the first list in the navigation).
+          if (values === "page")
+            return heroLayoutOf(section.name) !== "stage" && !current ? null : (
+              <label key={`${section.name}.${key}`} className="flex items-center gap-2">
+                <span className="flex-1">{label}</span>
+                <input
+                  key={String(current ?? "")}
+                  aria-label={label}
+                  defaultValue={String(current ?? "")}
+                  placeholder="The first list"
+                  onBlur={(e) => {
+                    const value = e.target.value.trim() || "default";
+                    if (value !== String(current ?? "default")) void set(value);
+                  }}
+                  className="h-8 w-44 rounded border border-line px-2 text-xs"
+                />
+              </label>
+            );
           // A hero's facts: models by name, counted under its text.
           if (values === "models")
             return (
