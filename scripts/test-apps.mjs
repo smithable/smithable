@@ -1889,10 +1889,7 @@ async function callFlow(dir, base, receiver) {
     // As staff: a mail never goes to the person who made the change, and the admin is its reader.
     await signInAs(page, base, "staff");
     await open(page, `${base}/incidents/${other.id}`);
-    await page
-      .getByLabel(/^Status/)
-      .first()
-      .selectOption("resolved");
+    await page.getByRole("radio", { name: "Resolved", exact: true }).first().check();
     const saved = Date.now();
     await page.getByRole("button", { name: "Save changes" }).click();
     while (mails() === before && Date.now() - saved < 30_000) await page.waitForTimeout(100);
