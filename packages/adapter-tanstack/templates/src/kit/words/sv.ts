@@ -234,6 +234,7 @@ export const w = {
   noPlacesLeft: "Inga platser kvar.",
   nobodyYet: "Ingen ännu. Bjud in den första personen ovan.",
   notAllowed: "Du får inte göra det här.",
+  notAllowedTitle: "Inte för din roll",
   notDone: "Inte gjort.",
   notFound: "Hittades inte",
   notFoundNote: "Sidan eller posten finns inte, eller så får du inte se den.",

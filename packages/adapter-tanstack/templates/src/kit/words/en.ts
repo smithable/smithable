@@ -244,6 +244,7 @@ export const w = {
   noPlacesLeft: "No places left.",
   nobodyYet: "Nobody yet. Invite the first person above.",
   notAllowed: "You are not allowed to do this.",
+  notAllowedTitle: "Not for your role",
   notDone: "Not done.",
   notFound: "Not found",
   notFoundNote: "This page or record does not exist, or you cannot see it.",

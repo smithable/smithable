@@ -46,7 +46,7 @@ export function dashboardParts(
     .add("@tanstack/react-router", "createFileRoute")
     .add("@tanstack/react-start", "createServerFn")
     .add("#/generated/pages", "pageAccess")
-    .add("#/kit/access", "guardPage")
+    .add("#/kit/page-guard", "guardPage")
     .add("#/lib/viewer.server", "currentViewer");
   const view = importList()
     .add("#/generated/app", "app")

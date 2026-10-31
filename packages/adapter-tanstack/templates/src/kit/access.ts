@@ -1,6 +1,6 @@
 // Smithable app kit: who may read, create, change and delete records, and open pages.
 // Every generated data function checks access here, so the rules live in one place.
-import { redirect } from "@tanstack/react-router";
+
 import { w } from "./words";
 
 /** The signed-in user, or null for a visitor who has not signed in. */
@@ -35,11 +35,23 @@ export interface ModelAccess {
 }
 
 export class AccessDenied extends Error {
+  /** What the server answers with it: 403 for a signed-in person, 401 before signing in. */
+  readonly status: number;
   /** `why`: the refusal in words the caller can act on, when there are better ones than "not allowed". */
   constructor(signedIn: boolean, why?: string) {
     super(why ?? (signedIn ? w.notAllowed : w.signInFirst));
+    this.name = "AccessDenied";
+    this.status = signedIn ? 403 : 401;
   }
 }
+
+/**
+ * A refusal, also once it has crossed from the server as plain data: by its name where that
+ * survives, else by the kit's own words for it (the error page's message, a page's refusal).
+ */
+export const isRefusal = (error: unknown): boolean =>
+  error instanceof AccessDenied ||
+  (error instanceof Error && (error.name === "AccessDenied" || error.message === w.notAllowed));
 
 /** A change the database refused, as a code the form turns into words: "taken:<column>" or "in-use". */
 export class Conflict extends Error {}
@@ -75,11 +87,4 @@ export function readScope(rule: Rule, viewer: Viewer | null): "all" | "own" | "p
   if (rule.public && !rule.where) return "all";
   if (viewer && rule.owner) return "own";
   return rule.public ? "public" : "none";
-}
-
-/** For a page's beforeLoad: sends visitors to sign in, and refuses users without the role. */
-export function guardPage(rule: Rule, viewer: Viewer | null, href: string): void {
-  if (allows(rule, viewer)) return;
-  if (!viewer) throw redirect({ href: `/sign-in?redirect=${encodeURIComponent(href)}` });
-  throw new AccessDenied(true);
 }

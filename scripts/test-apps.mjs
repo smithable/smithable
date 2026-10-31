@@ -2488,6 +2488,23 @@ async function productionFormFlow(dir, port) {
   }
 }
 
+/** A page the role may not open, in the production build: the refusal, answered 403 (A 214). */
+async function productionRefusalFlow(dir, port) {
+  const stop = await serve(dir, port, "production", { DEMO_SIGN_IN: "1" });
+  const browser = await chromium.launch();
+  try {
+    const base = `http://localhost:${port}`;
+    const page = await browser.newPage();
+    await signInAs(page, base, "member");
+    const answer = await page.goto(`${base}/sessions`);
+    if (answer?.status() !== 403) throw new Error(`answered ${answer?.status()}, not 403`);
+    await page.getByRole("heading", { name: "Not for your role" }).waitFor({ timeout: 10000 * P });
+  } finally {
+    await browser.close();
+    stop();
+  }
+}
+
 /**
  * A demo (DEMO_VISITORS=1) gives each visitor a copy of the app's data of their own
  * (src/kit/visitor.ts): what one visitor adds, another never sees, and the app's own data is left
@@ -4465,6 +4482,33 @@ async function topbarFlow(dir, base) {
       }
       await check.context().browser()?.close();
     }
+  }
+}
+
+/**
+ * A page the role may not open, reached by its address (A 214): a member who types a staff page's
+ * address gets the refusal, answered 403, never "Something went wrong" and a 500.
+ */
+async function refusalFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    await signInAs(page, base, "member");
+    const answer = await page.goto(`${base}/sessions`);
+    if (answer?.status() !== 403) throw new Error(`answered ${answer?.status()}, not 403`);
+    await page.getByRole("heading", { name: "Not for your role" }).waitFor({ timeout: 10000 * P });
+    if (await page.getByText("Something went wrong").count())
+      throw new Error("the refusal still reads as an error");
+    console.log(
+      "  ✓ browser: a member who opens a staff page by its address gets the refusal, answered 403, not an error",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("refusal");
+  } finally {
+    await browser.close();
   }
 }
 
@@ -6520,6 +6564,11 @@ for (const [index, example] of examples.entries()) {
         "in the production build an administrator opens a new customer from its address and gets the form, with whom to give it to",
         () => productionFormFlow(dir, port + 450),
       );
+    if (example === "booking")
+      await asyncStep(
+        "in the production build a member who opens a staff page by its address gets the refusal, answered 403 (A 214)",
+        () => productionRefusalFlow(dir, port + 450),
+      );
 
     if (example === "crm")
       await asyncStep(
@@ -7703,6 +7752,7 @@ test("the session cookie's name and attributes", async () => {
         await bookingFlow(dir, base);
         await outgoingFlow(dir, base);
         await sessionsListFlow(base);
+        await refusalFlow(base);
         await visitorMailFlow(dir, base);
         await markdownFlow(base);
         await inputSecurityFlow(dir, base);

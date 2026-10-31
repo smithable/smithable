@@ -34,7 +34,7 @@ export function orderRoute(
     .add(`#/generated/${kebab(into.name)}.server`, ni.data)
     .add(`#/generated/${kebab(into.name)}`, ni.ui, `type ${ni.values}`)
     .add(`#/generated/${kebab(into.name)}.schema`, ni.schema)
-    .add("#/kit/access", "guardPage")
+    .add("#/kit/page-guard", "guardPage")
     .add("#/kit/hours", "type Hours", "nextOpening", "openAt")
     .add("#/kit/limit", "writeAllowed")
     .add("#/kit/OrderPage", "type Menu", "OrderPage")

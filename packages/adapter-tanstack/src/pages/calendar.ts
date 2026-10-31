@@ -68,7 +68,8 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     .add("#/generated/app", "app")
     .add("#/generated/pages", "pageAccess")
     .add(`${n.module}.server`, n.access, n.data)
-    .add("#/kit/access", "allows", "guardPage")
+    .add("#/kit/access", "allows")
+    .add("#/kit/page-guard", "guardPage")
     .add("#/kit/AppShell", "PageHeader")
     .add("#/kit/Calendar", "Calendar", "calendarRange")
     .add("#/kit/words", "w");
