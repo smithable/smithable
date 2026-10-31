@@ -246,7 +246,7 @@ export const SECTION_LOOKS: Partial<
   },
   features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
-  records: { layout: ["cards", "list", "grid"], columns: [3, 2, 4, 5, 6], band: BANDS },
+  records: { layout: ["cards", "list", "grid", "ledger"], columns: [3, 2, 4, 5, 6], band: BANDS },
   testimonials: { layout: ["cards", "carousel", "one"], band: BANDS },
   pricing: { highlight: "text", band: BANDS },
   // An FAQ's columns are its list's (every answer shown); the accordion is one column.
@@ -1371,11 +1371,15 @@ function readSectionLooks(
         `"columns" of ${at} is for the list layout; the accordion is one column.`,
         `Add layout: list (setSectionLook ${page.id} ${entry.key} layout list).`,
       );
-    if (section.kind === "records" && look.columns !== undefined && look.layout === "list")
+    if (
+      section.kind === "records" &&
+      look.columns !== undefined &&
+      (look.layout === "list" || look.layout === "ledger")
+    )
       ctx.warning(
         entry.value,
         "invalid-value",
-        `"columns" of ${at} is for cards and a grid; a list is one row per record.`,
+        `"columns" of ${at} is for cards and a grid; a list or a ledger is one row per record.`,
       );
     if (look.band && look.band !== "none")
       bands.push({ page: page.id, section: entry.key, band: look.band, node: entry.value });

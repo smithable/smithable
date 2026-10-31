@@ -425,9 +425,10 @@
                       "enum": [
                         "cards",
                         "list",
-                        "grid"
+                        "grid",
+                        "ledger"
                       ],
-                      "description": "One of cards, list, grid; the first is the default."
+                      "description": "One of cards, list, grid, ledger; the first is the default."
                     },
                     "columns": {
                       "enum": [

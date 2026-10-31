@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { applyOperation } from "./apply.js";
+import type { SpecIR } from "./ir.js";
 import { validateSpec } from "./spec.js";
 import { themeNamed } from "./theme.js";
 import { validateUx } from "./ux.js";
@@ -283,4 +284,24 @@ test("a landing page's header stays or scrolls: header position, set with setSec
       value: "sticky",
     }),
   ).toMatchObject({ ok: false });
+});
+
+test("a records section may be a ledger: ruled rows with the amount as a figure column (look-breadth §3)", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Service: { fields: { name: string!, price: money } }\npages:\n  home:\n    route: /\n    landing:\n      prices: { records: Service }\n  services: { crud: Service }\n",
+  }).ir as SpecIR;
+  const read = (look: string) =>
+    validateUx(
+      {
+        path: "smithable.ux.yml",
+        text: `smithableUx: 0.1\npages:\n  home:\n    sections:\n      prices: ${look}\n`,
+      },
+      spec,
+    );
+  expect(read("{ layout: ledger }").ux?.pages.home?.looks?.prices).toEqual({ layout: "ledger" });
+  // One row per record: columns are a warning, as for a list.
+  expect(read("{ layout: ledger, columns: 3 }").diagnostics.map((d) => d.severity)).toEqual([
+    "warning",
+  ]);
 });
