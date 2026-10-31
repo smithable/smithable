@@ -4870,6 +4870,53 @@ async function pickFlow(dir, base) {
   }
 }
 
+/**
+ * Each row's actions in a menu (look-gap §4, the ux file's table actions: menu): the row shows a
+ * "…" button, and the actions open from it; back to buttons after, by undo.
+ */
+async function rowMenuFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  let set = false;
+  try {
+    const on = smithable(dir, "op", "setRowActions", "invoices", "menu");
+    if (on.code !== 0) throw new Error(on.out);
+    set = true;
+    await signInAs(page, base, "admin");
+    // A draft invoice's row, as the table shows it on a wide screen (the phone's cards hidden).
+    const row = page
+      .locator('[data-part="row"]')
+      .filter({ hasText: "2026-009" })
+      .filter({ visible: true });
+    const more = row.locator('summary[aria-label="More"]');
+    // The dev server takes the change up by itself; asked again until it has.
+    for (let i = 0; ; i++) {
+      await open(page, `${base}/invoices`);
+      if (await more.first().isVisible()) break;
+      if (i === 20 * P) throw new Error("the row has no … menu");
+      await page.waitForTimeout(500);
+    }
+    if (await row.getByRole("button", { name: "Mark sent" }).isVisible())
+      throw new Error("the row still shows its action as a button");
+    await more.first().click();
+    await row.getByRole("button", { name: "Mark sent" }).waitFor({ timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: with actions: menu a row's actions open from its … button, not shown as buttons",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("row menu");
+  } finally {
+    await browser.close();
+    if (set) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`row menu put back: ${back.out}`);
+    }
+  }
+}
+
 /** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
 async function formulaFlow(base) {
   const browser = await chromium.launch();
@@ -7788,6 +7835,7 @@ test("the session cookie's name and attributes", async () => {
         await copyFlow(base);
         await documentFlow(dir, base);
         await formulaFlow(base);
+        await rowMenuFlow(dir, base);
         await pickFlow(dir, base);
         await addChildFlow(base);
         await onboardingFlow(base);

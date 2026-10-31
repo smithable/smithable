@@ -133,6 +133,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="model-table"",
     "data-part="empty"",
     "data-part="thread"",
+    "data-part="mark"",
     "data-part="select"",
     "data-part="row"",
     "data-part="description"",
