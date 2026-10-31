@@ -625,6 +625,19 @@ function Controls({
             ))}
           </select>
         </label>
+        <label>
+          Labels
+          <select
+            aria-label="Labels font"
+            value={theme.style.labelsFont ?? ""}
+            onChange={(e) => set(["fonts", "labels"], e.target.value || undefined)}
+          >
+            <option value="">the body font</option>
+            {FONTS.map((f) => (
+              <option key={f}>{f}</option>
+            ))}
+          </select>
+        </label>
       </fieldset>
       {(Object.keys(STYLE_VALUES) as (keyof typeof STYLE_VALUES)[]).map((group) => (
         <fieldset key={group}>
@@ -637,7 +650,7 @@ function Controls({
                 value={theme.style.headings.weight}
                 onChange={(e) => set(["headings", "weight"], Number(e.target.value))}
               >
-                {[400, 500, 600, 700, 800].filter(inRange).map((w) => (
+                {[300, 400, 500, 600, 700, 800, 900].filter(inRange).map((w) => (
                   <option key={w}>{w}</option>
                 ))}
               </select>
@@ -662,6 +675,8 @@ function Controls({
         {choice("shadow", ["shadow"], shadow, Object.keys(SHADOWS))}
         {choice("density", ["density"], theme.density, ["comfortable", "standard", "compact"])}
         {choice("motion", ["motion"], theme.motion, ["none", "subtle", "lively"])}
+        {choice("texture", ["texture"], theme.style.texture, ["none", "grain", "paper"])}
+        {choice("modes", ["modes"], theme.modes, ["both", "light", "dark"])}
         <p className="hint" data-motion-note>
           {MOTION_NOTES[theme.motion]}
         </p>

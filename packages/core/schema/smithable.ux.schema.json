@@ -47,9 +47,21 @@
                 "Fraunces",
                 "Archivo Narrow",
                 "DM Sans",
-                "Outfit"
+                "Outfit",
+                "Hanken Grotesk",
+                "Instrument Sans",
+                "Mona Sans",
+                "Bricolage Grotesque",
+                "Oswald",
+                "Big Shoulders Display",
+                "Instrument Serif",
+                "Young Serif",
+                "Newsreader",
+                "Bodoni Moda",
+                "Zilla Slab",
+                "JetBrains Mono"
               ],
-              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans, Outfit."
+              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans, Outfit, Hanken Grotesk, Instrument Sans, Mona Sans, Bricolage Grotesque, Oswald, Big Shoulders Display, Instrument Serif, Young Serif, Newsreader, Bodoni Moda, Zilla Slab, JetBrains Mono."
             }
           }
         },
