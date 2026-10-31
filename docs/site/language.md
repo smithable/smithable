@@ -64,6 +64,11 @@ smithable op setText "En stund bara för dig." pages schedule subtitle
 smithable op setText "Börjar" models Session fields startsAt label
 smithable op setText "Platser" models Session fields capacity label
 smithable op setText "Mina bokningar" pages my-bookings title
+smithable op setText "Schema" menus schedule label
+smithable op setText "Studion" menus studioSetup label
+smithable op setText "Webbplats" menus website label
+smithable op setText "Om oss" pages about title
+smithable op setText "Platser kvar" models Session fields placesLeft label
 ```
 
 ```text
@@ -71,7 +76,7 @@ Change the text models.Booking.reserve.book to "Boka en matta". Undo with: smith
 …
 ```
 
-A field's label and a page's title that you never wrote come from their names in `smithable.yml` (`startsAt` reads "Starts at"), so they are English too until you give them a text. Dates and times are shown the way the reader's browser writes them.
+A field's label and a page's title that you never wrote come from their names in `smithable.yml` (`startsAt` reads "Starts at"), so they are English too until you give them a text: the last five lines above give the menu's groups, the About page and the sessions list's Places left column their Swedish words, and the starter's other texts (its blog posts, its home page) stay English until you do the same for them. Dates and times are shown the way the reader's browser writes them.
 
 ![The booking app in Swedish: the list of sessions titled Pass, with a Lägg till pass button, Swedish column headings and menu, and Swedish dates](language/sessions.webp)
 
