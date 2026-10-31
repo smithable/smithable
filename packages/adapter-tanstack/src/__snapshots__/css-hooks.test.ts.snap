@@ -95,6 +95,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="second-button"",
     "data-part="facts"",
     "data-part="door"",
+    "data-part="figure"",
     "data-part={forward(plan.name) ? "highlight" : undefined}",
   ],
   "src/kit/Languages.tsx": [
