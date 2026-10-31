@@ -4,20 +4,24 @@ pages:
     table:
       sort: -kickoff
       columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
+    icon: calendar
   players:
     table:
+      sort: number
       view: cards
     record:
       subtitle: team
       detail: [position, number]
+    icon: users
   teams:
     table:
       view: cards
+    icon: layers
 tones:
   Match.status:
     played: success
     postponed: warning
-    canceled: danger
+    cancelled: danger
 theme:
   preset: modern
   brand:

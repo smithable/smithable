@@ -4,7 +4,6 @@
   "wordStarter": "booking",
   "questions": [
     "Do people need an account to book a class?",
-    "What can visitors see without signing in?",
-    "Should the studio track memberships or class passes?"
+    "Who manages classes and the schedule?"
   ]
 }

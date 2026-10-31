@@ -1,7 +1,9 @@
 smithable: 0.1
 app:
-  name: Northlight Conference
-  description: Talks, speakers and registration for a conference, where attendees reserve their seat in the talks they want to hear.
+  name: Talkfront
+  description: "Programme and registration for a conference: browse the talks and speakers, and reserve a seat in the talks you want to attend."
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
@@ -13,11 +15,12 @@ models:
   Talk:
     fields:
       title: string!
-      abstract: text
+      abstract: markdown
       speaker: Speaker!
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
+      track: keynote | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -27,8 +30,8 @@ models:
     fields:
       talk: Talk! unique
       attendee: User
-    namedBy: talk
     ownedBy: attendee
+    namedBy: talk
     capacity:
       per: talk
       max: talk.capacity
@@ -37,7 +40,7 @@ models:
 pages:
   talks:
     crud: Talk
-    filters: [speaker, startsAt]
+    filters: [track, speaker, startsAt]
     defaultFilter:
       startsAt: upcoming
   speakers:
@@ -52,17 +55,22 @@ pages:
     route: /
     landing:
       hero:
-        button: schedule
-      program:
-        records: Talk
-      lineup:
+        button: talks
+        secondButton: speakers
+      features:
+      speakerList:
         records: Speaker
       faq:
       callToAction:
-        button: schedule
+        button: talks
       footer:
   privacy:
     route: /privacy
     legal: privacy
   admin:
     data: all
+navigation:
+  main: [talks, speakers, my-registrations, schedule, home, privacy, admin]
+  programme: [schedule, talks, speakers, my-registrations]
+  website: [home]
+  admin: [admin]

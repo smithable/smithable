@@ -3,7 +3,7 @@ pages:
   home:
     hero:
       title: Get paid for your work, without the paperwork
-      subtitle: Ledgerly keeps your clients, invoices and payments in one tidy place, so you always know who owes you what.
+      subtitle: Billfold keeps your clients, invoices and payments in one place, so you always know who owes you what.
       button: Start invoicing
       image:
         src: images/hero.webp
@@ -13,9 +13,9 @@ pages:
       title: Send your next invoice in minutes
       button: Sign in
     features:
-      items: [{ title: Clients at hand, text: "Keep each client's contact details, address and VAT number ready for every invoice." }, { title: Invoices with lines, text: Add lines with quantity and price; the totals add themselves up. }, { title: Payments tracked, text: Record full or partial payments and see the balance left on each invoice. }, { title: Late invoices flagged, text: Invoices still unpaid a week past their due date are marked overdue for you. }]
+      items: [{ title: Clients at hand, text: "Keep each client's contact details, address and VAT number ready for the next invoice." }, { title: Invoices that add up, text: Add lines with quantity and price; the total works itself out. }, { title: Payments tracked, text: Record each payment against its invoice and see the balance still open. }, { title: Late invoices flagged, text: A sent invoice that stays unpaid past its due date is marked overdue for you. }]
     faq:
-      items: [{ question: Who can see my invoices?, answer: "Only you. Every freelancer sees just their own clients, invoices and payments." }, { question: Can a client pay in parts?, answer: Yes. Record each payment as it arrives and the invoice shows what is still due. }, { question: Is the client told when I send an invoice?, answer: "Yes, marking an invoice as sent mails the client at their address." }]
+      items: [{ question: Who can see my invoices?, answer: "Only you. Every freelancer sees just their own clients, invoices and payments." }, { question: Can a client pay in parts?, answer: Yes. Record each payment as it arrives and the invoice shows what is left to pay. }, { question: Does the client get the invoice by mail?, answer: "When you mark an invoice as sent, your client is mailed about it." }]
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

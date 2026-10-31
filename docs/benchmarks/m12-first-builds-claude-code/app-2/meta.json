@@ -3,8 +3,7 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Who on the team can see which companies and deals?",
-    "What should a deal hold?",
-    "What is a follow-up attached to?"
+    "Who on the team can see which deals and contacts?",
+    "What should a deal hold?"
   ]
 }

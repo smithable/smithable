@@ -10,10 +10,8 @@ pages:
       sort: -issuedOn
 theme:
   preset: modern
-  brand:
-    primary: "#0f766e"
 tones:
   Invoice.status:
-    sent: warning
     paid: success
+    sent: warning
     overdue: danger

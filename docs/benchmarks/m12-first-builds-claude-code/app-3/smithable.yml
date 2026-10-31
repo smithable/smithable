@@ -1,9 +1,8 @@
 smithable: 0.1
 app:
-  name: Ledgerly
-  description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
+  name: Billfold
+  description: "Invoicing for freelancers: keep your clients, send invoices and track the payments that come in."
   currency: EUR
-  timezone: Europe/Stockholm
 models:
   Client:
     fields:
@@ -23,8 +22,8 @@ models:
       invoice: Invoice!
   Payment:
     fields:
-      paidOn: date! = TODAY()
       amount: money!
+      paidOn: date! = TODAY()
       method: bankTransfer | card | cash | other
       note: string
       invoice: Invoice!
@@ -33,8 +32,9 @@ models:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      dueOn: date!
       status: draft | sent | paid | overdue
+      contract: file
       lines: InvoiceLine[]
       payments: Payment[]
       total:
@@ -60,6 +60,9 @@ pages:
         sum: Invoice.balance
         where:
           status: overdue
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
       latest:
         list: Invoice
         limit: 5
@@ -68,7 +71,9 @@ pages:
     search: [name, email]
   payments:
     crud: Payment
-    filters: [invoice, paidOn, method]
+    filters: [invoice, method, paidOn]
+  invoice-lines:
+    crud: InvoiceLine
   home:
     route: /
     landing:
@@ -84,8 +89,7 @@ pages:
     legal: privacy
   invoices:
     crud: Invoice
-    filters: [client, status, dueOn]
-    search: [number]
+    filters: [client, status, issuedOn]
     actions: [markSent, markPaid, markOverdue]
 actions:
   markSent:
@@ -103,8 +107,8 @@ actions:
       status: paid
     add:
       Payment:
-        paidOn: TODAY()
         amount:
+        paidOn: TODAY()
         method:
     intent: The client paid the invoice; the payment is recorded with it.
   markOverdue:
@@ -115,9 +119,9 @@ actions:
       status: overdue
     intent: The invoice is late.
 timers:
-  markOverdue:
+  flagOverdue:
     on: Invoice
-    at: 7 days after dueOn
+    at: 1 day after dueOn
     where:
       status: sent
     run: markOverdue

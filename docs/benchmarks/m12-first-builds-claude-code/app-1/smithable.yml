@@ -1,9 +1,7 @@
 smithable: 0.1
 app:
-  name: Saltwind Yoga
+  name: Open Sky Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
-  currency: SEK
-  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
@@ -39,7 +37,7 @@ models:
       per: session
       max: session.capacity
       closes: session.startsAt
-      cancelUntil: 2 hours before session.startsAt
+      cancelUntil: session.startsAt
 pages:
   schedule:
     calendar:
@@ -52,6 +50,7 @@ pages:
     filters: [classType, instructor, startsAt]
     defaultFilter:
       startsAt: upcoming
+    sortable: [startsAt, capacity]
   class-types:
     crud: ClassType
     filters: [level]
@@ -73,4 +72,8 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [schedule, my-bookings, sessions, class-types, instructors, home]
+navigation:
+  main: [schedule, my-bookings, sessions, class-types, instructors, home, privacy]
+  schedule: [schedule, my-bookings, sessions]
+  studioSetup: [class-types, instructors]
+  website: [home]

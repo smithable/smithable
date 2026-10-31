@@ -7,10 +7,11 @@ models:
   Team:
     fields:
       name: string!
-      category: senior | youth | women | veterans
+      ageGroup: senior | youth | junior
+      gender: men | women | mixed
       coach: string
+      picture: picture
       about: text
-      photo: picture
       players: Player[]
       matches: Match[]
   Player:
@@ -30,9 +31,9 @@ models:
       opponent: string!
       kickoff: datetime!
       venue: home | away
-      location: string
+      ground: string
       competition: string
-      status: scheduled | played | postponed | canceled
+      status: scheduled | played | postponed | cancelled
       goalsFor:
         type: int
         min: 0
@@ -44,12 +45,13 @@ models:
 pages:
   matches:
     crud: Match
-    search: [opponent, competition]
+    search: [opponent, competition, ground]
     filters: [team, status, venue, kickoff]
-    actions: [recordResult, postpone]
+    actions: [enterResult, postpone]
   teams:
     crud: Team
-    filters: [category]
+    search: [name, coach]
+    filters: [ageGroup, gender]
   players:
     crud: Player
     search: [name]
@@ -60,7 +62,7 @@ pages:
       hero:
         button: matches
         secondButton: teams
-      fixtures:
+      upcoming:
         records: Match
         where:
           status: scheduled
@@ -68,14 +70,14 @@ pages:
         records: Match
         where:
           status: played
-      squads:
+      ourTeams:
         records: Team
       footer:
   privacy:
     route: /privacy
     legal: privacy
 actions:
-  recordResult:
+  enterResult:
     on: Match
     when:
       status: [scheduled, postponed]
@@ -83,10 +85,11 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match once it has been played.
+    intent: Record the final score of a match that has been played.
   postpone:
     on: Match
     when:
       status: scheduled
     set:
       status: postponed
+    intent: Mark a scheduled match as postponed.

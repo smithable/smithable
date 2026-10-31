@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: "The IT team's tickets: what needs fixing, how urgent it is and who handles it."
+  description: "The IT team's tickets: what is wrong, how urgent it is and who is handling it."
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -12,12 +12,16 @@ models:
         type: email!
         locked: true
       status: open | inProgress | closed | reopened
-      priority: normal | low | high | urgent
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
       assignee:
         type: User
         required:
           status: [inProgress, closed]
-      description: text
+      body: text
       attachments: files
       messages: Message[]
   Message:
@@ -41,11 +45,9 @@ pages:
 actions:
   assignToMe:
     on: Ticket
-    when:
-      assignee: not ME()
     set:
       assignee: ME()
-    intent: "Take the ticket: you become the one who handles it."
+    intent: "Take the ticket: you become its assignee."
   assignTo:
     on: Ticket
     set:

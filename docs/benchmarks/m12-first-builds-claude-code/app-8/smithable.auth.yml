@@ -4,14 +4,10 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member:
-    description: An attendee who registers for talks.
-    pages: [my-registrations]
-    create: [Registration]
+  member: { pages: [my-registrations, talks, speakers, schedule], create: [Registration] }
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, privacy]
+  pages: [home, talks, speakers, schedule, privacy]
   read: [Talk, Speaker]
-defaultRole: member
 admins: [johan@smithable.ai]
