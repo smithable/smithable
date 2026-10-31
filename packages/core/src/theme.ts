@@ -382,7 +382,7 @@ const GLASS_OPACITY = 0.65;
  * A color moved towards another by a share of the way (0 stays, 1 arrives), mixed in OKLab, so a
  * pale paper moved a little towards a dark ink keeps the paper's own cast: mixing hue and chroma
  * apart took the ink's hue whenever the paper's chroma was low, and cream towards a green ink
- * came out lilac (the barbers' band, 2026-11-01).
+ * came out a cool grey that read lilac beside the cream (the barbers' band, 2026-11-01).
  */
 function towards(from: string, to: string, share: number): string {
   const [l1, c1, h1] = rgbToOklch(hexToRgb(from));
