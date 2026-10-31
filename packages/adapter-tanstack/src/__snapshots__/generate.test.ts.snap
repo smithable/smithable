@@ -7837,7 +7837,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -7853,7 +7855,7 @@ export const Route = createFileRoute("/admin/activity")({
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -7864,7 +7866,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}
         app={app}
         onFilter={(next) => navigate({ to: "/admin/activity", search: next, replace: true, resetScroll: false })}
@@ -9370,7 +9372,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -9386,7 +9390,7 @@ export const Route = createFileRoute("/team/activity")({
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -9397,7 +9401,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}
         app={app}
         onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true, resetScroll: false })}
@@ -10121,7 +10125,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "13ade15a generated",
-  "src/routes/admin/activity.tsx": "e61e6416 generated",
+  "src/routes/admin/activity.tsx": "43c50085 generated",
   "src/routes/admin/ask.tsx": "45cbc128 generated",
   "src/routes/admin/index.tsx": "e9662e56 generated",
   "src/routes/admin/notes/$id.tsx": "5ec1a6f3 generated",
@@ -10154,7 +10158,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "a86f791d generated",
-  "src/routes/team/activity.tsx": "70b87ea4 generated",
+  "src/routes/team/activity.tsx": "9d9e14fd generated",
   "src/routes/team/index.tsx": "c58a919e generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "c501d393 kit",
@@ -24791,7 +24795,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -24811,7 +24817,7 @@ export const Route = createFileRoute("/admin/activity")({
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -24822,7 +24828,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}
         app={app}
         onFilter={(next) => navigate({ to: "/admin/activity", search: next, replace: true, resetScroll: false })}
@@ -28960,7 +28966,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "d8ea4a70 generated",
   "src/routes/about/index.tsx": "6c4dd63e generated",
-  "src/routes/admin/activity.tsx": "727676c3 generated",
+  "src/routes/admin/activity.tsx": "0a98e254 generated",
   "src/routes/admin/bookings/$id.tsx": "3b23a445 generated",
   "src/routes/admin/bookings/index.tsx": "b6b106eb generated",
   "src/routes/admin/bookings/new.tsx": "557a5a18 generated",
@@ -36788,7 +36794,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -36804,7 +36812,7 @@ export const Route = createFileRoute("/team/activity")({
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -36815,7 +36823,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}
         app={app}
         onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true, resetScroll: false })}
@@ -37614,7 +37622,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "8c938050 generated",
-  "src/routes/team/activity.tsx": "70b87ea4 generated",
+  "src/routes/team/activity.tsx": "9d9e14fd generated",
   "src/routes/team/index.tsx": "5c4ec38b generated",
   "src/routes/team/trash.tsx": "30f6bbf9 generated",
   "src/start.ts": "ca04f376 kit",
@@ -53269,7 +53277,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -53289,7 +53299,7 @@ export const Route = createFileRoute("/team/activity")({
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -53300,7 +53310,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}
         targets={["kitchen"]}
         app={app}
@@ -54083,7 +54093,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/$id.tsx": "893f7544 generated",
   "src/routes/stops/index.tsx": "4e65d858 generated",
   "src/routes/stops/new.tsx": "1a880670 generated",
-  "src/routes/team/activity.tsx": "abefd3a4 generated",
+  "src/routes/team/activity.tsx": "1836cf71 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
   "src/routes/where/index.tsx": "2c4338d9 generated",
   "src/start.ts": "ca04f376 kit",
@@ -73181,7 +73191,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -73197,7 +73209,7 @@ export const Route = createFileRoute("/team/activity")({
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -73208,7 +73220,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}
         app={app}
         onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true, resetScroll: false })}
@@ -74252,7 +74264,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "7572bbad generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
-  "src/routes/team/activity.tsx": "70b87ea4 generated",
+  "src/routes/team/activity.tsx": "9d9e14fd generated",
   "src/routes/team/index.tsx": "f53943cc generated",
   "src/routes/updates/$id.tsx": "6f71d0c0 generated",
   "src/routes/updates/index.tsx": "26d02735 generated",
@@ -80615,7 +80627,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -80635,7 +80649,7 @@ export const Route = createFileRoute("/team/activity")({
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -80646,7 +80660,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}
         app={app}
         onFilter={(next) => navigate({ to: "/team/activity", search: next, replace: true, resetScroll: false })}
@@ -81333,7 +81347,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "f15377e4 generated",
-  "src/routes/team/activity.tsx": "861ffc19 generated",
+  "src/routes/team/activity.tsx": "320a3120 generated",
   "src/routes/team/index.tsx": "2de6d460 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "c501d393 kit",

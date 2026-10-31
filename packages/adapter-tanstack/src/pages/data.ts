@@ -313,7 +313,9 @@ const getActivity = createServerFn()
       .all();
     const { lines, people } = describeActivity(rows);
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
-    return { lines, people, actions };
+    // The models by label, for the filter (the labels live on the server with the lines).
+    const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
+    return { lines, people, actions, models };
   });
 
 const forget = createServerFn({ method: "POST" })
@@ -336,7 +338,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  validateSearch: filters,
 });
 
 function ActivityPage() {
-  const { lines, people, actions } = Route.useLoaderData();
+  const { lines, people, actions, models } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const router = useRouter();
@@ -347,7 +349,7 @@ function ActivityPage() {
         lines={lines}
         filters={search}
         people={people}
-        models={Object.entries(LABELS).map(([name, label]) => ({ name, label }))}
+        models={models}
         actions={actions}${targets.length ? `\n        targets={${JSON.stringify(targets)}}` : ""}
         app={app}
         onFilter={(next) => navigate({ to: ${JSON.stringify(route)}, search: next, replace: true, resetScroll: false })}

@@ -574,6 +574,8 @@ try {
   await step(
     "a click in the preview opens the page in the same document, never a new load (the white flash)",
     async () => {
+      // The CRM starts on its overview (look-gap §4): the customers first.
+      await openPreview("/customers");
       const frame = await (
         await page.locator('iframe[title="App preview"]').elementHandle()
       )?.contentFrame();
