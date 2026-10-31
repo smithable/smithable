@@ -574,8 +574,11 @@ try {
   await step(
     "a click in the preview opens the page in the same document, never a new load (the white flash)",
     async () => {
-      // The CRM starts on its overview (look-gap §4): the customers first.
+      // The CRM starts on its overview (look-gap §4): the customers first, ready for a click.
       await openPreview("/customers");
+      await preview
+        .locator('body[data-hydrated="true"]')
+        .waitFor({ state: "attached", timeout: 30000 * P });
       const frame = await (
         await page.locator('iframe[title="App preview"]').elementHandle()
       )?.contentFrame();
@@ -1925,7 +1928,14 @@ try {
         .getByText("Added a contact section to the Home page")
         .first()
         .waitFor({ timeout: 60000 * P });
-      await openPreview("/");
+      // The CRM's overview holds "/" (look-gap §4), so the landing page is at /home: a new route,
+      // asked for again until the dev server has made it.
+      const landed = preview.getByRole("heading", { name: "Acme CRM", level: 1 });
+      for (let i = 0; i < 20; i++) {
+        await openPreview("/home");
+        if (await landed.isVisible().catch(() => false)) break;
+        await page.waitForTimeout(1500 * P);
+      }
       await preview
         .getByRole("heading", { name: "Acme CRM", level: 1 })
         .waitFor({ timeout: 60000 * P });
