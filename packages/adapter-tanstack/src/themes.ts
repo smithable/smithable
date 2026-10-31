@@ -179,7 +179,7 @@ const noise = (frequency: string, opacity: number) =>
 const TEXTURE = { none: "none", grain: noise("0.9", 0.09), paper: noise("0.035 0.5", 0.07) };
 
 /** A colour's hue as HSL and CSS's hue-rotate count it, in degrees. */
-function hslHue([r, g, b]: readonly number[]): number {
+function hslHue([r, g, b]: readonly [number, number, number]): number {
   const max = Math.max(r, g, b);
   const span = max - Math.min(r, g, b);
   if (span === 0) return 0;
