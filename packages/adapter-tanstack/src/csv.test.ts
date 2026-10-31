@@ -18,3 +18,13 @@ test("a cell is quoted when it must be, and a formula is written as text, a numb
   expect(cell("-2+3")).toBe("'-2+3");
   expect(cell(" =1+1")).toBe("' =1+1");
 });
+
+test("an export cut at the cap says so in its name; the file stays a table, its header first", async () => {
+  const { csvName } = (await import(path)) as {
+    csvName(ui: { pluralLabel: string }, cut?: { shown: number; total: number }): string;
+  };
+  expect(csvName({ pluralLabel: "Follow ups" })).toBe("follow-ups.csv");
+  expect(csvName({ pluralLabel: "Customers" }, { shown: 10000, total: 14200 })).toBe(
+    "customers-10000-of-14200.csv",
+  );
+});

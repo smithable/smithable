@@ -67,11 +67,18 @@ export function webpSize(bytes: Uint8Array): { width: number; height: number } |
   return undefined;
 }
 
-/** Stores a picture sent by a browser under `model/`, and returns what the record keeps of it. */
-export function savePicture(model: string, bytes: Uint8Array, alt: string): Picture {
+/**
+ * Stores a picture sent by a browser under `model/`, and returns what the record keeps of it. The
+ * browser scales a picture to PICTURE_MAX_SIDE before sending; the server holds what is sent to the
+ * same on either side (a small file can still decode to a huge image). The app's own
+ * sample pictures (`ours`) are not sent by anyone.
+ */
+export function savePicture(model: string, bytes: Uint8Array, alt: string, ours = false): Picture {
   if (bytes.length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
   const size = webpSize(bytes);
   if (!size || size.width < 1 || size.height < 1) throw new BadPicture(w.pictureKinds);
+  if (!ours && (size.width > PICTURE_MAX_SIDE || size.height > PICTURE_MAX_SIDE))
+    throw new BadPicture(w.pictureTooWide(PICTURE_MAX_SIDE));
   const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 24);
   const file = `${model}/${hash}.webp`;
   mkdirSync(join(uploadsDir(), model), { recursive: true });
@@ -132,7 +139,7 @@ export function samplePicture(
   const source = join("public", "images", "samples", name);
   if (!existsSync(source)) return null;
   const bytes = readFileSync(source);
-  const picture = savePicture(model, bytes, alt);
+  const picture = savePicture(model, bytes, alt, true);
   const path = join(uploadsDir(), picture.file);
   if (!existsSync(path)) copyFileSync(source, path);
   return generated ? { ...picture, generated: true } : picture;
@@ -247,15 +254,25 @@ function storedBytes(): number {
 /**
  * Whether `bytes` more fit the app's storage: UPLOADS_MAX_BYTES, when set (the hosted service sets
  * it by plan), is the most all stored files together may take; unset, there is no limit. Counted
- * before anything is stored.
+ * before anything is stored, and held for the upload, so two at once cannot both take the last
+ * room; an upload refused or failed gives it back (release).
  */
 export function roomFor(bytes: number): boolean {
   const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
   if (!max) return true;
+  // A length that is not one (a header made up) holds nothing and is refused.
+  if (!Number.isFinite(bytes) || bytes < 0) return false;
   if (storedBytes() + bytes > max) return false;
   const kept = counted.get(uploadsDir());
   if (kept) kept.bytes += bytes;
   return true;
+}
+
+/** Gives back what roomFor held for an upload that was refused or failed. */
+export function release(bytes: number): void {
+  if (!Number.isFinite(bytes) || bytes <= 0) return;
+  const kept = counted.get(uploadsDir());
+  if (kept) kept.bytes = Math.max(0, kept.bytes - bytes);
 }
 
 /** Stores a document sent by a browser under `model/`, and returns what the record keeps of it. */

@@ -8591,6 +8591,7 @@ import {
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
   type Picture,
+  release,
   roomFor,
   type StoredFile,
   saveFile,
@@ -8626,20 +8627,27 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           // The app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
-          if (!roomFor(Number(request.headers.get("content-length") ?? 0))) throw new BadInput("There is no room left for files in this app.");
-          const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
+          const held = Number(request.headers.get("content-length") ?? 0);
+          if (!roomFor(held)) throw new BadInput("There is no room left for files in this app.");
           let stored: unknown;
+          // The room held is given back when the file is refused or cannot be stored.
           try {
-            await scanned(bytes);
+            const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
+            try {
+              await scanned(bytes);
+            } catch (error) {
+              if (error instanceof BadFile) throw new BadInput(error.message);
+              throw error;
+            }
+            const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
+            try {
+              stored = field.kind === "file" ? saveFile("note", bytes, named("x-file-name")) : savePicture("note", bytes, named("x-alt"));
+            } catch (error) {
+              if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
+              throw error;
+            }
           } catch (error) {
-            if (error instanceof BadFile) throw new BadInput(error.message);
-            throw error;
-          }
-          const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
-          try {
-            stored = field.kind === "file" ? saveFile("note", bytes, named("x-file-name")) : savePicture("note", bytes, named("x-alt"));
-          } catch (error) {
-            if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
+            release(held);
             throw error;
           }
           const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, "note", params.field, (stored as { file: string }).file) };
@@ -10104,7 +10112,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -10121,14 +10129,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
@@ -10140,11 +10148,11 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4d49d3f kit",
+  "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -10169,7 +10177,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "f102d4bb generated",
   "src/routes/admin/tasks/new.tsx": "f44c470d generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "891d1105 generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "b9f75a6b generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
@@ -10181,7 +10189,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
   "src/routes/api/v1/tasks[.]csv.ts": "dace99ee generated",
-  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
+  "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -14589,7 +14597,7 @@ function AppointmentsPage() {
         page="appointments"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/appointments", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchAppointments({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchAppointments({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
@@ -14876,7 +14884,7 @@ function BarbersPage() {
         page="barbers"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/barbers", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listBarbers({ data: { all: true } })).rows}
+        exportRows={async () => (await listBarbers({ data: { all: true } }))}
         rows={rows}
         icon={List}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -15309,7 +15317,7 @@ function ServicesPage() {
         page="services"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/services", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listServices({ data: { all: true } })).rows}
+        exportRows={async () => (await listServices({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -15691,7 +15699,7 @@ function TimeOffPage() {
         page="time-off"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/time-off", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listTimeOffs({ data: { all: true } })).rows}
+        exportRows={async () => (await listTimeOffs({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -16252,7 +16260,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -16267,18 +16275,18 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.server.ts": "a6605de1 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -16288,10 +16296,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/slots.ts": "911e04a7 kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4d49d3f kit",
+  "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -16304,13 +16312,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "bd3451f4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/appointments/$id.tsx": "4d088ddc generated",
-  "src/routes/appointments/index.tsx": "12dbcdff generated",
+  "src/routes/appointments/index.tsx": "b792fc3c generated",
   "src/routes/appointments/new.tsx": "8c0370e1 generated",
   "src/routes/barbers/$id.tsx": "a8ba804e generated",
-  "src/routes/barbers/index.tsx": "9a49a0b9 generated",
+  "src/routes/barbers/index.tsx": "92601020 generated",
   "src/routes/barbers/new.tsx": "13d2e8ac generated",
   "src/routes/day/index.tsx": "782a4b6c generated",
-  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
+  "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
@@ -16318,12 +16326,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/privacy/index.tsx": "e303f9ed generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "9f29cc8a generated",
-  "src/routes/services/index.tsx": "930745df generated",
+  "src/routes/services/index.tsx": "0a1e0d7e generated",
   "src/routes/services/new.tsx": "b24c44de generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/time-off/$id.tsx": "27fcb010 generated",
-  "src/routes/time-off/index.tsx": "2cac7bcc generated",
+  "src/routes/time-off/index.tsx": "8f217fa1 generated",
   "src/routes/time-off/new.tsx": "be2eaa7b generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "ea364037 kit",
@@ -26297,7 +26305,7 @@ function ClassTypesPage() {
         page="class-types"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/class-types", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchClassTypes({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchClassTypes({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No class types match the search and filters." : undefined}
@@ -26650,7 +26658,7 @@ function InstructorsPage() {
         page="instructors"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/instructors", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listInstructors({ data: { all: true } })).rows}
+        exportRows={async () => (await listInstructors({ data: { all: true } }))}
         rows={rows}
         icon={Users}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -26877,7 +26885,7 @@ function MessagesPage() {
         page="messages"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/messages", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listMessages({ data: { all: true } })).rows}
+        exportRows={async () => (await listMessages({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -27129,7 +27137,7 @@ function MyBookingsPage() {
         page="my-bookings"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/my-bookings", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listBookings({ data: { all: true } })).rows}
+        exportRows={async () => (await listBookings({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -27393,7 +27401,7 @@ function PostsPage() {
         page="posts"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/posts", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchPosts({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchPosts({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         icon={BookOpen}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -27859,7 +27867,7 @@ function SessionsPage() {
         page="sessions"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/sessions", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchSessions({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchSessions({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         sorting={{ keys: { startsAt: "startsAt", capacity: "capacity" }, value: sort, onChange: (next) => navigate({ to: "/sessions", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -28679,7 +28687,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -28698,7 +28706,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -28706,11 +28714,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.server.ts": "a6605de1 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -28720,11 +28728,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4d49d3f kit",
+  "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -28761,31 +28769,31 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/blog/$address.tsx": "16febad1 generated",
   "src/routes/blog/index.tsx": "6b23ad22 generated",
   "src/routes/class-types/$id.tsx": "e5b41057 generated",
-  "src/routes/class-types/index.tsx": "fca9fe3b generated",
+  "src/routes/class-types/index.tsx": "5413ca6e generated",
   "src/routes/class-types/new.tsx": "e9189dbc generated",
-  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
+  "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "02564f4f generated",
   "src/routes/instructors/$id.tsx": "1105deb4 generated",
-  "src/routes/instructors/index.tsx": "dfac8649 generated",
+  "src/routes/instructors/index.tsx": "6b4a8754 generated",
   "src/routes/instructors/new.tsx": "891761b2 generated",
   "src/routes/messages/$id.tsx": "9d1f9c82 generated",
-  "src/routes/messages/index.tsx": "e4a7b8f3 generated",
+  "src/routes/messages/index.tsx": "f545eefe generated",
   "src/routes/messages/new.tsx": "a8afc6f6 generated",
   "src/routes/my-bookings/$id.tsx": "25f5ed59 generated",
   "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
-  "src/routes/my-bookings/index.tsx": "b344332d generated",
+  "src/routes/my-bookings/index.tsx": "81c5b040 generated",
   "src/routes/my-bookings/new.tsx": "ea212364 generated",
   "src/routes/posts/$id.tsx": "0c9830f3 generated",
-  "src/routes/posts/index.tsx": "759433b7 generated",
+  "src/routes/posts/index.tsx": "4d50049a generated",
   "src/routes/posts/new.tsx": "92730a59 generated",
   "src/routes/privacy/index.tsx": "edd7628a generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "c6c8aa5a generated",
   "src/routes/sessions/$id.tsx": "b79fc3e3 generated",
-  "src/routes/sessions/index.tsx": "5ba7e89f generated",
+  "src/routes/sessions/index.tsx": "cabe091a generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
@@ -35376,7 +35384,7 @@ function CustomersPage() {
         page="customers"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/customers", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchCustomers({ data: { q, all: true } })).rows}
+        exportRows={async () => (await searchCustomers({ data: { q, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q ? \`No customers match “\${q}”.\` : undefined}
@@ -35709,7 +35717,7 @@ function FollowUpsPage() {
         page="followUps"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/follow-ups", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchFollowUps({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchFollowUps({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No follow ups match the search and filters." : undefined}
@@ -36087,7 +36095,7 @@ function OrdersPage() {
         page="orders"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No orders match the search and filters." : undefined}
@@ -37219,7 +37227,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -37236,7 +37244,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -37244,7 +37252,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
@@ -37257,7 +37265,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -37272,17 +37280,17 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "d8d2768e generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "c8c34df2 generated",
-  "src/routes/customers/index.tsx": "67986234 generated",
+  "src/routes/customers/index.tsx": "6429a9ff generated",
   "src/routes/customers/new.tsx": "630db072 generated",
   "src/routes/customers/trash.tsx": "732d5013 generated",
   "src/routes/follow-ups/$id.tsx": "9fa97b96 generated",
-  "src/routes/follow-ups/index.tsx": "25525437 generated",
+  "src/routes/follow-ups/index.tsx": "bf444206 generated",
   "src/routes/follow-ups/new.tsx": "ca6bd493 generated",
   "src/routes/follow-ups/trash.tsx": "363b8042 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "b027dccb generated",
   "src/routes/orders/$id.tsx": "06572473 generated",
-  "src/routes/orders/index.tsx": "370dfed8 generated",
+  "src/routes/orders/index.tsx": "c75b4ee3 generated",
   "src/routes/orders/new.tsx": "ffa48b2d generated",
   "src/routes/orders/trash.tsx": "1f4e80bb generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -43952,7 +43960,7 @@ function ClientsPage() {
         page="clients"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/clients", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listClients({ data: { all: true } })).rows}
+        exportRows={async () => (await listClients({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -44218,7 +44226,7 @@ function InvoiceLinesPage() {
         page="invoice-lines"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/invoice-lines", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listInvoiceLines({ data: { all: true } })).rows}
+        exportRows={async () => (await listInvoiceLines({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -44557,7 +44565,7 @@ function InvoicesPage() {
         page="invoices"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/invoices", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchInvoices({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchInvoices({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
@@ -45579,7 +45587,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "aae45ddd kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -45599,7 +45607,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -45607,11 +45615,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.server.ts": "a6605de1 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -45621,11 +45629,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4d49d3f kit",
+  "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -45639,18 +45647,18 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/__root.tsx": "566c0853 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "350b3d17 generated",
-  "src/routes/clients/index.tsx": "0ab3c03f generated",
+  "src/routes/clients/index.tsx": "88267874 generated",
   "src/routes/clients/new.tsx": "0909bfea generated",
-  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
+  "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "44f38eee generated",
   "src/routes/invoice-lines/$id.tsx": "8b97d0fe generated",
-  "src/routes/invoice-lines/index.tsx": "49077b68 generated",
+  "src/routes/invoice-lines/index.tsx": "0e5568f7 generated",
   "src/routes/invoice-lines/new.tsx": "10f86141 generated",
   "src/routes/invoices/$id.tsx": "dc083f5d generated",
-  "src/routes/invoices/index.tsx": "89980771 generated",
+  "src/routes/invoices/index.tsx": "ad5e4c30 generated",
   "src/routes/invoices/new.tsx": "c0f53eab generated",
   "src/routes/overview/index.tsx": "5d1fd6ad generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
@@ -51545,7 +51553,7 @@ function DishesPage() {
         page="dishes"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/dishes", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchDishes({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchDishes({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         icon={List}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -52034,7 +52042,7 @@ function OrdersPage() {
         page="orders"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         sorting={{ keys: { wanted: "wanted" }, value: sort, onChange: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -52500,7 +52508,7 @@ function StopsPage() {
         page="stops"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/stops", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listStops({ data: { all: true } })).rows}
+        exportRows={async () => (await listStops({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -53450,7 +53458,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "61bb9677 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
@@ -53466,7 +53474,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -53474,11 +53482,11 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/hours.ts": "fac9ba0f kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.server.ts": "a6605de1 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -53488,10 +53496,10 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/sequence.server.ts": "89a0dd0d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4d49d3f kit",
+  "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -53504,21 +53512,21 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/__root.tsx": "c9b7fba0 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/dishes/$id.tsx": "a8c9781d generated",
-  "src/routes/dishes/index.tsx": "eb035ee3 generated",
+  "src/routes/dishes/index.tsx": "2d7af028 generated",
   "src/routes/dishes/new.tsx": "3ac97d16 generated",
-  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
+  "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "3c987813 generated",
   "src/routes/orders/$id.tsx": "aa89b4ac generated",
-  "src/routes/orders/index.tsx": "576b775a generated",
+  "src/routes/orders/index.tsx": "d2c09903 generated",
   "src/routes/orders/new.tsx": "387f341c generated",
   "src/routes/robots[.]txt.ts": "bcbf1851 generated",
   "src/routes/sign-in.tsx": "7572bbad generated",
   "src/routes/sitemap[.]xml.ts": "7259ffa4 generated",
   "src/routes/stops/$id.tsx": "893f7544 generated",
-  "src/routes/stops/index.tsx": "b9c7a2c9 generated",
+  "src/routes/stops/index.tsx": "4e65d858 generated",
   "src/routes/stops/new.tsx": "1a880670 generated",
   "src/routes/team/activity.tsx": "d3324158 generated",
   "src/routes/team/index.tsx": "1eadada7 generated",
@@ -56874,7 +56882,7 @@ function CatalogPage() {
         page="catalog"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, view, f: values, all: true } })).rows}
+        exportRows={async () => (await searchItems({ data: { q, sort, view, f: values, all: true } }))}
         rows={rows}
         sorting={{ keys: { price: "price" }, value: sort, onChange: (next) => navigate({ to: "/", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         icon={Package}
@@ -57080,7 +57088,7 @@ function MyItemsPage() {
         page="myItems"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/my-items", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         icon={Package}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -57477,7 +57485,7 @@ function SavedPage() {
         page="saved"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/saved", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         icon={Package}
         saved={{ ids: saved, onToggle: toggleSaved }}
@@ -58229,7 +58237,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -58246,7 +58254,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -58254,7 +58262,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
@@ -58266,11 +58274,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4d49d3f kit",
+  "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
@@ -58284,20 +58292,20 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "1054f6cd generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
+  "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "24ab9545 generated",
+  "src/routes/index.tsx": "17e220ca generated",
   "src/routes/my-items/$id.tsx": "c0ced6db generated",
-  "src/routes/my-items/index.tsx": "9a927b2e generated",
+  "src/routes/my-items/index.tsx": "fc3668e1 generated",
   "src/routes/my-items/new.tsx": "0a1bdc48 generated",
   "src/routes/new.tsx": "e97af4c3 generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "e17b4654 generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
   "src/routes/saved/$id.tsx": "9841a3f1 generated",
-  "src/routes/saved/index.tsx": "5a3f02fe generated",
+  "src/routes/saved/index.tsx": "35ba6401 generated",
   "src/routes/saved/new.tsx": "0e0d8106 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
@@ -61085,7 +61093,7 @@ function ItemsPage() {
         page="items"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/items", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No items match the search and filters." : undefined}
@@ -61727,7 +61735,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -61742,7 +61750,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -61750,7 +61758,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
@@ -61763,7 +61771,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -61779,7 +61787,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "9e421604 generated",
   "src/routes/items/$id.tsx": "001d1444 generated",
-  "src/routes/items/index.tsx": "65ad657b generated",
+  "src/routes/items/index.tsx": "c27ee898 generated",
   "src/routes/items/new.tsx": "53354ad2 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
@@ -70855,7 +70863,7 @@ function ComponentsPage() {
         page="components"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/components", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listComponents({ data: { all: true } })).rows}
+        exportRows={async () => (await listComponents({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -71409,7 +71417,7 @@ function IncidentsPage() {
         page="incidents"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/incidents", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchIncidents({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchIncidents({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
@@ -71889,7 +71897,7 @@ function MaintenancePage() {
         page="maintenance"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/maintenance", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listMaintenances({ data: { all: true } })).rows}
+        exportRows={async () => (await listMaintenances({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -72747,7 +72755,7 @@ function UpdatesPage() {
         page="updates"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/updates", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listIncidentUpdates({ data: { all: true } })).rows}
+        exportRows={async () => (await listIncidentUpdates({ data: { all: true } }))}
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -73360,7 +73368,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
@@ -73378,7 +73386,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -73386,7 +73394,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
@@ -73400,7 +73408,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -73422,18 +73430,18 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/components/$id.tsx": "2a8547fc generated",
-  "src/routes/components/index.tsx": "d167b8eb generated",
+  "src/routes/components/index.tsx": "a38a961a generated",
   "src/routes/components/new.tsx": "bb94e5ee generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "186434ab generated",
   "src/routes/history/index.tsx": "e6010bcb generated",
   "src/routes/incidents/$id.tsx": "345c12e1 generated",
-  "src/routes/incidents/index.tsx": "df2fa48e generated",
+  "src/routes/incidents/index.tsx": "3ac9f65d generated",
   "src/routes/incidents/new.tsx": "f59ca175 generated",
   "src/routes/incoming/chatCommand.ts": "3ab76b77 generated",
   "src/routes/index.tsx": "48f412ae generated",
   "src/routes/maintenance/$id.tsx": "dd96b09a generated",
-  "src/routes/maintenance/index.tsx": "f02390a2 generated",
+  "src/routes/maintenance/index.tsx": "a4a3d3b1 generated",
   "src/routes/maintenance/new.tsx": "288cada3 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "35181282 generated",
@@ -73443,7 +73451,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/team/activity.tsx": "c5f9047a generated",
   "src/routes/team/index.tsx": "f53943cc generated",
   "src/routes/updates/$id.tsx": "6f71d0c0 generated",
-  "src/routes/updates/index.tsx": "544b43a8 generated",
+  "src/routes/updates/index.tsx": "26d02735 generated",
   "src/routes/updates/new.tsx": "9bff0965 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "ea364037 kit",
@@ -79158,7 +79166,7 @@ function CasesPage() {
         page="cases"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/cases", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchSupportCases({ data: { q, sort, f: values, all: true } })).rows}
+        exportRows={async () => (await searchSupportCases({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
         sorting={{ keys: { priority: "priority" }, value: sort, onChange: (next) => navigate({ to: "/cases", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -80411,7 +80419,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "9a557d08 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
-  "src/kit/ModelTable.tsx": "fee742a4 kit",
+  "src/kit/ModelTable.tsx": "a36a050f kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "bc0d2fd1 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -80429,7 +80437,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "3db5c78a kit",
+  "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "48ab6eb7 kit",
@@ -80437,11 +80445,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
-  "src/kit/mail.ts": "db90c965 kit",
+  "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "f5c1c07c kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "dce958a2 kit",
+  "src/kit/outgoing.server.ts": "a6605de1 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
@@ -80451,11 +80459,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4d49d3f kit",
+  "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "53be3b2c kit",
+  "src/kit/words/en.ts": "4bc7eae6 kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",
@@ -80469,9 +80477,9 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "b42589d4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "c5ea4e91 generated",
-  "src/routes/cases/index.tsx": "f7f09d40 generated",
+  "src/routes/cases/index.tsx": "b69a56eb generated",
   "src/routes/cases/new.tsx": "2360043b generated",
-  "src/routes/files/$model.$field.ts": "9bcaa091 kit",
+  "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",

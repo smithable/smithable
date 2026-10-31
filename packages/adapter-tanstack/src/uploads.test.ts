@@ -7,6 +7,9 @@ const kit = (await import(path)) as {
   pictureTag(picture: { file: string }): string;
   fileKind(bytes: Uint8Array, name: string): { ext: string; type: string } | undefined;
   fileHeaders(stored: { file: string; name: string; type: string }): Record<string, string>;
+  savePicture(model: string, bytes: Uint8Array, alt: string, ours?: boolean): unknown;
+  roomFor(bytes: number): boolean;
+  release(bytes: number): void;
 };
 
 /** A ZIP archive of stored entries (no compression), with its central directory and end record. */
@@ -89,6 +92,33 @@ test("a WebP's size comes from its header, lossy, lossless or extended", () => {
   expect(kit.webpSize(webp("ALPH", new Array(20).fill(0)))).toBeUndefined();
 });
 
+test("a picture sent wider or taller than the browser makes them is refused by the server (the review, 2026-10-30)", () => {
+  // Extended headers: 24-bit width-1 and height-1; a small file, a huge image.
+  const sized = (width: number, height: number) =>
+    webp("VP8X", [
+      0,
+      0,
+      0,
+      0,
+      (width - 1) & 255,
+      ((width - 1) >> 8) & 255,
+      ((width - 1) >> 16) & 255,
+      (height - 1) & 255,
+      ((height - 1) >> 8) & 255,
+      ((height - 1) >> 16) & 255,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+    ]);
+  expect(() => kit.savePicture("post", sized(1601, 900), "")).toThrow(/1600 pixels/);
+  expect(() => kit.savePicture("post", sized(900, 16000), "")).toThrow(/1600 pixels/);
+  // Not a picture at all: the kinds it takes.
+  expect(() => kit.savePicture("post", new Uint8Array([1, 2, 3]), "")).toThrow(/JPEG, PNG/);
+});
+
 test("a picture's tag is the content hash in its file name", () => {
   expect(kit.pictureTag({ file: "post/0123456789abcdef01234567.webp" })).toBe(
     '"0123456789abcdef01234567"',
@@ -156,4 +186,21 @@ test("a PDF opens in the browser, a document downloads, and neither can run anyt
   });
   expect(claimed["Content-Type"]).toBe("text/plain; charset=utf-8");
   expect(claimed["Content-Disposition"]).toMatch(/^attachment;/);
+});
+
+test("room held for an upload stops a second one, and an upload refused gives it back (the review, 2026-10-30)", () => {
+  const before = process.env.UPLOADS_MAX_BYTES;
+  process.env.UPLOADS_MAX_BYTES = "100";
+  try {
+    expect(kit.roomFor(60)).toBe(true);
+    // Two at once: the second does not fit beside what the first holds.
+    expect(kit.roomFor(60)).toBe(false);
+    // The first was refused (a wrong kind, a scan): its room comes back.
+    kit.release(60);
+    expect(kit.roomFor(60)).toBe(true);
+    kit.release(60);
+  } finally {
+    if (before === undefined) delete process.env.UPLOADS_MAX_BYTES;
+    else process.env.UPLOADS_MAX_BYTES = before;
+  }
 });

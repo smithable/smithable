@@ -129,6 +129,8 @@ export const w = {
   errorTitle: "Something went wrong",
   everyone: "Everyone",
   exportCsv: "Export CSV",
+  exportedSome: (shown: number, total: number) =>
+    `Exported ${shown.toLocaleString("en")} of ${total.toLocaleString("en")} matching records`,
   fieldsMarked: "Fields marked",
   fileKinds: "Choose a PDF, a document, a spreadsheet, a text or a picture.",
   fileNotAdded: "The file could not be added.",
@@ -264,6 +266,8 @@ export const w = {
   pictureNotRead: "The picture could not be read.",
   pictureRefused: "The picture was refused.",
   pictureTooLarge: "The picture is too large (at most 1 MB).",
+  pictureTooWide: (side: number) =>
+    `The picture is too large (at most ${side} pixels on its longest side).`,
   preview: "Preview",
   previous: "Previous",
   previousPicture: "Previous picture",
