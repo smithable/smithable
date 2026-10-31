@@ -109,7 +109,26 @@ const editSpec: Operation<{
       if (value === null) {
         if (!editor.has(at)) throw new OperationError(`${path.join(".")} is not in ${file}.`);
         editor.remove(at);
-      } else editor.set(at, value as YamlValue);
+      } else if (editor.has(at)) editor.set(at, value as YamlValue);
+      else {
+        // A key the part does not have yet is added under its parent, which must be a mapping
+        // there is (a form writing a merge's fields or a split's move for the first time), so the
+        // entry's comments and its neighbours stay as they are. The first missing part of the
+        // path is named; a list takes no item by path, and a scalar takes no key.
+        const parent = at.slice(0, -1);
+        for (let i = 1; i <= parent.length; i++)
+          if (!editor.has(parent.slice(0, i)))
+            throw new OperationError(`${parent.slice(0, i).join(".")} is not in ${file}.`);
+        const node = parent.length ? editor.get(parent) : editor.get([]);
+        const key = path[path.length - 1];
+        if (typeof key !== "string" || Array.isArray(node))
+          throw new OperationError(
+            `${parent.join(".") || file} is a list; a path adds no item to it.`,
+          );
+        if (node === null || typeof node !== "object")
+          throw new OperationError(`${parent.join(".")} is a value, not a part with keys.`);
+        editor.add(parent, key, value as YamlValue);
+      }
       // A stored field lost with the part is a migration's, as with the whole text.
       return file === "smithable.yml" ? removedFields(ir, editors.spec.text) : [];
     }

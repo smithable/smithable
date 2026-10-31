@@ -446,6 +446,75 @@ test("setMine makes a page list only the viewer's own records, and back", () => 
   expect(apply("setMine", ["nowhere"])).toMatchObject({ ok: false });
 });
 
+test("editSpec with a path adds a key the part lacks under its parent, keeping the comment; a missing parent is refused", () => {
+  const added = applyOperation(files, "editSpec", {
+    path: ["actions", "mergeCustomers", "fields"],
+    value: { notes: "append" },
+  });
+  expect(added).toMatchObject({ ok: true, destructive: false });
+  const spec = (r: ReturnType<typeof applyOperation>) => (r.ok ? r.files.spec : "");
+  expect(spec(added)).toContain("# two customers become one");
+  expect(spec(added)).toMatch(/\n {4}fields:\n {6}notes: append\n/);
+  const again = applyOperation(added.ok ? added.files : files, "editSpec", {
+    path: ["actions", "mergeCustomers", "fields"],
+    value: { notes: "keep" },
+  });
+  expect(again).toMatchObject({ ok: true });
+  expect(spec(again)).toContain("notes: keep");
+  expect(spec(again)).not.toContain("notes: append");
+  expect(
+    applyOperation(files, "editSpec", { path: ["actions", "nobody", "fields"], value: {} }),
+  ).toMatchObject({
+    ok: false,
+    message: "actions.nobody is not in smithable.yml.",
+  });
+  // The first missing part is named, however deep the path goes.
+  expect(
+    applyOperation(files, "editSpec", {
+      path: ["actions", "nobody", "fields", "notes"],
+      value: "keep",
+    }),
+  ).toMatchObject({ ok: false, message: "actions.nobody is not in smithable.yml." });
+  // A scalar takes no key, a list no item by path.
+  expect(
+    applyOperation(files, "editSpec", {
+      path: ["actions", "mergeCustomers", "merge", "x"],
+      value: 1,
+    }),
+  ).toMatchObject({
+    ok: false,
+    message: "actions.mergeCustomers.merge is a value, not a part with keys.",
+  });
+  expect(
+    applyOperation(files, "editSpec", {
+      path: ["actions", "scheduleFollowUps", "rules", 7],
+      value: "x",
+    }),
+  ).toMatchObject({
+    ok: false,
+    message: "actions.scheduleFollowUps.rules is a list; a path adds no item to it.",
+  });
+  // A key among siblings keeps them and their comments; a top-level key goes under the root.
+  const touched = applyOperation(files, "editSpec", {
+    path: ["actions", "scheduleFollowUps", "touches"],
+    value: { reads: ["Customer"] },
+  });
+  expect(touched).toMatchObject({ ok: true });
+  expect(spec(touched)).toContain("The first note is due today");
+  expect(spec(touched)).toContain("intent: Plan a series of follow-up notes");
+  expect(spec(touched)).toMatch(
+    /touches:\n {6}reads: \[Customer\]|touches: \{ reads: \[Customer\] \}|touches:\n {6}reads:\n {8}- Customer/,
+  );
+  // A top-level key goes under the root: the add happens, and what refuses here is validation
+  // of the value (an empty timers mapping is none), not "timers is not in smithable.yml".
+  const top = applyOperation(files, "editSpec", { path: ["timers"], value: {} });
+  expect(top).toMatchObject({
+    ok: false,
+    message: "editSpec would make smithable.yml invalid.",
+    diagnostics: [{ message: '"timers" must be a mapping of keys to values.' }],
+  });
+});
+
 test("editSpec replaces the spec; removing a stored field is destructive; broken YAML is refused", () => {
   const added = applyOperation(files, "editSpec", {
     text: files.spec.replace("      notes: text\n", "      notes: text\n      website: url\n"),
