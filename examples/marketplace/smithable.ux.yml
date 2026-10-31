@@ -8,6 +8,6 @@ pages:
   home:
     sections:
       hero: { layout: stage, stage: catalog }   # the catalog itself beside the headline (look-breadth §3)
-      latest: { layout: grid, columns: 3, band: muted }   # the like-new items' pictures, two rows of three
+      latest: { layout: grid, columns: 4, band: muted }   # the like-new items' pictures, a row of four
   catalog:
     table: { view: cards }
