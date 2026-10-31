@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { contrast, hexOf } from "./color.js";
+import { contrast, hexOf, hexToRgb, rgbToOklch } from "./color.js";
 import { validateSpec } from "./spec.js";
 import {
   BUILT_IN_THEMES,
@@ -231,17 +231,21 @@ test("the other mode made from one mode keeps the hues, turns the lightness over
   expect(contrast(dark.foreground, dark.background)).toBeGreaterThan(10);
   expect(contrast(dark.primary, dark.background)).toBeGreaterThanOrEqual(3);
   expect(contrast(dark["primary-foreground"], dark.primary)).toBeGreaterThanOrEqual(4.5);
-  const [l] = ((hex: string) => {
-    const n = Number.parseInt(hex.slice(1), 16);
-    return [((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255)];
-  })(dark.background);
-  expect(l).toBeLessThan(3 * 70);
-  // An ink primary (stillwater's) turns to a pale one on dark paper, still its own text's colour.
+  const oklch = (hex: string) => rgbToOklch(hexToRgb(hex));
+  expect(oklch(dark.background)[0]).toBeLessThan(0.27);
+  expect(oklch(dark.foreground)[0]).toBeGreaterThan(0.88);
+  // The hues are kept: the paper's and the green's, within a few degrees.
+  const hue = (hex: string) => oklch(hex)[2];
+  const near = (x: number, y: number) => Math.min(Math.abs(x - y), 360 - Math.abs(x - y)) < 15;
+  expect(near(hue(dark.background), hue(forest.light.background))).toBe(true);
+  expect(near(hue(dark.primary), hue(forest.light.primary))).toBe(true);
+  // An ink primary (stillwater's) turns to a pale one on dark paper, with its own text reading on it.
   const ink = oppositeMode(
     { ...forest.light, primary: "#16181a", "primary-foreground": "#ffffff" } as Tokens,
     "light",
   );
   expect(contrast(ink.primary, ink.background)).toBeGreaterThanOrEqual(3);
+  expect(contrast(ink["primary-foreground"], ink.primary)).toBeGreaterThanOrEqual(4.5);
   // Back again from dark gives light paper and dark ink.
   const back = oppositeMode(dark, "dark");
   expect(contrast(back.foreground, back.background)).toBeGreaterThan(10);

@@ -257,8 +257,9 @@ function* hallmark(checkout) {
     }
     const { L: paperL } = oklch(paper);
     const mode = paperL < 0.5 ? "dark" : "light";
-    // The surfaces and the signal; the text on them our parser derives, so it reads (the
-    // catalog's muted text and second signal are often under the floor on our pairs).
+    // The surfaces and the signal with its own text (a designed pair); the other text colours
+    // our parser derives, so they read (the catalog's muted text and second signal are often
+    // under the floor on our pairs). A token the material lacks is left out, and derived.
     const tokensOut = {
       background: paper,
       foreground: ink,
@@ -307,9 +308,9 @@ function* hallmark(checkout) {
         duotone: "duotone",
         tint: "duotone",
       }[photo] ?? "natural";
-    const texture = /\bgrain|noise\b/i.test(material)
+    const texture = /\b(?:grain|noise)\b/i.test(material)
       ? "grain"
-      : /\bfibre|fiber|newsprint|riso|uncoated|laid paper\b/i.test(material)
+      : /\b(?:fibre|fiber|newsprint|riso|uncoated|laid paper)\b/i.test(material)
         ? "paper"
         : "none";
     const { C: accentC } = oklch(accent);
@@ -493,7 +494,7 @@ for (const entry of entries) {
   );
   if (weightProblem) {
     const [, low, high] = weightProblem.message.match(/goes from (\d+) to (\d+)/) ?? [];
-    const w = Math.min(Math.max(entry.headings.weight, Number(low)), Number(high));
+    const w = Math.min(Math.max(entry.headings.weight ?? 700, Number(low)), Number(high));
     text = themeText({ ...entry, headings: { ...entry.headings, weight: w } });
     ({ theme, diagnostics } = parseTheme(
       { path: `${entry.name}.yml`, text },

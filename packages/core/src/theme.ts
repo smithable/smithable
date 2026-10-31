@@ -466,10 +466,12 @@ export function deriveTokens(
  */
 export function oppositeMode(tokens: Tokens, from: Mode): Tokens {
   const to: Mode = from === "light" ? "dark" : "light";
+  // A colour at a lightness, its chroma capped, in the hue of another when that one has a hue
+  // (a neutral paper's hue is noise, so a tinted ink keeps its own then).
   const tinted = (hex: string, lightness: number, chromaCap: number, hueOf = hex) => {
-    const [, c] = rgbToOklch(hexToRgb(hexOf(hex)));
-    const [, , h] = rgbToOklch(hexToRgb(hexOf(hueOf)));
-    return gamutMap([lightness, Math.min(c, chromaCap), h]);
+    const [, c, own] = rgbToOklch(hexToRgb(hexOf(hex)));
+    const [, c2, h2] = rgbToOklch(hexToRgb(hexOf(hueOf)));
+    return gamutMap([lightness, Math.min(c, chromaCap), c2 >= 0.01 ? h2 : own]);
   };
   const [bgL] = rgbToOklch(hexToRgb(hexOf(tokens.background)));
   const [fgL] = rgbToOklch(hexToRgb(hexOf(tokens.foreground)));
@@ -490,6 +492,8 @@ export function oppositeMode(tokens: Tokens, from: Mode): Tokens {
   let primary = readable(hexOf(tokens.primary), background, away, 3);
   for (let i = 0; i < 40 && contrast(bestText(primary), primary) < 4.5; i++)
     primary = towards(primary, away, 0.1);
+  // A primary no step could settle (none so far) becomes the mode's text colour itself.
+  if (contrast(bestText(primary), primary) < 4.5) primary = away;
   return deriveTokens({ background, foreground, primary }, to);
 }
 
