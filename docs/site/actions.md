@@ -2,14 +2,14 @@
 
 A standard action is a button on a record's page that moves the record on: mark an invoice sent, resolve an incident, take over a customer. It needs no code. You say which records it applies to and what it changes, and Smithable generates the button, the server function that checks who may press it, and the tests.
 
-This page adds five actions to the invoicing starter and one to the CRM, each with the command and what it printed. Every example was run for real, and the app type-checked afterwards. Each command is one change, so `smithable undo` takes it back.
+This page adds four actions to the invoicing starter and one to the CRM, each with the command and what it printed. Every example was run for real, and the app type-checked afterwards. Each command is one change, so `smithable undo` takes it back.
 
 ```console
 $ smithable new books --starter invoicing
 $ cd books
 ```
 
-The starter already has two actions, **Mark sent** and **Mark paid**. You can see them in `smithable.yml`:
+The starter already has three actions, **Mark sent**, **Mark paid** and **Mark overdue**; the last is run by a timer a week after the due date, so it is not a button on the page. You can see them in `smithable.yml`:
 
 ```yaml
 actions:
@@ -22,14 +22,14 @@ actions:
 ## Set a field, under a condition
 
 ```console
-$ smithable op addAction markOverdue --on Invoice --when status=sent --set status=overdue
-Generated 100 files (5 changed, 0 removed).
-Add the standard action markOverdue. Undo with: smithable undo
+$ smithable op addAction reopen --on Invoice --when status=sent --set status=draft
+Generated 166 files (7 changed, 0 removed).
+Add the standard action reopen. Undo with: smithable undo
 ```
 
 `--on` names the model, `--when` says which records the button is for, and `--set` gives the new values. The button appears on the invoice page because Invoice has one list-and-record page; on any other invoice the server refuses the action ("This cannot be done now").
 
-![An invoice that has been sent, with the buttons Mark paid, Mark overdue, Postpone and Duplicate](actions/invoice-buttons.webp)
+![An invoice that has been sent, with the buttons Mark paid, Reopen, Postpone, and More, which holds Duplicate](actions/invoice-buttons.webp)
 
 A value can also be a formula, worked out on the record as it was: `--set "paidOn=TODAY()"`, or `--set "dueOn=DATEADD(dueOn, 14, \"day\")"`.
 
@@ -39,7 +39,7 @@ A field given no value is asked for when someone presses the button:
 
 ```console
 $ smithable op addAction postpone --on Invoice --when "status=sent | overdue" --set dueOn= --set status=sent
-Generated 102 files (5 changed, 0 removed).
+Generated 168 files (7 changed, 0 removed).
 Add the standard action postpone. Undo with: smithable undo
 ```
 
@@ -53,7 +53,7 @@ Add the standard action postpone. Undo with: smithable undo
 
 ```console
 $ smithable op addAction lateFee --on Invoice --when status=overdue --add "InvoiceLine.description=Late payment fee" --add InvoiceLine.unitPrice=25
-Generated 104 files (5 changed, 0 removed).
+Generated 170 files (7 changed, 0 removed).
 Add the standard action lateFee. Undo with: smithable undo
 ```
 
@@ -65,7 +65,7 @@ Pressing **Late fee** on an overdue invoice adds a line of 25.00, and the invoic
 
 ```console
 $ smithable op addAction duplicate --on Invoice --copy status=draft --copy "issuedOn=TODAY()" --copy number= --with lines
-Generated 106 files (5 changed, 0 removed).
+Generated 172 files (7 changed, 0 removed).
 Add the standard action duplicate. Undo with: smithable undo
 ```
 
@@ -79,7 +79,7 @@ Add the standard action duplicate. Undo with: smithable undo
 $ smithable new sales --starter crm
 $ cd sales
 $ smithable op addAction takeOver --on Customer --set "accountManager=ME()"
-Generated 88 files (5 changed, 0 removed).
+Generated 156 files (7 changed, 0 removed).
 Add the standard action takeOver. Undo with: smithable undo
 ```
 
@@ -108,12 +108,12 @@ After the four invoicing commands, `smithable.yml` has:
 
 ```yaml
 actions:
-  markOverdue:
+  reopen:
     on: Invoice
     when:
       status: sent
     set:
-      status: overdue
+      status: draft
   postpone:
     on: Invoice
     when:
@@ -138,7 +138,7 @@ actions:
     with: [lines]
 ```
 
-and the invoice page lists them: `actions: [markSent, markPaid, markOverdue, postpone, lateFee, duplicate]`.
+and the invoice page lists them: `actions: [markSent, markPaid, reopen, postpone, lateFee, duplicate]`.
 
 ## Change or remove one
 
@@ -149,8 +149,8 @@ $ smithable op setAction markPaid --when "status=sent | overdue"
 Change the condition of the action markPaid. Undo with: smithable undo
 $ smithable op setAction markSent --intent "The invoice has gone to the customer."
 Change the intent of the action markSent. Undo with: smithable undo
-$ smithable op removeAction markSent
-Remove the action markSent. Undo with: smithable undo
+$ smithable op removeAction reopen
+Remove the action reopen. Undo with: smithable undo
 ```
 
 A bare `--when` removes the condition, so the button is offered on every record; `--intent ""` removes the intent. `removeAction` takes the action off the pages that list it and out of what an API offers by name. For anything else (another model, what it adds or copies), remove the action and add it again.
