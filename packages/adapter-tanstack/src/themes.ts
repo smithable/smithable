@@ -1,7 +1,10 @@
 // src/theme.css: the theme's tokens (docs/design/look.md §3) as CSS variables the app kit's
 // styles use, with the brand color's changes on top and the ux file's density and motion.
 import {
+  hexOf,
+  hexToRgb,
   type Mode,
+  rgbToOklch,
   type ThemeIR,
   type Tokens,
   themeNamed,
@@ -108,6 +111,28 @@ const pageUx = (ux: UxIR, page: string): UxIR => ({
 export const bandedPage = (ux: UxIR, page: string, themes: readonly ThemeIR[] = []): boolean =>
   themeOf(pageUx(ux, page), themes).style.surfaces.sections === "banded";
 
+/**
+ * The faces with a true italic, by the file their package keeps it in (look-breadth.md §2): the
+ * app imports it beside the roman; the others fall back to the browser's slanted roman.
+ */
+const ITALICS: Record<string, string> = {
+  Inter: "wght-italic.css",
+  "Nunito Sans": "wght-italic.css",
+  "Source Sans 3": "wght-italic.css",
+  "Source Serif 4": "wght-italic.css",
+  Fraunces: "wght-italic.css",
+  "Archivo Narrow": "wght-italic.css",
+  "DM Sans": "wght-italic.css",
+  "Hanken Grotesk": "wght-italic.css",
+  "Instrument Sans": "wght-italic.css",
+  "Mona Sans": "wght-italic.css",
+  "Instrument Serif": "400-italic.css",
+  Newsreader: "wght-italic.css",
+  "Bodoni Moda": "wght-italic.css",
+  "Zilla Slab": "400-italic.css",
+  "JetBrains Mono": "wght-italic.css",
+};
+
 /** The pages with a theme of their own. */
 const themedPages = (ux: UxIR) =>
   Object.entries(ux.pages)
@@ -143,6 +168,50 @@ const DIVIDER = {
   none: "transparent",
 };
 const BUTTON_RADIUS = { rounded: "calc(var(--radius) - 2px)", pill: "9999px", square: "0" };
+/** The opacity of a glass card's tint: the least the contrast check reads text on (core theme.ts). */
+const GLASS = "65%";
+/**
+ * A quiet noise (grain) or a paper fibre (paper) over the page's surfaces: an SVG with a
+ * turbulence filter as the background image, so no file and no script (look-breadth.md §3).
+ */
+const noise = (frequency: string, opacity: number) =>
+  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="t"><feTurbulence type="fractalNoise" baseFrequency="${frequency}" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 ${opacity} 0"/></filter><rect width="100%" height="100%" filter="url(#t)"/></svg>`)}")`;
+const TEXTURE = { none: "none", grain: noise("0.9", 0.09), paper: noise("0.035 0.5", 0.07) };
+
+/** A colour's hue as HSL and CSS's hue-rotate count it, in degrees. */
+function hslHue([r, g, b]: readonly [number, number, number]): number {
+  const max = Math.max(r, g, b);
+  const span = max - Math.min(r, g, b);
+  if (span === 0) return 0;
+  const sector =
+    max === r ? ((g - b) / span) % 6 : max === g ? (b - r) / span + 2 : (r - g) / span + 4;
+  return (sector * 60 + 360) % 360;
+}
+
+/**
+ * What the theme does to every photograph, per mode: duotone washes the picture in the mode's
+ * primary (a grey picture toned, then turned to the primary's hue), the others are fixed filters.
+ */
+function pictureFilter(theme: ThemeIR, primary: string): string {
+  switch (theme.style.pictures.treatment) {
+    case "muted":
+      return "saturate(0.6) contrast(0.95)";
+    case "warm":
+      return "sepia(0.25) saturate(1.1)";
+    case "mono":
+      return "grayscale(1) contrast(1.05)";
+    case "duotone": {
+      // hue-rotate turns an RGB hue (the HSL angle), and sepia leaves a grey near 38 degrees of
+      // it; the rest is the turn to the primary's. A grey primary gives a grey picture.
+      const rgb = hexToRgb(hexOf(primary));
+      const grey = rgbToOklch(rgb)[1] < 0.02;
+      const turn = Math.round(hslHue(rgb) - 38);
+      return `grayscale(1) sepia(1) hue-rotate(${grey ? 0 : turn}deg) saturate(${grey ? 0 : 1.6}) contrast(1.05)`;
+    }
+    default:
+      return "none";
+  }
+}
 
 /**
  * A font and what stands in for it before it loads: a serif face falls back to a serif, a mono
@@ -173,8 +242,13 @@ const fontStack = (font: string) => {
 function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string> {
   const { style } = theme;
   const s = style.surfaces;
+  const glass = s.cards === "glass";
   return {
     "font-heading": fontStack(style.headingFont ?? bodyFont),
+    // Column labels, eyebrows, tags and small figures (labels: they follow the headings unsaid).
+    "font-labels": fontStack(style.labelsFont ?? bodyFont),
+    "label-case": style.labels.case === "upper" ? "uppercase" : "none",
+    "label-tracking": style.labels.tracking === "wide" ? "0.05em" : "normal",
     "heading-weight": String(style.headings.weight),
     "heading-tracking": TRACKING[style.headings.tracking],
     "heading-scale": SCALE[style.headings.scale],
@@ -182,10 +256,28 @@ function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string
     // A section's heading block: at the start, or centered with its lead under it (headings.align).
     "heading-align": style.headings.align === "center" ? "center" : "start",
     "heading-inline": style.headings.align === "center" ? "auto" : "0",
-    // A card: a border (bordered), the theme's shadow alone (raised), or neither (flat).
-    "card-shadow": s.cards === "flat" ? "none" : theme.shadow,
-    "card-border": s.cards === "bordered" ? "1px" : "0",
-    "card-border-color": s.cards === "bordered" ? "var(--border)" : "transparent",
+    // A card: a border (bordered), the theme's shadow alone (raised), neither (flat), or glass:
+    // the card's colour at GLASS over what is behind, blurred, with a lit top edge.
+    "card-shadow":
+      s.cards === "flat"
+        ? "none"
+        : glass
+          ? `${theme.shadow === "none" ? "" : `${theme.shadow}, `}inset 0 1px 0 color-mix(in oklch, white 22%, transparent)`
+          : theme.shadow,
+    "card-border": s.cards === "bordered" || glass ? "1px" : "0",
+    "card-border-color":
+      s.cards === "bordered"
+        ? "var(--border)"
+        : glass
+          ? "color-mix(in oklch, var(--foreground) 12%, transparent)"
+          : "transparent",
+    "card-surface": glass
+      ? `color-mix(in oklch, var(--card) ${GLASS}, transparent)`
+      : "var(--card)",
+    "card-blur": glass ? "blur(14px) saturate(1.2)" : "none",
+    // How far a band's paper steps from the page past the muted surface (surfaces.bands).
+    "band-step": s.bands === "strong" ? "12%" : "0%",
+    texture: TEXTURE[style.texture],
     // A page's sections: open, or each in a box of the card's color.
     "section-background": s.sections === "boxed" ? "var(--card)" : "transparent",
     "section-border": s.sections === "boxed" ? "1px" : "0",
@@ -222,6 +314,7 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
     return {
       light: `${selector} {
 ${block(tokens(from, theme, "light"), "  ")}
+  --picture-filter: ${pictureFilter(theme, tokens(from, theme, "light").primary)};
   --radius: ${theme.radius};
   --font-body: ${fontStack(font)};
   --control-height: ${density.control};
@@ -239,6 +332,7 @@ ${HOVER.light}
 }`,
       dark: `${dark} {
 ${block(tokens(from, theme, "dark"), "  ")}
+  --picture-filter: ${pictureFilter(theme, tokens(from, theme, "dark").primary)};
 ${HOVER.dark}
 }`,
       comment: `${theme.name}${from.theme.primary ? `, brand color ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}, motion ${from.theme.motion}`,
@@ -247,13 +341,30 @@ ${HOVER.dark}
   // Dark as the visitor's appearance resolves on <html> (src/kit/appearance.ts): the device's
   // setting, or the one chosen.
   const app = scope(":root", ':root[data-appearance="dark"]', ux);
+  // The menu's surface apart from the theme (ux chrome): the page's own colours, or the text
+  // colour as its surface (in dark mode, a step below the page, which is dark already).
+  const chrome = ux.chrome
+    ? {
+        light:
+          ux.chrome === "light"
+            ? "  --sidebar: var(--background);\n  --sidebar-foreground: var(--foreground);"
+            : "  --sidebar: var(--foreground);\n  --sidebar-foreground: var(--background);",
+        dark:
+          ux.chrome === "light"
+            ? "  --sidebar: var(--background);\n  --sidebar-foreground: var(--foreground);"
+            : "  --sidebar: color-mix(in oklch, var(--background), black 40%);\n  --sidebar-foreground: var(--foreground);",
+      }
+    : undefined;
   // A landing page's own theme: the same variables on its body (data-page), so only it changes.
   const pages = themedPages(ux).map((id) => ({
     id,
     ...scope(`[data-page="${id}"]`, `[data-appearance="dark"] [data-page="${id}"]`, pageUx(ux, id)),
   }));
   return `${HEADER}${themeFonts(ux, themes)
-    .map((font) => `@import "${FONT_PACKAGES[font]}";`)
+    .flatMap((font) => [
+      `@import "${FONT_PACKAGES[font]}";`,
+      ...(ITALICS[font] ? [`@import "${FONT_PACKAGES[font]}/${ITALICS[font]}";`] : []),
+    ])
     .join("\n")}
 
 /* Theme: ${app.comment} */
@@ -277,8 +388,34 @@ ${pages.map((p) => `\n/* The ${p.id} page's own theme: ${p.comment} */\n${p.ligh
   }
 }
 
-${[app.dark, ...pages.map((p) => p.dark)].join("\n")}
+${[app.dark, ...pages.map((p) => p.dark)].join("\n")}${
+  chrome
+    ? `
+/* The menu's surface: ${ux.chrome} (chrome in the ux file), its hover read on it. */
+:root {
+${chrome.light}
+}
+:root[data-appearance="dark"] {
+${chrome.dark}
+}
+[data-kit="app-shell"] > aside,
+[data-kit="app-shell"] > header,
+[data-kit="drawer"] {
+  --hover: color-mix(in oklch, var(--sidebar-foreground) 12%, transparent);
+}
+`
+    : ""
+}
 ${
+  themeOf(ux, themes).modes === "both"
+    ? ""
+    : `
+/* The theme has one mode (modes: ${themeOf(ux, themes).modes}): no appearance to choose. */
+[data-part="appearance"] {
+  display: none;
+}
+`
+}${
   ux.aiBadge
     ? ""
     : `

@@ -4397,16 +4397,96 @@ async function calculatorFlow(base) {
   }
 }
 
-async function landingFlow(base) {
+/**
+ * The menu in a bar across the top (look-gap §4, the ux file's navigation): on a wide screen the
+ * pages are links in the bar and the menu button at its end opens the rest, signing out among it;
+ * back to the sidebar after, by undo, so the later steps' undo history is as it was.
+ */
+async function topbarFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  let set = false;
+  try {
+    ok(smithable(dir, "op", "setMenuLayout", "topbar"));
+    set = true;
+    await signInAs(page, base, "admin");
+    const bar = page.locator('[data-part="header"][data-navigation="topbar"]');
+    // The dev server takes the change up by itself; asked again until it has.
+    for (let i = 0; ; i++) {
+      await open(page, `${base}/customers`);
+      if (await bar.isVisible()) break;
+      if (i === 20 * P) throw new Error("no bar across the top");
+      await page.waitForTimeout(500);
+    }
+    if (await page.locator('[data-kit="app-shell"] > aside').isVisible())
+      throw new Error("the sidebar is still there");
+    await bar.getByRole("link", { name: "Orders", exact: true }).click();
+    await page.waitForURL(`${base}/orders`, { timeout: 10000 * P });
+    await bar.getByRole("button", { name: "Open menu" }).filter({ visible: true }).click();
+    await page
+      .locator('[data-kit="drawer"]')
+      .getByRole("button", { name: "Sign out" })
+      .waitFor({ timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: with navigation: topbar the pages are links in a bar across the top, and its menu button opens the rest",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("topbar flow");
+  } finally {
+    await browser.close();
+    if (set) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`topbar put back: ${back.out}`);
+      // The sidebar back before the next step: the dev server takes the undo up by itself.
+      const check = await (await chromium.launch()).newPage({
+        viewport: { width: 1280, height: 900 },
+      });
+      for (let i = 0; i < 20 * P; i++) {
+        await open(check, `${base}/sign-in`);
+        if (!(await check.locator('[data-part="header"][data-navigation]').count())) break;
+        await check.waitForTimeout(500);
+      }
+      await check.context().browser()?.close();
+    }
+  }
+}
+
+async function landingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
+  let shortcutsSet = false;
   try {
-    await open(page, base);
-    // The cover hero's shortcuts: round links to the schedule and the blog over its edge.
+    // The hero's shortcuts, round links over its edge: no starter has them since 2026-10-31
+    // (look-gap.md §3), so they are given here by the operation and taken away after.
+    const set = smithable(dir, "op", "setShortcuts", "home", "schedule", "blog");
+    if (set.code !== 0) throw new Error(set.out);
+    shortcutsSet = true;
     const shortcuts = page.getByRole("navigation", { name: "Shortcuts" });
-    await shortcuts.getByRole("link", { name: "Blog" }).waitFor({ timeout: 5000 * P });
+    // The dev server takes the change up by itself; asked again until it has.
+    for (let i = 0; ; i++) {
+      await open(page, base);
+      if (await shortcuts.getByRole("link", { name: "Blog" }).isVisible()) break;
+      if (i === 20 * P) throw new Error("the hero has no shortcuts");
+      await page.waitForTimeout(500);
+    }
     await shortcuts.getByRole("link", { name: "Schedule" }).click();
     await page.waitForURL(`${base}/schedule`);
+    const unset = smithable(dir, "op", "setShortcuts", "home");
+    if (unset.code !== 0) throw new Error(unset.out);
+    shortcutsSet = false;
+    // And gone again before the next step opens the page.
+    for (let i = 0; ; i++) {
+      await page.waitForTimeout(500);
+      await open(page, base);
+      if (!(await shortcuts.count())) break;
+      if (i === 20 * P) throw new Error("the hero's shortcuts stayed");
+    }
     console.log("  ✓ browser: the hero's shortcuts lead to their pages");
     // Classes have no picture field: their cards stay text cards, with no placeholder.
     await open(page, base);
@@ -4516,6 +4596,7 @@ async function landingFlow(base) {
     );
     failures.push("booking landing flow");
   } finally {
+    if (shortcutsSet) smithable(dir, "op", "setShortcuts", "home");
     await browser.close();
   }
 }
@@ -4667,6 +4748,64 @@ async function copyFlow(base) {
     failures.push("copy flow");
   } finally {
     await browser.close();
+  }
+}
+
+/**
+ * A filter on a reference with too many records to list is a search (A 208): with the ux file's
+ * filters.pick saying so, the invoices' client filter finds clients as one types and filters by the
+ * one chosen; an id in the address that is no client the viewer may read shows as not found and
+ * filters nothing.
+ */
+async function pickFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  let set = false;
+  try {
+    ok(smithable(dir, "op", "setFilterPick", "invoices", "client", "search"));
+    set = true;
+    await signInAs(page, base, "admin");
+    // The dev server takes the new page up by itself; asked again until it has.
+    const box = page.getByRole("combobox", { name: "Client" });
+    for (let i = 0; ; i++) {
+      await open(page, `${base}/invoices`);
+      if (await box.isVisible()) break;
+      if (i === 20 * P) throw new Error("the client filter is not a search");
+      await page.waitForTimeout(500);
+    }
+    await box.fill("kall");
+    await page.getByRole("option", { name: "Kallio Design" }).click({ timeout: 10000 * P });
+    await page.waitForURL(/client/, { timeout: 10000 * P });
+    await page
+      .getByRole("cell", { name: "2026-001", exact: true })
+      .waitFor({ state: "detached", timeout: 10000 * P });
+    await page.getByRole("cell", { name: "2026-006", exact: true }).waitFor({ timeout: 10000 * P });
+    const url = new URL(page.url());
+    url.searchParams.set("client", JSON.stringify("999999"));
+    await open(page, url.href);
+    await page
+      .getByText("Not found")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    await page.getByRole("cell", { name: "2026-001", exact: true }).waitFor({ timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: a client filter set to search finds clients as one types and filters by the one chosen; an unknown id is not found and filters nothing",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("searched filter");
+  } finally {
+    await browser.close();
+    // Put back without hiding the step's own failure.
+    if (set) {
+      const back = smithable(dir, "op", "setFilterPick", "invoices", "client", "auto");
+      if (back.code !== 0) failures.push(`searched filter put back: ${back.out}`);
+    }
   }
 }
 
@@ -7545,9 +7684,10 @@ test("the session cookie's name and attributes", async () => {
         await pagingFlow(dir, base);
         await favoritesFlow(base);
         await contactFlow(dir, base);
+        await topbarFlow(dir, base);
       }
       if (example === "booking") {
-        await landingFlow(base);
+        await landingFlow(dir, base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await outgoingFlow(dir, base);
@@ -7581,6 +7721,7 @@ test("the session cookie's name and attributes", async () => {
         await copyFlow(base);
         await documentFlow(dir, base);
         await formulaFlow(base);
+        await pickFlow(dir, base);
         await addChildFlow(base);
         await onboardingFlow(base);
         await isolationFlow(dir, base);

@@ -5,10 +5,13 @@ import { type AnyOperation, type Operation, OperationError, refTo } from "../ope
 import { pageModel } from "../patterns.js";
 import { parseTheme } from "../theme.js";
 import {
+  CHROMES,
   CONTROLS,
   FONTS,
   HEADER_LOOKS,
   ICONS,
+  NAVIGATIONS,
+  notPickable,
   SECTION_LOOKS,
   THEME_PRESETS,
   TONES,
@@ -659,6 +662,71 @@ const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
   },
 };
 
+/** Where the app's menu sits (look-gap.md §4); default removes the key, back to the sidebar. */
+const setMenuLayout: Operation<{ navigation: string }> = {
+  name: "setMenuLayout",
+  summary:
+    "Put the app's menu in a sidebar (the default), a bar across the top (topbar) or a bar with the name centred between the links (topbar-centered).",
+  schema: {
+    type: "object",
+    required: ["navigation"],
+    additionalProperties: false,
+    properties: {
+      navigation: {
+        type: "string",
+        enum: [...NAVIGATIONS, "default"],
+        description: "sidebar, topbar, topbar-centered, or default.",
+      },
+    },
+  },
+  positional: ["navigation"],
+  describe: ({ navigation }) =>
+    navigation === "default" || navigation === "sidebar"
+      ? "Put the menu in a sidebar"
+      : navigation === "topbar"
+        ? "Put the menu in a bar across the top"
+        : "Put the menu in a bar across the top, the name centred",
+  destructive: () => false,
+  apply(editors, { navigation }) {
+    // The sidebar is the default, so it is written as nothing.
+    put(
+      editors.ux,
+      ["navigation"],
+      navigation === "default" || navigation === "sidebar" ? undefined : navigation,
+    );
+    return [];
+  },
+};
+
+/** The menu's surface (look-gap.md §4); default removes the key, back to the theme's colours. */
+const setChrome: Operation<{ chrome: string }> = {
+  name: "setChrome",
+  summary:
+    "Give the menu a light surface (the page's colours) or a dark one (the text colour as its surface); default returns to the theme's own menu colours.",
+  schema: {
+    type: "object",
+    required: ["chrome"],
+    additionalProperties: false,
+    properties: {
+      chrome: {
+        type: "string",
+        enum: [...CHROMES, "default"],
+        description: "light, dark, or default.",
+      },
+    },
+  },
+  positional: ["chrome"],
+  describe: ({ chrome }) =>
+    chrome === "default"
+      ? "Give the menu the theme's own colours"
+      : `Give the menu a ${chrome} surface`,
+  destructive: () => false,
+  apply(editors, { chrome }) {
+    put(editors.ux, ["chrome"], chrome === "default" ? undefined : chrome);
+    return [];
+  },
+};
+
 /** Ask's manner (docs/design/ask-defaults.md §2): plain, the default, is written as nothing. */
 const setAssistantVoice: Operation<{ voice: Voice }> = {
   name: "setAssistantVoice",
@@ -746,6 +814,49 @@ const setFiltersShown: Operation<{ page: string; fields?: string[] }> = {
   },
 };
 
+/** How a filter on a reference is picked (backlog A 208): list, search, or by the count (auto). */
+const setFilterPick: Operation<{ page: string; filter: string; pick: "list" | "search" | "auto" }> =
+  {
+    name: "setFilterPick",
+    summary:
+      "How a list page's filter on a reference is picked: list (every related record as a choice), search (found as you type), or auto (by the count: a search from 200 records).",
+    schema: {
+      type: "object",
+      required: ["page", "filter", "pick"],
+      additionalProperties: false,
+      properties: {
+        page: refTo({ ref: "page", label: "Page" }),
+        filter: { type: "string", description: "A filter of the page on a reference field." },
+        pick: { enum: ["list", "search", "auto"], description: "auto leaves it to the count." },
+      },
+    },
+    positional: ["page", "filter", "pick"],
+    describe: ({ page, filter, pick }) =>
+      pick === "auto"
+        ? `Pick the ${filter} filter of ${page} by the count`
+        : `Pick the ${filter} filter of ${page} ${pick === "search" ? "by searching" : "from a list"}`,
+    destructive: () => false,
+    apply(editors, { page, filter, pick }, ir) {
+      pageNamed(ir, page);
+      const found = ir.pages.find((p) => p.id === page) as SpecIR["pages"][number];
+      const offered = found.filters ?? [];
+      if (!offered.includes(filter))
+        throw new OperationError(
+          `${page} has no filter named "${filter}"; its filters are ${offered.length ? offered.join(", ") : "none"}.`,
+        );
+      const model = ir.models.find((m) => m.name === pageModel(found));
+      const field = model?.fields.find((x) => x.name === filter);
+      const refused = notPickable(filter, field);
+      if (refused) throw new OperationError(refused);
+      put(
+        editors.ux,
+        ["pages", page, "filters", "pick", filter],
+        pick === "auto" ? undefined : pick,
+      );
+      return [];
+    },
+  };
+
 const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
   name: "addTheme",
   summary: "Add a theme of the project's own (themes/<name>.yml), and use it with --use.",
@@ -808,4 +919,7 @@ export const uxOperations: AnyOperation[] = [
   setAssistantVoice,
   setSort,
   setFiltersShown,
+  setFilterPick,
+  setMenuLayout,
+  setChrome,
 ];

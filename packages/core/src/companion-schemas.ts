@@ -312,6 +312,12 @@ export const UX_SCHEMA: JsonSchema = {
               shown: strings(
                 "The filters shown at once, from the page's filters in smithable.yml.",
               ),
+              pick: {
+                type: "object",
+                description:
+                  "How a filter on a reference is picked, by its name: list (every related record as a choice) or search (found as you type); unsaid, a search from 200 related records.",
+                additionalProperties: { enum: ["list", "search"] },
+              },
             },
           },
           record: {
@@ -344,10 +350,21 @@ export const UX_SCHEMA: JsonSchema = {
             properties: {
               fieldOrder: strings("The fields in the order the form shows them."),
               sections: {
-                type: "object",
+                type: "array",
                 description:
-                  "Headings over groups of fields: { contact: [email, phone] }; the heading's text is in smithable.content.yml.",
-                additionalProperties: strings("The fields under the heading."),
+                  "Groups of fields with headings: - { name: contact, fields: [email, phone] }; the heading's text is in smithable.content.yml.",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["name", "fields"],
+                  properties: {
+                    name: {
+                      type: "string",
+                      description: "The group's name; its heading is in smithable.content.yml.",
+                    },
+                    fields: strings("The fields under the heading."),
+                  },
+                },
               },
               columns: {
                 enum: [1, 2],
@@ -421,6 +438,16 @@ export const UX_SCHEMA: JsonSchema = {
           description: "plain (the default: short, no pleasantries), friendly or formal.",
         },
       },
+    },
+    navigation: {
+      enum: ["sidebar", "topbar", "topbar-centered"],
+      description:
+        "Where the menu sits on a wide screen: sidebar (the default), topbar (a bar across the top, the name at the start) or topbar-centered (the name centred between the links).",
+    },
+    chrome: {
+      enum: ["light", "dark"],
+      description:
+        "The menu's surface: light (the page's own colours) or dark (the text colour as its surface); unsaid, the theme's own menu colours.",
     },
     aiBadge: {
       type: "boolean",

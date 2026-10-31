@@ -73,9 +73,15 @@ function filterCode(
   unread?: boolean,
   /** The filters shown when the list is first reached (the ux file); the rest fold. */
   shown?: string[],
+  /** How a filter on a reference is picked (the ux file's filters.pick); unsaid, by the count. */
+  pick?: Record<string, "list" | "search">,
 ) {
   const n = names(model, t);
   const conditions: string[] = [];
+  // What the server function works out before its query (a filter's count and its chosen records),
+  // and the server functions a filter's search calls (A 208).
+  const prelude: string[] = [];
+  const picks: string[] = [];
   const controls: Record<string, unknown>[] = [];
   // A date filter's relative values are read in the app's time zone.
   let dated = false;
@@ -159,20 +165,50 @@ function filterCode(
       const title = relatedTitle(ir, target.name);
       if (longTitle(target)) titles = true;
       modules.push({ module: `#/generated/${kebab(target.name)}.server`, data: tn.data });
-      conditions.push(
-        `${value} ? inArray(${n.table}.${dataKey(field)}, ${value}.split(",").map(Number).filter(Number.isInteger)) : undefined`,
-      );
+      const column = `${n.table}.${dataKey(field)}`;
+      const ids = `${value}.split(",").map(Number).filter(Number.isInteger)`;
       // The related records the viewer may read, by their names.
-      options.push(
-        `${name}: (await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)} }))`,
-      );
-      controls.push({
-        name,
-        label,
-        kind: "chips",
-        options: code(`options.${name}`),
-        ...fold(name),
-      });
+      const all = `(await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)} }))`;
+      const how = pick?.[name];
+      if (how === "list" || titleField(target) === "id") {
+        conditions.push(`${value} ? inArray(${column}, ${ids}) : undefined`);
+        options.push(`${name}: ${all}`);
+        controls.push({
+          name,
+          label,
+          kind: "chips",
+          options: code(`options.${name}`),
+          ...fold(name),
+        });
+      } else {
+        // Many related records (A 208): counted, not listed, and found as the person types; the
+        // chosen ones named, each one the viewer may read (an id that is not one clears itself).
+        const v = `pick${pascal(name)}`;
+        prelude.push(
+          `const ${v}Many = ${how === "search" ? "true" : `${tn.data}.pickCount(viewer) >= ${PICK_SEARCH_FROM}`};`,
+          `const ${v}Chosen = ${v}Many && ${value} ? ${tn.data}.pick(viewer, "", ${ids}) : [];`,
+        );
+        conditions.push(
+          `${v}Many ? (${v}Chosen.length ? inArray(${column}, ${v}Chosen.map((r) => Number(r.value))) : undefined) : ${value} ? inArray(${column}, ${ids}) : undefined`,
+        );
+        options.push(`${name}: ${v}Many ? ${v}Chosen : ${all}`, `${name}Search: ${v}Many`);
+        picks.push(`
+/** The ${tn.pluralLabel.toLowerCase()} the viewer may read whose name has the text, for the ${name} filter (a few). */
+const ${v} = createServerFn()
+  .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
+  .handler(async ({ data }) => ${tn.data}.pick(await currentViewer(), data.text));
+`);
+        controls.push({
+          name,
+          label,
+          kind: "chips",
+          options: code(`options.${name}`),
+          search: code(
+            `options.${name}Search ? (text: string) => ${v}({ data: { text } }) : undefined`,
+          ),
+          ...fold(name),
+        });
+      }
     } else if (
       field.type.kind === "relation" &&
       !field.type.many &&
@@ -243,6 +279,8 @@ function filterCode(
     conditions,
     controls,
     options,
+    prelude,
+    picks,
     modules,
     sorts,
     // A table's sortable columns, by the field's name: their key in the address.
@@ -286,12 +324,14 @@ export function searchCode(
   unread?: boolean,
   /** The filters shown first (the ux file); the rest fold. */
   shown?: string[],
+  /** How a filter on a reference is picked (the ux file). */
+  pick?: Record<string, "list" | "search">,
 ) {
   const n = names(model, t);
   // Filters and sorting live beside the search, in the address too (not inside a data page).
   const filtering =
     !within && (page.filters?.length || page.sortable?.length || favorites || ownOnly || unread)
-      ? filterCode(page, model, t, ir, favorites, ownOnly, unread, shown)
+      ? filterCode(page, model, t, ir, favorites, ownOnly, unread, shown, pick)
       : undefined;
   const fields = (page.search ?? []).map(
     (name) => model.fields.find((f) => f.name === name) as FieldIR,
@@ -355,7 +395,7 @@ const ${fn} = createServerFn()
         ? `
     const saved = ${n.data}.saved(viewer);`
         : ""
-    }
+    }${filtering.prelude.map((line) => `\n    ${line}`).join("")}
     const where = and(
       ${[searched, ...filtering.conditions].join(",\n      ")},
     );${
@@ -371,7 +411,7 @@ const ${fn} = createServerFn()
       options: { ${filtering.options.join(", ")} },${favorites ? "\n      saved," : ""}${unread ? `\n      threads: ${n.data}.threadCounts(viewer, found.rows.map((row) => row.id)),` : ""}
     };
   });
-`,
+${filtering.picks.join("")}`,
       options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => (k === "unread" ? 'unread: String(s.unread) === "1" ? "1" : undefined' : `${k}: text(s.${k})`)).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps: { q, sort, ${view ? "view, " : ""}page, ...f } }) => ${fn}({ data: { q, sort, ${view ? "view, " : ""}f, page } }),
@@ -484,6 +524,7 @@ export function listParts(
           order,
           Boolean(threadField),
           ux.pages[page.id]?.filtersShown,
+          ux.pages[page.id]?.filterPick,
         )
       : undefined;
   const filtering = search && "filtering" in search ? search.filtering : undefined;
@@ -966,10 +1007,14 @@ ${head}
 ${p.body("Route")}`;
 }
 
+/** From how many related records the viewer may read a filter on them is a search (A 208). */
+const PICK_SEARCH_FROM = 200;
+
 /**
  * The statement that returns a list's rows: all of them, or inside a data page the newest
  * DATA_LIMIT, one more fetched to know whether there are others.
  */
+
 /** The most records "Export CSV" takes from a list; a visitor of a public list, fewer. */
 const EXPORT_ROWS = 10_000;
 const VISITOR_EXPORT_ROWS = 500;

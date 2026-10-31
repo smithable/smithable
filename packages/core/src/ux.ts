@@ -49,9 +49,23 @@ export interface UxIR {
   tones: Record<string, Record<string, Tone>>;
   /** Whether pictures an AI made carry the badge (AiMark.tsx); on unless the owner switches it off. */
   aiBadge: boolean;
+  /**
+   * Where the app's menu sits on a wide screen (docs/design/look-gap.md §4): the sidebar, or a bar
+   * across the top with the name at the start or centred between the links. Unsaid, the sidebar.
+   */
+  navigation?: (typeof NAVIGATIONS)[number];
+  /**
+   * The menu's surface, apart from where it sits: light (the page's own colours) or dark (the
+   * text colour as its surface). Unsaid, the theme's own menu colours.
+   */
+  chrome?: (typeof CHROMES)[number];
   /** Ask's manner (docs/design/ask-defaults.md §2): a fixed set of prompt lines each, plain by default. */
   assistant: { voice: Voice };
 }
+
+/** Where the menu sits, and its surface (look-gap.md §4). */
+export const NAVIGATIONS = ["sidebar", "topbar", "topbar-centered"] as const;
+export const CHROMES = ["light", "dark"] as const;
 
 /** The assistant's voices: plain (short, no pleasantries), friendly, formal. */
 export const VOICES = ["plain", "friendly", "formal"] as const;
@@ -72,6 +86,13 @@ export interface PageUx {
    * with a value in the address shows anyway). Without it, every filter shows.
    */
   filtersShown?: string[];
+  /**
+   * How a filter on a reference is picked, by the filter's name: `list`, every related record the
+   * viewer may read as a choice, or `search`, a field that finds them as the person types. A filter
+   * not named here is picked by the count: a search from 200 readable related records, else the
+   * list (backlog A 208).
+   */
+  filterPick?: Record<string, "list" | "search">;
   /** A second field shown under a column's value, e.g. { email: "phone" }. */
   below?: Record<string, string>;
   /** The list's order until someone sorts it: a field, or "-field" for descending. */
@@ -296,6 +317,8 @@ export const THEME_PRESETS = [
   "warm-service",
   "quiet-workspace",
   "ink-and-brass",
+  "workbench",
+  "stillwater",
 ] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
@@ -444,6 +467,23 @@ function readRecord(
 }
 
 /** Parses smithable.ux.yml and checks every page and field it names against the spec. */
+/**
+ * Why a page's filter cannot be picked by `filters.pick` (A 208), in the words the ux file's check
+ * and setFilterPick both give; undefined for a filter on a reference to a record.
+ */
+export function notPickable(name: string, field: FieldIR | undefined): string | undefined {
+  if (field?.type.kind === "relation" && field.type.model === "User")
+    return `${name} refers to a person; its filter is Mine, Unassigned and the people by name, never a search.`;
+  if (field?.type.kind === "relation" && !field.type.many) return undefined;
+  const kind =
+    field?.type.kind === "choice"
+      ? "a choice"
+      : field
+        ? `a ${field.type.kind === "scalar" ? field.type.name : "list"}`
+        : "not a field";
+  return `${name} is ${kind}; only a filter on a reference can be a search.`;
+}
+
 export function validateUx(
   file: { path: string; text: string },
   ir: SpecIR,
@@ -488,13 +528,33 @@ export function validateUx(
     return done();
   }
   const known = checkKeys(ctx, entries, "smithable.ux.yml", {
-    allowed: ["smithableUx", "theme", "pages", "tones", "aiBadge", "assistant"],
+    allowed: [
+      "smithableUx",
+      "theme",
+      "pages",
+      "tones",
+      "aiBadge",
+      "assistant",
+      "navigation",
+      "chrome",
+    ],
     later: ["menus", "sections"],
   });
 
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
     if (key === "aiBadge") ux.aiBadge = readBoolean(ctx, value, '"aiBadge"') ?? true;
+    if (key === "navigation" || key === "chrome") {
+      const allowed: readonly string[] = key === "navigation" ? NAVIGATIONS : CHROMES;
+      const said = readString(ctx, value, `"${key}"`);
+      if (said !== undefined && allowed.includes(said)) ux[key] = said as never;
+      else if (said !== undefined)
+        ctx.error(
+          value,
+          "invalid-value",
+          `"${key}" is ${allowed.join(", ").replace(/, ([^,]*)$/, " or $1")}.`,
+        );
+    }
     if (key === "assistant")
       for (const option of checkKeys(
         ctx,
@@ -621,14 +681,51 @@ export function validateUx(
             continue;
           }
           if (part.key === "filters") {
-            // Which of the page's filters show first; the page's filters are the spec's.
+            // How the page's filters are shown and picked; which fields filter is the spec's
+            // (smithable.yml's filters), so the two never mix.
             const offered = spec.filters ?? [];
             for (const option of checkKeys(
               ctx,
               mapEntries(ctx, part.value, `the filters of ${where}`) ?? [],
               `the filters of ${where}`,
-              { allowed: ["shown"] },
+              { allowed: ["shown", "pick"] },
             )) {
+              if (option.key === "pick") {
+                const model = ir.models.find((m) => m.name === pageModel(spec));
+                const pick: Record<string, "list" | "search"> = {};
+                for (const entry of mapEntries(
+                  ctx,
+                  option.value,
+                  `"pick" of the filters of ${where}`,
+                ) ?? []) {
+                  const name = entry.key;
+                  const field = model?.fields.find((x) => x.name === name);
+                  if (!offered.includes(name)) {
+                    ctx.error(
+                      entry.keyNode,
+                      "unknown-filter",
+                      `${page.key} has no filter named "${name}" to pick; its filters are ${offered.length ? offered.join(", ") : "none"} (smithable.yml).`,
+                      didYouMean(name, offered),
+                    );
+                    continue;
+                  }
+                  const refused = notPickable(name, field);
+                  if (refused) {
+                    ctx.error(entry.keyNode, "invalid-value", refused);
+                    continue;
+                  }
+                  const how = readString(ctx, entry.value, `"pick" of ${name} in ${where}`);
+                  if (how === "list" || how === "search") pick[name] = how;
+                  else if (how !== undefined)
+                    ctx.error(
+                      entry.value,
+                      "invalid-value",
+                      `"pick" of ${name} in ${where} is list or search.`,
+                    );
+                }
+                if (Object.keys(pick).length) result.filterPick = pick;
+                continue;
+              }
               const names = readNameList(ctx, option.value, `"shown" of the filters of ${where}`);
               const shown: string[] = [];
               for (const { name, at } of names) {

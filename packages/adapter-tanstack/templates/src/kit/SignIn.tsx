@@ -182,7 +182,7 @@ export function SignIn({
       )}
       {devRoles && onDevRole && (
         <div className="space-y-2 border-t pt-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium label-text text-muted-foreground">
             {demo ? w.tryItAs : w.developmentOnly}
           </p>
           {devRoles.map((role) => (

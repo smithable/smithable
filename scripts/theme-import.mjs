@@ -412,7 +412,7 @@ const BRAND_LABELS = new Set([
 function* tweakcn(file) {
   const text = readFileSync(file, "utf8");
   const presets = [
-    ...text.matchAll(/\n  "?([a-z0-9-]+)"?: \{\n    label: "([^"]+)",([\s\S]*?)\n  \},\n/g),
+    ...text.matchAll(/\n {2}"?([a-z0-9-]+)"?: \{\n {4}label: "([^"]+)",([\s\S]*?)\n {2}\},\n/g),
   ];
   for (const [, key, label, body] of presets) {
     if (BRAND_LABELS.has(label)) continue;
