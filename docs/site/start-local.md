@@ -40,8 +40,8 @@ In development nothing is mailed. The sign-in page lets you sign in as any role 
 A marketplace made, changed and deployed. This is a real run, shortened; the times are one laptop's.
 
 ```console
-$ smithable new torget --starter marketplace                 # 3.7 s
-Generated 86 files (86 changed, 0 removed).
+$ smithable new torget --starter marketplace                 # 3.1 s
+Generated 139 files (139 changed, 0 removed).
 Created torget. Open it in Studio, to see it and change it:
   cd torget
   smithable studio
@@ -49,20 +49,21 @@ or only run the app with smithable run.
 
 $ cd torget
 $ smithable op addField Item delivery "pickup | shipping"    # 1.8 s
-Generated 86 files (4 changed, 0 removed).
+Generated 139 files (7 changed, 0 removed).
 Add field delivery (pickup | shipping) to Item. Undo with: smithable undo
 
-$ smithable op setTheme --preset corporate                   # 1.2 s
-Generated 86 files (2 changed, 0 removed).
-Set the theme: preset corporate. Undo with: smithable undo
+$ smithable op setTheme --preset corporate                   # 1.1 s
+Generated 139 files (1 changed, 0 removed).
+Use the Corporate theme. Undo with: smithable undo
 
-$ smithable ask "let visitors filter items by delivery"      # 0.3 s
+$ smithable ask "let visitors filter items by delivery"      # 0.5 s
 Generator (filters) · 0 tokens
 Proposed change:
   1. Filter catalog by category, price, condition, available, delivery
 Run again with --yes to apply it.
 
 $ smithable ask --yes "let visitors filter items by delivery"
+Generated 139 files (1 changed, 0 removed).
 Filter catalog by category, price, condition, available, delivery. Undo with: smithable undo
 
 $ smithable deploy --target docker                            # the security scans take a few minutes
