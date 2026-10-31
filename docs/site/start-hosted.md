@@ -60,4 +60,4 @@ pnpm install
 smithable studio
 ```
 
-Then every command in [Getting started on your own machine](start-local.md) works on it. The app also runs without Smithable (`pnpm dev`), and `smithable detach` removes what only Smithable uses.
+Then every command in [Getting started on your own machine](start-local.md) works on it. The app also runs without Smithable (`pnpm dev`), and `smithable detach` removes what only Smithable uses. [Leaving, tried out](leave.md) does it with a sample download: run with Docker, changed, tested, and what it needs set up of its own.

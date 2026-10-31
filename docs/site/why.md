@@ -24,7 +24,7 @@ When a request does need interpretation, the cheapest capable model gets a small
 
 A generated app is a normal TanStack Start application with React, Tailwind, shadcn/ui, Drizzle and SQLite, written the way a developer who knows that stack would write it. It has no dependency on Smithable at build time or run time: no SDK, no runtime, no license key. It ships as a container with a `/data` volume, carries its own tests, and runs anywhere a container runs.
 
-When you want to continue without Smithable, `smithable detach` removes what only Smithable used, as one reviewable commit, and leaves an ordinary project behind. The app kit copied into every app is licensed under 0BSD, so a generated app owes nothing to this repository.
+When you want to continue without Smithable, `smithable detach` removes what only Smithable used, as changes to review and commit as one, and leaves an ordinary project behind. The app kit copied into every app is licensed under 0BSD, so a generated app owes nothing to this repository.
 
 ## Access rules are code, not hope
 
@@ -52,7 +52,7 @@ Those tools have a model write and rewrite the application's code from your prom
 
 ### Does my app depend on Smithable?
 
-No. A generated app has no Smithable package at build time or run time; a test in this repository fails if one appears. It is a TanStack Start app with React, Tailwind, shadcn/ui, Drizzle and SQLite. `smithable detach` turns the project into an ordinary one in a single commit when you want to stop using Smithable, and the app kit copied into it is licensed under 0BSD.
+No. A generated app has no Smithable package at build time or run time; a test in this repository fails if one appears. It is a TanStack Start app with React, Tailwind, shadcn/ui, Drizzle and SQLite. `smithable detach` turns the project into an ordinary one when you want to stop using Smithable, and the app kit copied into it is licensed under 0BSD.
 
 ### Do I need an AI model?
 
