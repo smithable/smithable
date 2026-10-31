@@ -2,7 +2,7 @@
 smithableUx: 0.1
 
 theme:
-  preset: modern
+  preset: monochrome                   # the market's own: black on white, heavy capital titles, hairline tiles
 
 pages:
   home:

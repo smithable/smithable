@@ -2,7 +2,7 @@
 smithableUx: 0.1
 
 theme:
-  preset: modern
+  preset: brass                        # the shop's own: bottle green on cream, a light display serif, hairlines
 
 tones:
   Appointment.status: { requested: warning, confirmed: success, cancelled: neutral }
@@ -15,3 +15,14 @@ pages:
   appointments:
     table:
       columns: [startsAt, service, barber, name, status]
+      sort: startsAt                     # a booking list reads in time order
+    form:
+      sections:                          # the service and the barber first, then the time, then who comes
+        - { name: what, fields: [service, barber] }
+        - { name: when, fields: [startsAt] }
+        - { name: who, fields: [name, phone, note] }
+      control: { barber: select }        # two barbers need no search
+  services:
+    table: { view: cards, sort: name }   # the menu reads as a menu
+  barbers:
+    table: { view: cards, sort: name }   # people as cards, with their portraits

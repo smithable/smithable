@@ -181,6 +181,12 @@ try {
         if (who !== "visitor") await signIn(page, base, who);
         await open(page, `${base}${path}`);
         if (before) await before(page, dir);
+        // A whole page reads as it scrolls: the form's Save row in its place, not stuck mid-form.
+        if (fullPage)
+          await page.addStyleTag({
+            content:
+              '[data-kit="model-form"] [data-part="actions"] { position: static !important }',
+          });
         await page.waitForTimeout(500); // pictures and fonts settle
         const file = join(out, `${starter}-${n + 1}.webp`);
         writeFileSync(

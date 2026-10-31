@@ -2,7 +2,7 @@
 smithableUx: 0.1
 
 theme:
-  preset: modern
+  preset: paperwork                    # the tool's own: a geometric heading over Inter, bordered blocks, tabular amounts
 
 # Status colors by meaning; values not listed are neutral.
 tones:
@@ -10,12 +10,19 @@ tones:
 
 pages:
   home:
-    theme: { brand: { font: Outfit } }   # the public page in a rounder face than the tool behind it
     sections:                          # how the landing page's sections look
-      hero: { layout: centered }       # the text over the picture
+      hero: { layout: split, image: right }   # the photo undimmed, the text on a clean ground
       pricing: { highlight: Pro }      # the plan drawn forward
-      faq: { layout: list, columns: 2 }   # every answer shown, two abreast
+      faq: { layout: accordion }       # a shorter page
       callToAction: { band: primary }  # the one band on an otherwise open page
   invoices:
     table:
       columns: [number, client, status, issuedOn, total]
+      sort: -issuedOn                    # the newest invoice first
+    form:
+      sections:                          # who and what state first, then the dates as a pair, then the agreement
+        - { name: invoice, fields: [number, client, status] }
+        - { name: dates, fields: [issuedOn, dueOn] }
+        - { name: documents, fields: [contract] }
+      columns: 2
+      control: { status: radio }         # the four states shown at once

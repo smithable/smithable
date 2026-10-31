@@ -2,7 +2,7 @@
 smithableUx: 0.1
 
 theme:
-  preset: minimal
+  preset: helpdesk                     # the desk's own: small firm titles, the form and the thread lifted a little, quiet buttons
 
 tones:
   SupportCase.status: { open: warning, inProgress: neutral, closed: success, reopened: danger }

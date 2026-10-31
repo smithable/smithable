@@ -363,6 +363,11 @@ export const THEME_PRESETS = [
   "ink-and-brass",
   "workbench",
   "stillwater",
+  "brass",
+  "paperwork",
+  "monochrome",
+  "softbox",
+  "helpdesk",
 ] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 

@@ -127,6 +127,12 @@
     animation-duration: 500ms;
     animation-timing-function: var(--motion-ease);
   }
+  /* A form's Save row sticks to the window's foot: a field reached by Tab or by the browser's own
+     scrolling stops above it, not behind it. */
+  html:has([data-kit="model-form"] [data-part="actions"]) {
+    scroll-padding-bottom: 6rem;
+  }
+
   /* A landing section's band (its own, or a banded theme's): the section on a
      surface of the theme. The band's two colors are taken on the section (--band-surface, its
      text --band-text), and its children read the theme's tokens as the band's, so the text,

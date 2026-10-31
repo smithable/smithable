@@ -1,8 +1,9 @@
-// The seventeen themes after the first four presets: nine added on 2026-10-04, rule-made
+// The twenty-two themes after the first four presets: nine added on 2026-10-04, rule-made
 // candidates (scripts/theme-candidates.mjs) that Johan picked from their sheets; the theme lab's
 // three styles (docs/design/theme-lab.md §6); and at the end the three candidates of 2026-10-18
 // from a tester's report, warm-service, quiet-workspace and ink-and-brass; then the CRM's and
-// the booking starter's own of 2026-10-31, workbench and stillwater. Each is a theme file as
+// the booking starter's own of 2026-10-31, workbench and stillwater, and look-gap round 2's starters' own of
+// the same night, brass, paperwork, monochrome, softbox and helpdesk. Each is a theme file as
 // a project would write one (docs/spec/v0.1.md, Themes), with seven colors per mode, or more where
 // it names colors otherwise derived (the three of 2026-10-18 name thirteen); theme.ts parses them
 // with the same parser and checks as a project's own, and derives the rest. To change one, change
@@ -486,36 +487,127 @@ dark:
   accent: "#1E3532"
   sidebar: "#171B20"
 `,
-  stillwater: `# stillwater: the booking starter's own (docs/design/look-gap.md §3, 2026-10-31): one ink on warm
-# paper, a display face at a large size, square bold buttons, pictures left as they are.
+  stillwater: `# stillwater: the booking starter's own (docs/design/look-gap.md §3, 2026-10-31; round 2 the same
+# night): ink on warm paper with one terracotta accent, a display serif set large and light, rules
+# and space instead of boxes, square buttons and pictures.
 smithableTheme: 0.1
 name: stillwater
-fonts: { body: Source Sans 3, heading: DM Sans }
-headings: { weight: 800, tracking: tight, scale: large, case: none }
-surfaces: { cards: bordered, sections: open, dividers: light }
+fonts: { body: Source Sans 3, heading: Fraunces }
+headings: { weight: 500, tracking: tight, scale: large, case: none }
+surfaces: { cards: flat, sections: open, dividers: light }
 buttons: { shape: square, weight: bold }
-pictures: { corners: theme, frame: none }
+pictures: { corners: square, frame: none }
 tables: { numbers: tabular, rows: lined }
 radius: 4px
 shadow: soft
 density: comfortable
 motion: subtle
-chroma: 0.06
+chroma: 0.12
 light:
-  background: "#ECEBE6"
-  foreground: "#16181A"
+  background: "#F4F1EC"
+  foreground: "#1A1A18"
   card: "#F6F5F1"
-  primary: "#16181A"
+  primary: "#A8482A"
   muted: "#E2E1DB"
   border: "#CFCDC5"
   accent: "#E4E2DA"
 dark:
-  background: "#141516"
-  foreground: "#ECEBE6"
+  background: "#171615"
+  foreground: "#ECE8E1"
   card: "#1C1D1F"
-  primary: "#ECEBE6"
+  primary: "#E39A7C"
   muted: "#26282A"
   border: "#3A3C3F"
   accent: "#2A2B2D"
+`,
+  brass: `# brass: the barbers starter's own (look-gap round 2, 2026-10-31): bottle green on cream, brass in
+# the dark, a light display serif in small tracked capitals over the sections, hairline rules,
+# square buttons and pictures.
+smithableTheme: 0.1
+name: brass
+fonts: { body: DM Sans, heading: Fraunces }
+headings: { weight: 400, tracking: normal, scale: large, case: upper }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: square, weight: bold }
+pictures: { corners: square, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 2px
+shadow: none
+density: comfortable
+motion: subtle
+chroma: 0.10
+light: { background: "#F4EFE6", foreground: "#1C2420", primary: "#1F3A2E" }
+dark: { background: "#14201B", foreground: "#EFE9DD", primary: "#D6B67A" }
+`,
+  paperwork: `# paperwork: the invoicing starter's own (look-gap round 2, 2026-10-31): a geometric heading over Inter,
+# firm titles, form sections as bordered blocks, amounts in tabular figures; modern's colours.
+smithableTheme: 0.1
+name: paperwork
+fonts: { body: Inter, heading: DM Sans }
+headings: { weight: 700, tracking: tight, scale: regular, case: none }
+surfaces: { cards: bordered, sections: boxed, dividers: light }
+buttons: { shape: rounded, weight: bold }
+pictures: { corners: theme, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 10px
+shadow: soft
+density: comfortable
+motion: subtle
+chroma: 0.22
+light: { background: "oklch(0.976510 0.005419 274.9666)", foreground: "oklch(0.244862 0.038771 264.3540)", primary: "oklch(0.510573 0.230053 276.9656)" }
+dark: { background: "oklch(0.197469 0.027449 267.7258)", foreground: "oklch(0.961159 0.018238 269.0896)", primary: "oklch(0.785298 0.104135 274.7134)" }
+`,
+  monochrome: `# monochrome: the marketplace starter's own (look-gap round 2, 2026-10-31): black on white, heavy
+# geometric titles in capitals, hairline tiles, near-square corners, no tint in badges or links.
+smithableTheme: 0.1
+name: monochrome
+fonts: { body: Inter, heading: DM Sans }
+headings: { weight: 700, tracking: normal, scale: large, case: upper }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: square, weight: bold }
+pictures: { corners: theme, frame: none }
+radius: 6px
+shadow: none
+density: comfortable
+motion: subtle
+chroma: 0.02
+light: { background: "#FFFFFF", foreground: "#111111", primary: "#111111" }
+dark: { background: "#121212", foreground: "#F2F2F2", primary: "#F2F2F2" }
+`,
+  softbox: `# softbox: the status starter's own (look-gap round 2, 2026-10-31): a friendly geometric face, small
+# medium titles so the status comes first, each part in a soft bordered box, pill buttons, no
+# shadow; minimal's colours.
+smithableTheme: 0.1
+name: softbox
+fonts: { body: DM Sans }
+headings: { weight: 500, tracking: normal, scale: small, case: none }
+surfaces: { cards: bordered, sections: boxed, dividers: light }
+buttons: { shape: pill, weight: regular }
+tables: { numbers: tabular, rows: lined }
+radius: 20px
+shadow: none
+density: comfortable
+motion: subtle
+chroma: 0.08
+light: { background: "oklch(0.982049 0.004110 91.4458)", foreground: "oklch(0.256472 0.003981 84.5842)", primary: "oklch(0.268485 0.006287 34.2976)" }
+dark: { background: "oklch(0.195324 0.001971 106.5807)", foreground: "oklch(0.966535 0.006712 97.3521)", primary: "oklch(0.969871 0.001324 106.4238)" }
+`,
+  helpdesk: `# helpdesk: the support starter's own (look-gap round 2, 2026-10-31): a neutral grotesque, small firm
+# titles, the form and the thread lifted a little off the page, quiet rounded buttons; minimal's
+# colours, a little warmer in its badges.
+smithableTheme: 0.1
+name: helpdesk
+fonts: { body: Inter }
+headings: { weight: 600, tracking: tight, scale: small, case: none }
+surfaces: { cards: raised, sections: boxed, dividers: light }
+buttons: { shape: rounded, weight: regular }
+tables: { numbers: tabular, rows: lined }
+radius: 12px
+shadow: soft
+density: comfortable
+motion: subtle
+chroma: 0.12
+light: { background: "oklch(0.982049 0.004110 91.4458)", foreground: "oklch(0.256472 0.003981 84.5842)", primary: "oklch(0.268485 0.006287 34.2976)" }
+dark: { background: "oklch(0.195324 0.001971 106.5807)", foreground: "oklch(0.966535 0.006712 97.3521)", primary: "oklch(0.969871 0.001324 106.4238)" }
 `,
 };

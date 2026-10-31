@@ -1807,10 +1807,8 @@ async function callFlow(dir, base, receiver) {
     );
     await signInAs(page, base, "admin");
     await open(page, `${base}/incidents/${id}`);
-    await page
-      .getByLabel(/^Status/)
-      .first()
-      .selectOption("resolved");
+    // The status is radio buttons (the ux file's control), every state shown at once.
+    await page.getByRole("radio", { name: "Resolved", exact: true }).first().check();
     await page.getByRole("button", { name: "Save changes" }).click();
     for (let i = 0; i < 100 * P && receiver.calls.length === 0; i++) await page.waitForTimeout(100);
     const call = receiver.calls.at(-1);
@@ -1891,10 +1889,7 @@ async function callFlow(dir, base, receiver) {
     // As staff: a mail never goes to the person who made the change, and the admin is its reader.
     await signInAs(page, base, "staff");
     await open(page, `${base}/incidents/${other.id}`);
-    await page
-      .getByLabel(/^Status/)
-      .first()
-      .selectOption("resolved");
+    await page.getByRole("radio", { name: "Resolved", exact: true }).first().check();
     const saved = Date.now();
     await page.getByRole("button", { name: "Save changes" }).click();
     while (mails() === before && Date.now() - saved < 30_000) await page.waitForTimeout(100);
@@ -4790,7 +4785,12 @@ async function copyFlow(base) {
     const markSent = page.getByRole("button", { name: "Mark sent" }).filter({ visible: true });
     await markSent.click();
     await markSent.waitFor({ state: "detached", timeout: 10000 * P });
-    for (let i = 0; (await page.getByLabel("Status").inputValue()) !== "sent"; i++) {
+    // The status is radio buttons (the ux file's control): Sent is checked once the form has the new value.
+    for (
+      let i = 0;
+      !(await page.getByRole("radio", { name: "Sent", exact: true }).isChecked());
+      i++
+    ) {
       if (i === 50 * P) throw new Error("the form still shows the status from before the action");
       await page.waitForTimeout(100);
     }
