@@ -251,3 +251,18 @@ test("the other mode made from one mode keeps the hues, turns the lightness over
   expect(contrast(back.foreground, back.background)).toBeGreaterThan(10);
   expect(hardToRead(back, "light")).toEqual([]);
 });
+
+test("a derived surface keeps the paper's cast: cream towards a green ink stays cream, not lilac", () => {
+  // The barbers' theme (brass): its muted band came out lilac when hue and chroma were mixed apart.
+  const brass = BUILT_IN_THEMES.find((t) => t.name === "brass");
+  if (!brass) throw new Error("brass");
+  const hue = (hex: string) => rgbToOklch(hexToRgb(hex))[2];
+  const near = (x: number, y: number) => Math.min(Math.abs(x - y), 360 - Math.abs(x - y)) < 25;
+  for (const token of ["muted", "secondary", "border"] as const)
+    expect(near(hue(brass.light[token]), hue(brass.light.background)), token).toBe(true);
+  // Every built-in still reads in both modes with the new mix.
+  for (const t of BUILT_IN_THEMES) {
+    expect(hardToRead(t.light, "light"), t.name).toEqual([]);
+    expect(hardToRead(t.dark, "dark"), t.name).toEqual([]);
+  }
+});
