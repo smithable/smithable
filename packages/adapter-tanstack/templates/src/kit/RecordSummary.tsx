@@ -47,6 +47,7 @@ export function RecordSummary({
       big: false,
     })),
   ];
+  if (!choice && facts.length === 0) return null;
   if (place === "header")
     return (
       <div

@@ -488,6 +488,8 @@ export function detailRoute(
   let threads = false;
   let inlines = false;
   let totals = false;
+  // Each inline list's choices for its rows' references, loaded with the record.
+  const rowOptions: string[] = [];
   const sections = lists(model).map((field) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
@@ -554,6 +556,26 @@ export function detailRoute(
         ...new Set([...(imports.get(tn.module) ?? []), tn.create, tn.update, tn.remove]),
       ]);
       const ref = dataKey(add.ref);
+      const shown = inlineFields(target, model.name);
+      const picks = shown.filter((f) => f.type.kind === "relation");
+      if (picks.length) {
+        rowOptions.push(
+          `${field.name}: { ${picks
+            .map((f) => {
+              const to = (f.type as { model: string }).model;
+              if (to === USER_MODEL) {
+                imports.set("#/generated/users", [
+                  ...new Set([...(imports.get("#/generated/users") ?? []), "userOptions"]),
+                ]);
+                return `${dataKey(f)}: await userOptions()`;
+              }
+              const o = names(modelNamed(ir, to), t);
+              imports.set(o.module, [...new Set([...(imports.get(o.module) ?? []), o.options])]);
+              return `${dataKey(f)}: await ${o.options}()`;
+            })
+            .join(", ")} }`,
+        );
+      }
       const total = model.fields.find(
         (f) =>
           f.formula &&
@@ -574,7 +596,7 @@ export function detailRoute(
           ui={${tn.ui}}
           app={app}
           rows={row.${field.name}}
-          fields={${JSON.stringify(inlineFields(target).map((f) => f.name))}}
+          fields={${JSON.stringify(shown.map(dataKey))}}${picks.length ? `\n          options={rowOptions.${field.name}}` : ""}
           label=${attr(tn.label.toLowerCase())}
           create={${changes("values")}}
           update={${changes("id, values")}}
@@ -729,13 +751,13 @@ const getHistory = createServerFn()
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: async ({ params }) => {
     const found = await ${n.get}({ data: Number(params.id) });
     if (!found) throw notFound();
-    return { ...found${options ? `, options: ${options.expr}` : ""}${history ? ", history: await getHistory({ data: Number(params.id) })" : ""} };
+    return { ...found${options ? `, options: ${options.expr}` : ""}${rowOptions.length ? `, rowOptions: { ${rowOptions.join(", ")} }` : ""}${history ? ", history: await getHistory({ data: Number(params.id) })" : ""} };
   },
   component: ${component},
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${sections.some((s) => s.includes("canAdd?.")) ? ", canAdd" : ""}${model.review ? ", review" : ""}${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
+  const { row, canWrite, canDelete${sections.some((s) => s.includes("canAdd?.")) ? ", canAdd" : ""}${model.review ? ", review" : ""}${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""}${rowOptions.length ? ", rowOptions" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
   const navigate = useNavigate();${router ? "\n  const router = useRouter();" : ""}
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favorite

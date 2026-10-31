@@ -185,16 +185,21 @@ export function recordSummary(
 }
 
 /**
- * The fields a row of an inline list shows (`record.lists: { lines: inline }`, A 215): its own
- * values, the entered ones as inputs and the computed ones as text. Not the reference back to the
- * parent (the row is on it), not its other references, lists, files or pictures, nor what the app
- * fills.
+ * The fields a row of an inline list shows (`record.lists: { lines: inline }`, A 215): its values,
+ * the entered ones as inputs and the computed ones as text, and its references as pickers. Not the
+ * reference back to the parent (the row is on it, the first one as addable takes it), nor lists,
+ * files, pictures, the record's owner or what the app fills.
  */
-export function inlineFields(target: ModelIR): FieldIR[] {
+export function inlineFields(target: ModelIR, parent: string): FieldIR[] {
+  const back = target.fields.find(
+    (f) => f.type.kind === "relation" && !f.type.many && f.type.model === parent,
+  );
   return target.fields.filter(
     (f) =>
+      f !== back &&
       !f.byApp &&
-      f.type.kind !== "relation" &&
+      f.name !== target.ownedBy &&
+      !(f.type.kind === "relation" && f.type.many) &&
       !(f.type.kind === "scalar" && ["file", "files", "picture", "pictures"].includes(f.type.name)),
   );
 }
@@ -532,23 +537,35 @@ function readRecord(
       if (look === "inline" && target) {
         // A row asks for the fields inlineFields gives; a required one it leaves out, with no
         // default and not the reference back, has nowhere to be given.
-        const asked = inlineFields(target);
+        // A row is added on its parent: the related model refers back to it.
+        const back = target.fields.find(
+          (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model?.name,
+        );
+        if (!back) {
+          ctx.error(
+            pair.value,
+            "invalid-value",
+            `${target.name} cannot be edited inline: it does not refer back to ${model?.name ?? "the record"}, so a new row would belong to nothing.`,
+          );
+          continue;
+        }
+        const asked = inlineFields(target, model?.name ?? "");
         const unasked = target.fields.find(
           (f) =>
             f.required &&
+            f !== back &&
             !asked.includes(f) &&
             !f.formula &&
             !f.byApp &&
             f.default === undefined &&
             !f.defaultMe &&
-            !f.defaultFormula &&
-            !(f.type.kind === "relation" && f.type.model === model?.name && !f.type.many),
+            !f.defaultFormula,
         );
         if (unasked) {
           ctx.error(
             pair.value,
             "invalid-value",
-            `${target.name} cannot be edited inline: its ${unasked.name} is required, and a row has no place to give it (a row asks for values of its own, not references, files or pictures).`,
+            `${target.name} cannot be edited inline: its ${unasked.name} is required, and a row has no place to give it (a row asks for values and references, not files or pictures).`,
           );
           continue;
         }

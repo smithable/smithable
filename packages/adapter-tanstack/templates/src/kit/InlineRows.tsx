@@ -13,8 +13,8 @@ import {
   TableRow,
 } from "#/components/ui/table";
 import { FieldInput } from "./FieldInput";
-import { formatValue, fromInput, toInput } from "./format";
-import type { AppUi, FieldUi, RecordUi, Row } from "./model";
+import { displayValue, formatValue, fromInput, toInput } from "./format";
+import type { AppUi, FieldUi, Options, RecordUi, Row } from "./model";
 import { w } from "./words";
 
 type Inputs = Record<string, string | boolean>;
@@ -29,6 +29,7 @@ export function InlineRows({
   create,
   update,
   remove,
+  options,
   sum,
 }: {
   // biome-ignore lint/suspicious/noExplicitAny: the related model's rows, of whichever model
@@ -42,6 +43,8 @@ export function InlineRows({
   create?: (values: Values) => Promise<void>;
   update?: (id: number, values: Values) => Promise<void>;
   remove?: (id: number) => Promise<void>;
+  /** The choices for the rows' references. */
+  options?: Options;
   /** The parent's own total of these rows, shown under them. */
   sum?: { label: string; value: string };
 }) {
@@ -65,21 +68,24 @@ export function InlineRows({
         <TableBody>
           {rows.map((row) => (
             <InlineRow
-              key={row.id}
+              // A row that changed elsewhere (or was saved) starts again from what is stored.
+              key={`${row.id}-${String(row.updatedAt)}`}
               row={row}
               fields={shown}
               app={app}
               label={label}
+              options={options}
               save={editable && update ? (values) => update(row.id, values) : undefined}
               remove={editable && remove ? () => remove(row.id) : undefined}
             />
           ))}
           {editable && create && (
             <InlineRow
-              key={rows.length}
+              key="new"
               fields={shown}
               app={app}
               label={label}
+              options={options}
               save={create}
               hasRemove={Boolean(remove)}
             />
@@ -88,7 +94,7 @@ export function InlineRows({
         {sum && (
           <tfoot className="border-t">
             <TableRow>
-              <TableCell colSpan={shown.length - 1} className="text-right font-medium">
+              <TableCell colSpan={Math.max(1, shown.length - 1)} className="text-right font-medium">
                 {sum.label}
               </TableCell>
               <TableCell data-part="sum" className="text-right font-semibold tabular-nums">
@@ -112,6 +118,7 @@ function InlineRow({
   save,
   remove,
   hasRemove,
+  options,
 }: {
   row?: Row;
   fields: FieldUi[];
@@ -121,6 +128,7 @@ function InlineRow({
   remove?: () => Promise<void>;
   /** The empty row keeps the remove column's place. */
   hasRemove?: boolean;
+  options?: Options;
 }) {
   const start = (): Inputs =>
     Object.fromEntries(
@@ -129,9 +137,11 @@ function InlineRow({
         .map((f) => [f.name, toInput(f, row ? row[f.name] : f.default, app.timeZone)]),
     );
   const [inputs, setInputs] = useState<Inputs>(start);
+  // What was last saved: a second Enter or the blur after it saves nothing more.
+  const [saved, setSaved] = useState<Inputs>(start);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const changed = JSON.stringify(inputs) !== JSON.stringify(start());
+  const changed = JSON.stringify(inputs) !== JSON.stringify(saved);
   const commit = async () => {
     if (!save || !changed || busy) return;
     // The empty row adds a record once something is written in it.
@@ -146,7 +156,8 @@ function InlineRow({
             .map((f) => [f.name, fromInput(f, inputs[f.name] ?? "", app.timeZone)]),
         ),
       );
-      if (!row) setInputs(start());
+      if (row) setSaved(inputs);
+      else setInputs(start());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -191,13 +202,16 @@ function InlineRow({
                   id={`${row ? row.id : "new"}-${f.name}`}
                   value={inputs[f.name] ?? ""}
                   invalid={Boolean(error)}
+                  options={options}
                   currency={app.currency}
                   timeZone={app.timeZone}
                   onChange={(value) => setInputs((now) => ({ ...now, [f.name]: value }))}
                 />
               </>
+            ) : row ? (
+              formatValue(f, displayValue(f as never, row), app)
             ) : (
-              formatValue(f, row?.[f.name], app)
+              ""
             )}
           </TableCell>
         ))}
@@ -228,7 +242,11 @@ function InlineRow({
       </TableRow>
       {error && (
         <TableRow>
-          <TableCell colSpan={fields.length + 1} role="alert" className="text-sm text-destructive">
+          <TableCell
+            colSpan={fields.length + (remove || hasRemove ? 1 : 0)}
+            role="alert"
+            className="text-sm text-destructive"
+          >
             {error}
           </TableCell>
         </TableRow>

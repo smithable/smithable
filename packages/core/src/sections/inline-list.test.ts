@@ -23,7 +23,7 @@ test("an invoice's lines edited in place: the row's own values, the menu warned 
   const line = ir.models.find((m) => m.name === "InvoiceLine");
   if (!line) throw new Error("no InvoiceLine");
   // Not the invoice it is on: the row is on it. The amount is computed, shown as text.
-  expect(inlineFields(line).map((f) => f.name)).toEqual([
+  expect(inlineFields(line, "Invoice").map((f) => f.name)).toEqual([
     "description",
     "quantity",
     "unitPrice",
@@ -58,10 +58,11 @@ test("an invoice's lines edited in place: the row's own values, the menu warned 
   ]);
 });
 
-test("a line with a required reference of its own cannot be edited inline: a row has no place for it", () => {
-  const spec = validateSpec({
-    path: "smithable.yml",
-    text: `smithable: 0.1
+test("an order line picks its product in the row; a required file is refused", () => {
+  const shop = (line: string, extra = "") =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
 app: { name: Shop }
 models:
   Product: { fields: { name: string! } }
@@ -69,25 +70,34 @@ models:
     fields:
       number: string!
       lines: OrderLine[]
-  OrderLine: { fields: { order: Order!, product: Product!, quantity: int! = 1 } }
+  OrderLine: { fields: { ${line} } }${extra}
 pages:
   orders: { crud: Order }
   products: { crud: Product }
 navigation:
   main: [orders, products]
 `,
-  }).ir;
-  if (!spec) throw new Error("the shop does not read");
-  const found = validateUx(
-    {
-      path: "smithable.ux.yml",
-      text: "smithableUx: 0.1\npages: { orders: { record: { lists: { lines: inline } } } }\n",
-    },
-    spec,
-    [],
-  ).diagnostics;
-  expect(found.map((d) => d.message)).toEqual([
-    "OrderLine cannot be edited inline: its product is required, and a row has no place to give it (a row asks for values of its own, not references, files or pictures).",
+    }).ir;
+  const messages = (line: string) => {
+    const spec = shop(line);
+    if (!spec) throw new Error("the shop does not read");
+    return validateUx(
+      {
+        path: "smithable.ux.yml",
+        text: "smithableUx: 0.1\npages: { orders: { record: { lists: { lines: inline } } } }\n",
+      },
+      spec,
+      [],
+    ).diagnostics.map((d) => d.message);
+  };
+  const spec = shop("order: Order!, product: Product!, quantity: int! = 1");
+  const line = spec?.models.find((m) => m.name === "OrderLine");
+  if (!line) throw new Error("no OrderLine");
+  // The product is a picker in the row; the order is the row's place.
+  expect(inlineFields(line, "Order").map((f) => f.name)).toEqual(["product", "quantity"]);
+  expect(messages("order: Order!, product: Product!, quantity: int! = 1")).toEqual([]);
+  expect(messages("order: Order!, receipt: file!")).toEqual([
+    "OrderLine cannot be edited inline: its receipt is required, and a row has no place to give it (a row asks for values and references, not files or pictures).",
   ]);
 });
 
