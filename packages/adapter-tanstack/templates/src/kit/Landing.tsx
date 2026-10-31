@@ -460,8 +460,10 @@ function HeroView({
   image,
   more,
   shortcuts = [],
-  layout = "split",
+  layout: given = "split",
   imageSide = "right",
+  overlay,
+  facts = [],
 }: {
   title: string;
   subtitle?: string;
@@ -478,13 +480,27 @@ function HeroView({
    * picture across the width with the theme's primary washing over it under the text; photo:
    * the picture across the width, a dark scrim from the start side, white text at the start.
    */
-  layout?: "split" | "centered" | "plain" | "cover" | "photo";
+  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset";
+  /**
+   * A cover or photo hero's wash: brand (the primary, the cover's own) or dark (a scrim, the
+   * photo's own); each layout keeps its size and takes the other's wash (look-gap §4).
+   */
+  overlay?: "brand" | "dark";
+  /** A row of figures under the text: each model's count of the records the viewer may read. */
+  facts?: { label: string; value: number }[];
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
   /** A short line over the title, e.g. who the app is for ("For small studios"). */
   eyebrow?: string;
 }) {
+  // A wash other than the layout's own: the other across-the-width layout's drawing.
+  const layout =
+    given === "cover" && overlay === "dark"
+      ? "photo"
+      : given === "photo" && overlay === "brand"
+        ? "cover"
+        : given;
   const after = useId();
   // A link to where the next section starts, so it works by keyboard and without JavaScript.
   const cue = more && (
@@ -568,6 +584,18 @@ function HeroView({
           )}
           {second}
         </div>
+      )}
+      {facts.length > 0 && (
+        <dl data-part="facts" className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
+          {facts.map((fact) => (
+            <div key={fact.label} className="flex flex-col-reverse">
+              <dt className="text-sm label-text opacity-80">{fact.label}</dt>
+              <dd className="text-3xl font-(--heading-weight) tabular-nums">
+                {new Intl.NumberFormat(undefined, { minimumIntegerDigits: 2 }).format(fact.value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
       )}
     </div>
   );
@@ -692,6 +720,45 @@ function HeroView({
           {!shortcutList && cue && <div className="mt-12 text-white/80">{cue}</div>}
           {!shortcutList && end}
         </div>
+      </section>,
+    );
+  // The picture as a tall card on the page beside the text (look-gap §4): in the card's surface,
+  // with its edge and shadow; on a phone the card comes first, wider than tall.
+  if (layout === "inset")
+    return framed(
+      <section
+        {...sectionHooks(texts)}
+        data-hero=""
+        data-layout="inset"
+        className={cn(
+          "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
+          shortcutList && "pb-20 sm:pb-28",
+        )}
+      >
+        <div
+          className={cn(
+            "rounded-[var(--radius-xl)] border-(length:--card-border) border-(--card-border-color) bg-(--card-surface) p-3 shadow-card lg:col-span-5",
+            imageSide === "right" ? "lg:order-2" : "",
+          )}
+        >
+          <AiMarked generated={image.generated} full>
+            <img
+              src={image.src}
+              alt={image.alt}
+              width={960}
+              height={1200}
+              fetchPriority="high"
+              className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover lg:aspect-[4/5]"
+            />
+          </AiMarked>
+        </div>
+        <div className="lg:col-span-7">{text}</div>
+        {!shortcutList && more && (
+          <div className="lg:order-3 lg:col-span-12">
+            {cue}
+            {end}
+          </div>
+        )}
       </section>,
     );
   // Beside the text on wide screens, above it on narrow ones; the first thing loaded.

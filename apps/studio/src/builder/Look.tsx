@@ -819,6 +819,27 @@ function LandingLook({
           const current = ux.looks?.[section.name]?.[key as "layout"];
           const set = (value: string) =>
             run("setSectionLook", { page, section: section.name, key, value });
+          // A hero's facts: models by name, counted under its text.
+          if (values === "models")
+            return (
+              <label key={`${section.name}.${key}`} className="flex items-center gap-2">
+                <span className="flex-1">{label}</span>
+                <input
+                  aria-label={label}
+                  defaultValue={Array.isArray(current) ? current.join(" ") : ""}
+                  placeholder="Models to count"
+                  onBlur={(e) => {
+                    const value = e.target.value.trim() || "default";
+                    const was = Array.isArray(current) ? current.join(" ") : "default";
+                    if (value !== was) void set(value);
+                  }}
+                  className="h-8 w-44 rounded border border-line px-2 text-xs"
+                />
+              </label>
+            );
+          // Keys whose first value is not the section's own (a hero's overlay and eyebrow): a
+          // Default of their own, which takes the key away.
+          const own = key === "overlay" || key === "eyebrow";
           return values === "text" ? (
             <label key={`${section.name}.${key}`} className="flex items-center gap-2">
               <span className="flex-1">{label}</span>
@@ -838,9 +859,12 @@ function LandingLook({
               <span>{label}</span>
               <Segmented
                 label={label}
-                value={String(current ?? values[0])}
-                options={values.map((v): [string, string] => [String(v), humanize(String(v))])}
-                onChange={(v) => set(v === String(values[0]) ? "default" : v)}
+                value={String(current ?? (own ? "default" : values[0]))}
+                options={[
+                  ...(own ? [["default", "Default"] as [string, string]] : []),
+                  ...values.map((v): [string, string] => [String(v), humanize(String(v))]),
+                ]}
+                onChange={(v) => set(!own && v === String(values[0]) ? "default" : v)}
               />
             </div>
           );

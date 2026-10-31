@@ -79,7 +79,10 @@ export function landingRoute(
   const records = sections.filter((s) => s.model && !s.own);
   // Each model's list read once; the page gets each section's rows already filtered and cut to
   // what it shows (A 154), not the whole list.
-  const lists = [...new Set(records.map((s) => s.model as string))].map((name) => {
+  // The hero's facts (look-gap §4): each model's count, read with the same lists.
+  const hero = sections.find((s) => s.kind === "hero");
+  const facts = (hero && ux.pages[page.id]?.looks?.[hero.name]?.facts) || [];
+  const lists = [...new Set([...records.map((s) => s.model as string), ...facts])].map((name) => {
     const n = names(modelNamed(ir, name), t);
     imports.add(n.module, n.list);
     return `    const ${camel(plural(name))} = (await ${n.list}()).rows;`;
@@ -88,7 +91,19 @@ export function landingRoute(
     (s) =>
       `${JSON.stringify(s.name)}: ${camel(plural(s.model as string))}${kept(s.where)}.slice(0, ${s.limit ?? 6})`,
   );
-  const loader = records.length
+  if (hero && facts.length)
+    shown.push(
+      `${JSON.stringify(`${hero.name}Facts`)}: [${facts
+        .map((name) => {
+          // The model's own label, as its module has it (each word written once).
+          const n = names(modelNamed(ir, name), t);
+          imports.add(n.module, n.ui);
+          return `{ label: ${n.ui}.pluralLabel, value: ${camel(plural(name))}.length }`;
+        })
+        .join(", ")}]`,
+    );
+  const loaded = records.length > 0 || facts.length > 0;
+  const loader = loaded
     ? `  loader: async () => {\n${lists.join("\n")}\n    return { ${shown.join(", ")} };\n  },\n`
     : "";
   const items = (name: string) => literal(text(name).items ?? []);
@@ -103,6 +118,8 @@ export function landingRoute(
     const look = Object.entries(
       alternate.has(section.name) && given.band === undefined ? { ...given, band: "muted" } : given,
     )
+      // A hero's facts and its line from the contact section are props of their own (below).
+      .filter(([key]) => key !== "facts" && key !== "eyebrow")
       // The hero's "image" (which side) is imageSide: its image is the picture itself.
       .map(
         ([key, value]) =>
@@ -110,8 +127,22 @@ export function landingRoute(
       )
       .join("");
     const own = text(section.name);
-    // The short line over a section's title, when the content file has one.
-    const eyebrow = own.eyebrow ? `\n          eyebrow=${attr(own.eyebrow)}` : "";
+    // The short line over a section's title: the content file's, else (a hero) one read from the
+    // page's contact section, its city or the first line of its hours (look-gap §4).
+    const contact = sections.find((s) => s.kind === "contact");
+    const read =
+      given.eyebrow && contact
+        ? given.eyebrow === "address"
+          ? (text(contact.name).address ?? "")
+              .trim()
+              .split(/[\n,]/)
+              .pop()
+              ?.replace(/^[\s\d-]+/, "")
+              .trim()
+          : (text(contact.name).hours ?? "").trim().split("\n")[0]?.trim()
+        : undefined;
+    const line = own.eyebrow ?? (read || undefined);
+    const eyebrow = line ? `\n          eyebrow=${attr(line)}` : "";
     const open = (component: string) =>
       `<${component}\n          texts=${attr(`pages.${page.id}.${section.name}`)}${look}${eyebrow}`;
     switch (section.kind) {
@@ -161,6 +192,11 @@ export function landingRoute(
             sections.slice(sections.indexOf(section) + 1).some((s) => s.kind !== "footer")
               ? `
           more`
+              : ""
+          }${
+            facts.length
+              ? `
+          facts={data[${JSON.stringify(`${section.name}Facts`)}]}`
               : ""
           }
         />`,
@@ -484,7 +520,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  comp
 });
 
 function ${component}() {
-${records.length ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
+${loaded ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
     <div data-kit="sections">${headed ? `\n      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id, 8)} />` : ""}
       ${parts.join("\n      ")}
     </div>
@@ -513,7 +549,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  comp
 });
 
 function ${component}() {
-${records.length ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
+${loaded ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
     <LandingLayout appName={app.name}${t.logo} link={${header}}${headerProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
       ${parts.join("\n      ")}
     </LandingLayout>

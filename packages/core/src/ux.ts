@@ -1,4 +1,5 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
+import type { AuthIR } from "./auth.js";
 import {
   checkKeys,
   mapEntries,
@@ -205,6 +206,12 @@ export interface SectionLook {
   columns?: number;
   highlight?: string;
   band?: Band;
+  /** A cover or photo hero's wash over its picture: the brand's, or a dark scrim (look-gap §4). */
+  overlay?: "brand" | "dark";
+  /** A hero's line over its title from the contact section: its city, or today's opening hours. */
+  eyebrow?: "address" | "hours";
+  /** A hero's row of figures: the count of each model's records the viewer may read. */
+  facts?: string[];
 }
 
 /**
@@ -216,13 +223,20 @@ export const BANDS = ["none", "muted", "inverse", "primary"] as const;
 export type Band = (typeof BANDS)[number];
 
 /**
- * The looks each section kind has: a key's allowed values, or "text" for any (a pricing plan's
- * name). The first value of a layout is the kind's own look, used when none is given.
+ * The looks each section kind has: a key's allowed values, "text" for any (a pricing plan's
+ * name), or "models" for a list of the spec's models (a hero's facts). The first value of a layout
+ * is the kind's own look, used when none is given.
  */
 export const SECTION_LOOKS: Partial<
-  Record<string, Record<string, readonly (string | number)[] | "text">>
+  Record<string, Record<string, readonly (string | number)[] | "text" | "models">>
 > = {
-  hero: { layout: ["split", "centered", "plain", "cover", "photo"], image: ["right", "left"] },
+  hero: {
+    layout: ["split", "centered", "plain", "cover", "photo", "inset"],
+    image: ["right", "left"],
+    overlay: ["brand", "dark"],
+    eyebrow: ["address", "hours"],
+    facts: "models",
+  },
   features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
   records: { layout: ["cards", "list", "grid"], columns: [3, 2, 4, 5, 6], band: BANDS },
@@ -506,6 +520,8 @@ export function validateUx(
   ir: SpecIR,
   /** The project's own themes (themes/<name>.yml), which `theme.preset` may name too. */
   themes: readonly ThemeIR[] = [],
+  /** The auth file, when read: a public hero's facts count only what visitors may read. */
+  auth?: AuthIR,
 ): { ux?: UxIR; diagnostics: Diagnostic[] } {
   const lines = new LineCounter();
   const doc = parseDocument(file.text, {
@@ -911,7 +927,7 @@ export function validateUx(
             continue;
           }
           if (part.key === "sections") {
-            result.looks = readSectionLooks(ctx, part.value, spec, where, bands);
+            result.looks = readSectionLooks(ctx, part.value, spec, where, bands, ir, auth);
             continue;
           }
           if (part.key === "header") {
@@ -1194,6 +1210,8 @@ function readSectionLooks(
   where: string,
   /** The bands given, for their contrast once the themes are read. */
   bands: BandAt[],
+  ir: SpecIR,
+  auth?: AuthIR,
 ): Record<string, SectionLook> {
   const looks: Record<string, SectionLook> = {};
   const sections = page.sections.filter((s) => !s.own);
@@ -1226,7 +1244,46 @@ function readSectionLooks(
       allowed: Object.keys(allowed),
     })) {
       const values = allowed[option.key];
+      if (values === "models") {
+        // The spec's models, each counted; on a public page, only ones visitors may read.
+        const open = auth?.public.pages.includes(page.id);
+        const models: string[] = [];
+        for (const { name, at: modelAt } of readNameList(
+          ctx,
+          option.value,
+          `"${option.key}" of ${at}`,
+        )) {
+          if (!ir.models.some((m) => m.name === name))
+            ctx.error(
+              modelAt,
+              "unknown-model",
+              `There is no model named "${name}".`,
+              didYouMean(
+                name,
+                ir.models.map((m) => m.name),
+              ),
+            );
+          else if (open && !auth?.public.read.includes(name))
+            ctx.error(
+              modelAt,
+              "invalid-value",
+              `${page.id} is public, and visitors may not read ${name}: its count would show what they may not see.`,
+            );
+          else if (!models.includes(name)) models.push(name);
+        }
+        if (models.length) (look as Record<string, unknown>)[option.key] = models;
+        continue;
+      }
       const value = isScalar(option.value) ? option.value.value : undefined;
+      // No wash at all would leave the hero's text on a bare photograph.
+      if (section.kind === "hero" && option.key === "overlay" && value === "none") {
+        ctx.error(
+          option.value,
+          "invalid-value",
+          `The text of ${at.replace("the look of ", "")} stands on the picture; brand or dark keeps it readable.`,
+        );
+        continue;
+      }
       if (
         values === "text"
           ? typeof value !== "string" || !value.trim()
@@ -1242,6 +1299,27 @@ function readSectionLooks(
         continue;
       }
       (look as Record<string, unknown>)[option.key] = value;
+    }
+    // A hero's wash goes with a picture under the text; its line from the contact section needs one.
+    if (section.kind === "hero") {
+      const overlay = mapEntries(ctx, entry.value, at)?.find((o) => o.key === "overlay");
+      if (look.overlay && look.layout !== "cover" && look.layout !== "photo") {
+        delete look.overlay;
+        ctx.error(
+          overlay?.keyNode ?? null,
+          "invalid-key",
+          `"overlay" goes with cover or photo, where the text stands on the picture.`,
+        );
+      }
+      if (look.eyebrow && !page.sections.some((s) => s.kind === "contact")) {
+        const eyebrow = mapEntries(ctx, entry.value, at)?.find((o) => o.key === "eyebrow");
+        delete look.eyebrow;
+        ctx.error(
+          eyebrow?.keyNode ?? null,
+          "invalid-key",
+          `"eyebrow" reads the contact section's ${eyebrow && isScalar(eyebrow.value) ? eyebrow.value.value : "details"}; ${page.id} has no contact section.`,
+        );
+      }
     }
     // Columns a layout does not have: an FAQ's accordion is one column, records as a list rows.
     if (section.kind === "faq" && look.columns !== undefined && look.layout !== "list")
