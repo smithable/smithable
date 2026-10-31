@@ -27,6 +27,7 @@ import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
 import { ModelTable, PicturePlaceholder } from "./ModelTable";
 import { type AppUi, type RecordUi, type Row, textMarker } from "./model";
+import { tx, w } from "./words";
 
 export interface LandingLink {
   to: LinkProps["to"];
@@ -492,7 +493,15 @@ function HeroView({
    * A stage hero's list (look-breadth §3): the app's own list page drawn by the kit's table with
    * its first records, a picture of the list beside the headline, not a list to use.
    */
-  stage?: { ui: RecordUi<Row>; app: AppUi; rows: Row[]; label: string; columns?: string[] };
+  stage?: {
+    ui: RecordUi<Row>;
+    app: AppUi;
+    rows: Row[];
+    label: string;
+    columns?: string[];
+    /** The list's own look on a wide screen: cards where its page shows cards. */
+    view?: "table" | "cards";
+  };
   /** The picture's side in a split hero on wide screens. */
   imageSide?: "left" | "right";
   texts?: string;
@@ -770,6 +779,7 @@ function HeroView({
               app={stage.app}
               rows={stage.rows}
               {...(stage.columns ? { columns: stage.columns } : {})}
+              {...(stage.view ? { view: stage.view } : {})}
             />
           </div>
         </div>

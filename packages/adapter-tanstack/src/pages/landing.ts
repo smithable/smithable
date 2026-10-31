@@ -138,9 +138,11 @@ export function landingRoute(
   if (hero && staged && stagedModel) {
     // The list's own order: the ux file's sort, else the newest first.
     const sort = ux.pages[staged.id]?.sort;
-    const key = sort?.replace(/^-/, "");
+    const field = sort?.replace(/^-/, "");
+    const key = field ? keyOf(modelNamed(ir, stagedModel), field) : undefined;
+    // Records without a value last, whichever way the list runs.
     const order = key
-      ? `(a, b) => { const x = a.${key} ?? ""; const y = b.${key} ?? ""; return (x < y ? -1 : x > y ? 1 : 0) * ${sort?.startsWith("-") ? -1 : 1}; }`
+      ? `(a, b) => { const x = a.${key}; const y = b.${key}; if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1; return (x < y ? -1 : x > y ? 1 : 0) * ${sort?.startsWith("-") ? -1 : 1}; }`
       : "(a, b) => b.id - a.id";
     shown.push(
       `${JSON.stringify(`${hero.name}Stage`)}: [...${camel(plural(stagedModel))}].sort(${order}).slice(0, 6)`,
@@ -247,8 +249,9 @@ export function landingRoute(
                       .add("#/generated/app", "app")
                       .add("#/generated/pages", "pageUi");
                     const columns = ux.pages[staged.id]?.columns;
+                    const view = ux.pages[staged.id]?.view;
                     return `
-          stage={{ ui: ${n.ui}, app, rows: data[${JSON.stringify(`${section.name}Stage`)}], label: pageUi[${JSON.stringify(staged.id)}].title${columns ? `, columns: ${literal(columns.map((c) => keyOf(modelNamed(ir, stagedModel), c)))}` : ""} }}`;
+          stage={{ ui: ${n.ui}, app, rows: data[${JSON.stringify(`${section.name}Stage`)}], label: pageUi[${JSON.stringify(staged.id)}].title${columns ? `, columns: ${literal(columns.map((c) => keyOf(modelNamed(ir, stagedModel), c)))}` : ""}${view === "cards" ? ', view: "cards"' : ""} }}`;
                   }
                 )()
               : ""

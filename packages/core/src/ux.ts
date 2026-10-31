@@ -522,18 +522,22 @@ export function notPickable(name: string, field: FieldIR | undefined): string | 
 }
 
 /**
- * The list page a stage hero shows (look-breadth §3): the one named, if it is a list page, else
- * (unsaid) the first list page in the navigation.
+ * The list page a stage hero shows (look-breadth §3): the one named, if it is a list everyone
+ * sees (not a page of the viewer's own or saved records), else (unsaid) the first such list page
+ * in the navigation.
  */
 export function stagePage(ir: SpecIR, named?: string): PageIR | undefined {
+  // A list everyone sees: not one of a person's own records or their saved ones.
+  const everyone = (p: PageIR | undefined) =>
+    p?.pattern.kind === "crud" && !p.mine && p.favorites !== "only";
   if (named !== undefined) {
     const page = ir.pages.find((p) => p.id === named);
-    return page?.pattern.kind === "crud" ? page : undefined;
+    return everyone(page) ? page : undefined;
   }
   return ir.navigation
     .flatMap((m) => m.pages)
     .map((id) => ir.pages.find((p) => p.id === id))
-    .find((p) => p?.pattern.kind === "crud");
+    .find(everyone);
 }
 
 export function validateUx(
@@ -1354,9 +1358,9 @@ function readSectionLooks(
           ctx.error(
             stageOption?.value ?? null,
             "invalid-value",
-            `${look.stage} is not a list page; the stage shows one (${
+            `${look.stage} is not a list everyone sees; the stage shows one (${
               ir.pages
-                .filter((p) => p.pattern.kind === "crud")
+                .filter((p) => stagePage(ir, p.id))
                 .map((p) => p.id)
                 .join(", ") || "none here"
             }).`,

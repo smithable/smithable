@@ -31,7 +31,7 @@ const message = (hero: string) => read(hero).diagnostics[0]?.message;
 test("a stage hero shows a list page: the one named, else the navigation's first (look-breadth §3)", () => {
   // Unsaid: the first list page in the navigation, in the order the spec declares it.
   expect(stagePage(ir)?.id).toBe("my-bookings");
-  // That one is a member's own bookings, which visitors of the public home may not read.
+  // Its bookings are private to each member: visitors of the public home may not read them.
   expect(message("{ layout: stage }")).toBe(
     "home is public, and visitors may not read Booking: the stage would show what they may not see.",
   );
@@ -40,7 +40,7 @@ test("a stage hero shows a list page: the one named, else the navigation's first
     "class-types",
   );
   expect(message("{ layout: stage, stage: schedule }")).toMatch(
-    /^schedule is not a list page; the stage shows one \(/,
+    /^schedule is not a list everyone sees; the stage shows one \(/,
   );
   expect(message("{ layout: split, stage: sessions }")).toBe('"stage" goes with layout: stage.');
   // The home page is public: a list visitors may not read is refused.
