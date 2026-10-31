@@ -178,6 +178,16 @@ const noise = (frequency: string, opacity: number) =>
   `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="t"><feTurbulence type="fractalNoise" baseFrequency="${frequency}" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 ${opacity} 0"/></filter><rect width="100%" height="100%" filter="url(#t)"/></svg>`)}")`;
 const TEXTURE = { none: "none", grain: noise("0.9", 0.09), paper: noise("0.035 0.5", 0.07) };
 
+/** A colour's hue as HSL and CSS's hue-rotate count it, in degrees. */
+function hslHue([r, g, b]: readonly number[]): number {
+  const max = Math.max(r, g, b);
+  const span = max - Math.min(r, g, b);
+  if (span === 0) return 0;
+  const sector =
+    max === r ? ((g - b) / span) % 6 : max === g ? (b - r) / span + 2 : (r - g) / span + 4;
+  return (sector * 60 + 360) % 360;
+}
+
 /**
  * What the theme does to every photograph, per mode: duotone washes the picture in the mode's
  * primary (a grey picture toned, then turned to the primary's hue), the others are fixed filters.
@@ -191,10 +201,12 @@ function pictureFilter(theme: ThemeIR, primary: string): string {
     case "mono":
       return "grayscale(1) contrast(1.05)";
     case "duotone": {
-      // Sepia lands near hue 60 in OKLCH; the rest is the turn to the primary's.
-      const [, chroma, hue] = rgbToOklch(hexToRgb(hexOf(primary)));
-      const turn = Math.round((chroma < 0.02 ? 60 : hue) - 60);
-      return `grayscale(1) sepia(1) hue-rotate(${turn}deg) saturate(${chroma < 0.02 ? 0 : 1.6}) contrast(1.05)`;
+      // hue-rotate turns an RGB hue (the HSL angle), and sepia leaves a grey near 38 degrees of
+      // it; the rest is the turn to the primary's. A grey primary gives a grey picture.
+      const rgb = hexToRgb(hexOf(primary));
+      const grey = rgbToOklch(rgb)[1] < 0.02;
+      const turn = Math.round(hslHue(rgb) - 38);
+      return `grayscale(1) sepia(1) hue-rotate(${grey ? 0 : turn}deg) saturate(${grey ? 0 : 1.6}) contrast(1.05)`;
     }
     default:
       return "none";

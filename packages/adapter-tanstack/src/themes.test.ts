@@ -111,7 +111,7 @@ test("the style layer's new fields render, in the combinations where misses woul
     `${mode}:\n  background: "${background}"\n  foreground: "${foreground}"\n  primary: "${primary}"\n`;
   const both =
     colors("light", "#f4f1ea", "#1b1d22", "#3346c8") +
-    colors("dark", "#14161b", "#eceef2", "#9aa8ff");
+    colors("dark", "#14161b", "#eceef2", "#e8b04a");
   const themes = [
     // Glass in dark: the card's tint over the page and a strong band, blurred, a lit top edge.
     theme(
