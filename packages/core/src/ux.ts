@@ -149,15 +149,64 @@ export interface PageUx {
   /** How a field is entered, when not the default for its kind (docs/design/look.md §1.1). */
   control?: Record<string, Control>;
   /**
-   * How the record page shows a list of related records, by its field: a table (the default) or
-   * a conversation with a reply box (docs/design/conversation.md).
+   * How the record page shows a list of related records, by its field: a table (the default), a
+   * conversation with a reply box (docs/design/conversation.md), or inline: rows edited in place,
+   * each saved on its own (look-gap round 2, A 215).
    */
-  lists?: Record<string, "thread" | "table">;
+  lists?: Record<string, RecordList>;
+  /** The record's title row carries its summary: the status badge, the amount, the key dates. */
+  recordHeader?: "summary";
+  /** The same summary in a panel beside the form (under it on a phone, before the lists). */
+  formAside?: "summary";
   /** The line under a record's name on cards and in pickers (record-names.md §3): a name part. */
   subtitle?: NamePartIR;
   /** Smaller parts after the subtitle. */
   detail?: NamePartIR[];
 }
+
+/**
+ * What a record's summary shows (`record.header` and `form.aside`, A 215), read by type, never by
+ * name: its first choice field with tones (else its first choice field) as the status, its first
+ * money field or money formula as the amount, and its first two date fields as the key dates.
+ */
+export function recordSummary(
+  model: ModelIR,
+  tones: UxIR["tones"],
+): { status?: FieldIR; amount?: FieldIR; dates: FieldIR[] } {
+  const choices = model.fields.filter((f) => f.type.kind === "choice");
+  const status = choices.find((f) => tones[`${model.name}.${f.name}`]) ?? choices[0];
+  const amount = model.fields.find((f) => f.type.kind === "scalar" && f.type.name === "money");
+  const dates = model.fields
+    .filter(
+      (f) => f.type.kind === "scalar" && (f.type.name === "date" || f.type.name === "datetime"),
+    )
+    .slice(0, 2);
+  return { ...(status ? { status } : {}), ...(amount ? { amount } : {}), dates };
+}
+
+/**
+ * The fields a row of an inline list shows (`record.lists: { lines: inline }`, A 215): its values,
+ * the entered ones as inputs and the computed ones as text, and its references as pickers. Not the
+ * reference back to the parent (the row is on it, the first one as addable takes it), nor lists,
+ * files, pictures, the record's owner or what the app fills.
+ */
+export function inlineFields(target: ModelIR, parent: string): FieldIR[] {
+  const back = target.fields.find(
+    (f) => f.type.kind === "relation" && !f.type.many && f.type.model === parent,
+  );
+  return target.fields.filter(
+    (f) =>
+      f !== back &&
+      !f.byApp &&
+      f.name !== target.ownedBy &&
+      !(f.type.kind === "relation" && f.type.many) &&
+      !(f.type.kind === "scalar" && ["file", "files", "picture", "pictures"].includes(f.type.name)),
+  );
+}
+
+/** How a record page shows a list of related records (`record.lists`). */
+export const RECORD_LISTS = ["table", "thread", "inline"] as const;
+export type RecordList = (typeof RECORD_LISTS)[number];
 
 /** The ways a field can be entered, chosen by name in the ux file. */
 export const CONTROLS = [
@@ -395,8 +444,14 @@ function readRecord(
   ir: SpecIR,
   model: ModelIR | undefined,
   where: string,
-): { lists: Record<string, "thread" | "table">; subtitle?: NamePartIR; detail?: NamePartIR[] } {
-  const lists: Record<string, "thread" | "table"> = {};
+): {
+  lists: Record<string, RecordList>;
+  subtitle?: NamePartIR;
+  detail?: NamePartIR[];
+  header?: "summary";
+} {
+  const lists: Record<string, RecordList> = {};
+  let header: "summary" | undefined;
   let subtitle: NamePartIR | undefined;
   let detail: NamePartIR[] | undefined;
   // A line under the name: a part as namedBy takes them, checked against the page's model.
@@ -422,9 +477,16 @@ function readRecord(
     mapEntries(ctx, node, `the record of ${where}`) ?? [],
     `the record of ${where}`,
     {
-      allowed: ["lists", "subtitle", "detail"],
+      allowed: ["lists", "subtitle", "detail", "header"],
     },
   )) {
+    if (option.key === "header") {
+      const look = readString(ctx, option.value, `"header" of the record of ${where}`);
+      if (look === "summary") header = look;
+      else if (look !== undefined && look !== "none")
+        ctx.error(option.value, "invalid-value", `"header" of a record is summary or none.`);
+      continue;
+    }
     if (option.key === "subtitle") {
       const text = readString(ctx, option.value, `"subtitle" of the record of ${where}`);
       if (text !== undefined) subtitle = part(text, option.value as ParsedNode);
@@ -462,12 +524,67 @@ function readRecord(
         );
         continue;
       }
-      if (look !== "thread" && look !== "table") {
+      if (!(RECORD_LISTS as readonly string[]).includes(look ?? "")) {
         if (look !== undefined)
-          ctx.error(pair.value, "invalid-value", `"${pair.key}" in "lists" is thread or table.`);
+          ctx.error(
+            pair.value,
+            "invalid-value",
+            `"${pair.key}" in "lists" is table, thread or inline.`,
+          );
         continue;
       }
       const target = ir.models.find((m) => m.name === (field.type as { model: string }).model);
+      if (look === "inline" && target) {
+        // A row asks for the fields inlineFields gives; a required one it leaves out, with no
+        // default and not the reference back, has nowhere to be given.
+        // A row is added on its parent: the related model refers back to it.
+        const back = target.fields.find(
+          (f) => f.type.kind === "relation" && !f.type.many && f.type.model === model?.name,
+        );
+        if (!back) {
+          ctx.error(
+            pair.value,
+            "invalid-value",
+            `${target.name} cannot be edited inline: it does not refer back to ${model?.name ?? "the record"}, so a new row would belong to nothing.`,
+          );
+          continue;
+        }
+        const asked = inlineFields(target, model?.name ?? "");
+        const unasked = target.fields.find(
+          (f) =>
+            f.required &&
+            f !== back &&
+            !asked.includes(f) &&
+            !f.formula &&
+            !f.byApp &&
+            f.default === undefined &&
+            !f.defaultMe &&
+            !f.defaultFormula,
+        );
+        if (unasked) {
+          ctx.error(
+            pair.value,
+            "invalid-value",
+            `${target.name} cannot be edited inline: its ${unasked.name} is required, and a row has no place to give it (a row asks for values and references, not files or pictures).`,
+          );
+          continue;
+        }
+        // Its own page in the menu too: the records are edited on their parent, and the page is
+        // a second way in that reads as the first.
+        const own = ir.pages.find(
+          (p) =>
+            p.pattern.kind === "crud" &&
+            p.pattern.model === target.name &&
+            ir.navigation.some((m) => m.pages.includes(p.id)),
+        );
+        if (own)
+          ctx.warning(
+            pair.value,
+            "inline-in-menu",
+            `${humanize(pair.key)} are edited on their ${humanize(model?.name ?? "record").toLowerCase()}; ${own.id} is a page of its own in the menu too.`,
+            `Leave ${own.id} out of the navigation in smithable.yml; it stays reachable by its address.`,
+          );
+      }
       if (look === "thread" && target) {
         const bindings = threadBindings(target);
         const text = bindings.body;
@@ -509,10 +626,15 @@ function readRecord(
             );
         }
       }
-      lists[pair.key] = look;
+      lists[pair.key] = look as RecordList;
     }
   }
-  return { lists, ...(subtitle ? { subtitle } : {}), ...(detail ? { detail } : {}) };
+  return {
+    lists,
+    ...(subtitle ? { subtitle } : {}),
+    ...(detail ? { detail } : {}),
+    ...(header ? { header } : {}),
+  };
 }
 
 /** Parses smithable.ux.yml and checks every page and field it names against the spec. */
@@ -1004,6 +1126,7 @@ export function validateUx(
             if (Object.keys(record.lists).length) result.lists = record.lists;
             if (record.subtitle) result.subtitle = record.subtitle;
             if (record.detail?.length) result.detail = record.detail;
+            if (record.header) result.recordHeader = record.header;
             continue;
           }
           if (part.key === "icon") {
@@ -1027,11 +1150,16 @@ export function validateUx(
               allowed:
                 part.key === "table"
                   ? ["columns", "below", "sort", "view", "totals", "mark", "actions"]
-                  : ["fieldOrder", "sections", "columns", "control", "results"],
+                  : ["fieldOrder", "sections", "columns", "control", "results", "aside"],
               later: part.key === "table" ? ["pageSize"] : [],
             },
           )) {
-            if (part.key === "form" && option.key === "columns") {
+            if (part.key === "form" && option.key === "aside") {
+              const aside = readString(ctx, option.value, `"aside" of the form of ${where}`);
+              if (aside === "summary") result.formAside = aside;
+              else if (aside !== undefined && aside !== "none")
+                ctx.error(option.value, "invalid-value", `"aside" of a form is summary or none.`);
+            } else if (part.key === "form" && option.key === "columns") {
               const n = isScalar(option.value) ? option.value.value : undefined;
               if (n === 1 || n === 2) result.formColumns = n;
               else ctx.error(option.value, "invalid-value", `"columns" of a form is 1 or 2.`);

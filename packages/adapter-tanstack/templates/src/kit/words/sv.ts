@@ -307,6 +307,7 @@ export const w = {
     `Ändringen mejlas till var och en av dess ${label.toLowerCase()} (${n}).`,
   saved: "Sparade",
   saving: "Sparar…",
+  summary: "Sammanfattning",
   search: "Sök…",
   searchAction: "Sök",
   selectAll: "Välj alla",

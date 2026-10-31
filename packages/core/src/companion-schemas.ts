@@ -354,14 +354,20 @@ export const UX_SCHEMA: JsonSchema = {
           },
           record: {
             type: "object",
-            description: "The record page: how its lists of related records are shown.",
+            description:
+              "The record page: how its lists of related records are shown, and its title row.",
             additionalProperties: false,
             properties: {
               lists: {
                 type: "object",
                 description:
-                  "By list field: table (the default) or thread, a conversation with a reply box, e.g. { messages: thread }.",
-                additionalProperties: { enum: ["thread", "table"] },
+                  "By list field: table (the default), thread, a conversation with a reply box, e.g. { messages: thread }, or inline, rows edited in place, e.g. { lines: inline }.",
+                additionalProperties: { enum: ["table", "thread", "inline"] },
+              },
+              header: {
+                enum: ["summary", "none"],
+                description:
+                  "summary: the title row carries the record's status, its amount and its key dates; none (the default).",
               },
               subtitle: {
                 type: "string",
@@ -402,6 +408,11 @@ export const UX_SCHEMA: JsonSchema = {
                 enum: [1, 2],
                 description:
                   "2 puts short fields two abreast; long texts and pictures stay full width.",
+              },
+              aside: {
+                enum: ["summary", "none"],
+                description:
+                  "summary: a panel beside the form with the record's status, its amount and its key dates (under the form on a phone); none (the default).",
               },
               control: {
                 type: "object",

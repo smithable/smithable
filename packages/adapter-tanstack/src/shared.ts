@@ -298,9 +298,21 @@ export function addable(model: ModelIR, ir: SpecIR, threads: string[] = []) {
       (p) => p.pattern.kind === "crud" && pageModel(p) === target.name,
     )?.route;
     const ref = parentRefs(target, ir).find((p) => p.field.type.model === model.name)?.field;
-    // A thread adds by its reply box, with no page of the related model needed.
+    // A thread adds by its reply box, an inline list by its empty row: no page of the related
+    // model needed.
     return (route || threads.includes(list.name)) && ref ? [{ list, target, ref, route }] : [];
   });
+}
+
+/** A model's lists that one of its pages edits in place (`record.lists` inline, A 215). */
+export function inlineLists(model: ModelIR, ir: SpecIR, ux: UxIR): string[] {
+  return lists(model)
+    .map((f) => f.name)
+    .filter((name) =>
+      ir.pages.some(
+        (p) => pageModel(p) === model.name && ux.pages[p.id]?.lists?.[name] === "inline",
+      ),
+    );
 }
 
 /** A model's lists that one of its pages shows as a conversation (docs/design/conversation.md). */

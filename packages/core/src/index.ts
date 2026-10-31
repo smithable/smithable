@@ -119,7 +119,7 @@ export { explainAccess } from "./explain-access.js";
 export { writeExplicit } from "./explicit.js";
 export { formatSpec, sameContent } from "./format.js";
 export type { Expr } from "./formula.js";
-export { formatFormula, parseFormula } from "./formula.js";
+export { fieldsUsed, formatFormula, parseFormula } from "./formula.js";
 export {
   daysOf,
   type Hours,
@@ -303,7 +303,11 @@ export {
   FONTS,
   HEADER_LOOKS,
   ICONS,
+  inlineFields,
   pageIcon,
+  RECORD_LISTS,
+  type RecordList,
+  recordSummary,
   SECTION_LOOKS,
   stagePage,
   THEME_PRESETS,

@@ -15,6 +15,7 @@ import {
   type PersonIR,
   pageModel,
   parseTheme,
+  recordSummary,
   type SamplesIR,
   type SpecIR,
   type SpecPlugin,
@@ -439,6 +440,20 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
           `${page.id} ${name} stage: ${shown?.id ?? "no list page"}${look.stage ? " (stage)" : " (the first list page in the navigation)"}`,
         );
       }
+  // A record's summary (A 215): what its title row or its side panel shows, by type.
+  for (const page of ir.pages) {
+    const look = ux?.pages[page.id];
+    const model =
+      page.pattern.kind === "crud" ? ir.models.find((m) => m.name === pageModel(page)) : undefined;
+    if (!model || !look || (!look.recordHeader && !look.formAside)) continue;
+    const { status, amount, dates } = recordSummary(model, ux?.tones ?? {});
+    const where = [look.recordHeader && "header", look.formAside && "aside"]
+      .filter(Boolean)
+      .join(" and ");
+    lines.push(
+      `${page.id} summary (${where}): status ${status?.name ?? "none"}, amount ${amount?.name ?? "none"}, dates ${dates.map((d) => d.name).join(", ") || "none"} (the first choice with tones, money, dates)`,
+    );
+  }
   // Where the menu sits and its surface (look-gap §4): the ux file's word, else the default.
   lines.push(ux?.navigation ? `menu: ${ux.navigation} (navigation)` : "menu: sidebar (unsaid)");
   lines.push(

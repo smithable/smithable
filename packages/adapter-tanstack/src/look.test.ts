@@ -277,3 +277,48 @@ pages:
   );
   expect(home("smithableUx: 0.1\n")).not.toContain("amount:");
 });
+
+test("an inline list's rows pick their references, with the choices loaded with the record (A 215)", () => {
+  const shop = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Shop }
+models:
+  Product: { fields: { name: string! } }
+  Order:
+    fields:
+      number: string!
+      lines: OrderLine[]
+  OrderLine: { fields: { order: Order!, product: Product!, quantity: int! = 1 } }
+pages:
+  orders: { crud: Order }
+  products: { crud: Product }
+navigation:
+  main: [orders, products]
+`,
+  }).ir as SpecIR;
+  const route =
+    generateApp(shop, {
+      smithableVersion: "0.0.0",
+      auth: validateAuth(
+        {
+          path: "smithable.auth.yml",
+          text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [orders, products], read: [Order, Product, OrderLine] }\n",
+        },
+        shop,
+      ).auth as AuthIR,
+      ux: validateUx(
+        {
+          path: "smithable.ux.yml",
+          text: "smithableUx: 0.1\npages: { orders: { record: { lists: { lines: inline }, header: summary } } }\n",
+        },
+        shop,
+        [],
+      ).ux,
+    }).find((f) => f.path === "src/routes/orders/$id.tsx")?.content ?? "";
+  expect(route).toContain("rowOptions: { lines: { productId: await productOptions() } }");
+  expect(route).toContain('fields={["productId","quantity"]}');
+  expect(route).toContain("options={rowOptions.lines}");
+  expect(route).toContain("createOrderLine({ data: { ...values, orderId: row.id } as never })");
+  expect(route).toContain("<RecordSummary");
+});

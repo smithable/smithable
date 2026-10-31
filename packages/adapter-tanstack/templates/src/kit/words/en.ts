@@ -328,6 +328,7 @@ export const w = {
     `The change is mailed to each of its ${label.toLowerCase()} (${n}).`,
   saved: "Saved",
   saving: "Saving…",
+  summary: "Summary",
   search: "Search…",
   searchAction: "Search",
   selectAll: "Select all",

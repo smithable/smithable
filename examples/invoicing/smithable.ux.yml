@@ -26,3 +26,7 @@ pages:
         - { name: documents, fields: [contract] }
       columns: 2
       control: { status: radio }         # the four states shown at once
+      aside: summary                     # the status, the total and the dates beside the form
+    record:
+      lists: { lines: inline }           # the lines edited in place, the total under them
+      header: summary                    # the status, the total and the dates under the number

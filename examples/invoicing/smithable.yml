@@ -120,3 +120,6 @@ pages:
       steps:
         business: [businessName, vatNumber]
         payment: [iban, paymentTermDays]
+
+navigation:                             # invoice lines are edited on their invoice (smithable.ux.yml)
+  main: [overview, invoices, clients, settings]
