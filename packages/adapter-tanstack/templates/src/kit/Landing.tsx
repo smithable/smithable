@@ -921,7 +921,7 @@ function RecordCardsView({
    * ruled rows with the amount as a figure column (look-breadth §3), for prices and accounts.
    */
   layout?: "cards" | "list" | "grid" | "ledger";
-  /** Cards or pictures side by side on wide screens, 2 to 6: cards 3 and a grid 4 when not said; a list has none. */
+  /** Cards or pictures side by side on wide screens, 2 to 6: cards 3 and a grid 4 when not said; a list or a ledger has none. */
   columns?: 2 | 3 | 4 | 5 | 6;
   /** The model's icon, for a model with pictures: the placeholder where a record has none. */
   icon?: LucideIcon;
@@ -1036,12 +1036,14 @@ function RecordCardsView({
                   </p>
                 )}
               </div>
-              <p
-                data-part="figure"
-                className="text-right text-xl font-(--heading-weight) tabular-nums"
-              >
-                {card.amount ?? ""}
-              </p>
+              {card.amount && (
+                <p
+                  data-part="figure"
+                  className="text-right text-xl font-(--heading-weight) tabular-nums"
+                >
+                  {card.amount}
+                </p>
+              )}
             </li>
           ))}
         </ul>
