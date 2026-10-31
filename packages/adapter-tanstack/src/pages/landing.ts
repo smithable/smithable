@@ -39,6 +39,26 @@ import { LUCIDE, workspaceEntries } from "./root.js";
  * a frame of its own (framed false): the root gives it the page's frame. The parts beside a
  * kind's own page are a module of their own (framed "parts", partsModule).
  */
+/**
+ * An address's city, for a hero's line over its title: from its last part, the words that are
+ * not a postcode (any word with a digit) or a state's short code ("IL"); "22100 Mariehamn" and
+ * "Springfield, IL 62704" give Mariehamn and Springfield.
+ */
+function cityOf(address: string): string | undefined {
+  const parts = address
+    .trim()
+    .split(/[\n,]/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  for (const part of parts.reverse()) {
+    const words = part.split(/\s+/).filter((w) => !/\d/.test(w));
+    if (words.length === 0 || (words.length === 1 && /^[A-Z]{2,3}$/.test(words[0] as string)))
+      continue;
+    return words.join(" ");
+  }
+  return undefined;
+}
+
 export function landingRoute(
   page: PageIR,
   sections: LandingSection[],
@@ -133,12 +153,7 @@ export function landingRoute(
     const read =
       given.eyebrow && contact
         ? given.eyebrow === "address"
-          ? (text(contact.name).address ?? "")
-              .trim()
-              .split(/[\n,]/)
-              .pop()
-              ?.replace(/^[\s\d-]+/, "")
-              .trim()
+          ? cityOf(text(contact.name).address ?? "")
           : (text(contact.name).hours ?? "").trim().split("\n")[0]?.trim()
         : undefined;
     const line = own.eyebrow ?? (read || undefined);

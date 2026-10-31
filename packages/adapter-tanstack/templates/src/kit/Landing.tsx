@@ -494,13 +494,10 @@ function HeroView({
   /** A short line over the title, e.g. who the app is for ("For small studios"). */
   eyebrow?: string;
 }) {
-  // A wash other than the layout's own: the other across-the-width layout's drawing.
-  const layout =
-    given === "cover" && overlay === "dark"
-      ? "photo"
-      : given === "photo" && overlay === "brand"
-        ? "cover"
-        : given;
+  const layout = given;
+  // Over a picture across the width: the brand's wash (the cover's own) or a dark scrim (the
+  // photo's own); each layout keeps its size and takes the wash it is given (look-gap §4).
+  const wash = overlay ?? (layout === "cover" ? "brand" : "dark");
   const after = useId();
   // A link to where the next section starts, so it works by keyboard and without JavaScript.
   const cue = more && (
@@ -542,10 +539,11 @@ function HeroView({
       className={cn(
         buttonVariants({ variant: "outline" }),
         "h-12 px-6 text-base",
-        (shown === "centered" || shown === "photo") &&
+        (shown === "centered" || ((shown === "photo" || shown === "cover") && wash === "dark")) &&
           "border-white/70 bg-transparent text-white hover:bg-white/10",
         // Over the cover's rule for its links (the first button's fill), so marked as important.
-        shown === "cover" &&
+        (shown === "cover" || shown === "photo") &&
+          wash === "brand" &&
           "border-primary-foreground/70 bg-transparent! text-primary-foreground! hover:bg-primary-foreground/10! dark:border-foreground/70 dark:text-foreground! dark:hover:bg-foreground/10!",
       )}
     >
@@ -629,17 +627,26 @@ function HeroView({
             fetchPriority="high"
             className="absolute inset-0 -z-10 size-full object-cover"
           />
+          {wash === "dark" ? (
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 to-black/20 sm:bg-linear-to-r sm:from-black/85 sm:via-black/60 sm:to-black/5 sm:rtl:bg-linear-to-l"
+            />
+          ) : (
+            <div
+              aria-hidden
+              className={cn(
+                "absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10",
+                "[--cover-wash:color-mix(in_oklch,var(--primary)_35%,var(--background))] dark:bg-(--cover-wash)/90 dark:sm:bg-transparent dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10",
+              )}
+            />
+          )}
           <div
-            aria-hidden
             className={cn(
-              "absolute inset-0 -z-10 bg-primary/90 sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10",
-              "[--cover-wash:color-mix(in_oklch,var(--primary)_35%,var(--background))] dark:bg-(--cover-wash)/90 dark:sm:bg-transparent dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10",
-            )}
-          />
-          <div
-            className={cn(
-              "mx-auto max-w-6xl px-5 py-24 text-primary-foreground sm:py-32 [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90",
-              "dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90",
+              "mx-auto max-w-6xl px-5 py-24 sm:py-32",
+              wash === "dark"
+                ? "text-white [&_p]:text-white/90"
+                : "text-primary-foreground [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90 dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90",
               shortcutList && "pb-28 sm:pb-36",
             )}
           >
@@ -683,11 +690,18 @@ function HeroView({
         />
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 to-black/20 sm:bg-linear-to-r sm:from-black/85 sm:via-black/60 sm:to-black/5 sm:rtl:bg-linear-to-l"
+          className={
+            wash === "brand"
+              ? "absolute inset-0 -z-10 bg-primary/90 [--cover-wash:color-mix(in_oklch,var(--primary)_35%,var(--background))] sm:bg-transparent sm:bg-linear-to-r sm:from-primary sm:via-primary/85 sm:to-primary/10 dark:bg-(--cover-wash)/90 dark:sm:bg-transparent dark:sm:from-(--cover-wash) dark:sm:via-(--cover-wash)/85 dark:sm:to-(--cover-wash)/10"
+              : "absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/65 to-black/20 sm:bg-linear-to-r sm:from-black/85 sm:via-black/60 sm:to-black/5 sm:rtl:bg-linear-to-l"
+          }
         />
         <div
           className={cn(
-            "mx-auto w-full max-w-6xl px-5 py-16 text-white sm:py-24 [&_h1]:max-w-2xl [&_p]:text-white/90",
+            "mx-auto w-full max-w-6xl px-5 py-16 sm:py-24 [&_h1]:max-w-2xl",
+            wash === "brand"
+              ? "text-primary-foreground [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90 dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90"
+              : "text-white [&_p]:text-white/90",
             shortcutList && "pb-28 sm:pb-36",
           )}
         >

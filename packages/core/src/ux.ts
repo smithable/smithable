@@ -208,7 +208,7 @@ export interface SectionLook {
   band?: Band;
   /** A cover or photo hero's wash over its picture: the brand's, or a dark scrim (look-gap §4). */
   overlay?: "brand" | "dark";
-  /** A hero's line over its title from the contact section: its city, or today's opening hours. */
+  /** A hero's line over its title from the contact section: its city, or its hours' first line. */
   eyebrow?: "address" | "hours";
   /** A hero's row of figures: the count of each model's records the viewer may read. */
   facts?: string[];
@@ -520,7 +520,10 @@ export function validateUx(
   ir: SpecIR,
   /** The project's own themes (themes/<name>.yml), which `theme.preset` may name too. */
   themes: readonly ThemeIR[] = [],
-  /** The auth file, when read: a public hero's facts count only what visitors may read. */
+  /**
+   * The auth file, when read: a public hero's facts count only what visitors may read. Without it
+   * that refusal cannot fire, so a caller with the auth file passes it.
+   */
   auth?: AuthIR,
 ): { ux?: UxIR; diagnostics: Diagnostic[] } {
   const lines = new LineCounter();
@@ -1240,7 +1243,8 @@ function readSectionLooks(
     const allowed = SECTION_LOOKS[section.kind] ?? {};
     const at = `the look of ${entry.key} on ${where}`;
     const look: SectionLook = {};
-    for (const option of checkKeys(ctx, mapEntries(ctx, entry.value, at) ?? [], at, {
+    const options = mapEntries(ctx, entry.value, at) ?? [];
+    for (const option of checkKeys(ctx, options, at, {
       allowed: Object.keys(allowed),
     })) {
       const values = allowed[option.key];
@@ -1302,7 +1306,7 @@ function readSectionLooks(
     }
     // A hero's wash goes with a picture under the text; its line from the contact section needs one.
     if (section.kind === "hero") {
-      const overlay = mapEntries(ctx, entry.value, at)?.find((o) => o.key === "overlay");
+      const overlay = options.find((o) => o.key === "overlay");
       if (look.overlay && look.layout !== "cover" && look.layout !== "photo") {
         delete look.overlay;
         ctx.error(
@@ -1312,7 +1316,7 @@ function readSectionLooks(
         );
       }
       if (look.eyebrow && !page.sections.some((s) => s.kind === "contact")) {
-        const eyebrow = mapEntries(ctx, entry.value, at)?.find((o) => o.key === "eyebrow");
+        const eyebrow = options.find((o) => o.key === "eyebrow");
         delete look.eyebrow;
         ctx.error(
           eyebrow?.keyNode ?? null,

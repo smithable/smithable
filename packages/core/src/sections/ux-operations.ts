@@ -600,6 +600,9 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       ["pages", page, "sections", section, key],
       value === "default" ? undefined : typed,
     );
+    // A hero's wash goes with a picture under the text: a layout without one takes it away.
+    if (kind === "hero" && key === "layout" && value !== "cover" && value !== "photo")
+      put(editors.ux, ["pages", page, "sections", section, "overlay"], undefined);
     return [];
   },
 };

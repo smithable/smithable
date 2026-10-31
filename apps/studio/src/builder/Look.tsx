@@ -819,12 +819,20 @@ function LandingLook({
           const current = ux.looks?.[section.name]?.[key as "layout"];
           const set = (value: string) =>
             run("setSectionLook", { page, section: section.name, key, value });
+          // Choices the check would refuse are not offered: a wash without a picture under the
+          // text, a line from a contact section the page does not have.
+          const heroLayout = ux.looks?.[section.name]?.layout;
+          if (key === "overlay" && heroLayout !== "cover" && heroLayout !== "photo" && !current)
+            return null;
+          if (key === "eyebrow" && !sections.some((s) => s.kind === "contact") && !current)
+            return null;
           // A hero's facts: models by name, counted under its text.
           if (values === "models")
             return (
               <label key={`${section.name}.${key}`} className="flex items-center gap-2">
                 <span className="flex-1">{label}</span>
                 <input
+                  key={Array.isArray(current) ? current.join(" ") : ""}
                   aria-label={label}
                   defaultValue={Array.isArray(current) ? current.join(" ") : ""}
                   placeholder="Models to count"
