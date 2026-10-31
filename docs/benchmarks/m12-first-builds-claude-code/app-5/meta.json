@@ -4,7 +4,7 @@
   "wordStarter": "api",
   "questions": [
     "Who will use the app?",
-    "How should stock levels be tracked?",
-    "Should the app also keep orders placed with suppliers?"
+    "How should stock levels be kept?",
+    "Should the app also record orders placed with suppliers?"
   ]
 }

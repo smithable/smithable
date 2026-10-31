@@ -25,6 +25,18 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
 pages:
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
   incidents:
     crud: Incident
     filters: [status, component]
@@ -51,18 +63,6 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
   team:
     users: manage
 actions:
@@ -76,7 +76,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: We have found the cause and are working on a fix.
+        message: The cause is found and a fix is being worked on.
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -88,7 +88,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is in place. We are watching closely before closing this.
+        message: A fix is out. We are watching before we close this.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -101,6 +101,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This outage is over and everything works again.
-    intent: The outage is over, with an update saying so; the service's state stays what the team sets.
+        message: This incident is resolved.
+    intent: The outage is over, with an update saying so.
 navigation: [overview, incidents, updates, components, team]

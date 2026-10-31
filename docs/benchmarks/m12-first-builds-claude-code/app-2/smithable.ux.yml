@@ -12,3 +12,5 @@ tones:
     won: success
     lost: danger
     negotiation: warning
+theme:
+  preset: corporate

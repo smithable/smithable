@@ -19,5 +19,4 @@ defaultRole: staff
 api:
   models: [Component, Incident]
   actions: [resolve]
-  assistants: true
 admins: [johan@smithable.ai]

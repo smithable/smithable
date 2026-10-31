@@ -1,23 +1,29 @@
 smithableContent: 0.1
 pages:
+  catalog:
+    title: Tools
+  myTools:
+    title: My tools
+  loans:
+    title: Lent out
   home:
     features:
-      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? Find one a few doors down instead of buying a new one. }, { title: Share what sits in your shed, text: "Add the tools you rarely use with a photo and a short note, and mark them available when they are." }, { title: Ask the owner directly, text: Send a message from the tool's page to agree on when to pick it up and bring it back. }]
-    faq:
-      items: [{ question: Does borrowing cost anything?, answer: No. Neighbors lend their tools for free; just bring them back clean and on time. }, { question: Who can see my contact details?, answer: Nobody sees your address or email. Neighbors reach you through the message form on your tool's page. }, { question: Why does my tool not show up yet?, answer: "Photos are checked before a tool appears in the library, usually within a day." }]
+      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? Someone down the street probably has one sitting in a drawer. }, { title: Share what you own, text: "Add your ladder, hedge trimmer or tent with a photo and let neighbors know it's there to borrow." }, { title: Arrange it directly, text: Send the owner a message from the tool's page and agree on when to pick it up. }, { title: Know where your tools are, text: "Keep track of what you've lent, to whom, and when it should come back." }]
+      title: How it works
     hero:
-      title: Borrow tools from your neighbors
-      subtitle: "A shared shed for the whole neighborhood: find the ladder, saw or hedge trimmer you need, and lend out the ones you have."
+      title: The neighborhood tool shed
+      subtitle: Borrow the tools you need from people nearby, and lend out the ones you rarely use.
+      button: Browse tools
+      secondButton: Share a tool
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-  tools:
-    title: Tools
-  myTools:
-    title: My tools
-  saved:
-    title: Saved
+    latest:
+      title: Recently shared
+actions:
+  markReturned:
+    label: Mark returned
 logo:
   src: images/logo.webp
   alt: A toolbox

@@ -3,18 +3,25 @@ pages:
   home:
     hero:
       title: Welcome to the club
-      subtitle: Follow our teams, meet the players and catch every fixture and result.
-      button: See matches
+      subtitle: Fixtures, results and the squads behind every team, from the juniors to the first eleven.
+      button: See the fixtures
+      secondButton: Our teams
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    fixtures:
-      title: Upcoming fixtures
+    upcoming:
+      title: Coming up
     results:
       title: Latest results
-    squads:
+    ourTeams:
       title: Our teams
+  matches:
+    title: Matches
+  teams:
+    title: Teams
+  players:
+    title: Players
 logo:
   src: images/logo.webp
   alt: A football

@@ -2,10 +2,19 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      title: Is the shop working?
+      subtitle: The live state of checkout, payments, search and delivery tracking, and what we are doing about any outage.
+      button: Past incidents
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
+    services:
+      title: Services
+    open:
+      title: Ongoing outages
+    recent:
+      title: Recently resolved
 logo:
   src: images/logo.webp
   alt: A pulse line in a circle

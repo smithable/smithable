@@ -1,12 +1,12 @@
 smithable: 0.1
 app:
   name: Pipeline CRM
-  description: A simple CRM where a small sales team tracks companies, contacts, deals and follow-ups.
+  description: A simple CRM for a small sales team to track companies, contacts, deals and follow-ups.
   currency: EUR
 models:
   Company:
     fields:
-      name: string!
+      name: string! unique
       website: url
       phone: phone
       industry: string
@@ -20,7 +20,7 @@ models:
   Contact:
     fields:
       name: string!
-      company: Company
+      company: Company!
       jobTitle: string
       email: email
       phone: phone
@@ -31,10 +31,10 @@ models:
       title: string!
       company: Company!
       contact: Contact
-      stage: lead | qualified | proposal | negotiation | won | lost
       value:
         type: money
         min: 0
+      stage: lead | qualified | proposal | negotiation | won | lost
       expectedClose: date
       closedOn:
         type: date
@@ -44,10 +44,7 @@ models:
   FollowUp:
     fields:
       company: Company!
-      deal: Deal
-      contact: Contact
       dueOn: date! = TODAY()
-      assignee: User = ME()
       done: bool
       note: text
     trash: true
@@ -55,6 +52,7 @@ pages:
   companies:
     crud: Company
     search: [name, industry]
+    filters: [accountManager]
     actions: [mergeCompanies]
   contacts:
     crud: Contact
@@ -65,15 +63,15 @@ pages:
     search: [title]
     filters: [stage, company, expectedClose]
     actions: [markWon, markLost]
-  team:
-    users: manage
   followUps:
     crud: FollowUp
     search: [note]
-    filters: [done, dueOn, assignee]
+    filters: [done, dueOn, company]
     defaultFilter:
       done: false
-    actions: [completeFollowUp]
+    actions: [markDone]
+  team:
+    users: manage
 actions:
   markWon:
     on: Deal
@@ -82,6 +80,7 @@ actions:
     set:
       stage: won
       closedOn: TODAY()
+    intent: Close a deal as won.
   markLost:
     on: Deal
     when:
@@ -89,11 +88,14 @@ actions:
     set:
       stage: lost
       closedOn: TODAY()
-  mergeCompanies:
-    merge: Company
-  completeFollowUp:
+    intent: Close a deal as lost.
+  markDone:
     on: FollowUp
     when:
       done: false
     set:
       done: true
+    intent: Tick off a follow-up once it is handled.
+  mergeCompanies:
+    merge: Company
+    intent: Combine duplicate companies; their contacts, deals and follow-ups move to the one kept.
