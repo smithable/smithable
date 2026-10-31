@@ -1871,6 +1871,8 @@ async function callFlow(dir, base, receiver) {
       "select id from incidents where status != 'resolved' order by id limit 1",
     );
     if (!other) throw new Error("no incident left to resolve");
+    // As staff: a mail never goes to the person who made the change, and the admin is its reader.
+    await signInAs(page, base, "staff");
     await open(page, `${base}/incidents/${other.id}`);
     await page
       .getByLabel(/^Status/)
@@ -1882,7 +1884,7 @@ async function callFlow(dir, base, receiver) {
     // Under ten seconds, the call's timeout: a slow call before it would hold it at least that long.
     if (Date.now() - saved >= 8_000)
       throw new Error(
-        `the mail went ${Math.round((Date.now() - saved) / 1000)} s after the change`,
+        `the mail went ${Math.round((Date.now() - saved) / 1000)} s after the change: ${JSON.stringify(query(dir, 'select entry, "to", sent_at, failed_at, error, next_at from outgoing_mail order by id desc limit 3'))}`,
       );
     for (
       let i = 0;
