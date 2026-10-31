@@ -4,13 +4,16 @@ import {
   type AuthIR,
   camel,
   type FieldIR,
+  fieldsUsed,
   humanize,
+  inlineFields,
   kebab,
   type ModelIR,
   type OnboardingStep,
   type PageIR,
   pageModel,
   pascal,
+  recordSummary,
   type SpecIR,
   type StandardActionIR,
   threadBindings,
@@ -36,6 +39,7 @@ import {
   hasFavorites,
   importList,
   indexPath,
+  inlineLists,
   join,
   keyOf,
   lists,
@@ -464,7 +468,9 @@ export function detailRoute(
     page.contact && auth && hasSignIn(auth) && !within
       ? contactParts(page, model, t, ir)
       : undefined;
-  const adds = within ? [] : addable(model, ir, threadLists(model, ir, ux));
+  const adds = within
+    ? []
+    : addable(model, ir, [...threadLists(model, ir, ux), ...inlineLists(model, ir, ux)]);
   // A list shown as a conversation (docs/design/conversation.md), read by rule.
   const threadFor = (field: FieldIR) =>
     !within && field.type.kind === "relation" && ux.pages[page.id]?.lists?.[field.name] === "thread"
@@ -480,6 +486,8 @@ export function detailRoute(
     ]);
   let tables = false;
   let threads = false;
+  let inlines = false;
+  let totals = false;
   const sections = lists(model).map((field) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
@@ -538,6 +546,47 @@ export function detailRoute(
         />
       </section>`;
     }
+    // Rows edited in place (A 215), each saved on its own through the related model's own
+    // create, change and delete; the parent's total of them under the table, from its own field.
+    if (!within && add && ux.pages[page.id]?.lists?.[field.name] === "inline") {
+      inlines = true;
+      imports.set(tn.module, [
+        ...new Set([...(imports.get(tn.module) ?? []), tn.create, tn.update, tn.remove]),
+      ]);
+      const ref = dataKey(add.ref);
+      const total = model.fields.find(
+        (f) =>
+          f.formula &&
+          f.type.kind === "scalar" &&
+          f.type.name === "money" &&
+          fieldsUsed(f.formula).includes(field.name),
+      );
+      if (total) totals = true;
+      const changes = (call: string) => `canAdd?.${field.name}
+              ? async (${call}) => {
+                  await ${call === "values" ? `${tn.create}({ data: { ...values, ${ref}: row.id } as never })` : call === "id, values" ? `${tn.update}({ data: { id, values: { ...values, ${ref}: row.id } as never } })` : `${tn.remove}({ data: { id } })`};
+                  await router.invalidate();
+                }
+              : undefined`;
+      return `      <section className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold">${label}</h2>
+        <InlineRows
+          ui={${tn.ui}}
+          app={app}
+          rows={row.${field.name}}
+          fields={${JSON.stringify(inlineFields(target).map((f) => f.name))}}
+          label=${attr(tn.label.toLowerCase())}
+          create={${changes("values")}}
+          update={${changes("id, values")}}
+          remove={${changes("id")}}${
+            total
+              ? `
+          sum={{ label: ${n.ui}.fields.find((f) => f.name === "${total.name}")?.label ?? "", value: formatValue(${n.ui}.fields.find((f) => f.name === "${total.name}") as never, row.${total.name}, app) }}`
+              : ""
+          }
+        />
+      </section>`;
+    }
     tables = true;
     return `      <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -553,9 +602,25 @@ export function detailRoute(
         />
       </section>`;
   });
+  // The record's summary (A 215): its status, amount and key dates, by type (recordSummary).
+  const look = within ? undefined : ux.pages[page.id];
+  const summary =
+    look?.recordHeader || look?.formAside ? recordSummary(model, ux.tones) : undefined;
+  const summaryOf = (place: "header" | "aside") =>
+    summary
+      ? `<RecordSummary
+          ui={${n.ui}}
+          app={app}
+          row={row}${summary.status ? `\n          status="${summary.status.name}"` : ""}${summary.amount ? `\n          amount="${summary.amount.name}"` : ""}${summary.dates.length ? `\n          dates={${JSON.stringify(summary.dates.map((d) => d.name))}}` : ""}
+          place="${place}"
+        />`
+      : "";
+  if (summary) imports.set("#/kit/RecordSummary", ["RecordSummary"]);
   if (threads) imports.set("#/kit/Thread", ["Thread"]);
+  if (inlines) imports.set("#/kit/InlineRows", ["InlineRows"]);
+  if (totals) imports.set("#/kit/format", [...(imports.get("#/kit/format") ?? []), "formatValue"]);
   // A copy opens the new record instead of reloading this one: it needs no router.
-  const router = favorite || trash || threads || offered.some((a) => !a.copy);
+  const router = favorite || trash || threads || inlines || offered.some((a) => !a.copy);
   // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
   const history = Boolean(auth && hasSignIn(auth) && !within);
   const keys = history && auth ? hasKeys(ir, auth) : false;
@@ -705,6 +770,13 @@ function ${component}() {
       />`
             : `<PageHeader title={${heading}} />`
       }${
+        look?.recordHeader
+          ? `
+      <div className="-mt-2 mb-6">
+        ${summaryOf("header")}
+      </div>`
+          : ""
+      }${
         model.review
           ? `
       <ReviewNotice notes={review} labels={${JSON.stringify(Object.fromEntries((model.review ?? []).map((f) => [f, t.field(model, model.fields.find((x) => x.name === f) as FieldIR).label ?? humanize(f)])))}} />`
@@ -748,7 +820,12 @@ function ${component}() {
       )}`
           : ""
       }
-      <ModelForm
+      ${
+        look?.formAside
+          ? `<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+      `
+          : ""
+      }<ModelForm
         key={String(row.updatedAt)}${trash ? "\n        trash" : ""}
         ui={${n.ui}}
         app={app}
@@ -769,7 +846,13 @@ ${options ? "        options={options}\n" : ""}        submitLabel={w.saveChange
               }
             : undefined
         }
-      />
+      />${
+        look?.formAside
+          ? `
+        ${summaryOf("aside")}
+      </div>`
+          : ""
+      }
 ${
   reserve
     ? `      <section className="mt-10 max-w-3xl">

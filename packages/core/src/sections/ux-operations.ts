@@ -433,10 +433,14 @@ const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: stri
   },
 };
 
-const setRecordList: Operation<{ page: string; field: string; look: "thread" | "table" }> = {
+const setRecordList: Operation<{
+  page: string;
+  field: string;
+  look: "thread" | "table" | "inline";
+}> = {
   name: "setRecordList",
   summary:
-    "Show a list of related records on a page's record as a thread (a conversation with a reply box) or a table (the default).",
+    "Show a list of related records on a page's record as a table (the default), a thread (a conversation with a reply box) or inline (rows edited in place, each saved on its own).",
   schema: {
     type: "object",
     required: ["page", "field", "look"],
@@ -444,23 +448,58 @@ const setRecordList: Operation<{ page: string; field: string; look: "thread" | "
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
       field: refTo({ ref: "field", page: "page", label: "List" }),
-      look: { enum: ["thread", "table"], description: "thread or table." },
+      look: { enum: ["table", "thread", "inline"], description: "table, thread or inline." },
     },
   },
   positional: ["page", "field", "look"],
   describe: ({ page, field, look }) =>
     look === "thread"
       ? `Show ${field} on the ${page} page's records as a conversation`
-      : `Show ${field} on the ${page} page's records as a table`,
+      : look === "inline"
+        ? `Edit ${field} in place on the ${page} page's records`
+        : `Show ${field} on the ${page} page's records as a table`,
   destructive: () => false,
   apply(editors, { page, field, look }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
     // A table is the default: setting it takes the key away, and an empty record block with it.
+    put(editors.ux, ["pages", page, "record", "lists", field], look === "table" ? undefined : look);
+    return [];
+  },
+};
+
+const setRecordSummary: Operation<{
+  page: string;
+  place: "header" | "aside";
+  look: "summary" | "none";
+}> = {
+  name: "setRecordSummary",
+  summary:
+    "Show a record's summary (its status, its amount, its key dates) in the title row (header) or in a panel beside the form (aside); none takes it away.",
+  schema: {
+    type: "object",
+    required: ["page", "place", "look"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      place: { enum: ["header", "aside"], description: "header or aside." },
+      look: { enum: ["summary", "none"], description: "summary or none." },
+    },
+  },
+  positional: ["page", "place", "look"],
+  describe: ({ page, place, look }) =>
+    look === "none"
+      ? `No summary ${place === "header" ? "in the title row" : "beside the form"} of the ${page} page's records`
+      : `A summary ${place === "header" ? "in the title row" : "beside the form"} of the ${page} page's records`,
+  destructive: () => false,
+  apply(editors, { page, place, look }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    // None is the default: setting it takes the key away.
     put(
       editors.ux,
-      ["pages", page, "record", "lists", field],
-      look === "thread" ? look : undefined,
+      ["pages", page, place === "header" ? "record" : "form", place],
+      look === "none" ? undefined : look,
     );
     return [];
   },
@@ -1103,6 +1142,7 @@ export const uxOperations: AnyOperation[] = [
   setColumns,
   setTotals,
   setRecordList,
+  setRecordSummary,
   setRecordLines,
   setFieldOrder,
   setTone,

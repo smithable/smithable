@@ -76,6 +76,12 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="filters"",
     "data-part="saved-tabs"",
   ],
+  "src/kit/InlineRows.tsx": [
+    "data-kit="inline-rows"",
+    "data-part="sum"",
+    "data-part={row ? "row" : "new-row"}",
+    "data-field={f.name}",
+  ],
   "src/kit/Keys.tsx": [
     "data-part="using-a-key"",
     "data-kit="keys"",
@@ -164,6 +170,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/PictureInput.tsx": [
     "data-part="picture"",
+  ],
+  "src/kit/RecordSummary.tsx": [
+    "data-kit="record-summary"",
   ],
   "src/kit/Reserve.tsx": [
     "data-kit="reserve"",

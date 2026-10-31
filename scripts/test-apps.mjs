@@ -4947,34 +4947,56 @@ async function formulaFlow(base) {
 }
 
 /**
- * A related list adds from its record (the stranger walk of 2026-10-07): "Add invoice line" on
- * an invoice opens the new line with the invoice filled in and fixed, and goes back to it.
+ * An invoice's lines edited in place (record.lists inline, A 215): a line added in the empty row,
+ * changed and removed, each saved on its own; the invoice's total under them and its summary in
+ * the title row and beside the form follow.
  */
 async function addChildFlow(base) {
   const browser = await chromium.launch();
-  const page = await browser.newPage();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
     await signInAs(page, base, "admin");
     await open(page, `${base}/invoices/1`);
-    await page.getByRole("link", { name: "Add invoice line" }).first().click();
-    await page.waitForURL(/\/invoice-lines\/new\?invoice=1$/);
-    if (!(await page.getByLabel("Invoice *").isDisabled()))
-      throw new Error("the invoice can be changed on the new line");
-    await page.getByRole("textbox", { name: "Description *" }).fill("Added from the invoice");
-    await page.getByRole("textbox", { name: "Unit price *" }).fill("40");
-    await page.getByRole("button", { name: "Create invoice line" }).click();
-    await page.waitForURL(`${base}/invoices/1`);
-    await page
-      .getByRole("cell", { name: "Added from the invoice" })
-      .waitFor({ timeout: 10000 * P });
+    const rows = page.locator('[data-kit="inline-rows"]');
+    const sum = rows.locator('[data-part="sum"]');
+    await sum.waitFor({ timeout: 10000 * P });
+    for (const place of ["header", "aside"])
+      await page
+        .locator(`[data-kit="record-summary"][data-place="${place}"]`)
+        .getByText(await sum.innerText())
+        .waitFor({ timeout: 5000 * P });
+    const before = await sum.innerText();
+    const fresh = rows.locator('[data-part="new-row"]');
+    await fresh.getByRole("textbox", { name: "Description", exact: true }).fill("Added in place");
+    await fresh.getByRole("textbox", { name: "Unit price", exact: true }).fill("40");
+    await fresh.getByRole("textbox", { name: "Unit price", exact: true }).press("Enter");
+    const added = rows.locator('[data-part="row"]').last();
+    for (let i = 0; (await sum.innerText()) === before; i++) {
+      if (i === 100 * P) throw new Error("the total did not follow the added line");
+      await page.waitForTimeout(100);
+    }
+    if (
+      (await added.getByRole("textbox", { name: "Description", exact: true }).inputValue()) !==
+      "Added in place"
+    )
+      throw new Error("the added line is not the last row");
+    // A change saves when the focus leaves the row: its amount follows.
+    await added.getByRole("textbox", { name: "Quantity", exact: true }).fill("2");
+    await page.getByRole("heading", { level: 1 }).click();
+    await added.getByText("€80.00").waitFor({ timeout: 10000 * P });
+    await added.getByRole("button", { name: "Remove Added in place" }).click();
+    for (let i = 0; (await sum.innerText()) !== before; i++) {
+      if (i === 100 * P) throw new Error("the total did not go back after the line was removed");
+      await page.waitForTimeout(100);
+    }
     console.log(
-      "  ✓ browser: Add invoice line on an invoice opens the new line with the invoice fixed, and the line is on the invoice after",
+      "  ✓ browser: an invoice's lines are edited in place: added, changed and removed row by row, the total and the summary following",
     );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
-    failures.push("invoicing add-child flow");
+    failures.push("invoicing inline lines flow");
   } finally {
     await browser.close();
   }

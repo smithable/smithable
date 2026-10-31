@@ -2744,7 +2744,6 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "overview",
         "invoices",
         "clients",
-        "invoice-lines",
         "settings",
       ],
     },
