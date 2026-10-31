@@ -28,9 +28,21 @@ export interface Mail {
 /** Where mails go without SMTP settings: in a demo, the visitor's own (src/kit/visitor.ts). */
 const outboxDir = () => join(ownDataDir(), "mail", "outbox");
 
+/**
+ * How long the mail server may take before the outbox goes on and tries the mail again later (the
+ * review, 2026-10-30): to connect, to greet, and between replies; the transport's own timeouts, so
+ * a mail given up on is not still delivered in the background. An address's own wins.
+ */
+const WAITS = { connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 30_000 };
+
 function smtp() {
   const env = process.env;
-  if (env.SMTP_URL) return env.SMTP_URL;
+  if (env.SMTP_URL) {
+    const url = new URL(env.SMTP_URL);
+    for (const [key, ms] of Object.entries(WAITS))
+      if (!url.searchParams.has(key)) url.searchParams.set(key, String(ms));
+    return url.toString();
+  }
   if (env.SMTP_HOST)
     return {
       host: env.SMTP_HOST,
@@ -42,6 +54,7 @@ function smtp() {
       // ask for it with ?requireTLS=true.)
       requireTLS: env.SMTP_PORT !== "465",
       ...(env.SMTP_USER ? { auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD ?? "" } } : {}),
+      ...WAITS,
     };
   return undefined;
 }

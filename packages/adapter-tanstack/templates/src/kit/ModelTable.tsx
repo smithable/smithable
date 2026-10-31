@@ -73,7 +73,9 @@ interface ModelTableProps<R extends Row> {
    */
   totals?: { count: number; sums: Record<string, number> };
   /** The whole list as it is filtered, for "Export CSV" (the selection bar exports chosen rows). */
-  exportRows?: () => Promise<R[]>;
+  /** The rows to export, or with how many fit (an export past the cap says so); a page copied
+   * before the count came may still give the rows alone. */
+  exportRows?: () => Promise<R[] | { rows: R[]; total?: number }>;
   /**
    * Sorting by a column's header (the page's sortable fields): each column's key in the address,
    * the order now ("key", or "-key" for largest or latest first) and choosing another.
@@ -641,18 +643,40 @@ export function ModelTable<R extends Row>({
 }
 
 /** "Export CSV" under a list: every record it shows as filtered, not only this page. */
-function ExportCsv<R extends Row>({ ui, all }: { ui: RecordUi<R>; all: () => Promise<R[]> }) {
+/**
+ * Export CSV: the list as it is filtered and sorted, up to the app's cap; past it, the page and the
+ * file's name say how many of how many were exported, never a silent cut.
+ */
+function ExportCsv<R extends Row>({
+  ui,
+  all,
+}: {
+  ui: RecordUi<R>;
+  all: () => Promise<R[] | { rows: R[]; total?: number }>;
+}) {
   const [busy, setBusy] = useState(false);
+  const [cut, setCut] = useState<string>();
   const save = async () => {
     setBusy(true);
     try {
-      download(csvName(ui), csvOf(ui, await all()));
+      const got = await all();
+      const rows = Array.isArray(got) ? got : got.rows;
+      const total = Array.isArray(got) ? rows.length : (got.total ?? rows.length);
+      const cut = total > rows.length;
+      setCut(cut ? w.exportedSome(rows.length, total) : undefined);
+      // The file stays a table (its first line the header); its name says what it holds.
+      download(csvName(ui, cut ? { shown: rows.length, total } : undefined), csvOf(ui, rows));
     } finally {
       setBusy(false);
     }
   };
   return (
-    <div data-part="export" className="flex justify-end py-1">
+    <div data-part="export" className="flex items-center justify-end gap-2 py-1">
+      {cut && (
+        <span role="status" className="text-xs text-muted-foreground">
+          {cut}
+        </span>
+      )}
       <Button variant="ghost" size="sm" disabled={busy} onClick={() => void save()}>
         <Download aria-hidden />
         {w.exportCsv}

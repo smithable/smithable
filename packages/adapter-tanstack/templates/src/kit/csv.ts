@@ -44,9 +44,13 @@ export function csvOf<R extends Row>(ui: RecordUi<R>, rows: R[]): string {
   return `\uFEFF${lines.join("\r\n")}\r\n`;
 }
 
-/** The file's name, e.g. customers.csv. */
-export function csvName(ui: { pluralLabel: string }): string {
-  return `${ui.pluralLabel.toLowerCase().replace(/\s+/g, "-")}.csv`;
+/** The file's name, e.g. customers.csv; cut at the cap, customers-10000-of-14200.csv. */
+export function csvName(
+  ui: { pluralLabel: string },
+  cut?: { shown: number; total: number },
+): string {
+  const name = ui.pluralLabel.toLowerCase().replace(/\s+/g, "-");
+  return cut ? `${name}-${cut.shown}-of-${cut.total}.csv` : `${name}.csv`;
 }
 
 /** Saves the text as a file in the browser, e.g. customers.csv. */

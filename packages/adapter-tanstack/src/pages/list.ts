@@ -639,7 +639,8 @@ export function listParts(
     : searchable
       ? "{ q, page: next }"
       : "{ page: next }";
-  // The whole list as it is filtered, for "Export CSV" (at most EXPORT_ROWS records).
+  // The whole list as it is filtered, for "Export CSV" (at most EXPORT_ROWS records), with how many
+  // fit, so an export past the cap says what it left out.
   const exportArgs = filtering
     ? `{ q, sort, ${favorites === "all" ? "view, " : ""}f: values, all: true }`
     : searchable
@@ -849,7 +850,7 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
           within || capped || owned
             ? ""
             : `
-        exportRows={async () => (await ${loading}({ data: ${exportArgs} })).rows}`
+        exportRows={async () => (await ${loading}({ data: ${exportArgs} }))}`
         }
         rows={${(() => {
           const ordered = sort

@@ -128,6 +128,8 @@ export const w = {
   errorTitle: "Något gick fel",
   everyone: "Alla",
   exportCsv: "Exportera CSV",
+  exportedSome: (shown: number, total: number) =>
+    `Exporterade ${shown.toLocaleString("sv")} av ${total.toLocaleString("sv")} poster som passar`,
   fieldsMarked: "Fält märkta med",
   fileKinds: "Välj en PDF, ett dokument, ett kalkylark, en text eller en bild.",
   fileNotAdded: "Filen kunde inte läggas till.",
@@ -254,6 +256,7 @@ export const w = {
   pictureNotRead: "Bilden kunde inte läsas.",
   pictureRefused: "Bilden avvisades.",
   pictureTooLarge: "Bilden är för stor (högst 1 MB).",
+  pictureTooWide: (side: number) => `Bilden är för stor (högst ${side} pixlar på längsta sidan).`,
   preview: "Förhandsgranska",
   previous: "Föregående",
   previousPicture: "Föregående bild",

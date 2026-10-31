@@ -13,6 +13,7 @@ import {
   BadPicture,
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
+  release,
   roomFor,
   saveFile,
   savePicture,
@@ -36,11 +37,14 @@ export const Route = createFileRoute("/files/$model/$field")({
               status: viewer ? 403 : 401,
             },
           );
+        // The room held for this upload, given back if it is refused or fails.
+        let held = 0;
         try {
           writeAllowed(viewer, request.headers);
           const length = Number(request.headers.get("content-length") ?? 0);
           // The app's storage is full (UPLOADS_MAX_BYTES): told before anything is read.
           if (!roomFor(length)) return new Response(w.storageFull, { status: 507 });
+          held = length;
           if (entry.kind === "file") {
             if (length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
             const bytes = new Uint8Array(await request.arrayBuffer());
@@ -64,6 +68,7 @@ export const Route = createFileRoute("/files/$model/$field")({
             receipt: receiptFor(viewer?.id ?? null, params.model, params.field, file),
           });
         } catch (error) {
+          release(held);
           const known =
             error instanceof BadPicture ||
             error instanceof BadFile ||

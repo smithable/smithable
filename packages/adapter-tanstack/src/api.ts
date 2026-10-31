@@ -725,6 +725,7 @@ import {
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
   type Picture,
+  release,
   roomFor,
   type StoredFile,
   saveFile,
@@ -760,20 +761,27 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           // The app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
-          if (!roomFor(Number(request.headers.get("content-length") ?? 0))) throw new BadInput("There is no room left for files in this app.");
-          const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
+          const held = Number(request.headers.get("content-length") ?? 0);
+          if (!roomFor(held)) throw new BadInput("There is no room left for files in this app.");
           let stored: unknown;
+          // The room held is given back when the file is refused or cannot be stored.
           try {
-            await scanned(bytes);
+            const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
+            try {
+              await scanned(bytes);
+            } catch (error) {
+              if (error instanceof BadFile) throw new BadInput(error.message);
+              throw error;
+            }
+            const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
+            try {
+              stored = field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name")) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"));
+            } catch (error) {
+              if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
+              throw error;
+            }
           } catch (error) {
-            if (error instanceof BadFile) throw new BadInput(error.message);
-            throw error;
-          }
-          const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
-          try {
-            stored = field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name")) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"));
-          } catch (error) {
-            if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
+            release(held);
             throw error;
           }
           const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, (stored as { file: string }).file) };
