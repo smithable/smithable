@@ -196,6 +196,7 @@ export function RecentChanges({
                 {new Intl.DateTimeFormat(undefined, {
                   dateStyle: "short",
                   timeStyle: "short",
+                  hourCycle: "h23",
                 }).format(new Date(line.at))}
               </time>
             </li>

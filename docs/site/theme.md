@@ -96,7 +96,7 @@ The lab opens in the browser beside a real app: by default a booking app with a 
 - **Phone** shows the pages at a phone's width. **Greyscale** takes the color out: if two themes still look different without it, they are two designs and not one design in two colors.
 - **Show the motion** plays the landing page once, with the theme's motion: `none`, `subtle` or `lively`.
 - Under the pages, a line for each look the app can ask for says whether the theme suits it ("flat cards on this background have no edge"), and the check's errors are shown in red.
-- **Save** adds the theme to the project through `addTheme`, as above, so it is one change like any other and `smithable undo` takes it back. Without `--project`, inside a project folder the lab saves to that project, and anywhere else it writes `themes/<name>.yml` into the current folder.
+- **Save to the project** adds the theme to the project through `addTheme`, as above, so it is one change like any other and `smithable undo` takes it back. Without `--project`, inside a project folder the lab saves to that project, and anywhere else the button is **Save theme** and writes `themes/<name>.yml` into the current folder.
 
 ### The pages as files
 

@@ -71,6 +71,7 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
         weekday: "long",
         hour: "2-digit",
         minute: "2-digit",
+        hourCycle: "h23",
         timeZone: app.timeZone,
       }).format(new Date(menu.opens))
     : undefined;

@@ -55,6 +55,7 @@ export function Thread<R extends Row>({
       ? new Intl.DateTimeFormat(undefined, {
           dateStyle: "medium",
           timeStyle: "short",
+          hourCycle: "h23",
           timeZone: app.timeZone,
         }).format(new Date(String(row.createdAt)))
       : "";
