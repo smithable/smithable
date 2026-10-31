@@ -161,7 +161,14 @@ const ux: Companion = {
   file: "smithable.ux.yml",
   empty: "smithableUx: 0.1\n",
   check: (text, ir, files) =>
-    validateUx({ path: "smithable.ux.yml", text }, ir, files?.themes).diagnostics,
+    validateUx(
+      { path: "smithable.ux.yml", text },
+      ir,
+      files?.themes,
+      files?.auth
+        ? validateAuth({ path: "smithable.auth.yml", text: files.auth }, ir).auth
+        : undefined,
+    ).diagnostics,
   operations: uxOperations,
   follow(editor, effect, ir) {
     if (effect.kind === "rename-page") {
@@ -174,6 +181,17 @@ const ux: Companion = {
       for (const key of tones)
         if (key.startsWith(`${effect.from}.`))
           editor.renameKey(["tones", key], `${effect.to}.${key.slice(effect.from.length + 1)}`);
+      // A hero's facts name models (look-gap §4).
+      for (const page of ir.pages)
+        for (const section of page.sections) {
+          const at = ["pages", page.id, "sections", section.name, "facts"];
+          const facts = editor.has(at) ? editor.get(at) : undefined;
+          if (Array.isArray(facts) && facts.includes(effect.from))
+            editor.set(
+              at,
+              facts.map((m) => (m === effect.from ? effect.to : m)),
+            );
+        }
       return undefined;
     }
     if (effect.kind === "remove-page") {
