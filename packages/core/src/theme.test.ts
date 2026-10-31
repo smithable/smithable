@@ -1,11 +1,13 @@
 import { expect, test } from "vitest";
-import { contrast, hexOf } from "./color.js";
+import { contrast, hexOf, hexToRgb, rgbToOklch } from "./color.js";
 import { validateSpec } from "./spec.js";
 import {
   BUILT_IN_THEMES,
   checkContrast,
   FONTS,
+  hardToRead,
   lowContrast,
+  oppositeMode,
   parseTheme,
   type Tokens,
   themeNamed,
@@ -212,4 +214,40 @@ test("a ratio just under the one needed is rounded down, never shown as reaching
   expect(checkContrast(tokens).find((p) => p.startsWith("foreground on background"))).toBe(
     "foreground on background is 4.4:1; it needs 4.5:1 to read.",
   );
+});
+
+test("the other mode made from one mode keeps the hues, turns the lightness over, and reads", () => {
+  // Every built-in theme, both ways: the made mode passes the floor a theme file is checked by.
+  for (const t of BUILT_IN_THEMES) {
+    expect(hardToRead(oppositeMode(t.light, "light"), "dark"), `${t.name} dark`).toEqual([]);
+    expect(hardToRead(oppositeMode(t.dark, "dark"), "light"), `${t.name} light`).toEqual([]);
+  }
+  const forest = parseTheme({
+    path: "themes/forest.yml",
+    text: `smithableTheme: 0.1\nmodes: light\nlight: { primary: "#2f6b3a", background: "#f6f8f4", foreground: "#1f2a1f" }\n`,
+  }).theme as { light: Tokens };
+  const dark = oppositeMode(forest.light, "light");
+  // Deep paper of the same tint, pale ink, the green kept and lifted to show on it.
+  expect(contrast(dark.foreground, dark.background)).toBeGreaterThan(10);
+  expect(contrast(dark.primary, dark.background)).toBeGreaterThanOrEqual(3);
+  expect(contrast(dark["primary-foreground"], dark.primary)).toBeGreaterThanOrEqual(4.5);
+  const oklch = (hex: string) => rgbToOklch(hexToRgb(hex));
+  expect(oklch(dark.background)[0]).toBeLessThan(0.27);
+  expect(oklch(dark.foreground)[0]).toBeGreaterThan(0.88);
+  // The hues are kept: the paper's and the green's, within a few degrees.
+  const hue = (hex: string) => oklch(hex)[2];
+  const near = (x: number, y: number) => Math.min(Math.abs(x - y), 360 - Math.abs(x - y)) < 15;
+  expect(near(hue(dark.background), hue(forest.light.background))).toBe(true);
+  expect(near(hue(dark.primary), hue(forest.light.primary))).toBe(true);
+  // An ink primary (stillwater's) turns to a pale one on dark paper, with its own text reading on it.
+  const ink = oppositeMode(
+    { ...forest.light, primary: "#16181a", "primary-foreground": "#ffffff" } as Tokens,
+    "light",
+  );
+  expect(contrast(ink.primary, ink.background)).toBeGreaterThanOrEqual(3);
+  expect(contrast(ink["primary-foreground"], ink.primary)).toBeGreaterThanOrEqual(4.5);
+  // Back again from dark gives light paper and dark ink.
+  const back = oppositeMode(dark, "dark");
+  expect(contrast(back.foreground, back.background)).toBeGreaterThan(10);
+  expect(hardToRead(back, "light")).toEqual([]);
 });

@@ -36,7 +36,19 @@ if (!source || !from || !["hallmark", "tweakcn"].includes(source)) {
   process.exit(2);
 }
 const core = await import(resolve(opts.core));
-const { parseTheme, themeThumbnail, gamutMap, hexOf, FONTS } = core;
+const {
+  parseTheme,
+  themeThumbnail,
+  gamutMap,
+  hexOf,
+  FONTS,
+  deriveTokens,
+  oppositeMode,
+  themeNames,
+} = core;
+/** A candidate named like a built-in theme takes the catalog's name in front (addTheme refuses the clash). */
+const BUILT_IN = new Set(themeNames());
+const freeName = (name) => (BUILT_IN.has(name) ? `${source}-${name}` : name);
 const stamp = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
 const out = opts.out ?? `/mnt/c/Users/johan/Pictures/claude/themes/${stamp}-import-${source}`;
 const dir = join(out, "themes");
@@ -257,8 +269,9 @@ function* hallmark(checkout) {
     }
     const { L: paperL } = oklch(paper);
     const mode = paperL < 0.5 ? "dark" : "light";
-    // The surfaces and the signal; the text on them our parser derives, so it reads (the
-    // catalog's muted text and second signal are often under the floor on our pairs).
+    // The surfaces and the signal with its own text (a designed pair); the other text colours
+    // our parser derives, so they read (the catalog's muted text and second signal are often
+    // under the floor on our pairs). A token the material lacks is left out, and derived.
     const tokensOut = {
       background: paper,
       foreground: ink,
@@ -307,9 +320,9 @@ function* hallmark(checkout) {
         duotone: "duotone",
         tint: "duotone",
       }[photo] ?? "natural";
-    const texture = /\bgrain|noise\b/i.test(material)
+    const texture = /\b(?:grain|noise)\b/i.test(material)
       ? "grain"
-      : /\bfibre|fiber|newsprint|riso|uncoated|laid paper\b/i.test(material)
+      : /\b(?:fibre|fiber|newsprint|riso|uncoated|laid paper)\b/i.test(material)
         ? "paper"
         : "none";
     const { C: accentC } = oklch(accent);
@@ -364,12 +377,26 @@ function* hallmark(checkout) {
       shadow: shadowName(tokens["shadow-card"]),
       chroma: Math.min(0.4, Math.max(0.04, Math.round(accentC * 100) / 100)),
       texture,
-      modes: mode,
+      // A material is one palette: the other mode is made from it (oppositeMode), so the
+      // candidate has both, as Johan asked (2026-10-31).
+      modes: "both",
       [mode]: tokensOut,
+      [mode === "light" ? "dark" : "light"]: otherMode(tokensOut, mode),
       weightRange: weight,
       genre: head.genre,
     };
   }
+}
+
+/** The other mode's seven given colours, from one mode's given ones. */
+function otherMode(given, mode) {
+  const made = oppositeMode(deriveTokens(given, mode), mode);
+  return Object.fromEntries(
+    ["background", "foreground", "card", "primary", "muted", "border", "accent"].map((k) => [
+      k,
+      hexOf(made[k]),
+    ]),
+  );
 }
 
 // ---- tweakcn: one TypeScript file of presets, read by its shape, never run.
@@ -468,6 +495,7 @@ for (const entry of entries) {
     dropped.push(`${entry.name}: ${entry.error}`);
     continue;
   }
+  entry.name = freeName(entry.name);
   let text = themeText(entry);
   let { theme, diagnostics } = parseTheme(
     { path: `${entry.name}.yml`, text },
@@ -479,7 +507,7 @@ for (const entry of entries) {
   );
   if (weightProblem) {
     const [, low, high] = weightProblem.message.match(/goes from (\d+) to (\d+)/) ?? [];
-    const w = Math.min(Math.max(entry.headings.weight, Number(low)), Number(high));
+    const w = Math.min(Math.max(entry.headings.weight ?? 700, Number(low)), Number(high));
     text = themeText({ ...entry, headings: { ...entry.headings, weight: w } });
     ({ theme, diagnostics } = parseTheme(
       { path: `${entry.name}.yml`, text },
