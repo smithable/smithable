@@ -753,12 +753,18 @@ try {
       // The CRM's merge: a field's rule from its pick list.
       const merge = await entry(await area("actions"), "mergeCustomers");
       await merge.getByLabel("Segment takes").selectOption("keep");
+      const before = await changeCount();
       await merge.getByRole("button", { name: "Change the rules" }).click();
       await until(
         "mergeCustomers",
         (b) => /segment: keep/.test(b),
         "the merge has no rule for segment",
       );
+      // The change is made (committed) before the next one starts.
+      for (const deadline = Date.now() + 60000 * P; (await changeCount()) <= before; ) {
+        if (Date.now() > deadline) throw new Error("the merge's rule is not a change yet");
+        await page.waitForTimeout(200);
+      }
       // A copy: what differs, as a standard action's values.
       await op("addAction", {
         action: "copyOrder",
