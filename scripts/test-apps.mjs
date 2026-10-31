@@ -241,6 +241,9 @@ async function detachFlow(dir, port) {
     run("git", ["commit", "-q", "--allow-empty", "-m", "work before detaching"], dir);
     const out = smithable(dir, "detach");
     if (out.code !== 0) throw new Error(out.out);
+    // One change, left to review: detach says how to keep it or take it back.
+    if (!out.out.includes("git diff") || !out.out.includes("git checkout ."))
+      throw new Error(`detach does not say how to keep or take back its change: ${out.out}`);
     const mentions = spawnSync("grep", ["-rli", "smithable", "src", "README.md", "package.json"], {
       cwd: dir,
       encoding: "utf8",
@@ -964,6 +967,7 @@ async function visitorMailFlow(dir, base) {
 async function callReceiver() {
   const secret = "test-secret";
   const calls = [];
+  const state = { slow: false };
   const server = createServer((req, res) => {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
@@ -975,7 +979,8 @@ async function callReceiver() {
         signed: req.headers["x-signature-256"] === signed,
         key: req.headers["idempotency-key"],
       });
-      res.writeHead(204).end();
+      // Slow on request: longer than the app's call timeout (A 211).
+      setTimeout(() => res.writeHead(204).end(), state.slow ? 25_000 : 0);
     });
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -1010,6 +1015,7 @@ async function callReceiver() {
   return {
     calls,
     tunnels,
+    state,
     // Only for the status app's server: what a hosted app is started with.
     env: {
       HTTP_PROXY: egress,
@@ -1742,6 +1748,7 @@ async function callFlow(dir, base, receiver) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   let added = false;
+  let mailed = false;
   try {
     ok(
       smithable(
@@ -1761,6 +1768,22 @@ async function callFlow(dir, base, receiver) {
       ),
     );
     added = true;
+    // The mail beside it for the slow endpoint's step below, added before any page opens: an
+    // operation reloads the dev app under an open page.
+    ok(
+      smithable(
+        dir,
+        "op",
+        "addOutgoing",
+        "incidentMailed",
+        "Incident changed",
+        "--where",
+        "status=resolved",
+        "--recipient",
+        "admin",
+      ),
+    );
+    mailed = true;
     const [{ id, title }] = query(
       dir,
       "select id, title from incidents where status != 'resolved' order by id limit 1",
@@ -1837,6 +1860,47 @@ async function callFlow(dir, base, receiver) {
     console.log(
       "  ✓ outgoing call: an incident that becomes resolved is sent to the status feed, signed with its secret, as the API gives it; Activity has the line, and Activity for the target shows its deliveries only; it went through a stand-in egress proxy with its credential",
     );
+    // A slow endpoint beside a mail from the same change (A 211): the mail goes first, at once;
+    // the call waits out its timeout and is tried again later.
+    receiver.state.slow = true;
+    const outbox = join(dir, "data", "mail", "outbox");
+    const mails = () => (existsSync(outbox) ? readdirSync(outbox).length : 0);
+    const before = mails();
+    const [other] = query(
+      dir,
+      "select id from incidents where status != 'resolved' order by id limit 1",
+    );
+    if (!other) throw new Error("no incident left to resolve");
+    // As staff: a mail never goes to the person who made the change, and the admin is its reader.
+    await signInAs(page, base, "staff");
+    await open(page, `${base}/incidents/${other.id}`);
+    await page
+      .getByLabel(/^Status/)
+      .first()
+      .selectOption("resolved");
+    const saved = Date.now();
+    await page.getByRole("button", { name: "Save changes" }).click();
+    while (mails() === before && Date.now() - saved < 30_000) await page.waitForTimeout(100);
+    // Under ten seconds, the call's timeout: a slow call before it would hold it at least that long.
+    if (Date.now() - saved >= 8_000)
+      throw new Error(
+        `the mail went ${Math.round((Date.now() - saved) / 1000)} s after the change: ${JSON.stringify(query(dir, 'select entry, "to", sent_at, failed_at, error, next_at from outgoing_mail order by id desc limit 3'))}`,
+      );
+    for (
+      let i = 0;
+      i < 300 * P &&
+      !query(dir, "select id from outgoing_call where sent_at is null and error is not null")
+        .length;
+      i++
+    )
+      await page.waitForTimeout(100);
+    if (
+      !query(dir, "select id from outgoing_call where sent_at is null and error is not null").length
+    )
+      throw new Error("the slow call was not given up on, to be tried again");
+    console.log(
+      "  ✓ a slow endpoint beside a mail from the same change: the mail goes at once, the call waits out its timeout and is tried again later",
+    );
   } catch (error) {
     console.log(
       `  ✗ outgoing call: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -1845,6 +1909,8 @@ async function callFlow(dir, base, receiver) {
   } finally {
     await browser.close();
     // Removed by an operation, not undone: an undo puts back the database file under the server.
+    receiver.state.slow = false;
+    if (mailed) ok(smithable(dir, "op", "removeOutgoing", "incidentMailed"));
     if (added) ok(smithable(dir, "op", "removeOutgoing", "incidentResolved"));
   }
 }

@@ -78,7 +78,9 @@ export function detach(dir: string, io: Io): number {
   }
   io.out(
     `Detached: ${cleaned} files no longer mention Smithable, the README is rewritten, and ${specs.join(", ")} ` +
-      `moved to docs/smithable/ as documentation.\nThis is now an ordinary TanStack Start + Drizzle project.\n`,
+      `moved to docs/smithable/ as documentation.\nThis is now an ordinary TanStack Start + Drizzle project.\n` +
+      // One change, not committed (ARCHITECTURE §6.8): the person looks at it, then keeps it or not.
+      "Review the change with git diff, then commit it; or take it back with git checkout . && git clean -fd.\n",
   );
   return 0;
 }
