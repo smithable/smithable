@@ -7,7 +7,7 @@ theme:
 pages:
   customers:
     table:
-      columns: [name, email, segment, accountManager, creditLimit]
+      columns: [name, email, segment, creditLimit]
       below: { email: phone }   # the phone number under the email
       sort: name
     form:

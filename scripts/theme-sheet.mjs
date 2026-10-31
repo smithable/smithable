@@ -41,14 +41,15 @@ const open = (page, path) => openUrl(page, `${base}${path}`);
 // waits for its dialog; a hover shot shows the element in its own hue, a step lighter or darker.
 const SHOTS = [
   ["Landing page", "/", null, true],
-  ["List", "/class-types", null, false],
+  // The sessions: a table (the class types are cards since look-gap step 1).
+  ["List", "/sessions", null, false],
   [
     "Hover, the new button",
-    "/class-types",
+    "/sessions",
     (page) => page.getByRole("link", { name: /^New/ }).first().hover(),
     false,
   ],
-  ["Hover, a row", "/class-types", (page) => page.getByRole("row").nth(1).hover(), false],
+  ["Hover, a row", "/sessions", (page) => page.getByRole("row").nth(1).hover(), false],
   ["Form", "/class-types/new", null, true],
   [
     "Dialog",
