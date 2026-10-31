@@ -391,5 +391,26 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
       `${page.id} hero: button ${opens}; ${hero.secondButton ? `second button opens ${hero.secondButton}` : "no second button (secondButton)"}`,
     );
   }
+  // How a list page's filter on a reference is picked (A 208): the ux file's word, else the count.
+  for (const page of ir.pages) {
+    const model = ir.models.find((m) => m.name === pageModel(page));
+    for (const name of page.filters ?? []) {
+      const field = model?.fields.find((x) => x.name === name);
+      if (field?.type.kind !== "relation" || field.type.many || field.type.model === "User")
+        continue;
+      const to = field.type.model;
+      const target = ir.models.find((m) => m.name === to);
+      if (target && titleField(target) === "id") {
+        lines.push(
+          `${page.id} filter ${name}: pick list (${target.name} has no name to search by)`,
+        );
+        continue;
+      }
+      const said = ux?.pages[page.id]?.filterPick?.[name];
+      lines.push(
+        `${page.id} filter ${name}: pick ${said ?? "by count (search from 200 readable records)"}${said ? " (filters.pick)" : ""}`,
+      );
+    }
+  }
   return `${lines.join("\n")}\n`;
 }
