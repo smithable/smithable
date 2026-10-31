@@ -1562,13 +1562,25 @@ try {
     async () => {
       await openPreview("/customers/new");
       await page.getByRole("button", { name: "Select" }).click();
-      await preview
-        .locator('[data-sm-concept="field:Customer.email"]')
-        .click({ timeout: 60000 * P });
       const email = page
         .getByRole("region", { name: "What the app does" })
         .locator("details[open]", { has: page.locator('summary:text-is("email")') });
-      await email.first().waitFor({ timeout: 10000 * P });
+      // The page in select mode before the pick: one the dev server reloads after the last change
+      // shows its fields before its editor knows the mode, so a click then is a plain click.
+      for (let attempt = 1; ; attempt++) {
+        await preview
+          .locator("html[data-sm-selecting]")
+          .waitFor({ state: "attached", timeout: 60000 * P });
+        await preview
+          .locator('[data-sm-concept="field:Customer.email"]')
+          .click({ timeout: 60000 * P });
+        try {
+          await email.first().waitFor({ timeout: 10000 * P });
+          break;
+        } catch (error) {
+          if (attempt === 2) throw error;
+        }
+      }
       await page.getByRole("button", { name: "Select" }).click();
       // A reload keeps the place (the browser tab's session).
       await page.reload();
