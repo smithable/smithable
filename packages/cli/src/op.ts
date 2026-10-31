@@ -98,10 +98,13 @@ export function op(
   const plugins = loadPlugins(dir);
   const operation = name === undefined ? undefined : findOperation(name, plugins);
   if (!operation) {
-    io.err(`${name ? `Unknown operation "${name}". ` : ""}Available operations:\n`);
+    // `smithable op` alone lists the operations (docs/site/start-local.md): a use, so on stdout and
+    // status 0; an unknown name is a usage error, the same list on stderr with status 2.
+    const say = name === undefined ? io.out : io.err;
+    say(`${name ? `Unknown operation "${name}". ` : ""}Available operations:\n`);
     for (const o of operationsFor(plugins))
-      io.err(`  ${o.name} ${o.positional.map((p) => `<${p}>`).join(" ")}  ${o.summary}\n`);
-    return 2;
+      say(`  ${o.name} ${o.positional.map((p) => `<${p}>`).join(" ")}  ${o.summary}\n`);
+    return name === undefined ? 0 : 2;
   }
   // A word "@path" stands for that file's text (a theme file for addTheme).
   const words = values.map((w) =>
