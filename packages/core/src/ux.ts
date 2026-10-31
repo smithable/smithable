@@ -451,6 +451,23 @@ function readRecord(
 }
 
 /** Parses smithable.ux.yml and checks every page and field it names against the spec. */
+/**
+ * Why a page's filter cannot be picked by `filters.pick` (A 208), in the words the ux file's check
+ * and setFilterPick both give; undefined for a filter on a reference to a record.
+ */
+export function notPickable(name: string, field: FieldIR | undefined): string | undefined {
+  if (field?.type.kind === "relation" && field.type.model === "User")
+    return `${name} refers to a person; its filter is Mine, Unassigned and the people by name, never a search.`;
+  if (field?.type.kind === "relation" && !field.type.many) return undefined;
+  const kind =
+    field?.type.kind === "choice"
+      ? "a choice"
+      : field
+        ? `a ${field.type.kind === "scalar" ? field.type.name : "list"}`
+        : "not a field";
+  return `${name} is ${kind}; only a filter on a reference can be a search.`;
+}
+
 export function validateUx(
   file: { path: string; text: string },
   ir: SpecIR,
@@ -656,26 +673,9 @@ export function validateUx(
                     );
                     continue;
                   }
-                  if (field?.type.kind === "relation" && field.type.model === "User") {
-                    ctx.error(
-                      entry.keyNode,
-                      "invalid-value",
-                      `${name} refers to a person; its filter is Mine, Unassigned and the people by name, never a search.`,
-                    );
-                    continue;
-                  }
-                  if (field?.type.kind !== "relation" || field.type.many) {
-                    const kind =
-                      field?.type.kind === "choice"
-                        ? "a choice"
-                        : field
-                          ? `a ${field.type.kind === "scalar" ? field.type.name : "list"}`
-                          : "not a field";
-                    ctx.error(
-                      entry.keyNode,
-                      "invalid-value",
-                      `${name} is ${kind}; only a filter on a reference can be a search.`,
-                    );
+                  const refused = notPickable(name, field);
+                  if (refused) {
+                    ctx.error(entry.keyNode, "invalid-value", refused);
                     continue;
                   }
                   const how = readString(ctx, entry.value, `"pick" of ${name} in ${where}`);

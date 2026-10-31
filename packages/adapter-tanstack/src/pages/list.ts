@@ -1007,12 +1007,13 @@ ${head}
 ${p.body("Route")}`;
 }
 
+/** From how many related records the viewer may read a filter on them is a search (A 208). */
+const PICK_SEARCH_FROM = 200;
+
 /**
  * The statement that returns a list's rows: all of them, or inside a data page the newest
  * DATA_LIMIT, one more fetched to know whether there are others.
  */
-/** From how many related records the viewer may read a filter on them is a search (A 208). */
-const PICK_SEARCH_FROM = 200;
 
 /** The most records "Export CSV" takes from a list; a visitor of a public list, fewer. */
 const EXPORT_ROWS = 10_000;

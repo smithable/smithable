@@ -32,9 +32,12 @@ export function Combobox({
   search,
 }: ComboboxProps) {
   const list = useId();
-  const [found, setFound] = useState<ComboboxProps["options"] | null>(null);
+  // The last answer and the text it answers.
+  const [found, setFound] = useState<{ query: string; rows: ComboboxProps["options"] } | null>(
+    null,
+  );
   const labelOf = (v: string) =>
-    [...options, ...(found ?? [])].find((o) => String(o.value) === v)?.label ?? "";
+    [...options, ...(found?.rows ?? [])].find((o) => String(o.value) === v)?.label ?? "";
   const [text, setText] = useState(() => labelOf(value));
   // A choice made from outside (a time picker choosing who) shows as if it were typed here.
   const [seen, setSeen] = useState(value);
@@ -55,7 +58,12 @@ export function Combobox({
     if (!searches || !open) return;
     let current = true;
     const timer = setTimeout(() => {
-      searching.current?.(query).then((rows) => current && setFound(rows));
+      const answer = (rows: ComboboxProps["options"]) => {
+        if (!current) return;
+        setFound({ query, rows });
+        setActive(0);
+      };
+      searching.current?.(query).then(answer, () => answer([]));
     }, 250);
     return () => {
       current = false;
@@ -63,7 +71,7 @@ export function Combobox({
     };
   }, [searches, open, query]);
   const shown = search
-    ? (found ?? [])
+    ? (found?.rows ?? [])
     : typed
       ? options.filter((o) =>
           `${o.label} ${o.detail ?? ""}`.toLowerCase().includes(text.trim().toLowerCase()),
@@ -167,7 +175,7 @@ export function Combobox({
               </div>
             ))}
           </div>
-          {shown.length === 0 && (!search || found) && (
+          {shown.length === 0 && (!search || found?.query === query) && (
             <p className="px-3 py-2 text-sm text-muted-foreground">
               {options.length || (search && query)
                 ? w.nothingMatchesText(text.trim())

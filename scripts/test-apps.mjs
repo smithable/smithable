@@ -4720,7 +4720,11 @@ async function pickFlow(dir, base) {
     failures.push("searched filter");
   } finally {
     await browser.close();
-    if (set) ok(smithable(dir, "op", "setFilterPick", "invoices", "client", "auto"));
+    // Put back without hiding the step's own failure.
+    if (set) {
+      const back = smithable(dir, "op", "setFilterPick", "invoices", "client", "auto");
+      if (back.code !== 0) failures.push(`searched filter put back: ${back.out}`);
+    }
   }
 }
 

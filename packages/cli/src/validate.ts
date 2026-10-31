@@ -398,6 +398,14 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
       const field = model?.fields.find((x) => x.name === name);
       if (field?.type.kind !== "relation" || field.type.many || field.type.model === "User")
         continue;
+      const to = field.type.model;
+      const target = ir.models.find((m) => m.name === to);
+      if (target && titleField(target) === "id") {
+        lines.push(
+          `${page.id} filter ${name}: pick list (${target.name} has no name to search by)`,
+        );
+        continue;
+      }
       const said = ux?.pages[page.id]?.filterPick?.[name];
       lines.push(
         `${page.id} filter ${name}: pick ${said ?? "by count (search from 200 readable records)"}${said ? " (filters.pick)" : ""}`,

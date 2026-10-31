@@ -10108,7 +10108,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
@@ -16259,11 +16259,11 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -19672,7 +19672,7 @@ export const classTypeData = {
    * is not there.
    */
   pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
-    if (readScope(classTypeAccess.read, viewer) === "none") return [];
+    if (readScope(classTypeAccess.read, viewer) === "none" || ids?.length === 0) return [];
     return db
       .select({ id: schema.classTypes.id, title: schema.classTypes.name })
       .from(schema.classTypes)
@@ -21109,7 +21109,7 @@ export const instructorData = {
    * is not there.
    */
   pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
-    if (readScope(instructorAccess.read, viewer) === "none") return [];
+    if (readScope(instructorAccess.read, viewer) === "none" || ids?.length === 0) return [];
     return db
       .select({ id: schema.instructors.id, title: schema.instructors.name })
       .from(schema.instructors)
@@ -28711,7 +28711,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.server.ts": "6109d59a generated",
   "src/generated/booking.ts": "40202f54 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "b344f47a generated",
+  "src/generated/class-type.server.ts": "a221d86c generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "d3acafca generated",
@@ -28720,7 +28720,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "540aef8c generated",
+  "src/generated/instructor.server.ts": "2e767d80 generated",
   "src/generated/instructor.ts": "fd304a3a generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "2e082e3d generated",
@@ -28751,11 +28751,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
@@ -37298,10 +37298,10 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -40594,7 +40594,7 @@ export const clientData = {
    * is not there.
    */
   pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
-    if (readScope(clientAccess.read, viewer) === "none") return [];
+    if (readScope(clientAccess.read, viewer) === "none" || ids?.length === 0) return [];
     return db
       .select({ id: schema.clients.id, title: schema.clients.name })
       .from(schema.clients)
@@ -45669,7 +45669,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/business-profile.server.ts": "d11efba7 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "ba7c1a0a generated",
+  "src/generated/client.server.ts": "cc0f1d16 generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "33a92ba5 generated",
@@ -45696,12 +45696,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "22ca5dcb kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -53573,11 +53573,11 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "a36a050f kit",
@@ -58351,12 +58351,12 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -61852,10 +61852,10 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -73485,11 +73485,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "22ca5dcb kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/Landing.tsx": "436df766 kit",
@@ -80542,11 +80542,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "221185d4 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "fb0b7a91 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "a36a050f kit",

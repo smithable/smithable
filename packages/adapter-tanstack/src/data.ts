@@ -835,6 +835,7 @@ export function dataModule(
   // finds them by their title as the person types, without listing them all.
   const filteredBy =
     titleColumn !== "id" &&
+    model.name !== "User" &&
     ir.pages.some((p) => {
       const listed = ir.models.find((m) => m.name === pageModel(p));
       return (p.filters ?? []).some((name) => {
@@ -2283,7 +2284,7 @@ ${
    * is not there.
    */
   pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
-    if (readScope(${n.access}.read, viewer) === "none") return [];
+    if (readScope(${n.access}.read, viewer) === "none" || ids?.length === 0) return [];
     return db
       .select({ id: ${n.table}.id, title: ${n.table}.${titleColumn} })
       .from(${n.table})

@@ -210,6 +210,8 @@ function Filter({
   onChange: (value: string | undefined) => void;
 }) {
   const id = useId();
+  // The record just chosen in a search, named by the field itself until the list's answer has it.
+  const [chose, setChose] = useState("");
   const chosen = new Set((value ?? "").split(",").filter(Boolean));
   if (filter.kind === "mine" || filter.kind === "unread") {
     const on = filter.kind === "mine" ? "mine" : "1";
@@ -244,20 +246,26 @@ function Filter({
   if (filter.kind === "range") return <Range filter={filter} value={value} onChange={onChange} />;
   if (filter.search) {
     // An id the viewer may not read, or that no longer exists, filters nothing: said so.
-    const lost = !!value && !filter.options?.some((o) => o.value === value);
+    const known = value
+      ?.split(",")
+      .find((v) => v === chose || filter.options?.some((o) => o.value === v));
+    const lost = !!value && !known;
     return (
       <div className="flex flex-col gap-1">
         <Label htmlFor={id}>{filter.label}</Label>
         <div className="w-60">
           <Combobox
             id={id}
-            value={lost ? "" : (value ?? "")}
+            value={known ?? ""}
             options={filter.options ?? []}
             required={false}
             invalid={lost}
             describedBy={lost ? `${id}-lost` : undefined}
             search={filter.search}
-            onChange={(v) => onChange(v || undefined)}
+            onChange={(v) => {
+              setChose(v);
+              onChange(v || undefined);
+            }}
           />
         </div>
         {lost && (

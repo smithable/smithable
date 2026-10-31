@@ -269,7 +269,7 @@ test("the ux file says how a filter on a reference is picked; setFilterPick writ
     pick: "auto",
   });
   if (!auto.ok) throw new Error(auto.message);
-  expect(auto.files.ux).not.toContain("room: search");
+  expect(auto.files.ux).not.toContain("pick");
   const wrong = applyOperation(files, "setFilterPick", {
     page: "sessions",
     filter: "notes",

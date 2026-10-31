@@ -9,6 +9,7 @@ import {
   FONTS,
   HEADER_LOOKS,
   ICONS,
+  notPickable,
   SECTION_LOOKS,
   THEME_PRESETS,
   TONES,
@@ -778,10 +779,8 @@ const setFilterPick: Operation<{ page: string; filter: string; pick: "list" | "s
         );
       const model = ir.models.find((m) => m.name === pageModel(found));
       const field = model?.fields.find((x) => x.name === filter);
-      if (field?.type.kind !== "relation" || field.type.many || field.type.model === "User")
-        throw new OperationError(
-          `${filter} is not a reference to a record; only such a filter can be a search.`,
-        );
+      const refused = notPickable(filter, field);
+      if (refused) throw new OperationError(refused);
       put(
         editors.ux,
         ["pages", page, "filters", "pick", filter],
