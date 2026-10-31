@@ -1768,6 +1768,22 @@ async function callFlow(dir, base, receiver) {
       ),
     );
     added = true;
+    // The mail beside it for the slow endpoint's step below, added before any page opens: an
+    // operation reloads the dev app under an open page.
+    ok(
+      smithable(
+        dir,
+        "op",
+        "addOutgoing",
+        "incidentMailed",
+        "Incident changed",
+        "--where",
+        "status=resolved",
+        "--recipient",
+        "admin",
+      ),
+    );
+    mailed = true;
     const [{ id, title }] = query(
       dir,
       "select id, title from incidents where status != 'resolved' order by id limit 1",
@@ -1846,20 +1862,6 @@ async function callFlow(dir, base, receiver) {
     );
     // A slow endpoint beside a mail from the same change (A 211): the mail goes first, at once;
     // the call waits out its timeout and is tried again later.
-    ok(
-      smithable(
-        dir,
-        "op",
-        "addOutgoing",
-        "incidentMailed",
-        "Incident changed",
-        "--where",
-        "status=resolved",
-        "--recipient",
-        "admin",
-      ),
-    );
-    mailed = true;
     receiver.state.slow = true;
     const outbox = join(dir, "data", "mail", "outbox");
     const mails = () => (existsSync(outbox) ? readdirSync(outbox).length : 0);
