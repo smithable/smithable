@@ -265,6 +265,7 @@ export {
   parseTheme,
   SHADOWS,
   TOKEN_NAMES,
+  oppositeMode,
   themeNamed,
   themeNames,
   themeThumbnail,

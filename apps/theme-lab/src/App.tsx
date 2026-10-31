@@ -8,6 +8,7 @@ import {
   BUILT_IN_THEMES,
   contrast,
   deriveTokens,
+  oppositeMode,
   emptyUx,
   FONT_WEIGHTS,
   FONTS,
@@ -558,6 +559,14 @@ function Controls({
     set([mode, "card"], value);
     follow(mode, shownColor(mode, "background"), value);
   };
+  // The other mode made from this one: the same hues, the lightness turned over (oppositeMode),
+  // written as the seven colours a theme file gives.
+  const otherMode = (mode: "light" | "dark") => {
+    const other = mode === "light" ? "dark" : "light";
+    const made = oppositeMode(theme[mode], mode);
+    for (const token of ["background", "foreground", "card", "primary", "muted", "border", "accent"] as const)
+      set([other, token], hexOf(made[token]));
+  };
   const follow = (mode: "light" | "dark", bg: string, card: string) => {
     const reads = (fg: string) => Math.min(contrast(fg, bg), contrast(fg, card));
     if (!follows || reads(shownColor(mode, "foreground")) >= 4.5) return;
@@ -590,6 +599,9 @@ function Controls({
           <input type="checkbox" checked={follows} onChange={(e) => setFollows(e.target.checked)} />{" "}
           Text colour follows the others
         </label>
+        <button type="button" onClick={() => otherMode(mode)}>
+          Make the {mode === "light" ? "dark" : "light"} mode from this one
+        </button>
         <p className="hint">
           {follows
             ? "The text changes to white or ink when a background or surface would make it hard to read."

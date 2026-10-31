@@ -5,7 +5,9 @@ import {
   BUILT_IN_THEMES,
   checkContrast,
   FONTS,
+  hardToRead,
   lowContrast,
+  oppositeMode,
   parseTheme,
   type Tokens,
   themeNamed,
@@ -212,4 +214,36 @@ test("a ratio just under the one needed is rounded down, never shown as reaching
   expect(checkContrast(tokens).find((p) => p.startsWith("foreground on background"))).toBe(
     "foreground on background is 4.4:1; it needs 4.5:1 to read.",
   );
+});
+
+test("the other mode made from one mode keeps the hues, turns the lightness over, and reads", () => {
+  // Every built-in theme, both ways: the made mode passes the floor a theme file is checked by.
+  for (const t of BUILT_IN_THEMES) {
+    expect(hardToRead(oppositeMode(t.light, "light"), "dark"), `${t.name} dark`).toEqual([]);
+    expect(hardToRead(oppositeMode(t.dark, "dark"), "light"), `${t.name} light`).toEqual([]);
+  }
+  const forest = parseTheme({
+    path: "themes/forest.yml",
+    text: `smithableTheme: 0.1\nmodes: light\nlight: { primary: "#2f6b3a", background: "#f6f8f4", foreground: "#1f2a1f" }\n`,
+  }).theme as { light: Tokens };
+  const dark = oppositeMode(forest.light, "light");
+  // Deep paper of the same tint, pale ink, the green kept and lifted to show on it.
+  expect(contrast(dark.foreground, dark.background)).toBeGreaterThan(10);
+  expect(contrast(dark.primary, dark.background)).toBeGreaterThanOrEqual(3);
+  expect(contrast(dark["primary-foreground"], dark.primary)).toBeGreaterThanOrEqual(4.5);
+  const [l] = ((hex: string) => {
+    const n = Number.parseInt(hex.slice(1), 16);
+    return [((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255)];
+  })(dark.background);
+  expect(l).toBeLessThan(3 * 70);
+  // An ink primary (stillwater's) turns to a pale one on dark paper, still its own text's colour.
+  const ink = oppositeMode(
+    { ...forest.light, primary: "#16181a", "primary-foreground": "#ffffff" } as Tokens,
+    "light",
+  );
+  expect(contrast(ink.primary, ink.background)).toBeGreaterThanOrEqual(3);
+  // Back again from dark gives light paper and dark ink.
+  const back = oppositeMode(dark, "dark");
+  expect(contrast(back.foreground, back.background)).toBeGreaterThan(10);
+  expect(hardToRead(back, "light")).toEqual([]);
 });

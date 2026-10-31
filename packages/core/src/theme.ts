@@ -3,7 +3,7 @@
 // project's own live in themes/<name>.yml and are checked like the built-ins: every pair of
 // text and background the kit puts together must read. A theme never ships CSS or code.
 import { isScalar, LineCounter, parseDocument } from "yaml";
-import { contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./color.js";
+import { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./color.js";
 import { checkKeys, mapEntries, ParseContext, readString } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
@@ -455,6 +455,42 @@ export function deriveTokens(
     "chart-5": given["chart-5"] ?? rotate(primary, 280),
   };
   return t;
+}
+
+/**
+ * The other mode's colours from one mode's (docs/design/look-breadth.md; the lab's button, and
+ * the import of a catalog's one-palette materials): the same hues, the lightness turned over
+ * (light paper becomes deep paper of the same tint, ink becomes pale ink), the primary moved
+ * until it reads on the new background and its own text reads on it; the rest derives as a
+ * theme's does. The result reads by the same floor a theme file is checked against.
+ */
+export function oppositeMode(tokens: Tokens, from: Mode): Tokens {
+  const to: Mode = from === "light" ? "dark" : "light";
+  const tinted = (hex: string, lightness: number, chromaCap: number, hueOf = hex) => {
+    const [, c] = rgbToOklch(hexToRgb(hexOf(hex)));
+    const [, , h] = rgbToOklch(hexToRgb(hexOf(hueOf)));
+    return gamutMap([lightness, Math.min(c, chromaCap), h]);
+  };
+  const [bgL] = rgbToOklch(hexToRgb(hexOf(tokens.background)));
+  const [fgL] = rgbToOklch(hexToRgb(hexOf(tokens.foreground)));
+  // Paper at 0.90 to 1.0 turns to paper at 0.13 to 0.26, a paler page giving a deeper one; back
+  // the same way. Ink at 0.1 to 0.35 turns to ink at 0.9 to 0.96, and the ink takes the paper's
+  // tint, so the surfaces derived between them stay one family.
+  const background =
+    to === "dark"
+      ? tinted(tokens.background, clamp(0.17 + (0.97 - bgL) * 0.6, 0.13, 0.26), 0.035)
+      : tinted(tokens.background, clamp(0.97 - (bgL - 0.17) * 0.5, 0.9, 0.99), 0.03);
+  const foreground =
+    to === "dark"
+      ? tinted(tokens.foreground, clamp(0.96 - (fgL - 0.15) * 0.25, 0.88, 0.96), 0.02, background)
+      : tinted(tokens.foreground, clamp(0.2 + (0.96 - fgL) * 0.5, 0.16, 0.32), 0.03, background);
+  // The primary keeps its hue; it moves towards the new mode's text colour until it shows on
+  // the background (3:1) and its own text reads on it (4.5:1).
+  const away = to === "dark" ? LIGHT_TEXT : DARK_TEXT;
+  let primary = readable(hexOf(tokens.primary), background, away, 3);
+  for (let i = 0; i < 40 && contrast(bestText(primary), primary) < 4.5; i++)
+    primary = towards(primary, away, 0.1);
+  return deriveTokens({ background, foreground, primary }, to);
 }
 
 /**

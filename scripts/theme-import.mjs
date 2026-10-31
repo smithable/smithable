@@ -36,7 +36,7 @@ if (!source || !from || !["hallmark", "tweakcn"].includes(source)) {
   process.exit(2);
 }
 const core = await import(resolve(opts.core));
-const { parseTheme, themeThumbnail, gamutMap, hexOf, FONTS } = core;
+const { parseTheme, themeThumbnail, gamutMap, hexOf, FONTS, deriveTokens, oppositeMode } = core;
 const stamp = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
 const out = opts.out ?? `/mnt/c/Users/johan/Pictures/claude/themes/${stamp}-import-${source}`;
 const dir = join(out, "themes");
@@ -364,12 +364,26 @@ function* hallmark(checkout) {
       shadow: shadowName(tokens["shadow-card"]),
       chroma: Math.min(0.4, Math.max(0.04, Math.round(accentC * 100) / 100)),
       texture,
-      modes: mode,
+      // A material is one palette: the other mode is made from it (oppositeMode), so the
+      // candidate has both, as Johan asked (2026-10-31).
+      modes: "both",
       [mode]: tokensOut,
+      [mode === "light" ? "dark" : "light"]: otherMode(tokensOut, mode),
       weightRange: weight,
       genre: head.genre,
     };
   }
+}
+
+/** The other mode's seven given colours, from one mode's given ones. */
+function otherMode(given, mode) {
+  const made = oppositeMode(deriveTokens(given, mode), mode);
+  return Object.fromEntries(
+    ["background", "foreground", "card", "primary", "muted", "border", "accent"].map((k) => [
+      k,
+      hexOf(made[k]),
+    ]),
+  );
 }
 
 // ---- tweakcn: one TypeScript file of presets, read by its shape, never run.
