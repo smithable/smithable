@@ -2,12 +2,21 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: Openings from union employers, text: "Every post comes from the union office, with pay, location and closing date up front." }, { title: Apply in minutes, text: "Sign in, add your member number and a CV, and send your application straight to the office." }, { title: Know where you stand, text: Follow each application from submitted to shortlisted or hired on your own page. }]
+      items: [{ title: Jobs from union employers, text: "Every opening here comes from an employer working with our local, at union wages and conditions." }, { title: Apply in minutes, text: "Sign in, write a few lines about yourself, attach your resume and send it." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted or settled, all in one place." }]
+      title: How it works
+    faq:
+      items: [{ question: Who can apply?, answer: Members of the local. Sign in with your email and include your member number on the application. }, { question: Can anyone see my application?, answer: No. Only you and the union's job desk staff see what you send. }, { question: Can I apply to more than one job?, answer: "Yes, once per job, as many jobs as you like." }, { question: How do employers post a job?, answer: Contact the union office and our staff will post the opening for you. }]
+      title: Questions
     hero:
+      title: Union jobs, posted first for our members
+      subtitle: Browse open positions from employers working with our local and apply in a few minutes.
+      button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
+    openJobs:
+      title: Open now
 logo:
   src: images/logo.webp
   alt: A map pin

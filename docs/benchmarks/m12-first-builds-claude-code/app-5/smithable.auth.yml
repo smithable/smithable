@@ -6,10 +6,10 @@ defaultAccess: shared
 roles:
   admin: all
   member:
-    description: Works in the bakery and keeps the stock up to date.
+    description: "Works in the bakery: keeps ingredients, stock levels and suppliers up to date."
     pages: all
     create: all
-    write: all
+    write: [Ingredient, Supplier]
 assistant:
   for: signed-in
 defaultRole: member

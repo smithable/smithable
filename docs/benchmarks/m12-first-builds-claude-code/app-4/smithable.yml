@@ -1,24 +1,50 @@
 smithable: 0.1
 app:
-  name: Tool Shed
-  description: Neighbors lend each other the tools they own instead of everyone buying their own.
+  name: Toolshare
+  description: "Neighbors share their tools: list what you own, find what you need, and borrow instead of buying."
+  currency: EUR
 models:
   Tool:
     fields:
       title: string!
       photos: pictures!
       description: text!
-      category: power | garden | hand | ladders | cleaning | other
+      category: powerTools | handTools | garden | ladders | cleaning | camping | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
     review: [photos]
+  Loan:
+    fields:
+      tool: Tool!
+      borrower: string!
+      borrowerContact: string
+      lentOn: date!
+      dueBack: date
+      status: out | returned
+      returnedOn: date
+      note: text
+    namedBy: [tool, borrower]
 pages:
-  tools:
+  home:
+    route: /welcome
+    landing:
+      hero:
+        button: catalog
+        secondButton: myTools
+      features:
+      latest:
+        records: Tool
+        where:
+          available: true
+      footer:
+  catalog:
     route: /
     crud: Tool
     search: [title, description, place]
     filters: [category, condition, available]
+    defaultFilter:
+      available: true
     sortable: [title, createdAt]
     favorites: true
     contact: owner
@@ -28,20 +54,24 @@ pages:
   saved:
     crud: Tool
     favorites: only
+  loans:
+    crud: Loan
+    filters: [status, tool, dueBack]
+    defaultFilter:
+      status: out
+    actions: [markReturned]
   review:
     review: all
-  home:
-    route: /welcome
-    landing:
-      hero:
-        button: tools
-        secondButton: myTools
-      latest:
-        records: Tool
-      features:
-      faq:
-      footer:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [tools, myTools, saved, review]
+actions:
+  markReturned:
+    on: Loan
+    when:
+      status: out
+    set:
+      status: returned
+      returnedOn: TODAY()
+    intent: Record that a lent tool has come back.
+navigation: [catalog, myTools, loans, saved, review]

@@ -3,7 +3,8 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin: all
+  admin:
+    description: Studio staff. Manage the schedule, classes and teachers.
   member:
     description: A student who books classes.
     pages: [schedule, my-bookings]

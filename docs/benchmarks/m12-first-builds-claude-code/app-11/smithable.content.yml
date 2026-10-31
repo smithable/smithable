@@ -2,8 +2,8 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Is the API working?
-      subtitle: The live state of every part of our API, the incidents we are fixing and the maintenance we have planned.
+      title: API Status
+      subtitle: "The current state of our API, live: ongoing incidents, recent fixes and planned maintenance."
       button: Incident history
       image:
         src: images/hero.webp
@@ -13,10 +13,10 @@ pages:
       title: Services
     open:
       title: Ongoing incidents
-    recent:
-      title: Recently resolved
     planned:
       title: Planned maintenance
+    recent:
+      title: Recently resolved
 logo:
   src: images/logo.webp
   alt: A plug
