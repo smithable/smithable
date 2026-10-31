@@ -197,6 +197,17 @@ export const pagesSection: SpecSection<"pages"> = {
           `${model.name}'s ${model.review.join(", ")} wait for review, but no review page lists ${model.name}, so nothing is ever approved.`,
           `Add one: smithable op addReviewPage (a page with "review: all").`,
         );
+    // The latest changes are the Activity page's, which a team page gives (look-gap §4).
+    if (!pages.some((p) => p.pattern.kind === "users"))
+      for (const p of pages)
+        for (const item of p.pattern.kind === "dashboard" ? p.pattern.items : [])
+          if (item.kind === "activity")
+            ctx.warning(
+              node,
+              "activity-no-page",
+              `The "${item.name}" tile of the ${p.id} page shows nothing: the app has no Activity page (a team page gives it one).`,
+              "Add one: smithable op addUsersPage.",
+            );
     return pages;
   },
 };

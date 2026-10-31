@@ -35,7 +35,10 @@ export interface FilterUi {
    * has not read, for those signed in).
    */
   kind: "chips" | "range" | "toggle" | "mine" | "person" | "unread";
-  options?: { value: string; label: string }[];
+  /** A choice's value and name; a related record's picture, for its chip (chips). */
+  options?: { value: string; label: string; picture?: string }[];
+  /** Every value as a chip however many there are, never a list to pick from (filters.look: chips). */
+  chips?: boolean;
   /**
    * A reference with too many records to list (A 208): found as the person types, one chosen;
    * `options` then holds only the chosen record, named.
@@ -279,7 +282,7 @@ function Filter({
   // A person (record-rules.md §6): Mine and Unassigned, then the people as chips, or a list to
   // pick one from when there are many.
   const people = filter.kind === "person" ? (filter.options ?? []) : [];
-  const many = people.length > 8;
+  const many = !filter.chips && people.length > 8;
   const options =
     filter.kind === "person"
       ? [
@@ -340,7 +343,7 @@ function Filter({
     );
   }
   // Many values read better as a list to pick one from than as a row of chips.
-  if (filter.kind !== "person" && options.length > 8)
+  if (!filter.chips && filter.kind !== "person" && options.length > 8)
     return (
       <div className="flex flex-col gap-1">
         <Label htmlFor={id}>{filter.label}</Label>
@@ -377,10 +380,14 @@ function Filter({
                 onChange([...next].join(",") || undefined);
               }}
               className={cn(
-                "rounded-full border px-3 py-1 text-sm",
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm",
+                o.picture && "pl-1",
                 on ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-hover",
               )}
             >
+              {o.picture && (
+                <img src={o.picture} alt="" className="size-6 rounded-full object-cover" />
+              )}
               {o.label}
             </button>
           );

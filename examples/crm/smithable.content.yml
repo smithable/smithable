@@ -14,6 +14,12 @@ models:
       placedAt: { label: Placed on }
 
 pages:
+  start:
+    title: Overview
+    subtitle: What needs you today.
+    openOrders: { label: Open orders }
+    followUpsDue: { label: Follow-ups due }
+    recent: { label: Latest changes }
   customers: { subtitle: Keep every relationship in view. }
   orders: { subtitle: Every order and where it stands. }
   team: { subtitle: Who has access and who is invited. }

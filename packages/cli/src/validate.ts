@@ -7,6 +7,7 @@ import {
   actionAccess,
   type ContentIR,
   type Diagnostic,
+  DUE_WITHIN,
   formatDiagnostic,
   hasErrors,
   LANGUAGES,
@@ -412,6 +413,17 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
       );
     }
   }
+  // A dashboard's lists of what is due: how far ahead each reaches, said or unsaid (7 days).
+  for (const page of ir.pages)
+    if (page.pattern.kind === "dashboard")
+      for (const item of page.pattern.items)
+        if (item.when) {
+          const within = item.within ?? DUE_WITHIN;
+          const span = `${within.amount} ${within.unit}${within.amount === 1 ? "" : "s"}`;
+          lines.push(
+            `${page.id} tile ${item.name}: due by ${item.when}, within ${span}${item.within ? " (within)" : " (unsaid)"}`,
+          );
+        }
   // Where the menu sits and its surface (look-gap §4): the ux file's word, else the default.
   lines.push(ux?.navigation ? `menu: ${ux.navigation} (navigation)` : "menu: sidebar (unsaid)");
   lines.push(

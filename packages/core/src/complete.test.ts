@@ -98,7 +98,7 @@ test("a value's fixed choices, and the app's own names where they fit", () => {
       "smithable.auth.yml",
     )?.suggestions.map((s) => s.label);
   };
-  expect(grant("pages: [‸")).toEqual(["all", "customers", "orders", "followUps", "team"]);
+  expect(grant("pages: [‸")).toEqual(["all", "customers", "orders", "followUps", "team", "start"]);
   expect(grant("write: [Cu‸")).toEqual(["Customer"]);
   expect(grant("actions: [‸")).toEqual(["all", "mergeCustomers", "scheduleFollowUps"]);
   expect(at(withLine("  customers:", "    mine: ‸")).labels).toEqual(["true", "false"]);
@@ -193,6 +193,7 @@ test("a companion file is helped from its own schema, with the spec's names", ()
     "orders",
     "followUps",
     "team",
+    "start",
   ]);
   expect(auth("smithableAuth: 0.1\npublic:\n  read: [‸")).toEqual([
     "Customer",
@@ -207,7 +208,13 @@ test("a companion file is helped from its own schema, with the spec's names", ()
     const found = completeSpec(marked.replace("‸", ""), offset, { spec }, "smithable.ux.yml");
     return found?.suggestions.map((s) => s.label) ?? [];
   };
-  expect(ux("smithableUx: 0.1\npages:\n  ‸")).toEqual(["customers", "orders", "followUps", "team"]);
+  expect(ux("smithableUx: 0.1\npages:\n  ‸")).toEqual([
+    "customers",
+    "orders",
+    "followUps",
+    "team",
+    "start",
+  ]);
   expect(ux("smithableUx: 0.1\npages:\n  orders:\n    table:\n      columns: [‸")).toEqual(
     expect.arrayContaining(["number", "customer", "status", "total"]),
   );

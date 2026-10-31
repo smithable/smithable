@@ -1,4 +1,5 @@
 // Smithable app kit: the numbers a dashboard shows, worked out from records the viewer may read.
+import { wallTime } from "./zoned";
 
 /** The sum of a number over records; empty values count as nothing. */
 export function sum<R>(rows: R[], value: (row: R) => unknown): number {
@@ -109,4 +110,36 @@ export function byValue<R>(
 /** The newest records first: the highest ids. */
 export function latest<R extends { id: number }>(rows: R[], limit: number): R[] {
   return [...rows].sort((a, b) => b.id - a.id).slice(0, limit);
+}
+
+/** A date `days` after another, both "YYYY-MM-DD". */
+const dayAfter = (day: string, days: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * What is due (look-gap §4): the rows whose date falls before the end of the span from today, in
+ * the app's time zone, earliest first, the overdue (before today) marked. A date-time counts by
+ * its day there; a row without one is left out.
+ */
+export function due<R>(
+  rows: R[],
+  when: (row: R) => unknown,
+  within: { amount: number; unit: "day" | "week" },
+  timeZone: string,
+  now = new Date(),
+): { row: R; day: string; overdue: boolean }[] {
+  const today = wallTime(now, timeZone).slice(0, 10);
+  const end = dayAfter(today, within.amount * (within.unit === "week" ? 7 : 1));
+  const dayOf = (value: unknown) =>
+    value instanceof Date
+      ? wallTime(value, timeZone).slice(0, 10)
+      : typeof value === "string" && value
+        ? value.slice(0, 10)
+        : undefined;
+  return rows
+    .flatMap((row) => {
+      const day = dayOf(when(row));
+      return day && day < end ? [{ row, day, overdue: day < today }] : [];
+    })
+    .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
 }
