@@ -139,25 +139,25 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
   let colorLoad = "";
   let colorItem = "";
   if (colorBy) {
-    const through = colorBy.kind === "record" || colorBy.reference !== undefined;
+    const reference = colorBy.kind === "record" ? colorBy.reference : colorBy.reference;
     const target = modelNamed(ir, colorBy.model);
-    if (through) {
-      const tn = names(target, t);
-      imports.add(`${tn.module}.server`, tn.data);
-    }
-    const refKey = through ? `row.${(colorBy as { reference: string }).reference}Id` : "";
+    const refKey = reference ? `row.${dataKey(field(reference))}` : "";
     if (colorBy.kind === "record") {
-      // Each referenced record its own hue, by its order among its model's that the viewer may read.
-      colorLoad = `\n    // Each ${target.name} a hue of its own, by its order.\n    const hues = new Map((await ${names(target, t).data}.list(viewer)).map((r) => r.id).sort((a, b) => a - b).map((id, i) => [id, i]));`;
-      colorItem = `\n        hue: hues.get(${refKey} as number),`;
+      // Each referenced record its own hue, by its number: the same for everyone who looks.
+      colorItem = `\n        hue: ${refKey} ?? undefined,`;
     } else {
+      const through = reference !== undefined;
+      if (through) {
+        const tn = names(target, t);
+        imports.add(`${tn.module}.server`, tn.data);
+      }
       // A choice's value: its tone, or a hue by the value's place among the choice's.
       const field = target.fields.find((f) => f.name === colorBy.field);
       const values = field?.type.kind === "choice" ? field.type.values : [];
       const tones = ctx.ux.tones[`${target.name}.${colorBy.field}`] ?? {};
       const value = through ? `colors.get(${refKey} as number)` : `row.${colorBy.field}`;
       if (through)
-        colorLoad = `\n    // Each ${target.name}'s ${colorBy.field}, for the blocks' colour.\n    const colors = new Map((await ${names(target, t).data}.list(viewer)).map((r) => [r.id, r.${colorBy.field}]));`;
+        colorLoad = `\n    // Each ${target.name}'s ${colorBy.field}, for the blocks' colour (none where the viewer may not read them).\n    const colors = new Map((await ${names(target, t).data}.list(viewer).catch(() => [])).map((r) => [r.id, r.${colorBy.field}]));`;
       colorItem = `\n        ...colorOf(${value}, ${literal(values)}, ${literal(tones)}),`;
       imports.add("#/kit/Calendar", "colorOf");
     }

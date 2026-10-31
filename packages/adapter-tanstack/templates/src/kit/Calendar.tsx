@@ -51,7 +51,7 @@ function accentStyle(item: CalendarItem): React.CSSProperties | undefined {
     item.tone !== undefined
       ? `var(--${item.tone === "danger" ? "destructive" : item.tone})`
       : item.hue !== undefined
-        ? `var(--chart-${(item.hue % 5) + 1})`
+        ? `var(--chart-${(((item.hue % 5) + 5) % 5) + 1})`
         : undefined;
   return accent
     ? {
@@ -508,44 +508,45 @@ export function Calendar({
                   <p className="text-sm text-muted-foreground md:sr-only">{w.nothing}</p>
                 ) : (
                   <ol className="space-y-1 md:space-y-0">
-                    {records.map((p) => (
-                      <li
-                        key={p.id}
-                        className={timed ? "md:absolute md:px-0.5" : "md:mt-1"}
-                        style={
-                          timed
-                            ? ({
-                                top: `${((p.from - firstHour * 60) * 100) / span}%`,
-                                height: `${((p.to - p.from) * 100) / span}%`,
-                                left: `${(p.column * 100) / p.columns}%`,
-                                width: `${100 / p.columns}%`,
-                              } as React.CSSProperties)
-                            : undefined
-                        }
-                      >
-                        <button
-                          type="button"
-                          onClick={() => open(p)}
-                          className="block h-full w-full overflow-hidden rounded-md bg-primary/10 px-2 py-1 text-left text-sm text-foreground hover:bg-primary/20 md:text-xs"
-                          style={accentStyle(p)}
+                    {records.map((p) => {
+                      const accent = accentStyle(p);
+                      return (
+                        <li
+                          key={p.id}
+                          className={timed ? "md:absolute md:px-0.5" : "md:mt-1"}
+                          style={
+                            timed
+                              ? ({
+                                  top: `${((p.from - firstHour * 60) * 100) / span}%`,
+                                  height: `${((p.to - p.from) * 100) / span}%`,
+                                  left: `${(p.column * 100) / p.columns}%`,
+                                  width: `${100 / p.columns}%`,
+                                } as React.CSSProperties)
+                              : undefined
+                          }
                         >
-                          <span className="font-medium">{p.title}</span>
-                          <span className="sr-only">, {when(p)}</span>
-                          {!dateOnly && (
-                            // On a coloured block the muted text would not read: the text's own colour.
-                            <span
-                              aria-hidden
-                              className={`block ${accentStyle(p) ? "text-foreground" : "text-muted-foreground"}`}
-                            >
-                              {clock(p.from)}
-                            </span>
-                          )}
-                          {p.places && (
-                            <Places places={p.places} look={places} plain={!accentStyle(p)} />
-                          )}
-                        </button>
-                      </li>
-                    ))}
+                          <button
+                            type="button"
+                            onClick={() => open(p)}
+                            className="block h-full w-full overflow-hidden rounded-md bg-primary/10 px-2 py-1 text-left text-sm text-foreground hover:bg-primary/20 md:text-xs"
+                            style={accent}
+                          >
+                            <span className="font-medium">{p.title}</span>
+                            <span className="sr-only">, {when(p)}</span>
+                            {!dateOnly && (
+                              // On a coloured block the muted text would not read: the text's own colour.
+                              <span
+                                aria-hidden
+                                className={`block ${accent ? "text-foreground" : "text-muted-foreground"}`}
+                              >
+                                {clock(p.from)}
+                              </span>
+                            )}
+                            {p.places && <Places places={p.places} look={places} plain={!accent} />}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ol>
                 )}
               </div>

@@ -98,6 +98,10 @@ test("setCalendarColor and setCalendarCapacity write the part; renames follow, r
   });
   if (!level.ok) throw new Error(level.message);
   expect(level.files.ux).toContain("colorBy: classType.grade");
+  // The reference itself renamed: the path follows at its start.
+  const kind = applyOperation(both.files, "renameField", { model: "Session", from: "classType", to: "kind" });
+  if (!kind.ok) throw new Error(kind.message);
+  expect(kind.files.ux).toContain("colorBy: kind.level");
   const off = applyOperation(both.files, "setCalendarColor", { page: "schedule", field: "none" });
   if (!off.ok) throw new Error(off.message);
   expect(off.files.ux).not.toContain("colorBy");
