@@ -62,3 +62,36 @@ test("a stage hero over a list the landing lists again below is a warning: the p
   // Sessions are listed nowhere else on home.
   expect(read("{ layout: stage, stage: sessions }").diagnostics).toEqual([]);
 });
+
+test("a records section with a where of its own beside the stage is no repeat; an empty where is", () => {
+  const shop = (where: string) =>
+    validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1
+app: { name: Shop }
+models:
+  Item: { fields: { title: string!, condition: likeNew | good } }
+pages:
+  home:
+    route: /welcome
+    landing:
+      hero: {}
+      latest: { records: Item${where} }
+  catalog: { route: /, crud: Item }
+`,
+    }).ir;
+  const codes = (where: string) => {
+    const spec = shop(where);
+    if (!spec) throw new Error("the shop does not read");
+    return validateUx(
+      {
+        path: "smithable.ux.yml",
+        text: "smithableUx: 0.1\npages: { home: { sections: { hero: { layout: stage, stage: catalog } } } }\n",
+      },
+      spec,
+      [],
+    ).diagnostics.map((d) => d.code);
+  };
+  expect(codes("")).toEqual(["stage-repeats"]);
+  expect(codes(", where: { condition: likeNew }")).toEqual([]);
+});
