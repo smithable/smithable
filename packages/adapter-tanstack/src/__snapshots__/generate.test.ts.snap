@@ -58460,7 +58460,7 @@ export const Route = createFileRoute("/welcome/")({
   head: () => pageHead("home"),
   loader: async () => {
     const items = (await listItems()).rows;
-    return { "latest": items.slice(0, 6) };
+    return { "latest": items.filter((row) => row.condition === "likeNew").slice(0, 4) };
   },
   component: HomePage,
 });
@@ -59071,7 +59071,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/saved/new.tsx": "59f878f7 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
-  "src/routes/welcome/index.tsx": "92089879 generated",
+  "src/routes/welcome/index.tsx": "7b2851ad generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "c501d393 kit",
   "src/theme.css": "bdcdfdd1 generated",

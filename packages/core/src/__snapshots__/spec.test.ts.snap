@@ -3836,10 +3836,13 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
               "category",
             ],
             "kind": "records",
-            "limit": 6,
+            "limit": 4,
             "model": "Item",
             "name": "latest",
             "search": true,
+            "where": {
+              "condition": "likeNew",
+            },
           },
           {
             "kind": "footer",
@@ -3860,10 +3863,13 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
             "category",
           ],
           "kind": "records",
-          "limit": 6,
+          "limit": 4,
           "model": "Item",
           "name": "latest",
           "search": true,
+          "where": {
+            "condition": "likeNew",
+          },
         },
         {
           "kind": "footer",
