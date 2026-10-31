@@ -35,11 +35,19 @@ export interface ModelAccess {
 }
 
 export class AccessDenied extends Error {
+  /** What the server answers with it: 403 for a signed-in person, 401 before signing in. */
+  readonly status: number;
   /** `why`: the refusal in words the caller can act on, when there are better ones than "not allowed". */
   constructor(signedIn: boolean, why?: string) {
     super(why ?? (signedIn ? w.notAllowed : w.signInFirst));
+    this.name = "AccessDenied";
+    this.status = signedIn ? 403 : 401;
   }
 }
+
+/** A refusal, also once it has crossed from the server as plain data (its name kept). */
+export const isRefusal = (error: unknown): boolean =>
+  error instanceof AccessDenied || (error instanceof Error && error.name === "AccessDenied");
 
 /** A change the database refused, as a code the form turns into words: "taken:<column>" or "in-use". */
 export class Conflict extends Error {}

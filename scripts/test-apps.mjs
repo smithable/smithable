@@ -4457,6 +4457,33 @@ async function topbarFlow(dir, base) {
   }
 }
 
+/**
+ * A page the role may not open, reached by its address (A 214): a member who types a staff page's
+ * address gets the refusal, answered 403, never "Something went wrong" and a 500.
+ */
+async function refusalFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  try {
+    await signInAs(page, base, "member");
+    const answer = await page.goto(`${base}/sessions`);
+    if (answer?.status() !== 403) throw new Error(`answered ${answer?.status()}, not 403`);
+    await page.getByRole("heading", { name: "Not for your role" }).waitFor({ timeout: 10000 * P });
+    if (await page.getByText("Something went wrong").count())
+      throw new Error("the refusal still reads as an error");
+    console.log(
+      "  ✓ browser: a member who opens a staff page by its address gets the refusal, answered 403, not an error",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("refusal");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function landingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -7692,6 +7719,7 @@ test("the session cookie's name and attributes", async () => {
         await bookingFlow(dir, base);
         await outgoingFlow(dir, base);
         await sessionsListFlow(base);
+        await refusalFlow(base);
         await visitorMailFlow(dir, base);
         await markdownFlow(base);
         await inputSecurityFlow(dir, base);

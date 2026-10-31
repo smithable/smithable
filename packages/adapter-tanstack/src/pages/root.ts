@@ -227,7 +227,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-${modes === "both" ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
+${modes === "both" ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}\nimport { ${workspace.length ? "allows, " : ""}isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
@@ -319,9 +319,13 @@ export const Route = createRootRoute({
     ],
   }),
   shellComponent: RootDocument,
-  errorComponent: ({ error }) => (
-    <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
-  ),
+  // A refusal (a page the role may not open, reached by its address) is said as one, not as a crash.
+  errorComponent: ({ error }) =>
+    isRefusal(error) ? (
+      <ErrorNotice kind="denied" title={w.notAllowedTitle} message={error instanceof Error ? error.message : undefined} />
+    ) : (
+      <ErrorNotice title={w.errorTitle} message={error instanceof Error ? error.message : undefined} />
+    ),
   notFoundComponent: () => (
     <ErrorNotice kind="not-found" title={w.notFound} message={w.notFoundNote} />
   ),

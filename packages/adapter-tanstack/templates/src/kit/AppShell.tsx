@@ -440,8 +440,11 @@ export function ErrorNotice({
 }: {
   title: string;
   message?: string;
-  /** What the page is: an error (the preview loads it again while the app updates), or a page not found. */
-  kind?: "error" | "not-found";
+  /**
+   * What the page is: an error (the preview loads it again while the app updates), a page not
+   * found, or a refusal (a page the viewer's role may not open).
+   */
+  kind?: "error" | "not-found" | "denied";
 }) {
   return (
     <div data-kit={kind} className="max-w-xl">
