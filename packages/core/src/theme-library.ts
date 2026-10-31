@@ -1,7 +1,8 @@
-// The fifteen themes after the first four presets: nine added on 2026-10-04, rule-made
+// The seventeen themes after the first four presets: nine added on 2026-10-04, rule-made
 // candidates (scripts/theme-candidates.mjs) that Johan picked from their sheets; the theme lab's
 // three styles (docs/design/theme-lab.md §6); and at the end the three candidates of 2026-10-18
-// from a tester's report, warm-service, quiet-workspace and ink-and-brass. Each is a theme file as
+// from a tester's report, warm-service, quiet-workspace and ink-and-brass; then the CRM's and
+// the booking starter's own of 2026-10-31, workbench and stillwater. Each is a theme file as
 // a project would write one (docs/spec/v0.1.md, Themes), with seven colors per mode, or more where
 // it names colors otherwise derived (the three of 2026-10-18 name thirteen); theme.ts parses them
 // with the same parser and checks as a project's own, and derives the rest. To change one, change
@@ -450,5 +451,71 @@ dark:
   sidebar: "#142233"
   accent: "#3D3527"
   secondary: "#23364A"
+`,
+  workbench: `# workbench: the CRM starter's own (docs/design/look-gap.md §3, 2026-10-31): a quiet near-white
+# workspace with a light sidebar, one neutral face at medium weights, colour kept for the data.
+smithableTheme: 0.1
+name: workbench
+fonts: { body: Inter, heading: Inter }
+headings: { weight: 600, tracking: tight, scale: regular, case: none }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: rounded, weight: regular }
+pictures: { corners: round, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 6px
+shadow: none
+density: compact
+motion: subtle
+chroma: 0.08
+light:
+  background: "#FAFAF9"
+  foreground: "#18212B"
+  card: "#FFFFFF"
+  primary: "#1D6B63"
+  muted: "#F1F2F1"
+  border: "#DADDDC"
+  accent: "#E5F0EE"
+  sidebar: "#F2F3F2"
+dark:
+  background: "#121519"
+  foreground: "#E6E9EC"
+  card: "#1A1E23"
+  primary: "#62C0B3"
+  muted: "#22272D"
+  border: "#343B43"
+  accent: "#1E3532"
+  sidebar: "#171B20"
+`,
+  stillwater: `# stillwater: the booking starter's own (docs/design/look-gap.md §3, 2026-10-31): one ink on warm
+# paper, a display face at a large size, square bold buttons, pictures left as they are.
+smithableTheme: 0.1
+name: stillwater
+fonts: { body: Source Sans 3, heading: DM Sans }
+headings: { weight: 800, tracking: tight, scale: large, case: none }
+surfaces: { cards: bordered, sections: open, dividers: light }
+buttons: { shape: square, weight: bold }
+pictures: { corners: theme, frame: none }
+tables: { numbers: tabular, rows: lined }
+radius: 4px
+shadow: soft
+density: comfortable
+motion: subtle
+chroma: 0.06
+light:
+  background: "#ECEBE6"
+  foreground: "#16181A"
+  card: "#F6F5F1"
+  primary: "#16181A"
+  muted: "#E2E1DB"
+  border: "#CFCDC5"
+  accent: "#E4E2DA"
+dark:
+  background: "#141516"
+  foreground: "#ECEBE6"
+  card: "#1C1D1F"
+  primary: "#ECEBE6"
+  muted: "#26282A"
+  border: "#3A3C3F"
+  accent: "#2A2B2D"
 `,
 };

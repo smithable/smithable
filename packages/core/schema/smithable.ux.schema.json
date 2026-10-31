@@ -23,7 +23,7 @@
       "properties": {
         "preset": {
           "type": "string",
-          "description": "A built-in theme (modern, minimal, playful, corporate, coastal, navy, editorial, woodland, contrast, nordic, pastel, midnight, craft, restaurant, street-food, cafe, warm-service, quiet-workspace, ink-and-brass) or one of the project's own (themes/<name>.yml)."
+          "description": "A built-in theme (modern, minimal, playful, corporate, coastal, navy, editorial, woodland, contrast, nordic, pastel, midnight, craft, restaurant, street-food, cafe, warm-service, quiet-workspace, ink-and-brass, workbench, stillwater) or one of the project's own (themes/<name>.yml)."
         },
         "brand": {
           "type": "object",
@@ -219,14 +219,28 @@
                 "description": "The fields in the order the form shows them."
               },
               "sections": {
-                "type": "object",
-                "description": "Headings over groups of fields: { contact: [email, phone] }; the heading's text is in smithable.content.yml.",
-                "additionalProperties": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "description": "The fields under the heading."
+                "type": "array",
+                "description": "Groups of fields with headings: - { name: contact, fields: [email, phone] }; the heading's text is in smithable.content.yml.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "fields"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The group's name; its heading is in smithable.content.yml."
+                    },
+                    "fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The fields under the heading."
+                    }
+                  }
                 }
               },
               "columns": {

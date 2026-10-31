@@ -2,7 +2,7 @@
 smithableUx: 0.1
 
 theme:
-  preset: ink-and-brass
+  preset: stillwater                   # the studio's own theme: one ink on warm paper
 
 pages:
   home:
@@ -27,6 +27,8 @@ pages:
     form:
       fieldOrder: [classType, instructor, startsAt, capacity]
       columns: 2
-      control: { capacity: stepper }
+      control: { classType: select, instructor: select, capacity: stepper }
+  class-types:
+    table: { view: cards, sort: name }
   instructors:
     table: { columns: [name, portrait], view: cards }

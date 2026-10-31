@@ -1267,10 +1267,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
             "kind": "hero",
             "name": "hero",
             "secondButton": "blog",
-            "shortcuts": [
-              "schedule",
-              "blog",
-            ],
           },
           {
             "kind": "records",
@@ -1418,10 +1414,6 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
           "kind": "hero",
           "name": "hero",
           "secondButton": "blog",
-          "shortcuts": [
-            "schedule",
-            "blog",
-          ],
         },
         {
           "kind": "records",

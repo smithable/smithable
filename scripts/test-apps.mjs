@@ -4397,16 +4397,36 @@ async function calculatorFlow(base) {
   }
 }
 
-async function landingFlow(base) {
+async function landingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
+  let shortcutsSet = false;
   try {
-    await open(page, base);
-    // The cover hero's shortcuts: round links to the schedule and the blog over its edge.
+    // The hero's shortcuts, round links over its edge: no starter has them since 2026-10-31
+    // (look-gap.md §3), so they are given here by the operation and taken away after.
+    const set = smithable(dir, "op", "setShortcuts", "home", "schedule", "blog");
+    if (set.code !== 0) throw new Error(set.out);
+    shortcutsSet = true;
     const shortcuts = page.getByRole("navigation", { name: "Shortcuts" });
-    await shortcuts.getByRole("link", { name: "Blog" }).waitFor({ timeout: 5000 * P });
+    // The dev server takes the change up by itself; asked again until it has.
+    for (let i = 0; ; i++) {
+      await open(page, base);
+      if (await shortcuts.getByRole("link", { name: "Blog" }).isVisible()) break;
+      if (i === 20 * P) throw new Error("the hero has no shortcuts");
+      await page.waitForTimeout(500);
+    }
     await shortcuts.getByRole("link", { name: "Schedule" }).click();
     await page.waitForURL(`${base}/schedule`);
+    const unset = smithable(dir, "op", "setShortcuts", "home");
+    if (unset.code !== 0) throw new Error(unset.out);
+    shortcutsSet = false;
+    // And gone again before the next step opens the page.
+    for (let i = 0; ; i++) {
+      await page.waitForTimeout(500);
+      await open(page, base);
+      if (!(await shortcuts.count())) break;
+      if (i === 20 * P) throw new Error("the hero's shortcuts stayed");
+    }
     console.log("  ✓ browser: the hero's shortcuts lead to their pages");
     // Classes have no picture field: their cards stay text cards, with no placeholder.
     await open(page, base);
@@ -4516,6 +4536,7 @@ async function landingFlow(base) {
     );
     failures.push("booking landing flow");
   } finally {
+    if (shortcutsSet) smithable(dir, "op", "setShortcuts", "home");
     await browser.close();
   }
 }
@@ -7605,7 +7626,7 @@ test("the session cookie's name and attributes", async () => {
         await contactFlow(dir, base);
       }
       if (example === "booking") {
-        await landingFlow(base);
+        await landingFlow(dir, base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await outgoingFlow(dir, base);
