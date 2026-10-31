@@ -94,6 +94,17 @@ export interface PageUx {
    */
   filterPick?: Record<string, "list" | "search">;
   /**
+   * A calendar page's blocks (docs/design/look-gap.md §4): coloured by a choice's tone, the model's
+   * own or one a reference away, or by the referenced record itself, each record a chart hue by
+   * its order among its model's (`colorBy`); and showing the places left of the places there are.
+   */
+  calendar?: {
+    colorBy?:
+      | { kind: "choice"; model: string; field: string; reference?: string }
+      | { kind: "record"; model: string; reference: string };
+    capacity?: { left: string; of: string; look: "number" | "pips" | "bar" };
+  };
+  /**
    * How the page's filters show (docs/design/look-gap.md §4): unsaid, today's controls (chips up to
    * eight values, a list to pick from above); `chips`, every choice and reference as a row of
    * chips, a referenced record's picture on its chip when it has one.
@@ -676,9 +687,148 @@ export function validateUx(
             "theme",
             "filters",
             "frame",
+            "calendar",
           ],
-          later: ["detail", "calendar"],
+          later: ["detail"],
         })) {
+          if (part.key === "calendar") {
+            if (spec.pattern.kind !== "calendar") {
+              ctx.error(
+                part.keyNode,
+                "invalid-key",
+                `"calendar" belongs to a calendar page; ${page.key} is not one.`,
+              );
+              continue;
+            }
+            const calendar: NonNullable<PageUx["calendar"]> = {};
+            // The calendar's own model (its pattern names it).
+            const model = ir.models.find(
+              (m) => m.name === (spec.pattern as { model?: string }).model,
+            );
+            const own = model?.fields ?? [];
+            for (const option of checkKeys(
+              ctx,
+              mapEntries(ctx, part.value, `the calendar of ${where}`) ?? [],
+              `the calendar of ${where}`,
+              { allowed: ["colorBy", "capacity"] },
+            )) {
+              if (option.key === "colorBy") {
+                // A choice of the model, or of the record a reference points to (classType.level).
+                const said = readString(ctx, option.value, `"colorBy" of the calendar of ${where}`);
+                if (said === undefined) continue;
+                const [first = "", second, third] = said.split(".");
+                const field = own.find((f) => f.name === first);
+                const through =
+                  field?.type.kind === "relation" && !field.type.many && field.type.model !== "User"
+                    ? ir.models.find((m) => m.name === (field.type as { model: string }).model)
+                    : undefined;
+                const choice =
+                  second === undefined ? field : through?.fields.find((f) => f.name === second);
+                if (!field)
+                  ctx.error(
+                    option.value,
+                    "unknown-field",
+                    `${model?.name} has no field named "${first}".`,
+                    didYouMean(
+                      first,
+                      own.map((f) => f.name),
+                    ),
+                  );
+                else if (second === undefined && through)
+                  // The referenced record itself: a stable hue for each (classType).
+                  calendar.colorBy = { kind: "record", model: through.name, reference: first };
+                else if (third !== undefined || (second !== undefined && !through))
+                  ctx.error(
+                    option.value,
+                    "invalid-value",
+                    `"colorBy" is a choice of ${model?.name}, a reference (each record its own colour), or a choice one reference away, as in classType.level.`,
+                  );
+                else if (!choice)
+                  ctx.error(
+                    option.value,
+                    "unknown-field",
+                    `${through?.name} has no field named "${second}".`,
+                    didYouMean(second ?? "", through?.fields.map((f) => f.name) ?? []),
+                  );
+                else if (choice.type.kind !== "choice" || choice.formula)
+                  ctx.error(
+                    option.value,
+                    "invalid-value",
+                    `"colorBy" needs a stored choice: ${said} is not one.`,
+                  );
+                else
+                  calendar.colorBy = {
+                    kind: "choice",
+                    model: through?.name ?? (model?.name as string),
+                    field: choice.name,
+                    ...(second !== undefined ? { reference: first } : {}),
+                  };
+              } else {
+                // The places left of the places there are: two number fields of the model.
+                const parts = checkKeys(
+                  ctx,
+                  mapEntries(ctx, option.value, `"capacity" of the calendar of ${where}`) ?? [],
+                  `"capacity" of the calendar of ${where}`,
+                  { allowed: ["left", "of", "look"] },
+                );
+                const number = (key: string) => {
+                  const entry = parts.find((p) => p.key === key);
+                  if (!entry) {
+                    if (key !== "look")
+                      ctx.error(
+                        option.keyNode,
+                        "invalid-value",
+                        `"capacity" of the calendar of ${where} names "left" and "of", two number fields.`,
+                      );
+                    return undefined;
+                  }
+                  const name = readString(ctx, entry.value, `"${key}" of the capacity`);
+                  const field = own.find((f) => f.name === name);
+                  if (name !== undefined && !field)
+                    ctx.error(
+                      entry.value,
+                      "unknown-field",
+                      `${model?.name} has no field named "${name}".`,
+                      didYouMean(
+                        name,
+                        own.map((f) => f.name),
+                      ),
+                    );
+                  else if (
+                    field &&
+                    !(field.type.kind === "scalar" && ["int", "decimal"].includes(field.type.name))
+                  )
+                    ctx.error(
+                      entry.value,
+                      "invalid-value",
+                      `"${key}" of the capacity needs a number field: ${name} is not one.`,
+                    );
+                  else return name;
+                  return undefined;
+                };
+                const left = number("left");
+                const of = number("of");
+                const lookEntry = parts.find((p) => p.key === "look");
+                const look = lookEntry
+                  ? readString(ctx, lookEntry.value, `"look" of the capacity`)
+                  : "number";
+                if (look !== undefined && look !== "number" && look !== "pips" && look !== "bar")
+                  ctx.error(
+                    lookEntry?.value ?? null,
+                    "invalid-value",
+                    `"look" of the capacity is number, pips or bar.`,
+                  );
+                else if (left && of)
+                  calendar.capacity = {
+                    left,
+                    of,
+                    look: (look ?? "number") as "number" | "pips" | "bar",
+                  };
+              }
+            }
+            if (calendar.colorBy || calendar.capacity) result.calendar = calendar;
+            continue;
+          }
           if (part.key === "frame") {
             const frame = readString(ctx, part.value, `"frame" of ${where}`);
             if (frame === "site" || frame === "app" || frame === "none") result.frame = frame;

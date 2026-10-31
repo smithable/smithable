@@ -21,6 +21,99 @@ export interface CalendarItem {
   title: string;
   /** The person (or room) whose time it takes: its column in the day view. */
   lane?: number;
+  /** The block's colour: a choice value's tone, or a hue of the chart's (look-gap §4). */
+  tone?: "success" | "warning" | "danger";
+  hue?: number;
+  /** The places left of the places there are. */
+  places?: { left: number; of: number };
+}
+
+/**
+ * A choice value's colour for a block: its tone where the ux file gives one, else a chart hue by
+ * the value's place among the choice's values; none for no value or a neutral tone.
+ */
+export function colorOf(
+  value: unknown,
+  values: readonly string[],
+  tones: Record<string, string>,
+): { tone?: "success" | "warning" | "danger"; hue?: number } {
+  if (value === null || value === undefined || value === "") return {};
+  const tone = tones[String(value)];
+  if (tone === "success" || tone === "warning" || tone === "danger") return { tone };
+  if (tone === "neutral") return {};
+  const at = values.indexOf(String(value));
+  return at < 0 ? {} : { hue: at };
+}
+
+/** A block's colour as CSS: the tone's or the hue's, on a soft surface with a strong edge. */
+function accentStyle(item: CalendarItem): React.CSSProperties | undefined {
+  const accent =
+    item.tone !== undefined
+      ? `var(--${item.tone === "danger" ? "destructive" : item.tone})`
+      : item.hue !== undefined
+        ? `var(--chart-${(((item.hue % 5) + 5) % 5) + 1})`
+        : undefined;
+  return accent
+    ? {
+        backgroundColor: `color-mix(in oklch, ${accent} 16%, var(--card))`,
+        boxShadow: `inset 3px 0 0 ${accent}`,
+      }
+    : undefined;
+}
+
+/** The places left: a number, a dot a place (filled when taken, up to 20), or a thin bar. */
+function Places({
+  places,
+  look,
+  plain,
+}: {
+  places: { left: number; of: number };
+  look: "number" | "pips" | "bar";
+  /** On the block's plain surface the number may be muted; on a coloured one it may not. */
+  plain: boolean;
+}) {
+  const taken = Math.max(0, places.of - places.left);
+  const label = w.placesLeft(places.left, places.of);
+  if (look === "pips" && places.of > 0 && places.of <= 20)
+    return (
+      <span
+        data-part="places"
+        role="img"
+        aria-label={label}
+        className="mt-1 flex flex-wrap gap-0.5"
+      >
+        {Array.from({ length: places.of }, (_, i) => (
+          <span
+            key={i}
+            aria-hidden
+            className={`size-1.5 rounded-full ${i < taken ? "bg-foreground/70" : "border border-foreground/40"}`}
+          />
+        ))}
+      </span>
+    );
+  if (look === "bar" && places.of > 0)
+    return (
+      <span
+        data-part="places"
+        role="img"
+        aria-label={label}
+        className="mt-1 block h-1 overflow-hidden rounded-full bg-foreground/15"
+      >
+        <span
+          aria-hidden
+          className="block h-full bg-foreground/60"
+          style={{ width: `${(taken * 100) / places.of}%` }}
+        />
+      </span>
+    );
+  return (
+    <span
+      data-part="places"
+      className={`block ${plain ? "text-muted-foreground" : "text-foreground"}`}
+    >
+      {label}
+    </span>
+  );
 }
 
 const DAY = 86_400_000;
@@ -167,6 +260,7 @@ export function Calendar({
   newLabel,
   details,
   lanes,
+  places = "number",
 }: {
   search: CalendarSearch;
   items: CalendarItem[];
@@ -185,6 +279,8 @@ export function Calendar({
   details?: (id: number) => React.ReactNode;
   /** The people (or rooms) whose time the records take: the day view has a column for each. */
   lanes?: { id: number; title: string }[];
+  /** How a block's places left show (the ux file's calendar capacity look). */
+  places?: "number" | "pips" | "bar";
 }) {
   const range = calendarRange(search, timeZone);
   const panel = useRef<HTMLDialogElement>(null);
@@ -412,36 +508,45 @@ export function Calendar({
                   <p className="text-sm text-muted-foreground md:sr-only">{w.nothing}</p>
                 ) : (
                   <ol className="space-y-1 md:space-y-0">
-                    {records.map((p) => (
-                      <li
-                        key={p.id}
-                        className={timed ? "md:absolute md:px-0.5" : "md:mt-1"}
-                        style={
-                          timed
-                            ? ({
-                                top: `${((p.from - firstHour * 60) * 100) / span}%`,
-                                height: `${((p.to - p.from) * 100) / span}%`,
-                                left: `${(p.column * 100) / p.columns}%`,
-                                width: `${100 / p.columns}%`,
-                              } as React.CSSProperties)
-                            : undefined
-                        }
-                      >
-                        <button
-                          type="button"
-                          onClick={() => open(p)}
-                          className="block h-full w-full overflow-hidden rounded-md bg-primary/10 px-2 py-1 text-left text-sm text-foreground hover:bg-primary/20 md:text-xs"
+                    {records.map((p) => {
+                      const accent = accentStyle(p);
+                      return (
+                        <li
+                          key={p.id}
+                          className={timed ? "md:absolute md:px-0.5" : "md:mt-1"}
+                          style={
+                            timed
+                              ? ({
+                                  top: `${((p.from - firstHour * 60) * 100) / span}%`,
+                                  height: `${((p.to - p.from) * 100) / span}%`,
+                                  left: `${(p.column * 100) / p.columns}%`,
+                                  width: `${100 / p.columns}%`,
+                                } as React.CSSProperties)
+                              : undefined
+                          }
                         >
-                          <span className="font-medium">{p.title}</span>
-                          <span className="sr-only">, {when(p)}</span>
-                          {!dateOnly && (
-                            <span aria-hidden className="block text-muted-foreground">
-                              {clock(p.from)}
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
+                          <button
+                            type="button"
+                            onClick={() => open(p)}
+                            className="block h-full w-full overflow-hidden rounded-md bg-primary/10 px-2 py-1 text-left text-sm text-foreground hover:bg-primary/20 md:text-xs"
+                            style={accent}
+                          >
+                            <span className="font-medium">{p.title}</span>
+                            <span className="sr-only">, {when(p)}</span>
+                            {!dateOnly && (
+                              // On a coloured block the muted text would not read: the text's own colour.
+                              <span
+                                aria-hidden
+                                className={`block ${accent ? "text-foreground" : "text-muted-foreground"}`}
+                              >
+                                {clock(p.from)}
+                              </span>
+                            )}
+                            {p.places && <Places places={p.places} look={places} plain={!accent} />}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ol>
                 )}
               </div>
