@@ -44,7 +44,7 @@ export function dataRoutes(
   const inspector = hasInspector({ ir, auth });
   const files: Record<string, string> = {
     "index.tsx": overviewRoute(page, within, { ir, t }, activity, inspector),
-    ...(activity ? { "activity.tsx": activityRoute(page, { ir, t }, hasKeys(ir, auth)) } : {}),
+    ...(activity ? { "activity.tsx": activityRoute(page, { ir }) } : {}),
     ...(inspector ? { "ask.tsx": askRoute(page, { ir, auth, options }) } : {}),
   };
   for (const name of page.pattern.models) {
@@ -256,17 +256,8 @@ function AskPage() {
  * and when, newest first, filtered from the address; a record by its title now, a deleted one or
  * a removed user by their id, with Forget in the log on their lines.
  */
-export function activityRoute(
-  page: PageIR,
-  { ir, t }: Pick<GenContext, "ir" | "t">,
-  keys: boolean,
-): string {
+export function activityRoute(page: PageIR, { ir }: Pick<GenContext, "ir">): string {
   const route = `${page.route}/activity`.replace("//", "/");
-  const models = ir.models.map((model) => ({
-    model,
-    n: names(model, t),
-    title: titleField(model),
-  }));
   const mails = outgoingOf(ir).length > 0;
   // The targets outgoing calls go to: Activity filtered to one is its deliveries (integrations.md §4.1).
   const targets = [...new Set(outgoingOf(ir).flatMap((o) => (o.to === "mail" ? [] : [o.to])))];
@@ -391,10 +382,11 @@ export function activityModule({ ir, t }: Pick<GenContext, "ir" | "t">, keys: bo
     title: titleField(model),
   }));
   const mails = outgoingOf(ir).length > 0;
-  return `${HEADER}import { inArray } from "drizzle-orm";
-import { db } from "#/db";
+  // A model named by one column is read with a select; one named by parts, by its function.
+  const plain = models.some(({ model }) => !composedName(model));
+  return `${HEADER}${plain ? 'import { inArray } from "drizzle-orm";\n' : ""}import { db } from "#/db";
 import { ${["auditLog", "user", ...(keys ? ["apiKey"] : [])].sort().join(", ")} } from "#/db/schema";
-${models.length ? `${SCHEMA_IMPORT}\n` : ""}${models.map(({ n }) => `import { ${n.ui} } from "${n.module}";\n`).join("")}${models
+${plain ? `${SCHEMA_IMPORT}\n` : ""}${models.map(({ n }) => `import { ${n.ui} } from "${n.module}";\n`).join("")}${models
   .filter(({ model }) => composedName(model))
   .map(({ model, n }) => `import { ${nameFunction(model)} } from "${n.module}.name";\n`)
   .join("")}import { w } from "#/kit/words";

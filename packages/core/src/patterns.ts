@@ -1734,12 +1734,6 @@ function readDashboard(
           "invalid-key",
           `"${o.key}" does not apply to a query: its code chooses the records.`,
         );
-      for (const o of dueKeys)
-        ctx.error(
-          o.keyNode,
-          "invalid-key",
-          `"${o.key}" does not apply to a query: its code chooses the records.`,
-        );
       if (query) items.push(item);
       continue;
     }

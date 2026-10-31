@@ -769,7 +769,7 @@ const setFiltersLook: Operation<{ page: string; look: "default" | "chips" }> = {
   destructive: () => false,
   apply(editors, { page, look }, ir) {
     pageNamed(ir, page);
-    if (!ir.pages.find((p) => p.id === page)?.filters?.length)
+    if (look === "chips" && !ir.pages.find((p) => p.id === page)?.filters?.length)
       throw new OperationError(
         `${page} has no filters (smithable.yml's filters) to show as chips.`,
       );

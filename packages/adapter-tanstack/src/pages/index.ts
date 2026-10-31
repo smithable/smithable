@@ -2,7 +2,6 @@
 // the files a page of that pattern gets, and the kit files only such pages need.
 import { type PageIR, type PatternKind, type PatternOf, partSections } from "@smithable/core";
 import { calculatorRoute } from "../calculators.js";
-import { hasKeys } from "../keys.js";
 import { reviewFileRoute, reviewRoute } from "../review.js";
 import { type GenContext, trashedLists } from "../shared.js";
 import { bandedPage } from "../themes.js";
@@ -135,7 +134,7 @@ export const PAGE_GENERATORS: {
     routes: (page, { ir, t, auth }) => ({
       "index.tsx": usersRoute(page, ir, t, auth),
       ...(trashedLists(ir).length ? { "trash.tsx": allTrashRoute(page, ir, t) } : {}),
-      "activity.tsx": activityRoute(page, { ir, t }, hasKeys(ir, auth)),
+      "activity.tsx": activityRoute(page, { ir }),
     }),
   },
 };
