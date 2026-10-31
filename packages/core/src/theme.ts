@@ -378,11 +378,24 @@ export function parseTheme(
 /** The least opaque a glass card gets in the kit: what its text is checked against. */
 const GLASS_OPACITY = 0.65;
 
-/** A color moved towards another in OKLCH by a share of the way (0 stays, 1 arrives). */
+/**
+ * A color moved towards another by a share of the way (0 stays, 1 arrives), mixed in OKLab, so a
+ * pale paper moved a little towards a dark ink keeps the paper's own cast: mixing hue and chroma
+ * apart took the ink's hue whenever the paper's chroma was low, and cream towards a green ink
+ * came out a cool grey that read lilac beside the cream (the barbers' band, 2026-11-01).
+ */
 function towards(from: string, to: string, share: number): string {
   const [l1, c1, h1] = rgbToOklch(hexToRgb(from));
   const [l2, c2, h2] = rgbToOklch(hexToRgb(to));
-  return gamutMap([l1 + (l2 - l1) * share, c1 + (c2 - c1) * share, c1 < 0.02 ? h2 : h1]);
+  const ab = (c: number, h: number) =>
+    [c * Math.cos((h * Math.PI) / 180), c * Math.sin((h * Math.PI) / 180)] as const;
+  const [a1, b1] = ab(c1, h1);
+  const [a2, b2] = ab(c2, h2);
+  const a = a1 + (a2 - a1) * share;
+  const b = b1 + (b2 - b1) * share;
+  const c = Math.hypot(a, b);
+  const h = c < 0.0001 ? 0 : ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+  return gamutMap([l1 + (l2 - l1) * share, c, h]);
 }
 
 /** The text that reads best on a color. */
