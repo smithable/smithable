@@ -118,3 +118,57 @@ test("the list route applies the page's defaults and the time zone, and marks fo
   const plainRoute = plain.find((f) => f.path === "src/routes/sessions/index.tsx")?.content ?? "";
   expect(plainRoute).not.toContain("folded");
 });
+
+test("a filter on a reference is a search from 200 readable records, or as the ux file says (A 208)", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Rooms }
+models:
+  Room:
+    fields:
+      name: string!
+  Booking:
+    fields:
+      room: Room!
+pages:
+  bookings:
+    crud: Booking
+    filters: [room]
+`,
+  }).ir as SpecIR;
+  const route = (pick?: string) => {
+    const ux = pick
+      ? validateUx(
+          {
+            path: "smithable.ux.yml",
+            text: `smithableUx: 0.1\npages:\n  bookings:\n    filters: { pick: { room: ${pick} } }\n`,
+          },
+          spec,
+        ).ux
+      : undefined;
+    const files = generateApp(spec, {
+      smithableVersion: "0.0.0",
+      auth,
+      content: emptyContent(),
+      ux,
+    });
+    const at = (path: string) => files.find((f) => f.path === path)?.content ?? "";
+    return { list: at("src/routes/bookings/index.tsx"), data: at("src/generated/room.server.ts") };
+  };
+  // Unsaid: the related records the viewer may read are counted, never listed to decide.
+  const counted = route();
+  expect(counted.data).toContain("pickCount(viewer: Viewer | null): number {");
+  expect(counted.list).toContain("const pickRoomMany = roomData.pickCount(viewer) >= 200;");
+  expect(counted.list).toContain(
+    "options: { room: pickRoomMany ? pickRoomChosen : (await roomData.list(viewer))",
+  );
+  expect(counted.list).toContain(
+    "search: options.roomSearch ? (text: string) => pickRoom({ data: { text } }) : undefined",
+  );
+  // Said: always a search, or always the list as before.
+  expect(route("search").list).toContain("const pickRoomMany = true;");
+  const listed = route("list").list;
+  expect(listed).not.toContain("pickRoom");
+  expect(listed).toContain("options: { room: (await roomData.list(viewer))");
+});

@@ -312,6 +312,12 @@ export const UX_SCHEMA: JsonSchema = {
               shown: strings(
                 "The filters shown at once, from the page's filters in smithable.yml.",
               ),
+              pick: {
+                type: "object",
+                description:
+                  "How a filter on a reference is picked, by its name: list (every related record as a choice) or search (found as you type); unsaid, a search from 200 related records.",
+                additionalProperties: { enum: ["list", "search"] },
+              },
             },
           },
           record: {

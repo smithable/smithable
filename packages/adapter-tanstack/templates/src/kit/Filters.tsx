@@ -7,6 +7,7 @@ import { useEffect, useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
+import { Combobox } from "./Combobox";
 import { withDefaults } from "./params";
 import { tx, w } from "./words";
 import { RELATIVE, type Relative } from "./zoned";
@@ -35,6 +36,11 @@ export interface FilterUi {
    */
   kind: "chips" | "range" | "toggle" | "mine" | "person" | "unread";
   options?: { value: string; label: string }[];
+  /**
+   * A reference with too many records to list (A 208): found as the person types, one chosen;
+   * `options` then holds only the chosen record, named.
+   */
+  search?: (text: string) => Promise<{ value: string; label: string }[]>;
   /** A range's inputs: numbers, amounts (in the currency's units) or dates. */
   input?: "number" | "date";
   /** Folded behind "More filters" when the list is first reached (the ux file's shown). */
@@ -204,6 +210,8 @@ function Filter({
   onChange: (value: string | undefined) => void;
 }) {
   const id = useId();
+  // The record just chosen in a search, named by the field itself until the list's answer has it.
+  const [chose, setChose] = useState("");
   const chosen = new Set((value ?? "").split(",").filter(Boolean));
   if (filter.kind === "mine" || filter.kind === "unread") {
     const on = filter.kind === "mine" ? "mine" : "1";
@@ -236,6 +244,38 @@ function Filter({
       </div>
     );
   if (filter.kind === "range") return <Range filter={filter} value={value} onChange={onChange} />;
+  if (filter.search) {
+    // An id the viewer may not read, or that no longer exists, filters nothing: said so.
+    const known = value
+      ?.split(",")
+      .find((v) => v === chose || filter.options?.some((o) => o.value === v));
+    const lost = !!value && !known;
+    return (
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={id}>{filter.label}</Label>
+        <div className="w-60">
+          <Combobox
+            id={id}
+            value={known ?? ""}
+            options={filter.options ?? []}
+            required={false}
+            invalid={lost}
+            describedBy={lost ? `${id}-lost` : undefined}
+            search={filter.search}
+            onChange={(v) => {
+              setChose(v);
+              onChange(v || undefined);
+            }}
+          />
+        </div>
+        {lost && (
+          <p id={`${id}-lost`} className="text-xs text-muted-foreground">
+            {w.notFound}
+          </p>
+        )}
+      </div>
+    );
+  }
   // A person (record-rules.md §6): Mine and Unassigned, then the people as chips, or a list to
   // pick one from when there are many.
   const people = filter.kind === "person" ? (filter.options ?? []) : [];
@@ -457,7 +497,7 @@ function describe(filter: FilterUi, value: string): string {
   ] as [string, string][]);
   return value
     .split(",")
-    .map((v) => labels.get(v) ?? v)
+    .map((v) => labels.get(v) ?? (filter.search ? w.notFound : v))
     .join(", ");
 }
 

@@ -234,3 +234,46 @@ test("the ux file names the filters shown first; setFiltersShown writes it; a fi
   if (!gone.ok) throw new Error(gone.message);
   expect(gone.files.ux).not.toContain("shown");
 });
+
+test("the ux file says how a filter on a reference is picked; setFilterPick writes it (A 208)", () => {
+  const ir = read("").ir;
+  if (!ir) throw new Error("spec");
+  const ux = (text: string) =>
+    validateUx({ path: "smithable.ux.yml", text: `smithableUx: 0.1\n${text}` }, ir);
+  const picked = ux("pages:\n  sessions:\n    filters: { pick: { room: search } }\n");
+  expect(picked.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(picked.ux?.pages.sessions?.filterPick).toEqual({ room: "search" });
+  // Only a filter of the page, and only one on a reference.
+  expect(
+    ux("pages:\n  sessions:\n    filters: { pick: { rooms: list } }\n").diagnostics.map(
+      (d) => d.message,
+    ),
+  ).toEqual([expect.stringContaining('sessions has no filter named "rooms" to pick')]);
+  expect(
+    ux("pages:\n  sessions:\n    filters: { pick: { status: search } }\n").diagnostics.map(
+      (d) => d.message,
+    ),
+  ).toEqual(["status is a choice; only a filter on a reference can be a search."]);
+  const files = { spec: SPEC, ux: "smithableUx: 0.1\n" };
+  const set = applyOperation(files, "setFilterPick", {
+    page: "sessions",
+    filter: "room",
+    pick: "search",
+  });
+  if (!set.ok) throw new Error(set.message);
+  expect(set.files.ux).toContain("    filters:\n      pick:\n        room: search\n");
+  // auto takes it away: the count decides again.
+  const auto = applyOperation(set.files, "setFilterPick", {
+    page: "sessions",
+    filter: "room",
+    pick: "auto",
+  });
+  if (!auto.ok) throw new Error(auto.message);
+  expect(auto.files.ux).not.toContain("pick");
+  const wrong = applyOperation(files, "setFilterPick", {
+    page: "sessions",
+    filter: "notes",
+    pick: "list",
+  });
+  expect(wrong.ok ? "" : wrong.message).toContain('sessions has no filter named "notes"');
+});

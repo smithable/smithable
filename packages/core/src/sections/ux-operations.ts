@@ -9,6 +9,7 @@ import {
   FONTS,
   HEADER_LOOKS,
   ICONS,
+  notPickable,
   SECTION_LOOKS,
   THEME_PRESETS,
   TONES,
@@ -746,6 +747,49 @@ const setFiltersShown: Operation<{ page: string; fields?: string[] }> = {
   },
 };
 
+/** How a filter on a reference is picked (backlog A 208): list, search, or by the count (auto). */
+const setFilterPick: Operation<{ page: string; filter: string; pick: "list" | "search" | "auto" }> =
+  {
+    name: "setFilterPick",
+    summary:
+      "How a list page's filter on a reference is picked: list (every related record as a choice), search (found as you type), or auto (by the count: a search from 200 records).",
+    schema: {
+      type: "object",
+      required: ["page", "filter", "pick"],
+      additionalProperties: false,
+      properties: {
+        page: refTo({ ref: "page", label: "Page" }),
+        filter: { type: "string", description: "A filter of the page on a reference field." },
+        pick: { enum: ["list", "search", "auto"], description: "auto leaves it to the count." },
+      },
+    },
+    positional: ["page", "filter", "pick"],
+    describe: ({ page, filter, pick }) =>
+      pick === "auto"
+        ? `Pick the ${filter} filter of ${page} by the count`
+        : `Pick the ${filter} filter of ${page} ${pick === "search" ? "by searching" : "from a list"}`,
+    destructive: () => false,
+    apply(editors, { page, filter, pick }, ir) {
+      pageNamed(ir, page);
+      const found = ir.pages.find((p) => p.id === page) as SpecIR["pages"][number];
+      const offered = found.filters ?? [];
+      if (!offered.includes(filter))
+        throw new OperationError(
+          `${page} has no filter named "${filter}"; its filters are ${offered.length ? offered.join(", ") : "none"}.`,
+        );
+      const model = ir.models.find((m) => m.name === pageModel(found));
+      const field = model?.fields.find((x) => x.name === filter);
+      const refused = notPickable(filter, field);
+      if (refused) throw new OperationError(refused);
+      put(
+        editors.ux,
+        ["pages", page, "filters", "pick", filter],
+        pick === "auto" ? undefined : pick,
+      );
+      return [];
+    },
+  };
+
 const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
   name: "addTheme",
   summary: "Add a theme of the project's own (themes/<name>.yml), and use it with --use.",
@@ -808,4 +852,5 @@ export const uxOperations: AnyOperation[] = [
   setAssistantVoice,
   setSort,
   setFiltersShown,
+  setFilterPick,
 ];

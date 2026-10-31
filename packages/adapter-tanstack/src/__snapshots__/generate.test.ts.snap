@@ -5212,6 +5212,7 @@ export const noteData = {
     );
   },
 
+
   /** How many notes the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
     if (readScope(noteAccess.read, viewer) === "none") return null;
@@ -5832,6 +5833,7 @@ export const projectData = {
     );
   },
 
+
   /** How many projects the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
     if (readScope(projectAccess.read, viewer) === "none") return null;
@@ -6448,6 +6450,7 @@ export const taskData = {
       ...wordsOf(search).map((word) => contains([schema.tasks.title, schema.tasks.details], word)),
     );
   },
+
 
   /** How many tasks the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
@@ -10084,15 +10087,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "68c0a077 generated",
   "src/generated/mcp.server.ts": "5ece0f35 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "0fe30be9 generated",
+  "src/generated/note.server.ts": "bbb212ff generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "a1925af1 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "2b01e0a0 generated",
+  "src/generated/project.server.ts": "877da3e6 generated",
   "src/generated/project.ts": "0c7272f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "c588a679 generated",
+  "src/generated/task.server.ts": "7ae69457 generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
@@ -10105,7 +10108,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
@@ -11662,6 +11665,7 @@ export const appointmentData = {
     return { rows: rows, total, page: at, size };
   },
 
+
   /**
    * A day's free times for the picker: of one barber, or of every one the viewer may read, the
    * first free one in their order taking each time. With \`first\`, the first day from \`date\` that
@@ -12138,6 +12142,7 @@ export const barberData = {
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.barbers.findFirst({
@@ -13227,6 +13232,7 @@ export const serviceData = {
     return { rows: rows, total, page: at, size };
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.services.findFirst({
       where: and(eq(schema.services.id, id), serviceData.readable(viewer)),
@@ -13641,6 +13647,7 @@ export const timeOffData = {
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.timeOffs.findFirst({
@@ -16226,10 +16233,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/actions/confirm.ts": "f4df37ea generated",
   "src/generated/app.ts": "97916622 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "0a5311b1 generated",
+  "src/generated/appointment.server.ts": "ceb04ff9 generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
-  "src/generated/barber.server.ts": "2d15e0eb generated",
+  "src/generated/barber.server.ts": "0cdaec9b generated",
   "src/generated/barber.ts": "c6cb9e61 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "e9b5540a generated",
@@ -16238,11 +16245,11 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/pages.ts": "0bc41f9d generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
-  "src/generated/service.server.ts": "884e4f6e generated",
+  "src/generated/service.server.ts": "1cfd3766 generated",
   "src/generated/service.ts": "9b30fa43 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "88b263ff generated",
+  "src/generated/time-off.server.ts": "766baa05 generated",
   "src/generated/time-off.ts": "b2f38bf7 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -16252,11 +16259,11 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -19003,6 +19010,7 @@ export const bookingData = {
     );
   },
 
+
   /** How many bookings the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
     if (readScope(bookingAccess.read, viewer) === "none") return null;
@@ -19651,6 +19659,30 @@ export const classTypeData = {
       ...wordsOf(search).map((word) => contains([schema.classTypes.name, schema.classTypes.summary], word)),
     );
   },
+
+  /** How many class types the viewer may read, for a list's filter on them (A 208), without listing them. */
+  pickCount(viewer: Viewer | null): number {
+    if (readScope(classTypeAccess.read, viewer) === "none") return 0;
+    return db.select({ n: count() }).from(schema.classTypes).where(classTypeData.readable(viewer)).get()?.n ?? 0;
+  },
+
+  /**
+   * For a list's filter on them: up to twenty the viewer may read whose name has the text, or
+   * those of the ids given (a filter's chosen ones, named), by name; one the viewer may not read
+   * is not there.
+   */
+  pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
+    if (readScope(classTypeAccess.read, viewer) === "none" || ids?.length === 0) return [];
+    return db
+      .select({ id: schema.classTypes.id, title: schema.classTypes.name })
+      .from(schema.classTypes)
+      .where(and(classTypeData.readable(viewer), ids ? inArray(schema.classTypes.id, ids) : contains([schema.classTypes.name], text)))
+      .orderBy(asc(schema.classTypes.name))
+      .limit(ids ? ids.length : 20)
+      .all()
+      .map((row) => ({ value: String(row.id), label: String(row.title) }));
+  },
+
 
   /** How many class types the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
@@ -21065,6 +21097,30 @@ export const instructorData = {
     );
   },
 
+  /** How many instructors the viewer may read, for a list's filter on them (A 208), without listing them. */
+  pickCount(viewer: Viewer | null): number {
+    if (readScope(instructorAccess.read, viewer) === "none") return 0;
+    return db.select({ n: count() }).from(schema.instructors).where(instructorData.readable(viewer)).get()?.n ?? 0;
+  },
+
+  /**
+   * For a list's filter on them: up to twenty the viewer may read whose name has the text, or
+   * those of the ids given (a filter's chosen ones, named), by name; one the viewer may not read
+   * is not there.
+   */
+  pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
+    if (readScope(instructorAccess.read, viewer) === "none" || ids?.length === 0) return [];
+    return db
+      .select({ id: schema.instructors.id, title: schema.instructors.name })
+      .from(schema.instructors)
+      .where(and(instructorData.readable(viewer), ids ? inArray(schema.instructors.id, ids) : contains([schema.instructors.name], text)))
+      .orderBy(asc(schema.instructors.name))
+      .limit(ids ? ids.length : 20)
+      .all()
+      .map((row) => ({ value: String(row.id), label: String(row.title) }));
+  },
+
+
   /** How many instructors the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
     if (readScope(instructorAccess.read, viewer) === "none") return null;
@@ -21683,6 +21739,7 @@ export const messageData = {
       ...wordsOf(search).map((word) => contains([schema.messages.name, schema.messages.email, schema.messages.message], word)),
     );
   },
+
 
   /** How many messages the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
@@ -22511,6 +22568,7 @@ export const postData = {
     );
   },
 
+
   /** How many posts the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
     if (readScope(postAccess.read, viewer) === "none") return null;
@@ -23224,6 +23282,7 @@ export const sessionData = {
       ...wordsOf(search).map((word) => inArray(schema.sessions.classTypeId, db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(contains([schema.classTypes.name], word), classTypeData.readable(viewer))))),
     );
   },
+
 
   /** How many sessions the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
@@ -27770,10 +27829,14 @@ const searchSessions = createServerFn()
     // The page's default filters, where the address says nothing ("all" clears one).
     const data = { ...given, f: withDefaults(given.f ?? {}, { startsAt: "upcoming" }) };
     const viewer = await currentViewer();
+    const pickClassTypeMany = classTypeData.pickCount(viewer) >= 200;
+    const pickClassTypeChosen = pickClassTypeMany && data.f?.classType ? classTypeData.pick(viewer, "", data.f?.classType.split(",").map(Number).filter(Number.isInteger)) : [];
+    const pickInstructorMany = instructorData.pickCount(viewer) >= 200;
+    const pickInstructorChosen = pickInstructorMany && data.f?.instructor ? instructorData.pick(viewer, "", data.f?.instructor.split(",").map(Number).filter(Number.isInteger)) : [];
     const where = and(
       undefined,
-      data.f?.classType ? inArray(schema.sessions.classTypeId, data.f?.classType.split(",").map(Number).filter(Number.isInteger)) : undefined,
-      data.f?.instructor ? inArray(schema.sessions.instructorId, data.f?.instructor.split(",").map(Number).filter(Number.isInteger)) : undefined,
+      pickClassTypeMany ? (pickClassTypeChosen.length ? inArray(schema.sessions.classTypeId, pickClassTypeChosen.map((r) => Number(r.value))) : undefined) : data.f?.classType ? inArray(schema.sessions.classTypeId, data.f?.classType.split(",").map(Number).filter(Number.isInteger)) : undefined,
+      pickInstructorMany ? (pickInstructorChosen.length ? inArray(schema.sessions.instructorId, pickInstructorChosen.map((r) => Number(r.value))) : undefined) : data.f?.instructor ? inArray(schema.sessions.instructorId, data.f?.instructor.split(",").map(Number).filter(Number.isInteger)) : undefined,
       data.f?.startsAt ? inRange(schema.sessions.startsAt, data.f?.startsAt, "instant", 1, app.timeZone) : undefined,
     );
     // The order the viewer chose, among the fields the page offers; else the newest first.
@@ -27781,9 +27844,19 @@ const searchSessions = createServerFn()
     return {
       ...(await sessionData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(sessionAccess.create, viewer),
-      options: { classType: (await classTypeData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })), instructor: (await instructorData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })) },
+      options: { classType: pickClassTypeMany ? pickClassTypeChosen : (await classTypeData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })), classTypeSearch: pickClassTypeMany, instructor: pickInstructorMany ? pickInstructorChosen : (await instructorData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })), instructorSearch: pickInstructorMany },
     };
   });
+
+/** The class types the viewer may read whose name has the text, for the classType filter (a few). */
+const pickClassType = createServerFn()
+  .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
+  .handler(async ({ data }) => classTypeData.pick(await currentViewer(), data.text));
+
+/** The instructors the viewer may read whose name has the text, for the instructor filter (a few). */
+const pickInstructor = createServerFn()
+  .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
+  .handler(async ({ data }) => instructorData.pick(await currentViewer(), data.text));
 
 export const Route = createFileRoute("/sessions/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["sessions"], context.viewer, location.href),
@@ -27826,12 +27899,14 @@ function SessionsPage() {
     label: "Class type",
     kind: "chips",
     options: options.classType,
+    search: options.classTypeSearch ? (text: string) => pickClassType({ data: { text } }) : undefined,
   },
   {
     name: "instructor",
     label: "Instructor",
     kind: "chips",
     options: options.instructor,
+    search: options.instructorSearch ? (text: string) => pickInstructor({ data: { text } }) : undefined,
   },
   { name: "startsAt", label: "Starts at", kind: "range", input: "date" },
 ]}
@@ -28633,10 +28708,10 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/ask.server.ts": "c63659a8 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "e779aa80 generated",
+  "src/generated/booking.server.ts": "6109d59a generated",
   "src/generated/booking.ts": "40202f54 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "00d73d14 generated",
+  "src/generated/class-type.server.ts": "a221d86c generated",
   "src/generated/class-type.ts": "4579f208 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "d3acafca generated",
@@ -28645,21 +28720,21 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "6b2e9ac0 generated",
+  "src/generated/instructor.server.ts": "2e767d80 generated",
   "src/generated/instructor.ts": "fd304a3a generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "e1a37127 generated",
+  "src/generated/message.server.ts": "2e082e3d generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/outgoing.server.ts": "f981b018 generated",
   "src/generated/pages.ts": "59562a2b generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "ce740b8c generated",
+  "src/generated/post.server.ts": "e0b587d4 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "96f88852 generated",
+  "src/generated/session.server.ts": "079a1524 generated",
   "src/generated/session.ts": "2a8dc93c generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "5236c791 generated",
@@ -28676,11 +28751,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Calculator.tsx": "0ca254f1 kit",
   "src/kit/Calendar.tsx": "1f39b7d7 kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
@@ -28793,7 +28868,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "c6c8aa5a generated",
   "src/routes/sessions/$id.tsx": "b79fc3e3 generated",
-  "src/routes/sessions/index.tsx": "cabe091a generated",
+  "src/routes/sessions/index.tsx": "7f1d174f generated",
   "src/routes/sessions/new.tsx": "8e6fab9b generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
@@ -31305,6 +31380,7 @@ export const customerData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.customers.findFirst({
       where: and(eq(schema.customers.id, id), customerData.readable(viewer)),
@@ -32659,6 +32735,7 @@ export const followUpData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.followUps.findFirst({
       where: and(eq(schema.followUps.id, id), followUpData.readable(viewer)),
@@ -33577,6 +33654,7 @@ export const orderData = {
       ...wordsOf(search).map((word) => contains([schema.orders.number], word)),
     );
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.orders.findFirst({
@@ -37193,18 +37271,18 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "30d02290 generated",
+  "src/generated/customer.server.ts": "07f960c6 generated",
   "src/generated/customer.ts": "79b283e3 generated",
   "src/generated/dev-door.server.ts": "00baba7c generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
-  "src/generated/follow-up.server.ts": "60c21496 generated",
+  "src/generated/follow-up.server.ts": "311eede6 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "5685c42e generated",
+  "src/generated/order.server.ts": "e61a8330 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "d027cb31 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -37220,10 +37298,10 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -39898,6 +39976,7 @@ export const businessProfileData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.businessProfiles.findFirst({
       where: and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer)),
@@ -40502,6 +40581,30 @@ export const clientData = {
       ...wordsOf(search).map((word) => contains([schema.clients.name, schema.clients.email, schema.clients.address, schema.clients.vatNumber], word)),
     );
   },
+
+  /** How many clients the viewer may read, for a list's filter on them (A 208), without listing them. */
+  pickCount(viewer: Viewer | null): number {
+    if (readScope(clientAccess.read, viewer) === "none") return 0;
+    return db.select({ n: count() }).from(schema.clients).where(clientData.readable(viewer)).get()?.n ?? 0;
+  },
+
+  /**
+   * For a list's filter on them: up to twenty the viewer may read whose name has the text, or
+   * those of the ids given (a filter's chosen ones, named), by name; one the viewer may not read
+   * is not there.
+   */
+  pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
+    if (readScope(clientAccess.read, viewer) === "none" || ids?.length === 0) return [];
+    return db
+      .select({ id: schema.clients.id, title: schema.clients.name })
+      .from(schema.clients)
+      .where(and(clientData.readable(viewer), ids ? inArray(schema.clients.id, ids) : contains([schema.clients.name], text)))
+      .orderBy(asc(schema.clients.name))
+      .limit(ids ? ids.length : 20)
+      .all()
+      .map((row) => ({ value: String(row.id), label: String(row.title) }));
+  },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.clients.findFirst({
@@ -41882,6 +41985,7 @@ export const invoiceData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.invoices.findFirst({
       where: and(eq(schema.invoices.id, id), invoiceData.readable(viewer)),
@@ -42607,6 +42711,7 @@ export const invoiceLineData = {
       ...wordsOf(search).map((word) => contains([schema.invoiceLines.description], word)),
     );
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.invoiceLines.findFirst({
@@ -44472,17 +44577,24 @@ const searchInvoices = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
+    const pickClientMany = clientData.pickCount(viewer) >= 200;
+    const pickClientChosen = pickClientMany && data.f?.client ? clientData.pick(viewer, "", data.f?.client.split(",").map(Number).filter(Number.isInteger)) : [];
     const where = and(
       undefined,
-      data.f?.client ? inArray(schema.invoices.clientId, data.f?.client.split(",").map(Number).filter(Number.isInteger)) : undefined,
+      pickClientMany ? (pickClientChosen.length ? inArray(schema.invoices.clientId, pickClientChosen.map((r) => Number(r.value))) : undefined) : data.f?.client ? inArray(schema.invoices.clientId, data.f?.client.split(",").map(Number).filter(Number.isInteger)) : undefined,
       data.f?.status ? inArray(schema.invoices.status, data.f?.status.split(",").filter((v) => ["draft", "sent", "paid", "overdue"].includes(v)) as ("draft" | "sent" | "paid" | "overdue")[]) : undefined,
     );
     return {
       ...(await invoiceData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(invoiceAccess.create, viewer),
-      options: { client: (await clientData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })) },
+      options: { client: pickClientMany ? pickClientChosen : (await clientData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })), clientSearch: pickClientMany },
     };
   });
+
+/** The clients the viewer may read whose name has the text, for the client filter (a few). */
+const pickClient = createServerFn()
+  .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
+  .handler(async ({ data }) => clientData.pick(await currentViewer(), data.text));
 
 export const Route = createFileRoute("/invoices/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
@@ -44520,7 +44632,13 @@ function InvoicesPage() {
       />
       <Filters
         filters={[
-  { name: "client", label: "Client", kind: "chips", options: options.client },
+  {
+    name: "client",
+    label: "Client",
+    kind: "chips",
+    options: options.client,
+    search: options.clientSearch ? (text: string) => pickClient({ data: { text } }) : undefined,
+  },
   {
     name: "status",
     label: "Status",
@@ -45548,10 +45666,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "e2e4d93c generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "2394bb3d generated",
+  "src/generated/business-profile.server.ts": "d11efba7 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "768541de generated",
+  "src/generated/client.server.ts": "cc0f1d16 generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "33a92ba5 generated",
@@ -45559,11 +45677,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "b2aabced generated",
+  "src/generated/invoice-line.server.ts": "39a3c3bd generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "2d2c76c1 generated",
+  "src/generated/invoice.server.ts": "fcd9c7d7 generated",
   "src/generated/invoice.ts": "b569c412 generated",
   "src/generated/outgoing.server.ts": "11bc8997 generated",
   "src/generated/pages.ts": "e7c77bc3 generated",
@@ -45578,12 +45696,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "22ca5dcb kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -45658,7 +45776,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoice-lines/index.tsx": "0e5568f7 generated",
   "src/routes/invoice-lines/new.tsx": "10f86141 generated",
   "src/routes/invoices/$id.tsx": "dc083f5d generated",
-  "src/routes/invoices/index.tsx": "ad5e4c30 generated",
+  "src/routes/invoices/index.tsx": "e1e0ee76 generated",
   "src/routes/invoices/new.tsx": "c0f53eab generated",
   "src/routes/overview/index.tsx": "5d1fd6ad generated",
   "src/routes/robots[.]txt.ts": "a34e0990 generated",
@@ -48552,6 +48670,7 @@ export const dishData = {
     return { rows: rows, total, page: at, size };
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.dishes.findFirst({
       where: and(eq(schema.dishes.id, id), dishData.readable(viewer)),
@@ -49122,6 +49241,7 @@ export const orderData = {
     }), total, page: at, size };
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.orders.findFirst({
       where: and(eq(schema.orders.id, id), orderData.readable(viewer)),
@@ -49588,6 +49708,7 @@ export const orderLineData = {
     const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withOrderLineFormulas);
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.orderLines.findFirst({
@@ -50190,6 +50311,7 @@ export const stopData = {
     const rows = found.map((row) => shownTo(viewer, row));
     return { rows: rows, total, page: at, size };
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.stops.findFirst({
@@ -53424,23 +53546,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "3204a49e generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "f5e71811 generated",
+  "src/generated/dish.server.ts": "ba5b7d9b generated",
   "src/generated/dish.ts": "b7cb2173 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "6cbe0877 generated",
+  "src/generated/order-line.server.ts": "ff3daf07 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "3bdf1e53 generated",
+  "src/generated/order.server.ts": "5468ecab generated",
   "src/generated/order.ts": "4fdb55f6 generated",
   "src/generated/outgoing.server.ts": "14522d6c generated",
   "src/generated/pages.ts": "fb100d92 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "ba807c8a generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
-  "src/generated/stop.server.ts": "f1ef99bd generated",
+  "src/generated/stop.server.ts": "232d0e05 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "26958fac generated",
@@ -53451,11 +53573,11 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/AppLink.tsx": "fe6438fa kit",
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "a36a050f kit",
@@ -55491,6 +55613,7 @@ export const itemData = {
       ...wordsOf(search).map((word) => contains([schema.items.title, schema.items.description, schema.items.place], word)),
     );
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.items.findFirst({
@@ -58213,7 +58336,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/dev-door.server.ts": "ee31ede4 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "84d584a3 generated",
+  "src/generated/item.server.ts": "3fb76c31 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/pages.ts": "0b749c7c generated",
   "src/generated/review.server.ts": "05473a16 generated",
@@ -58228,12 +58351,12 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -60066,6 +60189,7 @@ export const itemData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.items.findFirst({
       where: and(eq(schema.items.id, id), itemData.readable(viewer)),
@@ -61716,7 +61840,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
-  "src/generated/item.server.ts": "e7fe4ad9 generated",
+  "src/generated/item.server.ts": "873d87d1 generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/pages.ts": "eccb02bc generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -61728,10 +61852,10 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Landing.tsx": "436df766 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
@@ -65457,6 +65581,7 @@ export const componentData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.components.findFirst({
       where: and(eq(schema.components.id, id), componentData.readable(viewer)),
@@ -66808,6 +66933,7 @@ export const incidentData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.incidents.findFirst({
       where: and(eq(schema.incidents.id, id), incidentData.readable(viewer)),
@@ -67471,6 +67597,7 @@ export const incidentUpdateData = {
       ...wordsOf(search).map((word) => contains([schema.incidentUpdates.message], word)),
     );
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.incidentUpdates.findFirst({
@@ -68250,6 +68377,7 @@ export const maintenanceData = {
       ...wordsOf(search).map((word) => contains([schema.maintenances.title, schema.maintenances.description], word)),
     );
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.maintenances.findFirst({
@@ -73327,21 +73455,21 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "712a64ca generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "2f6960e5 generated",
+  "src/generated/component.server.ts": "466e0bad generated",
   "src/generated/component.ts": "04dc29d8 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "ce9e7d19 generated",
   "src/generated/hooks.ts": "a654df5e generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "becee6e2 generated",
+  "src/generated/incident-update.server.ts": "5e4b3872 generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "48122df8 generated",
+  "src/generated/incident.server.ts": "ea8b4902 generated",
   "src/generated/incident.ts": "c9a0216a generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "ccd5e01d generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "98f41e02 generated",
+  "src/generated/maintenance.server.ts": "7d89d37a generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "c95c523a generated",
   "src/generated/pages.ts": "89e62230 generated",
@@ -73357,11 +73485,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "22ca5dcb kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/Landing.tsx": "436df766 kit",
@@ -76656,6 +76784,7 @@ export const messageData = {
     );
   },
 
+
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.messages.findFirst({
       where: and(eq(schema.messages.id, id), messageData.readable(viewer)),
@@ -77562,6 +77691,7 @@ export const supportCaseData = {
       ...wordsOf(search).map((word) => contains([schema.supportCases.subject, schema.supportCases.customerEmail, schema.supportCases.body], word)),
     );
   },
+
 
   async get(viewer: Viewer | null, id: number) {
     const fetched = await db.query.supportCases.findFirst({
@@ -80392,13 +80522,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3388ad3d generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "00275f2b generated",
+  "src/generated/message.server.ts": "cb4d2981 generated",
   "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "0dc0e782 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "240d2d41 generated",
+  "src/generated/support-case.server.ts": "4c14966b generated",
   "src/generated/support-case.ts": "6fd6eca7 generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
@@ -80412,11 +80542,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/AppShell.tsx": "4c028686 kit",
   "src/kit/AppearancePicker.tsx": "2bf2ef93 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
-  "src/kit/Combobox.tsx": "ef1fe469 kit",
+  "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "0844c4d3 kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/Filters.tsx": "9a557d08 kit",
+  "src/kit/Filters.tsx": "9b91c788 kit",
   "src/kit/Inspector.tsx": "f2caa556 kit",
   "src/kit/ModelForm.tsx": "61bcdabd kit",
   "src/kit/ModelTable.tsx": "a36a050f kit",
