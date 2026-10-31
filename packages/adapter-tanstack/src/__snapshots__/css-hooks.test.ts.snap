@@ -56,6 +56,11 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/Dashboard.tsx": [
     "data-kit="tile"",
+    "data-part="due"",
+    "data-part="overdue"",
+    "data-part="recent"",
+    "data-kit="dashboard"",
+    "data-part="quiet"",
   ],
   "src/kit/FieldInput.tsx": [
     "data-part="input"",

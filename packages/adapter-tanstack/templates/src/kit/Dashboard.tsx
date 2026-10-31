@@ -1,6 +1,7 @@
 // Smithable app kit: dashboard tiles. A number, and a bar chart with one bar per month.
 // To change one, copy this file into src/custom/components/ and edit the copy.
 import { Card } from "#/components/ui/card";
+import { AppLink } from "./AppLink";
 import type { AppUi } from "./model";
 import { w } from "./words";
 
@@ -99,5 +100,122 @@ export function BarChart({
         </ol>
       )}
     </Card>
+  );
+}
+
+/** A day ("YYYY-MM-DD") as the visitor's locale writes it, read as that day wherever they are. */
+const dayText = (day: string) =>
+  new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
+    new Date(`${day}T00:00:00Z`),
+  );
+
+/**
+ * What is due (look-gap §4): the records in their date's order, the overdue first and marked, each
+ * leading to its page; with nothing due, a line that says so.
+ */
+export function DueList({
+  label,
+  rows,
+  href,
+}: {
+  label: string;
+  rows: { id: number; title: string; day: string; overdue: boolean }[];
+  /** The record's page, with ${id} for its id. */
+  href?: string;
+}) {
+  return (
+    <Card data-kit="tile" data-part="due" className="space-y-3 p-card">
+      <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
+      {rows.length ? (
+        <ul className="divide-y">
+          {rows.map((row) => (
+            <li key={row.id} className="flex items-center justify-between gap-3 py-2">
+              {href ? (
+                <AppLink
+                  href={href.replace("${id}", String(row.id))}
+                  className="min-w-0 truncate font-medium hover:underline"
+                >
+                  {row.title}
+                </AppLink>
+              ) : (
+                <span className="min-w-0 truncate font-medium">{row.title}</span>
+              )}
+              <span className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground tabular-nums">
+                {row.overdue && (
+                  <span
+                    data-part="overdue"
+                    className="rounded-full bg-destructive px-2 text-xs font-semibold text-destructive-foreground"
+                  >
+                    {w.overdue}
+                  </span>
+                )}
+                {dayText(row.day)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">{w.nothingDue}</p>
+      )}
+    </Card>
+  );
+}
+
+/** The app's latest changes, for administrators: who did what, and the way to all of it. */
+export function RecentChanges({
+  label,
+  lines,
+  all,
+}: {
+  label: string;
+  lines: { id: number; at: Date; who: string; action: string; record?: string }[];
+  /** The Activity page. */
+  all: string;
+}) {
+  return (
+    <Card data-kit="tile" data-part="recent" className="space-y-3 p-card">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
+        <AppLink href={all} className="text-sm font-medium text-primary hover:underline">
+          {w.activity}
+        </AppLink>
+      </div>
+      {lines.length ? (
+        <ul className="divide-y text-sm">
+          {lines.map((line) => (
+            <li key={line.id} className="flex items-baseline justify-between gap-3 py-2">
+              <span className="min-w-0">
+                <span className="font-medium">{line.who}</span>{" "}
+                {line.action.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase()}
+                {line.record ? <> {line.record}</> : null}
+              </span>
+              <time
+                dateTime={new Date(line.at).toISOString()}
+                className="shrink-0 text-muted-foreground tabular-nums"
+              >
+                {new Intl.DateTimeFormat(undefined, {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                }).format(new Date(line.at))}
+              </time>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">{w.nothingYet}</p>
+      )}
+    </Card>
+  );
+}
+
+/** A dashboard over no records yet: one sentence and the way to the first list, not zeros. */
+export function QuietDashboard({ href, label }: { href: string; label: string }) {
+  return (
+    <div data-kit="dashboard" data-part="quiet" className="max-w-prose space-y-3 py-6">
+      <p className="text-muted-foreground">{w.nothingHereYet}</p>
+      <AppLink href={href} className="font-medium text-primary hover:underline">
+        {label}
+      </AppLink>
+    </div>
   );
 }

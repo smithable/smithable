@@ -2036,6 +2036,22 @@
                   "type": "string",
                   "description": "Show a custom query's records."
                 },
+                "activity": {
+                  "type": "string",
+                  "enum": [
+                    "changes"
+                  ],
+                  "description": "The app's latest changes, for those who may open Activity (changes is the only value)."
+                },
+                "when": {
+                  "type": "string",
+                  "description": "A list of what is due: the date field, e.g. dueOn; the overdue records come first, marked."
+                },
+                "within": {
+                  "type": "string",
+                  "pattern": "^[1-9][0-9]* (day|days|week|weeks)$",
+                  "description": "How far ahead what is due reaches, e.g. 7 days or 2 weeks; 7 days unsaid."
+                },
                 "where": {
                   "type": "object",
                   "description": "Only records with these choice values or yes/no values."

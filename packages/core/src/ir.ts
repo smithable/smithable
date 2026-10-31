@@ -488,7 +488,8 @@ export type LandingSection = PageSection;
  */
 export interface DashboardItem {
   name: string;
-  kind: "stat" | "chart" | "list";
+  /** activity: the app's latest changes, for those who may open Activity (look-gap §4). */
+  kind: "stat" | "chart" | "list" | "activity";
   model: string;
   measure?: "count" | "sum" | "average";
   /** The number field summed or averaged. */
@@ -507,7 +508,17 @@ export interface DashboardItem {
   /** For a choice `by`: the choice field, on this model or on the model `reference` points to. */
   choice?: { model: string; field: string; reference?: string };
   limit?: number;
+  /**
+   * A list of what is due: the records whose date field falls before the end of `within` from
+   * today (in the app's time zone), the overdue among them marked, earliest first.
+   */
+  when?: string;
+  /** How far ahead a due list reaches, as written; unsaid, 7 days (DUE_WITHIN). */
+  within?: { amount: number; unit: "day" | "week" };
 }
+
+/** How far ahead a list of what is due reaches when its tile does not say. */
+export const DUE_WITHIN = { amount: 7, unit: "day" } as const;
 
 /** The span of a chart's bars: eight weeks (from Monday), six months, four quarters or three years. */
 export type ChartPeriod = "week" | "month" | "quarter" | "year";

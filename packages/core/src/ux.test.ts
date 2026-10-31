@@ -226,12 +226,14 @@ test("setTone colors a choice value; the tone follows renames and goes with its 
     ok: true,
     files: { ux: expect.stringContaining("Order.state:") },
   });
-  const removed = applyOperation({ spec: crm, ux }, "removeField", {
+  // The start page's open orders count by status, which holds the field: that tile out first.
+  const untiled = crm.replace(/^ {6}openOrders:.*\n/m, "");
+  const removed = applyOperation({ spec: untiled, ux }, "removeField", {
     model: "Order",
     field: "status",
   });
   expect(removed).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
-  const changed = applyOperation({ spec: crm, ux }, "changeField", {
+  const changed = applyOperation({ spec: untiled, ux }, "changeField", {
     model: "Order",
     field: "status",
     type: "draft | placed | sent",

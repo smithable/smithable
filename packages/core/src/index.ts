@@ -132,6 +132,7 @@ export {
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
+  DUE_WITHIN,
   FILES_MAX,
   isFile,
   isFiles,

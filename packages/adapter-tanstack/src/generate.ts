@@ -47,7 +47,7 @@ import { named, nameModule } from "./names.js";
 import { outgoingModule } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
-import { hasInspector } from "./pages/data.js";
+import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
@@ -656,6 +656,16 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         ? [generated("src/generated/site.ts", siteModule(ir, t, auth, ux))]
         : []),
       generated("src/lib/viewer.server.ts", viewerModule(auth)),
+      // The activity's lines as people read them, for the Activity page and a dashboard's latest
+      // changes: the log is kept wherever people sign in.
+      ...(hasSignIn(auth)
+        ? [
+            generated(
+              "src/generated/activity.server.ts",
+              activityModule({ ir, t }, hasKeys(ir, auth)),
+            ),
+          ]
+        : []),
       ...(ir.outgoing.length
         ? [
             generated(
