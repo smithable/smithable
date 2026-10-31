@@ -1,7 +1,8 @@
 // Smithable app kit: a searchable choice of a related record (the WAI-ARIA combobox pattern).
-// Type to filter, arrow keys to move, Enter to choose, Escape to close.
+// Type to filter, arrow keys to move, Enter to choose, Escape to close. With `search`, the choices
+// are found on the server as the person types (too many records to list, A 208).
 import { ChevronDown, X } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { fieldClassName } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
 import { w } from "./words";
@@ -16,6 +17,8 @@ interface ComboboxProps {
   invalid: boolean;
   describedBy?: string;
   onChange: (value: string) => void;
+  /** Finds the choices whose name has the text; `options` then holds only the chosen one. */
+  search?: (text: string) => Promise<{ value: string | number; label: string }[]>;
 }
 
 export function Combobox({
@@ -26,9 +29,12 @@ export function Combobox({
   invalid,
   describedBy,
   onChange,
+  search,
 }: ComboboxProps) {
   const list = useId();
-  const labelOf = (v: string) => options.find((o) => String(o.value) === v)?.label ?? "";
+  const [found, setFound] = useState<ComboboxProps["options"] | null>(null);
+  const labelOf = (v: string) =>
+    [...options, ...(found ?? [])].find((o) => String(o.value) === v)?.label ?? "";
   const [text, setText] = useState(() => labelOf(value));
   // A choice made from outside (a time picker choosing who) shows as if it were typed here.
   const [seen, setSeen] = useState(value);
@@ -39,11 +45,30 @@ export function Combobox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const typed = text !== labelOf(value);
-  const shown = typed
-    ? options.filter((o) =>
-        `${o.label} ${o.detail ?? ""}`.toLowerCase().includes(text.trim().toLowerCase()),
-      )
-    : options;
+  const query = typed ? text.trim() : "";
+  // Asked once typing pauses; an answer to an older text is dropped. The page may hand a new
+  // function on every render, so the latest is kept aside rather than asked again for it.
+  const searching = useRef(search);
+  searching.current = search;
+  const searches = !!search;
+  useEffect(() => {
+    if (!searches || !open) return;
+    let current = true;
+    const timer = setTimeout(() => {
+      searching.current?.(query).then((rows) => current && setFound(rows));
+    }, 250);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [searches, open, query]);
+  const shown = search
+    ? (found ?? [])
+    : typed
+      ? options.filter((o) =>
+          `${o.label} ${o.detail ?? ""}`.toLowerCase().includes(text.trim().toLowerCase()),
+        )
+      : options;
 
   const choose = (v: string) => {
     onChange(v);
@@ -142,9 +167,11 @@ export function Combobox({
               </div>
             ))}
           </div>
-          {shown.length === 0 && (
+          {shown.length === 0 && (!search || found) && (
             <p className="px-3 py-2 text-sm text-muted-foreground">
-              {options.length ? w.nothingMatchesText(text.trim()) : w.nothingToChooseYet}
+              {options.length || (search && query)
+                ? w.nothingMatchesText(text.trim())
+                : w.nothingToChooseYet}
             </p>
           )}
         </div>

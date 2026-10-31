@@ -4670,6 +4670,60 @@ async function copyFlow(base) {
   }
 }
 
+/**
+ * A filter on a reference with too many records to list is a search (A 208): with the ux file's
+ * filters.pick saying so, the invoices' client filter finds clients as one types and filters by the
+ * one chosen; an id in the address that is no client the viewer may read shows as not found and
+ * filters nothing.
+ */
+async function pickFlow(dir, base) {
+  const ok = (r) => {
+    if (r.code !== 0) throw new Error(r.out);
+  };
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  let set = false;
+  try {
+    ok(smithable(dir, "op", "setFilterPick", "invoices", "client", "search"));
+    set = true;
+    await signInAs(page, base, "admin");
+    // The dev server takes the new page up by itself; asked again until it has.
+    const box = page.getByRole("combobox", { name: "Client" });
+    for (let i = 0; ; i++) {
+      await open(page, `${base}/invoices`);
+      if (await box.isVisible()) break;
+      if (i === 20 * P) throw new Error("the client filter is not a search");
+      await page.waitForTimeout(500);
+    }
+    await box.fill("kall");
+    await page.getByRole("option", { name: "Kallio Design" }).click({ timeout: 10000 * P });
+    await page.waitForURL(/client/, { timeout: 10000 * P });
+    await page
+      .getByRole("cell", { name: "2026-001", exact: true })
+      .waitFor({ state: "detached", timeout: 10000 * P });
+    await page.getByRole("cell", { name: "2026-006", exact: true }).waitFor({ timeout: 10000 * P });
+    const url = new URL(page.url());
+    url.searchParams.set("client", JSON.stringify("999999"));
+    await open(page, url.href);
+    await page
+      .getByText("Not found")
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    await page.getByRole("cell", { name: "2026-001", exact: true }).waitFor({ timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: a client filter set to search finds clients as one types and filters by the one chosen; an unknown id is not found and filters nothing",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("searched filter");
+  } finally {
+    await browser.close();
+    if (set) ok(smithable(dir, "op", "setFilterPick", "invoices", "client", "auto"));
+  }
+}
+
 /** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
 async function formulaFlow(base) {
   const browser = await chromium.launch();
@@ -7581,6 +7635,7 @@ test("the session cookie's name and attributes", async () => {
         await copyFlow(base);
         await documentFlow(dir, base);
         await formulaFlow(base);
+        await pickFlow(dir, base);
         await addChildFlow(base);
         await onboardingFlow(base);
         await isolationFlow(dir, base);

@@ -19,6 +19,7 @@ import {
   modelAccess,
   type PatternOf,
   PICTURES_MAX,
+  pageModel,
   pascal,
   plural,
   reviewRoles,
@@ -830,6 +831,17 @@ export function dataModule(
   const referenced =
     ir.models.some((m) => references(m).some((f) => f.type.model === model.name)) ||
     mergesOf(ir, model.name).length > 0;
+  // A list page filters by a reference to these records (A 208): its filter counts them, and
+  // finds them by their title as the person types, without listing them all.
+  const filteredBy =
+    titleColumn !== "id" &&
+    ir.pages.some((p) => {
+      const listed = ir.models.find((m) => m.name === pageModel(p));
+      return (p.filters ?? []).some((name) => {
+        const f = listed?.fields.find((x) => x.name === name);
+        return f?.type.kind === "relation" && !f.type.many && f.type.model === model.name;
+      });
+    });
   const access = modelAccess(model, auth);
   // A capacity: at most so many of these per referenced record (docs/design/booking.md),
   // checked in the same transaction as the write. And the records that hold a capacity for
@@ -867,7 +879,13 @@ export function dataModule(
     "inArray",
     "sql",
     ...((referenced && titleColumn !== "id") || paged ? ["asc"] : []),
-    ...(access.create.public || capped || paged || hasListPage || capacity || holds.length
+    ...(access.create.public ||
+    capped ||
+    paged ||
+    hasListPage ||
+    capacity ||
+    holds.length ||
+    filteredBy
       ? ["count"]
       : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
@@ -2248,6 +2266,34 @@ ${
       ...wordsOf(search).map(${wordCode}),
     );
   },
+`
+    : ""
+}
+${
+  filteredBy
+    ? `  /** How many ${n.pluralLabel.toLowerCase()} the viewer may read, for a list's filter on them (A 208), without listing them. */
+  pickCount(viewer: Viewer | null): number {
+    if (readScope(${n.access}.read, viewer) === "none") return 0;
+    return db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
+  },
+
+  /**
+   * For a list's filter on them: up to twenty the viewer may read whose ${titleColumn} has the text, or
+   * those of the ids given (a filter's chosen ones, named), by ${titleColumn}; one the viewer may not read
+   * is not there.
+   */
+  pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
+    if (readScope(${n.access}.read, viewer) === "none") return [];
+    return db
+      .select({ id: ${n.table}.id, title: ${n.table}.${titleColumn} })
+      .from(${n.table})
+      .where(and(${self}.readable(viewer), ids ? inArray(${n.table}.id, ids) : contains([${n.table}.${titleColumn}], text)))
+      .orderBy(asc(${n.table}.${titleColumn}))
+      .limit(ids ? ids.length : 20)
+      .all()
+      .map((row) => ({ value: String(row.id), label: ${shownTitle(model, "row.title")} }));
+  },
+
 `
     : ""
 }
