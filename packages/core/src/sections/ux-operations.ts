@@ -244,6 +244,64 @@ function calendarPage(ir: SpecIR, page: string) {
     throw new OperationError(`${page} is not a calendar page.`);
 }
 
+/** A list's mark before each title (look-gap §4); none takes it away. */
+const setTableMark: Operation<{ page: string; mark: "initials" | "picture" | "none" }> = {
+  name: "setTableMark",
+  summary:
+    "Put a round mark before each record's title in a list: its initials, or its picture; none takes it away.",
+  schema: {
+    type: "object",
+    required: ["page", "mark"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      mark: {
+        type: "string",
+        enum: ["initials", "picture", "none"],
+        description: "initials, picture or none.",
+      },
+    },
+  },
+  positional: ["page", "mark"],
+  describe: ({ page, mark }) =>
+    mark === "none"
+      ? `Show no mark before the titles on ${page}`
+      : `Mark each record on ${page} with its ${mark === "picture" ? "picture" : "initials"}`,
+  destructive: () => false,
+  apply({ ux }, { page, mark }, ir) {
+    pageNamed(ir, page);
+    put(ux, ["pages", page, "table", "mark"], mark === "none" ? undefined : mark);
+    return [];
+  },
+};
+
+/** A list's rows' actions: buttons (below) or a menu at the row's end (look-gap §4). */
+const setRowActions: Operation<{ page: string; actions: "below" | "menu" }> = {
+  name: "setRowActions",
+  summary:
+    "Show each row's actions as buttons (below, the default) or in a … menu at the row's end.",
+  schema: {
+    type: "object",
+    required: ["page", "actions"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      actions: { type: "string", enum: ["below", "menu"], description: "below or menu." },
+    },
+  },
+  positional: ["page", "actions"],
+  describe: ({ page, actions }) =>
+    actions === "menu"
+      ? `Put each row's actions on ${page} in a menu`
+      : `Show each row's actions on ${page} as buttons`,
+  destructive: () => false,
+  apply({ ux }, { page, actions }, ir) {
+    pageNamed(ir, page);
+    put(ux, ["pages", page, "table", "actions"], actions === "menu" ? "menu" : undefined);
+    return [];
+  },
+};
+
 const setColumns: Operation<{ page: string; columns?: string[] }> = {
   name: "setColumns",
   summary: "Choose which fields a page's table shows, in order (none: back to the default).",
@@ -1038,4 +1096,6 @@ export const uxOperations: AnyOperation[] = [
   setChrome,
   setCalendarColor,
   setCalendarCapacity,
+  setTableMark,
+  setRowActions,
 ];

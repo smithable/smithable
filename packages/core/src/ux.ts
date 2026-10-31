@@ -116,6 +116,13 @@ export interface PageUx {
   sort?: string;
   /** How the list looks on a wide screen; a phone shows cards anyway. */
   view?: "table" | "cards";
+  /**
+   * A round mark before each record's title (look-gap §4): its initials on a colour of their own,
+   * or the model's first picture. Unsaid, none.
+   */
+  mark?: "initials" | "picture";
+  /** Each row's actions as buttons (unsaid) or in a "…" menu at the row's end. */
+  rowActions?: "menu";
   /** The form's fields in this order; fields not listed follow. */
   fieldOrder?: string[];
   /** A calculator's results beside its inputs on a wide screen (the default), or below them. */
@@ -970,7 +977,7 @@ export function validateUx(
             {
               allowed:
                 part.key === "table"
-                  ? ["columns", "below", "sort", "view", "totals"]
+                  ? ["columns", "below", "sort", "view", "totals", "mark", "actions"]
                   : ["fieldOrder", "sections", "columns", "control", "results"],
               later: part.key === "table" ? ["pageSize"] : [],
             },
@@ -999,6 +1006,34 @@ export function validateUx(
               if (view === "table" || view === "cards") result.view = view;
               else if (view !== undefined)
                 ctx.error(option.value, "invalid-value", `"view" is table or cards.`);
+            } else if (option.key === "mark") {
+              // A picture mark needs a picture to show: the model's first picture field.
+              const mark = readString(ctx, option.value, `"mark" of ${where}`);
+              const picture = fields.some(
+                (f) => !f.formula && f.type.kind === "scalar" && f.type.name === "picture",
+              );
+              if (mark === "initials" || (mark === "picture" && picture)) result.mark = mark;
+              else if (mark === "picture")
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `${owner} has no picture field to show; "initials" works for any model.`,
+                );
+              else if (mark !== undefined)
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `"mark" of ${where} is initials or picture.`,
+                );
+            } else if (option.key === "actions") {
+              const actions = readString(ctx, option.value, `"actions" of ${where}`);
+              if (actions === "menu") result.rowActions = "menu";
+              else if (actions !== undefined && actions !== "below")
+                ctx.error(
+                  option.value,
+                  "invalid-value",
+                  `"actions" of ${where} is below (buttons in the row) or menu.`,
+                );
             } else if (option.key === "sections") {
               result.sections = readSections(ctx, option.value, where, names);
             } else if (option.key === "control") {

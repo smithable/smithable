@@ -11,16 +11,19 @@ export function Overflow({
   children,
   max = 3,
   inRow = false,
+  all = false,
 }: {
   children: React.ReactNode;
   max?: number;
   inRow?: boolean;
+  /** Every action behind the "…" button, however few (a list's actions: menu, look-gap §4). */
+  all?: boolean;
 }) {
   // Actions the viewer may not run render nothing and do not count.
   const items = Children.toArray(children);
-  const shown = inRow ? 2 : max;
+  const shown = all ? 0 : inRow ? 2 : max;
   if (items.length <= shown) return <>{items}</>;
-  const keep = inRow ? 1 : max;
+  const keep = all ? 0 : inRow ? 1 : max;
   return (
     <>
       {items.slice(0, keep)}

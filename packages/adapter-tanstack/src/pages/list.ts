@@ -555,6 +555,9 @@ export function listParts(
       }
     : undefined;
   const cards = presentation?.view === "cards";
+  // A mark before each title, and every row action in a menu (the ux file's table, look-gap §4).
+  const mark = presentation?.mark;
+  const menu = presentation?.rowActions === "menu";
   // A model with pictures shows the page's icon where a record has none (cards, its column).
   const icon = model.fields.some(storesPictures) ? LUCIDE[pageIcon(ux, page)] : undefined;
   // Inside a data page without a search, the list still loads the newest records only.
@@ -617,7 +620,7 @@ export function listParts(
       ...(askOptions(a, ir, t) ? [actionNames(a).askOptions] : []),
     );
   if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
-  if (offered.length > 2) view.add("#/kit/Overflow", "Overflow");
+  if (offered.length > 2 || (menu && offered.length)) view.add("#/kit/Overflow", "Overflow");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
   // A merge: offered when exactly two are picked (intents.md §3).
@@ -919,11 +922,11 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
           filtering && Object.keys(filtering.headers).length
             ? `\n        sorting={{ keys: ${literal(filtering.headers)}, value: sort, onChange: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}`
             : ""
-        }${cards ? '\n        view="cards"' : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${threadField ? `\n        thread={{ label: ${JSON.stringify(t.field(model, threadField).label ?? humanize(threadField.name))}, counts: threads }}` : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
+        }${cards ? '\n        view="cards"' : ""}${mark ? `\n        mark=${attr(mark)}` : ""}${icon ? `\n        icon={${icon}}` : ""}${favorites ? "\n        saved={{ ids: saved, onToggle: toggleSaved }}" : ""}${threadField ? `\n        thread={{ label: ${JSON.stringify(t.field(model, threadField).label ?? humanize(threadField.name))}, counts: threads }}` : ""}${selecting ? "\n        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}" : ""}${
           offered.length
             ? `
         rowActions={(row) => (
-          ${offered.length > 2 ? "<Overflow inRow>" : "<>"}
+          ${menu ? "<Overflow inRow all>" : offered.length > 2 ? "<Overflow inRow>" : "<>"}
             ${offered
               .map(
                 (
@@ -933,7 +936,7 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
             )}`,
               )
               .join("\n            ")}
-          ${offered.length > 2 ? "</Overflow>" : "</>"}
+          ${menu || offered.length > 2 ? "</Overflow>" : "</>"}
         )}`
             : ""
         }${

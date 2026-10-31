@@ -50,6 +50,11 @@ interface ModelTableProps<R extends Row> {
   page?: string;
   /** Cards on wide screens too, instead of a table (a phone shows cards anyway). */
   view?: "table" | "cards";
+  /**
+   * A round mark before each title (look-gap §4): the record's initials on a colour of their own,
+   * or its picture (initials where it has none).
+   */
+  mark?: "initials" | "picture";
   /** The model's icon, shown where a picture is missing. */
   icon?: LucideIcon;
   /** A heart on each record: the ids the viewer saved, and what a click does (sign in, for a visitor). */
@@ -187,6 +192,7 @@ export function ModelTable<R extends Row>({
   saved,
   thread,
   rowActions,
+  mark,
   selection,
   paging,
   more,
@@ -288,6 +294,46 @@ export function ModelTable<R extends Row>({
   // A picture's address; for several pictures, the cover's (the first).
   const pictureSrc = (field: RecordFieldUi<R>, row: R) =>
     `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}${field.kind === "pictures" ? "/0" : ""}`;
+  // The mark before a title: a picture where asked and there is one, else initials on a hue of the
+  // chart's, the same for the same name everywhere.
+  const markOf = (row: R) => {
+    if (!mark) return null;
+    const name =
+      named(row) ??
+      formatValue(title as RecordFieldUi<R>, displayValue(title as RecordFieldUi<R>, row), app);
+    if (
+      mark === "picture" &&
+      pictureField &&
+      formatValue(pictureField, displayValue(pictureField, row), app) !== "—" &&
+      ui.model
+    )
+      return (
+        <img
+          data-part="mark"
+          src={pictureSrc(pictureField, row)}
+          alt=""
+          className="size-8 shrink-0 rounded-full object-cover"
+        />
+      );
+    const initials = name
+      .split(/\s+/)
+      .filter((word) => /\p{L}/u.test(word))
+      .slice(0, 2)
+      .map((word) => (word.match(/\p{L}/u)?.[0] ?? "").toUpperCase())
+      .join("");
+    const hue = [...name].reduce((sum, c) => (sum * 31 + (c.codePointAt(0) ?? 0)) % 9973, 0) % 5;
+    return (
+      // The letters drawn from an attribute, so the cell's own text stays the name alone (what a
+      // screen reader reads, and what is copied).
+      <span
+        data-part="mark"
+        data-initials={initials || "·"}
+        aria-hidden
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground before:content-[attr(data-initials)]"
+        style={{ backgroundColor: `color-mix(in oklch, var(--chart-${hue + 1}) 30%, var(--card))` }}
+      />
+    );
+  };
   const cell = (field: RecordFieldUi<R>, row: R) => {
     const text = formatValue(field, displayValue(field, row), app);
     if ((field.kind === "picture" || field.kind === "pictures") && text === "—")
@@ -573,7 +619,18 @@ export function ModelTable<R extends Row>({
                         field.name === ui.titleField && "min-w-40 font-semibold",
                       )}
                     >
-                      {field === title ? open(row, cell(field, row)) : stacked(field, row)}
+                      {field === title ? (
+                        mark ? (
+                          <span className="flex items-center gap-3">
+                            {markOf(row)}
+                            {open(row, cell(field, row))}
+                          </span>
+                        ) : (
+                          open(row, cell(field, row))
+                        )
+                      ) : (
+                        stacked(field, row)
+                      )}
                     </TableCell>
                   ))}
                   {thread && <TableCell>{messages(row)}</TableCell>}
