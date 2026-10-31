@@ -260,6 +260,8 @@ function storedBytes(): number {
 export function roomFor(bytes: number): boolean {
   const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
   if (!max) return true;
+  // A length that is not one (a header made up) holds nothing and is refused.
+  if (!Number.isFinite(bytes) || bytes < 0) return false;
   if (storedBytes() + bytes > max) return false;
   const kept = counted.get(uploadsDir());
   if (kept) kept.bytes += bytes;
@@ -268,6 +270,7 @@ export function roomFor(bytes: number): boolean {
 
 /** Gives back what roomFor held for an upload that was refused or failed. */
 export function release(bytes: number): void {
+  if (!Number.isFinite(bytes) || bytes <= 0) return;
   const kept = counted.get(uploadsDir());
   if (kept) kept.bytes = Math.max(0, kept.bytes - bytes);
 }

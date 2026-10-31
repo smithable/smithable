@@ -363,6 +363,13 @@ async function sendCalls(now: number): Promise<{ done: number; more: boolean }> 
             details: { outgoing: call.entry, target: call.target },
           });
         });
+      // A published app looks again in ten minutes: a call waiting for its settings neither fills
+      // the next batch nor turns the outbox round and round (the review, 2026-10-30).
+      else
+        db.update(outgoingCall)
+          .set({ nextAt: new Date(now + 10 * MINUTE) })
+          .where(eq(outgoingCall.id, call.id))
+          .run();
       continue;
     }
     let status: number | undefined;

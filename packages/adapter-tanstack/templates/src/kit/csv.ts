@@ -34,21 +34,23 @@ function fieldValue<R extends Row>(field: RecordUi<R>["fields"][number], row: R)
 }
 
 /** The rows as CSV text, a header line first; with a BOM so spreadsheets read it as UTF-8. */
-export function csvOf<R extends Row>(ui: RecordUi<R>, rows: R[], note?: string): string {
+export function csvOf<R extends Row>(ui: RecordUi<R>, rows: R[]): string {
   const fields = ui.fields.filter((f) => !SKIPPED.has(f.kind));
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const lines = [
-    // An export cut at the cap says so first ("Exported 10,000 of 14,200 matching records").
-    ...(note ? [cell(note)] : []),
     fields.map((f) => cell(f.label)).join(","),
     ...shown.map((row) => fields.map((f) => cell(fieldValue(f, row))).join(",")),
   ];
   return `\uFEFF${lines.join("\r\n")}\r\n`;
 }
 
-/** The file's name, e.g. customers.csv. */
-export function csvName(ui: { pluralLabel: string }): string {
-  return `${ui.pluralLabel.toLowerCase().replace(/\s+/g, "-")}.csv`;
+/** The file's name, e.g. customers.csv; cut at the cap, customers-10000-of-14200.csv. */
+export function csvName(
+  ui: { pluralLabel: string },
+  cut?: { shown: number; total: number },
+): string {
+  const name = ui.pluralLabel.toLowerCase().replace(/\s+/g, "-");
+  return cut ? `${name}-${cut.shown}-of-${cut.total}.csv` : `${name}.csv`;
 }
 
 /** Saves the text as a file in the browser, e.g. customers.csv. */

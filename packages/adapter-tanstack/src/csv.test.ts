@@ -19,20 +19,12 @@ test("a cell is quoted when it must be, and a formula is written as text, a numb
   expect(cell(" =1+1")).toBe("' =1+1");
 });
 
-test("an export cut at the cap says so on its first line, before the header", async () => {
-  const { csvOf } = (await import(path)) as {
-    csvOf(ui: unknown, rows: unknown[], note?: string): string;
+test("an export cut at the cap says so in its name; the file stays a table, its header first", async () => {
+  const { csvName } = (await import(path)) as {
+    csvName(ui: { pluralLabel: string }, cut?: { shown: number; total: number }): string;
   };
-  const ui = {
-    pluralLabel: "Customers",
-    fields: [{ name: "name", label: "Name", kind: "string", get: (r: { name: string }) => r.name }],
-  };
-  const rows = [{ id: 1, name: "Nordic Timber Oy" }];
-  const cut = csvOf(ui, rows, "Exported 1 of 2 matching records").replace(/^﻿/, "");
-  expect(cut.split("\r\n").slice(0, 3)).toEqual([
-    "Exported 1 of 2 matching records",
-    "Name",
-    "Nordic Timber Oy",
-  ]);
-  expect(csvOf(ui, rows).replace(/^﻿/, "").split("\r\n")[0]).toBe("Name");
+  expect(csvName({ pluralLabel: "Follow ups" })).toBe("follow-ups.csv");
+  expect(csvName({ pluralLabel: "Customers" }, { shown: 10000, total: 14200 })).toBe(
+    "customers-10000-of-14200.csv",
+  );
 });
