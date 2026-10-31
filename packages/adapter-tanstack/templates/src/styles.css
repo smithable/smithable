@@ -61,6 +61,13 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* The theme's texture (grain or paper) over the page's surfaces; cards cover it. */
+    background-image: var(--texture, none);
+  }
+  /* What the theme does to every photograph (pictures.treatment): the kit's pictures are the
+     covering images; logos and icons are left as they are. */
+  img.object-cover {
+    filter: var(--picture-filter, none);
   }
   /* Motion (the theme's --motion-* in theme.css, all 0 under "reduce motion"): dialogs and the
      menu drawer open and close, notices and new rows ease in, page changes cross-fade. */
@@ -135,7 +142,8 @@
     color: var(--band-text);
   }
   [data-band="muted"] {
-    --band-surface: var(--muted);
+    /* A strong band (surfaces.bands) steps a little further from the page than the muted surface. */
+    --band-surface: color-mix(in oklch, var(--foreground) var(--band-step, 0%), var(--muted));
     --band-text: var(--foreground);
     --band-under: var(--background);
   }
@@ -201,6 +209,14 @@
   [data-kit="model-table"] tbody tr:nth-child(even) {
     background-color: var(--row-stripe, transparent);
   }
+}
+
+/* Column labels, eyebrows, tags and small figures: the theme's labels face, case and tracking
+   (labels in the theme file; unsaid, they follow the headings). */
+@utility label-text {
+  font-family: var(--font-labels, inherit);
+  text-transform: var(--label-case, none);
+  letter-spacing: var(--label-tracking, normal);
 }
 
 @keyframes kit-rise {

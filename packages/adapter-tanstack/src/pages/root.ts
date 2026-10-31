@@ -93,7 +93,16 @@ export function rootRoute(
   analytics?: AnalyticsSetting,
   consent?: ContentIR["consent"],
   assistant?: ContentIR["assistant"],
+  /** A theme with one mode by design shows it whatever the device says (look-breadth.md §3). */
+  modes: "both" | "light" | "dark" = "both",
 ): string {
+  // The appearance resolved before the first paint: the visitor's, or the theme's one mode.
+  const appearance =
+    modes === "both"
+      ? "APPEARANCE_SCRIPT"
+      : JSON.stringify(
+          `document.documentElement.dataset.appearance="${modes}";document.documentElement.style.colorScheme="${modes}"`,
+        );
   // The consent bar's link to the privacy page, when the app has one (docs/design/analytics.md).
   const privacy = (
     ir.pages.find((p) => p.pattern.kind === "legal") ?? ir.pages.find((p) => p.id === "privacy")
@@ -213,8 +222,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-import { APPEARANCE_SCRIPT } from "#/kit/appearance";
-import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
+${modes === "both" ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}${workspace.length ? '\nimport { allows } from "#/kit/access";' : ""}
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
@@ -339,7 +347,7 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
     // data-appearance is set by the head's script before React takes over (src/kit/appearance.ts).
     <html lang=${t.translated ? "{language()}" : JSON.stringify(t.language)} suppressHydrationWarning>
       <head>
-        <ScriptOnce children={APPEARANCE_SCRIPT} />
+        <ScriptOnce children={${appearance}} />
         <HeadContent />${t.translated ? "\n        <Alternates path={pathname} />" : ""}
       </head>
       <body data-page={pageOf(pathname)} data-hydrated={hydrated ? "true" : undefined}>

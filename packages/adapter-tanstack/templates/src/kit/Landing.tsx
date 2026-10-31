@@ -338,7 +338,7 @@ function Eyebrow({ texts, children }: { texts?: string; children: string }) {
   return (
     <p
       data-part="eyebrow"
-      className={cn("mb-2 text-sm font-semibold tracking-wide text-primary uppercase", ALIGN)}
+      className={cn("mb-2 text-sm font-semibold label-text text-primary", ALIGN)}
       {...mark(texts, "eyebrow")}
     >
       {children}
@@ -542,7 +542,7 @@ function HeroView({
       {eyebrow && (
         <p
           data-part="eyebrow"
-          className="mb-4 text-sm font-semibold tracking-wide uppercase opacity-90"
+          className="mb-4 text-sm font-semibold label-text opacity-90"
           {...mark(texts, "eyebrow")}
         >
           {eyebrow}

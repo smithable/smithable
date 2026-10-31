@@ -523,7 +523,7 @@ export function ModelTable<R extends Row>({
                               order === "ascending" ? `-${key}` : order ? undefined : key,
                             )
                           }
-                          className="inline-flex cursor-pointer items-center gap-1 uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                          className="inline-flex cursor-pointer items-center gap-1 label-text outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {label}
                           {order === "ascending" ? (
