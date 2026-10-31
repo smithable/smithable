@@ -270,6 +270,14 @@ export function landingRoute(
         // Its first amount of money, stored or computed: for a thing for sale, its price.
         const money = model.fields.find((f) => f.type.kind === "scalar" && f.type.name === "money");
         if (money) imports.add("#/generated/app", "app");
+        // A ledger without money figures its first number, by type (look-breadth §3); none, no figure.
+        const count =
+          !money && given.layout === "ledger"
+            ? model.fields.find(
+                (f) =>
+                  f.type.kind === "scalar" && (f.type.name === "int" || f.type.name === "decimal"),
+              )
+            : undefined;
         // A card opens its article when the model has an articles page, and shows its picture.
         const article = ir.pages.find(
           (p) => p.pattern.kind === "articles" && p.pattern.model === model.name,
@@ -377,7 +385,10 @@ export function landingRoute(
               money
                 ? `
             amount: row.${money.name} == null ? undefined : new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(row.${money.name} / 100),`
-                : ""
+                : count
+                  ? `
+            amount: row.${count.name} == null ? undefined : new Intl.NumberFormat().format(row.${count.name}),`
+                  : ""
             }${
               tones && Object.keys(tones).length
                 ? `

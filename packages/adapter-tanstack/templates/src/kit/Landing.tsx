@@ -973,9 +973,12 @@ function RecordCardsView({
     href?: string;
     picture?: { src: string; alt: string; width: number; height: number; generated?: boolean };
   }[];
-  /** cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled. */
-  layout?: "cards" | "list" | "grid";
-  /** Cards or pictures side by side on wide screens, 2 to 6: cards 3 and a grid 4 when not said; a list has none. */
+  /**
+   * cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled; ledger:
+   * ruled rows with the amount as a figure column (look-breadth §3), for prices and accounts.
+   */
+  layout?: "cards" | "list" | "grid" | "ledger";
+  /** Cards or pictures side by side on wide screens, 2 to 6: cards 3 and a grid 4 when not said; a list or a ledger has none. */
   columns?: 2 | 3 | 4 | 5 | 6;
   /** The model's icon, for a model with pictures: the placeholder where a record has none. */
   icon?: LucideIcon;
@@ -1069,7 +1072,39 @@ function RecordCardsView({
           ))}
         </div>
       )}
-      {layout === "list" ? (
+      {layout === "ledger" ? (
+        <ul data-layout="ledger" className="border-t-2 border-foreground">
+          {cards.map((card) => (
+            <li
+              key={card.key}
+              className={cn(
+                "relative grid grid-cols-[1fr_auto] items-baseline gap-x-6 border-b py-4",
+                card.href && "hover:bg-hover",
+              )}
+            >
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold">{heading(card)}</h3>
+                {card.text && (
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{card.text}</p>
+                )}
+                {card.badge && (
+                  <p className="mt-2">
+                    <Badge variant={card.tone}>{card.badge}</Badge>
+                  </p>
+                )}
+              </div>
+              {card.amount && (
+                <p
+                  data-part="figure"
+                  className="text-right text-xl font-(--heading-weight) tabular-nums"
+                >
+                  {card.amount}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : layout === "list" ? (
         <ul className="divide-y border-y">
           {cards.map((card) => (
             <li

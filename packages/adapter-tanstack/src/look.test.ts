@@ -240,3 +240,40 @@ ${contentText}    faq: { items: [{ question: Open on Sundays?, answer: Yes. }] }
   expect(bandOf(own, "Gallery")).toBe("primary");
   expect(bandOf(own, "CallToAction")).toBe("muted");
 });
+
+test("a ledger figures a model's first number when it has no money, by type, and cards do not (look-breadth §3)", () => {
+  const site = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Rooms }
+models:
+  Room: { fields: { name: string!, note: string, seats: int } }
+pages:
+  home:
+    route: /
+    landing:
+      rooms: { records: Room }
+  rooms: { crud: Room }
+`,
+  }).ir as SpecIR;
+  const home = (uxText: string) =>
+    generateApp(site, {
+      smithableVersion: "0.0.0",
+      auth: validateAuth(
+        {
+          path: "smithable.auth.yml",
+          text: "smithableAuth: 0.1\nsignIn: none\npublic: { pages: [home, rooms], read: [Room] }\n",
+        },
+        site,
+      ).auth as AuthIR,
+      ux: validateUx({ path: "smithable.ux.yml", text: uxText }, site, []).ux,
+    }).find((f) => f.path === "src/routes/index.tsx")?.content ?? "";
+  const ledger = home(
+    "smithableUx: 0.1\npages: { home: { sections: { rooms: { layout: ledger } } } }\n",
+  );
+  expect(ledger).toContain('layout="ledger"');
+  expect(ledger).toContain(
+    "amount: row.seats == null ? undefined : new Intl.NumberFormat().format(row.seats),",
+  );
+  expect(home("smithableUx: 0.1\n")).not.toContain("amount:");
+});
