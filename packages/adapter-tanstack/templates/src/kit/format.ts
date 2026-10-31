@@ -82,6 +82,7 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
       return new Intl.DateTimeFormat(undefined, {
         dateStyle: "medium",
         timeStyle: "short",
+        hourCycle: "h23",
         timeZone: app.timeZone,
       }).format(value instanceof Date ? value : new Date(String(value)));
     case "choice":

@@ -52,6 +52,15 @@ export function InlineRows({
     .map((name) => ui.fields.find((f) => f.name === name))
     .filter((f): f is FieldUi & (typeof ui.fields)[number] => Boolean(f));
   const editable = Boolean(create || update);
+  // A related list's rows come without their computed values: worked out here, as ModelTable does.
+  const filled = ui.compute
+    ? rows.map((row) => {
+        const computed = Object.entries(ui.compute?.(row) ?? {}).filter(
+          ([name]) => row[name] == null,
+        );
+        return { ...row, ...Object.fromEntries(computed) } as Row;
+      })
+    : rows;
   return (
     <div data-kit="inline-rows">
       <Table>
@@ -66,7 +75,7 @@ export function InlineRows({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {filled.map((row) => (
             <InlineRow
               // A row that changed elsewhere (or was saved) starts again from what is stored.
               key={`${row.id}-${String(row.updatedAt)}`}

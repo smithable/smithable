@@ -478,7 +478,13 @@ export function detailRoute(
       : undefined;
   // An Add button to the related model's own form, where one is written: a table's, or a
   // thread's whose reply box cannot fill every required field.
-  const links = adds.some((a) => a.route && !threadFor(a.list)?.replies);
+  // An inline list adds in its own empty row: no button to the related form.
+  const links = adds.some(
+    (a) =>
+      a.route &&
+      !threadFor(a.list)?.replies &&
+      ux.pages[page.id]?.lists?.[a.list.name] !== "inline",
+  );
   if (links)
     imports.set("#/components/ui/button", [
       ...(imports.get("#/components/ui/button") ?? []),
