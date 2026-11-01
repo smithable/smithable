@@ -181,11 +181,12 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
   return `${HEADER}${imports.render()}
 /** The ${n.pluralLabel.toLowerCase()} whose start falls in the range shown, among those the viewer may read. */
 const getRange = createServerFn()
-  // A real range, and no longer than a month view needs (six weeks and a day on each side).
+  // A real range, and no longer than a month view needs: six weeks, a day before and two after
+  // (a month starting on a Sunday spans six).
   .validator(
     z
       .object({ from: z.iso.datetime(), to: z.iso.datetime() })
-      .refine((r) => Date.parse(r.from) < Date.parse(r.to) && Date.parse(r.to) - Date.parse(r.from) <= 44 * 86_400_000, "The range is not a week or a month."),
+      .refine((r) => Date.parse(r.from) < Date.parse(r.to) && Date.parse(r.to) - Date.parse(r.from) <= 45 * 86_400_000, "The range is not a week or a month."),
   )
   .handler(async ({ data }) => {
     const viewer = await currentViewer();

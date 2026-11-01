@@ -509,7 +509,8 @@ export function Calendar({
           range.view === "day"
             ? "md:grid md:gap-x-1"
             : range.view === "days" && !empty
-              ? "grid snap-x auto-cols-[calc((100%-1rem)/3)] grid-flow-col gap-2 overflow-x-auto md:auto-cols-auto md:grid-flow-row md:grid-cols-7 md:gap-1 md:overflow-visible"
+              ? // Positioned, so what is absolutely placed inside (screen-reader text) scrolls with it.
+                "relative grid snap-x auto-cols-[calc((100%-1rem)/3)] grid-flow-col gap-2 overflow-x-auto md:auto-cols-auto md:grid-flow-row md:grid-cols-7 md:gap-1 md:overflow-visible"
               : range.view === "agenda"
                 ? "space-y-2"
                 : timed
