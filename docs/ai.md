@@ -111,7 +111,7 @@ The target must be one the spec's `outgoing` section calls (`to: crmFeed`), so w
 A generated app's **Ask** panel answers questions about its records and makes the changes it is asked for, through the app's own tools and as the person asking: it may do only what their role may. Questions worded the usual way are read by rules in the app itself, with no model and at no cost. For the rest, the app uses the model its host gives it:
 
 ```bash
-export ASSISTANT_URL=https://api.mistral.ai/v1   # any OpenAI-compatible chat endpoint that can call tools
+export ASSISTANT_URL=https://api.eu.mistral.ai/v1   # any OpenAI-compatible chat endpoint that can call tools; Mistral's EU one is what a hosted app at Strict or Normal may reach
 export ASSISTANT_KEY=…
 export ASSISTANT_MODEL=mistral-small-latest      # or claude-haiku-5-5, through a gateway that serves Claude
 ```
