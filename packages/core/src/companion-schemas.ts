@@ -464,6 +464,11 @@ export const UX_SCHEMA: JsonSchema = {
             description:
               "The frame the page shows in: site (the public frame with the top menu), app (the workspace with the side menu) or none (the page alone). Without it, the page kind's own.",
           },
+          width: {
+            enum: ["contained", "wide", "full"],
+            description:
+              "A landing page's width: contained (72rem, the default), wide (80rem) or full (edge to edge, the page's gutter kept).",
+          },
           sections: {
             type: "object",
             description:

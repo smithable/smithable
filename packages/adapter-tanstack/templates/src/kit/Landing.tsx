@@ -15,7 +15,7 @@ import {
   Phone,
   X,
 } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { buttonVariants } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
@@ -64,6 +64,7 @@ function LandingLayoutView({
   logo,
   link,
   header,
+  width,
   footer,
   site,
   viewer,
@@ -74,8 +75,13 @@ function LandingLayoutView({
   /** The app's mark, drawn before its name in the header (with an empty alt: the name says it). */
   logo?: string;
   link?: LandingLink;
-  /** The header's look (smithable.ux.yml): it stays at the top as the page scrolls unless scrolling. */
-  header?: { position?: "sticky" | "scrolling" };
+  /**
+   * The header's look (smithable.ux.yml): it stays at the top as the page scrolls unless
+   * scrolling; over the hero, on the hero's own wash (dark or brand) until the hero has passed.
+   */
+  header?: { position?: "sticky" | "scrolling"; over?: "dark" | "brand" };
+  /** How wide the content runs: contained (72rem) unless wide (80rem) or full. */
+  width?: "wide" | "full";
   footer?: LandingFooter;
   site?: LandingSite;
   /** Who is signed in: the menu shows the pages they may open. */
@@ -85,6 +91,21 @@ function LandingLayoutView({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  // Over the hero: the bar stands on the hero's wash until the hero has scrolled under it.
+  const over = header?.over;
+  const [onHero, setOnHero] = useState(Boolean(over));
+  useEffect(() => {
+    if (!over) return;
+    const hero = document.querySelector("[data-hero]");
+    if (!hero) return setOnHero(false);
+    const seen = new IntersectionObserver(([entry]) => setOnHero(Boolean(entry?.isIntersecting)), {
+      rootMargin: "-72px 0px 0px 0px",
+    });
+    seen.observe(hero);
+    return () => seen.disconnect();
+  }, [over]);
+  // An open phone menu stands on the bar's own surface, not on the picture.
+  const clear = onHero && !open;
   const menu = (site?.menu ?? []).filter((m) => !m.access || allows(m.access, viewer ?? null));
   const contact = site?.contact;
   // Columns when there is something to put in them; otherwise the one line it always had.
@@ -133,17 +154,50 @@ function LandingLayoutView({
     // A sticky header stays over the page as it scrolls; a part reached by its anchor stops below it.
     <div
       data-kit="landing"
+      data-width={width}
+      style={
+        width
+          ? ({ "--landing-width": width === "full" ? "100%" : "80rem" } as React.CSSProperties)
+          : undefined
+      }
       className={cn(
-        "flex min-h-screen flex-col",
+        "relative flex min-h-screen flex-col",
         header?.position !== "scrolling" && "[&_[id]]:scroll-mt-20",
       )}
     >
       <header
         data-part="header"
         data-position={header?.position}
-        className={cn("border-b bg-card", header?.position !== "scrolling" && "sticky top-0 z-30")}
+        data-over={over && clear ? over : undefined}
+        className={cn(
+          "border-b",
+          over
+            ? cn(
+                "inset-x-0 top-0 z-30 transition-[background-color,color,border-color] duration-(--motion-slow) ease-(--motion-ease)",
+                header?.position === "scrolling" ? "absolute" : "fixed",
+                clear
+                  ? over === "dark"
+                    ? "border-transparent bg-transparent text-white"
+                    : "border-transparent bg-transparent text-primary-foreground dark:text-foreground"
+                  : "bg-card",
+              )
+            : cn("bg-card", header?.position !== "scrolling" && "sticky top-0 z-30"),
+        )}
       >
-        <div className="mx-auto flex h-18 max-w-6xl items-center justify-between gap-4 px-5">
+        {over && (
+          // The hero's wash under the bar, faded out as the bar takes its own surface.
+          <div
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute inset-0 -z-10 bg-linear-to-b transition-opacity duration-(--motion-slow) ease-(--motion-ease)",
+              over === "dark"
+                ? "from-black/60 to-transparent"
+                : "from-primary to-primary/0 dark:from-(--cover-wash,var(--background)) dark:to-transparent",
+              clear ? "opacity-100" : "opacity-0",
+            )}
+          />
+        )}
+        <div className="mx-auto flex h-18 max-w-(--landing-width) items-center justify-between gap-4 px-5">
           {name}
           {menu.length > 0 && (
             <nav aria-label={w.site} className="hidden md:block">
@@ -164,7 +218,17 @@ function LandingLayoutView({
           )}
           <div className="flex items-center gap-2">
             {link && (
-              <Link to={link.to} className={buttonVariants({ variant: "outline" })}>
+              <Link
+                to={link.to}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  // On the hero's wash the button keeps only its outline, in the wash's text color.
+                  clear &&
+                    (over === "dark"
+                      ? "border-white/70 bg-transparent! text-white! hover:bg-white/10!"
+                      : "border-primary-foreground/70 bg-transparent! text-primary-foreground! hover:bg-primary-foreground/10! dark:border-foreground/70 dark:text-foreground! dark:hover:bg-foreground/10!"),
+                )}
+              >
                 {link.label}
               </Link>
             )}
@@ -197,7 +261,7 @@ function LandingLayoutView({
         </div>
         {open && menu.length > 0 && (
           <nav id="site-menu" aria-label={w.site} className="border-t md:hidden">
-            <ul className="mx-auto max-w-6xl px-5 py-2">
+            <ul className="mx-auto max-w-(--landing-width) px-5 py-2">
               {menu.map((m) => (
                 <li key={String(m.to)}>
                   <Link to={m.to} onClick={() => setOpen(false)} className="block py-3 font-medium">
@@ -212,7 +276,7 @@ function LandingLayoutView({
       <main className="flex-1">{children}</main>
       <footer data-part="footer" className="border-t">
         {columns ? (
-          <div className="mx-auto max-w-6xl px-5 py-12 text-sm">
+          <div className="mx-auto max-w-(--landing-width) px-5 py-12 text-sm">
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <p className="text-base font-semibold">{appName}</p>
@@ -267,7 +331,7 @@ function LandingLayoutView({
             </div>
           </div>
         ) : (
-          <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex max-w-(--landing-width) flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
             {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
             <LegalLinks links={site?.legal} />
@@ -319,7 +383,7 @@ type Banded = {
 const frame = (band: Band, padding: string) => ({
   "data-band": band === "none" ? undefined : band,
   className: cn(
-    "mx-auto my-(--section-gap) max-w-6xl rounded-lg border-(length:--section-border) px-5",
+    "mx-auto my-(--section-gap) max-w-(--landing-width) rounded-lg border-(length:--section-border) px-5",
     band === "none" && "bg-(--section-background)",
     padding,
   ),
@@ -619,7 +683,10 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
-        className={cn("mx-auto max-w-6xl px-5 py-20 sm:py-28", more && "pb-6 sm:pb-6")}
+        className={cn(
+          "mx-auto max-w-(--landing-width) px-5 py-20 sm:py-28",
+          more && "pb-6 sm:pb-6",
+        )}
       >
         {text}
         {shortcutList && <div className="mt-16 [&_nav]:mt-0 [&_nav]:px-0">{shortcutList}</div>}
@@ -659,7 +726,7 @@ function HeroView({
           )}
           <div
             className={cn(
-              "mx-auto max-w-6xl px-5 py-24 sm:py-32",
+              "mx-auto max-w-(--landing-width) px-5 py-24 sm:py-32",
               wash === "dark"
                 ? "text-white [&_p]:text-white/90"
                 : "text-primary-foreground [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90 dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90",
@@ -714,7 +781,7 @@ function HeroView({
         />
         <div
           className={cn(
-            "mx-auto w-full max-w-6xl px-5 py-16 sm:py-24 [&_h1]:max-w-2xl",
+            "mx-auto w-full max-w-(--landing-width) px-5 py-16 sm:py-24 [&_h1]:max-w-2xl",
             wash === "brand"
               ? "text-primary-foreground [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90 dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90"
               : "text-white [&_p]:text-white/90",
@@ -761,7 +828,7 @@ function HeroView({
         data-hero=""
         data-layout="stage"
         className={cn(
-          "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
+          "mx-auto grid max-w-(--landing-width) items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
           shortcutList && "pb-20 sm:pb-28",
         )}
       >
@@ -802,7 +869,7 @@ function HeroView({
         data-hero=""
         data-layout="inset"
         className={cn(
-          "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
+          "mx-auto grid max-w-(--landing-width) items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
           shortcutList && "pb-20 sm:pb-28",
         )}
       >
@@ -838,7 +905,7 @@ function HeroView({
       {...sectionHooks(texts)}
       data-hero=""
       className={cn(
-        "mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2",
+        "mx-auto grid max-w-(--landing-width) items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2",
         shortcutList && "pb-20 sm:pb-28",
       )}
     >

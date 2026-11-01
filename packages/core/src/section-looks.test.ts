@@ -229,6 +229,23 @@ test("a band whose text would not read on its surface is a warning, in the mode 
   expect(read.diagnostics[0]?.message).toMatch(
     /^On the muted band of features \(page "home"\), in light mode, the text may be hard to read\.$/,
   );
+  // The primary as text on the muted band (eyebrows, links): said by what fails, not "the text".
+  const faint = {
+    ...modern,
+    name: "faint",
+    light: { ...modern.light, primary: "#a8482a", muted: "#e2e1db" },
+  };
+  const eyebrows = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: "smithableUx: 0.1\ntheme: { preset: faint }\npages:\n  home:\n    sections: { features: { band: muted } }\n",
+    },
+    ir,
+    [faint],
+  );
+  expect(eyebrows.diagnostics.map((d) => d.message)).toEqual([
+    'On the muted band of features (page "home"), in light mode, its eyebrows and links may be hard to read.',
+  ]);
   // The built-in themes' bands all read.
   expect(
     ux("{ features: { band: muted }, items: { band: inverse }, faq: { band: primary } }")

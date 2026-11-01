@@ -140,8 +140,10 @@ export interface PageUx {
    * page-level `sections`, not the form's. */
   looks?: Record<string, SectionLook>;
   /** A landing page's header's look (HEADER_LOOKS): whether it stays at the top as the page
-   * scrolls. The frame's, not a section's. */
+   * scrolls, and whether it is drawn over the hero. The frame's, not a section's. */
   header?: HeaderLook;
+  /** How wide a landing page's content runs (LANDING_WIDTHS); unsaid, contained. */
+  width?: Exclude<LandingWidth, "contained">;
   /** The form's groups, each with a heading; fields in none follow at the end. */
   sections?: { name: string; fields: string[] }[];
   /** Short fields two abreast on wide screens. */
@@ -316,15 +318,23 @@ export const SECTION_LOOKS: Partial<
 /** How a landing page's header looks; HEADER_LOOKS has its keys and values. */
 export interface HeaderLook {
   position?: "sticky" | "scrolling";
+  over?: "hero";
 }
 
 /**
  * The looks of a landing page's header, as SECTION_LOOKS has a section's: the first value is the
- * header's own. Its position: sticky (kept at the top as the page scrolls) or scrolling (away with it).
+ * header's own (none is written as nothing). Its position: sticky (kept at the top as the page scrolls) or
+ * scrolling (away with it); over: hero (drawn over a cover or photo hero, its own surface again
+ * past it) or none.
  */
 export const HEADER_LOOKS: Record<string, readonly string[]> = {
   position: ["sticky", "scrolling"],
+  over: ["none", "hero"],
 };
+
+/** How wide a landing page's content runs: contained (72rem, today's), wide (80rem) or full. */
+export const LANDING_WIDTHS = ["contained", "wide", "full"] as const;
+export type LandingWidth = (typeof LANDING_WIDTHS)[number];
 
 /** A records section's columns in the grid layout when the ux file does not say (today's four). */
 export const RECORD_GRID_COLUMNS = 4;
@@ -829,6 +839,8 @@ export function validateUx(
         );
         const where = `page "${page.key}"`;
         const result: PageUx = {};
+        // Where the header's look is written, for a check once the sections are read too.
+        let headerNode: ParsedNode | null = null;
         const names = (node: ParsedNode | null, what: string, allowComputed: boolean) =>
           readNameList(ctx, node, what).flatMap(({ name, at }) => {
             const field = fields.find((f) => f.name === name);
@@ -866,9 +878,23 @@ export function validateUx(
             "filters",
             "frame",
             "calendar",
+            "width",
           ],
           later: ["detail"],
         })) {
+          if (part.key === "width") {
+            const width = readString(ctx, part.value, `"width" of ${where}`);
+            if (spec.pattern.kind !== "landing")
+              ctx.error(
+                part.keyNode,
+                "invalid-key",
+                `A width is for a landing page; ${page.key} is not one.`,
+              );
+            else if (width === "wide" || width === "full") result.width = width;
+            else if (width !== undefined && width !== "contained")
+              ctx.error(part.value, "invalid-value", `"width" is contained, wide or full.`);
+            continue;
+          }
           if (part.key === "calendar") {
             if (spec.pattern.kind !== "calendar") {
               ctx.error(
@@ -1103,6 +1129,7 @@ export function validateUx(
             else {
               const header = readHeaderLook(ctx, part.value, where);
               if (Object.keys(header).length) result.header = header;
+              headerNode = part.value;
             }
             continue;
           }
@@ -1340,6 +1367,34 @@ export function validateUx(
             "conflict",
             `${capitalize(where)} has both "sections" and "fieldOrder"; sections order the fields.`,
           );
+        // Over the hero: a hero whose picture runs across the width, for the header to stand on.
+        if (result.header?.over === "hero") {
+          const hero =
+            spec.pattern.kind === "landing"
+              ? spec.sections.find((s) => s.kind === "hero")
+              : undefined;
+          const layout = hero ? result.looks?.[hero.name]?.layout : undefined;
+          // The bar is fixed at the top: the hero must be what the page starts with.
+          const first =
+            spec.pattern.kind === "landing" && spec.pattern.sections[0]?.kind === "hero";
+          if (!first) {
+            ctx.error(
+              headerNode,
+              "invalid-value",
+              `"over: hero" needs the hero first on ${page.key}, under the header.`,
+            );
+            delete result.header.over;
+            if (!Object.keys(result.header).length) delete result.header;
+          } else if (layout !== "cover" && layout !== "photo") {
+            ctx.error(
+              headerNode,
+              "invalid-value",
+              `"over: hero" needs a cover or photo hero, whose picture runs across the width; ${page.key}'s hero is ${hero ? (layout ?? "split") : "missing"}.`,
+            );
+            delete result.header.over;
+            if (!Object.keys(result.header).length) delete result.header;
+          }
+        }
         ux.pages[page.key] = result;
       }
     }
@@ -1367,15 +1422,17 @@ function checkBands(
     const named = themeNamed(own.preset ?? "modern", themes);
     if (!named) continue;
     const theme = (own.background && withBackground(named, own.background)) || named;
-    for (const mode of ["light", "dark"] as const)
-      if (bandLowContrast(tokensOf(theme, mode), b.band).length)
+    for (const mode of ["light", "dark"] as const) {
+      const low = bandLowContrast(tokensOf(theme, mode), b.band);
+      if (low.length)
         ctx.warning(
           b.node,
           "band-contrast",
           // Plain words, as a theme's own contrast is said (hardToRead): no colour names, no ratios.
-          `On the ${b.band} band of ${b.section} (page "${b.page}"), in ${mode} mode, the text may be hard to read.`,
+          `On the ${b.band} band of ${b.section} (page "${b.page}"), in ${mode} mode, ${low.every((l) => l.text === "primary") ? "its eyebrows and links" : "the text"} may be hard to read.`,
           `Choose another band (setSectionLook ${b.page} ${b.section} band muted|inverse|primary|none), or a theme whose colours read on that surface.`,
         );
+    }
   }
 }
 
@@ -1396,7 +1453,8 @@ function readHeaderLook(ctx: ParseContext, node: ParsedNode | null, where: strin
       );
       continue;
     }
-    (look as Record<string, unknown>)[option.key] = value;
+    // none is the same as unsaid.
+    if (value !== "none") (look as Record<string, unknown>)[option.key] = value;
   }
   return look;
 }

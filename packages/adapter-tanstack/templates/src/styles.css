@@ -127,6 +127,11 @@
     animation-duration: 500ms;
     animation-timing-function: var(--motion-ease);
   }
+  /* A landing page's content width (its `width` in the ux file sets it on the page): 72rem unsaid. */
+  :root {
+    --landing-width: 72rem;
+  }
+
   /* A form's Save row sticks to the window's foot: a field reached by Tab or by the browser's own
      scrolling stops above it, not behind it. */
   html:has([data-kit="model-form"] [data-part="actions"]) {
@@ -147,9 +152,10 @@
     background-color: var(--band-surface);
     color: var(--band-text);
   }
+  /* Surfaces step towards the text in OKLab, as core derives them: OKLCH takes the text's hue. */
   [data-band="muted"] {
     /* A strong band (surfaces.bands) steps a little further from the page than the muted surface. */
-    --band-surface: color-mix(in oklch, var(--foreground) var(--band-step, 0%), var(--muted));
+    --band-surface: color-mix(in oklab, var(--foreground) var(--band-step, 0%), var(--muted));
     --band-text: var(--foreground);
     --band-under: var(--background);
   }
@@ -169,20 +175,20 @@
   [data-band="primary"] > * {
     --background: var(--band-surface);
     --foreground: var(--band-text);
-    --card: color-mix(in oklch, var(--band-text) 8%, var(--band-surface));
+    --card: color-mix(in oklab, var(--band-text) 8%, var(--band-surface));
     --card-foreground: var(--band-text);
-    --muted: color-mix(in oklch, var(--band-text) 14%, var(--band-surface));
+    --muted: color-mix(in oklab, var(--band-text) 14%, var(--band-surface));
     --muted-foreground: var(--band-text);
-    --secondary: color-mix(in oklch, var(--band-text) 14%, var(--band-surface));
+    --secondary: color-mix(in oklab, var(--band-text) 14%, var(--band-surface));
     --secondary-foreground: var(--band-text);
-    --accent: color-mix(in oklch, var(--band-text) 14%, var(--band-surface));
+    --accent: color-mix(in oklab, var(--band-text) 14%, var(--band-surface));
     --accent-foreground: var(--band-text);
-    --border: color-mix(in oklch, var(--band-text) 40%, var(--band-surface));
-    --input: color-mix(in oklch, var(--band-text) 55%, var(--band-surface));
+    --border: color-mix(in oklab, var(--band-text) 40%, var(--band-surface));
+    --input: color-mix(in oklab, var(--band-text) 55%, var(--band-surface));
     --primary: var(--band-text);
     --primary-foreground: var(--band-surface);
-    --primary-hover: color-mix(in oklch, var(--band-text) 85%, var(--band-surface));
-    --hover: color-mix(in oklch, var(--band-text) 12%, transparent);
+    --primary-hover: color-mix(in oklab, var(--band-text) 85%, var(--band-surface));
+    --hover: color-mix(in oklab, var(--band-text) 12%, transparent);
     --ring: var(--band-text);
   }
   /* In the site's frame the band runs across the window's width (a border image reaching out on

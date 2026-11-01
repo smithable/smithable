@@ -507,7 +507,7 @@ light:
   background: "#F4F1EC"
   foreground: "#1A1A18"
   card: "#F6F5F1"
-  primary: "#A8482A"
+  primary: "#A3462A"
   muted: "#E2E1DB"
   border: "#CFCDC5"
   accent: "#E4E2DA"

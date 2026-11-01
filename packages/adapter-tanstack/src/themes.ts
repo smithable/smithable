@@ -88,10 +88,10 @@ export function themeFont(ux: UxIR, themes: readonly ThemeIR[] = []): string {
  * surface (a row, a menu item, an outline button) takes a veil of the text color.
  */
 const HOVER = {
-  light: `  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  light: `  --hover: color-mix(in oklab, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);`,
-  dark: `  --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+  dark: `  --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);`,
 };
@@ -164,7 +164,7 @@ const TRACKING = { tight: "-0.02em", normal: "-0.01em", wide: "0.05em" };
 const SCALE = { small: "0.875", regular: "1", large: "1.2", huge: "1.45" };
 const DIVIDER = {
   light: "var(--border)",
-  strong: "color-mix(in oklch, var(--foreground) 35%, transparent)",
+  strong: "color-mix(in oklab, var(--foreground) 35%, transparent)",
   none: "transparent",
 };
 const BUTTON_RADIUS = { rounded: "calc(var(--radius) - 2px)", pill: "9999px", square: "0" };
@@ -262,17 +262,17 @@ function styleVariables(theme: ThemeIR, bodyFont: string): Record<string, string
       s.cards === "flat"
         ? "none"
         : glass
-          ? `${theme.shadow === "none" ? "" : `${theme.shadow}, `}inset 0 1px 0 color-mix(in oklch, white 22%, transparent)`
+          ? `${theme.shadow === "none" ? "" : `${theme.shadow}, `}inset 0 1px 0 color-mix(in oklab, white 22%, transparent)`
           : theme.shadow,
     "card-border": s.cards === "bordered" || glass ? "1px" : "0",
     "card-border-color":
       s.cards === "bordered"
         ? "var(--border)"
         : glass
-          ? "color-mix(in oklch, var(--foreground) 12%, transparent)"
+          ? "color-mix(in oklab, var(--foreground) 12%, transparent)"
           : "transparent",
     "card-surface": glass
-      ? `color-mix(in oklch, var(--card) ${GLASS}, transparent)`
+      ? `color-mix(in oklab, var(--card) ${GLASS}, transparent)`
       : "var(--card)",
     "card-blur": glass ? "blur(14px) saturate(1.2)" : "none",
     // How far a band's paper steps from the page past the muted surface (surfaces.bands).
@@ -352,7 +352,7 @@ ${HOVER.dark}
         dark:
           ux.chrome === "light"
             ? "  --sidebar: var(--background);\n  --sidebar-foreground: var(--foreground);"
-            : "  --sidebar: color-mix(in oklch, var(--background), black 40%);\n  --sidebar-foreground: var(--foreground);",
+            : "  --sidebar: color-mix(in oklab, var(--background), black 40%);\n  --sidebar-foreground: var(--foreground);",
       }
     : undefined;
   // A landing page's own theme: the same variables on its body (data-page), so only it changes.
@@ -401,7 +401,7 @@ ${chrome.dark}
 [data-kit="app-shell"] > aside,
 [data-kit="app-shell"] > header,
 [data-kit="drawer"] {
-  --hover: color-mix(in oklch, var(--sidebar-foreground) 12%, transparent);
+  --hover: color-mix(in oklab, var(--sidebar-foreground) 12%, transparent);
 }
 `
     : ""

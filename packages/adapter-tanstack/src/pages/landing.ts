@@ -607,10 +607,18 @@ ${loaded ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ?
       : link(appPage?.route, "w.openApp(app.name)", true).slice(1, -1);
   imports.add("#/generated/app", "app");
   // The header's look from smithable.ux.yml (HEADER_LOOKS), e.g. kept at the top as the page scrolls.
-  const headerLook = Object.entries(ux.pages[page.id]?.header ?? {});
+  // Over the hero, the bar stands on the hero's own wash: its overlay, else brand on a cover and
+  // dark on a photo (as the hero draws it).
+  const headerLook = Object.entries(ux.pages[page.id]?.header ?? {}).map(([key, value]) =>
+    key === "over"
+      ? [key, heroLook?.overlay ?? (heroLook?.layout === "cover" ? "brand" : "dark")]
+      : [key, value],
+  );
   const headerProp = headerLook.length
     ? ` header={{ ${headerLook.map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(", ")} }}`
     : "";
+  const width = ux.pages[page.id]?.width;
+  const widthProp = width ? ` width="${width}"` : "";
   return `${HEADER}${imports.render()}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  component: ${component},
@@ -618,7 +626,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  comp
 
 function ${component}() {
 ${loaded ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName={app.name}${t.logo} link={${header}}${headerProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
+    <LandingLayout appName={app.name}${t.logo} link={${header}}${headerProp}${widthProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );

@@ -136,7 +136,7 @@ test("the style layer's new fields render, in the combinations where misses woul
     new RegExp(`:root\\[data-appearance="dark"\\] \\{[^}]*--${name}: ([^;]+);`).exec(text)?.[1];
 
   const glassy = css("glassy");
-  expect(root(glassy, "card-surface")).toBe("color-mix(in oklch, var(--card) 65%, transparent)");
+  expect(root(glassy, "card-surface")).toBe("color-mix(in oklab, var(--card) 65%, transparent)");
   expect(root(glassy, "card-blur")).toBe("blur(14px) saturate(1.2)");
   expect(root(glassy, "band-step")).toBe("12%");
   // One mode by design: the same colours under both, and no appearance to choose.
