@@ -418,7 +418,9 @@ export function Calendar({
     if (search.open === undefined && dialog.open) dialog.close();
   }, [search.open]);
   // Elsewhere in time, the time of day chosen stays chosen.
-  const go = (to: CalendarSearch) => onNavigate(search.time ? { ...to, time: search.time } : to);
+  // Previous, Today, Next and the views move the days; the page's filters and the time of day stay.
+  const { day: _day, week: _week, month: _month, from: _from, open: _open, ...stays } = search;
+  const go = (to: CalendarSearch) => onNavigate({ ...stays, ...to });
   const closed = () => {
     if (search.open === undefined) return;
     if (pushed.current) {
