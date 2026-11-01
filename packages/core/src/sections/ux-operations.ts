@@ -433,6 +433,33 @@ const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: stri
   },
 };
 
+const setLandingWidth: Operation<{ page: string; width: "contained" | "wide" | "full" }> = {
+  name: "setLandingWidth",
+  summary:
+    "How wide a landing page's content runs: contained (72rem, the default), wide (80rem) or full (edge to edge).",
+  schema: {
+    type: "object",
+    required: ["page", "width"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      width: { enum: ["contained", "wide", "full"], description: "contained, wide or full." },
+    },
+  },
+  positional: ["page", "width"],
+  describe: ({ page, width }) =>
+    `Run the ${page} page's content ${width === "full" ? "edge to edge" : width}`,
+  destructive: () => false,
+  apply(editors, { page, width }, ir) {
+    const found = ir.pages.find((p) => p.id === page);
+    if (!found) throw new OperationError(`There is no page named "${page}".`);
+    if (found.pattern.kind !== "landing")
+      throw new OperationError(`A width is for a landing page; ${page} is not one.`);
+    put(editors.ux, ["pages", page, "width"], width === "contained" ? undefined : width);
+    return [];
+  },
+};
+
 const setRecordList: Operation<{
   page: string;
   field: string;
@@ -668,7 +695,12 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
         );
       if (value !== "default" && !values.includes(value))
         throw new OperationError(`"${key}" of a header is one of ${values.join(", ")}.`);
-      put(editors.ux, ["pages", page, "header", key], value === "default" ? undefined : value);
+      put(
+        editors.ux,
+        ["pages", page, "header", key],
+        // none (over: none) is written as nothing.
+        value === "default" || value === "none" ? undefined : value,
+      );
       return [];
     }
     const kind = found.sections.find((s) => s.name === section && !s.own)?.kind;
@@ -1142,6 +1174,7 @@ export const uxOperations: AnyOperation[] = [
   setColumns,
   setTotals,
   setRecordList,
+  setLandingWidth,
   setRecordSummary,
   setRecordLines,
   setFieldOrder,

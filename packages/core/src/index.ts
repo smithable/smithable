@@ -304,6 +304,8 @@ export {
   HEADER_LOOKS,
   ICONS,
   inlineFields,
+  LANDING_WIDTHS,
+  type LandingWidth,
   pageIcon,
   RECORD_LISTS,
   type RecordList,
