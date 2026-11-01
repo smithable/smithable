@@ -265,6 +265,7 @@ export const w = {
   person: "Person",
   phone: "Telefon",
   pictureKinds: "Välj en bild (JPEG, PNG, WebP eller HEIC).",
+  pictureOf: (n: number, of: number) => `Bild ${n} av ${of}`,
   pictureNotAdded: "Bilden kunde inte läggas till.",
   pictureNotRead: "Bilden kunde inte läsas.",
   pictureRefused: "Bilden avvisades.",

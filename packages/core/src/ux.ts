@@ -164,6 +164,8 @@ export interface PageUx {
   lists?: Record<string, RecordList>;
   /** The record's title row carries its summary: the status badge, the amount, the key dates. */
   recordHeader?: "summary";
+  /** A record's pictures on its read-only view: large beside the fields, or across the top (A 215). */
+  recordPictures?: "aside" | "top";
   /** The same summary in a panel beside the form (under it on a phone, before the lists). */
   formAside?: "summary";
   /** The record's conversation before its form (A 215): the thread an agent opened the case for. */
@@ -211,6 +213,16 @@ export function inlineFields(target: ModelIR, parent: string): FieldIR[] {
       f.name !== target.ownedBy &&
       !(f.type.kind === "relation" && f.type.many) &&
       !(f.type.kind === "scalar" && ["file", "files", "picture", "pictures"].includes(f.type.name)),
+  );
+}
+
+/** The field a record's pictures come from (record.pictures, A 215): its first picture field, by type. */
+export function recordPicture(model: ModelIR): FieldIR | undefined {
+  return model.fields.find(
+    (f) =>
+      !f.formula &&
+      f.type.kind === "scalar" &&
+      (f.type.name === "picture" || f.type.name === "pictures"),
   );
 }
 
@@ -487,10 +499,12 @@ function readRecord(
   detail?: NamePartIR[];
   header?: "summary";
   first?: "thread";
+  pictures?: "aside" | "top";
 } {
   const lists: Record<string, RecordList> = {};
   let header: "summary" | undefined;
   let first: { at: ParsedNode } | undefined;
+  let pictures: "aside" | "top" | undefined;
   let subtitle: NamePartIR | undefined;
   let detail: NamePartIR[] | undefined;
   // A line under the name: a part as namedBy takes them, checked against the page's model.
@@ -516,7 +530,7 @@ function readRecord(
     mapEntries(ctx, node, `the record of ${where}`) ?? [],
     `the record of ${where}`,
     {
-      allowed: ["lists", "subtitle", "detail", "header", "first"],
+      allowed: ["lists", "subtitle", "detail", "header", "first", "pictures"],
     },
   )) {
     if (option.key === "first") {
@@ -524,6 +538,22 @@ function readRecord(
       if (look === "thread") first = { at: option.value as ParsedNode };
       else if (look !== undefined && look !== "form")
         ctx.error(option.value, "invalid-value", `"first" of a record is form or thread.`);
+      continue;
+    }
+    if (option.key === "pictures") {
+      const look = readString(ctx, option.value, `"pictures" of the record of ${where}`);
+      if (look !== "aside" && look !== "top") {
+        if (look !== undefined && look !== "none")
+          ctx.error(option.value, "invalid-value", `"pictures" of a record is aside, top or none.`);
+        continue;
+      }
+      if (model && !recordPicture(model))
+        ctx.error(
+          option.value,
+          "invalid-value",
+          `${model.name} has no picture or pictures field to show ${look === "aside" ? "beside its fields" : "across its top"}.`,
+        );
+      else pictures = look;
       continue;
     }
     if (option.key === "header") {
@@ -689,6 +719,7 @@ function readRecord(
     ...(detail ? { detail } : {}),
     ...(header ? { header } : {}),
     ...(first && threaded ? { first: "thread" as const } : {}),
+    ...(pictures ? { pictures } : {}),
   };
 }
 
@@ -1239,6 +1270,7 @@ export function validateUx(
             if (record.detail?.length) result.detail = record.detail;
             if (record.header) result.recordHeader = record.header;
             if (record.first) result.recordFirst = record.first;
+            if (record.pictures) result.recordPictures = record.pictures;
             continue;
           }
           if (part.key === "icon") {

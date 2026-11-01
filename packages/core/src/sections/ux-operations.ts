@@ -559,6 +559,33 @@ const setRecordList: Operation<{
   },
 };
 
+const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none" }> = {
+  name: "setRecordPictures",
+  summary:
+    "Show a record's pictures large on its view: aside (beside the fields), top (across the top, with a strip to switch them) or none (among the fields, the default).",
+  schema: {
+    type: "object",
+    required: ["page", "look"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      look: { enum: ["aside", "top", "none"], description: "aside, top or none." },
+    },
+  },
+  positional: ["page", "look"],
+  describe: ({ page, look }) =>
+    look === "none"
+      ? `Show the ${page} page's pictures among the fields`
+      : `Show the ${page} page's pictures ${look === "aside" ? "beside the fields" : "across the top"}`,
+  destructive: () => false,
+  apply(editors, { page, look }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    put(editors.ux, ["pages", page, "record", "pictures"], look === "none" ? undefined : look);
+    return [];
+  },
+};
+
 const setRecordSummary: Operation<{
   page: string;
   place: "header" | "aside";
@@ -1269,6 +1296,7 @@ export const uxOperations: AnyOperation[] = [
   setLandingWidth,
   setRecordSummary,
   setRecordFirst,
+  setRecordPictures,
   setRecordLines,
   setFieldOrder,
   setTone,
