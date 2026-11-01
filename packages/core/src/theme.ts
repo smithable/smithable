@@ -455,7 +455,12 @@ export function deriveTokens(
     input:
       given.input ??
       readable(
-        readable(given.border ?? towards(background, foreground, 0.3), card, foreground, 3),
+        readable(
+          given.border ?? towards(background, foreground, 0.3),
+          card,
+          given["card-foreground"] ?? foreground,
+          3,
+        ),
         background,
         foreground,
         3,

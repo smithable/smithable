@@ -278,6 +278,11 @@ test("a field's edge stands at 3:1 on the card and the page, from a quiet border
     expect(contrast(t.input, t.card)).toBeGreaterThanOrEqual(3);
     expect(contrast(t.input, t.background)).toBeGreaterThanOrEqual(3);
   }
+  const plain = deriveTokens(
+    { background: "#ffffff", foreground: "#111111", primary: "#2f6b3a" },
+    "light",
+  );
+  expect(contrast(plain.input, plain.background)).toBeGreaterThanOrEqual(3);
   // An input the theme names stays as it is.
   expect(
     deriveTokens(
