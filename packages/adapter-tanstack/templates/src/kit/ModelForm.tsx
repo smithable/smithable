@@ -253,6 +253,12 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
       const facts = inUseFacts(error);
       if (facts) setInUse(facts);
       else setFailure(failureMessage(ui, error, app.timeZone));
+      // A value another record has: its field says so too, as a required one left empty does.
+      const taken = takenField(ui, error);
+      if (taken) {
+        setErrors((before) => ({ ...before, [taken.name]: w.alreadyHas(ui.label, taken.label) }));
+        document.getElementById(`${formId}field-${taken.name}`)?.focus();
+      }
       return false;
     } finally {
       setBusy(false);
@@ -715,13 +721,16 @@ function friendly(field: FieldUi, issue: z.core.$ZodIssue, value: unknown): stri
   }
 }
 
+/** The field whose value another record has, from a "taken:<column>" refusal. */
+function takenField(ui: ModelUi, error: unknown) {
+  const column = /^taken:(\w+)$/.exec(error instanceof Error ? error.message : "")?.[1];
+  return ui.fields.find((f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column);
+}
+
 /** Explains server errors (see refusal in access.ts): a unique field taken, a record in use. */
 function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string {
   const message = error instanceof Error ? error.message : "";
-  const column = /^taken:(\w+)$/.exec(message)?.[1];
-  const field = ui.fields.find(
-    (f) => f.name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) === column,
-  );
+  const field = takenField(ui, error);
   if (field) return w.alreadyHas(ui.label, field.label);
   if (message === "in-use") return w.stillUsed(ui.label);
   const noRight = /^no-right:(.+)$/.exec(message)?.[1];

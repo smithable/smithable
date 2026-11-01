@@ -387,8 +387,22 @@ async function calendarFlow(base) {
         throw new Error(`classes at ${(await afternoon()).join(", ")} under Morning`);
       await page.waitForTimeout(100);
     }
+    // A click moves from the days drawn on the page: each waits for the last move to be drawn,
+    // not only for the address (a click in between moved from the old days, A 222).
+    const moved = async (from, back) => {
+      for (
+        let i = 0;
+        back ? (await week.innerText()) !== from : (await week.innerText()) === from;
+        i++
+      ) {
+        if (i === 100 * P) throw new Error(`the days stayed ${await week.innerText()}`);
+        await page.waitForTimeout(100);
+      }
+    };
+    const thisWeek = await week.innerText();
     await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForURL(/[?&]time=morning/);
+    await moved(thisWeek);
+    if (!page.url().includes("time=morning")) throw new Error("Next dropped the time of day");
     await page.getByRole("button", { name: "Any time", exact: true }).click();
     // The page's own filters (A 215 5b): a class type's chip shows only its classes, in the address.
     const types = page.locator('[data-kit="filters"] fieldset', {
@@ -407,16 +421,16 @@ async function calendarFlow(base) {
       await page.waitForTimeout(100);
     }
     // Next and Previous keep the page's filter (A 222), and Previous comes back to the same days.
-    const filtered = new URL(page.url()).searchParams;
-    const same = (url, from) =>
-      url.searchParams.get("classType") === filtered.get("classType") &&
-      url.searchParams.get("from") === from;
+    const kind = new URL(page.url()).searchParams.get("classType");
+    const days = await week.innerText();
     await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForURL(
-      (url) => !same(url, filtered.get("from")) && same(url, url.searchParams.get("from")),
-    );
+    await moved(days);
+    if (new URL(page.url()).searchParams.get("classType") !== kind)
+      throw new Error("Next dropped the class type");
     await page.getByRole("button", { name: "Previous" }).click();
-    await page.waitForURL((url) => same(url, filtered.get("from")));
+    await moved(days, true);
+    if (new URL(page.url()).searchParams.get("classType") !== kind)
+      throw new Error("Previous dropped the class type");
     await types.getByRole("button", { name: chosen }).click();
     await page.waitForURL((url) => !url.search.includes("classType="));
     await page.getByRole("button", { name: "Previous" }).click();
@@ -6401,6 +6415,12 @@ async function browserFlow(dir, base) {
     await page.getByRole("textbox", { name: "Credit limit" }).fill("1500");
     await page.getByRole("button", { name: "Create customer" }).click();
     await expectText("a taken email is explained", "Another customer already has this email.");
+    // The field itself is marked, as an empty required one is.
+    if (
+      (await page.getByRole("textbox", { name: "Email" }).getAttribute("aria-invalid")) !== "true"
+    )
+      throw new Error("the taken email field is not marked invalid");
+    console.log("  ✓ browser: the taken email field is marked invalid");
 
     await page.getByRole("textbox", { name: "Email" }).fill("hello@mariehamn-marine.example.com");
     await page.getByRole("button", { name: "Create customer" }).click();
