@@ -63,7 +63,7 @@ const AUTOMATIC: Record<string, { key: string; label: string }> = {
  * control for the kit's Filters, and the choices a reference filter offers. References to
  * people who sign in (owner) are not filters yet: listing them would show every user's name.
  */
-function filterCode(
+export function filterCode(
   page: PageIR,
   model: ModelIR,
   t: Texts,

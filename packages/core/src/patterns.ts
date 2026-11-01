@@ -594,6 +594,8 @@ const calendar: PagePattern<"calendar"> = {
     const path = (key: string) => ["pages", page.id, "calendar", key];
     // Where the calendar uses the field: its own keys, or a duration one reference away.
     const own = f.model === p.model;
+    // Its filters (A 215 5b) follow a renamed field, as a list's do, and lose a removed one.
+    if (own) followInList(spec, ["pages", page.id, "filters"], f.from, f.to, 3);
     const uses: [string, string][] = [];
     if (own)
       for (const key of ["starts", "ends", "title"] as const)

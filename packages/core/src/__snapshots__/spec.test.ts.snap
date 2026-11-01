@@ -1555,6 +1555,10 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       ],
     },
     {
+      "filters": [
+        "classType",
+        "instructor",
+      ],
       "id": "schedule",
       "pattern": {
         "duration": "classType.durationMinutes",
