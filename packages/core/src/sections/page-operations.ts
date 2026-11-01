@@ -1010,7 +1010,8 @@ const addSection: Operation<{
     else spec.add(["pages", page], path[2] as string, { [section]: options });
     // The footer stays the page's last part: a new section goes above it.
     const footer = existing.sections.find((s) => s.kind === "footer" && !s.own);
-    if (footer && named !== "footer") spec.move(path, section, { before: footer.name });
+    if (footer && named !== "footer" && spec.has([...path, footer.name]))
+      spec.move(path, section, { before: footer.name });
     return [];
   },
 };
