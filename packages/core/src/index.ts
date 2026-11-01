@@ -56,6 +56,7 @@ export {
   reservedDomain,
   validateAuth,
 } from "./auth.js";
+export { type BrandColors, brandColors } from "./brand.js";
 export { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToHex, rgbToOklch } from "./color.js";
 export { defaultColumns } from "./columns.js";
 export { AUTH_SCHEMA, COMPANION_SCHEMAS, CONTENT_SCHEMA, UX_SCHEMA } from "./companion-schemas.js";

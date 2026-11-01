@@ -322,3 +322,22 @@ test("a records section may be a ledger: ruled rows with the amount as a figure 
     "warning",
   ]);
 });
+
+test("a band is checked with the brand's colours when the ux file names a brand colour", () => {
+  const modern = themeNamed("modern");
+  if (!modern) throw new Error("no modern");
+  // The preset's own primary is too faint for eyebrows on its muted band, but the brand colour
+  // the app will have is not: the app's colours are checked, not the preset's (kiosk, 2026-11-01).
+  const faint = { ...modern, name: "faint", light: { ...modern.light, primary: "#9aa3b8" } };
+  const ux = (brand: string) =>
+    validateUx(
+      {
+        path: "smithable.ux.yml",
+        text: `smithableUx: 0.1\ntheme: { preset: faint${brand} }\npages:\n  home:\n    sections: { features: { band: muted } }\n`,
+      },
+      ir,
+      [faint],
+    );
+  expect(ux("").diagnostics.map((d) => d.code)).toEqual(["band-contrast"]);
+  expect(ux(', brand: { primary: "#1f3a2e" }').diagnostics).toEqual([]);
+});

@@ -1,5 +1,6 @@
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import type { AuthIR } from "./auth.js";
+import { brandColors } from "./brand.js";
 import {
   checkKeys,
   mapEntries,
@@ -1423,7 +1424,14 @@ function checkBands(
     if (!named) continue;
     const theme = (own.background && withBackground(named, own.background)) || named;
     for (const mode of ["light", "dark"] as const) {
-      const low = bandLowContrast(tokensOf(theme, mode), b.band);
+      // With a brand colour the app's primary, ring and accent are the brand's (brandColors), so
+      // the band is checked with those, not the preset's own (kiosk's false warning, 2026-11-01).
+      const tokens = tokensOf(
+        theme,
+        mode,
+        own.primary ? brandColors(own.primary, theme, mode) : {},
+      );
+      const low = bandLowContrast(tokens, b.band);
       if (low.length)
         ctx.warning(
           b.node,
