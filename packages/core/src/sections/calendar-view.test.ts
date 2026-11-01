@@ -30,7 +30,7 @@ test("a calendar's view (week unsaid, agenda or days) and its own filter, timeOf
     '"view" of a calendar is week, agenda or days.',
   );
   expect(read("{ filters: [level] }").diagnostics[0]?.message).toBe(
-    'A calendar\'s own filter is timeOfDay; "level" is not one.',
+    "A calendar's own filter is timeOfDay; \"level\" is not one: a field goes in the page's filters in smithable.yml.",
   );
 });
 

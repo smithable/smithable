@@ -16,6 +16,7 @@ pages:
   # The members' pages in the site frame, for staff too (page-sections.md §4).
   schedule:
     frame: site
+    filters: { look: chips }           # every class type and teacher a chip, a teacher with their portrait
     # Each class coloured by its level, its places a dot each (look-gap §4).
     calendar: { colorBy: classType.level, capacity: { left: placesLeft, of: capacity, look: pips }, view: days, filters: [timeOfDay] }   # the coming days as lists, a timetable; morning, afternoon or evening
   my-bookings: { frame: site }
