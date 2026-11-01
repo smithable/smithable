@@ -61,6 +61,11 @@ export interface UxIR {
    * text colour as its surface). Unsaid, the theme's own menu colours.
    */
   chrome?: (typeof CHROMES)[number];
+  /**
+   * How the menu marks the page that is open (A 215): filled (the primary behind it), subtle (a
+   * tint behind it) or underline. Unsaid, the menu's own: filled in the sidebar, underlined in a bar.
+   */
+  menuActive?: (typeof ACTIVES)[number];
   /** Ask's manner (docs/design/ask-defaults.md §2): a fixed set of prompt lines each, plain by default. */
   assistant: { voice: Voice };
 }
@@ -68,6 +73,7 @@ export interface UxIR {
 /** Where the menu sits, and its surface (look-gap.md §4). */
 export const NAVIGATIONS = ["sidebar", "topbar", "topbar-centered"] as const;
 export const CHROMES = ["light", "dark"] as const;
+export const ACTIVES = ["filled", "subtle", "underline"] as const;
 
 /** The assistant's voices: plain (short, no pleasantries), friendly, formal. */
 export const VOICES = ["plain", "friendly", "formal"] as const;
@@ -288,6 +294,8 @@ export interface SectionLook {
   overlay?: "brand" | "dark";
   /** A hero's line over its title from the contact section: its city, or its hours' first line. */
   eyebrow?: "address" | "hours";
+  /** A hero's height: only its content's, or the window's under the header (A 215). */
+  height?: "auto" | "full";
   /** A hero's row of figures: the count of each model's records the viewer may read. */
   facts?: string[];
   /**
@@ -334,6 +342,8 @@ export const SECTION_LOOKS: Partial<
     eyebrow: ["address", "hours"],
     facts: "models",
     stage: "page",
+    // Unsaid, the layout's own height; auto, the content's; full, the window's under the header.
+    height: ["auto", "full"],
   },
   features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
@@ -818,6 +828,7 @@ export function validateUx(
       "assistant",
       "navigation",
       "chrome",
+      "menuActive",
     ],
     later: ["menus", "sections"],
   });
@@ -825,8 +836,9 @@ export function validateUx(
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
     if (key === "aiBadge") ux.aiBadge = readBoolean(ctx, value, '"aiBadge"') ?? true;
-    if (key === "navigation" || key === "chrome") {
-      const allowed: readonly string[] = key === "navigation" ? NAVIGATIONS : CHROMES;
+    if (key === "navigation" || key === "chrome" || key === "menuActive") {
+      const allowed: readonly string[] =
+        key === "navigation" ? NAVIGATIONS : key === "chrome" ? CHROMES : ACTIVES;
       const said = readString(ctx, value, `"${key}"`);
       if (said !== undefined && allowed.includes(said)) ux[key] = said as never;
       else if (said !== undefined)

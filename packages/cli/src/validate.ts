@@ -487,6 +487,10 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
     lines.push(
       `${page.id} summary (${where}): status ${status?.name ?? "none"}, amount ${amount?.name ?? "none"}, dates ${dates.map((d) => d.name).join(", ") || "none"} (the first choice with tones, money, dates)`,
     );
+    if (look.recordHeader && look.formAside)
+      lines.push(
+        `${page.id} summary: ${status ? "the status in the title row, " : "no title row (no status), "}the amount and dates beside the form (both said)`,
+      );
   }
   // Where the menu sits and its surface (look-gap §4): the ux file's word, else the default.
   lines.push(ux?.navigation ? `menu: ${ux.navigation} (navigation)` : "menu: sidebar (unsaid)");

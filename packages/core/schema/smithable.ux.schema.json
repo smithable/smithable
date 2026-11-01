@@ -450,6 +450,13 @@
                     "stage": {
                       "type": "string",
                       "description": "A stage hero's list page, drawn with its first six records; unsaid, the first list page in the navigation."
+                    },
+                    "height": {
+                      "enum": [
+                        "auto",
+                        "full"
+                      ],
+                      "description": "auto: only as tall as its content; full: the window's height under the header; unsaid, the layout's own."
                     }
                   }
                 },
@@ -753,6 +760,14 @@
         "topbar-centered"
       ],
       "description": "Where the menu sits on a wide screen: sidebar (the default), topbar (a bar across the top, the name at the start) or topbar-centered (the name centred between the links)."
+    },
+    "menuActive": {
+      "enum": [
+        "filled",
+        "subtle",
+        "underline"
+      ],
+      "description": "How the menu marks the open page: filled (the primary behind it), subtle (a tint behind it) or underline; unsaid, filled in the sidebar and underlined in a bar."
     },
     "chrome": {
       "enum": [

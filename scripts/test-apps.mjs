@@ -1182,6 +1182,28 @@ async function kioskLandingFlow(dir, base) {
     console.log(
       "  ✓ browser: over a photo hero the header stands on its wash until the hero has passed, and the page runs 80rem wide",
     );
+    // The hero's height (A 215): the whole window under a header over it, or only its content's.
+    for (const [value, fits] of [
+      ["full", (h, vh) => Math.abs(h - vh) <= 2],
+      ["auto", (h, vh) => h < 0.8 * vh - 8],
+    ]) {
+      const done = smithable(dir, "op", "setSectionLook", "where", "hero", "height", value);
+      if (done.code !== 0) throw new Error(`setSectionLook height ${value}: ${done.out}`);
+      changed++;
+      const vh = page.viewportSize()?.height ?? 0;
+      for (let i = 0; ; i++) {
+        // The app reloads itself after the change: a load it interrupts is one more try.
+        await open(page, `${base}/where`).catch(() => {});
+        const h = (await page.locator("[data-hero]").boundingBox())?.height ?? 0;
+        if (fits(h, vh)) break;
+        if (i === 40 * P)
+          throw new Error(`a hero of height ${value} is ${h}px in a ${vh}px window`);
+        await page.waitForTimeout(500);
+      }
+    }
+    console.log(
+      "  ✓ browser: a hero's height full fills the window under a header over it, and auto keeps it to its content",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -5125,11 +5147,18 @@ async function addChildFlow(base) {
     const rows = page.locator('[data-kit="inline-rows"]');
     const sum = rows.locator('[data-part="sum"]');
     await sum.waitFor({ timeout: 10000 * P });
-    for (const place of ["header", "aside"])
+    // The total in the panel beside the form; the title row keeps the status alone (A 221).
+    await page
+      .locator('[data-kit="record-summary"][data-place="aside"]')
+      .getByText(await sum.innerText())
+      .waitFor({ timeout: 5000 * P });
+    if (
       await page
-        .locator(`[data-kit="record-summary"][data-place="${place}"]`)
+        .locator('[data-kit="record-summary"][data-place="header"]')
         .getByText(await sum.innerText())
-        .waitFor({ timeout: 5000 * P });
+        .count()
+    )
+      throw new Error("the title row repeats the total the panel shows");
     const before = await sum.innerText();
     const fresh = rows.locator('[data-part="new-row"]');
     await fresh.getByRole("textbox", { name: "Description", exact: true }).fill("Added in place");
@@ -5155,7 +5184,7 @@ async function addChildFlow(base) {
       await page.waitForTimeout(100);
     }
     console.log(
-      "  ✓ browser: an invoice's lines are edited in place: added, changed and removed row by row, the total and the summary following",
+      "  ✓ browser: an invoice's lines are edited in place: added, changed and removed row by row, the total and the summary following; the total stands in the panel only",
     );
   } catch (error) {
     console.log(
