@@ -675,7 +675,8 @@ function readRecord(
       lists[pair.key] = look as RecordList;
     }
   }
-  if (first && !Object.values(lists).includes("thread"))
+  const threaded = Object.values(lists).includes("thread");
+  if (first && !threaded)
     ctx.error(
       first.at,
       "invalid-value",
@@ -687,7 +688,7 @@ function readRecord(
     ...(subtitle ? { subtitle } : {}),
     ...(detail ? { detail } : {}),
     ...(header ? { header } : {}),
-    ...(first ? { first: "thread" as const } : {}),
+    ...(first && threaded ? { first: "thread" as const } : {}),
   };
 }
 

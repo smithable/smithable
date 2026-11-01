@@ -372,7 +372,7 @@ export const UX_SCHEMA: JsonSchema = {
               first: {
                 enum: ["form", "thread"],
                 description:
-                  "What the page shows first: form (the default), or thread, the list shown as a conversation before the form.",
+                  "What the page shows first: form (the default), or thread, the lists shown as conversations before the form.",
               },
               subtitle: {
                 type: "string",

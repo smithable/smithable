@@ -497,8 +497,8 @@ export function detailRoute(
   // Each inline list's choices for its rows' references, loaded with the record.
   const rowOptions: string[] = [];
   // A thread the page leads with (record.first, A 215): drawn before the form, not after it.
-  const leading = new Set<string>();
-  const sections = lists(model).map((field) => {
+  const leading = new Set<number>();
+  const sections = lists(model).map((field, i) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
     imports.set(tn.module, [...(imports.get(tn.module) ?? []), tn.ui]);
@@ -556,7 +556,7 @@ export function detailRoute(
           reply={${reply}}
         />
       </section>`;
-      if (lead) leading.add(markup);
+      if (lead) leading.add(i);
       return markup;
     }
     // Rows edited in place (A 215), each saved on its own through the related model's own
@@ -853,7 +853,10 @@ function ${component}() {
       )}`
           : ""
       }
-${[...leading].map((s) => `${s}\n`).join("")}      ${
+${sections
+  .filter((_, i) => leading.has(i))
+  .map((s) => `${s}\n`)
+  .join("")}      ${
     look?.formAside
       ? `<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
       `
@@ -900,7 +903,7 @@ ${
       </section>
 `
     : ""
-}${contact ? `      ${contact.element}\n` : ""}${sections.filter((s) => !leading.has(s)).join("\n")}${
+}${contact ? `      ${contact.element}\n` : ""}${sections.filter((_, i) => !leading.has(i)).join("\n")}${
   history
     ? `
       {history && history.length > 0 && (

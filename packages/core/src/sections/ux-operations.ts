@@ -547,6 +547,14 @@ const setRecordList: Operation<{
       throw new OperationError(`There is no page named "${page}".`);
     // A table is the default: setting it takes the key away, and an empty record block with it.
     put(editors.ux, ["pages", page, "record", "lists", field], look === "table" ? undefined : look);
+    // A page that led with its thread leads with its form once no thread is left.
+    const lists = ["pages", page, "record", "lists"];
+    if (
+      !Object.values(editors.ux.has(lists) ? (editors.ux.get(lists) as object) : {}).includes(
+        "thread",
+      )
+    )
+      put(editors.ux, ["pages", page, "record", "first"], undefined);
     return [];
   },
 };

@@ -47,4 +47,11 @@ test("a record page leads with its thread or its form (A 215)", () => {
       first: "form",
     }),
   ).toMatchObject({ ok: true, files: { ux } });
+  // The last thread shown as a table, or its field removed, takes first with it.
+  const table = applyOperation({ spec, ux: set.files.ux as string }, "setRecordList", {
+    page: "cases",
+    field: "messages",
+    look: "table",
+  });
+  expect(table).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
 });
