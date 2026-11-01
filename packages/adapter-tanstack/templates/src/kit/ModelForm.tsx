@@ -307,7 +307,12 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
       >
         {!inline && (
           <Label htmlFor={id} id={`${id}-label`} data-part="label">
-            <span {...textMarker(`models.${ui.model}.fields.${field.name}.label`)}>
+            <span
+              {...textMarker(
+                field.text ??
+                  `models.${ui.model}.fields.${field.relation?.key ?? field.name}.label`,
+              )}
+            >
               {field.label}
             </span>
             {requiredNow(field, storedValues(ui, inputs, app.timeZone)) && (

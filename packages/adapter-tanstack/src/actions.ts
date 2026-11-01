@@ -481,6 +481,14 @@ export function standardActionModule(
   const n = names(modelNamed(ir, action.on), t);
   const when = whenKeys(action, ir);
   const asked = askedKeys(action, ir);
+  // Where an asked field's label is kept: under its own model, by its name in the spec (a
+  // reference's, not its key's).
+  const labelText = (x: { model: string; field: string }) => {
+    const own = ir.models
+      .find((m) => m.name === x.model)
+      ?.fields.find((f) => f.name === x.field || dataKey(f) === x.field);
+    return `models.${x.model}.fields.${own?.name ?? x.field}.label`;
+  };
   const models = [...new Set(asked.map((x) => x.model))].map((m) => names(modelNamed(ir, m), t));
   const named = (m: string) => names(modelNamed(ir, m), t);
   const choices = askOptions(action, ir, t);
@@ -504,7 +512,7 @@ export const ${a.askUi}: ModelUi = {
   titleField: "id",
   columns: [],
   fields: [
-${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === ${JSON.stringify(x.field)})${x.key === x.field ? "" : `.map((f) => ({ ...f, name: ${JSON.stringify(x.key)} }))`}${required.has(x.key) ? ".map((f) => ({ ...f, required: true }))" : ""},`).join("\n")}
+${asked.map((x) => `    ...${named(x.model).ui}.fields.filter((f) => f.name === ${JSON.stringify(x.field)}).map((f) => ({ ...f, ${x.key === x.field ? "" : `name: ${JSON.stringify(x.key)}, `}text: ${JSON.stringify(labelText(x))} }))${required.has(x.key) ? ".map((f) => ({ ...f, required: true }))" : ""},`).join("\n")}
   ],
   sections: ${literal(
     [...new Set(asked.filter((x) => x.key !== x.field).map((x) => x.model))].map((m) => ({
