@@ -2250,6 +2250,10 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           "own": true,
         },
       ],
+      "sortable": [
+        "name",
+        "createdAt",
+      ],
     },
     {
       "filters": [
@@ -2273,6 +2277,11 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           "own": true,
         },
       ],
+      "sortable": [
+        "placedAt",
+        "total",
+        "number",
+      ],
     },
     {
       "filters": [
@@ -2295,6 +2304,9 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           "name": "crud",
           "own": true,
         },
+      ],
+      "sortable": [
+        "dueOn",
       ],
     },
     {
@@ -2798,6 +2810,10 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
             "kind": "callToAction",
             "name": "callToAction",
           },
+          {
+            "kind": "footer",
+            "name": "footer",
+          },
         ],
       },
       "route": "/",
@@ -2823,6 +2839,10 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "button": "overview",
           "kind": "callToAction",
           "name": "callToAction",
+        },
+        {
+          "kind": "footer",
+          "name": "footer",
         },
       ],
     },
@@ -2901,6 +2921,10 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "Invoice",
       },
       "route": "/invoices",
+      "search": [
+        "number",
+        "client",
+      ],
       "sections": [
         {
           "kind": "crud",
@@ -2908,6 +2932,11 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "name": "crud",
           "own": true,
         },
+      ],
+      "sortable": [
+        "issuedOn",
+        "dueOn",
+        "number",
       ],
     },
     {
@@ -2917,6 +2946,10 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         "model": "Client",
       },
       "route": "/clients",
+      "search": [
+        "name",
+        "email",
+      ],
       "sections": [
         {
           "kind": "crud",
@@ -2925,19 +2958,22 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
           "own": true,
         },
       ],
+      "sortable": [
+        "name",
+        "createdAt",
+      ],
     },
     {
-      "id": "invoice-lines",
+      "id": "privacy",
       "pattern": {
-        "kind": "crud",
-        "model": "InvoiceLine",
+        "kind": "legal",
+        "legal": "privacy",
       },
-      "route": "/invoice-lines",
+      "route": "/privacy",
       "sections": [
         {
-          "kind": "crud",
-          "model": "InvoiceLine",
-          "name": "crud",
+          "kind": "legal",
+          "name": "legal",
           "own": true,
         },
       ],

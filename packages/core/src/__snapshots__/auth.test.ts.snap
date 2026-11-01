@@ -121,6 +121,7 @@ exports[`the examples > invoicing is valid with its auth file 1`] = `
     "create": [],
     "pages": [
       "home",
+      "privacy",
     ],
     "read": [],
     "readWhere": {},

@@ -97,6 +97,7 @@ pages:
       pricing:
       faq:
       callToAction: { button: overview }
+      footer:                           # who is behind it and how to write to them; the privacy page beside
   overview:
     dashboard:
       outstanding: { sum: Invoice.total, where: { status: sent } }
@@ -106,12 +107,17 @@ pages:
       latest: { list: Invoice, limit: 5 }
   invoices:
     crud: Invoice
+    search: [number, client]
     filters: [client, status]
+    sortable: [issuedOn, dueOn, number]
     actions: [markSent, markPaid]
   clients:
     crud: Client
-  invoice-lines:
-    crud: InvoiceLine
+    search: [name, email]
+    sortable: [name, createdAt]
+  privacy:
+    route: /privacy
+    legal: privacy                      # written from the app: who runs it, what it stores, cookies, mail
   settings:
     settings: BusinessProfile
   welcome:
@@ -121,5 +127,5 @@ pages:
         business: [businessName, vatNumber]
         payment: [iban, paymentTermDays]
 
-navigation:                             # invoice lines are edited on their invoice (smithable.ux.yml)
+navigation:                             # invoice lines are edited on their invoice (smithable.ux.yml), with no page of their own
   main: [overview, invoices, clients, settings]

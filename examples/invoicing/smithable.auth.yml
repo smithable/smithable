@@ -15,7 +15,7 @@ admins: [owner@invoicely.example]
 # ⚠ PUBLIC: everything listed here is visible to anyone on the internet, without
 # signing in. Never add models that contain personal or business data.
 public:
-  pages: [home]                    # the landing page
+  pages: [home, privacy]           # the landing page and what it stores
 
 # Ask, the assistant in the app, for everyone who signs in (setAssistant).
 assistant:

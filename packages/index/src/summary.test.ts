@@ -45,9 +45,9 @@ test("the CRM in plain language, with labels from the content file", () => {
   ]);
   expect(sections[1]?.sentences).toEqual([
     "- Overview (a dashboard: customers, open orders, follow ups due and recent)",
-    "- Customers (lists customers; search by name or email; “Merge customers”; “Schedule follow ups”)",
-    "- Orders (lists orders; search by number or customer; filter by status)",
-    "- Follow ups (lists follow ups; search by customer or note; filter by done)",
+    "- Customers (lists customers; search by name or email; sort by name or date added; “Merge customers”; “Schedule follow ups”)",
+    "- Orders (lists orders; search by number or customer; filter by status; sort by placed on, total or number)",
+    "- Follow ups (lists follow ups; search by customer or note; filter by done; sort by due on)",
     "- Team (who has access: invite people, change roles, remove users; only for admins)",
   ]);
 });

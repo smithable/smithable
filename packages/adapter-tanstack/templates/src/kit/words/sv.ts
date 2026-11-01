@@ -155,6 +155,8 @@ export const w = {
   full: "Fullbokat",
   giveThemTo: "Ge dem till",
   history: "Historik",
+  changed: (when: string) => `Ändrad ${when}`,
+  changedBy: (when: string, who: string) => `Ändrad ${when} av ${who}`,
   if: "Om",
   inspectorPlaceholder: "Hur många … finns det? Visa de … som …",
   inTrash: (at: string, by: string | null, until: string) =>
