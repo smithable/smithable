@@ -31,6 +31,8 @@ export type FieldKind =
 export interface FieldUi {
   name: string;
   label: string;
+  /** Where its label's wording is kept when not under the form's model (an action's dialog). */
+  text?: string;
   kind: FieldKind;
   required: boolean;
   /** Computed by a formula: shown, never entered. */
