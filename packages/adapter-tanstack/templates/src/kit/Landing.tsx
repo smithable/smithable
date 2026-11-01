@@ -39,6 +39,8 @@ export interface LandingLink {
 /** A hero's shortcut: a page, shown as a round icon with its title under it. */
 export interface LandingShortcut extends LandingLink {
   icon: LucideIcon;
+  /** A tiles hero's picture for it (the content file's, else its landing page's hero picture). */
+  image?: LandingImage;
 }
 
 /** A footer of its own: a line of text and links (a page's address, or a full one). */
@@ -543,9 +545,10 @@ function HeroView({
   /**
    * split: text beside the picture; centered: text over it; plain: no picture; cover: the
    * picture across the width with the theme's primary washing over it under the text; photo:
-   * the picture across the width, a dark scrim from the start side, white text at the start.
+   * the picture across the width, a dark scrim from the start side, white text at the start;
+   * tiles: the picture large with the text on its scrim, the shortcuts as picture tiles.
    */
-  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset" | "stage";
+  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset" | "stage" | "tiles";
   /**
    * A cover or photo hero's wash: brand (the primary, the cover's own) or dark (a scrim, the
    * photo's own); each layout keeps its size and takes the other's wash (look-gap §4).
@@ -619,7 +622,9 @@ function HeroView({
       className={cn(
         buttonVariants({ variant: "outline" }),
         "h-12 px-6 text-base",
-        (shown === "centered" || ((shown === "photo" || shown === "cover") && wash === "dark")) &&
+        (shown === "centered" ||
+          shown === "tiles" ||
+          ((shown === "photo" || shown === "cover") && wash === "dark")) &&
           "border-white/70 bg-transparent text-white hover:bg-white/10",
         // Over the cover's rule for its links (the first button's fill), so marked as important.
         (shown === "cover" || shown === "photo") &&
@@ -753,6 +758,86 @@ function HeroView({
     ) : (
       hero
     );
+  // The large picture with the text on its dark scrim, and the shortcuts as picture tiles: two
+  // stacked beside it, a third across under both; a tile without a picture is its page's title on
+  // the primary, so the hero works before there are pictures.
+  if (layout === "tiles") {
+    const tiles = shortcuts.slice(0, 3);
+    return framed(
+      <section
+        {...sectionHooks(texts)}
+        data-hero=""
+        data-layout="tiles"
+        className="mx-auto max-w-(--landing-width) px-5 py-6 sm:py-10"
+      >
+        <div className="grid gap-4 lg:grid-cols-3 lg:grid-rows-2">
+          <div className="relative isolate flex min-h-[28rem] items-end overflow-hidden rounded-[var(--radius-xl)] lg:col-span-2 lg:row-span-2 lg:min-h-[36rem]">
+            <img
+              src={image.src}
+              alt={image.alt}
+              width={1200}
+              height={900}
+              fetchPriority="high"
+              className="absolute inset-0 -z-10 size-full object-cover"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/60 to-black/10"
+            />
+            <div className="p-6 text-white sm:p-10 [&_h1]:max-w-2xl [&_p]:text-white/90">
+              {text}
+            </div>
+          </div>
+          <nav aria-label={w.shortcuts} className="contents">
+            <ul className="contents">
+              {tiles.map((s, i) => (
+                <li
+                  key={String(s.to)}
+                  data-part="tile"
+                  className={cn("min-h-40", tiles.length === 3 && i === 2 && "lg:col-span-3")}
+                >
+                  <Link
+                    to={s.to}
+                    className="group relative isolate flex h-full min-h-40 items-end overflow-hidden rounded-[var(--radius-xl)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {s.image ? (
+                      // A tile is a card: an AI's picture carries the small mark, over its scrim.
+                      <AiMarked generated={s.image.generated} className="absolute inset-0 -z-10">
+                        <img
+                          src={s.image.src}
+                          alt=""
+                          width={800}
+                          height={600}
+                          loading="lazy"
+                          className="size-full object-cover transition group-hover:scale-105"
+                        />
+                        <span
+                          aria-hidden
+                          className="absolute inset-0 bg-linear-to-t from-black/85 via-black/35 to-transparent"
+                        />
+                      </AiMarked>
+                    ) : (
+                      <span aria-hidden className="absolute inset-0 -z-10 bg-primary" />
+                    )}
+                    <span
+                      className={cn(
+                        "p-5 text-lg font-semibold",
+                        s.image ? "text-white" : "text-primary-foreground",
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+        {cue && <div className="mt-8">{cue}</div>}
+        {end}
+      </section>,
+    );
+  }
   // Across the width at a large size: a dark scrim from the start side (from the foot on a
   // phone, where the text sits low) keeps the text white and readable on any picture, in light
   // and dark mode alike; the text and buttons stand at the start.

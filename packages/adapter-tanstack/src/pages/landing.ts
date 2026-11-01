@@ -220,7 +220,19 @@ export function landingRoute(
               const target = ir.pages.find((p) => p.id === id) as PageIR;
               const icon = LUCIDE[pageIcon(ux, target)];
               imports.add("lucide-react", icon);
-              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${t.pageTitleOf(id)}, icon: ${icon} }`;
+              // A tiles hero dresses each: the content file's label and picture, else the page's
+              // title and, for a landing page, its own hero picture.
+              const tiled = heroLook?.layout === "tiles";
+              const dress = tiled ? own.tiles?.[id] : undefined;
+              const borrowed =
+                tiled && !dress?.image && target.pattern.kind === "landing"
+                  ? t.section(
+                      target.id,
+                      target.pattern.sections.find((s) => s.kind === "hero")?.name ?? "hero",
+                    ).image
+                  : undefined;
+              const picture = dress?.image ?? borrowed;
+              const shortcut = `{ to: ${JSON.stringify(target.route)}, label: ${dress?.label ? JSON.stringify(dress.label) : t.pageTitleOf(id)}, icon: ${icon}${picture ? `, image: { src: ${JSON.stringify(`/${picture.src}`)}, alt: ${JSON.stringify(picture.alt)}${picture.generated ? ", generated: true" : ""} }` : ""} }`;
               // A page behind sign-in is a shortcut only for those who may open it.
               if (!hasSignIn(auth) || auth.public.pages.includes(id)) return shortcut;
               imports.add("#/kit/access", "allows");

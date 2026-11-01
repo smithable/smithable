@@ -21,6 +21,6 @@ admins: [owner@kiosken.example]
 
 # The menu and where the truck stands are open to everyone; visitors send orders without an account.
 public:
-  pages: [menu, where]
+  pages: [menu, where, stops]             # the week's stops too, the hero's second tile
   read: [Dish, Stop]
   create: [Order]

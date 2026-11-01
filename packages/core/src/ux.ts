@@ -295,7 +295,7 @@ export const SECTION_LOOKS: Partial<
   Record<string, Record<string, readonly (string | number)[] | "text" | "models" | "page">>
 > = {
   hero: {
-    layout: ["split", "centered", "plain", "cover", "photo", "inset", "stage"],
+    layout: ["split", "centered", "plain", "cover", "photo", "inset", "stage", "tiles"],
     image: ["right", "left"],
     overlay: ["brand", "dark"],
     eyebrow: ["address", "hours"],
@@ -1368,6 +1368,18 @@ export function validateUx(
             "conflict",
             `${capitalize(where)} has both "sections" and "fieldOrder"; sections order the fields.`,
           );
+        // A tiles hero draws its shortcuts as tiles: two or three (a fourth makes a gallery).
+        if (spec.pattern.kind === "landing") {
+          const hero = spec.pattern.sections.find((s) => s.kind === "hero");
+          const count = hero?.shortcuts?.length ?? 0;
+          if (hero && result.looks?.[hero.name]?.layout === "tiles" && (count < 2 || count > 3))
+            ctx.error(
+              page.keyNode,
+              "invalid-value",
+              `A tiles hero shows its shortcuts as tiles, two or three; ${page.key}'s hero has ${count}.`,
+              `Give it two or three shortcuts in smithable.yml (setShortcuts ${page.key} <page> <page>).`,
+            );
+        }
         // Over the hero: a hero whose picture runs across the width, for the header to stand on.
         if (result.header?.over === "hero") {
           const hero =
