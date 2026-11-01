@@ -662,7 +662,8 @@ const addIncoming: Operation<{
         "A mail comes as JSON and has no setup check: no --form or --challenge.",
       );
     // Written as the field holds it: a yes/no, a number or a date, not their text; a value with a
-    // {path} or a formula stays as written, for the call to fill.
+    // {path} or a formula stays as written, for the call to fill; an unknown key too, for the
+    // check to refuse.
     const model = ir.models.find((m) => m.name === create);
     const values = Object.fromEntries(
       Object.entries(setArgs(set)).map(([key, raw]) => {
