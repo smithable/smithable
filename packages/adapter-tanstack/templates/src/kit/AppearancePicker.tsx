@@ -27,7 +27,7 @@ export function AppearancePicker({ className }: { className?: string }) {
           setChoice(next);
           chooseAppearance(next);
         }}
-        className="ml-2 rounded-md border bg-transparent px-1.5 py-0.5 text-current"
+        className="ml-2 rounded-md border border-input bg-transparent px-1.5 py-0.5 text-current"
       >
         <option value="system">{w.appearanceSystem}</option>
         <option value="light">{w.appearanceLight}</option>

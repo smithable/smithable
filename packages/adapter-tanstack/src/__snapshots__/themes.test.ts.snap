@@ -20,7 +20,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #1f2533;
   --accent-foreground: #eef0f5;
   --border: #494b52;
-  --input: #494b52;
+  --input: #66686f;
   --ring: #8fb4ff;
   --sidebar: #191b21;
   --sidebar-foreground: #eef0f5;
@@ -113,7 +113,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #1f2533;
   --accent-foreground: #eef0f5;
   --border: #494b52;
-  --input: #494b52;
+  --input: #66686f;
   --ring: #8fb4ff;
   --sidebar: #191b21;
   --sidebar-foreground: #eef0f5;
@@ -161,7 +161,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #d6dae8;
   --accent-foreground: #1b1d22;
   --border: #acaba8;
-  --input: #acaba8;
+  --input: #818180;
   --ring: #3346c8;
   --sidebar: #ffffff;
   --sidebar-foreground: #1b1d22;
@@ -254,7 +254,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #2d2924;
   --accent-foreground: #eceef2;
   --border: #4c4e54;
-  --input: #4c4e54;
+  --input: #67696f;
   --ring: #e8b04a;
   --sidebar: #1d1f24;
   --sidebar-foreground: #eceef2;
@@ -300,7 +300,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #d6dae8;
   --accent-foreground: #1b1d22;
   --border: #acaba8;
-  --input: #acaba8;
+  --input: #818180;
   --ring: #3346c8;
   --sidebar: #ffffff;
   --sidebar-foreground: #1b1d22;
@@ -393,7 +393,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #2d2924;
   --accent-foreground: #eceef2;
   --border: #4c4e54;
-  --input: #4c4e54;
+  --input: #67696f;
   --ring: #e8b04a;
   --sidebar: #1d1f24;
   --sidebar-foreground: #eceef2;
@@ -436,7 +436,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #d6dae8;
   --accent-foreground: #1b1d22;
   --border: #acaba8;
-  --input: #acaba8;
+  --input: #818180;
   --ring: #3346c8;
   --sidebar: #ffffff;
   --sidebar-foreground: #1b1d22;
@@ -529,7 +529,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --accent: #2d2924;
   --accent-foreground: #eceef2;
   --border: #4c4e54;
-  --input: #4c4e54;
+  --input: #67696f;
   --ring: #e8b04a;
   --sidebar: #1d1f24;
   --sidebar-foreground: #eceef2;
