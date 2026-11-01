@@ -381,3 +381,20 @@ test("addIncoming writes a service's own form: --signed-text, --signed-prefix, -
   });
   expect(half.ok).toBe(false);
 });
+
+test("addIncoming writes a set value as its field holds it: a yes/no, a number; a {path} stays text", () => {
+  const tasks = `smithable: 0.1
+app: { name: Tasks }
+models:
+  Task: { fields: { title: string!, done: bool, points: int } }
+pages:
+  tasks: { crud: Task }
+`;
+  const added = applyOperation({ spec: tasks }, "addIncoming", {
+    name: "newTask",
+    create: "Task",
+    set: ["title={task.title}", "done=false", "points=3"],
+  });
+  if (!added.ok) throw new Error(added.message);
+  expect(added.files.spec).toMatch(/title: "\{task\.title\}"\n {6}done: false\n {6}points: 3\n/);
+});

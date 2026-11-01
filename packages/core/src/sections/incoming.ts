@@ -661,7 +661,17 @@ const addIncoming: Operation<{
       throw new OperationError(
         "A mail comes as JSON and has no setup check: no --form or --challenge.",
       );
-    const values = setArgs(set);
+    // Written as the field holds it: a yes/no, a number or a date, not their text; a value with a
+    // {path} or a formula stays as written, for the call to fill.
+    const model = ir.models.find((m) => m.name === create);
+    const values = Object.fromEntries(
+      Object.entries(setArgs(set)).map(([key, raw]) => {
+        const field = model?.fields.find((f) => f.name === key);
+        if (!field || typeof raw !== "string" || /[{(]/.test(raw)) return [key, raw];
+        const converted = parseDefault(field.type, raw);
+        return [key, converted.ok ? (converted.value as YamlValue) : raw];
+      }),
+    );
     const signing =
       signedText !== undefined || signedPrefix !== undefined || timestamp !== undefined
         ? {
