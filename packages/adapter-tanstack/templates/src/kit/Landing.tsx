@@ -542,6 +542,7 @@ function HeroView({
   layout: given = "split",
   imageSide = "right",
   overlay,
+  height,
   facts = [],
   stage,
 }: {
@@ -567,6 +568,8 @@ function HeroView({
    * photo's own); each layout keeps its size and takes the other's wash (look-gap §4).
    */
   overlay?: "brand" | "dark";
+  /** auto: the content's height; full: the window's under the header; unsaid, the layout's own. */
+  height?: "auto" | "full";
   /** A row of figures under the text: each model's count of the records the viewer may read. */
   facts?: { label: string; value: number }[];
   /**
@@ -701,6 +704,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-height={height}
         data-layout="plain"
         className={cn(
           "mx-auto max-w-(--landing-width) px-5 py-20 sm:py-28",
@@ -723,6 +727,7 @@ function HeroView({
         <section
           {...sectionHooks(texts)}
           data-hero=""
+          data-height={height}
           data-layout="cover"
           className="relative isolate overflow-hidden"
         >
@@ -787,6 +792,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-height={height}
         data-layout="tiles"
         className="mx-auto max-w-(--landing-width) px-5 py-6 sm:py-10"
       >
@@ -866,6 +872,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-height={height}
         data-layout="photo"
         className="relative isolate flex min-h-[34rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
       >
@@ -906,6 +913,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-height={height}
         data-layout="centered"
         className="relative isolate overflow-hidden"
       >
@@ -937,6 +945,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-height={height}
         data-layout="stage"
         className={cn(
           "mx-auto grid max-w-(--landing-width) items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
@@ -978,6 +987,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-height={height}
         data-layout="inset"
         className={cn(
           "mx-auto grid max-w-(--landing-width) items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-12",
@@ -1015,6 +1025,7 @@ function HeroView({
     <section
       {...sectionHooks(texts)}
       data-hero=""
+      data-height={height}
       data-layout="split"
       className={cn(
         "mx-auto grid max-w-(--landing-width) items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2",

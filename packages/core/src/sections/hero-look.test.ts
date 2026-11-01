@@ -71,3 +71,11 @@ test("setSectionLook writes a hero's facts as a list of models", () => {
     }).ok,
   ).toBe(false);
 });
+
+test("a hero's height: auto or full (A 215)", () => {
+  expect(read("{ layout: photo, height: auto }").ux?.pages.home?.looks?.hero?.height).toBe("auto");
+  expect(read("{ layout: split, height: full }").ux?.pages.home?.looks?.hero?.height).toBe("full");
+  expect(message("{ height: tall }")).toBe(
+    '"height" of the look of hero on page "home" is one of auto, full.',
+  );
+});

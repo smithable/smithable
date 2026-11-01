@@ -132,6 +132,15 @@
     --landing-width: 72rem;
   }
 
+  /* A hero's height (its look's height): the window's under the header, or only its content's. */
+  [data-hero][data-height="full"] {
+    min-height: calc(100svh - 4.5rem);
+    align-content: center;
+  }
+  [data-hero][data-height="auto"] {
+    min-height: 0 !important;
+  }
+
   /* A form's Save row sticks to the window's foot: a field reached by Tab or by the browser's own
      scrolling stops above it, not behind it. */
   html:has([data-kit="model-form"] [data-part="actions"]) {

@@ -320,6 +320,8 @@ export const SECTION_LOOKS: Partial<
     eyebrow: ["address", "hours"],
     facts: "models",
     stage: "page",
+    // Unsaid, the layout's own height; auto, the content's; full, the window's under the header.
+    height: ["auto", "full"],
   },
   features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.

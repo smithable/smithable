@@ -435,6 +435,13 @@
                     "stage": {
                       "type": "string",
                       "description": "A stage hero's list page, drawn with its first six records; unsaid, the first list page in the navigation."
+                    },
+                    "height": {
+                      "enum": [
+                        "auto",
+                        "full"
+                      ],
+                      "description": "One of auto, full; the first is the default."
                     }
                   }
                 },
