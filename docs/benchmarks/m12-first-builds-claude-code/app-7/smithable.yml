@@ -1,14 +1,14 @@
 smithable: 0.1
 app:
-  name: Club Pitch
-  description: The club's public site with its teams, players, fixtures and results.
-  timezone: Europe/Mariehamn
+  name: Riverside FC
+  description: The club's site with its teams, players, fixtures and results.
+  timezone: Europe/London
 models:
   Team:
     fields:
       name: string!
-      ageGroup: senior | youth | junior
-      gender: men | women | mixed
+      ageGroup: string
+      division: string
       coach: string
       picture: picture
       about: text
@@ -18,11 +18,11 @@ models:
     fields:
       name: string!
       team: Team!
+      position: goalkeeper | defender | midfielder | forward
       number:
         type: int
         min: 1
         max: 99
-      position: goalkeeper | defender | midfielder | forward
       photo: picture
       bio: text
   Match:
@@ -33,7 +33,7 @@ models:
       venue: home | away
       ground: string
       competition: string
-      status: scheduled | played | postponed | cancelled
+      status: scheduled | played | postponed | canceled
       goalsFor:
         type: int
         min: 0
@@ -41,21 +41,19 @@ models:
         type: int
         min: 0
       report: text
-    namedBy: [team, opponent, kickoff]
+    namedBy: [team, opponent]
 pages:
   matches:
     crud: Match
-    search: [opponent, competition, ground]
     filters: [team, status, venue, kickoff]
-    actions: [enterResult, postpone]
+    search: [opponent, competition]
+    actions: [recordResult, postpone]
   teams:
     crud: Team
-    search: [name, coach]
-    filters: [ageGroup, gender]
   players:
     crud: Player
-    search: [name]
     filters: [team, position]
+    search: [name]
   home:
     route: /
     landing:
@@ -64,10 +62,12 @@ pages:
         secondButton: teams
       upcoming:
         records: Match
+        view: table
         where:
           status: scheduled
       results:
         records: Match
+        view: table
         where:
           status: played
       ourTeams:
@@ -77,7 +77,7 @@ pages:
     route: /privacy
     legal: privacy
 actions:
-  enterResult:
+  recordResult:
     on: Match
     when:
       status: [scheduled, postponed]
@@ -85,7 +85,7 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Record the final score of a match that has been played.
+    intent: Enter the final score once a match has been played.
   postpone:
     on: Match
     when:
@@ -93,3 +93,4 @@ actions:
     set:
       status: postponed
     intent: Mark a scheduled match as postponed.
+navigation: [matches, teams, players]

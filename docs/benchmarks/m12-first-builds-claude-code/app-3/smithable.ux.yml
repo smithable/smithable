@@ -3,13 +3,12 @@ pages:
   payments:
     table:
       sort: -paidOn
-      totals: [amount]
   invoices:
-    table:
-      columns: [number, client, issuedOn, dueOn, status, total, balance]
-      sort: -issuedOn
+    record:
+      lists:
+        lines: inline
 theme:
-  preset: modern
+  preset: paperwork
 tones:
   Invoice.status:
     paid: success

@@ -6,7 +6,7 @@ app:
 models:
   Company:
     fields:
-      name: string! unique
+      name: string!
       website: url
       phone: phone
       industry: string
@@ -20,44 +20,56 @@ models:
   Contact:
     fields:
       name: string!
-      company: Company!
+      company: Company
       jobTitle: string
       email: email
       phone: phone
       notes: text
-    trash: true
   Deal:
     fields:
       title: string!
       company: Company!
       contact: Contact
+      stage: lead | qualified | proposal | negotiation | won | lost
       value:
         type: money
         min: 0
-      stage: lead | qualified | proposal | negotiation | won | lost
       expectedClose: date
-      closedOn:
-        type: date
-        by: app
+      closedOn: date
       notes: text
     trash: true
   FollowUp:
     fields:
       company: Company!
+      contact: Contact
       dueOn: date! = TODAY()
-      done: bool
       note: text
-    trash: true
+      done: bool
 pages:
+  start:
+    dashboard:
+      openDeals:
+        count: Deal
+        where:
+          stage: [lead, qualified, proposal, negotiation]
+      pipelineValue:
+        sum: Deal.value
+        where:
+          stage: [lead, qualified, proposal, negotiation]
+      dealsByStage:
+        count: Deal
+        by: stage
+      followUpsDue:
+        list: FollowUp
+        where:
+          done: false
+        limit: 10
   companies:
     crud: Company
     search: [name, industry]
-    filters: [accountManager]
-    actions: [mergeCompanies]
   contacts:
     crud: Contact
     search: [name, email, jobTitle]
-    filters: [company]
   deals:
     crud: Deal
     search: [title]
@@ -65,11 +77,10 @@ pages:
     actions: [markWon, markLost]
   followUps:
     crud: FollowUp
-    search: [note]
     filters: [done, dueOn, company]
     defaultFilter:
       done: false
-    actions: [markDone]
+    actions: [completeFollowUp]
   team:
     users: manage
 actions:
@@ -89,13 +100,10 @@ actions:
       stage: lost
       closedOn: TODAY()
     intent: Close a deal as lost.
-  markDone:
+  completeFollowUp:
     on: FollowUp
     when:
       done: false
     set:
       done: true
-    intent: Tick off a follow-up once it is handled.
-  mergeCompanies:
-    merge: Company
-    intent: Combine duplicate companies; their contacts, deals and follow-ups move to the one kept.
+    intent: Mark a follow-up as done.

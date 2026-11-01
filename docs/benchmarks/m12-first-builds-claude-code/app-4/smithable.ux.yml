@@ -1,12 +1,7 @@
 smithableUx: 0.1
 pages:
-  loans:
+  catalog:
     table:
-      columns: [tool, borrower, lentOn, dueBack, status]
-      sort: dueBack
-tones:
-  Loan.status:
-    out: warning
-    returned: success
+      view: cards
 theme:
-  preset: woodland
+  preset: workbench

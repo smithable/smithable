@@ -13,7 +13,7 @@ pages:
     width: wide
     sections:
       hero: { layout: tiles }          # the evening photo large, the menu and the week as tiles beside it
-      stops: { layout: list, band: muted }   # the week as rows of day, place and hours, apart from the hero
+      stops: { layout: week, band: muted }   # the week as columns of days, each stop under its day
   orders:
     table:
       columns: [number, name, status, wanted, total]

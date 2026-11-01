@@ -512,6 +512,15 @@ function TextSectionView({
   );
 }
 
+/** A day (YYYY-MM-DD) as a heading: "Monday 12 October", in the language's own words. */
+const longDate = (day: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${day}T00:00:00Z`));
+
 /** A picture from public/, e.g. { src: "/images/hero.webp", alt: "A yoga class" }. */
 export interface LandingImage {
   src: string;
@@ -1136,6 +1145,8 @@ function RecordCardsView({
     text?: string;
     /** An amount of money, formatted: a price. */
     amount?: string;
+    /** A week's day for it, as YYYY-MM-DD in the app's time zone. */
+    day?: string;
     badge?: string;
     /** The badge's color by meaning; without one it is neutral. */
     tone?: "success" | "warning" | "danger";
@@ -1147,7 +1158,7 @@ function RecordCardsView({
    * cards: a grid of cards; list: rows with a small picture; grid: the pictures, titled; ledger:
    * ruled rows with the amount as a figure column (look-breadth §3), for prices and accounts.
    */
-  layout?: "cards" | "list" | "grid" | "ledger";
+  layout?: "cards" | "list" | "grid" | "ledger" | "week";
   /** Cards or pictures side by side on wide screens, 2 to 6: cards 3 and a grid 4 when not said; a list or a ledger has none. */
   columns?: 2 | 3 | 4 | 5 | 6;
   /** The model's icon, for a model with pictures: the placeholder where a record has none. */
@@ -1250,7 +1261,41 @@ function RecordCardsView({
           ))}
         </div>
       )}
-      {layout === "ledger" ? (
+      {layout === "week" ? (
+        // Each day with records under its heading, days side by side on a wide screen (up to seven).
+        <div
+          data-layout="week"
+          className="grid gap-6 md:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]"
+        >
+          {[...new Set(cards.map((card) => card.day).filter((d): d is string => Boolean(d)))]
+            .sort()
+            .slice(0, 7)
+            .map((day) => (
+              <section key={day} data-part="day" aria-label={longDate(day)}>
+                <h3 className="border-b-2 border-foreground pb-2 text-sm font-semibold label-text">
+                  {longDate(day)}
+                </h3>
+                <ul className="divide-y">
+                  {cards
+                    .filter((card) => card.day === day)
+                    .map((card) => (
+                      <li
+                        key={card.key}
+                        className={cn("relative py-3", card.href && "hover:bg-hover")}
+                      >
+                        <p className="font-semibold">{heading(card)}</p>
+                        {card.text && (
+                          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                            {card.text}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                </ul>
+              </section>
+            ))}
+        </div>
+      ) : layout === "ledger" ? (
         <ul data-layout="ledger" className="border-t-2 border-foreground">
           {cards.map((card) => (
             <li

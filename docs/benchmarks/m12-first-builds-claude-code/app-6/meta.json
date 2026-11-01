@@ -4,7 +4,7 @@
   "wordStarter": "marketplace",
   "questions": [
     "Who posts the jobs?",
-    "Who can apply for jobs?",
-    "What can visitors see without signing in?"
+    "What can visitors see without signing in?",
+    "What does an application include?"
   ]
 }

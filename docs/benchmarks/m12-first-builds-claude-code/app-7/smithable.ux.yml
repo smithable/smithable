@@ -2,26 +2,27 @@ smithableUx: 0.1
 pages:
   matches:
     table:
-      sort: -kickoff
       columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
-    icon: calendar
+      sort: -kickoff
   players:
     table:
-      sort: number
+      columns: [number, name, team, position]
       view: cards
+      mark: picture
     record:
       subtitle: team
       detail: [position, number]
-    icon: users
   teams:
     table:
       view: cards
-    icon: layers
+    record:
+      subtitle: division
+      detail: [ageGroup, coach]
 tones:
   Match.status:
     played: success
     postponed: warning
-    cancelled: danger
+    canceled: danger
 theme:
   preset: modern
   brand:

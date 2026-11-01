@@ -1,8 +1,12 @@
 smithableUx: 0.1
+pages:
+  tickets:
+    table:
+      columns: [title, status, priority, category, assignee, requesterEmail]
 tones:
   Ticket.status:
     open: warning
-    closed: success
     reopened: danger
+    resolved: success
 theme:
-  preset: quiet-workspace
+  preset: helpdesk

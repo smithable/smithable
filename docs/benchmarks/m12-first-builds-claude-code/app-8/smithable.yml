@@ -1,9 +1,7 @@
 smithable: 0.1
 app:
-  name: Talkfront
-  description: "Programme and registration for a conference: browse the talks and speakers, and reserve a seat in the talks you want to attend."
-  currency: EUR
-  timezone: Europe/Stockholm
+  name: Conference Hub
+  description: Talks, speakers and attendee registration for a conference.
 models:
   Speaker:
     fields:
@@ -15,12 +13,11 @@ models:
   Talk:
     fields:
       title: string!
-      abstract: markdown
+      summary: text
       speaker: Speaker!
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
-      track: keynote | technical | business | workshop
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -30,39 +27,38 @@ models:
     fields:
       talk: Talk! unique
       attendee: User
-    ownedBy: attendee
     namedBy: talk
+    ownedBy: attendee
     capacity:
       per: talk
       max: talk.capacity
       closes: talk.startsAt
       cancelUntil: talk.startsAt
 pages:
+  schedule:
+    calendar:
+      model: Talk
+      starts: startsAt
   talks:
     crud: Talk
-    filters: [track, speaker, startsAt]
+    filters: [speaker, startsAt]
     defaultFilter:
       startsAt: upcoming
   speakers:
     crud: Speaker
   my-registrations:
     crud: Registration
-  schedule:
-    calendar:
-      model: Talk
-      starts: startsAt
   home:
     route: /
     landing:
       hero:
-        button: talks
-        secondButton: speakers
+        button: schedule
       features:
-      speakerList:
+      speakers:
         records: Speaker
       faq:
       callToAction:
-        button: talks
+        button: schedule
       footer:
   privacy:
     route: /privacy
@@ -70,7 +66,7 @@ pages:
   admin:
     data: all
 navigation:
-  main: [talks, speakers, my-registrations, schedule, home, privacy, admin]
-  programme: [schedule, talks, speakers, my-registrations]
-  website: [home]
+  main: [schedule, talks, speakers, my-registrations, home, privacy, admin]
+  schedule: [schedule, my-registrations, talks]
+  programme: [speakers, home]
   admin: [admin]

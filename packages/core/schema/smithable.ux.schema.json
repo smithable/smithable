@@ -480,9 +480,10 @@
                         "cards",
                         "list",
                         "grid",
-                        "ledger"
+                        "ledger",
+                        "week"
                       ],
-                      "description": "One of cards, list, grid, ledger; the first is the default."
+                      "description": "One of cards, list, grid, ledger, week; the first is the default."
                     },
                     "columns": {
                       "enum": [
@@ -502,6 +503,10 @@
                         "primary"
                       ],
                       "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
+                    },
+                    "by": {
+                      "type": "string",
+                      "description": "The name of the item to set apart."
                     }
                   }
                 },
