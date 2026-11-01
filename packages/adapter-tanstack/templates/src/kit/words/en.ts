@@ -157,6 +157,8 @@ export const w = {
   full: "Full",
   giveThemTo: "Give them to",
   history: "History",
+  changed: (when: string) => `Changed ${when}`,
+  changedBy: (when: string, who: string) => `Changed ${when} by ${who}`,
   if: "If",
   inspectorPlaceholder: "How many … are there? Show the … that …",
   inTrash: (at: string, by: string | null, until: string) =>

@@ -71,15 +71,18 @@ pages:
     intent: Find a customer quickly and keep their details current.
     crud: Customer
     search: [name, email]
+    sortable: [name, createdAt]
     actions: [mergeCustomers, scheduleFollowUps]
   orders:
     crud: Order
     search: [number, customer]
     filters: [status]
+    sortable: [placedAt, total, number]
   followUps:
     crud: FollowUp
     search: [customer, note]
     filters: [done]
+    sortable: [dueOn]
   team:
     intent: Invite colleagues and manage who has access.
     users: manage

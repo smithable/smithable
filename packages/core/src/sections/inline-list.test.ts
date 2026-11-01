@@ -35,10 +35,12 @@ test("an invoice's lines edited in place: the row's own values, the menu warned 
   expect(read("    record: { lists: { lines: grid } }\n").diagnostics[0]?.message).toBe(
     '"lines" in "lists" is table, thread or inline.',
   );
-  // With invoice-lines back in the menu, the lines have two ways in: a warning, not a refusal.
+  // With a page of their own in the menu, the lines have two ways in: a warning, not a refusal.
   const menu = validateSpec({
     path: "smithable.yml",
     text: file("smithable.yml")
+      .split("  privacy:\n")
+      .join("  invoice-lines:\n    crud: InvoiceLine\n  privacy:\n")
       .split("main: [overview, invoices, clients, settings]")
       .join("main: [overview, invoices, clients, invoice-lines, settings]"),
   }).ir;

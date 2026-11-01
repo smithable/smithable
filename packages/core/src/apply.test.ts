@@ -363,7 +363,7 @@ test("setFilters and setSortable add, change and remove a list's filters and sor
   if (!sorted.ok) throw new Error(sorted.message);
   expect(changed(filtered.files.spec, sorted.files.spec)).toEqual({
     added: ["    sortable: [name, creditLimit]"],
-    removed: [],
+    removed: ["    sortable: [name, createdAt]"],
   });
   const gone = applyOperation({ ...files, spec: sorted.files.spec }, "setFilters", {
     page: "customers",
@@ -752,7 +752,7 @@ test("addSection and removeSection change a landing page's sections, with their 
   const invoicing = { spec: file(""), auth: file(".auth"), content: file(".content") };
   const gallery = applyOperation(invoicing, "addSection", { page: "home", section: "gallery" });
   expect(gallery.ok && gallery.files.spec).toMatch(
-    /callToAction: \{ button: overview \}\n\s+gallery:\n/,
+    /callToAction: \{ button: overview \}\n\s+gallery:\n\s+footer:/,
   );
   expect(applyOperation(invoicing, "addSection", { page: "home", section: "faq" }).ok).toBe(false);
   expect(applyOperation(invoicing, "addSection", { page: "home", section: "news" }).ok).toBe(false);
@@ -1088,7 +1088,7 @@ describe("standard actions", () => {
       "  cancelOrder:\n    on: Order\n    when:\n      status: [placed, shipped]\n    set:\n      status: canceled\n      total: 0\n",
     );
     expect(result.files.spec).toMatch(
-      / {2}orders:\n {4}crud: Order\n {4}search: \[number, customer\]\n {4}filters: \[status\]\n {4}actions: \[cancelOrder\]/,
+      / {2}orders:\n {4}crud: Order\n {4}search: \[number, customer\]\n {4}filters: \[status\]\n {4}sortable: \[placedAt, total, number\]\n {4}actions: \[cancelOrder\]/,
     );
   });
 
