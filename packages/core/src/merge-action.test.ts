@@ -145,6 +145,19 @@ test("addAction --merge writes the entry and offers it on the model's page; a mo
   refused({ merge: "Nobody" });
   refused({ merge: "Customer", fields: ["email=pick"] });
   refused({ merge: "Customer", fields: ["emial=ask"] });
+  // A list written with spaces: its next word lands on the input; said as a list, not as a stray.
+  expect(
+    applyOperation(files, "addAction", {
+      action: "m",
+      merge: "Customer",
+      fields: ["email=ask"],
+      input: { revenue: "add" },
+    }),
+  ).toMatchObject({
+    ok: false,
+    message:
+      '"revenue=add" is left over: a list is written with commas, e.g. --fields email=ask,revenue=add.',
+  });
   const renamed = applyOperation({ ...files, ...added.files }, "renameModel", {
     from: "Customer",
     to: "Client",
