@@ -382,9 +382,10 @@
                         "cover",
                         "photo",
                         "inset",
-                        "stage"
+                        "stage",
+                        "tiles"
                       ],
-                      "description": "One of split, centered, plain, cover, photo, inset, stage; the first is the default."
+                      "description": "One of split, centered, plain, cover, photo, inset, stage, tiles; the first is the default."
                     },
                     "image": {
                       "enum": [

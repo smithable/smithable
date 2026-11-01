@@ -19,6 +19,9 @@ pages:
         src: images/hero.webp
         alt: People at tables under string lights by a food truck on a summer evening
         generated: false
+      tiles:                           # the stops tile has no picture: its title on the primary
+        menu:
+          image: { src: images/samples/food-soup-b.webp, alt: A bowl of soup with bread, generated: true }
     stops:
       title: This week
 

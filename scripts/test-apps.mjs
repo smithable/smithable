@@ -1060,16 +1060,50 @@ async function callReceiver() {
  * so the flow does not depend on the hour it runs at (the closed refusal is a unit test).
  */
 /**
- * Kiosk's landing (A 215): the header over the photo hero on its dark wash until the hero has
- * scrolled under it, then on its own surface; the content as wide as `width: wide` (80rem).
+ * Kiosk's landing (A 215): a tiles hero, its shortcuts drawn as tiles (the menu with its picture,
+ * the week on the primary, having none); then, switched to a photo hero with the header over it,
+ * the bar on the photo's wash until the hero has passed, and the content 80rem wide. Put back.
  */
-async function kioskHeaderFlow(base) {
+async function kioskLandingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  let changed = 0;
   try {
     await open(page, `${base}/where`);
+    const tiles = page.locator('[data-hero][data-layout="tiles"] [data-part="tile"]');
+    await tiles.first().waitFor({ timeout: 10000 * P });
+    if ((await tiles.count()) !== 2) throw new Error(`${await tiles.count()} tiles, not 2`);
+    if (!(await tiles.nth(0).locator("img").count()))
+      throw new Error("the menu tile has no picture");
+    if (await tiles.nth(1).locator("img").count())
+      throw new Error("the stops tile has a picture it was not given");
+    await tiles.nth(1).getByRole("link").click();
+    await page.waitForURL(`${base}/stops`, { timeout: 10000 * P });
+    console.log(
+      "  ✓ browser: a tiles hero draws its shortcuts as tiles: a picture where given, the page's title on the primary where not",
+    );
+    for (const [key, value] of [
+      ["layout", "photo"],
+      ["over", "hero"],
+    ]) {
+      const done = smithable(
+        dir,
+        "op",
+        "setSectionLook",
+        "where",
+        key === "over" ? "header" : "hero",
+        key,
+        value,
+      );
+      if (done.code !== 0) throw new Error(`setSectionLook ${key} ${value}: ${done.out}`);
+      changed++;
+    }
     const header = page.locator('[data-kit="landing"] > [data-part="header"]');
-    await header.and(page.locator('[data-over="dark"]')).waitFor({ timeout: 10000 * P });
+    for (let i = 0; (await header.getAttribute("data-over").catch(() => null)) !== "dark"; i++) {
+      if (i === 40 * P) throw new Error("the header is not over the photo hero");
+      await open(page, `${base}/where`);
+      await page.waitForTimeout(500);
+    }
     const top = await page.locator("[data-hero]").boundingBox();
     if (!top || top.y > 1) throw new Error(`the hero starts at ${top?.y}, not under the header`);
     const inner = await header.locator(":scope > div").last().boundingBox();
@@ -1082,15 +1116,19 @@ async function kioskHeaderFlow(base) {
       await page.waitForTimeout(100);
     }
     console.log(
-      "  ✓ browser: the header stands over the photo hero until it has passed, and the page runs 80rem wide",
+      "  ✓ browser: over a photo hero the header stands on its wash until the hero has passed, and the page runs 80rem wide",
     );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
-    failures.push("kiosk header over the hero");
+    failures.push("kiosk landing flow");
   } finally {
     await browser.close();
+    for (; changed > 0; changed--) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`kiosk landing put back: ${back.out}`);
+    }
   }
 }
 
@@ -5324,7 +5362,7 @@ async function aiMarkCheck(dir, base) {
   const sampled = samples.includes("generated: true");
   // Switched off by the owner (aiBadge: false), the theme hides every mark.
   if ((!gallery && !hero && !sampled) || /^aiBadge: false/m.test(ux)) return;
-  const veiled = /hero: \{[^}]*layout: (cover|centered|photo)/.test(ux);
+  const veiled = /hero: \{[^}]*layout: (cover|centered|photo|tiles)/.test(ux);
   // The landing pages: the routes that use the kit's landing sections.
   const routes = [];
   const walk = (at, route) => {
@@ -7884,7 +7922,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "support") await supportFlow(dir, base);
       if (example === "kiosk") {
         await kioskFlow(dir, base);
-        await kioskHeaderFlow(base);
+        await kioskLandingFlow(dir, base);
       }
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "status") await statusFlow(base);

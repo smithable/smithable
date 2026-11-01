@@ -591,6 +591,31 @@ const section: JsonSchema = {
         },
       },
     },
+    tiles: {
+      type: "object",
+      description:
+        "A tiles hero's tiles, by the page of each of its shortcuts: { menu: { label: Our menu, image: { src, alt } } }; the label unsaid is the page's title.",
+      additionalProperties: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          label: { type: "string" },
+          image: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              src: { type: "string" },
+              alt: { type: "string" },
+              generated: {
+                type: "boolean",
+                description:
+                  "Made by an AI: the app marks it as such where it could pass for a photograph.",
+              },
+            },
+          },
+        },
+      },
+    },
     items: {
       type: "array",
       description:

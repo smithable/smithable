@@ -10,10 +10,9 @@ tones:
 
 pages:
   where:
-    header: { over: hero }             # the bar on the evening photo until it has passed
     width: wide
     sections:
-      hero: { layout: photo }          # the evening by the truck across the window, the text on a dark scrim
+      hero: { layout: tiles }          # the evening photo large, the menu and the week as tiles beside it
       stops: { layout: list, band: muted }   # the week as rows of day, place and hours, apart from the hero
   orders:
     table:

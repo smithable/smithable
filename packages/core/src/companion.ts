@@ -127,6 +127,18 @@ const content: Companion = {
         }
       }
     }
+    // A tiles hero's tile is dressed by its page's name: renamed with it, gone with it.
+    if (effect.kind === "rename-page" || effect.kind === "remove-page") {
+      const page = effect.kind === "rename-page" ? effect.from : effect.page;
+      for (const p of ir.pages)
+        for (const s of p.pattern.kind === "landing" ? p.pattern.sections : [])
+          if (s.kind === "hero") {
+            const tile = ["pages", p.id, s.name, "tiles", page];
+            if (!editor.has(tile)) continue;
+            if (effect.kind === "rename-page") editor.renameKey(tile, effect.to);
+            else editor.removeAndPrune(tile, 0);
+          }
+    }
     // A renamed model's or page's texts move to its new name.
     if (effect.kind === "rename-model" || effect.kind === "rename-page") {
       const path = [effect.kind === "rename-model" ? "models" : "pages", effect.from];

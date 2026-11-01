@@ -106,6 +106,8 @@ export interface SectionContent {
   fields?: Record<string, FieldContent>;
   /** A hero's picture: a file in the app's public/images/, and what it shows. */
   image?: ContentImage;
+  /** A tiles hero's tiles, by the shortcut's page: its picture and its label (else the page's title). */
+  tiles?: Record<string, { label?: string; image?: ContentImage }>;
 }
 
 export interface ContentImage {
@@ -684,6 +686,7 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
         ...(rules.items ? ["items"] : []),
         ...(rules.image ? ["image"] : []),
         ...(rules.fields ? ["fields"] : []),
+        ...(kind === "hero" ? ["tiles"] : []),
       ],
     });
     const section: SectionContent = readTexts(
@@ -691,7 +694,9 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
       null,
       partWhere,
       [],
-      known.filter((e) => e.key !== "items" && e.key !== "image" && e.key !== "fields"),
+      known.filter(
+        (e) => e.key !== "items" && e.key !== "image" && e.key !== "fields" && e.key !== "tiles",
+      ),
     );
     const fields = known.find((e) => e.key === "fields");
     const sectionFields =
@@ -711,6 +716,40 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
     if (image) {
       const read = readImage(ctx, image.value, `the image of ${partWhere}`);
       if (read) section.image = read;
+    }
+    // A tiles hero's tiles, by its shortcuts' pages: each a label and a picture.
+    const tiles = known.find((e) => e.key === "tiles");
+    if (tiles) {
+      const shortcuts =
+        page?.pattern.kind === "landing"
+          ? (page.pattern.sections.find((s) => s.name === entry.key)?.shortcuts ?? [])
+          : [];
+      section.tiles = {};
+      for (const tile of named(
+        ctx,
+        tiles.value,
+        `the tiles of ${partWhere}`,
+        shortcuts,
+        "shortcut",
+      )) {
+        const at = `tile "${tile.key}" of ${partWhere}`;
+        const parts = checkKeys(ctx, mapEntries(ctx, tile.value, at) ?? [], at, {
+          allowed: ["label", "image"],
+        });
+        const read: { label?: string; image?: ContentImage } = readTexts(
+          ctx,
+          null,
+          at,
+          [],
+          parts.filter((p) => p.key === "label"),
+        );
+        const picture = parts.find((p) => p.key === "image");
+        if (picture) {
+          const pic = readImage(ctx, picture.value, `the image of ${at}`);
+          if (pic) read.image = pic;
+        }
+        section.tiles[tile.key] = read;
+      }
     }
     result.sections = { ...result.sections, [entry.key]: section };
   }

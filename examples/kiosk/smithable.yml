@@ -64,7 +64,7 @@ pages:
     crud: Stop
   where:
     landing:
-      hero: {}
+      hero: { shortcuts: [menu, stops] }   # the menu and the week, as the hero's tiles
       stops: { records: Stop, limit: 7 }
       footer: {}
   team:
