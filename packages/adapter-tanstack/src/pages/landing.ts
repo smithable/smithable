@@ -121,10 +121,17 @@ export function landingRoute(
     imports.add(n.module, n.list);
     return `    const ${camel(plural(name))} = (await ${n.list}()).rows;`;
   });
-  const shown = records.map(
-    (s) =>
-      `${JSON.stringify(s.name)}: ${camel(plural(s.model as string))}${kept(s.where)}.slice(0, ${s.limit ?? 6})`,
-  );
+  const shown = records.map((s) => {
+    const rows = `${camel(plural(s.model as string))}${kept(s.where)}`;
+    // A week's records in their days' order (A 215), so its first days are the ones shown.
+    const look = ux.pages[page.id]?.looks?.[s.name];
+    const day =
+      look?.layout === "week" ? weekBy(modelNamed(ir, s.model as string), look.by) : undefined;
+    const ordered = day
+      ? `[...${rows}].sort((a, b) => Number(new Date(a.${day.name} ?? 0)) - Number(new Date(b.${day.name} ?? 0)))`
+      : rows;
+    return `${JSON.stringify(s.name)}: ${ordered}.slice(0, ${s.limit ?? 6})`;
+  });
   if (hero && facts.length)
     shown.push(
       `${JSON.stringify(`${hero.name}Facts`)}: [${facts
@@ -410,7 +417,7 @@ export function landingRoute(
             }${
               dayField
                 ? `
-            day: ${dayField.type.kind === "scalar" && dayField.type.name === "datetime" ? `row.${dayField.name} ? wallTime(new Date(row.${dayField.name}), app.timeZone).slice(0, 10) : undefined` : `row.${dayField.name} ?? undefined`},`
+            day: ${dayField.type.kind === "scalar" && dayField.type.name === "datetime" ? `row.${dayField.name} ? wallTime(new Date(row.${dayField.name}), app.timeZone).slice(0, 10) : undefined` : `row.${dayField.name} ? String(row.${dayField.name}).slice(0, 10) : undefined`},`
                 : ""
             }${
               tones && Object.keys(tones).length
