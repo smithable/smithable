@@ -1467,8 +1467,10 @@ async function supportFlow(dir, base) {
     // The case page leads with its conversation (record.first: thread, A 215).
     if (
       !(await thread.evaluate((t) => {
-        // The case's own form (the kit's model form), not the reply box or a dialog's.
-        const form = document.querySelector('[data-kit="model-form"]');
+        // The case's own form (the kit's model form), not an action's in its dialog.
+        const form = [...document.querySelectorAll('[data-kit="model-form"]')].find(
+          (f) => !f.closest('dialog, [data-kit="action-button"]'),
+        );
         return !!form && !!(t.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING);
       }))
     )
