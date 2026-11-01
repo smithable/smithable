@@ -1192,7 +1192,8 @@ async function kioskLandingFlow(dir, base) {
       changed++;
       const vh = page.viewportSize()?.height ?? 0;
       for (let i = 0; ; i++) {
-        await open(page, `${base}/where`);
+        // The app reloads itself after the change: a load it interrupts is one more try.
+        await open(page, `${base}/where`).catch(() => {});
         const h = (await page.locator("[data-hero]").boundingBox())?.height ?? 0;
         if (fits(h, vh)) break;
         if (i === 40 * P)
