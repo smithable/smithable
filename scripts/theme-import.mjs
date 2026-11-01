@@ -278,8 +278,8 @@ function* hallmark(checkout) {
       card: mode === "light" ? paper : color("paper-2"),
       muted: color("paper-2"),
       secondary: color("paper-3"),
+      // A field's edge is derived from the border at 3:1 (theme.ts), not the rule's quiet colour.
       border: color("rule"),
-      input: color("rule"),
       primary: accent,
       "primary-foreground": color("accent-ink"),
       sidebar: color("paper-2"),
@@ -429,7 +429,8 @@ function* tweakcn(file) {
       continue;
     }
     // The surfaces, the signal and the charts; the text on them our parser derives, so it
-    // reads (a preset's white on its blue, or its grey hints, are often under the floor).
+    // reads (a preset's white on its blue, or its grey hints, are often under the floor), and
+    // the field's edge too, at 3:1 from the border.
     const pick = (m) =>
       Object.fromEntries(
         [
@@ -439,7 +440,6 @@ function* tweakcn(file) {
           "primary",
           "muted",
           "border",
-          "input",
           "sidebar",
           "chart-1",
           "chart-2",
