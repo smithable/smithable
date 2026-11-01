@@ -31,6 +31,7 @@ import {
   shownTitleKey,
   titleField,
 } from "../shared.js";
+import { filterCode } from "./list.js";
 
 type CalendarPage = PageIR & { pattern: PatternOf<"calendar"> };
 
@@ -166,6 +167,34 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
   // The page's own view and its time-of-day chips (A 215).
   const view = look?.view;
   const timeOfDay = look?.filters?.includes("timeOfDay");
+  // The page's own filters (A 215 5b), as a list's: their conditions in getRange, their controls
+  // over the calendar, their values in the address.
+  const shownUx = ctx.ux.pages[page.id];
+  const filtering = page.filters?.length
+    ? filterCode(
+        page,
+        model,
+        t,
+        ir,
+        undefined,
+        undefined,
+        undefined,
+        shownUx?.filtersShown,
+        shownUx?.filterPick,
+        shownUx?.filtersLook,
+      )
+    : undefined;
+  if (filtering) {
+    imports.add("#/kit/Filters", "Filters").add("#/kit/params", "text");
+    if (filtering.imports.lists) imports.add("drizzle-orm", "inArray");
+    if (filtering.imports.toggles || filtering.imports.people) imports.add("drizzle-orm", "eq");
+    if (filtering.imports.people)
+      imports.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
+    if (filtering.imports.ranges) imports.add("#/kit/filter", "inRange");
+    if (filtering.imports.titles) imports.add("#/kit/format", "titleOf");
+    for (const m of filtering.modules) imports.add(m.module, m.data);
+  }
+  const filterKeys = filtering?.names ?? [];
   if (timeOfDay) imports.add("#/kit/params", "oneOf");
   const capacityItem = capacity
     ? `\n        places: { left: Number(row.${capacity.left} ?? 0), of: Number(row.${capacity.of} ?? 0) },`
@@ -185,12 +214,12 @@ const getRange = createServerFn()
   // (a month starting on a Sunday spans six).
   .validator(
     z
-      .object({ from: z.iso.datetime(), to: z.iso.datetime() })
+      .object({ from: z.iso.datetime(), to: z.iso.datetime()${filtering ? ", f: z.record(z.string(), z.string().optional()).optional()" : ""} })
       .refine((r) => Date.parse(r.from) < Date.parse(r.to) && Date.parse(r.to) - Date.parse(r.from) <= 45 * 86_400_000, "The range is not a week or a month."),
   )
   .handler(async ({ data }) => {
-    const viewer = await currentViewer();
-    const rows = await ${n.data}.list(viewer, ${range});${lengths}${colorLoad}
+    const viewer = await currentViewer();${filtering ? filtering.prelude.map((line) => `\n    ${line}`).join("") : ""}
+    const rows = await ${n.data}.list(viewer, ${filtering ? `and(${[range, ...filtering.conditions].join(", ")})` : range});${lengths}${colorLoad}
     return {
       items: rows.map((row) => ({
         id: row.id,
@@ -203,12 +232,12 @@ const getRange = createServerFn()
             : ""
         }
       })),${lanes}
-      // Records are made on their page: the viewer must be able to open it, too.
+${filtering?.options.length ? `      options: { ${filtering.options.join(", ")} },\n` : ""}      // Records are made on their page: the viewer must be able to open it, too.
       canCreate: ${opens && opensId ? `allows(${n.access}.create, viewer) && allows(pageAccess[${JSON.stringify(opensId)}], viewer)` : "false"},
       canOpen: ${opensId ? `allows(pageAccess[${JSON.stringify(opensId)}], viewer)` : "false"},
     };
   });
-
+${filtering ? filtering.picks.join("") : ""}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateSearch: (s: Search) => optional({${
     laneModel
@@ -229,25 +258,34 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateS
         : ""
     }
     // The record whose panel is open, so a sign-in or a link returns to it.
-    open: count(s.open),
+    open: count(s.open),${filterKeys.map((k) => `\n    ${k}: text(s.${k}),`).join("")}
   }),
   // The period shown decides what is loaded; opening a record's panel, or a time of day, loads
   // nothing again.
   loaderDeps: ({ search: { open: _open${timeOfDay ? ", time: _time" : ""}, ...period } }) => period,
   loader: ({ deps }) => {
     const range = calendarRange(deps, app.timeZone${view ? `, ${JSON.stringify(view)}` : ""});
-    return getRange({ data: { from: range.from.toISOString(), to: range.to.toISOString() } });
+    return getRange({ data: { from: range.from.toISOString(), to: range.to.toISOString()${filterKeys.length ? `, f: { ${filterKeys.map((k) => `${k}: deps.${k}`).join(", ")} } as Record<string, string>` : ""} } });
   },
   component: ${component},
 });
 
 function ${component}() {
-  const { items, canCreate, canOpen${laneModel ? ", lanes" : ""} } = Route.useLoaderData();
+  const { items, canCreate, canOpen${laneModel ? ", lanes" : ""}${filtering?.options.length ? ", options" : ""} } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   return (
     <>
-      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />
+      <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />${
+        filtering
+          ? `
+      <Filters
+        filters={${literal(filtering.controls)}}
+        values={{ ${filterKeys.map((k) => `${k}: search.${k}`).join(", ")} }}
+        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { ...search, ...next, open: undefined }, replace: true, resetScroll: false })}
+      />`
+          : ""
+      }
       <Calendar
         search={search}
         items={items}${capacity && capacity.look !== "number" ? `\n        places=${JSON.stringify(capacity.look)}` : ""}

@@ -136,6 +136,7 @@ pages:
       footer:
   schedule:                           # the week's classes, for visitors too
     calendar: { model: Session, duration: classType.durationMinutes }
+    filters: [classType, instructor]  # a timetable by class and by teacher
   sessions:                           # the staff's list of sessions
     crud: Session
     filters: [classType, instructor, startsAt]

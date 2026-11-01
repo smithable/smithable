@@ -408,12 +408,14 @@ function readPage(
         `${capitalize(where)} has no sections; a page of sections needs at least one, like "story: { text: }" or "team: { records: Instructor }".`,
       );
   }
+  // A calendar page takes filters too, of its own model (A 215): the rest is a crud page's.
+  const calendarModel = pattern.kind === "calendar" ? pattern.model : undefined;
   if (!model)
     for (const e of known.filter((e) =>
       [
         "actions",
         "search",
-        "filters",
+        ...(calendarModel ? [] : ["filters"]),
         "defaultFilter",
         "sortable",
         "favorites",
@@ -440,8 +442,30 @@ function readPage(
       `Give it another name, or a "route".`,
     );
   }
-  const checkedFilters =
-    model && filters?.length ? checkFilterFields(ctx, filters, model, parsed, where) : undefined;
+  const filterModel = model ?? calendarModel;
+  let checkedFilters =
+    filterModel && filters?.length
+      ? checkFilterFields(ctx, filters, filterModel, parsed, where)
+      : undefined;
+  // On a calendar the range of days is its date filter: no number or date ranges, no owner.
+  if (calendarModel && checkedFilters) {
+    const target = parsed.models?.find((m) => m.name === calendarModel);
+    checkedFilters = checkedFilters.filter((name) => {
+      const field = target?.fields.find((f) => f.name === name);
+      // The automatic fields: who owns it is a person (a "Mine" toggle); when it was made or
+      // changed is a date.
+      const ranged = field
+        ? field.type.kind === "scalar" && field.type.name !== "bool"
+        : name !== "owner";
+      if (!ranged) return true;
+      ctx.error(
+        filters?.find((f) => f.name === name)?.at,
+        "invalid-filter",
+        `"${name}" cannot be a filter on a calendar: its days are the range; a calendar filters by choices, references, people and yes/no fields.`,
+      );
+      return false;
+    });
+  }
   return {
     id,
     route,

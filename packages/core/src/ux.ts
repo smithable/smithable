@@ -944,7 +944,7 @@ export function validateUx(
                     ctx.error(
                       at as ParsedNode,
                       "invalid-value",
-                      `A calendar's own filter is timeOfDay; "${name}" is not one.`,
+                      `A calendar's own filter is timeOfDay; "${name}" is not one: a field goes in the page's filters in smithable.yml.`,
                     );
                 // A calendar of dates has no hours to tell morning from evening.
                 const starts = spec.pattern.kind === "calendar" ? spec.pattern.starts : undefined;

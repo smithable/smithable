@@ -388,6 +388,24 @@ async function calendarFlow(base) {
     await page.getByRole("button", { name: "Next" }).click();
     await page.waitForURL(/[?&]time=morning/);
     await page.getByRole("button", { name: "Any time", exact: true }).click();
+    // The page's own filters (A 215 5b): a class type's chip shows only its classes, in the address.
+    const types = page.locator('[data-kit="filters"] fieldset', {
+      has: page.locator("legend", { hasText: "Class type" }),
+    });
+    const chip = types.getByRole("button").first();
+    const chosen = (await chip.innerText()).trim();
+    await chip.click();
+    await page.waitForURL(/[?&]classType=/);
+    const others = async () =>
+      (await page.locator("section ol button span.font-medium").allInnerTexts()).filter(
+        (t) => !t.includes(chosen),
+      );
+    for (let i = 0; (await others()).length; i++) {
+      if (i === 50 * P) throw new Error(`classes ${(await others()).join(", ")} under ${chosen}`);
+      await page.waitForTimeout(100);
+    }
+    await types.getByRole("button", { name: chosen }).click();
+    await page.waitForURL((url) => !url.search.includes("classType="));
     await page.getByRole("button", { name: "Previous" }).click();
     await page.waitForFunction(
       (text) => [...document.querySelectorAll("h2")].some((h) => h.textContent === text),
