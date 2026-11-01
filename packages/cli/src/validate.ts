@@ -447,7 +447,7 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
     const model = ir.models.find((m) => m.name === pageModel(page));
     if (!look || !model) continue;
     lines.push(
-      `${page.id} pictures (${look}): ${recordPicture(model)?.name ?? "none"} (the first picture field)`,
+      `${page.id} pictures (${look}): ${recordPicture(model)?.name ?? "none"} (the first picture field), on the read-only view`,
     );
   }
   // A calendar's view and its time of day (A 215), with the kit's boundaries.

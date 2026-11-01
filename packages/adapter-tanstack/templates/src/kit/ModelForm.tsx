@@ -361,7 +361,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     const record = { ...initial, ...computed };
     // The record's pictures large (record.pictures): its first picture field, out of the fields.
     const pictureField = picturesLook
-      ? ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures")
+      ? ui.fields.find((f) => (f.kind === "picture" || f.kind === "pictures") && !f.computed)
       : undefined;
     const gallery = pictureField ? picturesOf(ui, pictureField, record) : [];
     const shownGroups = groups(ui).map((group) => ({
@@ -384,7 +384,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         >
           {big && (
             <div className={picturesLook === "aside" ? "lg:col-span-7" : undefined}>
-              <Gallery pictures={gallery} />
+              <Gallery key={String(record.id)} pictures={gallery} />
             </div>
           )}
           <div className={cn("space-y-6", big && picturesLook === "aside" && "lg:col-span-5")}>
