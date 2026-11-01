@@ -1200,10 +1200,11 @@ async function kioskLandingFlow(dir, base) {
     const inner = await header.locator(":scope > div").last().boundingBox();
     if (!inner || Math.round(inner.width) !== 1280)
       throw new Error(`the header's content is ${inner?.width}px wide, not 80rem`);
-    await page.mouse.wheel(0, 2000);
+    // To the page's end, again on each try: one wheel turn while the page still settles is lost.
     for (let i = 0; (await header.getAttribute("data-over")) !== null; i++) {
       if (i === 50 * P)
         throw new Error("the header stays on the hero's wash after the hero has passed");
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       await page.waitForTimeout(100);
     }
     console.log(
