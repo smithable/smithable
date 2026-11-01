@@ -163,6 +163,10 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     }
   }
   const capacity = look?.capacity;
+  // The page's own view and its time-of-day chips (A 215).
+  const view = look?.view;
+  const timeOfDay = look?.filters?.includes("timeOfDay");
+  if (timeOfDay) imports.add("#/kit/params", "oneOf");
   const capacityItem = capacity
     ? `\n        places: { left: Number(row.${capacity.left} ?? 0), of: Number(row.${capacity.of} ?? 0) },`
     : "";
@@ -212,14 +216,25 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${ctx.t.head(page)}  validateS
       : ""
   }
     week: shaped(s.week, /^\\d{4}-W\\d{2}$/),
-    month: shaped(s.month, /^\\d{4}-\\d{2}$/),
+    month: shaped(s.month, /^\\d{4}-\\d{2}$/),${
+      view
+        ? `
+    from: shaped(s.from, /^\\d{4}-\\d{2}-\\d{2}$/),`
+        : ""
+    }${
+      timeOfDay
+        ? `
+    time: oneOf(s.time, ["morning", "afternoon", "evening"] as const),`
+        : ""
+    }
     // The record whose panel is open, so a sign-in or a link returns to it.
     open: count(s.open),
   }),
-  // The period shown decides what is loaded; opening a record's panel loads nothing again.
-  loaderDeps: ({ search: { open: _open, ...period } }) => period,
+  // The period shown decides what is loaded; opening a record's panel, or a time of day, loads
+  // nothing again.
+  loaderDeps: ({ search: { open: _open${timeOfDay ? ", time: _time" : ""}, ...period } }) => period,
   loader: ({ deps }) => {
-    const range = calendarRange(deps, app.timeZone);
+    const range = calendarRange(deps, app.timeZone${view ? `, ${JSON.stringify(view)}` : ""});
     return getRange({ data: { from: range.from.toISOString(), to: range.to.toISOString() } });
   },
   component: ${component},
@@ -236,7 +251,7 @@ function ${component}() {
         search={search}
         items={items}${capacity && capacity.look !== "number" ? `\n        places=${JSON.stringify(capacity.look)}` : ""}
         timeZone={app.timeZone}
-        dateOnly={${dateOnly}}${laneModel ? "\n        lanes={lanes}" : ""}
+        dateOnly={${dateOnly}}${view ? `\n        view=${JSON.stringify(view)}` : ""}${timeOfDay ? "\n        timeOfDay" : ""}${laneModel ? "\n        lanes={lanes}" : ""}
         newLabel={w.newOne(${JSON.stringify(n.label.toLowerCase())})}${
           reserve
             ? `

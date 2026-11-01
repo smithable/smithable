@@ -12,7 +12,24 @@ import { instantOf, wallTime } from "./zoned";
 
 /** Where a calendar is: a day, a week (`2026-W40`) or a month (`2026-10`), as in the page's address. */
 /** The period shown, and the record whose panel is open (its id), so a sign-in or a link returns to it. */
-export type CalendarSearch = { day?: string; week?: string; month?: string; open?: number };
+export type CalendarSearch = {
+  day?: string;
+  week?: string;
+  month?: string;
+  /** The first day of an agenda's or days' view; unsaid, today. */
+  from?: string;
+  /** The time of day the records start in (the calendar's own filter). */
+  time?: TimeOfDay;
+  open?: number;
+};
+
+/** A record's start by the hour: morning before 12, afternoon 12 to 17, evening from 17. */
+export type TimeOfDay = "morning" | "afternoon" | "evening";
+const TIMES: Record<TimeOfDay, [from: number, to: number]> = {
+  morning: [0, 12 * 60],
+  afternoon: [12 * 60, 17 * 60],
+  evening: [17 * 60, 24 * 60],
+};
 
 export interface CalendarItem {
   id: number;
@@ -143,9 +160,20 @@ function weekStart(week: string): string {
  * of instants to load (with a day on each side, for records crossing midnight), its heading and
  * where Previous, Today and Next and the other view go.
  */
-export function calendarRange(search: CalendarSearch, timeZone?: string) {
+export function calendarRange(
+  search: CalendarSearch,
+  timeZone?: string,
+  /** The page's own view (smithable.ux.yml): week unless agenda or days. */
+  own: "week" | "agenda" | "days" = "week",
+) {
   const today = wallTime(new Date(), timeZone).slice(0, 10);
-  const view: "day" | "week" | "month" = search.day ? "day" : search.month ? "month" : "week";
+  const view: "day" | "week" | "month" | "agenda" | "days" = search.day
+    ? "day"
+    : search.month
+      ? "month"
+      : search.week
+        ? "week"
+        : own;
   let days: string[];
   let label: string;
   let prev: CalendarSearch;
@@ -170,6 +198,17 @@ export function calendarRange(search: CalendarSearch, timeZone?: string) {
     label = heading({ month: "long", year: "numeric" }, first);
     prev = { month: addDays(first, -1).slice(0, 7) };
     next = { month: addDays(last, 1).slice(0, 7) };
+  } else if (view === "agenda" || view === "days") {
+    // From a day (today unsaid): seven days side by side, or four weeks as one list.
+    const start = search.from ?? today;
+    const length = view === "days" ? 7 : 28;
+    days = Array.from({ length }, (_, i) => addDays(start, i));
+    label = `${heading({ day: "numeric", month: "long" }, start)} – ${heading(
+      { day: "numeric", month: "long", year: "numeric" },
+      addDays(start, length - 1),
+    )}`;
+    prev = { from: addDays(start, -length) };
+    next = { from: addDays(start, length) };
   } else {
     const start = search.week ? weekStart(search.week) : monday(today);
     days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -193,7 +232,9 @@ export function calendarRange(search: CalendarSearch, timeZone?: string) {
         ? { day: today }
         : view === "month"
           ? { month: today.slice(0, 7) }
-          : { week: isoWeek(today) },
+          : view === "week"
+            ? { week: isoWeek(today) }
+            : {},
     /** The other view, around the same days: a day goes back to its week. */
     other:
       view === "day"
@@ -201,6 +242,8 @@ export function calendarRange(search: CalendarSearch, timeZone?: string) {
         : view === "month"
           ? { week: isoWeek(first < today && today <= last ? today : (days[7] ?? first)) }
           : { month: (days[3] as string).slice(0, 7) },
+    /** The page's own view, back from a month or a day. */
+    own,
     /** The day view of a week: today when it is in it, else its Monday. */
     oneDay: { day: first <= today && today <= last ? today : first },
     month: view === "month" ? (search.month as string) : undefined,
@@ -261,6 +304,8 @@ export function Calendar({
   details,
   lanes,
   places = "number",
+  view: own = "week",
+  timeOfDay,
 }: {
   search: CalendarSearch;
   items: CalendarItem[];
@@ -281,8 +326,12 @@ export function Calendar({
   lanes?: { id: number; title: string }[];
   /** How a block's places left show (the ux file's calendar capacity look). */
   places?: "number" | "pips" | "bar";
+  /** The page's own view (smithable.ux.yml): week unless agenda or days. */
+  view?: "week" | "agenda" | "days";
+  /** Morning, afternoon and evening as chips over the records (the calendar's own filter). */
+  timeOfDay?: boolean;
 }) {
-  const range = calendarRange(search, timeZone);
+  const range = calendarRange(search, timeZone, own);
   const panel = useRef<HTMLDialogElement>(null);
   // The panel was opened here (a history entry of its own): closing it steps back, so Back and
   // Close agree. Opened from an address (a return from sign-in), closing takes `open` away.
@@ -316,7 +365,10 @@ export function Calendar({
       columns: 1,
     };
   });
-  const byDay = new Map(range.days.map((d) => [d, place(placed.filter((p) => p.day === d))]));
+  // The time of day chosen: the records that start in it.
+  const time = timeOfDay && search.time ? TIMES[search.time] : undefined;
+  const kept = time ? placed.filter((p) => p.from >= time[0] && p.from < time[1]) : placed;
+  const byDay = new Map(range.days.map((d) => [d, place(kept.filter((p) => p.day === d))]));
   // The columns: the days, or in the day view each person's records that day.
   const shownDay = range.days[0] as string;
   const columns =
@@ -326,7 +378,7 @@ export function Calendar({
           day: shownDay,
           long: l.title,
           short: l.title,
-          records: place(placed.filter((p) => p.day === shownDay && p.lane === l.id)),
+          records: place(kept.filter((p) => p.day === shownDay && p.lane === l.id)),
         }))
       : range.days.map((d) => ({
           key: d,
@@ -335,12 +387,16 @@ export function Calendar({
           short: shortDay(d),
           records: byDay.get(d) ?? [],
         }));
-  // Hours shown: 07:00 to 21:00, widened to the week's earliest and latest record.
-  const timed = !dateOnly && range.view !== "month";
+  // Hours shown: the week's earliest to its latest record (07:00 to 21:00 for an empty one). The
+  // agenda and the days are lists, with no hours.
+  const listed = range.view === "agenda" || range.view === "days";
+  const timed = !dateOnly && range.view !== "month" && !listed;
   const empty = range.days.every((d) => !byDay.get(d)?.length);
-  const inWeek = placed.filter((p) => byDay.has(p.day));
-  const firstHour = Math.min(7, ...inWeek.map((p) => Math.floor(p.from / 60)));
-  const lastHour = Math.max(21, ...inWeek.map((p) => Math.ceil(p.to / 60)));
+  const inWeek = kept.filter((p) => byDay.has(p.day));
+  const firstHour = inWeek.length ? Math.min(...inWeek.map((p) => Math.floor(p.from / 60))) : 7;
+  const lastHour = inWeek.length
+    ? Math.max(firstHour + 1, ...inWeek.map((p) => Math.ceil(p.to / 60)))
+    : 21;
   const hours = Array.from({ length: lastHour - firstHour }, (_, i) => firstHour + i);
   const span = (lastHour - firstHour) * 60;
 
@@ -408,19 +464,53 @@ export function Calendar({
           type="button"
           variant="ghost"
           className={lanes && range.view === "week" ? "" : "ml-auto"}
-          onClick={() => onNavigate(range.other)}
+          onClick={() =>
+            onNavigate(
+              (range.view === "month" || range.view === "day") && range.own !== "week"
+                ? {}
+                : range.other,
+            )
+          }
         >
-          {range.view === "month" ? w.week : range.view === "day" ? w.week : w.month}
+          {range.view === "month" || range.view === "day"
+            ? range.own === "agenda"
+              ? w.agenda
+              : range.own === "days"
+                ? w.days
+                : w.week
+            : w.month}
         </Button>
       </div>
+      {timeOfDay && (
+        <fieldset data-part="time-of-day" className="m-0 flex flex-wrap gap-2 border-0 p-0">
+          <legend className="sr-only">{w.timeOfDay}</legend>
+          {([undefined, "morning", "afternoon", "evening"] as const).map((t) => (
+            <Button
+              key={t ?? "any"}
+              type="button"
+              size="sm"
+              variant={search.time === t ? "default" : "outline"}
+              aria-pressed={search.time === t}
+              className="rounded-full"
+              onClick={() => onNavigate({ ...search, time: t, open: undefined })}
+            >
+              {t ? w[t] : w.anyTime}
+            </Button>
+          ))}
+        </fieldset>
+      )}
 
       <div
         className={
           range.view === "day"
             ? "md:grid md:gap-x-1"
-            : timed
-              ? "md:grid md:grid-cols-[3rem_repeat(7,minmax(0,1fr))] md:gap-x-1"
-              : "md:grid md:grid-cols-7 md:gap-1"
+            : range.view === "days"
+              ? "grid snap-x auto-cols-[calc((100%-1rem)/3)] grid-flow-col gap-2 overflow-x-auto md:auto-cols-auto md:grid-flow-row md:grid-cols-7 md:gap-1 md:overflow-visible"
+              : range.view === "agenda"
+                ? "space-y-2"
+                : timed
+                  ? "md:grid md:grid-cols-[3rem_repeat(7,minmax(0,1fr))] md:gap-x-1"
+                  : "md:grid md:grid-cols-7 md:gap-1"
         }
         style={
           range.view === "day"
@@ -443,13 +533,17 @@ export function Calendar({
         )}
         {/* On a phone an empty week or month says so once, not "Nothing" under every day. */}
         {empty && (
-          <div className="flex items-center justify-between gap-3 py-3 md:hidden">
+          <div
+            className={`flex items-center justify-between gap-3 py-3 ${listed ? "col-span-full" : "md:hidden"}`}
+          >
             <p className="text-sm text-muted-foreground">
-              {range.view === "day"
-                ? w.nothing
-                : range.view === "week"
-                  ? w.nothingThisWeek
-                  : w.nothingThisMonth}
+              {listed
+                ? w.nothingInTheseDays
+                : range.view === "day"
+                  ? w.nothing
+                  : range.view === "week"
+                    ? w.nothingThisWeek
+                    : w.nothingThisMonth}
             </p>
             {/* Whoever may add one gets the button here (the hours to tap are a wide screen's). */}
             {onCreate && (
@@ -470,13 +564,19 @@ export function Calendar({
             <section
               key={key}
               aria-label={long}
-              className={`border-b py-3 md:border md:border-border md:py-0 ${empty ? "max-md:hidden" : ""} ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
+              className={`border-b py-3 ${range.view === "agenda" ? "" : "md:border md:border-border md:py-0"} ${empty ? (listed ? "hidden" : "max-md:hidden") : ""} ${range.view === "agenda" && records.length === 0 ? "hidden" : ""} ${range.view === "days" ? "snap-start" : ""} ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
             >
               <h3
                 className={`text-sm font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today && range.view !== "day" ? "text-primary" : ""}`}
               >
-                <span className="md:hidden">{long}</span>
-                <span className="hidden md:inline">{short}</span>
+                {range.view === "agenda" ? (
+                  long
+                ) : (
+                  <>
+                    <span className="md:hidden">{long}</span>
+                    <span className="hidden md:inline">{short}</span>
+                  </>
+                )}
               </h3>
               <div
                 className={timed ? "relative md:h-[var(--grid)]" : ""}

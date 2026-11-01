@@ -440,6 +440,18 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
           `${page.id} ${name} stage: ${shown?.id ?? "no list page"}${look.stage ? " (stage)" : " (the first list page in the navigation)"}`,
         );
       }
+  // A calendar's view and its time of day (A 215), with the kit's boundaries.
+  for (const page of ir.pages) {
+    if (page.pattern.kind !== "calendar") continue;
+    const calendar = ux?.pages[page.id]?.calendar;
+    lines.push(
+      `${page.id} calendar view: ${calendar?.view ?? "week"}${calendar?.view ? " (view)" : " (unsaid)"}`,
+    );
+    if (calendar?.filters?.includes("timeOfDay"))
+      lines.push(
+        `${page.id} time of day: morning before 12:00, afternoon 12:00 to 17:00, evening from 17:00 (the kit's)`,
+      );
+  }
   // A record's summary (A 215): what its title row or its side panel shows, by type.
   for (const page of ir.pages) {
     const look = ux?.pages[page.id];

@@ -192,6 +192,62 @@ const setCalendarColor: Operation<{ page: string; field: string }> = {
   },
 };
 
+/** How a calendar shows its records (A 215): week (the default), agenda or days. */
+const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days" }> = {
+  name: "setCalendarView",
+  summary:
+    "Show a calendar as the week's grid (the default), an agenda (the coming weeks as one list by day) or days (the coming days side by side, each a list).",
+  schema: {
+    type: "object",
+    required: ["page", "view"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      view: { enum: ["week", "agenda", "days"], description: "week, agenda or days." },
+    },
+  },
+  positional: ["page", "view"],
+  describe: ({ page, view }) =>
+    `Show the ${page} calendar as ${view === "week" ? "the week's grid" : view === "agenda" ? "an agenda" : "days side by side"}`,
+  destructive: () => false,
+  apply({ ux }, { page, view }, ir) {
+    calendarPage(ir, page);
+    put(ux, ["pages", page, "calendar", "view"], view === "week" ? undefined : view);
+    return [];
+  },
+};
+
+/** A calendar's own filters (A 215): timeOfDay, or none. */
+const setCalendarFilters: Operation<{ page: string; filters?: string[] }> = {
+  name: "setCalendarFilters",
+  summary:
+    "Give a calendar its own filters: timeOfDay (morning before 12, afternoon 12 to 17, evening from 17, by the start hour); none takes them away.",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      filters: {
+        type: "array",
+        items: { enum: ["timeOfDay"] },
+        description: "timeOfDay, or none.",
+      },
+    },
+  },
+  positional: ["page", "...filters"],
+  describe: ({ page, filters }) =>
+    filters?.length
+      ? `Filter the ${page} calendar by time of day`
+      : `No filters of its own on the ${page} calendar`,
+  destructive: () => false,
+  apply({ ux }, { page, filters }, ir) {
+    calendarPage(ir, page);
+    put(ux, ["pages", page, "calendar", "filters"], filters?.length ? filters : undefined);
+    return [];
+  },
+};
+
 /** The places left on each of a calendar's blocks (look-gap §4); none takes them away. */
 const setCalendarCapacity: Operation<{ page: string; left: string; of?: string; look?: string }> = {
   name: "setCalendarCapacity",
@@ -1195,6 +1251,8 @@ export const uxOperations: AnyOperation[] = [
   setChrome,
   setCalendarColor,
   setCalendarCapacity,
+  setCalendarView,
+  setCalendarFilters,
   setTableMark,
   setRowActions,
 ];
