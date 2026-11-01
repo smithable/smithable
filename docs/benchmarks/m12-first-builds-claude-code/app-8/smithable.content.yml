@@ -1,24 +1,26 @@
 smithableContent: 0.1
 pages:
   home:
+    features:
+      items: [{ title: The full programme, text: "Browse every talk by day and time, with its room and speaker." }, { title: Save your seat, text: Register for the talks you want to attend; places are limited per room. }, { title: Change your mind, text: Cancel a registration any time before the talk begins and free the seat for someone else. }]
+      title: Everything for your conference days
+    faq:
+      items: [{ question: Do I need an account to register?, answer: Yes. Sign in with your email address to register for talks; the programme is open to everyone. }, { question: What happens when a talk is full?, answer: "Once all seats are taken, registration for that talk closes. Check back later in case someone cancels." }, { question: Can I cancel?, answer: "You can cancel your registration until the talk starts, from My registrations." }]
+      title: Questions
     hero:
-      title: Two days of talks worth your time
-      subtitle: See the full programme, get to know the speakers and save your seat in the sessions you don't want to miss.
-      button: Browse the talks
+      title: Ideas worth showing up for
+      subtitle: See the programme, meet the speakers and register for the talks you want to attend.
+      button: See the schedule
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
-    speakerList:
-      title: Meet the speakers
+    speakers:
+      title: Our speakers
     callToAction:
-      title: Seats are limited
-      text: Popular talks fill up fast. Sign in and reserve your place today.
-      button: Pick your talks
-    features:
-      items: [{ title: The whole programme in one place, text: "Every talk with its time, room, track and speaker, in a list or on the schedule." }, { title: Reserve your seat, text: Register for the talks you want; each one shows how many places are still free. }, { title: Know who is speaking, text: Read each speaker's background and see all the talks they give. }, { title: Your own agenda, text: "Your registrations are gathered on one page, and you can cancel until the talk begins." }]
-    faq:
-      items: [{ question: Do I need an account to see the programme?, answer: "No. Anyone can browse the talks, the schedule and the speakers. You only sign in to register." }, { question: How do I register for a talk?, answer: "Sign in, open the talk and press Book. Your seat is confirmed straight away if places are left." }, { question: What if a talk is full?, answer: "Full talks can't take more registrations. Keep an eye on it, as seats free up when others cancel." }, { question: Can I cancel a registration?, answer: "Yes, from My registrations, any time before the talk starts." }]
+      title: Pick your talks
+      text: Seats are limited. Register for the talks you don't want to miss.
+      button: Browse the schedule
 logo:
   src: images/logo.webp
   alt: A ticket

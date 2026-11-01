@@ -1,33 +1,13 @@
 smithableContent: 0.1
-models:
-  Instructor:
-    label: Teacher
-    pluralLabel: Teachers
-  Session:
-    fields:
-      instructor:
-        label: Teacher
 pages:
-  instructors:
-    title: Teachers
   home:
+    faq:
+      items: [{ question: Do I need experience to join a class?, answer: "No. Classes marked for beginners or all levels welcome first-timers, and teachers offer variations for every body." }, { question: How do I book a class?, answer: "Open the schedule, pick a class with places left and press Book. You sign in with your email address, no password needed." }, { question: Can I cancel my booking?, answer: "Yes, from My bookings, any time before the class starts. Your place then goes to someone else." }, { question: What should I bring?, answer: Comfortable clothes and some water. Mats and props are available at the studio. }]
     hero:
-      title: Find your breath, find your class
-      subtitle: Gentle mornings, strong evenings and everything in between. See the week's classes and book your mat in a few taps.
-      button: See the schedule
       image:
         src: images/hero.webp
-        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
+        alt: A yoga class stretching on mats in a bright studio
         generated: true
-    classes:
-      title: Our classes
-    teachers:
-      title: Meet the teachers
-    callToAction:
-      title: Ready to roll out your mat?
-      button: Book a class
-    faq:
-      items: [{ question: I've never done yoga. Where should I start?, answer: Pick a class marked for beginners or all levels; the teacher will offer simpler options throughout. }, { question: How do I book a class?, answer: "Open the schedule, choose a class and press Book. You sign in with your email address, no password needed." }, { question: Can I cancel a booking?, answer: "Yes, from My bookings, any time before the class starts, so your place goes to someone else." }, { question: What should I bring?, answer: Comfortable clothes and some water. Mats and props are available at the studio. }]
 logo:
   src: images/logo.webp
   alt: A lotus over a ripple

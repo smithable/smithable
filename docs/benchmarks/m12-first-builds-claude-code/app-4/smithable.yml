@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Toolshare
-  description: "Neighbors share their tools: list what you own, find what you need, and borrow instead of buying."
+  name: Shed Share
+  description: Neighbors list the tools they own and lend them to each other.
   currency: EUR
 models:
   Tool:
@@ -9,42 +9,17 @@ models:
       title: string!
       photos: pictures!
       description: text!
-      category: powerTools | handTools | garden | ladders | cleaning | camping | other
+      category: powerTools | handTools | garden | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
     review: [photos]
-  Loan:
-    fields:
-      tool: Tool!
-      borrower: string!
-      borrowerContact: string
-      lentOn: date!
-      dueBack: date
-      status: out | returned
-      returnedOn: date
-      note: text
-    namedBy: [tool, borrower]
 pages:
-  home:
-    route: /welcome
-    landing:
-      hero:
-        button: catalog
-        secondButton: myTools
-      features:
-      latest:
-        records: Tool
-        where:
-          available: true
-      footer:
   catalog:
     route: /
     crud: Tool
     search: [title, description, place]
     filters: [category, condition, available]
-    defaultFilter:
-      available: true
     sortable: [title, createdAt]
     favorites: true
     contact: owner
@@ -54,24 +29,31 @@ pages:
   saved:
     crud: Tool
     favorites: only
-  loans:
-    crud: Loan
-    filters: [status, tool, dueBack]
-    defaultFilter:
-      status: out
-    actions: [markReturned]
   review:
     review: all
+  home:
+    route: /welcome
+    landing:
+      hero:
+        button: catalog
+        secondButton: myTools
+      features:
+      footer:
   privacy:
     route: /privacy
     legal: privacy
 actions:
-  markReturned:
-    on: Loan
+  markLent:
+    on: Tool
     when:
-      status: out
+      available: true
     set:
-      status: returned
-      returnedOn: TODAY()
-    intent: Record that a lent tool has come back.
-navigation: [catalog, myTools, loans, saved, review]
+      available: false
+    intent: The owner marks a tool as lent out, so neighbors see it is away.
+  markReturned:
+    on: Tool
+    when:
+      available: false
+    set:
+      available: true
+    intent: The owner marks a tool as back and ready to borrow again.

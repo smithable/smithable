@@ -2,21 +2,14 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: Jobs from union employers, text: "Every opening here comes from an employer working with our local, at union wages and conditions." }, { title: Apply in minutes, text: "Sign in, write a few lines about yourself, attach your resume and send it." }, { title: Follow your applications, text: "See whether each application is submitted, shortlisted or settled, all in one place." }]
-      title: How it works
+      items: [{ title: Union-vetted jobs, text: "Every post comes through the local, so you know the work meets our standards." }, { title: Apply in minutes, text: "Sign in, write a few lines about yourself, attach your CV and send it." }, { title: Follow your applications, text: "See at a glance whether each application is submitted, shortlisted or settled." }]
     faq:
-      items: [{ question: Who can apply?, answer: Members of the local. Sign in with your email and include your member number on the application. }, { question: Can anyone see my application?, answer: No. Only you and the union's job desk staff see what you send. }, { question: Can I apply to more than one job?, answer: "Yes, once per job, as many jobs as you like." }, { question: How do employers post a job?, answer: Contact the union office and our staff will post the opening for you. }]
-      title: Questions
+      items: [{ question: Who can apply?, answer: Members of the local. Create an account with your email to send applications. }, { question: Do I need an account to look at jobs?, answer: No. Anyone can browse the open jobs; you only sign in to apply. }, { question: Who sees my application?, answer: Only you and the union staff who handle the job. }, { question: How do I know if I got the job?, answer: Your application's status changes as staff review it; check it under Applications. }]
     hero:
-      title: Union jobs, posted first for our members
-      subtitle: Browse open positions from employers working with our local and apply in a few minutes.
-      button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
-    openJobs:
-      title: Open now
 logo:
   src: images/logo.webp
   alt: A map pin

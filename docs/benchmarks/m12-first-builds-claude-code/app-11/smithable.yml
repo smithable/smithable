@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: API Status
-  description: "The live state of our API: what works, what is being fixed, and what maintenance is planned."
+  description: "The live state of our API: open incidents, their updates and planned maintenance."
 models:
   Component:
     fields:
@@ -49,7 +49,6 @@ pages:
       hero:
       services:
         records: Component
-        view: table
       open:
         records: Incident
         where:
@@ -101,7 +100,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix has been deployed. We are monitoring the results.
+        message: A fix is out. We are watching before we close this.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -114,6 +113,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident has been resolved.
+        message: This incident is resolved.
     intent: The incident is over, with an update saying so.
 navigation: [overview, incidents, updates, maintenance, components, team]

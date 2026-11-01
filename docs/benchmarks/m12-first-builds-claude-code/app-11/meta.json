@@ -4,7 +4,7 @@
   "wordStarter": "status",
   "questions": [
     "Who can see the status page?",
-    "How should the API's status be broken down?",
-    "Should visitors be able to subscribe to updates?"
+    "How is the API broken down on the page?",
+    "Can visitors subscribe to updates about incidents and maintenance?"
   ]
 }

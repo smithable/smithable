@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is the shop working? The live state of our web shop's services, outages and their updates.
+  description: Is the shop working? The state of our services, outages and their updates, live.
 models:
   Component:
     fields:
@@ -25,18 +25,6 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
 pages:
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
   incidents:
     crud: Incident
     filters: [status, component]
@@ -63,6 +51,18 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
   team:
     users: manage
 actions:

@@ -2,26 +2,32 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Welcome to the club
-      subtitle: Fixtures, results and the squads behind every team, from the juniors to the first eleven.
-      button: See the fixtures
+      title: One club, every team, every match
+      subtitle: Fixtures, results and squads from the first team to the juniors, all in one place.
+      button: Fixtures & results
       secondButton: Our teams
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
     upcoming:
-      title: Coming up
+      title: Upcoming matches
     results:
       title: Latest results
     ourTeams:
       title: Our teams
   matches:
-    title: Matches
-  teams:
-    title: Teams
-  players:
-    title: Players
+    title: Fixtures & results
+models:
+  Match:
+    fields:
+      goalsFor:
+        label: Our goals
+      goalsAgainst:
+        label: Their goals
+actions:
+  recordResult:
+    label: Record result
 logo:
   src: images/logo.webp
   alt: A football
