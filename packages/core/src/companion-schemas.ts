@@ -232,11 +232,13 @@ const look = Object.fromEntries(
                           ? `One of ${values.join(", ")}, for the list layout; the first is the default.`
                           : kind === "hero" && option === "overlay"
                             ? "A cover or photo hero's wash: brand or dark; unsaid, the layout's own."
-                            : kind === "hero" && option === "eyebrow"
-                              ? "A line over the title from the page's contact section: address (its city) or hours (the first line of its hours)."
-                              : option === "band"
-                                ? `The section across the width on a surface of the theme: ${values.join(", ")}; none (the default) is an open section, or the muted band a banded theme gives every second section.`
-                                : `One of ${values.join(", ")}; the first is the default.`,
+                            : kind === "hero" && option === "height"
+                              ? "auto: only as tall as its content; full: the window's height under the header; unsaid, the layout's own."
+                              : kind === "hero" && option === "eyebrow"
+                                ? "A line over the title from the page's contact section: address (its city) or hours (the first line of its hours)."
+                                : option === "band"
+                                  ? `The section across the width on a surface of the theme: ${values.join(", ")}; none (the default) is an open section, or the muted band a banded theme gives every second section.`
+                                  : `One of ${values.join(", ")}; the first is the default.`,
                   },
         ]),
       ),

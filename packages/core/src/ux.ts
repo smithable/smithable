@@ -292,6 +292,8 @@ export interface SectionLook {
   overlay?: "brand" | "dark";
   /** A hero's line over its title from the contact section: its city, or its hours' first line. */
   eyebrow?: "address" | "hours";
+  /** A hero's height: only its content's, or the window's under the header (A 215). */
+  height?: "auto" | "full";
   /** A hero's row of figures: the count of each model's records the viewer may read. */
   facts?: string[];
   /**
@@ -338,6 +340,8 @@ export const SECTION_LOOKS: Partial<
     eyebrow: ["address", "hours"],
     facts: "models",
     stage: "page",
+    // Unsaid, the layout's own height; auto, the content's; full, the window's under the header.
+    height: ["auto", "full"],
   },
   features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
