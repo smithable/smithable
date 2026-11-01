@@ -1099,7 +1099,11 @@ async function kioskLandingFlow(dir, base) {
       changed++;
     }
     const header = page.locator('[data-kit="landing"] > [data-part="header"]');
-    for (let i = 0; (await header.getAttribute("data-over").catch(() => null)) !== "dark"; i++) {
+    for (
+      let i = 0;
+      (await header.getAttribute("data-over", { timeout: 1000 }).catch(() => null)) !== "dark";
+      i++
+    ) {
       if (i === 40 * P) throw new Error("the header is not over the photo hero");
       await open(page, `${base}/where`);
       await page.waitForTimeout(500);

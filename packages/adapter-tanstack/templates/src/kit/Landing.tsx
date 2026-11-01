@@ -757,12 +757,9 @@ function HeroView({
     ) : (
       hero
     );
-  // Across the width at a large size: a dark scrim from the start side (from the foot on a
-  // phone, where the text sits low) keeps the text white and readable on any picture, in light
-  // and dark mode alike; the text and buttons stand at the start.
-  // The large picture with the text on its dark scrim, and the shortcuts as picture tiles beside it
-  // (two stacked) or around it (three); a tile without a picture is its page's title on the
-  // primary, so the hero works before there are pictures.
+  // The large picture with the text on its dark scrim, and the shortcuts as picture tiles: two
+  // stacked beside it, a third across under both; a tile without a picture is its page's title on
+  // the primary, so the hero works before there are pictures.
   if (layout === "tiles") {
     const tiles = shortcuts.slice(0, 3);
     return framed(
@@ -803,20 +800,21 @@ function HeroView({
                     className="group relative isolate flex h-full min-h-40 items-end overflow-hidden rounded-[var(--radius-xl)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {s.image ? (
-                      <>
+                      // A tile is a card: an AI's picture carries the small mark, over its scrim.
+                      <AiMarked generated={s.image.generated} className="absolute inset-0 -z-10">
                         <img
                           src={s.image.src}
                           alt=""
                           width={800}
                           height={600}
                           loading="lazy"
-                          className="absolute inset-0 -z-10 size-full object-cover transition group-hover:scale-105"
+                          className="size-full object-cover transition group-hover:scale-105"
                         />
                         <span
                           aria-hidden
-                          className="absolute inset-0 -z-10 bg-linear-to-t from-black/85 via-black/35 to-transparent"
+                          className="absolute inset-0 bg-linear-to-t from-black/85 via-black/35 to-transparent"
                         />
-                      </>
+                      </AiMarked>
                     ) : (
                       <span aria-hidden className="absolute inset-0 -z-10 bg-primary" />
                     )}
@@ -839,6 +837,9 @@ function HeroView({
       </section>,
     );
   }
+  // Across the width at a large size: a dark scrim from the start side (from the foot on a
+  // phone, where the text sits low) keeps the text white and readable on any picture, in light
+  // and dark mode alike; the text and buttons stand at the start.
   if (layout === "photo")
     return framed(
       <section
