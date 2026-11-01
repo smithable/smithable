@@ -297,6 +297,7 @@ export type {
   Voice,
 } from "./ux.js";
 export {
+  ACTIVES,
   BANDS,
   CONTROLS,
   controlUnfit,
@@ -310,6 +311,7 @@ export {
   pageIcon,
   RECORD_LISTS,
   type RecordList,
+  recordPicture,
   recordSummary,
   SECTION_LOOKS,
   stagePage,

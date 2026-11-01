@@ -859,7 +859,7 @@ function ${component}() {
         app={app}
         schema={${n.schema}}${order}
         initial={row}
-        readOnly={!canWrite}${tells.length ? `\n        tells={${JSON.stringify(tells)}}` : ""}
+        readOnly={!canWrite}${!within && ux.pages[page.id]?.recordPictures ? `\n        pictures=${JSON.stringify(ux.pages[page.id]?.recordPictures)}` : ""}${tells.length ? `\n        tells={${JSON.stringify(tells)}}` : ""}
 ${options ? "        options={options}\n" : ""}        submitLabel={w.saveChanges}
         onSubmit={async (values) => {
           await ${n.update}({ data: { id: row.id, values } });

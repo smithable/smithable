@@ -12,3 +12,4 @@ pages:
       latest: { layout: grid, columns: 4, band: muted }   # the like-new items' pictures, a row of four
   catalog:
     table: { view: cards }
+    record: { pictures: aside }        # an item's photos large beside its details

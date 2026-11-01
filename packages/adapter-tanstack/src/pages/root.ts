@@ -101,6 +101,8 @@ export function rootRoute(
     ux.navigation && ux.navigation !== "sidebar"
       ? ` navigation=${JSON.stringify(ux.navigation)}`
       : "";
+  // How the menu marks the open page (ux menuActive); unsaid, the menu's own.
+  const active = ux.menuActive ? ` active=${JSON.stringify(ux.menuActive)}` : "";
   // The appearance resolved before the first paint: the visitor's, or the theme's one mode.
   const appearance =
     modes === "both"
@@ -405,11 +407,11 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
         ) : `
                   : ""
               }(
-          <AppShell appName={app.name}${t.logo}${home}${layout} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+          <AppShell appName={app.name}${t.logo}${home}${layout}${active} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
             {children}
           </AppShell>
         )}`
-            : `<AppShell appName={app.name}${t.logo}${home}${layout} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+            : `<AppShell appName={app.name}${t.logo}${home}${layout}${active} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
           {children}
         </AppShell>`
         }

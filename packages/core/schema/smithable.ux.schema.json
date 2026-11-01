@@ -215,6 +215,14 @@
                   ]
                 }
               },
+              "pictures": {
+                "enum": [
+                  "aside",
+                  "top",
+                  "none"
+                ],
+                "description": "aside: the record's pictures large beside its fields; top: across the top, a strip of thumbnails switching them; none (the default): among the fields."
+              },
               "header": {
                 "enum": [
                   "summary",
@@ -745,6 +753,14 @@
         "topbar-centered"
       ],
       "description": "Where the menu sits on a wide screen: sidebar (the default), topbar (a bar across the top, the name at the start) or topbar-centered (the name centred between the links)."
+    },
+    "menuActive": {
+      "enum": [
+        "filled",
+        "subtle",
+        "underline"
+      ],
+      "description": "How the menu marks the open page: filled (the primary behind it), subtle (a tint behind it) or underline; unsaid, filled in the sidebar and underlined in a bar."
     },
     "chrome": {
       "enum": [
