@@ -1374,7 +1374,18 @@ export function validateUx(
               ? spec.sections.find((s) => s.kind === "hero")
               : undefined;
           const layout = hero ? result.looks?.[hero.name]?.layout : undefined;
-          if (layout !== "cover" && layout !== "photo") {
+          // The bar is fixed at the top: the hero must be what the page starts with.
+          const first =
+            spec.pattern.kind === "landing" && spec.pattern.sections[0]?.kind === "hero";
+          if (!first) {
+            ctx.error(
+              headerNode,
+              "invalid-value",
+              `"over: hero" needs the hero first on ${page.key}, under the header.`,
+            );
+            delete result.header.over;
+            if (!Object.keys(result.header).length) delete result.header;
+          } else if (layout !== "cover" && layout !== "photo") {
             ctx.error(
               headerNode,
               "invalid-value",

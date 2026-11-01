@@ -127,6 +127,11 @@
     animation-duration: 500ms;
     animation-timing-function: var(--motion-ease);
   }
+  /* A landing page's content width (its `width` in the ux file sets it on the page): 72rem unsaid. */
+  :root {
+    --landing-width: 72rem;
+  }
+
   /* A form's Save row sticks to the window's foot: a field reached by Tab or by the browser's own
      scrolling stops above it, not behind it. */
   html:has([data-kit="model-form"] [data-part="actions"]) {

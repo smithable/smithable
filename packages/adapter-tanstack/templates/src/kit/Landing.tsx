@@ -64,6 +64,7 @@ function LandingLayoutView({
   logo,
   link,
   header,
+  width,
   footer,
   site,
   viewer,
@@ -103,6 +104,8 @@ function LandingLayoutView({
     seen.observe(hero);
     return () => seen.disconnect();
   }, [over]);
+  // An open phone menu stands on the bar's own surface, not on the picture.
+  const clear = onHero && !open;
   const menu = (site?.menu ?? []).filter((m) => !m.access || allows(m.access, viewer ?? null));
   const contact = site?.contact;
   // Columns when there is something to put in them; otherwise the one line it always had.
@@ -153,9 +156,9 @@ function LandingLayoutView({
       data-kit="landing"
       data-width={width}
       style={
-        {
-          "--landing-width": width === "full" ? "100%" : width === "wide" ? "80rem" : "72rem",
-        } as React.CSSProperties
+        width
+          ? ({ "--landing-width": width === "full" ? "100%" : "80rem" } as React.CSSProperties)
+          : undefined
       }
       className={cn(
         "relative flex min-h-screen flex-col",
@@ -165,14 +168,14 @@ function LandingLayoutView({
       <header
         data-part="header"
         data-position={header?.position}
-        data-over={over && onHero ? over : undefined}
+        data-over={over && clear ? over : undefined}
         className={cn(
           "border-b",
           over
             ? cn(
                 "inset-x-0 top-0 z-30 transition-[background-color,color,border-color] duration-(--motion-slow) ease-(--motion-ease)",
                 header?.position === "scrolling" ? "absolute" : "fixed",
-                onHero
+                clear
                   ? over === "dark"
                     ? "border-transparent bg-transparent text-white"
                     : "border-transparent bg-transparent text-primary-foreground dark:text-foreground"
@@ -190,7 +193,7 @@ function LandingLayoutView({
               over === "dark"
                 ? "from-black/60 to-transparent"
                 : "from-primary to-primary/0 dark:from-(--cover-wash,var(--background)) dark:to-transparent",
-              onHero ? "opacity-100" : "opacity-0",
+              clear ? "opacity-100" : "opacity-0",
             )}
           />
         )}
@@ -215,7 +218,17 @@ function LandingLayoutView({
           )}
           <div className="flex items-center gap-2">
             {link && (
-              <Link to={link.to} className={buttonVariants({ variant: "outline" })}>
+              <Link
+                to={link.to}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  // On the hero's wash the button keeps only its outline, in the wash's text color.
+                  clear &&
+                    (over === "dark"
+                      ? "border-white/70 bg-transparent! text-white! hover:bg-white/10!"
+                      : "border-primary-foreground/70 bg-transparent! text-primary-foreground! hover:bg-primary-foreground/10! dark:border-foreground/70 dark:text-foreground! dark:hover:bg-foreground/10!"),
+                )}
+              >
                 {link.label}
               </Link>
             )}
