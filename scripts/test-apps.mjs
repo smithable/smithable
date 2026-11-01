@@ -1148,19 +1148,13 @@ async function kioskLandingFlow(dir, base) {
     console.log(
       "  ✓ browser: a records section as a week shows each stop under its day, the days at most seven",
     );
-    for (const [key, value] of [
-      ["layout", "photo"],
-      ["over", "hero"],
+    for (const [section, key, value] of [
+      ["hero", "layout", "photo"],
+      ["header", "over", "hero"],
+      // The stops as a list again: a page long enough for the hero to scroll away under the bar.
+      ["stops", "layout", "list"],
     ]) {
-      const done = smithable(
-        dir,
-        "op",
-        "setSectionLook",
-        "where",
-        key === "over" ? "header" : "hero",
-        key,
-        value,
-      );
+      const done = smithable(dir, "op", "setSectionLook", "where", section, key, value);
       if (done.code !== 0) throw new Error(`setSectionLook ${key} ${value}: ${done.out}`);
       changed++;
     }
