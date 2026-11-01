@@ -47,7 +47,11 @@ export function Calculator({
           const inline = field.kind === "bool";
           return (
             <div key={field.name} className={inline ? "flex items-center gap-3" : "space-y-2"}>
-              {!inline && <Label htmlFor={id}>{field.label}</Label>}
+              {!inline && (
+                <Label htmlFor={id} id={`${id}-label`}>
+                  {field.label}
+                </Label>
+              )}
               <FieldInput
                 field={field}
                 id={id}
@@ -57,7 +61,11 @@ export function Calculator({
                 describedBy={field.help ? `${id}-help` : undefined}
                 onChange={(value) => setValues((v) => ({ ...v, [field.name]: value }))}
               />
-              {inline && <Label htmlFor={id}>{field.label}</Label>}
+              {inline && (
+                <Label htmlFor={id} id={`${id}-label`}>
+                  {field.label}
+                </Label>
+              )}
               {field.help && (
                 <p id={`${id}-help`} className="text-sm text-muted-foreground">
                   {field.help}

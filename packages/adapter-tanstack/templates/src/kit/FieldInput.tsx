@@ -254,6 +254,9 @@ function Radios({
     <div
       role="radiogroup"
       id={id}
+      // A label names only form controls: the group takes its name from the field's label, whose
+      // id each form gives as <id>-label.
+      aria-labelledby={`${id}-label`}
       {...aria}
       className="flex flex-wrap gap-x-5 gap-y-2"
       data-part="radios"

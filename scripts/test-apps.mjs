@@ -5132,7 +5132,11 @@ async function formulaFlow(base) {
     const issued = await page.getByLabel("Issued on *").inputValue();
     const dueOn = await page.getByLabel("Due on *").inputValue();
     if (issued !== today || dueOn !== due) throw new Error(`defaults were ${issued} and ${dueOn}`);
-    console.log("  ✓ browser: formula defaults fill a new invoice (today, today + 30 days)");
+    // A choice as radio buttons is a group named by its field's label.
+    await page.getByRole("radiogroup", { name: /^Status/ }).waitFor({ timeout: 5000 * P });
+    console.log(
+      "  ✓ browser: formula defaults fill a new invoice (today, today + 30 days); its status buttons are a group named Status",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,

@@ -306,7 +306,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         {...editorMarker(ui, field, "field")}
       >
         {!inline && (
-          <Label htmlFor={id} data-part="label">
+          <Label htmlFor={id} id={`${id}-label`} data-part="label">
             <span {...textMarker(`models.${ui.model}.fields.${field.name}.label`)}>
               {field.label}
             </span>
@@ -333,7 +333,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
           input
         )}
         {inline && (
-          <Label htmlFor={id} data-part="label">
+          <Label htmlFor={id} id={`${id}-label`} data-part="label">
             {field.label}
           </Label>
         )}
