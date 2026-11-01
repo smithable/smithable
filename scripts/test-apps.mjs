@@ -369,6 +369,8 @@ async function calendarFlow(base) {
       .waitFor({ timeout: 10000 * P });
     await page.getByRole("dialog").getByRole("link", { name: "Sign in to book" }).waitFor();
     await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+    // Close goes back in the history: the next click waits for it, or the back lands after it.
+    await page.waitForURL((url) => !url.searchParams.has("open"));
     // The schedule's own view (A 215): the coming days side by side, each a list, seven of them.
     if ((await page.locator('[data-kit="calendar"] section').count()) !== 7)
       throw new Error("the days view does not show seven days");
@@ -404,6 +406,17 @@ async function calendarFlow(base) {
       if (i === 50 * P) throw new Error(`classes ${(await others()).join(", ")} under ${chosen}`);
       await page.waitForTimeout(100);
     }
+    // Next and Previous keep the page's filter (A 222), and Previous comes back to the same days.
+    const filtered = new URL(page.url()).searchParams;
+    const same = (url, from) =>
+      url.searchParams.get("classType") === filtered.get("classType") &&
+      url.searchParams.get("from") === from;
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.waitForURL(
+      (url) => !same(url, filtered.get("from")) && same(url, url.searchParams.get("from")),
+    );
+    await page.getByRole("button", { name: "Previous" }).click();
+    await page.waitForURL((url) => same(url, filtered.get("from")));
     await types.getByRole("button", { name: chosen }).click();
     await page.waitForURL((url) => !url.search.includes("classType="));
     await page.getByRole("button", { name: "Previous" }).click();
