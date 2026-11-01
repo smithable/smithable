@@ -366,7 +366,7 @@ export function Calendar({
     };
   });
   // The time of day chosen: the records that start in it.
-  const time = timeOfDay && search.time ? TIMES[search.time] : undefined;
+  const time = timeOfDay && !dateOnly && search.time ? TIMES[search.time] : undefined;
   const kept = time ? placed.filter((p) => p.from >= time[0] && p.from < time[1]) : placed;
   const byDay = new Map(range.days.map((d) => [d, place(kept.filter((p) => p.day === d))]));
   // The columns: the days, or in the day view each person's records that day.
@@ -395,7 +395,7 @@ export function Calendar({
   const inWeek = kept.filter((p) => byDay.has(p.day));
   const firstHour = inWeek.length ? Math.min(...inWeek.map((p) => Math.floor(p.from / 60))) : 7;
   const lastHour = inWeek.length
-    ? Math.max(firstHour + 1, ...inWeek.map((p) => Math.ceil(p.to / 60)))
+    ? Math.max(firstHour + 4, ...inWeek.map((p) => Math.ceil(p.to / 60)))
     : 21;
   const hours = Array.from({ length: lastHour - firstHour }, (_, i) => firstHour + i);
   const span = (lastHour - firstHour) * 60;
@@ -417,6 +417,8 @@ export function Calendar({
     if (search.open !== undefined && !dialog.open) dialog.showModal();
     if (search.open === undefined && dialog.open) dialog.close();
   }, [search.open]);
+  // Elsewhere in time, the time of day chosen stays chosen.
+  const go = (to: CalendarSearch) => onNavigate(search.time ? { ...to, time: search.time } : to);
   const closed = () => {
     if (search.open === undefined) return;
     if (pushed.current) {
@@ -432,19 +434,14 @@ export function Calendar({
           type="button"
           variant="outline"
           aria-label={w.previous}
-          onClick={() => onNavigate(range.prev)}
+          onClick={() => go(range.prev)}
         >
           <ChevronLeft aria-hidden className="size-4" />
         </Button>
-        <Button type="button" variant="outline" onClick={() => onNavigate(range.today)}>
+        <Button type="button" variant="outline" onClick={() => go(range.today)}>
           {w.today}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          aria-label={w.next}
-          onClick={() => onNavigate(range.next)}
-        >
+        <Button type="button" variant="outline" aria-label={w.next} onClick={() => go(range.next)}>
           <ChevronRight aria-hidden className="size-4" />
         </Button>
         <h2 aria-live="polite" className="mx-2 text-lg font-semibold">
@@ -455,7 +452,7 @@ export function Calendar({
             type="button"
             variant="ghost"
             className="ml-auto"
-            onClick={() => onNavigate(range.oneDay)}
+            onClick={() => go(range.oneDay)}
           >
             {w.day}
           </Button>
@@ -465,9 +462,16 @@ export function Calendar({
           variant="ghost"
           className={lanes && range.view === "week" ? "" : "ml-auto"}
           onClick={() =>
-            onNavigate(
+            go(
               (range.view === "month" || range.view === "day") && range.own !== "week"
-                ? {}
+                ? // Back to the page's own view, around the days that were shown.
+                  {
+                    from: range.days.includes(today)
+                      ? today
+                      : range.month
+                        ? `${range.month}-01`
+                        : range.days[0],
+                  }
                 : range.other,
             )
           }
@@ -481,7 +485,7 @@ export function Calendar({
             : w.month}
         </Button>
       </div>
-      {timeOfDay && (
+      {timeOfDay && !dateOnly && (
         <fieldset data-part="time-of-day" className="m-0 flex flex-wrap gap-2 border-0 p-0">
           <legend className="sr-only">{w.timeOfDay}</legend>
           {([undefined, "morning", "afternoon", "evening"] as const).map((t) => (
@@ -504,7 +508,7 @@ export function Calendar({
         className={
           range.view === "day"
             ? "md:grid md:gap-x-1"
-            : range.view === "days"
+            : range.view === "days" && !empty
               ? "grid snap-x auto-cols-[calc((100%-1rem)/3)] grid-flow-col gap-2 overflow-x-auto md:auto-cols-auto md:grid-flow-row md:grid-cols-7 md:gap-1 md:overflow-visible"
               : range.view === "agenda"
                 ? "space-y-2"

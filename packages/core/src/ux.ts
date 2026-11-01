@@ -946,7 +946,18 @@ export function validateUx(
                       "invalid-value",
                       `A calendar's own filter is timeOfDay; "${name}" is not one.`,
                     );
-                if (names.some((n) => n.name === "timeOfDay")) calendar.filters = ["timeOfDay"];
+                // A calendar of dates has no hours to tell morning from evening.
+                const starts = spec.pattern.kind === "calendar" ? spec.pattern.starts : undefined;
+                const startsType = model?.fields.find((f) => f.name === starts)?.type;
+                const dated = startsType?.kind === "scalar" && startsType.name === "date";
+                if (names.some((n) => n.name === "timeOfDay") && dated)
+                  ctx.error(
+                    option.value,
+                    "invalid-value",
+                    `timeOfDay needs records placed by a date and time; ${starts} is a date.`,
+                  );
+                else if (names.some((n) => n.name === "timeOfDay"))
+                  calendar.filters = ["timeOfDay"];
                 continue;
               }
               if (option.key === "colorBy") {
