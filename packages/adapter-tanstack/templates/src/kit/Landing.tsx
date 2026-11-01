@@ -419,9 +419,12 @@ function SectionView({
   id,
   title,
   text,
+  layout,
   children,
 }: Banded & {
   id: string;
+  /** The section's layout, named for stylesheets and checks to read (data-layout). */
+  layout?: string;
   title?: string;
   text?: string;
   children: React.ReactNode;
@@ -433,6 +436,7 @@ function SectionView({
     <section
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
+      data-layout={layout}
       {...frame(band, "py-12")}
     >
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
@@ -688,6 +692,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-layout="plain"
         className={cn(
           "mx-auto max-w-(--landing-width) px-5 py-20 sm:py-28",
           more && "pb-6 sm:pb-6",
@@ -706,7 +711,12 @@ function HeroView({
   if (layout === "cover")
     return (
       <>
-        <section {...sectionHooks(texts)} data-hero="" className="relative isolate overflow-hidden">
+        <section
+          {...sectionHooks(texts)}
+          data-hero=""
+          data-layout="cover"
+          className="relative isolate overflow-hidden"
+        >
           <img
             src={image.src}
             alt={image.alt}
@@ -847,6 +857,7 @@ function HeroView({
       <section
         {...sectionHooks(texts)}
         data-hero=""
+        data-layout="photo"
         className="relative isolate flex min-h-[34rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
       >
         <img
@@ -883,7 +894,12 @@ function HeroView({
   // Over the picture: a dark veil keeps the text readable on any picture.
   if (layout === "centered")
     return framed(
-      <section {...sectionHooks(texts)} data-hero="" className="relative isolate overflow-hidden">
+      <section
+        {...sectionHooks(texts)}
+        data-hero=""
+        data-layout="centered"
+        className="relative isolate overflow-hidden"
+      >
         <img
           src={image.src}
           alt={image.alt}
@@ -990,6 +1006,7 @@ function HeroView({
     <section
       {...sectionHooks(texts)}
       data-hero=""
+      data-layout="split"
       className={cn(
         "mx-auto grid max-w-(--landing-width) items-center gap-10 px-5 py-12 sm:py-20 lg:grid-cols-2",
         shortcutList && "pb-20 sm:pb-28",
@@ -1191,7 +1208,15 @@ function RecordCardsView({
     </>
   );
   return (
-    <Section id={id} texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}>
+    <Section
+      id={id}
+      texts={texts}
+      band={band}
+      eyebrow={eyebrow}
+      title={title}
+      text={text}
+      layout={layout ?? "cards"}
+    >
       {door && (
         <div data-part="door" className="mb-8 space-y-4">
           {door.search && (
@@ -1440,7 +1465,14 @@ function TestimonialsView({
   );
   const first = items[0];
   return (
-    <Section id="testimonials" texts={texts} band={band} eyebrow={eyebrow} title={title}>
+    <Section
+      id="testimonials"
+      texts={texts}
+      band={band}
+      eyebrow={eyebrow}
+      title={title}
+      layout={layout ?? "cards"}
+    >
       {layout === "one" && first ? (
         quote(first, 0, true)
       ) : (
@@ -1493,7 +1525,7 @@ function FaqView({
 }) {
   if (layout === "list")
     return (
-      <Section id="faq" texts={texts} band={band} eyebrow={eyebrow} title={title}>
+      <Section id="faq" texts={texts} band={band} eyebrow={eyebrow} title={title} layout="list">
         <dl
           className={
             columns === 2
@@ -1515,7 +1547,7 @@ function FaqView({
       </Section>
     );
   return (
-    <Section id="faq" texts={texts} band={band} eyebrow={eyebrow} title={title}>
+    <Section id="faq" texts={texts} band={band} eyebrow={eyebrow} title={title} layout="accordion">
       <div className={cn("max-w-3xl divide-y border-y", INLINE)}>
         {items.map((item, i) => (
           <details key={item.question} className="group">

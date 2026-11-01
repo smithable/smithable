@@ -4558,7 +4558,7 @@ async function topbarFlow(dir, base) {
       });
       for (let i = 0; i < 20 * P; i++) {
         await open(check, `${base}/sign-in`);
-        if (!(await check.locator('[data-part="header"][data-navigation]').count())) break;
+        if (!(await check.locator('[data-part="header"][data-navigation="topbar"]').count())) break;
         await check.waitForTimeout(500);
       }
       await check.context().browser()?.close();
