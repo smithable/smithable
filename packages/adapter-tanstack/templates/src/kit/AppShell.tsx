@@ -464,7 +464,7 @@ export function ErrorNotice({
     <div data-kit={kind} className="max-w-xl">
       <h1
         data-part="title"
-        className="mb-6 break-words text-[28px] leading-9 font-bold lg:text-[32px] lg:leading-10"
+        className="mb-6 break-words text-[28px] leading-9 font-(--heading-weight) [text-transform:var(--heading-case,none)] lg:text-[32px] lg:leading-10"
       >
         {title}
       </h1>
@@ -493,7 +493,7 @@ export function PageHeader({
       <div className="min-w-0">
         <h1
           data-part="title"
-          className="break-words text-[28px] leading-9 font-bold [text-transform:var(--heading-case,none)] lg:text-[32px] lg:leading-10"
+          className="break-words text-[28px] leading-9 font-(--heading-weight) [text-transform:var(--heading-case,none)] lg:text-[32px] lg:leading-10"
           {...(page ? textMarker(`pages.${page}.title`) : {})}
         >
           {tx(title)}
