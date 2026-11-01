@@ -132,10 +132,14 @@
     --landing-width: 72rem;
   }
 
-  /* A hero's height (its look's height): the window's under the header, or only its content's. */
+  /* A hero's height (its look's height): the window's under the header (the whole window when the
+     header stands over it), or only its content's. */
   [data-hero][data-height="full"] {
-    min-height: calc(100svh - 4.5rem);
+    min-height: calc(100svh - 4.5rem) !important;
     align-content: center;
+  }
+  [data-header="over"] [data-hero][data-height="full"] {
+    min-height: 100svh !important;
   }
   [data-hero][data-height="auto"] {
     min-height: 0 !important;

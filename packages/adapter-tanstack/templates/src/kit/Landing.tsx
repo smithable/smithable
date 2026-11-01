@@ -157,6 +157,7 @@ function LandingLayoutView({
     <div
       data-kit="landing"
       data-width={width}
+      data-header={over ? "over" : undefined}
       style={
         width
           ? ({ "--landing-width": width === "full" ? "100%" : "80rem" } as React.CSSProperties)

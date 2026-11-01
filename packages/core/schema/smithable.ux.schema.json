@@ -441,7 +441,7 @@
                         "auto",
                         "full"
                       ],
-                      "description": "One of auto, full; the first is the default."
+                      "description": "auto: only as tall as its content; full: the window's height under the header; unsaid, the layout's own."
                     }
                   }
                 },

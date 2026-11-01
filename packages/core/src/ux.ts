@@ -274,6 +274,8 @@ export interface SectionLook {
   overlay?: "brand" | "dark";
   /** A hero's line over its title from the contact section: its city, or its hours' first line. */
   eyebrow?: "address" | "hours";
+  /** A hero's height: only its content's, or the window's under the header (A 215). */
+  height?: "auto" | "full";
   /** A hero's row of figures: the count of each model's records the viewer may read. */
   facts?: string[];
   /**

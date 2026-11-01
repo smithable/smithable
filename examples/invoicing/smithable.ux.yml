@@ -11,7 +11,7 @@ tones:
 pages:
   home:
     sections:                          # how the landing page's sections look
-      hero: { layout: split, image: right, height: auto }   # the photo undimmed, the text on a clean ground; the next section shows above the fold
+      hero: { layout: split, image: right }   # the photo undimmed, the text on a clean ground
       pricing: { highlight: Pro }      # the plan drawn forward
       faq: { layout: accordion }       # a shorter page
       callToAction: { band: primary }  # the one band on an otherwise open page

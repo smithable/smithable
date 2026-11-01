@@ -1182,6 +1182,27 @@ async function kioskLandingFlow(dir, base) {
     console.log(
       "  ✓ browser: over a photo hero the header stands on its wash until the hero has passed, and the page runs 80rem wide",
     );
+    // The hero's height (A 215): the whole window under a header over it, or only its content's.
+    for (const [value, fits] of [
+      ["full", (h, vh) => Math.abs(h - vh) <= 2],
+      ["auto", (h, vh) => h < 0.8 * vh - 8],
+    ]) {
+      const done = smithable(dir, "op", "setSectionLook", "where", "hero", "height", value);
+      if (done.code !== 0) throw new Error(`setSectionLook height ${value}: ${done.out}`);
+      changed++;
+      const vh = page.viewportSize()?.height ?? 0;
+      for (let i = 0; ; i++) {
+        await open(page, `${base}/where`);
+        const h = (await page.locator("[data-hero]").boundingBox())?.height ?? 0;
+        if (fits(h, vh)) break;
+        if (i === 40 * P)
+          throw new Error(`a hero of height ${value} is ${h}px in a ${vh}px window`);
+        await page.waitForTimeout(500);
+      }
+    }
+    console.log(
+      "  ✓ browser: a hero's height full fills the window under a header over it, and auto keeps it to its content",
+    );
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
