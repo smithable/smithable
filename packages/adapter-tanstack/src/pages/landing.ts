@@ -17,6 +17,7 @@ import {
   stagePage,
   storesPictures,
   type UxIR,
+  weekBy,
 } from "@smithable/core";
 import { hasSignIn } from "../auth.js";
 import { calculatorModel } from "../calculators.js";
@@ -120,10 +121,17 @@ export function landingRoute(
     imports.add(n.module, n.list);
     return `    const ${camel(plural(name))} = (await ${n.list}()).rows;`;
   });
-  const shown = records.map(
-    (s) =>
-      `${JSON.stringify(s.name)}: ${camel(plural(s.model as string))}${kept(s.where)}.slice(0, ${s.limit ?? 6})`,
-  );
+  const shown = records.map((s) => {
+    const rows = `${camel(plural(s.model as string))}${kept(s.where)}`;
+    // A week's records in their days' order (A 215), so its first days are the ones shown.
+    const look = ux.pages[page.id]?.looks?.[s.name];
+    const day =
+      look?.layout === "week" ? weekBy(modelNamed(ir, s.model as string), look.by) : undefined;
+    const ordered = day
+      ? `[...${rows}].sort((a, b) => Number(new Date(a.${day.name} ?? 0)) - Number(new Date(b.${day.name} ?? 0)))`
+      : rows;
+    return `${JSON.stringify(s.name)}: ${ordered}.slice(0, ${s.limit ?? 6})`;
+  });
   if (hero && facts.length)
     shown.push(
       `${JSON.stringify(`${hero.name}Facts`)}: [${facts
@@ -165,7 +173,7 @@ export function landingRoute(
       alternate.has(section.name) && given.band === undefined ? { ...given, band: "muted" } : given,
     )
       // A hero's facts and its line from the contact section are props of their own (below).
-      .filter(([key]) => key !== "facts" && key !== "eyebrow" && key !== "stage")
+      .filter(([key]) => key !== "facts" && key !== "eyebrow" && key !== "stage" && key !== "by")
       // The hero's "image" (which side) is imageSide: its image is the picture itself.
       .map(
         ([key, value]) =>
@@ -281,6 +289,11 @@ export function landingRoute(
         const choice = model.fields.find((f) => f.type.kind === "choice");
         // Its first amount of money, stored or computed: for a thing for sale, its price.
         const money = model.fields.find((f) => f.type.kind === "scalar" && f.type.name === "money");
+        // A week places each card under its day (A 215): `by`, else the model's first date.
+        const sectionLook = ux.pages[page.id]?.looks?.[section.name];
+        const dayField = sectionLook?.layout === "week" ? weekBy(model, sectionLook.by) : undefined;
+        if (dayField?.type.kind === "scalar" && dayField.type.name === "datetime")
+          imports.add("#/kit/zoned", "wallTime").add("#/generated/app", "app");
         if (money) imports.add("#/generated/app", "app");
         // A ledger without money figures its first number, by type (look-breadth §3); none, no figure.
         const count =
@@ -401,6 +414,11 @@ export function landingRoute(
                   ? `
             amount: row.${count.name} == null ? undefined : new Intl.NumberFormat().format(row.${count.name}),`
                   : ""
+            }${
+              dayField
+                ? `
+            day: ${dayField.type.kind === "scalar" && dayField.type.name === "datetime" ? `row.${dayField.name} ? wallTime(new Date(row.${dayField.name}), app.timeZone).slice(0, 10) : undefined` : `row.${dayField.name} ? String(row.${dayField.name}).slice(0, 10) : undefined`},`
+                : ""
             }${
               tones && Object.keys(tones).length
                 ? `

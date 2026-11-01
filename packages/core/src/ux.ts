@@ -287,6 +287,20 @@ export interface SectionLook {
    * records in its own order; unsaid, the first list page in the navigation (stagePage).
    */
   stage?: string;
+  /** A week's date field: each record under its day (A 215); unsaid, the model's first date. */
+  by?: string;
+}
+
+/**
+ * The field a records section laid out as a week places each record by (A 215): the one its
+ * `by` names, else the model's first date or date-time field, by type.
+ */
+export function weekBy(model: ModelIR, by?: string): FieldIR | undefined {
+  const dated = (f: FieldIR) =>
+    f.type.kind === "scalar" && (f.type.name === "date" || f.type.name === "datetime");
+  return by === undefined
+    ? model.fields.find(dated)
+    : model.fields.find((f) => f.name === by && dated(f));
 }
 
 /**
@@ -315,7 +329,12 @@ export const SECTION_LOOKS: Partial<
   },
   features: { columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
-  records: { layout: ["cards", "list", "grid", "ledger"], columns: [3, 2, 4, 5, 6], band: BANDS },
+  records: {
+    layout: ["cards", "list", "grid", "ledger", "week"],
+    columns: [3, 2, 4, 5, 6],
+    band: BANDS,
+    by: "text",
+  },
   testimonials: { layout: ["cards", "carousel", "one"], band: BANDS },
   pricing: { highlight: "text", band: BANDS },
   // An FAQ's columns are its list's (every answer shown); the accordion is one column.
@@ -1721,13 +1740,30 @@ function readSectionLooks(
     if (
       section.kind === "records" &&
       look.columns !== undefined &&
-      (look.layout === "list" || look.layout === "ledger")
+      (look.layout === "list" || look.layout === "ledger" || look.layout === "week")
     )
       ctx.warning(
         entry.value,
         "invalid-value",
-        `"columns" of ${at} is for cards and a grid; a list or a ledger is one row per record.`,
+        `"columns" of ${at} is for cards and a grid; a list, a ledger or a week is one row per record.`,
       );
+    // A week places each record by a date: the one `by` names, else the model's first.
+    if (section.kind === "records") {
+      const model = ir.models.find((m) => m.name === section.model);
+      if (look.by !== undefined && look.layout !== "week") {
+        ctx.error(entry.value, "invalid-key", `"by" goes with layout: week.`);
+        delete look.by;
+      } else if (look.layout === "week" && model && !weekBy(model, look.by)) {
+        ctx.error(
+          entry.value,
+          "invalid-value",
+          look.by === undefined
+            ? `A week needs a date to place each record by; ${model.name} has none.`
+            : `"by" needs a date or date-time field of ${model.name}: ${look.by} is not one.`,
+        );
+        delete look.by;
+      }
+    }
     if (look.band && look.band !== "none")
       bands.push({ page: page.id, section: entry.key, band: look.band, node: entry.value });
     looks[entry.key] = look;
