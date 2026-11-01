@@ -3,6 +3,7 @@
   "starter": "invoicing",
   "wordStarter": "invoicing",
   "questions": [
+    "Who will use the app?",
     "Can clients see their invoices without signing in?",
     "How should payments be recorded?"
   ]

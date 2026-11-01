@@ -3,7 +3,7 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Who on the team can see which deals and contacts?",
-    "What should a deal hold?"
+    "Who on the team can see companies, contacts and deals?",
+    "What should a deal track?"
   ]
 }

@@ -3,16 +3,16 @@ pages:
   home:
     hero:
       title: Is the shop working?
-      subtitle: The live state of checkout, payments, search and delivery tracking, and what we are doing about any outage.
+      subtitle: The live state of checkout, payments, delivery and the rest of our web shop, with every outage and what we are doing about it.
       button: Past incidents
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
     services:
-      title: Services
+      title: Our services
     open:
-      title: Ongoing outages
+      title: Ongoing incidents
     recent:
       title: Recently resolved
 logo:

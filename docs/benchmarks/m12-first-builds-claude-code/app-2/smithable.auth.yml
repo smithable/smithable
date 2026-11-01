@@ -7,7 +7,7 @@ roles:
   admin: all
   sales:
     description: Works with companies, contacts, deals and follow-ups.
-    pages: [companies, contacts, deals, followUps]
+    pages: [start, companies, contacts, deals, followUps]
     create: all
     write: all
 assistant:

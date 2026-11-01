@@ -3,7 +3,8 @@
   "starter": "booking",
   "wordStarter": "booking",
   "questions": [
-    "Do people need an account to book a class?",
-    "Who manages classes and the schedule?"
+    "How do students book a class?",
+    "What can visitors see without signing in?",
+    "Should the site track class passes or memberships?"
   ]
 }

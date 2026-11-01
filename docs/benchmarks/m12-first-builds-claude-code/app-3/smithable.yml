@@ -25,16 +25,16 @@ models:
       amount: money!
       paidOn: date! = TODAY()
       method: bankTransfer | card | cash | other
-      note: string
+      reference: string
+      note: text
       invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date!
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
-      contract: file
       lines: InvoiceLine[]
       payments: Payment[]
       total:
@@ -60,15 +60,11 @@ pages:
         sum: Invoice.balance
         where:
           status: overdue
-      invoiced:
-        sum: Invoice.total
-        by: issuedOn
       latest:
         list: Invoice
         limit: 5
   clients:
     crud: Client
-    search: [name, email]
   payments:
     crud: Payment
     filters: [invoice, method, paidOn]
@@ -89,7 +85,7 @@ pages:
     legal: privacy
   invoices:
     crud: Invoice
-    filters: [client, status, issuedOn]
+    filters: [client, status]
     actions: [markSent, markPaid, markOverdue]
 actions:
   markSent:
@@ -105,12 +101,7 @@ actions:
       status: [sent, overdue]
     set:
       status: paid
-    add:
-      Payment:
-        amount:
-        paidOn: TODAY()
-        method:
-    intent: The client paid the invoice; the payment is recorded with it.
+    intent: The client paid the invoice in full.
   markOverdue:
     on: Invoice
     when:
@@ -119,14 +110,10 @@ actions:
       status: overdue
     intent: The invoice is late.
 timers:
-  flagOverdue:
+  markOverdue:
     on: Invoice
-    at: 1 day after dueOn
+    at: 7 days after dueOn
     where:
       status: sent
     run: markOverdue
-outgoing:
-  invoiceSent:
-    when: markSent
-    to: mail
-    recipient: client.email
+navigation: [overview, invoices, clients, payments]

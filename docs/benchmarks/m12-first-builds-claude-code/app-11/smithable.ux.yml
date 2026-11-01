@@ -1,11 +1,4 @@
 smithableUx: 0.1
-pages:
-  incidents:
-    table:
-      sort: -detectedAt
-  maintenance:
-    table:
-      sort: -startsAt
 tones:
   Component.status:
     operational: success
@@ -14,6 +7,12 @@ tones:
   Incident.status:
     investigating: danger
     identified: warning
+    monitoring: warning
     resolved: success
+pages:
+  home:
+    sections:
+      services:
+        layout: list
 theme:
-  preset: minimal
+  preset: helpdesk

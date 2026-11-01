@@ -1,9 +1,13 @@
 smithableContent: 0.1
 pages:
   home:
+    features:
+      items: [{ title: Clients in one place, text: "Keep each client's contact details, address and VAT number ready for the next invoice." }, { title: Invoices that add up, text: Add lines with quantity and price; totals are worked out for you. }, { title: Payments tracked, text: Record each payment against its invoice and see at once what is still owed. }, { title: Nothing slips, text: Unpaid invoices are flagged as overdue a week after their due date. }]
+    faq:
+      items: [{ question: Who sees my clients and invoices?, answer: Only you. Every freelancer's records are private to their own account. }, { question: Can I record partial payments?, answer: Yes. Add as many payments to an invoice as you receive; the balance shows what is left. }, { question: How do I sign in?, answer: "With your email address: we send you a code, no password to remember." }]
     hero:
-      title: Get paid for your work, without the paperwork
-      subtitle: Billfold keeps your clients, invoices and payments in one place, so you always know who owes you what.
+      title: Invoicing that gets you paid
+      subtitle: Clients, invoices and payments for freelancers, in one tidy place.
       button: Start invoicing
       image:
         src: images/hero.webp
@@ -11,11 +15,7 @@ pages:
         generated: true
     callToAction:
       title: Send your next invoice in minutes
-      button: Sign in
-    features:
-      items: [{ title: Clients at hand, text: "Keep each client's contact details, address and VAT number ready for the next invoice." }, { title: Invoices that add up, text: Add lines with quantity and price; the total works itself out. }, { title: Payments tracked, text: Record each payment against its invoice and see the balance still open. }, { title: Late invoices flagged, text: A sent invoice that stays unpaid past its due date is marked overdue for you. }]
-    faq:
-      items: [{ question: Who can see my invoices?, answer: "Only you. Every freelancer sees just their own clients, invoices and payments." }, { question: Can a client pay in parts?, answer: Yes. Record each payment as it arrives and the invoice shows what is left to pay. }, { question: Does the client get the invoice by mail?, answer: "When you mark an invoice as sent, your client is mailed about it." }]
+      button: Get started
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

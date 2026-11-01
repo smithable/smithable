@@ -1,12 +1,11 @@
 smithableUx: 0.1
 pages:
-  deals:
-    table:
-      columns: [title, company, stage, value, expectedClose]
-      totals: [value]
   followUps:
     table:
       sort: dueOn
+  deals:
+    table:
+      totals: [value]
 tones:
   Deal.stage:
     won: success

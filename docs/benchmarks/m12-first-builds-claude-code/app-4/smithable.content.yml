@@ -1,29 +1,17 @@
 smithableContent: 0.1
 pages:
-  catalog:
-    title: Tools
-  myTools:
-    title: My tools
-  loans:
-    title: Lent out
   home:
     features:
-      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? Someone down the street probably has one sitting in a drawer. }, { title: Share what you own, text: "Add your ladder, hedge trimmer or tent with a photo and let neighbors know it's there to borrow." }, { title: Arrange it directly, text: Send the owner a message from the tool's page and agree on when to pick it up. }, { title: Know where your tools are, text: "Keep track of what you've lent, to whom, and when it should come back." }]
-      title: How it works
+      items: [{ title: Borrow instead of buying, text: Need a drill for one afternoon? Find one a few doors away and save the money and the shelf space. }, { title: Share what sits in your shed, text: "List your ladder, mower or saw with a photo, and let neighbors put it to good use." }, { title: Arrange it directly, text: Send the owner a message from the tool's page and agree on when to pick it up and bring it back. }, { title: See what is free right now, text: "Owners mark tools as lent or returned, so you only ask for what is on hand." }]
     hero:
-      title: The neighborhood tool shed
+      title: Your neighborhood's tool shed
       subtitle: Borrow the tools you need from people nearby, and lend out the ones you rarely use.
       button: Browse tools
-      secondButton: Share a tool
+      secondButton: Lend a tool
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-    latest:
-      title: Recently shared
-actions:
-  markReturned:
-    label: Mark returned
 logo:
   src: images/logo.webp
   alt: A toolbox
