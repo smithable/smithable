@@ -634,12 +634,16 @@ export function detailRoute(
   const look = within ? undefined : ux.pages[page.id];
   const summary =
     look?.recordHeader || look?.formAside ? recordSummary(model, ux.tones) : undefined;
+  // With the summary in both places, each part stands in one (A 221): the status badge in the title
+  // row, the amount and the dates beside the form.
+  const figures = (place: "header" | "aside") => place === "aside" || !look?.formAside;
+  const badge = (place: "header" | "aside") => place === "header" || !look?.recordHeader;
   const summaryOf = (place: "header" | "aside") =>
     summary
       ? `<RecordSummary
           ui={${n.ui}}
           app={app}
-          row={row}${summary.status ? `\n          status="${summary.status.name}"` : ""}${summary.amount ? `\n          amount="${summary.amount.name}"` : ""}${summary.dates.length ? `\n          dates={${JSON.stringify(summary.dates.map((d) => d.name))}}` : ""}
+          row={row}${summary.status && badge(place) ? `\n          status="${summary.status.name}"` : ""}${summary.amount && figures(place) ? `\n          amount="${summary.amount.name}"` : ""}${summary.dates.length && figures(place) ? `\n          dates={${JSON.stringify(summary.dates.map((d) => d.name))}}` : ""}
           place="${place}"
         />`
       : "";
@@ -798,7 +802,7 @@ function ${component}() {
       />`
             : `<PageHeader title={${heading}} />`
       }${
-        look?.recordHeader
+        look?.recordHeader && (figures("header") || summary?.status)
           ? `
       <div className="-mt-2 mb-6">
         ${summaryOf("header")}

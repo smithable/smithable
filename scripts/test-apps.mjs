@@ -5114,11 +5114,18 @@ async function addChildFlow(base) {
     const rows = page.locator('[data-kit="inline-rows"]');
     const sum = rows.locator('[data-part="sum"]');
     await sum.waitFor({ timeout: 10000 * P });
-    for (const place of ["header", "aside"])
+    // The total in the panel beside the form; the title row keeps the status alone (A 221).
+    await page
+      .locator('[data-kit="record-summary"][data-place="aside"]')
+      .getByText(await sum.innerText())
+      .waitFor({ timeout: 5000 * P });
+    if (
       await page
-        .locator(`[data-kit="record-summary"][data-place="${place}"]`)
+        .locator('[data-kit="record-summary"][data-place="header"]')
         .getByText(await sum.innerText())
-        .waitFor({ timeout: 5000 * P });
+        .count()
+    )
+      throw new Error("the title row repeats the total the panel shows");
     const before = await sum.innerText();
     const fresh = rows.locator('[data-part="new-row"]');
     await fresh.getByRole("textbox", { name: "Description", exact: true }).fill("Added in place");
@@ -5144,7 +5151,7 @@ async function addChildFlow(base) {
       await page.waitForTimeout(100);
     }
     console.log(
-      "  ✓ browser: an invoice's lines are edited in place: added, changed and removed row by row, the total and the summary following",
+      "  ✓ browser: an invoice's lines are edited in place: added, changed and removed row by row, the total and the summary following; the total stands in the panel only",
     );
   } catch (error) {
     console.log(
