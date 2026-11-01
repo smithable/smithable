@@ -1073,6 +1073,9 @@ async function kioskLandingFlow(dir, base) {
     const tiles = page.locator('[data-hero][data-layout="tiles"] [data-part="tile"]');
     await tiles.first().waitFor({ timeout: 10000 * P });
     if ((await tiles.count()) !== 2) throw new Error(`${await tiles.count()} tiles, not 2`);
+    // Its shortcuts are its tiles, not round icons under it as well.
+    if (await page.locator('[data-part="shortcut"]').count())
+      throw new Error("the shortcuts are drawn as round icons too");
     if (!(await tiles.nth(0).locator("img").count()))
       throw new Error("the menu tile has no picture");
     if (await tiles.nth(1).locator("img").count())
