@@ -31,6 +31,7 @@ import {
   type SpecIR,
   titleField,
 } from "@smithable/core";
+import { readBeta } from "./beta.js";
 import { BUSY_MS, databasePath } from "./database.js";
 
 type ImportEffect = Extract<Effect, { kind: "import-records" }>;
@@ -52,6 +53,22 @@ export function prepareImport(
   content?: ContentIR,
 ): PreparedImport {
   const model = ir.models.find((m) => m.name === effect.model) as ModelIR;
+  // A hosted project that may hold only fictional data takes no records from a file (legal-1.0
+  // item 1.11): a file is how real customers and bookings come in.
+  if (readBeta(dir)?.data === "test")
+    return {
+      model,
+      text: "",
+      rows: [],
+      shown: "",
+      refusals: [
+        {
+          line: 0,
+          message:
+            "Test hosting only: this project may hold fictional data alone, so records from a file are refused until real data is switched on.",
+        },
+      ],
+    };
   const refusals: ImportRefusal[] = [];
   let text = "";
   if ("text" in effect.source) text = effect.source.text;
