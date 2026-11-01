@@ -269,7 +269,8 @@ async function applyAndCheckpoint(
   if (!result.ok) {
     io.err(`${result.message}\n`);
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
-    return result.diagnostics.length ? FAILED : 1;
+    // A refusal, said in words: not a failure to report (only what throws below is one).
+    return 1;
   }
   const before = validateSpec({ path: SPEC, text: files.spec }, { plugins: files.plugins })
     .ir as SpecIR;

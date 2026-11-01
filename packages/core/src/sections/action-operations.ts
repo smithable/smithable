@@ -218,7 +218,7 @@ const addAction: Operation<{
         type: "array",
         items: { type: "string" },
         description:
-          "For a merge: field=rule pairs, the rule keep, other, ask, add (numbers summed) or append (texts joined), e.g. email=ask revenue=add; a field not named is asked. For a split: the fields the new record takes, e.g. customer deliverTo; unsaid, every stored field but the unique, the sequences and the lists.",
+          "For a merge: field=rule pairs, the rule keep, other, ask, add (numbers summed) or append (texts joined), e.g. email=ask,revenue=add; a field not named is asked. For a split: the fields the new record takes, e.g. customer,deliverTo; unsaid, every stored field but the unique, the sequences and the lists.",
       },
       split: refTo(
         { ref: "model", label: "Splits a record of" },
@@ -288,6 +288,12 @@ const addAction: Operation<{
       lists.length ||
       Object.keys(input).length ||
       Object.keys(output).length;
+    // A list written with spaces (--fields email phone): its next words land on the input.
+    const strays = Object.entries(input).map(([key, value]) => (value ? `${key}=${value}` : key));
+    if ((merge !== undefined || split !== undefined) && rules.length && strays.length)
+      throw new OperationError(
+        `"${strays.join(" ")}" is left over: a list is written with commas, e.g. --fields ${[...rules, ...strays].join(",")}.`,
+      );
     if (split !== undefined || move !== undefined) {
       if (split === undefined) throw new OperationError('"--move" goes with --split <Model>.');
       if (move === undefined)
