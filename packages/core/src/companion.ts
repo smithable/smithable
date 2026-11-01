@@ -239,6 +239,15 @@ const ux: Companion = {
     const m = effect.model;
     const from = effect.kind === "rename-field" ? effect.from : effect.field;
     const to = effect.kind === "rename-field" ? effect.to : undefined;
+    // A week's `by` names its date field (A 215): renamed with it, gone with it.
+    for (const page of ir.pages)
+      for (const section of page.sections) {
+        const at = ["pages", page.id, "sections", section.name, "by"];
+        if (section.kind !== "records" || section.model !== m || !editor.has(at)) continue;
+        if (editor.get(at) !== from) continue;
+        if (to) editor.set(at, to);
+        else editor.removeAndPrune(at, 0);
+      }
     // A thread finds its message as the model's first long text: the last one cannot go while a
     // page shows the model as a thread (docs/design/conversation.md).
     if (effect.kind === "remove-field") {
