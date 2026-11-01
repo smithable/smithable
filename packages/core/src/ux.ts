@@ -105,6 +105,11 @@ export interface PageUx {
       | { kind: "choice"; model: string; field: string; reference?: string }
       | { kind: "record"; model: string; reference: string };
     capacity?: { left: string; of: string; look: "number" | "pips" | "bar" };
+    /** How the records show: unsaid the week's grid; agenda, the coming weeks as one list by
+     * day; days, the coming days side by side, each a list (A 215). */
+    view?: "agenda" | "days";
+    /** Filters of the calendar's own: timeOfDay, morning, afternoon or evening by the start hour. */
+    filters?: "timeOfDay"[];
   };
   /**
    * How the page's filters show (docs/design/look-gap.md §4): unsaid, today's controls (chips up to
@@ -915,8 +920,46 @@ export function validateUx(
               ctx,
               mapEntries(ctx, part.value, `the calendar of ${where}`) ?? [],
               `the calendar of ${where}`,
-              { allowed: ["colorBy", "capacity"] },
+              { allowed: ["colorBy", "capacity", "view", "filters"] },
             )) {
+              if (option.key === "view") {
+                const view = readString(ctx, option.value, `"view" of the calendar of ${where}`);
+                if (view === "agenda" || view === "days") calendar.view = view;
+                else if (view !== undefined && view !== "week")
+                  ctx.error(
+                    option.value,
+                    "invalid-value",
+                    `"view" of a calendar is week, agenda or days.`,
+                  );
+                continue;
+              }
+              if (option.key === "filters") {
+                const names = readNameList(
+                  ctx,
+                  option.value,
+                  `"filters" of the calendar of ${where}`,
+                );
+                for (const { name, at } of names)
+                  if (name !== "timeOfDay")
+                    ctx.error(
+                      at as ParsedNode,
+                      "invalid-value",
+                      `A calendar's own filter is timeOfDay; "${name}" is not one.`,
+                    );
+                // A calendar of dates has no hours to tell morning from evening.
+                const starts = spec.pattern.kind === "calendar" ? spec.pattern.starts : undefined;
+                const startsType = model?.fields.find((f) => f.name === starts)?.type;
+                const dated = startsType?.kind === "scalar" && startsType.name === "date";
+                if (names.some((n) => n.name === "timeOfDay") && dated)
+                  ctx.error(
+                    option.value,
+                    "invalid-value",
+                    `timeOfDay needs records placed by a date and time; ${starts} is a date.`,
+                  );
+                else if (names.some((n) => n.name === "timeOfDay"))
+                  calendar.filters = ["timeOfDay"];
+                continue;
+              }
               if (option.key === "colorBy") {
                 // A choice of the model, or of the record a reference points to (classType.level).
                 const said = readString(ctx, option.value, `"colorBy" of the calendar of ${where}`);
@@ -1031,7 +1074,8 @@ export function validateUx(
                   };
               }
             }
-            if (calendar.colorBy || calendar.capacity) result.calendar = calendar;
+            if (calendar.colorBy || calendar.capacity || calendar.view || calendar.filters)
+              result.calendar = calendar;
             continue;
           }
           if (part.key === "frame") {
