@@ -58,10 +58,10 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --heading-case: none;
   --heading-align: start;
   --heading-inline: 0;
-  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.08), inset 0 1px 0 color-mix(in oklch, white 22%, transparent);
+  --card-shadow: 0 1px 3px rgb(0 0 0 / 0.08), inset 0 1px 0 color-mix(in oklab, white 22%, transparent);
   --card-border: 1px;
-  --card-border-color: color-mix(in oklch, var(--foreground) 12%, transparent);
-  --card-surface: color-mix(in oklch, var(--card) 65%, transparent);
+  --card-border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --card-surface: color-mix(in oklab, var(--card) 65%, transparent);
   --card-blur: blur(14px) saturate(1.2);
   --band-step: 12%;
   --texture: none;
@@ -76,7 +76,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --table-numbers: normal;
   --row-divider: var(--divider);
   --row-stripe: transparent;
-  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
@@ -129,7 +129,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-4: #c1b85c;
   --chart-5: #4acdbd;
   --picture-filter: none;
-  --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
@@ -217,7 +217,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --table-numbers: normal;
   --row-divider: var(--divider);
   --row-stripe: transparent;
-  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
@@ -270,7 +270,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-4: #adb4fd;
   --chart-5: #fe96b8;
   --picture-filter: none;
-  --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
@@ -356,7 +356,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --table-numbers: normal;
   --row-divider: var(--divider);
   --row-stripe: transparent;
-  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
@@ -409,7 +409,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-4: #adb4fd;
   --chart-5: #fe96b8;
   --picture-filter: none;
-  --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }
@@ -492,7 +492,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --table-numbers: normal;
   --row-divider: var(--divider);
   --row-stripe: transparent;
-  --hover: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 7%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), black 20%);
   --destructive-hover: color-mix(in oklch, var(--destructive), black 20%);
 }
@@ -545,7 +545,7 @@ exports[`the style layer's new fields render, in the combinations where misses w
   --chart-4: #adb4fd;
   --chart-5: #fe96b8;
   --picture-filter: grayscale(1) sepia(1) hue-rotate(1deg) saturate(1.6) contrast(1.05);
-  --hover: color-mix(in oklch, var(--foreground) 10%, transparent);
+  --hover: color-mix(in oklab, var(--foreground) 10%, transparent);
   --primary-hover: color-mix(in oklch, var(--primary), white 30%);
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);
 }

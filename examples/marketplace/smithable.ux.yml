@@ -6,6 +6,7 @@ theme:
 
 pages:
   home:
+    width: wide                        # more of the catalog across a wide screen
     sections:
       hero: { layout: stage, stage: catalog }   # the catalog itself beside the headline (look-breadth §3)
       latest: { layout: grid, columns: 4, band: muted }   # the like-new items' pictures, a row of four

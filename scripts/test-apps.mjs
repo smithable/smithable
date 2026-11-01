@@ -1059,6 +1059,41 @@ async function callReceiver() {
  * in words; staff accept the order and the customer is mailed. The truck is open all week here,
  * so the flow does not depend on the hour it runs at (the closed refusal is a unit test).
  */
+/**
+ * Kiosk's landing (A 215): the header over the photo hero on its dark wash until the hero has
+ * scrolled under it, then on its own surface; the content as wide as `width: wide` (80rem).
+ */
+async function kioskHeaderFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  try {
+    await open(page, `${base}/where`);
+    const header = page.locator('[data-kit="landing"] > [data-part="header"]');
+    await header.and(page.locator('[data-over="dark"]')).waitFor({ timeout: 10000 * P });
+    const top = await page.locator("[data-hero]").boundingBox();
+    if (!top || top.y > 1) throw new Error(`the hero starts at ${top?.y}, not under the header`);
+    const inner = await header.locator(":scope > div").last().boundingBox();
+    if (!inner || Math.round(inner.width) !== 1280)
+      throw new Error(`the header's content is ${inner?.width}px wide, not 80rem`);
+    await page.mouse.wheel(0, 2000);
+    for (let i = 0; (await header.getAttribute("data-over")) !== null; i++) {
+      if (i === 50 * P)
+        throw new Error("the header stays on the hero's wash after the hero has passed");
+      await page.waitForTimeout(100);
+    }
+    console.log(
+      "  ✓ browser: the header stands over the photo hero until it has passed, and the page runs 80rem wide",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("kiosk header over the hero");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function kioskFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
   const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
@@ -7847,7 +7882,10 @@ test("the session cookie's name and attributes", async () => {
       if (example === "marketplace") await marketplaceFlow(dir, base);
       if (example === "marketplace") await reviewFlow(dir, base);
       if (example === "support") await supportFlow(dir, base);
-      if (example === "kiosk") await kioskFlow(dir, base);
+      if (example === "kiosk") {
+        await kioskFlow(dir, base);
+        await kioskHeaderFlow(base);
+      }
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
