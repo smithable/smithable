@@ -318,5 +318,6 @@ export {
   UX_VERSION,
   VOICES,
   validateUx,
+  weekBy,
 } from "./ux.js";
 export { convertValue } from "./values.js";

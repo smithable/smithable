@@ -1134,19 +1134,27 @@ async function kioskLandingFlow(dir, base) {
     console.log(
       "  ✓ browser: a tiles hero draws its shortcuts as tiles: a picture where given, the page's title on the primary where not",
     );
-    for (const [key, value] of [
-      ["layout", "photo"],
-      ["over", "hero"],
+    // The week's stops as a week (A 215): each under its day, the days in their order, at most seven.
+    await open(page, `${base}/where`);
+    const days = page.locator('[data-layout="week"] [data-part="day"]');
+    await days.first().waitFor({ timeout: 10000 * P });
+    const count = await days.count();
+    if (count < 1 || count > 7) throw new Error(`the week shows ${count} days`);
+    const dates = await days.evaluateAll((sections) =>
+      sections.map((s) => s.closest("[data-layout]") && s.querySelector("h3")?.textContent),
+    );
+    if (dates.some((d) => !d)) throw new Error("a day has no heading");
+    if (!(await days.first().locator("li").count())) throw new Error("the first day lists no stop");
+    console.log(
+      "  ✓ browser: a records section as a week shows each stop under its day, the days at most seven",
+    );
+    for (const [section, key, value] of [
+      ["hero", "layout", "photo"],
+      ["header", "over", "hero"],
+      // The stops as a list again: a page long enough for the hero to scroll away under the bar.
+      ["stops", "layout", "list"],
     ]) {
-      const done = smithable(
-        dir,
-        "op",
-        "setSectionLook",
-        "where",
-        key === "over" ? "header" : "hero",
-        key,
-        value,
-      );
+      const done = smithable(dir, "op", "setSectionLook", "where", section, key, value);
       if (done.code !== 0) throw new Error(`setSectionLook ${key} ${value}: ${done.out}`);
       changed++;
     }
