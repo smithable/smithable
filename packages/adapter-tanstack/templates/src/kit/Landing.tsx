@@ -763,7 +763,8 @@ function HeroView({
   // the primary, so the hero works before there are pictures.
   if (layout === "tiles") {
     const tiles = shortcuts.slice(0, 3);
-    return framed(
+    // Its shortcuts are its tiles: not again as round icons under it, as framed() would add.
+    return (
       <section
         {...sectionHooks(texts)}
         data-hero=""
@@ -835,7 +836,7 @@ function HeroView({
         </div>
         {cue && <div className="mt-8">{cue}</div>}
         {end}
-      </section>,
+      </section>
     );
   }
   // Across the width at a large size: a dark scrim from the start side (from the foot on a
