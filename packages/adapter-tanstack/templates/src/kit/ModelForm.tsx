@@ -8,6 +8,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
+import { AiMarked } from "./AiMark";
 import { FieldInput } from "./FieldInput";
 import { fileSize, formatValue, fromInput, toInput } from "./format";
 import {
@@ -43,6 +44,8 @@ interface ModelFormProps<S extends z.ZodType> {
   trash?: boolean;
   /** Shows the record without letting it be changed. */
   readOnly?: boolean;
+  /** On the read-only view, the record's first picture field large: aside the fields or on top. */
+  pictures?: "aside" | "top";
   /**
    * Mails a change of these fields (none: of any field) sends to the records of one of the
    * record's lists (a session moved: each booking's member): saving such a change asks first,
@@ -74,6 +77,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
     readOnly,
     fixed,
     tells,
+    pictures: picturesLook,
   } = props;
   const all = presented(props.ui, props);
   // A field the app fills is never in the form, only on the record's page (record-rules.md §1);
@@ -355,48 +359,75 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   // Someone who may only read sees the record, not a form they cannot use.
   if (readOnly && initial) {
     const record = { ...initial, ...computed };
+    // The record's pictures large (record.pictures): its first picture field, out of the fields.
+    const pictureField = picturesLook
+      ? ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures")
+      : undefined;
+    const gallery = pictureField ? picturesOf(ui, pictureField, record) : [];
+    const shownGroups = groups(ui).map((group) => ({
+      ...group,
+      fields: gallery.length ? group.fields.filter((f) => f !== pictureField) : group.fields,
+    }));
+    const big = gallery.length > 0;
     return (
-      <Card data-kit="model-form" data-part="view" className="max-w-3xl">
-        <div className="space-y-6 p-card">
-          {groups(ui).map((group) => (
-            <section key={group.name ?? ""} data-part="section" className="space-y-4">
-              {group.title && (
-                <h2 className="text-base font-semibold" data-part="title">
-                  {group.title}
-                </h2>
-              )}
-              <dl className={ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-5"}>
-                {/* The title is the page's heading already. */}
-                {group.fields
-                  .filter((field) => field.name !== ui.titleField)
-                  .map((field) => (
-                    <div
-                      key={field.name}
-                      data-kit="field"
-                      data-field={field.name}
-                      className={wide(field) ? "sm:col-span-2" : undefined}
-                    >
-                      <dt className="text-sm font-medium text-muted-foreground">{field.label}</dt>
-                      <dd
-                        className={cn(
-                          "mt-1",
-                          field.kind === "money" && "text-xl font-semibold tabular-nums",
-                        )}
-                      >
-                        {shown(ui, field, record, app)}
-                      </dd>
-                    </div>
-                  ))}
-              </dl>
-            </section>
-          ))}
-          {onCancel && (
-            <div data-part="actions" className="border-t pt-6">
-              <Button type="button" variant="outline" onClick={onCancel}>
-                {cancelLabel ?? "Back"}
-              </Button>
+      <Card
+        data-kit="model-form"
+        data-part="view"
+        data-pictures={big ? picturesLook : undefined}
+        className={big && picturesLook === "aside" ? "max-w-6xl" : big ? "max-w-4xl" : "max-w-3xl"}
+      >
+        <div
+          className={cn(
+            "p-card",
+            big && picturesLook === "aside" ? "grid gap-8 lg:grid-cols-12" : "space-y-6",
+          )}
+        >
+          {big && (
+            <div className={picturesLook === "aside" ? "lg:col-span-7" : undefined}>
+              <Gallery pictures={gallery} />
             </div>
           )}
+          <div className={cn("space-y-6", big && picturesLook === "aside" && "lg:col-span-5")}>
+            {shownGroups.map((group) => (
+              <section key={group.name ?? ""} data-part="section" className="space-y-4">
+                {group.title && (
+                  <h2 className="text-base font-semibold" data-part="title">
+                    {group.title}
+                  </h2>
+                )}
+                <dl className={ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-5"}>
+                  {/* The title is the page's heading already. */}
+                  {group.fields
+                    .filter((field) => field.name !== ui.titleField)
+                    .map((field) => (
+                      <div
+                        key={field.name}
+                        data-kit="field"
+                        data-field={field.name}
+                        className={wide(field) ? "sm:col-span-2" : undefined}
+                      >
+                        <dt className="text-sm font-medium text-muted-foreground">{field.label}</dt>
+                        <dd
+                          className={cn(
+                            "mt-1",
+                            field.kind === "money" && "text-xl font-semibold tabular-nums",
+                          )}
+                        >
+                          {shown(ui, field, record, app)}
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
+              </section>
+            ))}
+            {onCancel && (
+              <div data-part="actions" className="border-t pt-6">
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  {cancelLabel ?? "Back"}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </Card>
     );
@@ -792,6 +823,64 @@ function groups(ui: ModelUi): { name?: string; title?: string; fields: FieldUi[]
   }));
   const rest = ui.fields.filter((f) => !placed.has(f.name));
   return rest.length ? [...sections, { fields: rest }] : sections;
+}
+
+/** A record's pictures as addresses, for the gallery: one picture, or each of several. */
+function picturesOf(ui: ModelUi, field: FieldUi, record: Record<string, unknown>) {
+  const value = record[field.name];
+  const base = `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${String(record.id)}/${field.name}`;
+  const list = (
+    field.kind === "picture" ? (value ? [value] : []) : Array.isArray(value) ? value : []
+  ) as {
+    alt?: string;
+    generated?: boolean;
+  }[];
+  return list.map((p, i) => ({
+    src: field.kind === "picture" ? base : `${base}/${i}`,
+    alt: p.alt ?? "",
+    generated: p.generated,
+  }));
+}
+
+/**
+ * The pictures large, the first shown; several get a strip of thumbnails, buttons that switch the
+ * large one in place, the one shown marked. An AI's picture keeps its mark.
+ */
+function Gallery({ pictures }: { pictures: { src: string; alt: string; generated?: boolean }[] }) {
+  const [at, setAt] = useState(0);
+  const shownPicture = pictures[at] ?? pictures[0];
+  if (!shownPicture) return null;
+  return (
+    <div data-part="gallery" className="space-y-3">
+      <AiMarked generated={shownPicture.generated} full>
+        <img
+          src={shownPicture.src}
+          alt={shownPicture.alt}
+          className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover"
+        />
+      </AiMarked>
+      {pictures.length > 1 && (
+        <ul className="flex snap-x gap-2 overflow-x-auto pb-1">
+          {pictures.map((p, i) => (
+            <li key={p.src} className="shrink-0 snap-start">
+              <button
+                type="button"
+                aria-pressed={i === at}
+                aria-label={w.pictureOf(i + 1, pictures.length)}
+                onClick={() => setAt(i)}
+                className={cn(
+                  "block overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  i === at ? "ring-2 ring-primary" : "opacity-80 hover:opacity-100",
+                )}
+              >
+                <img src={p.src} alt="" loading="lazy" className="h-16 w-20 object-cover" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /** A stored value as someone who may only read sees it: pictures shown, Markdown formatted. */

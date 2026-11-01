@@ -215,6 +215,14 @@
                   ]
                 }
               },
+              "pictures": {
+                "enum": [
+                  "aside",
+                  "top",
+                  "none"
+                ],
+                "description": "aside: the record's pictures large beside its fields; top: across the top, a strip of thumbnails switching them; none (the default): among the fields."
+              },
               "header": {
                 "enum": [
                   "summary",

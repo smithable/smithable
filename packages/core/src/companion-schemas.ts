@@ -364,6 +364,11 @@ export const UX_SCHEMA: JsonSchema = {
                   "By list field: table (the default), thread, a conversation with a reply box, e.g. { messages: thread }, or inline, rows edited in place, e.g. { lines: inline }.",
                 additionalProperties: { enum: ["table", "thread", "inline"] },
               },
+              pictures: {
+                enum: ["aside", "top", "none"],
+                description:
+                  "aside: the record's pictures large beside its fields; top: across the top, a strip of thumbnails switching them; none (the default): among the fields.",
+              },
               header: {
                 enum: ["summary", "none"],
                 description:

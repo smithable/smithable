@@ -15,6 +15,7 @@ import {
   type PersonIR,
   pageModel,
   parseTheme,
+  recordPicture,
   recordSummary,
   type SamplesIR,
   type SpecIR,
@@ -440,6 +441,15 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
           `${page.id} ${name} stage: ${shown?.id ?? "no list page"}${look.stage ? " (stage)" : " (the first list page in the navigation)"}`,
         );
       }
+  // A record's pictures large on its view (A 215): which field, by type.
+  for (const page of ir.pages) {
+    const look = ux?.pages[page.id]?.recordPictures;
+    const model = ir.models.find((m) => m.name === pageModel(page));
+    if (!look || !model) continue;
+    lines.push(
+      `${page.id} pictures (${look}): ${recordPicture(model)?.name ?? "none"} (the first picture field)`,
+    );
+  }
   // A calendar's view and its time of day (A 215), with the kit's boundaries.
   for (const page of ir.pages) {
     if (page.pattern.kind !== "calendar") continue;

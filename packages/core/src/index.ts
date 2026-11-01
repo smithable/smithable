@@ -310,6 +310,7 @@ export {
   pageIcon,
   RECORD_LISTS,
   type RecordList,
+  recordPicture,
   recordSummary,
   SECTION_LOOKS,
   stagePage,
