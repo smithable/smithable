@@ -49,6 +49,7 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/Calendar.tsx": [
     "data-part="places"",
     "data-kit="calendar"",
+    "data-part="time-of-day"",
   ],
   "src/kit/Consent.tsx": [
     "data-part="consent"",

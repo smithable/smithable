@@ -431,6 +431,17 @@ export const UX_SCHEMA: JsonSchema = {
             description: "A calendar page's blocks: their colour, and the places left on each.",
             additionalProperties: false,
             properties: {
+              view: {
+                enum: ["week", "agenda", "days"],
+                description:
+                  "week (the default): the week's grid, its hours fitted to the records; agenda: the coming four weeks as one list by day; days: the coming seven days side by side, each a list.",
+              },
+              filters: {
+                type: "array",
+                items: { enum: ["timeOfDay"] },
+                description:
+                  "The calendar's own filters: timeOfDay, morning before 12, afternoon 12 to 17, evening from 17, by the start hour.",
+              },
               colorBy: {
                 type: "string",
                 description:

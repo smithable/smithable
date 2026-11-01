@@ -369,9 +369,34 @@ async function calendarFlow(base) {
       .waitFor({ timeout: 10000 * P });
     await page.getByRole("dialog").getByRole("link", { name: "Sign in to book" }).waitFor();
     await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
-    // Next and Previous: another week, in the address too.
+    // The schedule's own view (A 215): the coming days side by side, each a list, seven of them.
+    if ((await page.locator('[data-kit="calendar"] section').count()) !== 7)
+      throw new Error("the days view does not show seven days");
+    // Morning, afternoon or evening by the start hour, kept in the address and across Next.
+    await page.getByRole("button", { name: "Morning", exact: true }).click();
+    await page.waitForURL(/[?&]time=morning/);
+    // The address changes first; the list follows once the page has drawn it again.
+    const afternoon = async () =>
+      (await page.locator("section ol button span[aria-hidden]").allInnerTexts()).filter(
+        (t) => t.trim() >= "12:00",
+      );
+    for (let i = 0; (await afternoon()).length; i++) {
+      if (i === 50 * P)
+        throw new Error(`classes at ${(await afternoon()).join(", ")} under Morning`);
+      await page.waitForTimeout(100);
+    }
     await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForURL(/\?week=\d{4}-W\d{2}/);
+    await page.waitForURL(/[?&]time=morning/);
+    await page.getByRole("button", { name: "Any time", exact: true }).click();
+    await page.getByRole("button", { name: "Previous" }).click();
+    await page.waitForFunction(
+      (text) => [...document.querySelectorAll("h2")].some((h) => h.textContent === text),
+      shown,
+      { timeout: 10000 * P },
+    );
+    // Next and Previous: other days, in the address too.
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.waitForURL(/\?from=\d{4}-\d{2}-\d{2}/);
     await page.waitForFunction(
       (text) => [...document.querySelectorAll("h2")].every((h) => h.textContent !== text),
       shown,
@@ -387,7 +412,7 @@ async function calendarFlow(base) {
     await page.waitForURL(/\?month=\d{4}-\d{2}/);
     if (process.env.CALENDAR_SHOTS)
       await page.screenshot({ path: `${process.env.CALENDAR_SHOTS}/month.png`, fullPage: true });
-    await page.getByRole("button", { name: "Week" }).click();
+    await page.getByRole("button", { name: "Days" }).click();
     // A visitor sees the schedule in the site's frame, not the app's; the app's name leads back
     // to the landing page, whose hero says more follows.
     if (await page.locator('[data-kit="app-shell"]').count())
@@ -401,7 +426,11 @@ async function calendarFlow(base) {
     await page.waitForURL(/#/);
     // An admin clicks an empty hour: the new session's start is that hour.
     await signInAs(page, base, "admin");
-    await open(page, `${base}/schedule`);
+    // The week's grid, by its address: the days view has no hours to click.
+    const thursday = new Date();
+    thursday.setUTCDate(thursday.getUTCDate() + 3 - ((thursday.getUTCDay() + 6) % 7));
+    const isoWeek = `${thursday.getUTCFullYear()}-W${String(Math.ceil(((thursday - Date.UTC(thursday.getUTCFullYear(), 0, 1)) / 86_400_000 + 1) / 7)).padStart(2, "0")}`;
+    await open(page, `${base}/schedule?week=${isoWeek}`);
     // Signed in, the page keeps the site's frame (page-sections.md §4), with the way into the
     // workspace for staff.
     await page
@@ -410,12 +439,14 @@ async function calendarFlow(base) {
       .waitFor({ timeout: 10000 * P });
     if (await page.locator('[data-kit="app-shell"]').count())
       throw new Error("an admin sees the schedule in the app's frame, not the site's");
-    const slot = page.getByRole("button", { name: /^New session, .* at 07:00$/ }).first();
+    // The first empty hour of the week's fitted grid: the new session starts then.
+    const slot = page.getByRole("button", { name: /^New session, .* at \d\d:00$/ }).first();
     const label = await slot.getAttribute("aria-label");
+    const hour = /at (\d\d:00)$/.exec(label ?? "")?.[1];
     await slot.click();
     await page.waitForURL(/\/sessions\/new\?startsAt=/);
     const starts = await page.getByLabel("Starts at").inputValue();
-    if (!starts.endsWith("T07:00"))
+    if (!starts.endsWith(`T${hour}`))
       throw new Error(`the new session starts at ${starts}, from ${label}`);
     console.log(
       "  ✓ browser: the schedule shows this week's sessions to a visitor, in the site's frame, coloured by level with their places as dots, who opens one (its places, Sign in to book); Next and Previous change the week and the address; the app's name leads home, where the hero's arrow scrolls on; signed in, it keeps the site's frame with a Workspace link, and an admin's click on an empty hour starts a new session then",
