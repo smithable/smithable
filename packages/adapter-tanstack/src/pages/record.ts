@@ -723,7 +723,7 @@ ${
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
 ${options ? `${options.imports.join("\n")}\n` : ""}${offered.length || merges.length || splits.length ? 'import { allows } from "#/kit/access";\n' : ""}import { guardPage } from "#/kit/page-guard";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
-${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { PageHeader } from "#/kit/AppShell";
+${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { ${within ? "" : "BackTo, "}LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
 ${history && !contact ? 'import { currentViewer } from "#/lib/viewer.server";\n' : ""}${tables || favorite ? `import { ${[...(tables ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
@@ -789,7 +789,13 @@ function ${component}() {
       : ""
   }
   return (
-    <>
+    <>${
+      // The way back to the list (A 223); a data page has its own.
+      within
+        ? ""
+        : `
+      <BackTo to=${JSON.stringify(page.route)} title={${t.pageTitleOf(page.id)}} />`
+    }
       ${
         buttons.length === 1 && favorite
           ? `<PageHeader
@@ -813,6 +819,13 @@ function ${component}() {
         ${summaryOf("header")}
       </div>`
           : ""
+      }${
+        // When it last changed (A 223), and by whom where its history may be read.
+        history
+          ? `
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />`
+          : `
+      <LastChange at={row.updatedAt} app={app} />`
       }${
         model.review
           ? `

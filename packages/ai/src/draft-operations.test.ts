@@ -781,11 +781,9 @@ test("a drafted landing page keeps its footer last, and its sections get the ite
   });
   if (draft.kind !== "draft") throw new Error(draft.message);
   const spec = draft.files["smithable.yml"] ?? "";
+  // addSection puts the faq above the footer itself: nothing is left to move.
   expect(spec.indexOf("footer")).toBeGreaterThan(spec.indexOf("faq"));
-  expect(draft.operations).toContainEqual({
-    op: "moveSection",
-    args: { page: "home", section: "footer", after: "faq" },
-  });
+  expect(draft.operations?.some((o) => o.op === "moveSection")).toBe(false);
   expect(draft.files["smithable.content.yml"]).toContain("question: Can children play?");
   // A footer already last is left where it is.
   const files = toProjectFiles(draft.files);

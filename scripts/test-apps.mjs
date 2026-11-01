@@ -2437,6 +2437,9 @@ async function rulesFlow(base) {
     await chooseRecord(page, "Customer *", "Nordic Timber Oy");
     await page.getByLabel("Status").selectOption({ label: "Placed" });
     await page.getByRole("textbox", { name: "Total *" }).fill("50");
+    // A computed field follows the inputs live: express shipping costs 15.
+    await page.getByLabel("Shipping method").selectOption({ label: "Express" });
+    await page.getByText("€15.00").waitFor({ timeout: 5000 * P });
     await page.getByRole("button", { name: "Create order" }).click();
     await page.waitForURL(`${base}/orders`);
     const row = page.locator("tr", { hasText: "ORD-3001" });
@@ -2459,7 +2462,7 @@ async function rulesFlow(base) {
     await dialog.getByRole("button", { name: "Ship" }).click();
     await row.getByText("Shipped").waitFor({ timeout: 10000 * P });
     console.log(
-      "  ✓ browser: the form leaves out a field the app fills; an action asks for the field its change makes required, and refuses it empty",
+      "  ✓ browser: the form leaves out a field the app fills and computes a field live from its inputs; an action asks for the field its change makes required, and refuses it empty",
     );
     // The shipped order's total is locked; who made the order is on its page.
     await row.getByRole("button", { name: "ORD-3001" }).click();
@@ -5117,7 +5120,7 @@ async function rowMenuFlow(dir, base) {
   }
 }
 
-/** Formula defaults fill a new invoice; a computed amount follows the inputs live. */
+/** Formula defaults fill a new invoice. */
 async function formulaFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -5130,12 +5133,6 @@ async function formulaFlow(base) {
     const dueOn = await page.getByLabel("Due on *").inputValue();
     if (issued !== today || dueOn !== due) throw new Error(`defaults were ${issued} and ${dueOn}`);
     console.log("  ✓ browser: formula defaults fill a new invoice (today, today + 30 days)");
-
-    await open(page, `${base}/invoice-lines/new`);
-    await page.getByRole("textbox", { name: "Quantity *" }).fill("2");
-    await page.getByRole("textbox", { name: "Unit price *" }).fill("12.50");
-    await page.getByText("€25.00").waitFor({ timeout: 5000 * P });
-    console.log("  ✓ browser: a computed amount follows the inputs live");
   } catch (error) {
     console.log(
       `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
@@ -5157,6 +5154,11 @@ async function addChildFlow(base) {
   try {
     await signInAs(page, base, "admin");
     await open(page, `${base}/invoices/1`);
+    // The way back to the list, and when the record last changed (A 223).
+    if ((await page.locator('[data-part="back"]').getAttribute("href")) !== "/invoices")
+      throw new Error("the invoice has no way back to the invoices");
+    if (!/^Changed /.test(await page.locator('[data-part="last-change"]').innerText()))
+      throw new Error("the invoice does not say when it changed");
     const rows = page.locator('[data-kit="inline-rows"]');
     const sum = rows.locator('[data-part="sum"]');
     await sum.waitFor({ timeout: 10000 * P });
@@ -5197,7 +5199,7 @@ async function addChildFlow(base) {
       await page.waitForTimeout(100);
     }
     console.log(
-      "  ✓ browser: an invoice's lines are edited in place: added, changed and removed row by row, the total and the summary following; the total stands in the panel only",
+      "  ✓ browser: an invoice's lines are edited in place: added, changed and removed row by row, the total and the summary following; the total stands in the panel only; the page leads back to the list and says when it changed",
     );
   } catch (error) {
     console.log(

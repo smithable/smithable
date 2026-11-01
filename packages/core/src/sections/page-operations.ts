@@ -907,7 +907,7 @@ const addSection: Operation<{
   kind?: string;
 }> = {
   name: "addSection",
-  summary: `Add a section to a page, below its others: one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards, a table or a calendar), text (a heading and paragraphs) or custom. Its texts go in smithable.content.yml.`,
+  summary: `Add a section to a page, below its others (above its footer): one named after its kind (${KINDS.join(", ")}), or any name with records (a model's records as cards, a table or a calendar), text (a heading and paragraphs) or custom. Its texts go in smithable.content.yml.`,
   schema: {
     type: "object",
     required: ["page", "section"],
@@ -1008,6 +1008,10 @@ const addSection: Operation<{
     if (spec.has(path) && spec.get(path) != null) spec.add(path, section, options);
     else if (spec.has(path)) spec.set(path, { [section]: options });
     else spec.add(["pages", page], path[2] as string, { [section]: options });
+    // The footer stays the page's last part: a new section goes above it.
+    const footer = existing.sections.find((s) => s.kind === "footer" && !s.own);
+    if (footer && named !== "footer" && spec.has([...path, footer.name]))
+      spec.move(path, section, { before: footer.name });
     return [];
   },
 };

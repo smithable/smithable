@@ -71,6 +71,17 @@ pages:
     callToAction:
       title: Send your next invoice with Invoicely
       button: Get started
+    footer:
+      text: Invoicely · Torggatan 5, 22100 Mariehamn
+      items:
+        - { label: Email us, link: "mailto:hello@invoicely.example" }
+  privacy:
+    title: Privacy
+    operator:
+      name: Invoicely Ab
+      address: Torggatan 5, 22100 Mariehamn
+      email: hello@invoicely.example
+      country: Åland, Finland
   overview:
     subtitle: Who owes you what, at a glance. Sent, overdue and paid, and what you invoiced each month.
     outstanding: { label: Outstanding }

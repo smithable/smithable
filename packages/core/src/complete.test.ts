@@ -45,7 +45,9 @@ test("the keys that may stand at a place, with what they are for, without the on
   expect(top.labels).not.toContain("models");
   expect(top.labels).not.toContain("pages");
   // Under a page: its keys, each with the schema's description, put in with its colon.
-  const page = at(withLine("  customers:", "    s‸"));
+  const page = at(
+    withLine("  customers:", "    s‸").replace("    sortable: [name, createdAt]\n", ""),
+  );
   expect(page.labels).toContain("sortable");
   expect(page.labels).not.toContain("search");
   expect(page.labels).not.toContain("crud");

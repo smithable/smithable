@@ -10,7 +10,8 @@ import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
-import { textMarker } from "./model";
+import { formatValue } from "./format";
+import { type AppUi, textMarker } from "./model";
 import { tx, w } from "./words";
 
 export interface MenuUi {
@@ -470,6 +471,30 @@ export function ErrorNotice({
       </h1>
       {message && <p className="text-muted-foreground">{message}</p>}
     </div>
+  );
+}
+
+/** A record page's way back: its list, by the list's title. */
+export function BackTo({ to, title }: { to: LinkProps["to"]; title: string }) {
+  return (
+    <Link
+      to={to}
+      data-part="back"
+      className="mb-2 inline-flex min-h-6 items-center gap-1 rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span aria-hidden>←</span>
+      {tx(title)}
+    </Link>
+  );
+}
+
+/** When a record last changed, and by whom when its history may be read. */
+export function LastChange({ at, who, app }: { at: Date | string; who?: string; app: AppUi }) {
+  const when = formatValue({ name: "at", kind: "datetime", label: "", required: false }, at, app);
+  return (
+    <p data-part="last-change" className="-mt-4 mb-6 text-sm text-muted-foreground">
+      {who ? w.changedBy(when, who) : w.changed(when)}
+    </p>
   );
 }
 

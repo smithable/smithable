@@ -623,9 +623,9 @@ export function dropForbidden(files: ProjectFiles, done: Step[]): ProjectFiles {
 }
 
 /**
- * A page's footer is its last section: addSection adds below the others, so a landing page's
- * sections added after addLandingPage came below its footer (the padel club's draft put the
- * footer second). Each footer that is not last is moved below the last section.
+ * A page's footer is its last section. addSection keeps it so; a footer that came above other
+ * sections some other way (the padel club's draft put it second, before addSection did) is moved
+ * below the last section.
  */
 export function footerLast(files: ProjectFiles, done: Step[]): ProjectFiles {
   const ir = validateSpec({ path: "smithable.yml", text: files.spec }).ir;

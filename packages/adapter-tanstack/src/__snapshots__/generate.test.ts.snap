@@ -8045,7 +8045,7 @@ import { deleteNote, getNote, noteUi, updateNote } from "#/generated/note";
 import { noteSchema } from "#/generated/note.schema";
 import { projectOptions } from "#/generated/project";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 
@@ -8067,6 +8067,7 @@ function NotePage() {
   return (
     <>
       <PageHeader title={row.title || \`Note #\${row.id}\`} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={noteUi}
@@ -8231,7 +8232,7 @@ import { projectSchema } from "#/generated/project.schema";
 import { taskUi } from "#/generated/task";
 import { noteUi } from "#/generated/note";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { ModelTable } from "#/kit/ModelTable";
@@ -8254,6 +8255,7 @@ function ProjectPage() {
   return (
     <>
       <PageHeader title={row.name || \`Project #\${row.id}\`} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={projectUi}
@@ -8440,7 +8442,7 @@ import { taskSchema } from "#/generated/task.schema";
 import { projectOptions } from "#/generated/project";
 import { userOptions } from "#/generated/users";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 
@@ -8462,6 +8464,7 @@ function TaskPage() {
   return (
     <>
       <PageHeader title={row.title || \`Task #\${row.id}\`} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={taskUi}
@@ -10077,7 +10080,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -10130,7 +10133,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
@@ -10145,13 +10148,13 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/activity.tsx": "1ae4934d generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
   "src/routes/admin/index.tsx": "247d3d7b generated",
-  "src/routes/admin/notes/$id.tsx": "e99a5862 generated",
+  "src/routes/admin/notes/$id.tsx": "fd4a56a8 generated",
   "src/routes/admin/notes/index.tsx": "54d57aec generated",
   "src/routes/admin/notes/new.tsx": "ec53485b generated",
-  "src/routes/admin/projects/$id.tsx": "d7024ced generated",
+  "src/routes/admin/projects/$id.tsx": "cbd85e7f generated",
   "src/routes/admin/projects/index.tsx": "e88da81e generated",
   "src/routes/admin/projects/new.tsx": "e02c047b generated",
-  "src/routes/admin/tasks/$id.tsx": "52a8a1b6 generated",
+  "src/routes/admin/tasks/$id.tsx": "8dca2f3c generated",
   "src/routes/admin/tasks/index.tsx": "050d96d7 generated",
   "src/routes/admin/tasks/new.tsx": "bc0cd40c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -14473,7 +14476,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { appointmentCancelState, appointmentUi, cancelOwnAppointment, deleteAppointment, getAppointment, updateAppointment } from "#/generated/appointment";
 import { appointmentSchema } from "#/generated/appointment.schema";
 import { CancelOwn } from "#/kit/Slots";
@@ -14485,7 +14488,7 @@ import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -14533,6 +14536,7 @@ function AppointmentPage() {
   const back = () => navigate({ to: "/appointments" });
   return (
     <>
+      <BackTo to="/appointments" title={pageUi["appointments"].title} />
       <PageHeader
         title={row.name || \`Appointment #\${row.id}\`}
         actions={
@@ -14560,6 +14564,7 @@ function AppointmentPage() {
           </>
         }
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={appointmentUi}
@@ -14817,14 +14822,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { barberUi, deleteBarber, getBarber, updateBarber } from "#/generated/barber";
 import { barberSchema } from "#/generated/barber.schema";
 import { buttonVariants } from "#/components/ui/button";
 import { timeOffUi } from "#/generated/time-off";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -14871,7 +14876,9 @@ function BarberPage() {
   const back = () => navigate({ to: "/barbers" });
   return (
     <>
+      <BackTo to="/barbers" title={pageUi["barbers"].title} />
       <PageHeader title={row.name || \`Barber #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={barberUi}
@@ -15280,12 +15287,12 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteService, getService, serviceUi, updateService } from "#/generated/service";
 import { serviceSchema } from "#/generated/service.schema";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -15331,7 +15338,9 @@ function ServicePage() {
   const back = () => navigate({ to: "/services" });
   return (
     <>
+      <BackTo to="/services" title={pageUi["services"].title} />
       <PageHeader title={row.name || \`Service #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={serviceUi}
@@ -15661,13 +15670,13 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteTimeOff, getTimeOff, timeOffUi, updateTimeOff } from "#/generated/time-off";
 import { timeOffSchema } from "#/generated/time-off.schema";
 import { barberOptions } from "#/generated/barber";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -15713,7 +15722,9 @@ function TimeOffPage() {
   const back = () => navigate({ to: "/time-off" });
   return (
     <>
+      <BackTo to="/time-off" title={pageUi["time-off"].title} />
       <PageHeader title={row.note || \`Time off #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={timeOffUi}
@@ -16394,7 +16405,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Calendar.tsx": "880f2b64 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -16447,7 +16458,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
@@ -16459,10 +16470,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "dc714c08 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/appointments/$id.tsx": "24fb0874 generated",
+  "src/routes/appointments/$id.tsx": "d3570ea5 generated",
   "src/routes/appointments/index.tsx": "5c325600 generated",
   "src/routes/appointments/new.tsx": "35d50aba generated",
-  "src/routes/barbers/$id.tsx": "1668985d generated",
+  "src/routes/barbers/$id.tsx": "05481e8a generated",
   "src/routes/barbers/index.tsx": "0f2665e4 generated",
   "src/routes/barbers/new.tsx": "07a45f41 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
@@ -16473,12 +16484,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "28261328 generated",
   "src/routes/privacy/index.tsx": "e98a1cc0 generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
-  "src/routes/services/$id.tsx": "2a49c74b generated",
+  "src/routes/services/$id.tsx": "8105c906 generated",
   "src/routes/services/index.tsx": "b3231c66 generated",
   "src/routes/services/new.tsx": "331bb24d generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
-  "src/routes/time-off/$id.tsx": "b1c0fb45 generated",
+  "src/routes/time-off/$id.tsx": "1e32b368 generated",
   "src/routes/time-off/index.tsx": "a874232b generated",
   "src/routes/time-off/new.tsx": "467fc0d4 generated",
   "src/start.ts": "ca04f376 kit",
@@ -24900,7 +24911,7 @@ import { bookingName } from "#/generated/booking.name";
 import { sessionOptions } from "#/generated/session";
 import { bookingOwnerOptions } from "#/generated/booking";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 
@@ -24922,6 +24933,7 @@ function BookingPage() {
   return (
     <>
       <PageHeader title={bookingName(row as Record<string, unknown>)} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={bookingUi}
@@ -25076,7 +25088,7 @@ import { classTypeUi, deleteClassType, getClassType, updateClassType } from "#/g
 import { classTypeSchema } from "#/generated/class-type.schema";
 import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { ModelTable } from "#/kit/ModelTable";
@@ -25099,6 +25111,7 @@ function ClassTypePage() {
   return (
     <>
       <PageHeader title={row.name || \`Class type #\${row.id}\`} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={classTypeUi}
@@ -25361,7 +25374,7 @@ import { deleteInstructor, getInstructor, instructorUi, updateInstructor } from 
 import { instructorSchema } from "#/generated/instructor.schema";
 import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { ModelTable } from "#/kit/ModelTable";
@@ -25384,6 +25397,7 @@ function InstructorPage() {
   return (
     <>
       <PageHeader title={row.name || \`Instructor #\${row.id}\`} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={instructorUi}
@@ -25556,7 +25570,7 @@ import { pageAccess, pageHead } from "#/generated/pages";
 import { deleteMessage, getMessage, messageUi, updateMessage } from "#/generated/message";
 import { messageSchema } from "#/generated/message.schema";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 
@@ -25578,6 +25592,7 @@ function MessagePage() {
   return (
     <>
       <PageHeader title={row.name || \`Message #\${row.id}\`} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={messageUi}
@@ -25735,7 +25750,7 @@ import { pageAccess, pageHead } from "#/generated/pages";
 import { deletePost, getPost, postUi, updatePost } from "#/generated/post";
 import { postSchema } from "#/generated/post.schema";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 
@@ -25757,6 +25772,7 @@ function PostPage() {
   return (
     <>
       <PageHeader title={row.title || \`Post #\${row.id}\`} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={postUi}
@@ -25931,7 +25947,7 @@ import { bookingUi } from "#/generated/booking";
 import { classTypeOptions } from "#/generated/class-type";
 import { instructorOptions } from "#/generated/instructor";
 import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
+import { LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { ModelTable } from "#/kit/ModelTable";
@@ -25954,6 +25970,7 @@ function SessionPage() {
   return (
     <>
       <PageHeader title={sessionName(row as Record<string, unknown>)} />
+      <LastChange at={row.updatedAt} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={sessionUi}
@@ -26332,14 +26349,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { classTypeUi, deleteClassType, getClassType, updateClassType } from "#/generated/class-type";
 import { classTypeSchema } from "#/generated/class-type.schema";
 import { buttonVariants } from "#/components/ui/button";
 import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -26386,7 +26403,9 @@ function ClassTypePage() {
   const back = () => navigate({ to: "/class-types" });
   return (
     <>
+      <BackTo to="/class-types" title={pageUi["class-types"].title} />
       <PageHeader title={row.name || \`Class type #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={classTypeUi}
@@ -26711,14 +26730,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteInstructor, getInstructor, instructorUi, updateInstructor } from "#/generated/instructor";
 import { instructorSchema } from "#/generated/instructor.schema";
 import { buttonVariants } from "#/components/ui/button";
 import { sessionUi } from "#/generated/session";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -26765,7 +26784,9 @@ function InstructorPage() {
   const back = () => navigate({ to: "/instructors" });
   return (
     <>
+      <BackTo to="/instructors" title={pageUi["instructors"].title} />
       <PageHeader title={row.name || \`Instructor #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={instructorUi}
@@ -26965,12 +26986,12 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteMessage, getMessage, messageUi, updateMessage } from "#/generated/message";
 import { messageSchema } from "#/generated/message.schema";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -27016,7 +27037,9 @@ function MessagePage() {
   const back = () => navigate({ to: "/messages" });
   return (
     <>
+      <BackTo to="/messages" title={pageUi["messages"].title} />
       <PageHeader title={row.name || \`Message #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={messageUi}
@@ -27192,7 +27215,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { bookingUi, deleteBooking, getBooking, updateBooking } from "#/generated/booking";
 import { bookingSchema } from "#/generated/booking.schema";
 import { bookingName } from "#/generated/booking.name";
@@ -27200,7 +27223,7 @@ import { sessionOptions } from "#/generated/session";
 import { bookingOwnerOptions } from "#/generated/booking";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -27246,7 +27269,9 @@ function BookingPage() {
   const back = () => navigate({ to: "/my-bookings" });
   return (
     <>
+      <BackTo to="/my-bookings" title={pageUi["my-bookings"].title} />
       <PageHeader title={bookingName(row as Record<string, unknown>)} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={bookingUi}
@@ -27455,12 +27480,12 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deletePost, getPost, postUi, updatePost } from "#/generated/post";
 import { postSchema } from "#/generated/post.schema";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -27506,7 +27531,9 @@ function PostPage() {
   const back = () => navigate({ to: "/posts" });
   return (
     <>
+      <BackTo to="/posts" title={pageUi["posts"].title} />
       <PageHeader title={row.title || \`Post #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={postUi}
@@ -27907,7 +27934,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteSession, getSession, sessionUi, updateSession } from "#/generated/session";
 import { sessionSchema } from "#/generated/session.schema";
 import { sessionName } from "#/generated/session.name";
@@ -27918,7 +27945,7 @@ import { classTypeOptions } from "#/generated/class-type";
 import { instructorOptions } from "#/generated/instructor";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -27965,7 +27992,9 @@ function SessionPage() {
   const back = () => navigate({ to: "/sessions" });
   return (
     <>
+      <BackTo to="/sessions" title={pageUi["sessions"].title} />
       <PageHeader title={sessionName(row as Record<string, unknown>)} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={sessionUi}
@@ -28992,7 +29021,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
@@ -29057,7 +29086,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
@@ -29071,29 +29100,29 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "292de64e generated",
   "src/routes/about/index.tsx": "52b48987 generated",
   "src/routes/admin/activity.tsx": "f5a0628c generated",
-  "src/routes/admin/bookings/$id.tsx": "3248dd32 generated",
+  "src/routes/admin/bookings/$id.tsx": "42312200 generated",
   "src/routes/admin/bookings/index.tsx": "3cede361 generated",
   "src/routes/admin/bookings/new.tsx": "f4ba57ed generated",
-  "src/routes/admin/class-types/$id.tsx": "e6a6bcab generated",
+  "src/routes/admin/class-types/$id.tsx": "d13af679 generated",
   "src/routes/admin/class-types/index.tsx": "8db2bc16 generated",
   "src/routes/admin/class-types/new.tsx": "3dd9d0fd generated",
   "src/routes/admin/index.tsx": "19b6cd26 generated",
-  "src/routes/admin/instructors/$id.tsx": "b2801ac7 generated",
+  "src/routes/admin/instructors/$id.tsx": "78a3bd8d generated",
   "src/routes/admin/instructors/index.tsx": "a34071e2 generated",
   "src/routes/admin/instructors/new.tsx": "241e08a5 generated",
-  "src/routes/admin/messages/$id.tsx": "6a803b7f generated",
+  "src/routes/admin/messages/$id.tsx": "5bcf1a31 generated",
   "src/routes/admin/messages/index.tsx": "98129097 generated",
   "src/routes/admin/messages/new.tsx": "a2a68967 generated",
-  "src/routes/admin/posts/$id.tsx": "a0c03b7b generated",
+  "src/routes/admin/posts/$id.tsx": "d1a5b171 generated",
   "src/routes/admin/posts/index.tsx": "27da3624 generated",
   "src/routes/admin/posts/new.tsx": "48fa25de generated",
-  "src/routes/admin/sessions/$id.tsx": "b32427ed generated",
+  "src/routes/admin/sessions/$id.tsx": "9b6d3c1f generated",
   "src/routes/admin/sessions/index.tsx": "c4703df1 generated",
   "src/routes/admin/sessions/new.tsx": "2e47bbf4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "44568891 generated",
   "src/routes/blog/index.tsx": "0b818396 generated",
-  "src/routes/class-types/$id.tsx": "5a857b22 generated",
+  "src/routes/class-types/$id.tsx": "4931320d generated",
   "src/routes/class-types/index.tsx": "6c248008 generated",
   "src/routes/class-types/new.tsx": "bd5005cb generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
@@ -29101,23 +29130,23 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f8b34265 generated",
-  "src/routes/instructors/$id.tsx": "0d03665f generated",
+  "src/routes/instructors/$id.tsx": "b7f2c35a generated",
   "src/routes/instructors/index.tsx": "b013732e generated",
   "src/routes/instructors/new.tsx": "8528819b generated",
-  "src/routes/messages/$id.tsx": "16d9e73f generated",
+  "src/routes/messages/$id.tsx": "7ff7beea generated",
   "src/routes/messages/index.tsx": "e64446c6 generated",
   "src/routes/messages/new.tsx": "ed02fa35 generated",
-  "src/routes/my-bookings/$id.tsx": "b36906aa generated",
+  "src/routes/my-bookings/$id.tsx": "e849f6a5 generated",
   "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
   "src/routes/my-bookings/index.tsx": "db98ed6c generated",
   "src/routes/my-bookings/new.tsx": "ba1344a1 generated",
-  "src/routes/posts/$id.tsx": "1a7bf9de generated",
+  "src/routes/posts/$id.tsx": "ac3261bb generated",
   "src/routes/posts/index.tsx": "a1fbc7fe generated",
   "src/routes/posts/new.tsx": "cc22ec72 generated",
   "src/routes/privacy/index.tsx": "05f75ae3 generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "3cb0600f generated",
-  "src/routes/sessions/$id.tsx": "64e35076 generated",
+  "src/routes/sessions/$id.tsx": "1788904b generated",
   "src/routes/sessions/index.tsx": "090d8339 generated",
   "src/routes/sessions/new.tsx": "4798f7b2 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
@@ -31514,13 +31543,13 @@ export const customerData = {
     return found !== undefined;
   },
 
-  /** The customers the viewer may read; \`where\` narrows them, e.g. to a search. */
-  async list(viewer: Viewer | null, where?: SQL) {
+  /** The customers the viewer may read; \`where\` narrows them, e.g. to a search; \`order\` sorts them before the newest-first rest. */
+  async list(viewer: Viewer | null, where?: SQL, order?: SQL) {
     if (readScope(customerAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const rows = customerData.shownRefs(viewer, await db.query.customers.findMany({
       where: and(customerData.readable(viewer), where),
       with: { accountManager: { columns: { id: true, name: true } } },
-      orderBy: (t, { desc }) => [desc(t.id)],
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
     }));
     return rows;
   },
@@ -32873,13 +32902,13 @@ export const followUpData = {
     return found !== undefined;
   },
 
-  /** The follow ups the viewer may read; \`where\` narrows them, e.g. to a search. */
-  async list(viewer: Viewer | null, where?: SQL) {
+  /** The follow ups the viewer may read; \`where\` narrows them, e.g. to a search; \`order\` sorts them before the newest-first rest. */
+  async list(viewer: Viewer | null, where?: SQL, order?: SQL) {
     if (readScope(followUpAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const found = followUpData.shownRefs(viewer, await db.query.followUps.findMany({
       where: and(followUpData.readable(viewer), where),
       with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
-      orderBy: (t, { desc }) => [desc(t.id)],
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
     }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withFollowUpFormulas);
@@ -33793,13 +33822,13 @@ export const orderData = {
     return found !== undefined;
   },
 
-  /** The orders the viewer may read; \`where\` narrows them, e.g. to a search. */
-  async list(viewer: Viewer | null, where?: SQL) {
+  /** The orders the viewer may read; \`where\` narrows them, e.g. to a search; \`order\` sorts them before the newest-first rest. */
+  async list(viewer: Viewer | null, where?: SQL, order?: SQL) {
     if (readScope(orderAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const found = orderData.shownRefs(viewer, await db.query.orders.findMany({
       where: and(orderData.readable(viewer), where),
       with: { customer: { columns: { id: true, name: true, deletedAt: true } } },
-      orderBy: (t, { desc }) => [desc(t.id)],
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
     }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withOrderFormulas);
@@ -35490,7 +35519,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { customerOptions, customerUi, deleteCustomer, getCustomer, restoreCustomers, updateCustomer } from "#/generated/customer";
 import { customerSchema } from "#/generated/customer.schema";
 import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
@@ -35503,7 +35532,7 @@ import { customerOwnerOptions } from "#/generated/customer";
 import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -35552,6 +35581,7 @@ function CustomerPage() {
   const back = () => navigate({ to: "/customers" });
   return (
     <>
+      <BackTo to="/customers" title={pageUi["customers"].title} />
       <PageHeader
         title={row.name || \`Customer #\${row.id}\`}
         actions={
@@ -35577,6 +35607,7 @@ function CustomerPage() {
           </>
         }
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       {trashed && (
         <TrashedBanner
           {...trashed}
@@ -35723,6 +35754,8 @@ import * as schema from "#/db/schema";
 import { customerAccess, customerData } from "#/generated/customer.server";
 import { allows } from "#/kit/access";
 import { contains } from "#/kit/search";
+import { and } from "drizzle-orm";
+import { orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
@@ -35739,24 +35772,32 @@ import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
 import { SearchBox } from "#/kit/SearchBox";
+import { Filters } from "#/kit/Filters";
 
-/** The customers matching the search, among those the viewer may read. */
+/** The customers matching the search and the filters, among those the viewer may read. */
 const searchCustomers = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    const where = data.q ? contains([schema.customers.name, schema.customers.email], data.q) : undefined;
-    return { ...(await customerData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(customerAccess.create, viewer) };
+    const where = and(
+      data.q ? contains([schema.customers.name, schema.customers.email], data.q) : undefined,
+    );
+    // The order the viewer chose, among the fields the page offers; else the newest first.
+    const order = orderOf({ name: schema.customers.name, createdAt: schema.customers.createdAt }, data.sort);
+    return {
+      ...(await customerData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(customerAccess.create, viewer),
+      options: {  },
+    };
   });
 
 export const Route = createFileRoute("/customers/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["customers"], context.viewer, location.href),
   head: () => pageHead("customers"),
-  validateSearch: (s: Search) => optional({ q: text(s.q), page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ q: search.q, page: search.page }),
-  loader: ({ deps }) => searchCustomers({ data: { q: deps.q, page: deps.page } }),
-  // While a search loads, the page stays (and the box keeps its focus and text), never the
-  // placeholder; coming back loads afresh instead of showing rows from before a change.
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchCustomers({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
   pendingMs: Number.POSITIVE_INFINITY,
   gcTime: 0,
   component: CustomersPage,
@@ -35764,7 +35805,7 @@ export const Route = createFileRoute("/customers/")({
 
 function CustomersPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
-  const { q } = Route.useSearch();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/customers/" });
   const router = useRouter();
@@ -35792,7 +35833,19 @@ function CustomersPage() {
       <SearchBox
         value={q ?? ""}
         placeholder="Search by name or email"
-        onSearch={(text) => navigate({ to: "/customers", search: { q: text || undefined }, replace: true, resetScroll: false })}
+        onSearch={(text) => navigate({ to: "/customers", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true, resetScroll: false })}
+      />
+      <Filters
+        filters={[]}
+        values={values}
+        sorts={[
+  { value: "name", label: "Name, A to Z" },
+  { value: "-name", label: "Name, Z to A" },
+  { value: "createdAt", label: "Added, oldest first" },
+  { value: "-createdAt", label: "Added, newest first" },
+]}
+        sort={sort}
+        onChange={(next) => navigate({ to: "/customers", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -35846,10 +35899,11 @@ function CustomersPage() {
         page="customers"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/customers", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchCustomers({ data: { q, all: true } }))}
+        exportRows={async () => (await searchCustomers({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
+        sorting={{ keys: { name: "name" }, value: sort, onChange: (next) => navigate({ to: "/customers", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
-        emptyMessage={q ? \`No customers match “\${q}”.\` : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No customers match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/customers/$id", params: { id: String(row.id) } })}
       />
@@ -35958,7 +36012,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { titleOf } from "#/kit/format";
 import { deleteFollowUp, followUpUi, getFollowUp, restoreFollowUps, updateFollowUp } from "#/generated/follow-up";
 import { followUpSchema } from "#/generated/follow-up.schema";
@@ -35966,7 +36020,7 @@ import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
 import { customerOptions } from "#/generated/customer";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -36013,7 +36067,9 @@ function FollowUpPage() {
   const back = () => navigate({ to: "/follow-ups" });
   return (
     <>
+      <BackTo to="/follow-ups" title={pageUi["followUps"].title} />
       <PageHeader title={titleOf(row.note) || \`Follow up #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       {trashed && (
         <TrashedBanner
           {...trashed}
@@ -36074,6 +36130,7 @@ import { followUpAccess, followUpData } from "#/generated/follow-up.server";
 import { allows } from "#/kit/access";
 import { or, inArray, and, eq } from "drizzle-orm";
 import { contains } from "#/kit/search";
+import { orderOf } from "#/kit/filter";
 import { customerData } from "#/generated/customer.server";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
@@ -36100,8 +36157,10 @@ const searchFollowUps = createServerFn()
       data.q ? or(contains([schema.followUps.note], data.q), inArray(schema.followUps.customerId, customerData.titled(viewer, data.q))) : undefined,
       data.f?.done === "true" || data.f?.done === "false" ? eq(schema.followUps.done, data.f?.done === "true") : undefined,
     );
+    // The order the viewer chose, among the fields the page offers; else the newest first.
+    const order = orderOf({ dueOn: schema.followUps.dueOn }, data.sort);
     return {
-      ...(await followUpData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      ...(await followUpData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(followUpAccess.create, viewer),
       options: {  },
     };
@@ -36149,6 +36208,11 @@ function FollowUpsPage() {
       <Filters
         filters={[{ name: "done", label: "Done", kind: "toggle" }]}
         values={values}
+        sorts={[
+  { value: "dueOn", label: "Due on, oldest first" },
+  { value: "-dueOn", label: "Due on, newest first" },
+]}
+        sort={sort}
         onChange={(next) => navigate({ to: "/follow-ups", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
@@ -36182,6 +36246,7 @@ function FollowUpsPage() {
         app={app}
         exportRows={async () => (await searchFollowUps({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
+        sorting={{ keys: { dueOn: "dueOn" }, value: sort, onChange: (next) => navigate({ to: "/follow-ups", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No follow ups match the search and filters." : undefined}
         emptyAction={newButton || undefined}
@@ -36363,14 +36428,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteOrder, getOrder, orderUi, restoreOrders, updateOrder } from "#/generated/order";
 import { orderSchema } from "#/generated/order.schema";
 import { TrashedBanner, rememberTrashed } from "#/kit/Trash";
 import { customerOptions } from "#/generated/customer";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -36417,7 +36482,9 @@ function OrderPage() {
   const back = () => navigate({ to: "/orders" });
   return (
     <>
+      <BackTo to="/orders" title={pageUi["orders"].title} />
       <PageHeader title={row.number || \`Order #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       {trashed && (
         <TrashedBanner
           {...trashed}
@@ -36478,6 +36545,7 @@ import { orderAccess, orderData } from "#/generated/order.server";
 import { allows } from "#/kit/access";
 import { or, inArray, and } from "drizzle-orm";
 import { contains } from "#/kit/search";
+import { orderOf } from "#/kit/filter";
 import { customerData } from "#/generated/customer.server";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
@@ -36503,8 +36571,10 @@ const searchOrders = createServerFn()
       data.q ? or(contains([schema.orders.number], data.q), inArray(schema.orders.customerId, customerData.titled(viewer, data.q))) : undefined,
       data.f?.status ? inArray(schema.orders.status, data.f?.status.split(",").filter((v) => ["draft", "placed", "shipped", "canceled"].includes(v)) as ("draft" | "placed" | "shipped" | "canceled")[]) : undefined,
     );
+    // The order the viewer chose, among the fields the page offers; else the newest first.
+    const order = orderOf({ placedAt: schema.orders.placedAt, total: schema.orders.total, number: schema.orders.number }, data.sort);
     return {
-      ...(await orderData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      ...(await orderData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(orderAccess.create, viewer),
       options: {  },
     };
@@ -36559,6 +36629,15 @@ function OrdersPage() {
   },
 ]}
         values={values}
+        sorts={[
+  { value: "placedAt", label: "Placed at, oldest first" },
+  { value: "-placedAt", label: "Placed at, newest first" },
+  { value: "total", label: "Total, low to high" },
+  { value: "-total", label: "Total, high to low" },
+  { value: "number", label: "Number, A to Z" },
+  { value: "-number", label: "Number, Z to A" },
+]}
+        sort={sort}
         onChange={(next) => navigate({ to: "/orders", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
@@ -36592,6 +36671,7 @@ function OrdersPage() {
         app={app}
         exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
+        sorting={{ keys: { placedAt: "placedAt", total: "total", number: "number" }, value: sort, onChange: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No orders match the search and filters." : undefined}
         emptyAction={newButton || undefined}
@@ -37635,18 +37715,18 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "07f960c6 generated",
+  "src/generated/customer.server.ts": "3e0faf5c generated",
   "src/generated/customer.ts": "79b283e3 generated",
   "src/generated/dev-door.server.ts": "29bff84f generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
-  "src/generated/follow-up.server.ts": "311eede6 generated",
+  "src/generated/follow-up.server.ts": "5f843f64 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "e61a8330 generated",
+  "src/generated/order.server.ts": "8cf32304 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "b7ba93ee generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -37659,7 +37739,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -37712,7 +37792,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
@@ -37725,19 +37805,19 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "be123362 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "40f22834 generated",
+  "src/routes/customers/$id.tsx": "afdb118f generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "0fb22ed7 generated",
-  "src/routes/customers/index.tsx": "8fff6e57 generated",
+  "src/routes/customers/index.tsx": "f6b21926 generated",
   "src/routes/customers/new.tsx": "275bc6bf generated",
   "src/routes/customers/trash.tsx": "7848b304 generated",
-  "src/routes/follow-ups/$id.tsx": "e64f61f3 generated",
-  "src/routes/follow-ups/index.tsx": "24a76886 generated",
+  "src/routes/follow-ups/$id.tsx": "224cd7e7 generated",
+  "src/routes/follow-ups/index.tsx": "ebd1edd0 generated",
   "src/routes/follow-ups/new.tsx": "339efb06 generated",
   "src/routes/follow-ups/trash.tsx": "182e9c79 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "53350475 generated",
-  "src/routes/orders/$id.tsx": "9923e14c generated",
-  "src/routes/orders/index.tsx": "cc4ba1b1 generated",
+  "src/routes/orders/$id.tsx": "4b3b2053 generated",
+  "src/routes/orders/index.tsx": "1c895882 generated",
   "src/routes/orders/new.tsx": "40bc5e0a generated",
   "src/routes/orders/trash.tsx": "80862bb0 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -40107,13 +40187,13 @@ const WORDS: Record<string, () => AskKind[]> = {
     kindWords(businessProfileUi, ["businessName","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
     kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], [], "/clients"),
     kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"], "/invoices"),
-    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"], "/invoice-lines"),
+    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"]),
   ],
   "member": () => [
     kindWords(businessProfileUi, ["businessName","vatNumber","iban","paymentTermDays","invoiceFooter"], [{"field":"businessName","by":"text"},{"field":"vatNumber","by":"text"},{"field":"iban","by":"text"},{"field":"paymentTermDays","by":"number"}], ["paymentTermDays"], []),
     kindWords(clientUi, ["name","email","address","vatNumber"], [{"field":"name","by":"text"},{"field":"email","by":"text"},{"field":"vatNumber","by":"text"}], [], [], "/clients"),
     kindWords(invoiceUi, ["number","client","issuedOn","dueOn","status","contract"], [{"field":"number","by":"text"},{"field":"client","by":"reference","model":"Client"},{"field":"issuedOn","by":"date"},{"field":"dueOn","by":"date"},{"field":"status","by":"value","values":["draft","sent","paid","overdue"]}], [], ["client","issuedOn","dueOn","status"], "/invoices"),
-    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"], "/invoice-lines"),
+    kindWords(invoiceLineUi, ["invoice","description","quantity","unitPrice"], [{"field":"invoice","by":"reference","model":"Invoice"},{"field":"description","by":"text"},{"field":"quantity","by":"number"},{"field":"unitPrice","by":"number"}], ["quantity","unitPrice"], ["invoice"]),
   ],
 };
 
@@ -40859,12 +40939,12 @@ export const clientData = {
     return found !== undefined;
   },
 
-  /** The clients the viewer may read; \`where\` narrows them, e.g. to a search. */
-  async list(viewer: Viewer | null, where?: SQL) {
+  /** The clients the viewer may read; \`where\` narrows them, e.g. to a search; \`order\` sorts them before the newest-first rest. */
+  async list(viewer: Viewer | null, where?: SQL, order?: SQL) {
     if (readScope(clientAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const found = clientData.shownRefs(viewer, await db.query.clients.findMany({
       where: and(clientData.readable(viewer), where),
-      orderBy: (t, { desc }) => [desc(t.id)],
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
     }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
@@ -41424,12 +41504,7 @@ const MOVES: Record<string, DoorMove[]> = {
     { id: "open:overview", kind: "open", page: "overview", route: "/overview" },
     { id: "open:invoices", kind: "open", page: "invoices", route: "/invoices" },
     { id: "open:clients", kind: "open", page: "clients", route: "/clients" },
-    {
-      id: "open:invoice-lines",
-      kind: "open",
-      page: "invoice-lines",
-      route: "/invoice-lines",
-    },
+    { id: "open:privacy", kind: "open", page: "privacy", route: "/privacy" },
     { id: "open:settings", kind: "open", page: "settings", route: "/settings" },
     { id: "open:welcome", kind: "open", page: "welcome", route: "/welcome" },
     {
@@ -41568,12 +41643,7 @@ const MOVES: Record<string, DoorMove[]> = {
     { id: "open:overview", kind: "open", page: "overview", route: "/overview" },
     { id: "open:invoices", kind: "open", page: "invoices", route: "/invoices" },
     { id: "open:clients", kind: "open", page: "clients", route: "/clients" },
-    {
-      id: "open:invoice-lines",
-      kind: "open",
-      page: "invoice-lines",
-      route: "/invoice-lines",
-    },
+    { id: "open:privacy", kind: "open", page: "privacy", route: "/privacy" },
     { id: "open:settings", kind: "open", page: "settings", route: "/settings" },
     { id: "open:welcome", kind: "open", page: "welcome", route: "/welcome" },
     {
@@ -41707,7 +41777,10 @@ const MOVES: Record<string, DoorMove[]> = {
       slots: [],
     },
   ],
-  visitor: [{ id: "open:home", kind: "open", page: "home", route: "/" }],
+  visitor: [
+    { id: "open:home", kind: "open", page: "home", route: "/" },
+    { id: "open:privacy", kind: "open", page: "privacy", route: "/privacy" },
+  ],
 };
 
 /** Each written model's unique fields by column, and its UI: a value taken, in words. */
@@ -41749,7 +41822,7 @@ const OPEN: Record<string, (viewer: Viewer | null, move: DoorMove) => Promise<Op
   "open:overview": async (viewer, move) => (allows(pageAccess["overview"], viewer) ? move : undefined),
   "open:invoices": async (viewer, move) => (allows(pageAccess["invoices"], viewer) ? move : undefined),
   "open:clients": async (viewer, move) => (allows(pageAccess["clients"], viewer) ? move : undefined),
-  "open:invoice-lines": async (viewer, move) => (allows(pageAccess["invoice-lines"], viewer) ? move : undefined),
+  "open:privacy": async (viewer, move) => (allows(pageAccess["privacy"], viewer) ? move : undefined),
   "open:settings": async (viewer, move) => (allows(pageAccess["settings"], viewer) ? move : undefined),
   "open:welcome": async (viewer, move) => (allows(pageAccess["welcome"], viewer) ? move : undefined),
   "add:BusinessProfile": async (_viewer, move) => ready({ ...move,
@@ -41839,9 +41912,9 @@ const ACTS: Record<string, (viewer: Viewer | null, move: DoorMove, body: DoorBod
     if (!allows(pageAccess["clients"], viewer)) throw new AccessDenied(viewer !== null);
     return { route: "/clients" };
   },
-  "open:invoice-lines": async (viewer) => {
-    if (!allows(pageAccess["invoice-lines"], viewer)) throw new AccessDenied(viewer !== null);
-    return { route: "/invoice-lines" };
+  "open:privacy": async (viewer) => {
+    if (!allows(pageAccess["privacy"], viewer)) throw new AccessDenied(viewer !== null);
+    return { route: "/privacy" };
   },
   "open:settings": async (viewer) => {
     if (!allows(pageAccess["settings"], viewer)) throw new AccessDenied(viewer !== null);
@@ -42247,13 +42320,13 @@ export const invoiceData = {
     return found !== undefined;
   },
 
-  /** The invoices the viewer may read; \`where\` narrows them, e.g. to a search. */
-  async list(viewer: Viewer | null, where?: SQL) {
+  /** The invoices the viewer may read; \`where\` narrows them, e.g. to a search; \`order\` sorts them before the newest-first rest. */
+  async list(viewer: Viewer | null, where?: SQL, order?: SQL) {
     if (readScope(invoiceAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const found = invoiceData.shownRefs(viewer, await db.query.invoices.findMany({
       where: and(invoiceData.readable(viewer), where),
       with: { client: { columns: { id: true, name: true } }, lines: true },
-      orderBy: (t, { desc }) => [desc(t.id)],
+      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
     }));
     const rows = found.map((row) => shownTo(viewer, row));
     // The related records are here for the totals only: some may not be the viewer's to read.
@@ -42655,7 +42728,6 @@ import type { RecordUi } from "#/kit/model";
 import { bindFile } from "#/kit/FileInput";
 import { invoiceDefaults, withInvoiceFormulas } from "./invoice.formulas";
 import { invoiceAccess, invoiceData } from "./invoice.server";
-import { invoiceLineAccess } from "./invoice-line.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { invoiceSchema } from "./invoice.schema";
@@ -42765,8 +42837,6 @@ export const getInvoice = createServerFn()
       row,
       canWrite: allows(invoiceAccess.write, viewer, row.ownerId),
       canDelete: allows(invoiceAccess.delete, viewer, row.ownerId),
-      // Who may add to its related lists from here ("Add line" on an invoice).
-      canAdd: { lines: allows(invoiceLineAccess.create, viewer) },
     };
   });
 
@@ -42996,26 +43066,6 @@ export const invoiceLineData = {
     }));
     const rows = found.map((row) => shownTo(viewer, row));
     return rows.map(withInvoiceLineFormulas);
-  },
-
-  /**
-   * A page of the invoice lines the viewer may read that fit \`where\`, newest first (or in
-   * \`order\`), and how many fit in all: for a list page. A page past the end is the last one.
-   */
-  async page(viewer: Viewer | null, where?: SQL, order?: SQL, page = 1, size = 50) {
-    if (readScope(invoiceLineAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
-    const condition = and(invoiceLineData.readable(viewer), where);
-    const total = db.select({ n: count() }).from(schema.invoiceLines).where(condition).get()?.n ?? 0;
-    const at = Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.ceil(total / size)));
-    const found = invoiceLineData.shownRefs(viewer, await db.query.invoiceLines.findMany({
-      where: condition,
-      with: { invoice: { columns: { id: true, number: true } } },
-      orderBy: (t, { desc }) => [...(order ? [order] : []), desc(t.id)],
-      limit: size,
-      offset: (at - 1) * size,
-    }));
-    const rows = found.map((row) => shownTo(viewer, row));
-    return { rows: rows.map(withInvoiceLineFormulas), total, page: at, size };
   },
 
   /**
@@ -43590,7 +43640,7 @@ export const pageAccess = {
   overview: { public: false, roles: ["admin", "member"], owner: false },
   invoices: { public: false, roles: ["admin", "member"], owner: false },
   clients: { public: false, roles: ["admin", "member"], owner: false },
-  "invoice-lines": { public: false, roles: ["admin", "member"], owner: false },
+  privacy: { public: true, roles: ["admin", "member"], owner: false },
   settings: { public: false, roles: ["admin", "member"], owner: false },
   welcome: { public: false, roles: ["admin", "member"], owner: false },
 } satisfies Record<string, Rule>;
@@ -43607,7 +43657,7 @@ export const pageUi = {
   overview: { title: "Overview" },
   invoices: { title: "Invoices" },
   clients: { title: "Clients" },
-  "invoice-lines": { title: "Invoice lines" },
+  privacy: { title: "Privacy" },
   settings: { title: "Settings" },
   welcome: { title: "Welcome" },
 } satisfies Record<string, PageUi>;
@@ -43631,10 +43681,15 @@ export const ROLE_LABELS: Record<string, string> = { admin: "Admin", member: "Me
 
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/generated/site.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { pageUi } from "#/generated/pages";
 import type { LandingSite } from "#/kit/Landing";
 
 /** The public site's frame: the pages visitors may open, and how to reach the business. */
-export const site: LandingSite = { home: "/", menu: [] };
+export const site: LandingSite = {
+  home: "/",
+  menu: [],
+  legal: [{ to: "/privacy", label: pageUi["privacy"].title }],
+};
 "
 `;
 
@@ -44243,15 +44298,15 @@ const menus: MenuUi[] = [
 
 const landingRoutes = ["/", "/welcome"];
 /** Public pages that visitors see in the site's frame (signed in, the app's). */
-const visitorRoutes = ["/sign-in"];
+const visitorRoutes = ["/privacy", "/sign-in"];
 
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
-  ["/invoice-lines", "invoice-lines"],
   ["/invoices", "invoices"],
   ["/overview", "overview"],
   ["/settings", "settings"],
   ["/clients", "clients"],
+  ["/privacy", "privacy"],
   ["/welcome", "welcome"],
   ["/", "home"],
 ];
@@ -44361,7 +44416,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           </AppShell>
         )}
         {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })} />}
-        <Consent />
+        <Consent privacy="/privacy" />
         <Scripts />
       </body>
     </html>
@@ -44378,14 +44433,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { clientUi, deleteClient, getClient, updateClient } from "#/generated/client";
 import { clientSchema } from "#/generated/client.schema";
 import { buttonVariants } from "#/components/ui/button";
 import { invoiceUi } from "#/generated/invoice";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -44432,7 +44487,9 @@ function ClientPage() {
   const back = () => navigate({ to: "/clients" });
   return (
     <>
+      <BackTo to="/clients" title={pageUi["clients"].title} />
       <PageHeader title={row.name || \`Client #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={clientUi}
@@ -44496,10 +44553,14 @@ import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-r
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/page-guard";
 import { createServerFn } from "@tanstack/react-start";
+import * as schema from "#/db/schema";
 import { clientAccess, clientData } from "#/generated/client.server";
 import { allows } from "#/kit/access";
+import { contains } from "#/kit/search";
+import { and } from "drizzle-orm";
+import { orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional } from "#/kit/params";
+import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
@@ -44509,26 +44570,41 @@ import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { SearchBox } from "#/kit/SearchBox";
+import { Filters } from "#/kit/Filters";
 
-/** A page of the clients the viewer may read. */
-const listClients = createServerFn()
+/** The clients matching the search and the filters, among those the viewer may read. */
+const searchClients = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
-    return { ...(await clientData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(clientAccess.create, viewer) };
+    const where = and(
+      data.q ? contains([schema.clients.name, schema.clients.email], data.q) : undefined,
+    );
+    // The order the viewer chose, among the fields the page offers; else the newest first.
+    const order = orderOf({ name: schema.clients.name, createdAt: schema.clients.createdAt }, data.sort);
+    return {
+      ...(await clientData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      canCreate: allows(clientAccess.create, viewer),
+      options: {  },
+    };
   });
 
 export const Route = createFileRoute("/clients/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["clients"], context.viewer, location.href),
   head: () => pageHead("clients"),
-  validateSearch: (s: Search) => optional({ page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: ({ deps }) => listClients({ data: { page: deps.page } }),
+  validateSearch: (s: Search) => optional({ q: text(s.q), sort: text(s.sort), page: count(s.page) }),
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps: { q, sort, page, ...f } }) => searchClients({ data: { q, sort, f, page } }),
+  // While a search or filter loads, the page stays (and its controls keep their focus).
+  pendingMs: Number.POSITIVE_INFINITY,
+  gcTime: 0,
   component: ClientsPage,
 });
 
 function ClientsPage() {
   const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
+  const { q, sort, page: _page, ...values } = Route.useSearch();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate({ from: "/clients/" });
   const router = useRouter();
@@ -44547,6 +44623,23 @@ function ClientsPage() {
         page="clients"
         title={pageUi["clients"].title}
         actions={newButton}
+      />
+      <SearchBox
+        value={q ?? ""}
+        placeholder="Search by name or email"
+        onSearch={(text) => navigate({ to: "/clients", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true, resetScroll: false })}
+      />
+      <Filters
+        filters={[]}
+        values={values}
+        sorts={[
+  { value: "name", label: "Name, A to Z" },
+  { value: "-name", label: "Name, Z to A" },
+  { value: "createdAt", label: "Added, oldest first" },
+  { value: "-createdAt", label: "Added, newest first" },
+]}
+        sort={sort}
+        onChange={(next) => navigate({ to: "/clients", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
         <SelectionBar
@@ -44569,9 +44662,11 @@ function ClientsPage() {
         page="clients"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/clients", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listClients({ data: { all: true } }))}
+        exportRows={async () => (await searchClients({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
+        sorting={{ keys: { name: "name" }, value: sort, onChange: (next) => navigate({ to: "/clients", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
+        emptyMessage={q || Object.values(values).some(Boolean) ? "No clients match the search and filters." : undefined}
         emptyAction={newButton || undefined}
         onOpen={(row) => navigate({ to: "/clients/$id", params: { id: String(row.id) } })}
       />
@@ -44641,7 +44736,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { viewer } = Route.useRouteContext();
   return (
-    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} site={site} viewer={viewer}>
+    <LandingLayout appName={app.name} link={viewer ? { to: "/overview", label: w.openApp(app.name) } : { to: "/sign-in", label: w.signIn }} footer={{ links: [], texts: "pages.home.footer" }} site={site} viewer={viewer}>
       <Hero
           texts="pages.home.hero"
           title="Invoicely"
@@ -44660,265 +44755,26 @@ function HomePage() {
 "
 `;
 
-exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/invoice-lines/$id.tsx 1`] = `
-"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { and, desc, eq } from "drizzle-orm";
-import { db } from "#/db";
-import { auditLog, user } from "#/db/schema";
-import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
-import { deleteInvoiceLine, getInvoiceLine, invoiceLineUi, updateInvoiceLine } from "#/generated/invoice-line";
-import { invoiceLineSchema } from "#/generated/invoice-line.schema";
-import { invoiceOptions } from "#/generated/invoice";
-import { guardPage } from "#/kit/page-guard";
-import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
-import { ModelForm } from "#/kit/ModelForm";
-import { w } from "#/kit/words";
-import { currentViewer } from "#/lib/viewer.server";
-
-/** The record's lines in the audit log, newest first: administrators only, nobody else. */
-const getHistory = createServerFn()
-  .validator((id: number) => id)
-  .handler(async ({ data: id }) => {
-    const viewer = await currentViewer();
-    if (viewer?.role !== "admin") return null;
-    const people = new Map(db.select({ id: user.id, name: user.name }).from(user).all().map((p) => [p.id, p.name]));
-    return db
-      .select()
-      .from(auditLog)
-      .where(and(eq(auditLog.model, "InvoiceLine"), eq(auditLog.recordId, id)))
-      .orderBy(desc(auditLog.id))
-      .limit(50)
-      .all()
-      .map((r) => ({
-        id: r.id,
-        at: r.at,
-        who: r.who === "visitor" || r.who === "the app" ? r.who : (people.get(r.who) ?? (r.who.startsWith("key:") ? w.aKey(r.who.slice(4)) : r.who.startsWith("timer:") ? w.byTimer(r.who.slice(6)) : w.aRemovedUser(r.who))),
-        action: r.action,
-        fields: r.fields,
-        details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
-      }));
-  });
-
-export const Route = createFileRoute("/invoice-lines/$id")({
-  beforeLoad: ({ context, location }) => guardPage(pageAccess["invoice-lines"], context.viewer, location.href),
-  head: () => pageHead("invoice-lines"),
-  loader: async ({ params }) => {
-    const found = await getInvoiceLine({ data: Number(params.id) });
-    if (!found) throw notFound();
-    return { ...found, options: { invoiceId: await invoiceOptions() }, history: await getHistory({ data: Number(params.id) }) };
-  },
-  component: InvoiceLinePage,
-});
-
-function InvoiceLinePage() {
-  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
-  const navigate = useNavigate();
-  const back = () => navigate({ to: "/invoice-lines" });
-  return (
-    <>
-      <PageHeader title={row.description || \`Invoice line #\${row.id}\`} />
-      <ModelForm
-        key={String(row.updatedAt)}
-        ui={invoiceLineUi}
-        app={app}
-        schema={invoiceLineSchema}
-        initial={row}
-        readOnly={!canWrite}
-        options={options}
-        submitLabel={w.saveChanges}
-        onSubmit={async (values) => {
-          await updateInvoiceLine({ data: { id: row.id, values } });
-          await back();
-        }}
-        onCancel={back}
-        onDelete={
-          canDelete
-            ? async (together?: boolean) => {
-                await deleteInvoiceLine({ data: { id: row.id, together } });
-                await back();
-              }
-            : undefined
-        }
-      />
-
-      {history && history.length > 0 && (
-        <section className="mt-10 max-w-3xl">
-          <h2 className="mb-3 text-lg font-semibold">{w.history}</h2>
-          <ActivityLog lines={history} app={app} />
-        </section>
-      )}
-    </>
-  );
-}
-"
-`;
-
-exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/invoice-lines/index.tsx 1`] = `
-"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { pageAccess, pageUi, pageHead } from "#/generated/pages";
-import { guardPage } from "#/kit/page-guard";
-import { createServerFn } from "@tanstack/react-start";
-import { invoiceLineAccess, invoiceLineData } from "#/generated/invoice-line.server";
-import { allows } from "#/kit/access";
-import { currentViewer } from "#/lib/viewer.server";
-import { type Search, count, listQuery, optional } from "#/kit/params";
-import { buttonVariants } from "#/components/ui/button";
-import { useState } from "react";
-import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
-import { deleteInvoiceLines, invoiceLineDeleteRule, invoiceLineUi } from "#/generated/invoice-line";
-import { app } from "#/generated/app";
-import { w } from "#/kit/words";
-import { PageHeader } from "#/kit/AppShell";
-import { ModelTable } from "#/kit/ModelTable";
-
-/** A page of the invoice lines the viewer may read. */
-const listInvoiceLines = createServerFn()
-  .validator(listQuery)
-  .handler(async ({ data }) => {
-    const viewer = await currentViewer();
-    return { ...(await invoiceLineData.page(viewer, undefined, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)), canCreate: allows(invoiceLineAccess.create, viewer) };
-  });
-
-export const Route = createFileRoute("/invoice-lines/")({
-  beforeLoad: ({ context, location }) => guardPage(pageAccess["invoice-lines"], context.viewer, location.href),
-  head: () => pageHead("invoice-lines"),
-  validateSearch: (s: Search) => optional({ page: count(s.page) }),
-  loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: ({ deps }) => listInvoiceLines({ data: { page: deps.page } }),
-  component: InvoiceLinesPage,
-});
-
-function InvoiceLinesPage() {
-  const { rows, canCreate, total, page: at, size } = Route.useLoaderData();
-  const { viewer } = Route.useRouteContext();
-  const navigate = useNavigate({ from: "/invoice-lines/" });
-  const router = useRouter();
-  // The chosen rows, offered when the viewer may do something to at least one row.
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const chosen = rows.filter((row) => selected.has(row.id));
-  const selectable = rows.some((row) => allows(invoiceLineDeleteRule, viewer, row.ownerId));
-  const newButton = canCreate && (
-    <Link to="/invoice-lines/new" className={buttonVariants()}>
-      {w.newOne("invoice line")}
-    </Link>
-  );
-  return (
-    <>
-      <PageHeader
-        page="invoice-lines"
-        title={pageUi["invoice-lines"].title}
-        actions={newButton}
-      />
-      {selectable && (
-        <SelectionBar
-          count={chosen.length}
-          noun={["invoice line", "invoice lines"]}
-          app={app}
-          titleOf={(id) => String(rows.find((row) => row.id === id)?.description ?? id)}
-          actions={[]}
-          deletable={chosen.filter((row) => allows(invoiceLineDeleteRule, viewer, row.ownerId)).length}
-          onDelete={(together) => deleteInvoiceLines({ data: { ids: chosen.map((row) => row.id), together } })}
-          onDone={async () => {
-            setSelected(new Set());
-            await router.invalidate();
-          }}
-          onExport={() => download(csvName(invoiceLineUi), csvOf(invoiceLineUi, chosen))}
-        />
-      )}
-      <ModelTable
-        ui={invoiceLineUi}
-        page="invoice-lines"
-        paging={{ page: at, size, total, to: (next) => navigate({ to: "/invoice-lines", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
-        app={app}
-        exportRows={async () => (await listInvoiceLines({ data: { all: true } }))}
-        rows={rows}
-        selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
-        emptyAction={newButton || undefined}
-        onOpen={(row) => navigate({ to: "/invoice-lines/$id", params: { id: String(row.id) } })}
-      />
-    </>
-  );
-}
-"
-`;
-
-exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/invoice-lines/new.tsx 1`] = `
-"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
-import { createInvoiceLine, invoiceLineUi } from "#/generated/invoice-line";
-import { invoiceLineSchema } from "#/generated/invoice-line.schema";
-import { invoiceOptions } from "#/generated/invoice";
-import { guardPage } from "#/kit/page-guard";
-import { PageHeader } from "#/kit/AppShell";
-import { ModelForm } from "#/kit/ModelForm";
-import { w } from "#/kit/words";
-import { count, optional, type Search } from "#/kit/params";
-
-export const Route = createFileRoute("/invoice-lines/new")({
-  beforeLoad: ({ context, location }) => guardPage(pageAccess["invoice-lines"], context.viewer, location.href),
-  head: () => pageHead("invoice-lines"),
-  validateSearch: (s: Search) => optional({ invoice: count(s.invoice) }),
-  loader: async () => ({ options: { invoiceId: await invoiceOptions() } }),
-  component: NewInvoiceLinePage,
-});
-
-function NewInvoiceLinePage() {
-  const { options } = Route.useLoaderData();
-  const search = Route.useSearch();
-  const navigate = useNavigate();
-  const back = () => search.invoice ? navigate({ to: "/invoices/$id", params: { id: String(search.invoice) } }) : navigate({ to: "/invoice-lines" });
-  return (
-    <>
-      <PageHeader title={w.newOne("invoice line")} />
-      <ModelForm
-        ui={invoiceLineUi}
-        app={app}
-        schema={invoiceLineSchema}
-        preset={{ ...(search.invoice ? { invoiceId: search.invoice } : {}) }}
-        fixed={[...(search.invoice ? ["invoiceId"] : [])]}
-        options={options}
-        submitLabel={w.createOne("invoice line")}
-        onSubmit={async (values) => {
-          await createInvoiceLine({ data: values });
-          await back();
-        }}
-        onCancel={back}
-      />
-    </>
-  );
-}
-"
-`;
-
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/invoices/$id.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
-import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteInvoice, getInvoice, invoiceUi, updateInvoice } from "#/generated/invoice";
 import { invoiceSchema } from "#/generated/invoice.schema";
 import { markSent, markSentAccess, markSentFits } from "#/generated/actions/mark-sent";
 import { markPaid, markPaidAccess, markPaidFits } from "#/generated/actions/mark-paid";
-import { buttonVariants } from "#/components/ui/button";
 import { invoiceLineUi } from "#/generated/invoice-line";
 import { clientOptions } from "#/generated/client";
 import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -44960,13 +44816,14 @@ export const Route = createFileRoute("/invoices/$id")({
 });
 
 function InvoicePage() {
-  const { row, canWrite, canDelete, canAdd, options, history } = Route.useLoaderData();
+  const { row, canWrite, canDelete, options, history } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const navigate = useNavigate();
   const router = useRouter();
   const back = () => navigate({ to: "/invoices" });
   return (
     <>
+      <BackTo to="/invoices" title={pageUi["invoices"].title} />
       <PageHeader
         title={row.number || \`Invoice #\${row.id}\`}
         actions={
@@ -44994,6 +44851,7 @@ function InvoicePage() {
           </>
         }
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={invoiceUi}
@@ -45020,24 +44878,14 @@ function InvoicePage() {
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Lines</h2>
-          {row.lines.length > 0 && canAdd?.lines && (
-              <Link to="/invoice-lines/new" search={{ invoice: row.id }} className={buttonVariants({ variant: "outline" })}>
-                {w.addOne("invoice line")}
-              </Link>
-            )}
+          
         </div>
         <ModelTable
           ui={invoiceLineUi}
           app={app}
           rows={row.lines}
           hide={["invoiceId"]}
-          onOpen={(item) => navigate({ to: "/invoice-lines/$id", params: { id: String(item.id) } })}
-          emptyAction={canAdd?.lines && (
-              <Link to="/invoice-lines/new" search={{ invoice: row.id }} className={buttonVariants({ variant: "outline" })}>
-                {w.addOne("invoice line")}
-              </Link>
-            )}
-          emptyMessage={canAdd?.lines ? undefined : w.noneYet("invoice lines")}
+          emptyMessage={w.noneYet("invoice lines")}
         />
       </section>
       {history && history.length > 0 && (
@@ -45061,7 +44909,9 @@ import { createServerFn } from "@tanstack/react-start";
 import * as schema from "#/db/schema";
 import { invoiceAccess, invoiceData } from "#/generated/invoice.server";
 import { allows } from "#/kit/access";
-import { inArray, and } from "drizzle-orm";
+import { or, inArray, and } from "drizzle-orm";
+import { contains } from "#/kit/search";
+import { orderOf } from "#/kit/filter";
 import { clientData } from "#/generated/client.server";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
@@ -45077,6 +44927,7 @@ import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
 import { ModelTable } from "#/kit/ModelTable";
+import { SearchBox } from "#/kit/SearchBox";
 import { Filters } from "#/kit/Filters";
 
 /** The invoices matching the search and the filters, among those the viewer may read. */
@@ -45087,12 +44938,14 @@ const searchInvoices = createServerFn()
     const pickClientMany = clientData.pickCount(viewer) >= 200;
     const pickClientChosen = pickClientMany && data.f?.client ? clientData.pick(viewer, "", data.f?.client.split(",").map(Number).filter(Number.isInteger)) : [];
     const where = and(
-      undefined,
+      data.q ? or(contains([schema.invoices.number], data.q), inArray(schema.invoices.clientId, clientData.titled(viewer, data.q))) : undefined,
       pickClientMany ? (pickClientChosen.length ? inArray(schema.invoices.clientId, pickClientChosen.map((r) => Number(r.value))) : undefined) : data.f?.client ? inArray(schema.invoices.clientId, data.f?.client.split(",").map(Number).filter(Number.isInteger)) : undefined,
       data.f?.status ? inArray(schema.invoices.status, data.f?.status.split(",").filter((v) => ["draft", "sent", "paid", "overdue"].includes(v)) as ("draft" | "sent" | "paid" | "overdue")[]) : undefined,
     );
+    // The order the viewer chose, among the fields the page offers; else the newest first.
+    const order = orderOf({ issuedOn: schema.invoices.issuedOn, dueOn: schema.invoices.dueOn, number: schema.invoices.number }, data.sort);
     return {
-      ...(await invoiceData.page(viewer, where, undefined, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
+      ...(await invoiceData.page(viewer, where, order, data.all ? 1 : data.page, data.all ? (viewer ? 10000 : 500) : undefined)),
       canCreate: allows(invoiceAccess.create, viewer),
       options: { client: pickClientMany ? pickClientChosen : (await clientData.list(viewer)).map((r) => ({ value: String(r.id), label: String(r.name) })), clientSearch: pickClientMany },
     };
@@ -45137,6 +44990,11 @@ function InvoicesPage() {
         title={pageUi["invoices"].title}
         actions={newButton}
       />
+      <SearchBox
+        value={q ?? ""}
+        placeholder="Search by number or client"
+        onSearch={(text) => navigate({ to: "/invoices", search: (prev) => ({ ...prev, q: text || undefined, page: undefined }), replace: true, resetScroll: false })}
+      />
       <Filters
         filters={[
   {
@@ -45154,6 +45012,15 @@ function InvoicesPage() {
   },
 ]}
         values={values}
+        sorts={[
+  { value: "issuedOn", label: "Issued on, oldest first" },
+  { value: "-issuedOn", label: "Issued on, newest first" },
+  { value: "dueOn", label: "Due on, oldest first" },
+  { value: "-dueOn", label: "Due on, newest first" },
+  { value: "number", label: "Number, A to Z" },
+  { value: "-number", label: "Number, Z to A" },
+]}
+        sort={sort}
         onChange={(next) => navigate({ to: "/invoices", search: { q, ...next }, replace: true, resetScroll: false })}
       />
       {selectable && (
@@ -45192,6 +45059,7 @@ function InvoicesPage() {
         app={app}
         exportRows={async () => (await searchInvoices({ data: { q, sort, f: values, all: true } }))}
         rows={rows}
+        sorting={{ keys: { issuedOn: "issuedOn", dueOn: "dueOn", number: "number" }, value: sort, onChange: (next) => navigate({ to: "/invoices", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
           <>
@@ -45345,12 +45213,39 @@ function OverviewPage() {
 "
 `;
 
+exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/privacy/index.tsx 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+import { createFileRoute } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
+import { guardPage } from "#/kit/page-guard";
+import { LegalPage, type LegalFacts } from "#/kit/LegalPage";
+import { clientUi } from "#/generated/client";
+
+/** What the page says, from the app's definition when it was generated. */
+const facts: LegalFacts = {
+  app: app.name,
+  purpose: "Simple invoicing for freelancers. Each user manages their own clients and invoices.",
+  signIn: { email: true, google: false, invitedOnly: false },
+  records: [{ label: clientUi.pluralLabel, fields: ["email"], readers: ["admin"] }],
+  uploads: true,
+  mailAbout: ["invoices"],
+};
+
+export const Route = createFileRoute("/privacy/")({
+  beforeLoad: ({ context, location }) => guardPage(pageAccess["privacy"], context.viewer, location.href),
+  head: () => pageHead("privacy"),
+  component: () => <LegalPage title={pageUi["privacy"].title} facts={facts} />,
+});
+"
+`;
+
 exports[`../../../examples/invoicing/smithable.yml > file list and generated code > src/routes/robots[.]txt.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
+const ROBOTS = "User-agent: *\\nAllow: /$\\nAllow: /privacy\\nAllow: /assets/\\nAllow: /images/\\nAllow: /files/\\nDisallow: /\\n";
 
 export const Route = createFileRoute("/robots.txt")({
   server: {
@@ -45551,7 +45446,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
 import { createFileRoute } from "@tanstack/react-router";
 import { originOf } from "#/kit/origin";
 
-const PAGES = ["/"];
+const PAGES = ["/","/privacy"];
 
 const escape = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -45872,13 +45767,16 @@ test.beforeAll(async ({ browser }) => {
     for (const route of routes) await open(route);
     await context.close();
   };
-  await warm(undefined, ["/"]);
-  await warm("admin", ["/overview", "/invoices", "/clients", "/invoice-lines", "/settings", "/welcome"]);
+  await warm(undefined, ["/", "/privacy"]);
+  await warm("admin", ["/overview", "/invoices", "/clients", "/settings", "/welcome"]);
   if (slow.length) throw new Error(\`Pages that did not open while warming up: \${slow.join(", ")}\`);
 });
 
 test("Home opens for a visitor", async ({ page }) => {
   await visit(page, "/");
+});
+test("Privacy opens for a visitor", async ({ page }) => {
+  await visit(page, "/privacy");
 });
 test("Overview needs sign-in", async ({ page }) => {
   await page.goto("/overview");
@@ -45890,10 +45788,6 @@ test("Invoices needs sign-in", async ({ page }) => {
 });
 test("Clients needs sign-in", async ({ page }) => {
   await page.goto("/clients");
-  await expect(page).toHaveURL(/sign-in/);
-});
-test("Invoice lines needs sign-in", async ({ page }) => {
-  await page.goto("/invoice-lines");
   await expect(page).toHaveURL(/sign-in/);
 });
 test("Settings needs sign-in", async ({ page }) => {
@@ -45919,9 +45813,6 @@ test.describe("signed in as admin", () => {
   test("Clients opens", async ({ page }) => {
     await visit(page, "/clients");
   });
-  test("Invoice lines opens", async ({ page }) => {
-    await visit(page, "/invoice-lines");
-  });
   test("Settings opens", async ({ page }) => {
     await visit(page, "/settings");
   });
@@ -45943,9 +45834,6 @@ test.describe("signed in as member", () => {
   });
   test("Clients opens", async ({ page }) => {
     await visit(page, "/clients");
-  });
-  test("Invoice lines opens", async ({ page }) => {
-    await visit(page, "/invoice-lines");
   });
   test("Settings opens", async ({ page }) => {
     await visit(page, "/settings");
@@ -46063,6 +45951,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/InlineRows.tsx",
   "kit: src/kit/Inspector.tsx",
   "kit: src/kit/Landing.tsx",
+  "kit: src/kit/LegalPage.tsx",
   "kit: src/kit/ModelForm.tsx",
   "kit: src/kit/ModelTable.tsx",
   "kit: src/kit/MoreOnScroll.tsx",
@@ -46133,13 +46022,11 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/routes/files/$model.$id.$field.ts",
   "kit: src/routes/health.ts",
   "generated: src/routes/index.tsx",
-  "generated: src/routes/invoice-lines/$id.tsx",
-  "generated: src/routes/invoice-lines/index.tsx",
-  "generated: src/routes/invoice-lines/new.tsx",
   "generated: src/routes/invoices/$id.tsx",
   "generated: src/routes/invoices/index.tsx",
   "generated: src/routes/invoices/new.tsx",
   "generated: src/routes/overview/index.tsx",
+  "generated: src/routes/privacy/index.tsx",
   "generated: src/routes/robots[.]txt.ts",
   "generated: src/routes/settings/index.tsx",
   "generated: src/routes/sign-in.tsx",
@@ -46193,36 +46080,36 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/activity.server.ts": "811fcd6e generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "e2e4d93c generated",
+  "src/generated/ask.server.ts": "5d1b6944 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "d11efba7 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "cc0f1d16 generated",
+  "src/generated/client.server.ts": "28707bb6 generated",
   "src/generated/client.ts": "3e66d5ac generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "33a92ba5 generated",
+  "src/generated/dev-door.server.ts": "91e332bc generated",
   "src/generated/hooks.ts": "f860bab0 generated",
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "39a3c3bd generated",
+  "src/generated/invoice-line.server.ts": "bad218ee generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "fcd9c7d7 generated",
-  "src/generated/invoice.ts": "b569c412 generated",
+  "src/generated/invoice.server.ts": "378fe20d generated",
+  "src/generated/invoice.ts": "847402f3 generated",
   "src/generated/outgoing.server.ts": "11bc8997 generated",
-  "src/generated/pages.ts": "e7c77bc3 generated",
+  "src/generated/pages.ts": "e9e4dad4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
-  "src/generated/site.ts": "08ea7d3a generated",
+  "src/generated/site.ts": "97fb8041 generated",
   "src/generated/timers.server.ts": "8ff1c211 generated",
   "src/generated/uploads.ts": "a6f745ae generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -46234,6 +46121,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/InlineRows.tsx": "a11c1c4b kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
   "src/kit/Landing.tsx": "9203f739 kit",
+  "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "770efd55 kit",
   "src/kit/ModelTable.tsx": "23ce0368 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -46283,7 +46171,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
@@ -46294,32 +46182,30 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "45dd5df8 generated",
+  "src/routes/__root.tsx": "0bdfaa95 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "023fdf08 generated",
-  "src/routes/clients/index.tsx": "61eff112 generated",
+  "src/routes/clients/$id.tsx": "6619c589 generated",
+  "src/routes/clients/index.tsx": "411542d1 generated",
   "src/routes/clients/new.tsx": "7af06c43 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "115eaaf1 generated",
-  "src/routes/invoice-lines/$id.tsx": "2204ab8d generated",
-  "src/routes/invoice-lines/index.tsx": "644fc217 generated",
-  "src/routes/invoice-lines/new.tsx": "9d1d2e0a generated",
-  "src/routes/invoices/$id.tsx": "261b5665 generated",
-  "src/routes/invoices/index.tsx": "09427aea generated",
+  "src/routes/index.tsx": "0cdc647a generated",
+  "src/routes/invoices/$id.tsx": "7102729b generated",
+  "src/routes/invoices/index.tsx": "0842286d generated",
   "src/routes/invoices/new.tsx": "a9dc8138 generated",
   "src/routes/overview/index.tsx": "4d3a90ef generated",
-  "src/routes/robots[.]txt.ts": "a34e0990 generated",
+  "src/routes/privacy/index.tsx": "a2c437ac generated",
+  "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/settings/index.tsx": "dd4e71b0 generated",
   "src/routes/sign-in.tsx": "3f9be402 generated",
-  "src/routes/sitemap[.]xml.ts": "f0ce9eb0 generated",
+  "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/welcome/index.tsx": "902bc455 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "e0f9e5e8 kit",
   "src/theme.css": "ba057d91 generated",
-  "tests/smoke.spec.ts": "0b442446 generated",
+  "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -52112,7 +51998,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteDish, dishUi, getDish, updateDish } from "#/generated/dish";
 import { dishSchema } from "#/generated/dish.schema";
 import { soldOut, soldOutAccess, soldOutFits } from "#/generated/actions/sold-out";
@@ -52121,7 +52007,7 @@ import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -52169,6 +52055,7 @@ function DishPage() {
   const back = () => navigate({ to: "/dishes" });
   return (
     <>
+      <BackTo to="/dishes" title={pageUi["dishes"].title} />
       <PageHeader
         title={row.name || \`Dish #\${row.id}\`}
         actions={
@@ -52196,6 +52083,7 @@ function DishPage() {
           </>
         }
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={dishUi}
@@ -52542,7 +52430,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteOrder, getOrder, orderUi, updateOrder } from "#/generated/order";
 import { orderSchema } from "#/generated/order.schema";
 import { accept, acceptAccess, acceptFits } from "#/generated/actions/accept";
@@ -52554,7 +52442,7 @@ import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { Overflow } from "#/kit/Overflow";
 import { w } from "#/kit/words";
@@ -52604,6 +52492,7 @@ function OrderPage() {
   const back = () => navigate({ to: "/orders" });
   return (
     <>
+      <BackTo to="/orders" title={pageUi["orders"].title} />
       <PageHeader
         title={row.name || \`Order #\${row.id}\`}
         actions={
@@ -52652,6 +52541,7 @@ function OrderPage() {
           </Overflow>
         }
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={orderUi}
@@ -53148,12 +53038,12 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteStop, getStop, stopUi, updateStop } from "#/generated/stop";
 import { stopSchema } from "#/generated/stop.schema";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -53199,7 +53089,9 @@ function StopPage() {
   const back = () => navigate({ to: "/stops" });
   return (
     <>
+      <BackTo to="/stops" title={pageUi["stops"].title} />
       <PageHeader title={row.place || \`Stop #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={stopUi}
@@ -54162,7 +54054,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -54215,7 +54107,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
@@ -54227,7 +54119,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "cf93e9bc generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/dishes/$id.tsx": "b75b7375 generated",
+  "src/routes/dishes/$id.tsx": "7ce34e2c generated",
   "src/routes/dishes/index.tsx": "445c3904 generated",
   "src/routes/dishes/new.tsx": "c43e9a3f generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
@@ -54235,13 +54127,13 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f71e6cf2 generated",
-  "src/routes/orders/$id.tsx": "86633d54 generated",
+  "src/routes/orders/$id.tsx": "606b7e81 generated",
   "src/routes/orders/index.tsx": "289d3af5 generated",
   "src/routes/orders/new.tsx": "2702b25b generated",
   "src/routes/robots[.]txt.ts": "933017e8 generated",
   "src/routes/sign-in.tsx": "7572bbad generated",
   "src/routes/sitemap[.]xml.ts": "215860da generated",
-  "src/routes/stops/$id.tsx": "8091b971 generated",
+  "src/routes/stops/$id.tsx": "154bb7c0 generated",
   "src/routes/stops/index.tsx": "14c213d0 generated",
   "src/routes/stops/new.tsx": "62b2c8e5 generated",
   "src/routes/team/activity.tsx": "201476a9 generated",
@@ -57088,13 +56980,13 @@ import { createFileRoute, notFound, useNavigate, useRouter } from "@tanstack/rea
 import { and, desc } from "drizzle-orm";
 import { auditLog } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteItem, getItem, itemUi, toggleSavedItem, updateItem } from "#/generated/item";
 import { itemSchema } from "#/generated/item.schema";
 import { ReviewNotice } from "#/kit/Review";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { SaveButton } from "#/kit/ModelTable";
@@ -57186,10 +57078,12 @@ function ItemPage() {
   };
   return (
     <>
+      <BackTo to="/" title={pageUi["catalog"].title} />
       <PageHeader
         title={row.title || \`Item #\${row.id}\`}
         actions={<SaveButton saved={saved} label={String(row.title || \`Item #\${row.id}\`)} onToggle={toggleSaved} />}
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ReviewNotice notes={review} labels={{"photos":"Photos"}} />
       <ModelForm
         key={String(row.updatedAt)}
@@ -57716,13 +57610,13 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteItem, getItem, itemUi, updateItem } from "#/generated/item";
 import { itemSchema } from "#/generated/item.schema";
 import { ReviewNotice } from "#/kit/Review";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -57768,7 +57662,9 @@ function ItemPage() {
   const back = () => navigate({ to: "/my-items" });
   return (
     <>
+      <BackTo to="/my-items" title={pageUi["myItems"].title} />
       <PageHeader title={row.title || \`Item #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ReviewNotice notes={review} labels={{"photos":"Photos"}} />
       <ModelForm
         key={String(row.updatedAt)}
@@ -58088,13 +57984,13 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteItem, getItem, itemUi, toggleSavedItem, updateItem } from "#/generated/item";
 import { itemSchema } from "#/generated/item.schema";
 import { ReviewNotice } from "#/kit/Review";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -58152,10 +58048,12 @@ function ItemPage() {
   };
   return (
     <>
+      <BackTo to="/saved" title={pageUi["saved"].title} />
       <PageHeader
         title={row.title || \`Item #\${row.id}\`}
         actions={<SaveButton saved={saved} label={String(row.title || \`Item #\${row.id}\`)} onToggle={toggleSaved} />}
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ReviewNotice notes={review} labels={{"photos":"Photos"}} />
       <ModelForm
         key={String(row.updatedAt)}
@@ -59052,7 +58950,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -59108,14 +59006,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "f3db5b85 generated",
+  "src/routes/$id.tsx": "2fb77809 generated",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
@@ -59127,14 +59025,14 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "ea504bd4 generated",
-  "src/routes/my-items/$id.tsx": "43d1a6f8 generated",
+  "src/routes/my-items/$id.tsx": "be0b7640 generated",
   "src/routes/my-items/index.tsx": "e8a2b3db generated",
   "src/routes/my-items/new.tsx": "b3116bbd generated",
   "src/routes/new.tsx": "b9f7c55c generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "3fc62105 generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
-  "src/routes/saved/$id.tsx": "9b62f848 generated",
+  "src/routes/saved/$id.tsx": "b895f00d generated",
   "src/routes/saved/index.tsx": "c8f54b4b generated",
   "src/routes/saved/new.tsx": "59f878f7 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
@@ -61817,12 +61715,12 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteItem, getItem, itemUi, updateItem } from "#/generated/item";
 import { itemSchema } from "#/generated/item.schema";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -61868,7 +61766,9 @@ function ItemPage() {
   const back = () => navigate({ to: "/items" });
   return (
     <>
+      <BackTo to="/items" title={pageUi["items"].title} />
       <PageHeader title={row.name || \`Item #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={itemUi}
@@ -62664,7 +62564,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -62713,7 +62613,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
@@ -62728,7 +62628,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "a8c39617 generated",
-  "src/routes/items/$id.tsx": "e39bd04b generated",
+  "src/routes/items/$id.tsx": "35fd7306 generated",
   "src/routes/items/index.tsx": "afc3ac02 generated",
   "src/routes/items/new.tsx": "98a9e603 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
@@ -71728,7 +71628,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { componentUi, deleteComponent, getComponent, updateComponent } from "#/generated/component";
 import { componentSchema } from "#/generated/component.schema";
 import { buttonVariants } from "#/components/ui/button";
@@ -71736,7 +71636,7 @@ import { incidentUi } from "#/generated/incident";
 import { maintenanceUi } from "#/generated/maintenance";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -71786,7 +71686,9 @@ function ComponentPage() {
   const back = () => navigate({ to: "/components" });
   return (
     <>
+      <BackTo to="/components" title={pageUi["components"].title} />
       <PageHeader title={row.name || \`Component #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={componentUi}
@@ -72214,7 +72116,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteIncident, getIncident, incidentUi, updateIncident } from "#/generated/incident";
 import { incidentSchema } from "#/generated/incident.schema";
 import { identified, identifiedAccess, identifiedFits } from "#/generated/actions/identified";
@@ -72227,7 +72129,7 @@ import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -72279,6 +72181,7 @@ function IncidentPage() {
   const back = () => navigate({ to: "/incidents" });
   return (
     <>
+      <BackTo to="/incidents" title={pageUi["incidents"].title} />
       <PageHeader
         title={row.title || \`Incident #\${row.id}\`}
         actions={
@@ -72316,6 +72219,7 @@ function IncidentPage() {
           </>
         }
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={incidentUi}
@@ -72814,13 +72718,13 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteMaintenance, getMaintenance, maintenanceUi, updateMaintenance } from "#/generated/maintenance";
 import { maintenanceSchema } from "#/generated/maintenance.schema";
 import { componentOptions } from "#/generated/component";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -72869,7 +72773,9 @@ function MaintenancePage() {
   const back = () => navigate({ to: "/maintenance" });
   return (
     <>
+      <BackTo to="/maintenance" title={pageUi["maintenance"].title} />
       <PageHeader title={row.title || \`Maintenance #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={maintenanceUi}
@@ -73576,14 +73482,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { titleOf } from "#/kit/format";
 import { deleteIncidentUpdate, getIncidentUpdate, incidentUpdateUi, updateIncidentUpdate } from "#/generated/incident-update";
 import { incidentUpdateSchema } from "#/generated/incident-update.schema";
 import { incidentOptions } from "#/generated/incident";
 import { guardPage } from "#/kit/page-guard";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -73632,7 +73538,9 @@ function IncidentUpdatePage() {
   const back = () => navigate({ to: "/updates" });
   return (
     <>
+      <BackTo to="/updates" title={pageUi["updates"].title} />
       <PageHeader title={titleOf(row.message) || \`Incident update #\${row.id}\`} />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={incidentUpdateUi}
@@ -74362,7 +74270,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Articles.tsx": "665733a1 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
@@ -74420,7 +74328,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
@@ -74441,18 +74349,18 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "b933aed3 generated",
+  "src/routes/components/$id.tsx": "8a1eacf6 generated",
   "src/routes/components/index.tsx": "a387097e generated",
   "src/routes/components/new.tsx": "294efdf1 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "1eca6bcb generated",
   "src/routes/history/index.tsx": "1a28851f generated",
-  "src/routes/incidents/$id.tsx": "7c840479 generated",
+  "src/routes/incidents/$id.tsx": "d77f9e9e generated",
   "src/routes/incidents/index.tsx": "0bad2659 generated",
   "src/routes/incidents/new.tsx": "1abbbdfc generated",
   "src/routes/incoming/chatCommand.ts": "3ab76b77 generated",
   "src/routes/index.tsx": "aea24c4f generated",
-  "src/routes/maintenance/$id.tsx": "6bf64bd5 generated",
+  "src/routes/maintenance/$id.tsx": "df48940a generated",
   "src/routes/maintenance/index.tsx": "7b866e09 generated",
   "src/routes/maintenance/new.tsx": "9bd0d9b0 generated",
   "src/routes/mcp.ts": "0d8813db generated",
@@ -74462,7 +74370,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
   "src/routes/team/activity.tsx": "a8e492c5 generated",
   "src/routes/team/index.tsx": "ebf79135 generated",
-  "src/routes/updates/$id.tsx": "96c2e915 generated",
+  "src/routes/updates/$id.tsx": "19b1051c generated",
   "src/routes/updates/index.tsx": "ce99a44f generated",
   "src/routes/updates/new.tsx": "494f86c8 generated",
   "src/start.ts": "ca04f376 kit",
@@ -79947,7 +79855,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog, user } from "#/db/schema";
 import { app } from "#/generated/app";
-import { pageAccess, pageHead } from "#/generated/pages";
+import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { deleteSupportCase, getSupportCase, supportCaseUi, updateSupportCase } from "#/generated/support-case";
 import { supportCaseSchema } from "#/generated/support-case.schema";
 import { assignToMe, assignToMeAccess, assignToMeFits } from "#/generated/actions/assign-to-me";
@@ -79961,7 +79869,7 @@ import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { ActionButton } from "#/kit/ActionButton";
 import { ActivityLog } from "#/kit/ActivityLog";
-import { PageHeader } from "#/kit/AppShell";
+import { BackTo, LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 import { Overflow } from "#/kit/Overflow";
 import { w } from "#/kit/words";
@@ -80011,6 +79919,7 @@ function SupportCasePage() {
   const back = () => navigate({ to: "/cases" });
   return (
     <>
+      <BackTo to="/cases" title={pageUi["cases"].title} />
       <PageHeader
         title={row.subject || \`Support case #\${row.id}\`}
         actions={
@@ -80071,6 +79980,7 @@ function SupportCasePage() {
           </Overflow>
         }
       />
+      <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />
       <ModelForm
         key={String(row.updatedAt)}
         ui={supportCaseUi}
@@ -81476,7 +81386,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "4d35e2c1 kit",
+  "src/kit/AppShell.tsx": "aaf3d6fc kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "bd840a4d kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -81533,7 +81443,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "4979bb9e kit",
+  "src/kit/words/en.ts": "94e7b88d kit",
   "src/kit/zoned.ts": "8225716c kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",
@@ -81546,7 +81456,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "daa69b40 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/cases/$id.tsx": "04c460f7 generated",
+  "src/routes/cases/$id.tsx": "19be36a6 generated",
   "src/routes/cases/index.tsx": "c4825317 generated",
   "src/routes/cases/new.tsx": "68b8347e generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
