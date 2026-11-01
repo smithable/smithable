@@ -203,7 +203,11 @@ function InlineRow({
               )
             ) : save ? (
               <>
-                <label htmlFor={`${row ? row.id : "new"}-${f.name}`} className="sr-only">
+                <label
+                  htmlFor={`${row ? row.id : "new"}-${f.name}`}
+                  id={`${row ? row.id : "new"}-${f.name}-label`}
+                  className="sr-only"
+                >
                   {f.label}
                 </label>
                 <FieldInput
