@@ -70,7 +70,7 @@ export function AppShell({ children, ...shell }: ShellProps & { children: React.
           the appearance) behind the menu button at its end. */}
       <header
         data-part="header"
-        data-navigation={top ? shell.navigation : undefined}
+        data-navigation={top ? shell.navigation : "sidebar"}
         className={`sticky top-0 z-30 flex h-18 items-center gap-2 border-b bg-sidebar px-2 text-sidebar-foreground ${top ? `lg:gap-6 lg:px-6 ${centered ? "lg:grid lg:grid-cols-[1fr_auto_1fr]" : ""}` : "lg:hidden"}`}
       >
         {menu && (
