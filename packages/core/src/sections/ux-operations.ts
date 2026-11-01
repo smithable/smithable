@@ -5,6 +5,7 @@ import { type AnyOperation, type Operation, OperationError, refTo } from "../ope
 import { pageModel } from "../patterns.js";
 import { parseTheme } from "../theme.js";
 import {
+  ACTIVES,
   CHROMES,
   CONTROLS,
   FONTS,
@@ -1018,6 +1019,35 @@ const setMenuLayout: Operation<{ navigation: string }> = {
   },
 };
 
+/** How the menu marks the open page (A 215); default removes the key, back to the menu's own. */
+const setMenuActive: Operation<{ active: string }> = {
+  name: "setMenuActive",
+  summary:
+    "Mark the menu's open page filled (the primary behind it), subtle (a tint behind it) or underline; default returns to the menu's own (filled in the sidebar, underlined in a bar).",
+  schema: {
+    type: "object",
+    required: ["active"],
+    additionalProperties: false,
+    properties: {
+      active: {
+        type: "string",
+        enum: [...ACTIVES, "default"],
+        description: "filled, subtle, underline, or default.",
+      },
+    },
+  },
+  positional: ["active"],
+  describe: ({ active }) =>
+    active === "default"
+      ? "Mark the menu's open page as the menu does"
+      : `Mark the menu's open page ${active}`,
+  destructive: () => false,
+  apply(editors, { active }) {
+    put(editors.ux, ["menuActive"], active === "default" ? undefined : active);
+    return [];
+  },
+};
+
 /** The menu's surface (look-gap.md §4); default removes the key, back to the theme's colours. */
 const setChrome: Operation<{ chrome: string }> = {
   name: "setChrome",
@@ -1277,6 +1307,7 @@ export const uxOperations: AnyOperation[] = [
   setFiltersLook,
   setMenuLayout,
   setChrome,
+  setMenuActive,
   setCalendarColor,
   setCalendarCapacity,
   setCalendarView,
