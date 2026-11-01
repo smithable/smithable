@@ -134,6 +134,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part=delete]")",
     "data-part="error-summary"",
     "data-part="delete"",
+    "data-part="gallery"",
     "data-part="pictures"",
     "data-part="files"",
   ],

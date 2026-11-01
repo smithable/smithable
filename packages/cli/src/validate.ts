@@ -15,6 +15,7 @@ import {
   type PersonIR,
   pageModel,
   parseTheme,
+  recordPicture,
   recordSummary,
   type SamplesIR,
   type SpecIR,
@@ -441,6 +442,15 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
           `${page.id} ${name} stage: ${shown?.id ?? "no list page"}${look.stage ? " (stage)" : " (the first list page in the navigation)"}`,
         );
       }
+  // A record's pictures large on its view (A 215): which field, by type.
+  for (const page of ir.pages) {
+    const look = ux?.pages[page.id]?.recordPictures;
+    const model = ir.models.find((m) => m.name === pageModel(page));
+    if (!look || !model) continue;
+    lines.push(
+      `${page.id} pictures (${look}): ${recordPicture(model)?.name ?? "none"} (the first picture field), on the read-only view`,
+    );
+  }
   // A records section as a week (A 215): the date each record is placed by, said or unsaid.
   for (const page of ir.pages)
     for (const section of page.sections) {

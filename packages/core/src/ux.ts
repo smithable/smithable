@@ -164,6 +164,8 @@ export interface PageUx {
   lists?: Record<string, RecordList>;
   /** The record's title row carries its summary: the status badge, the amount, the key dates. */
   recordHeader?: "summary";
+  /** A record's pictures on its read-only view: large beside the fields, or across the top (A 215). */
+  recordPictures?: "aside" | "top";
   /** The same summary in a panel beside the form (under it on a phone, before the lists). */
   formAside?: "summary";
   /** The line under a record's name on cards and in pickers (record-names.md §3): a name part. */
@@ -209,6 +211,16 @@ export function inlineFields(target: ModelIR, parent: string): FieldIR[] {
       f.name !== target.ownedBy &&
       !(f.type.kind === "relation" && f.type.many) &&
       !(f.type.kind === "scalar" && ["file", "files", "picture", "pictures"].includes(f.type.name)),
+  );
+}
+
+/** The field a record's pictures come from (record.pictures, A 215): its first picture field, by type. */
+export function recordPicture(model: ModelIR): FieldIR | undefined {
+  return model.fields.find(
+    (f) =>
+      !f.formula &&
+      f.type.kind === "scalar" &&
+      (f.type.name === "picture" || f.type.name === "pictures"),
   );
 }
 
@@ -484,9 +496,11 @@ function readRecord(
   subtitle?: NamePartIR;
   detail?: NamePartIR[];
   header?: "summary";
+  pictures?: "aside" | "top";
 } {
   const lists: Record<string, RecordList> = {};
   let header: "summary" | undefined;
+  let pictures: "aside" | "top" | undefined;
   let subtitle: NamePartIR | undefined;
   let detail: NamePartIR[] | undefined;
   // A line under the name: a part as namedBy takes them, checked against the page's model.
@@ -512,9 +526,25 @@ function readRecord(
     mapEntries(ctx, node, `the record of ${where}`) ?? [],
     `the record of ${where}`,
     {
-      allowed: ["lists", "subtitle", "detail", "header"],
+      allowed: ["lists", "subtitle", "detail", "header", "pictures"],
     },
   )) {
+    if (option.key === "pictures") {
+      const look = readString(ctx, option.value, `"pictures" of the record of ${where}`);
+      if (look !== "aside" && look !== "top") {
+        if (look !== undefined && look !== "none")
+          ctx.error(option.value, "invalid-value", `"pictures" of a record is aside, top or none.`);
+        continue;
+      }
+      if (model && !recordPicture(model))
+        ctx.error(
+          option.value,
+          "invalid-value",
+          `${model.name} has no picture or pictures field to show ${look === "aside" ? "beside its fields" : "across its top"}.`,
+        );
+      else pictures = look;
+      continue;
+    }
     if (option.key === "header") {
       const look = readString(ctx, option.value, `"header" of the record of ${where}`);
       if (look === "summary") header = look;
@@ -669,6 +699,7 @@ function readRecord(
     ...(subtitle ? { subtitle } : {}),
     ...(detail ? { detail } : {}),
     ...(header ? { header } : {}),
+    ...(pictures ? { pictures } : {}),
   };
 }
 
@@ -1218,6 +1249,7 @@ export function validateUx(
             if (record.subtitle) result.subtitle = record.subtitle;
             if (record.detail?.length) result.detail = record.detail;
             if (record.header) result.recordHeader = record.header;
+            if (record.pictures) result.recordPictures = record.pictures;
             continue;
           }
           if (part.key === "icon") {
