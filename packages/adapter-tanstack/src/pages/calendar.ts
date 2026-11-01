@@ -214,7 +214,7 @@ const getRange = createServerFn()
   // (a month starting on a Sunday spans six).
   .validator(
     z
-      .object({ from: z.iso.datetime(), to: z.iso.datetime()${filtering ? ", f: z.record(z.string(), z.string()).optional()" : ""} })
+      .object({ from: z.iso.datetime(), to: z.iso.datetime()${filtering ? ", f: z.record(z.string(), z.string().optional()).optional()" : ""} })
       .refine((r) => Date.parse(r.from) < Date.parse(r.to) && Date.parse(r.to) - Date.parse(r.from) <= 45 * 86_400_000, "The range is not a week or a month."),
   )
   .handler(async ({ data }) => {

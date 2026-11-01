@@ -452,8 +452,11 @@ function readPage(
     const target = parsed.models?.find((m) => m.name === calendarModel);
     checkedFilters = checkedFilters.filter((name) => {
       const field = target?.fields.find((f) => f.name === name);
-      const ranged =
-        !field || (field.type.kind === "scalar" && !["bool"].includes(field.type.name));
+      // The automatic fields: who owns it is a person (a "Mine" toggle); when it was made or
+      // changed is a date.
+      const ranged = field
+        ? field.type.kind === "scalar" && field.type.name !== "bool"
+        : name !== "owner";
       if (!ranged) return true;
       ctx.error(
         filters?.find((f) => f.name === name)?.at,
