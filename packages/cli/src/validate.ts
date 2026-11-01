@@ -442,7 +442,6 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
           `${page.id} ${name} stage: ${shown?.id ?? "no list page"}${look.stage ? " (stage)" : " (the first list page in the navigation)"}`,
         );
       }
-<<<<<<< HEAD
   // A record's pictures large on its view (A 215): which field, by type.
   for (const page of ir.pages) {
     const look = ux?.pages[page.id]?.recordPictures;
@@ -452,7 +451,6 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
       `${page.id} pictures (${look}): ${recordPicture(model)?.name ?? "none"} (the first picture field), on the read-only view`,
     );
   }
-=======
   // A records section as a week (A 215): the date each record is placed by, said or unsaid.
   for (const page of ir.pages)
     for (const section of page.sections) {
@@ -464,7 +462,6 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
         `${page.id} ${section.name} by ${by?.name ?? "no date"}${look.by ? " (by)" : " (unsaid, the first date)"}`,
       );
     }
->>>>>>> origin/main
   // A calendar's view and its time of day (A 215), with the kit's boundaries.
   for (const page of ir.pages) {
     if (page.pattern.kind !== "calendar") continue;
