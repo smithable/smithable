@@ -1464,6 +1464,15 @@ async function supportFlow(dir, base) {
     await thread
       .getByRole("textbox", { name: "Reply" })
       .fill("We are restarting the access point now.");
+    // The case page leads with its conversation (record.first: thread, A 215).
+    if (
+      !(await thread.evaluate((t) => {
+        // The case's own form, not the reply box inside the thread.
+        const form = [...document.querySelectorAll("main form")].find((f) => !t.contains(f));
+        return !!form && !!(t.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING);
+      }))
+    )
+      throw new Error("the conversation is not before the case's form");
     before = mails().length;
     await thread.getByRole("button", { name: "Send" }).click();
     await thread
@@ -1492,7 +1501,7 @@ async function supportFlow(dir, base) {
       .locator('[data-part="message"]', { hasText: "It works again" })
       .waitFor({ timeout: 10000 * P });
     console.log(
-      "  ✓ support: a mail becomes a case and is acknowledged with its number; an agent's reply from the conversation reaches the customer alone, in the thread; the customer's answer joins the case",
+      "  ✓ support: a mail becomes a case and is acknowledged with its number; an agent's reply from the conversation, which the case page leads with, reaches the customer alone, in the thread; the customer's answer joins the case",
     );
   } catch (error) {
     console.log(

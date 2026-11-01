@@ -166,6 +166,8 @@ export interface PageUx {
   recordHeader?: "summary";
   /** The same summary in a panel beside the form (under it on a phone, before the lists). */
   formAside?: "summary";
+  /** The record's conversation before its form (A 215): the thread an agent opened the case for. */
+  recordFirst?: "thread";
   /** The line under a record's name on cards and in pickers (record-names.md §3): a name part. */
   subtitle?: NamePartIR;
   /** Smaller parts after the subtitle. */
@@ -484,9 +486,11 @@ function readRecord(
   subtitle?: NamePartIR;
   detail?: NamePartIR[];
   header?: "summary";
+  first?: "thread";
 } {
   const lists: Record<string, RecordList> = {};
   let header: "summary" | undefined;
+  let first: { at: ParsedNode } | undefined;
   let subtitle: NamePartIR | undefined;
   let detail: NamePartIR[] | undefined;
   // A line under the name: a part as namedBy takes them, checked against the page's model.
@@ -512,9 +516,16 @@ function readRecord(
     mapEntries(ctx, node, `the record of ${where}`) ?? [],
     `the record of ${where}`,
     {
-      allowed: ["lists", "subtitle", "detail", "header"],
+      allowed: ["lists", "subtitle", "detail", "header", "first"],
     },
   )) {
+    if (option.key === "first") {
+      const look = readString(ctx, option.value, `"first" of the record of ${where}`);
+      if (look === "thread") first = { at: option.value as ParsedNode };
+      else if (look !== undefined && look !== "form")
+        ctx.error(option.value, "invalid-value", `"first" of a record is form or thread.`);
+      continue;
+    }
     if (option.key === "header") {
       const look = readString(ctx, option.value, `"header" of the record of ${where}`);
       if (look === "summary") header = look;
@@ -664,11 +675,19 @@ function readRecord(
       lists[pair.key] = look as RecordList;
     }
   }
+  if (first && !Object.values(lists).includes("thread"))
+    ctx.error(
+      first.at,
+      "invalid-value",
+      `The record of ${where} shows no list as a thread to put before the form.`,
+      "Show one as a conversation first: lists: { <list>: thread }.",
+    );
   return {
     lists,
     ...(subtitle ? { subtitle } : {}),
     ...(detail ? { detail } : {}),
     ...(header ? { header } : {}),
+    ...(first ? { first: "thread" as const } : {}),
   };
 }
 
@@ -1218,6 +1237,7 @@ export function validateUx(
             if (record.subtitle) result.subtitle = record.subtitle;
             if (record.detail?.length) result.detail = record.detail;
             if (record.header) result.recordHeader = record.header;
+            if (record.first) result.recordFirst = record.first;
             continue;
           }
           if (part.key === "icon") {
