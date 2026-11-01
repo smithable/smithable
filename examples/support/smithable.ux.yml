@@ -13,3 +13,4 @@ pages:
       columns: [subject, status, priority, assignee]   # the messages' count comes after them
     record:
       lists: { messages: thread }    # a case's messages as a conversation with a reply box
+      first: thread                  # the conversation an agent opened the case for, before its form

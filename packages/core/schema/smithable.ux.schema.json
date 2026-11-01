@@ -230,6 +230,13 @@
                 ],
                 "description": "summary: the title row carries the record's status, its amount and its key dates; none (the default)."
               },
+              "first": {
+                "enum": [
+                  "form",
+                  "thread"
+                ],
+                "description": "What the page shows first: form (the default), or thread, the lists shown as conversations before the form."
+              },
               "subtitle": {
                 "type": "string",
                 "description": "The line under a record's name on cards and in pickers: a field, a reference or a field one reference away (instructor.name)."

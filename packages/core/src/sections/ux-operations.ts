@@ -548,6 +548,14 @@ const setRecordList: Operation<{
       throw new OperationError(`There is no page named "${page}".`);
     // A table is the default: setting it takes the key away, and an empty record block with it.
     put(editors.ux, ["pages", page, "record", "lists", field], look === "table" ? undefined : look);
+    // A page that led with its thread leads with its form once no thread is left.
+    const lists = ["pages", page, "record", "lists"];
+    if (
+      !Object.values(editors.ux.has(lists) ? (editors.ux.get(lists) as object) : {}).includes(
+        "thread",
+      )
+    )
+      put(editors.ux, ["pages", page, "record", "first"], undefined);
     return [];
   },
 };
@@ -612,6 +620,34 @@ const setRecordSummary: Operation<{
       ["pages", page, place === "header" ? "record" : "form", place],
       look === "none" ? undefined : look,
     );
+    return [];
+  },
+};
+
+const setRecordFirst: Operation<{ page: string; first: "form" | "thread" }> = {
+  name: "setRecordFirst",
+  summary:
+    "What a record page shows first: its form (the default), or its conversation (a list shown as a thread) before the form.",
+  schema: {
+    type: "object",
+    required: ["page", "first"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      first: { enum: ["form", "thread"], description: "form or thread." },
+    },
+  },
+  positional: ["page", "first"],
+  describe: ({ page, first }) =>
+    first === "thread"
+      ? `The ${page} page's records lead with their conversation`
+      : `The ${page} page's records lead with their form`,
+  destructive: () => false,
+  apply(editors, { page, first }, ir) {
+    if (!ir.pages.some((p) => p.id === page))
+      throw new OperationError(`There is no page named "${page}".`);
+    // The form is the default: setting it takes the key away.
+    put(editors.ux, ["pages", page, "record", "first"], first === "form" ? undefined : first);
     return [];
   },
 };
@@ -1289,6 +1325,7 @@ export const uxOperations: AnyOperation[] = [
   setRecordList,
   setLandingWidth,
   setRecordSummary,
+  setRecordFirst,
   setRecordPictures,
   setRecordLines,
   setFieldOrder,

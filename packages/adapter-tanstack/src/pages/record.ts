@@ -496,7 +496,9 @@ export function detailRoute(
   let totals = false;
   // Each inline list's choices for its rows' references, loaded with the record.
   const rowOptions: string[] = [];
-  const sections = lists(model).map((field) => {
+  // A thread the page leads with (record.first, A 215): drawn before the form, not after it.
+  const leading = new Set<number>();
+  const sections = lists(model).map((field, i) => {
     const target = modelNamed(ir, field.type.model);
     const tn = names(target, t);
     imports.set(tn.module, [...(imports.get(tn.module) ?? []), tn.ui]);
@@ -539,7 +541,8 @@ export function detailRoute(
               await router.invalidate();
             } : undefined`
           : "undefined";
-      return `      <section className="mt-10">
+      const lead = ux.pages[page.id]?.recordFirst === "thread";
+      const markup = `      <section className="${lead ? "mb-10" : "mt-10"}">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">${label}</h2>
           ${add?.route && !thread.replies ? `{${button}}` : ""}
@@ -553,6 +556,8 @@ export function detailRoute(
           reply={${reply}}
         />
       </section>`;
+      if (lead) leading.add(i);
+      return markup;
     }
     // Rows edited in place (A 215), each saved on its own through the related model's own
     // create, change and delete; the parent's total of them under the table, from its own field.
@@ -852,12 +857,15 @@ function ${component}() {
       )}`
           : ""
       }
-      ${
-        look?.formAside
-          ? `<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+${sections
+  .filter((_, i) => leading.has(i))
+  .map((s) => `${s}\n`)
+  .join("")}      ${
+    look?.formAside
+      ? `<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
       `
-          : ""
-      }<ModelForm
+      : ""
+  }<ModelForm
         key={String(row.updatedAt)}${trash ? "\n        trash" : ""}
         ui={${n.ui}}
         app={app}
@@ -899,7 +907,7 @@ ${
       </section>
 `
     : ""
-}${contact ? `      ${contact.element}\n` : ""}${sections.join("\n")}${
+}${contact ? `      ${contact.element}\n` : ""}${sections.filter((_, i) => !leading.has(i)).join("\n")}${
   history
     ? `
       {history && history.length > 0 && (

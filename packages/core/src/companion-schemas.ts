@@ -376,6 +376,11 @@ export const UX_SCHEMA: JsonSchema = {
                 description:
                   "summary: the title row carries the record's status, its amount and its key dates; none (the default).",
               },
+              first: {
+                enum: ["form", "thread"],
+                description:
+                  "What the page shows first: form (the default), or thread, the lists shown as conversations before the form.",
+              },
               subtitle: {
                 type: "string",
                 description:

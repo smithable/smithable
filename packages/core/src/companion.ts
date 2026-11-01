@@ -359,6 +359,14 @@ const ux: Companion = {
         if (to) editor.renameKey(listed, to);
         else editor.removeAndPrune(listed, 0);
       }
+      // A page that led with its thread leads with its form once no thread is left.
+      const first = ["pages", page.id, "record", "first"];
+      const lists = ["pages", page.id, "record", "lists"];
+      if (
+        editor.has(first) &&
+        !Object.values(editor.has(lists) ? (editor.get(lists) as object) : {}).includes("thread")
+      )
+        editor.removeAndPrune(first, 0);
       // A second line under a column: the pair goes with either field, and follows a rename.
       const below = ["pages", page.id, "table", "below"];
       const pairs = editor.has(below) ? (editor.get(below) as Record<string, string>) : {};
