@@ -4,6 +4,7 @@ import { validateSpec } from "./spec.js";
 import {
   BUILT_IN_THEMES,
   checkContrast,
+  deriveTokens,
   FONTS,
   hardToRead,
   lowContrast,
@@ -265,4 +266,28 @@ test("a derived surface keeps the paper's cast: cream towards a green ink stays 
     expect(hardToRead(t.light, "light"), t.name).toEqual([]);
     expect(hardToRead(t.dark, "dark"), t.name).toEqual([]);
   }
+});
+
+test("a field's edge stands at 3:1 on the card and the page, from a quiet border too (A 213)", () => {
+  for (const mode of ["light", "dark"] as const) {
+    const [background, foreground] =
+      mode === "light" ? ["#fafaf9", "#16191d"] : ["#121519", "#e8eaed"];
+    const border = mode === "light" ? "#dadddc" : "#2a2f36";
+    const t = deriveTokens({ background, foreground, primary: "#2f6b3a", border }, mode);
+    expect(t.border).toBe(border);
+    expect(contrast(t.input, t.card)).toBeGreaterThanOrEqual(3);
+    expect(contrast(t.input, t.background)).toBeGreaterThanOrEqual(3);
+  }
+  const plain = deriveTokens(
+    { background: "#ffffff", foreground: "#111111", primary: "#2f6b3a" },
+    "light",
+  );
+  expect(contrast(plain.input, plain.background)).toBeGreaterThanOrEqual(3);
+  // An input the theme names stays as it is.
+  expect(
+    deriveTokens(
+      { background: "#fafaf9", foreground: "#16191d", primary: "#2f6b3a", input: "#eeeeee" },
+      "light",
+    ).input,
+  ).toBe("#eeeeee");
 });

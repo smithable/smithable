@@ -450,7 +450,21 @@ export function deriveTokens(
     accent,
     "accent-foreground": given["accent-foreground"] ?? foreground,
     border: given.border ?? towards(background, foreground, 0.3),
-    input: given.input ?? given.border ?? towards(background, foreground, 0.3),
+    // A field's edge at 3:1 on the card and the page (WCAG 1.4.11): a theme's quiet border, made
+    // for dividers, would leave its fields unseen; an input the theme names stays as it is.
+    input:
+      given.input ??
+      readable(
+        readable(
+          given.border ?? towards(background, foreground, 0.3),
+          card,
+          given["card-foreground"] ?? foreground,
+          3,
+        ),
+        background,
+        foreground,
+        3,
+      ),
     // The primary, or for a bright one a step towards the card's text, so the focus ring shows.
     ring: given.ring ?? readable(primary, card, given["card-foreground"] ?? foreground, 3),
     sidebar: given.sidebar ?? card,

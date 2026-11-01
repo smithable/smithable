@@ -1,5 +1,6 @@
 // `smithable preview [dir] [--live] [--fast] [--everything] [--for <minutes>] [--port <n>]`: the app's development
-// server with its door open to this process alone (a new secret each start), and with --live the
+// server with its door open to this process alone (a new secret each start, or the one given in
+// SMITHABLE_DOOR_SECRET, so a tester that starts it can use the door too), and with --live the
 // project's sample users acting in it (docs/design/sample-users.md §4), their moves printed as
 // they happen. With a model configured they act from their personas; --fast, or no model, is each
 // person's draw from what they did; --everything tries every move's variants and reports what the
@@ -10,6 +11,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { providersFor } from "./ask.js";
+
 import { generate } from "./generate.js";
 import { type Io, tool } from "./io.js";
 import { doorAt, projectPeople } from "./sample-people.js";
@@ -30,6 +32,18 @@ export function feedText(line: FeedLine): string {
   return `${time} ${line.who}: ${line.text}${why}.${said}\n`;
 }
 
+/**
+ * The door's secret: a new one each start; or, when the starter asks for it with
+ * SMITHABLE_DOOR_SECRET (a tester that acts through the door, as sampleusers does), that one, if it
+ * is a secret: 32 or more letters, digits, _ or -, as a header can carry it. A DEV_DOOR_SECRET
+ * already in the environment is never taken up. Undefined when the one asked for is no secret.
+ */
+export function doorSecret(env: NodeJS.ProcessEnv): string | undefined {
+  const given = env.SMITHABLE_DOOR_SECRET;
+  if (given === undefined) return randomBytes(24).toString("hex");
+  return /^[A-Za-z0-9_-]{32,}$/.test(given) ? given : undefined;
+}
+
 export async function preview(
   dir: string,
   io: Io,
@@ -41,7 +55,11 @@ export async function preview(
   });
   if (code !== 0) return code;
   const base = `http://localhost:${options.port}`;
-  const secret = randomBytes(24).toString("hex");
+  const secret = doorSecret(process.env);
+  if (secret === undefined) {
+    io.err("SMITHABLE_DOOR_SECRET is not a secret: give 32 or more letters, digits, _ or -.\n");
+    return 2;
+  }
   const server = spawn(
     ...tool(dir, "vite", ["dev", "--port", String(options.port), "--strictPort"]),
     {

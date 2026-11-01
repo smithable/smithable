@@ -382,7 +382,7 @@ function YourName({
           setValue(name);
           dialog.current?.showModal();
         }}
-        className="block max-w-full truncate rounded-sm text-left font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
+        className="block min-h-6 max-w-full truncate rounded-sm text-left font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
       >
         {name.trim() || w.addYourName}
       </button>
