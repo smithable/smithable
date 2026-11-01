@@ -297,6 +297,7 @@ export type {
   Voice,
 } from "./ux.js";
 export {
+  ACTIVES,
   BANDS,
   CONTROLS,
   controlUnfit,

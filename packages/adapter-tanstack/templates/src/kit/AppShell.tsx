@@ -39,7 +39,22 @@ interface ShellProps {
    * the top with the name at the start or centred between the links. Phones always have the bar.
    */
   navigation?: "sidebar" | "topbar" | "topbar-centered";
+  /** How the open page is marked (the ux file's active); unsaid, filled in the sidebar, underlined in a bar. */
+  active?: "filled" | "subtle" | "underline";
 }
+
+/** The open page's mark, in the bar across the top and in the sidebar. */
+const ACTIVE = {
+  filled: {
+    bar: "bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+    side: "bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+  },
+  subtle: { bar: "bg-hover font-semibold", side: "bg-hover font-semibold" },
+  underline: {
+    bar: "font-semibold underline decoration-2 underline-offset-8",
+    side: "font-semibold underline decoration-2 underline-offset-4",
+  },
+} as const;
 
 // Links and buttons on the sidebar's own colors, with 44 px targets.
 const sidebarItem =
@@ -143,6 +158,7 @@ function TopLinks({
   counts,
   half,
   onMenu,
+  active,
 }: ShellProps & { half?: "start" | "end"; onMenu?: () => void }) {
   const items = menus.flatMap((m) => m.items).filter((item) => allows(item.access, viewer));
   const cut = Math.ceil(items.length / 2);
@@ -162,7 +178,7 @@ function TopLinks({
             className={topItem}
             activeOptions={{ exact: hasBelow(String(item.to)) }}
             inactiveProps={{ className: "font-medium" }}
-            activeProps={{ className: "font-semibold underline decoration-2 underline-offset-8" }}
+            activeProps={{ className: ACTIVE[active ?? "underline"].bar }}
           >
             {tx(item.label)}
             {(counts?.[String(item.to)] ?? 0) > 0 && (
@@ -243,6 +259,7 @@ function Navigation({
   onRename,
   counts,
   onNavigate,
+  active,
 }: ShellProps & { onNavigate?: () => void }) {
   // A link with another under it (Team over Team's activity) is lit only on its own page: by
   // default a link is lit on every page under it, which would light both.
@@ -276,10 +293,7 @@ function Navigation({
                   onClick={onNavigate}
                   className={sidebarItem}
                   activeOptions={{ exact: hasBelow(String(item.to)) }}
-                  activeProps={{
-                    className:
-                      "bg-primary font-semibold text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-                  }}
+                  activeProps={{ className: ACTIVE[active ?? "filled"].side }}
                 >
                   {item.icon && <item.icon aria-hidden className="size-5 shrink-0" />}
                   {tx(item.label)}
