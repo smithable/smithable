@@ -23,7 +23,7 @@ incoming:
 - **`set`** gives the other fields their values, here `status: new`.
 - **Attachments** are kept as uploads are: at most 10 MB each, checked, and held for review when the model reviews that field (`review`), so nobody else sees a file until it is approved.
 
-From the command line: `smithable op addIncoming support --mail --create Request --fields from=email subject=title body=body attachments=files`.
+From the command line: `smithable op addIncoming support --mail --create Request --fields from=email,subject=title,body=body,attachments=files`.
 
 ### Where the mail comes from
 
