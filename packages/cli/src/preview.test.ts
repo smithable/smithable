@@ -15,12 +15,14 @@ test("a move is a line in the terminal, a refusal and a fault with what the app 
   ).toBe("09:05:07 Maja: Deleted a post. The app failed: boom (seed 7)\n");
 });
 
-test("the door's secret is the one given when it is long enough, else a new one", () => {
-  const given = "a".repeat(32);
-  expect(doorSecret({ DEV_DOOR_SECRET: given })).toBe(given);
-  // Too short to be a secret, or none: a new one, different each time.
-  const short = doorSecret({ DEV_DOOR_SECRET: "secret" });
-  expect(short).not.toBe("secret");
-  expect(short).toMatch(/^[0-9a-f]{48}$/);
+test("the door's secret: the one asked for when it is a secret, else a new one each start", () => {
+  const given = "k3Y_".repeat(8);
+  expect(doorSecret({ SMITHABLE_DOOR_SECRET: given })).toBe(given);
+  // Asked for, but no secret (too short, or what a header cannot carry): refused, never replaced.
+  expect(doorSecret({ SMITHABLE_DOOR_SECRET: "secret" })).toBeUndefined();
+  expect(doorSecret({ SMITHABLE_DOOR_SECRET: `${given}\n` })).toBeUndefined();
+  // Not asked for: a new one, even with a DEV_DOOR_SECRET left in the environment.
+  const fresh = doorSecret({ DEV_DOOR_SECRET: given });
+  expect(fresh).toMatch(/^[0-9a-f]{48}$/);
   expect(doorSecret({})).not.toBe(doorSecret({}));
 });
