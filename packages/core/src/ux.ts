@@ -1429,7 +1429,9 @@ function checkBands(
       const tokens = tokensOf(
         theme,
         mode,
-        own.primary ? brandColors(own.primary, theme, mode) : {},
+        own.primary && /^#[0-9a-f]{6}$/i.test(own.primary)
+          ? brandColors(own.primary, theme, mode)
+          : {},
       );
       const low = bandLowContrast(tokens, b.band);
       if (low.length)
