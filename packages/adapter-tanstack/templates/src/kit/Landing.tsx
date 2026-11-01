@@ -545,9 +545,10 @@ function HeroView({
   /**
    * split: text beside the picture; centered: text over it; plain: no picture; cover: the
    * picture across the width with the theme's primary washing over it under the text; photo:
-   * the picture across the width, a dark scrim from the start side, white text at the start.
+   * the picture across the width, a dark scrim from the start side, white text at the start;
+   * tiles: the picture large with the text on its scrim, the shortcuts as picture tiles.
    */
-  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset" | "stage";
+  layout?: "split" | "centered" | "plain" | "cover" | "photo" | "inset" | "stage" | "tiles";
   /**
    * A cover or photo hero's wash: brand (the primary, the cover's own) or dark (a scrim, the
    * photo's own); each layout keeps its size and takes the other's wash (look-gap §4).
