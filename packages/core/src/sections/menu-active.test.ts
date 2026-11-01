@@ -11,14 +11,14 @@ const read = (text: string) =>
   validateUx({ path: "smithable.ux.yml", text: `smithableUx: 0.1\n${text}` }, ir, []);
 
 test("how the menu marks the open page: filled, subtle or underline (A 215)", () => {
-  expect(read("active: subtle\n").ux?.active).toBe("subtle");
-  expect(read("").ux?.active).toBeUndefined();
-  expect(read("active: bold\n").diagnostics[0]?.message).toBe(
-    '"active" is filled, subtle or underline.',
+  expect(read("menuActive: subtle\n").ux?.menuActive).toBe("subtle");
+  expect(read("").ux?.menuActive).toBeUndefined();
+  expect(read("menuActive: bold\n").diagnostics[0]?.message).toBe(
+    '"menuActive" is filled, subtle or underline.',
   );
   const set = applyOperation({ spec }, "setMenuActive", { active: "underline" });
   if (!set.ok) throw new Error(set.message);
-  expect(set.files.ux).toBe("smithableUx: 0.1\nactive: underline\n");
+  expect(set.files.ux).toBe("smithableUx: 0.1\nmenuActive: underline\n");
   expect(
     applyOperation({ spec, ux: set.files.ux as string }, "setMenuActive", { active: "default" }),
   ).toMatchObject({

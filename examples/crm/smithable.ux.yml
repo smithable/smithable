@@ -3,7 +3,7 @@ smithableUx: 0.1
 
 theme:
   preset: workbench         # the CRM's own theme: compact, quiet, a light sidebar
-active: subtle                # the open page as a quiet tint, not a solid pill: colour is for status
+menuActive: subtle            # the open page as a quiet tint, not a solid pill: colour is for status
 
 pages:
   customers:

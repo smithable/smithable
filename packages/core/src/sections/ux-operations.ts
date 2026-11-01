@@ -1016,7 +1016,7 @@ const setMenuActive: Operation<{ active: string }> = {
       : `Mark the menu's open page ${active}`,
   destructive: () => false,
   apply(editors, { active }) {
-    put(editors.ux, ["active"], active === "default" ? undefined : active);
+    put(editors.ux, ["menuActive"], active === "default" ? undefined : active);
     return [];
   },
 };

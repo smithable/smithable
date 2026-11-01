@@ -734,7 +734,7 @@
       ],
       "description": "Where the menu sits on a wide screen: sidebar (the default), topbar (a bar across the top, the name at the start) or topbar-centered (the name centred between the links)."
     },
-    "active": {
+    "menuActive": {
       "enum": [
         "filled",
         "subtle",

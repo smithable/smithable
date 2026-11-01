@@ -536,7 +536,7 @@ export const UX_SCHEMA: JsonSchema = {
       description:
         "Where the menu sits on a wide screen: sidebar (the default), topbar (a bar across the top, the name at the start) or topbar-centered (the name centred between the links).",
     },
-    active: {
+    menuActive: {
       enum: ["filled", "subtle", "underline"],
       description:
         "How the menu marks the open page: filled (the primary behind it), subtle (a tint behind it) or underline; unsaid, filled in the sidebar and underlined in a bar.",

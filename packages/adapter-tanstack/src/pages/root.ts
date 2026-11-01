@@ -101,8 +101,8 @@ export function rootRoute(
     ux.navigation && ux.navigation !== "sidebar"
       ? ` navigation=${JSON.stringify(ux.navigation)}`
       : "";
-  // How the menu marks the open page (ux active); unsaid, the menu's own.
-  const active = ux.active ? ` active=${JSON.stringify(ux.active)}` : "";
+  // How the menu marks the open page (ux menuActive); unsaid, the menu's own.
+  const active = ux.menuActive ? ` active=${JSON.stringify(ux.menuActive)}` : "";
   // The appearance resolved before the first paint: the visitor's, or the theme's one mode.
   const appearance =
     modes === "both"

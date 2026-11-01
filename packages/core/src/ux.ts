@@ -65,7 +65,7 @@ export interface UxIR {
    * How the menu marks the page that is open (A 215): filled (the primary behind it), subtle (a
    * tint behind it) or underline. Unsaid, the menu's own: filled in the sidebar, underlined in a bar.
    */
-  active?: (typeof ACTIVES)[number];
+  menuActive?: (typeof ACTIVES)[number];
   /** Ask's manner (docs/design/ask-defaults.md §2): a fixed set of prompt lines each, plain by default. */
   assistant: { voice: Voice };
 }
@@ -754,7 +754,7 @@ export function validateUx(
       "assistant",
       "navigation",
       "chrome",
-      "active",
+      "menuActive",
     ],
     later: ["menus", "sections"],
   });
@@ -762,7 +762,7 @@ export function validateUx(
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
     if (key === "aiBadge") ux.aiBadge = readBoolean(ctx, value, '"aiBadge"') ?? true;
-    if (key === "navigation" || key === "chrome" || key === "active") {
+    if (key === "navigation" || key === "chrome" || key === "menuActive") {
       const allowed: readonly string[] =
         key === "navigation" ? NAVIGATIONS : key === "chrome" ? CHROMES : ACTIVES;
       const said = readString(ctx, value, `"${key}"`);
