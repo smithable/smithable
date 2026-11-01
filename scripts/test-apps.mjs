@@ -2928,10 +2928,27 @@ async function marketplaceFlow(dir, base) {
     // A visitor who may only read gets the item as a page, not a disabled form.
     await open(page, `${base}/1`);
     const record = page.locator('[data-kit="model-form"]');
-    await record
-      .locator('[data-part="pictures"] img')
+    // The item's photos large beside its details (record.pictures: aside, A 215).
+    const gallery = record.locator('[data-part="gallery"]');
+    await gallery
+      .locator("img")
       .first()
       .waitFor({ timeout: 10000 * P });
+    if ((await record.getAttribute("data-pictures")) !== "aside")
+      throw new Error("the item's photos are not beside its details");
+    // Several photos: a thumbnail switches the large one in place, and is marked.
+    const thumbs = gallery.getByRole("button");
+    if ((await thumbs.count()) > 1) {
+      const large = gallery.locator("img").first();
+      const before = await large.getAttribute("src");
+      await thumbs.nth(1).click();
+      if ((await thumbs.nth(1).getAttribute("aria-pressed")) !== "true")
+        throw new Error("the chosen thumbnail is not marked");
+      for (let i = 0; (await large.getAttribute("src")) === before; i++) {
+        if (i === 30 * P) throw new Error("the thumbnail did not switch the large photo");
+        await page.waitForTimeout(100);
+      }
+    }
     const controls = await record
       .locator("input, textarea, select, button:not([type=button])")
       .count();
