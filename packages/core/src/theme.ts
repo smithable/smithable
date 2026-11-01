@@ -608,7 +608,7 @@ export function hardToRead(tokens: Tokens, mode: "light" | "dark"): string[] {
 
 /**
  * The pairs a landing section's band puts together (the kit's styles.css): on a muted band the
- * page's text and its muted text on the muted surface; on an inverse band the background's color
+ * page's text, its muted text and the primary as text (eyebrows, links) on the muted surface; on an inverse band the background's color
  * as text on the foreground's; on a primary band the primary's own text color on it. Inside a band
  * every text, card and button takes the band's colors, so these are the ones that must read.
  */
@@ -616,6 +616,7 @@ const BAND_PAIRS: Record<string, [text: TokenName, on: TokenName][]> = {
   muted: [
     ["foreground", "muted"],
     ["muted-foreground", "muted"],
+    ["primary", "muted"],
   ],
   inverse: [["background", "foreground"]],
   primary: [["primary-foreground", "primary"]],

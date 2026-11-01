@@ -1422,15 +1422,17 @@ function checkBands(
     const named = themeNamed(own.preset ?? "modern", themes);
     if (!named) continue;
     const theme = (own.background && withBackground(named, own.background)) || named;
-    for (const mode of ["light", "dark"] as const)
-      if (bandLowContrast(tokensOf(theme, mode), b.band).length)
+    for (const mode of ["light", "dark"] as const) {
+      const low = bandLowContrast(tokensOf(theme, mode), b.band);
+      if (low.length)
         ctx.warning(
           b.node,
           "band-contrast",
           // Plain words, as a theme's own contrast is said (hardToRead): no colour names, no ratios.
-          `On the ${b.band} band of ${b.section} (page "${b.page}"), in ${mode} mode, the text may be hard to read.`,
+          `On the ${b.band} band of ${b.section} (page "${b.page}"), in ${mode} mode, ${low.every((l) => l.text === "primary") ? "its eyebrows and links" : "the text"} may be hard to read.`,
           `Choose another band (setSectionLook ${b.page} ${b.section} band muted|inverse|primary|none), or a theme whose colours read on that surface.`,
         );
+    }
   }
 }
 
