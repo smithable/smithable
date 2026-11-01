@@ -1,5 +1,6 @@
 // `smithable preview [dir] [--live] [--fast] [--everything] [--for <minutes>] [--port <n>]`: the app's development
-// server with its door open to this process alone (a new secret each start), and with --live the
+// server with its door open to this process alone (a new secret each start, or the one given in
+// DEV_DOOR_SECRET, so a tester that starts it can use the door too), and with --live the
 // project's sample users acting in it (docs/design/sample-users.md §4), their moves printed as
 // they happen. With a model configured they act from their personas; --fast, or no model, is each
 // person's draw from what they did; --everything tries every move's variants and reports what the
@@ -10,6 +11,16 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { providersFor } from "./ask.js";
+
+/**
+ * The door's secret: the one given in DEV_DOOR_SECRET when it is long enough to be one (a tester
+ * that starts the preview and acts through the door, as sampleusers does), else a new one.
+ */
+export function doorSecret(env: NodeJS.ProcessEnv): string {
+  const given = env.DEV_DOOR_SECRET?.trim();
+  return given && given.length >= 24 ? given : randomBytes(24).toString("hex");
+}
+
 import { generate } from "./generate.js";
 import { type Io, tool } from "./io.js";
 import { doorAt, projectPeople } from "./sample-people.js";
@@ -41,7 +52,7 @@ export async function preview(
   });
   if (code !== 0) return code;
   const base = `http://localhost:${options.port}`;
-  const secret = randomBytes(24).toString("hex");
+  const secret = doorSecret(process.env);
   const server = spawn(
     ...tool(dir, "vite", ["dev", "--port", String(options.port), "--strictPort"]),
     {
