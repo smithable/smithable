@@ -2,8 +2,10 @@ import {
   BUILT_IN_THEMES,
   type ProjectLook,
   parseTheme,
+  sameLookTheme,
   type ThemeIR,
   validateSpec,
+  validateUx,
 } from "@smithable/core";
 import { expect, test } from "vitest";
 import { openProjectLook, previewProjectLook } from "./project-look";
@@ -99,4 +101,38 @@ test("a host-validated project with plugin grammar can stage theme edits without
   const preview = previewProjectLook(snapshot, draft, null, "home", [{ key: "density" }]);
   expect(preview.look.theme.radius).toBe("19px");
   expect(snapshot).toEqual(before);
+});
+
+test("editor and generator resolve identical default UX without writing inferred source", () => {
+  const draft: ThemeIR = {
+    ...corporate,
+    name: "direction",
+    source: "project",
+    defaults: {
+      app: { navigation: "topbar" },
+      kinds: { landing: { width: "full" } },
+      sections: { hero: { layout: "cover", overlay: "dark" } },
+    },
+  };
+  const snapshot = project(
+    "smithableUx: 0.1\nnavigation: sidebar\npages: {home: {width: contained}}\n",
+  );
+  const before = structuredClone(snapshot);
+  const preview = previewProjectLook(snapshot, draft, null, "home");
+  const persisted = validateUx(
+    { path: "smithable.ux.yml", text: snapshot.uxText + "theme: {preset: direction}\n" },
+    ir,
+    [draft],
+  );
+  expect(preview.ux).toEqual(persisted.ux);
+  expect(preview.ux.navigation).toBe("sidebar");
+  expect(preview.ux.pages.home?.width).toBeUndefined();
+  expect(preview.look.defaults?.masked.map((f) => f.path.join("."))).toContain("pages.home.width");
+  expect(snapshot).toEqual(before);
+  expect(
+    sameLookTheme(draft, {
+      ...draft,
+      defaults: { ...draft.defaults, app: { navigation: "sidebar" } },
+    }),
+  ).toBe(false);
 });

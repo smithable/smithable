@@ -121,3 +121,22 @@ test("app background overrides produce the same valid tokens before and after th
     }
   }
 });
+
+test("theme defaults survive serialization, an unrelated field edit, and reopening", () => {
+  const theme: ThemeIR = {
+    ...(BUILT_IN_THEMES[0] as ThemeIR),
+    name: "direction",
+    source: "project",
+    defaults: {
+      app: { navigation: "topbar" },
+      kinds: { landing: { width: "full" } },
+      sections: { hero: { layout: "cover" } },
+    },
+  };
+  const text = themeText(theme);
+  const edited = setField(text, ["radius"], "19px");
+  const read = parseTheme({ path: "themes/direction.yml", text: edited });
+  expect(read.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  expect(read.theme?.defaults).toEqual(theme.defaults);
+  expect(read.theme?.radius).toBe("19px");
+});
