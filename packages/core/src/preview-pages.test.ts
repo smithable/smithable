@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { previewRecordPath } from "./preview-pages.js";
+import { previewPages, previewRecordPath } from "./preview-pages.js";
 
 test("record discovery uses bounded readable opaque ids, including missing record 1", () => {
   expect(previewRecordPath("/cases", ["case-johans-åäö"], [])).toBe(
@@ -23,4 +23,11 @@ test("discovery never treats reserved, cross-route or external links as records"
   ])
     expect(previewRecordPath("/cases", [], [candidate]), candidate).toBeUndefined();
   expect(previewRecordPath("//other.test", ["42"], [])).toBeUndefined();
+});
+
+test("native sign-in is inventoried as a platform state without a fabricated spec page id", () => {
+  expect(previewPages([], {}, { signIn: { providers: [], selfSignUp: false } })).toEqual([
+    { id: "auth:sign-in", label: "Sign in / viewer", kind: "sign-in", path: "/sign-in" },
+  ]);
+  expect(previewPages([], {}, { signIn: "none" })).toEqual([]);
 });

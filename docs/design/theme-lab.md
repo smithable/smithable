@@ -15,8 +15,24 @@ and label fonts, heading and surface styles, pictures, tables, texture and one-m
 Contrast is a warning for authored themes; curated defaults receive separate checks. The lab
 preserves preset token exceptions and offers explicit reset to derived colors. Draft mode changes
 stash disabled palettes for session undo/redo; only enabled palettes are saved. A valid raw YAML
-edit replaces that hidden palette history. Standalone Save adds a theme; selecting or updating
-one is a separate operation today.
+edit replaces that hidden palette history. Save adds a new theme without selecting it. Apply
+atomically creates/selects or updates/selects the look, with a source-revision precondition and
+one project checkpoint. Built-ins are forked before editing; shared-theme impact is shown.
+
+`packages/look-editor` provides the shared controls, draft history and styles. The standalone
+lab, public static lab and Studio use host adapters. Studio’s **Edit look** opens the current
+page in an owned frame on its existing preview service; opening, editing and discarding do not
+write project source or domain data. Closing an unsaved draft asks before discarding, and focus
+returns to the launch button. Draft Undo/Redo remains separate from project history.
+
+Design frames use a versioned presentation protocol with bounded CSS, document/session/page and
+revision checks, font acknowledgements and explicit reconnect. Studio and the local lab bind
+frames through authenticated short-lived presentation tickets, using server-configured parent
+origins. Static frames accept presentation only from their own hosting origin and have no
+project operations. Apply waits for the committed CSS generation and compares rendered theme
+variables before removing transient styling. This CSS generation check does not claim that a
+structural layout draft has been generated. The app’s existing sign-in page offers explicit
+viewer choices; opening Studio’s editor never silently signs in as an administrator.
 
 Local and static font URLs come from the adapter's typed font manifest. Static exports refresh
 normal and supported italic CSS, referenced language subsets and licenses on every run.

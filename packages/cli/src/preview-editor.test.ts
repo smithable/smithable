@@ -18,6 +18,7 @@ function page(
   storage: Record<string, string> = {},
   crashed = false,
   records: string[] = [],
+  search = "",
 ) {
   // The dev server's error overlay, put up by the test; the observers watching for it, and the
   // timers the runtime sets, run by hand.
@@ -103,7 +104,7 @@ function page(
     window,
     document,
     { pushState() {}, replaceState() {} },
-    { pathname: at, search: "", reload: () => reloads.push(1) },
+    { pathname: at, search, reload: () => reloads.push(1) },
     (tick: () => void) => ticks.push(tick),
     (timer: () => void) => timers.set(++timerId, timer) && timerId,
     noop,
@@ -520,4 +521,11 @@ test("a requested unavailable role never falls back to another role", () => {
   const { send, clicked } = page("/sign-in");
   send({ type: "smithable:dev-sign-in", role: "unknown" });
   expect(clicked).toEqual([]);
+});
+
+test("a design-owned frame keeps the current viewer and never clicks development sign-in", () => {
+  const design = page("/sign-in", {}, false, [], "?__sm_look=1");
+  design.send({ type: "smithable:dev-sign-in", role: "admin" });
+  design.tick();
+  expect(design.clicked).toEqual([]);
 });

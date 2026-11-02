@@ -1,12 +1,14 @@
+import type { AuthIR } from "./auth.js";
 import type { PageIR } from "./ir.js";
 import { humanize } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 
 export interface PreviewPage {
   id: string;
-  page: string;
+  /** Spec page id; absent for platform routes such as native sign-in. */
+  page?: string;
   label: string;
-  kind: "page" | "new" | "record";
+  kind: "page" | "new" | "record" | "sign-in";
   /** Absent until a readable record has been discovered. */
   path?: string;
   discoverFrom?: string;
@@ -15,8 +17,9 @@ export interface PreviewPage {
 export function previewPages(
   pages: readonly PageIR[],
   titles: Record<string, string> = {},
+  auth?: Pick<AuthIR, "signIn">,
 ): PreviewPage[] {
-  return pages.flatMap((page) => {
+  const states = pages.flatMap((page) => {
     const title = titles[page.id] ?? humanize(page.id);
     const states: PreviewPage[] = [
       { id: `${page.id}:page`, page: page.id, label: title, kind: "page", path: page.route },
@@ -56,6 +59,14 @@ export function previewPages(
       });
     return states;
   });
+  if (auth && auth.signIn !== "none")
+    states.push({
+      id: "auth:sign-in",
+      label: "Sign in / viewer",
+      kind: "sign-in",
+      path: "/sign-in",
+    });
+  return states;
 }
 /** Bounded candidates already rendered for the current authorized viewer. Used by the live
  * frame and static exporter; accepts opaque ids and never guesses or fetches another role. */

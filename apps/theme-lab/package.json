@@ -2,7 +2,7 @@
   "name": "@smithable/theme-lab",
   "private": true,
   "type": "module",
-  "description": "The theme lab: a theme made on a real app's pages (docs/design/theme-lab.md §3).",
+  "description": "The theme lab: a theme made on a real app's pages (docs/design/theme-lab.md \u00a73).",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build"
@@ -12,7 +12,8 @@
     "@smithable/core": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "yaml": "2.9.1"
+    "yaml": "2.9.1",
+    "@smithable/look-editor": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

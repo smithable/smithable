@@ -257,3 +257,36 @@ test("a competing ordinary operation waits for Apply and preserves its selection
   expect(saved).toContain("#334455");
   expect(git(dir, ["rev-list", "--count", `${before}..HEAD`]).out).toBe("2");
 });
+
+test("a queued editor Save refuses a replaced project identity before any file or checkpoint", async () => {
+  const dir = fixture();
+  let opened = "project-one";
+  let release: () => void = () => {};
+  let entered: () => void = () => {};
+  const started = new Promise<void>((resolve) => (entered = resolve));
+  vi.mocked(generate).mockImplementationOnce(async () => {
+    entered();
+    await new Promise<void>((resolve) => (release = resolve));
+    return 0;
+  });
+  const applying = runOperation(dir, captureIo(), "applyTheme", args(dir), flags);
+  await started;
+  const captured = opened;
+  const io = captureIo();
+  const saving = runOperation(
+    dir,
+    io,
+    "addTheme",
+    { name: "second", text: text.replace("name: paper", "name: second") },
+    { ...flags, projectCheck: () => opened === captured },
+  );
+  opened = "project-two";
+  release();
+  expect(await applying).toBe(0);
+  const committed = head(dir);
+  expect(await saving).toBe(1);
+  expect(io.stderr).toMatch(/current project changed/);
+  expect(existsSync(join(dir, "themes/second.yml"))).toBe(false);
+  expect(head(dir)).toBe(committed);
+  expect(vi.mocked(generate)).toHaveBeenCalledTimes(1);
+});

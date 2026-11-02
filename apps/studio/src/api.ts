@@ -83,6 +83,8 @@ export interface Project {
   /** Redo would make again the last change undone (none made since). */
   canRedo?: boolean;
   preview: string;
+  /** Ephemeral identity of this editor project, supplied by its authenticated host. */
+  lookProject?: string;
   /** Where the project's publishing and settings live, when Studio is hosted. */
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
@@ -283,6 +285,11 @@ export const api = {
     confirm = false,
     file?: { path: string; data: string },
   ) => changing(call<Result>("/api/op", { name, args, confirm, file })),
+  applyLook: (
+    name: "applyTheme" | "addTheme",
+    args: Record<string, unknown>,
+    lookProject: string,
+  ) => changing(call<Result>("/api/op", { name, args, confirm: true, lookProject })),
   customize: (page: string) => changing(call<Result>("/api/customize", { page })),
   /** The language's empty texts drafted by the configured model (smithable translate). */
   translate: (language: string) => changing(call<Result>("/api/translate", { language })),

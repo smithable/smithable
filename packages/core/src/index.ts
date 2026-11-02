@@ -164,6 +164,7 @@ export {
   resolveLook,
   sameLookTheme,
 } from "./look.js";
+export * from "./look-protocol.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export {

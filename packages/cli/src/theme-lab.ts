@@ -5,7 +5,9 @@
 // (preview-editor.ts), so nothing is regenerated while a theme is made. Save writes the theme
 // through addTheme into the project (--project, or the current folder when it is one), or as
 // themes/<name>.yml into a current folder that is no project, never over a file there.
+
 import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes, randomUUID } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -27,6 +29,7 @@ import {
 } from "@smithable/core";
 import { openBrowser } from "./dev.js";
 import { type Io, tool } from "./io.js";
+import { mintLookTicket } from "./look-ticket.js";
 import { create } from "./new.js";
 import { runOperation } from "./op.js";
 import { previewConfig } from "./preview-editor.js";
@@ -159,6 +162,9 @@ export async function themeLab(
     if (!options.app) rmSync(join(was.app, ".."), { recursive: true, force: true });
     if (shown === was) shown = undefined;
   };
+  let lookProject = randomUUID();
+  const lookKey = randomBytes(32).toString("hex");
+  const lookOrigins = [`http://localhost:${port}`, `http://127.0.0.1:${port}`];
   const show = async (starter?: string): Promise<boolean> => {
     const app = options.app ? resolve(options.app) : await labApp(io, starter ?? "booking");
     if (!app) return false;
@@ -169,7 +175,13 @@ export async function themeLab(
     }
     const config = join("data", ".smithable", "preview.vite.config.mjs");
     mkdirSync(join(app, "data", ".smithable"), { recursive: true });
-    writeFileSync(join(app, config), previewConfig());
+    lookProject = randomUUID();
+    writeFileSync(
+      join(app, config),
+      previewConfig(undefined, undefined, {
+        look: { project: lookProject, parentOrigins: lookOrigins, previewOrigin: preview },
+      }),
+    );
     const child: ChildProcess = spawn(
       ...tool(app, "vite", [
         "dev",
@@ -179,7 +191,15 @@ export async function themeLab(
         String(previewPort),
         "--strictPort",
       ]),
-      { cwd: app, env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" } },
+      {
+        cwd: app,
+        env: {
+          ...process.env,
+          SMITHABLE_LOOK_KEY: lookKey,
+          BETTER_AUTH_URL: preview,
+          NO_COLOR: "1",
+        },
+      },
     );
     child.stderr?.on("data", (d) => io.err(String(d)));
     shown = { ...(options.app ? {} : { starter: starter ?? "booking" }), app, ir, content, child };
@@ -222,34 +242,66 @@ export async function themeLab(
       res.writeHead(status, { "content-type": "application/json" });
       res.end(JSON.stringify(data));
     };
-    if (url.pathname === "/api/start")
+    if (url.pathname === "/api/look-ticket" && req.method === "POST") {
+      const value = await bodyJson(req);
+      const parentOrigin = req.headers.origin;
+      if (
+        typeof parentOrigin !== "string" ||
+        !lookOrigins.includes(parentOrigin) ||
+        value.project !== lookProject ||
+        typeof value.document !== "string" ||
+        !/^[\w-]{8,100}$/.test(value.document) ||
+        typeof value.generation !== "string" ||
+        !/^[\w-]{8,100}:[a-f0-9]{64}$/.test(value.generation)
+      )
+        return json(403, { error: "Preview binding refused." });
+      return json(
+        200,
+        mintLookTicket(lookKey, {
+          project: lookProject,
+          parentOrigin,
+          document: value.document,
+          generation: value.generation,
+        }),
+      );
+    }
+    if (url.pathname === "/api/start") {
+      // External edits can remove pages or change titles while the lab is open.
+      const loaded = shown && loadSpec(shown.app, quiet(io));
+      if (shown && !loaded?.ir)
+        return json(409, {
+          error: "The project has validation errors. Fix them before reopening its look.",
+        });
+      const ir = loaded?.ir;
       return json(200, {
         preview,
-        frames: shown
+        projectId: lookProject,
+        frames: ir
           ? labFrames(
-              shown.ir.pages,
+              ir.pages,
               Object.fromEntries(
-                Object.entries(shown.content?.pages ?? {}).flatMap(([id, p]) =>
+                Object.entries(loaded?.content?.pages ?? {}).flatMap(([id, p]) =>
                   p.title ? [[id, p.title]] : [],
                 ),
               ),
+              loaded?.auth,
             )
           : [],
-        // The starters the switch offers: none when the app was given.
         starters: options.app ? [] : starters,
         starter: shown?.starter,
         themes: ownThemes(),
         look:
           shown &&
+          ir &&
           projectLook(
             shown.app,
-            shown.ir.pages.find((p) => p.route === labFrames(shown?.ir.pages ?? [])[0]?.path)?.id ??
-              shown.ir.pages[0]?.id,
+            ir.pages.find((p) => p.route === labFrames(ir.pages)[0]?.path)?.id ?? ir.pages[0]?.id,
           ),
         project: Boolean(project),
         canApply: Boolean(project && shown && realpathSync(project) === realpathSync(shown.app)),
         target,
       });
+    }
     if (url.pathname === "/api/starter" && req.method === "POST") {
       if (req.headers.origin !== `http://${req.headers.host}`)
         return json(403, { error: "Not from the lab." });
@@ -266,6 +318,7 @@ export async function themeLab(
         }
         return json(200, {
           starter: name,
+          projectId: lookProject,
           frames: labFrames(shown?.ir.pages ?? []),
           look:
             shown &&
@@ -301,6 +354,11 @@ export async function themeLab(
           output: said.join(""),
           ...(code === 0
             ? {
+                generation: await fetch(`${preview}/__smithable/look/generation`, {
+                  signal: AbortSignal.timeout(5000),
+                })
+                  .then((r) => r.json())
+                  .then((r) => (r as { generation?: string }).generation),
                 look: projectLook(
                   project,
                   shown.ir.pages.find((p) => p.pattern.kind === "landing")?.id ??

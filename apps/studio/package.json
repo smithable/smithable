@@ -2,7 +2,7 @@
   "name": "@smithable/studio",
   "private": true,
   "type": "module",
-  "description": "Smithable Studio: one web app with Builder and Studio modes (ARCHITECTURE §10.1).",
+  "description": "Smithable Studio: one web app with Builder and Studio modes (ARCHITECTURE \u00a710.1).",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build"
@@ -23,7 +23,8 @@
     "codemirror": "6.0.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "yaml": "2.9.1"
+    "yaml": "2.9.1",
+    "@smithable/look-editor": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",

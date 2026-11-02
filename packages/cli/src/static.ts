@@ -79,9 +79,16 @@ export interface StaticPage {
   getByRole(role: "button", options: { name: string; exact?: boolean }): StaticLocator;
   /** An expression's value (the CLI has no DOM types, so the script is text). */
   evaluate(script: string): Promise<unknown>;
+  route(pattern: string, handler: (route: StaticRoute) => Promise<void>): Promise<void>;
+  unroute(pattern: string, handler: (route: StaticRoute) => Promise<void>): Promise<void>;
   request: {
     get(url: string): Promise<{ body(): Promise<Buffer>; headers(): Record<string, string> }>;
   };
+}
+export interface StaticRoute {
+  request(): { method(): string };
+  abort(): Promise<void>;
+  continue(): Promise<void>;
 }
 export interface StaticLocator {
   first(): StaticLocator;
@@ -147,19 +154,33 @@ export async function savePages(
   const sheets = new Map<string, string>();
   const saved: Saved = { frames: [], skipped: [], assets: 0 };
   for (const frame of frames) {
+    const controlled = frame.state === "errors" || frame.state === "dialog";
+    let blocked = false;
+    const guard = async (route: StaticRoute) => {
+      if (!["GET", "HEAD", "OPTIONS"].includes(route.request().method())) {
+        blocked = true;
+        await route.abort();
+      } else await route.continue();
+    };
     try {
-      await save(frame);
+      if (controlled) await page.route("**/*", guard);
+      await save(frame, () => blocked);
     } catch (error) {
       // A state that could not be reached (no form to submit, a slow page) leaves its frame out.
       const reason = String(error instanceof Error ? error.message : error).split("\n")[0] ?? "";
-      saved.skipped.push({ label: frame.label, reason: reason.replace(/\.$/, "") });
+      saved.skipped.push({
+        label: frame.label,
+        reason: blocked ? "state capture refused a network mutation" : reason.replace(/\.$/, ""),
+      });
+    } finally {
+      if (controlled) await page.unroute("**/*", guard);
     }
   }
   writeFileSync(join(out, "frames", "frame.js"), FRAME_RUNTIME);
   saved.assets = assets.size;
   return saved;
 
-  async function save(frame: Frame) {
+  async function save(frame: Frame, blocked: () => boolean) {
     if (frame.discoverFrom) {
       const response = await page.goto(base + frame.discoverFrom, { waitUntil: "commit" });
       if (response && response.status() >= 400) {
@@ -201,7 +222,7 @@ export async function savePages(
       // Saving an empty form: the messages appear.
       await page.locator("[data-kit=model-form] button[type=submit]").first().click();
       await page
-        .locator('[aria-invalid="true"], [role="alert"]')
+        .locator('[aria-invalid="true"]')
         .first()
         .waitFor({ timeout: 10000 * patience });
     } else if (frame.state === "dialog") {
@@ -217,6 +238,7 @@ export async function savePages(
         .first()
         .waitFor({ timeout: 10000 * patience });
     }
+    if (blocked()) throw new Error("State capture refused a network mutation.");
     const { html, css, title } = (await page.evaluate(`(() => {
       // Every rule the page has; the imported sheets' (the fonts') when asked.
       const imports = ${options.imports};

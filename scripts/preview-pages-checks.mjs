@@ -7,7 +7,7 @@ import { projectRevision } from "../packages/cli/dist/project-revision.js";
 export async function checkPreviewPages(page, dir) {
   const start = await page.evaluate(() => fetch("/api/start").then((r) => r.json()));
   assert(start.frames.length >= start.look.ir.pages.length);
-  assert(start.frames.every((f) => f.id && f.page));
+  assert(start.frames.every((f) => f.id && (f.page || f.kind === "sign-in")));
   const initial = start.frames[0];
   const record = start.frames.find((f) => f.page === "customers" && f.kind === "record");
   const list = start.frames.find((f) => f.page === "customers" && f.kind === "page");

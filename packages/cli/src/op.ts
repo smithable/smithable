@@ -72,6 +72,8 @@ const UX = "smithable.ux.yml";
 const OPLOG = ".smithable/oplog.jsonl";
 
 export interface OpFlags {
+  /** Host-only identity guard, checked after acquiring the project mutation queue. */
+  projectCheck?: () => boolean;
   /** Host-only optimistic precondition for a queued redo or files plan. */
   expectedRevision?: string;
   /** Confirms a destructive operation. */
@@ -248,6 +250,10 @@ async function applyAndCheckpoint(
   flags: OpFlags,
   plan?: FilesPlan,
 ): Promise<number> {
+  if (flags.projectCheck && !flags.projectCheck()) {
+    io.err("The current project changed while this request waited. Reopen its editor.\n");
+    return 1;
+  }
   const started = Date.now();
   lapFrom();
   const plugins = loadPlugins(dir);
@@ -434,6 +440,10 @@ async function applyAndCheckpoint(
     return 1;
   }
 
+  if (flags.projectCheck && !flags.projectCheck()) {
+    io.err("The current project changed before this request could write. Reopen its editor.\n");
+    return 1;
+  }
   let applyBaseRevision = args.expectedRevision;
   if (name === "applyTheme") {
     if (projectRevision(dir) !== args.expectedRevision) {

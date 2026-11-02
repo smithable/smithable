@@ -39,6 +39,8 @@ import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
 import { git, ownRepository, trailer } from "./git.js";
 import { type Io, tool } from "./io.js";
+import { lookContext } from "./look-context.js";
+import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
 import { openQuestions } from "./new.js";
 import { runOperation } from "./op.js";
@@ -417,6 +419,17 @@ export async function studio(
   }
   const previewPort = port + 1;
   const preview = options.previewUrl ?? `http://localhost:${previewPort}`;
+  let lookProject = randomUUID();
+  const configuredParent = process.env.STUDIO_ORIGIN;
+  const parentUrl = configuredParent ? URL.parse(configuredParent) : undefined;
+  const lookOrigins = options.host
+    ? parentUrl &&
+      parentUrl.origin === configuredParent &&
+      ["https:", "http:"].includes(parentUrl.protocol)
+      ? [parentUrl.origin]
+      : []
+    : [`http://localhost:${port}`, `http://127.0.0.1:${port}`];
+  const lookKey = randomBytes(32).toString("hex");
   // Behind a proxy the preview takes Studio's token on every request (the editor plugin's guard):
   // the daemon's own requests to it carry it too. The preview's process gets the token's digest
   // only, so the app's code running in it cannot use the token on Studio.
@@ -426,6 +439,7 @@ export async function studio(
     : {};
   const { SMITHABLE_STUDIO_TOKEN: _studioToken, ...previewEnv } = process.env;
   if (previewToken) previewEnv[PREVIEW_TOKEN_DIGEST] = tokenDigest(previewToken);
+  previewEnv.SMITHABLE_LOOK_KEY = lookKey;
   // The development door's secret (sample-users.md §4), new each start: the sample users act
   // through it, and nobody without it can, a hosted preview's visitors included.
   const doorSecret = randomBytes(24).toString("hex");
@@ -527,7 +541,19 @@ export async function studio(
       store ? [resolve(dir), resolve(store)] : undefined,
       // Studio reloads the preview itself after a change (one reload, when the daemon says so);
       // on a host, the preview takes Studio's token on every request.
-      { holdUpdates: true, token: Boolean(previewToken) },
+      {
+        holdUpdates: true,
+        token: Boolean(previewToken),
+        ...(lookOrigins.length
+          ? {
+              look: {
+                project: lookProject,
+                parentOrigins: lookOrigins,
+                previewOrigin: new URL(preview).origin,
+              },
+            }
+          : {}),
+      },
     );
     const path = join(dir, config);
     if (existsSync(path) && readFileSync(path, "utf8") === text) return;
@@ -708,6 +734,7 @@ export async function studio(
       trace: trace(dir),
       // Whether Redo has a change it would make again.
       canRedo: Boolean(redoTarget(dir)),
+      lookProject,
       preview,
       ...(options.home ? { home: options.home } : {}),
       ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
@@ -754,6 +781,7 @@ export async function studio(
         send("making", making);
       }),
     );
+    if (result.ok) lookProject = randomUUID();
     // Refused (nothing was touched) or failed: it can be asked again.
     if (!result.ok) replaceable = true;
     writePreviewConfig();
@@ -863,6 +891,47 @@ export async function studio(
         await mcp.connect(transport);
         return await transport.handleRequest(req, res);
       }
+      if (url.pathname === "/api/look-generation" && req.method === "GET") {
+        try {
+          const response = await fetch(
+            `http://localhost:${previewPort}/__smithable/look/generation`,
+            { headers: previewHeaders, signal: AbortSignal.timeout(5000) },
+          );
+          if (!response.ok) return json({ error: "Preview generation unavailable." }, 409);
+          return json(await response.json());
+        } catch {
+          return json({ error: "Preview generation unavailable." }, 409);
+        }
+      }
+      if (url.pathname === "/api/look-ticket" && req.method === "POST") {
+        const value = await body();
+        const parentOrigin = req.headers.origin;
+        if (
+          typeof parentOrigin !== "string" ||
+          !lookOrigins.includes(parentOrigin) ||
+          value.project !== lookProject ||
+          typeof value.document !== "string" ||
+          !/^[\w-]{8,100}$/.test(value.document) ||
+          typeof value.generation !== "string" ||
+          !/^[\w-]{8,100}:[a-f0-9]{64}$/.test(value.generation)
+        )
+          return json({ error: "Preview binding refused." }, 403);
+        return json(
+          mintLookTicket(lookKey, {
+            project: lookProject,
+            document: value.document,
+            generation: value.generation,
+            parentOrigin,
+          }),
+        );
+      }
+      if (url.pathname === "/api/look" && req.method === "GET") {
+        try {
+          return json(lookContext(dir, preview, lookProject, url.searchParams.get("path") ?? "/"));
+        } catch (error) {
+          return json({ error: error instanceof Error ? error.message : String(error) }, 409);
+        }
+      }
       if (url.pathname === "/api/project") {
         const answer = state();
         notice = undefined;
@@ -952,7 +1021,16 @@ export async function studio(
           409,
         );
       if (req.method === "POST" && url.pathname === "/api/op") {
-        const { name, args, confirm, file } = await body();
+        const { name, args, confirm, file, lookProject: expectedLookProject } = await body();
+        if (expectedLookProject !== undefined && expectedLookProject !== lookProject)
+          return json(
+            {
+              ok: false,
+              output:
+                "The project changed. Keep this draft or reopen the current project before Apply.",
+            },
+            409,
+          );
         // The editor's text that only formats the file (studio-v3.md §7): no change, silently.
         if (unchangedEdit(dir, String(name), (args ?? {}) as Record<string, unknown>))
           return json({ ok: true, output: "Nothing to change.", unchanged: true });
@@ -999,6 +1077,9 @@ export async function studio(
         const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
+            ...(expectedLookProject !== undefined
+              ? { projectCheck: () => expectedLookProject === lookProject }
+              : {}),
             reportLater: true,
             trace: traceIdOf(req.headers.traceparent),
             ...(given && bytes ? { files: [{ path: given.path as string, bytes }] } : {}),

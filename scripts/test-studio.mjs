@@ -25,6 +25,9 @@ import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
+import { checkStaticStates } from "./static-state-checks.mjs";
+import { checkStudioLook, checkStudioLookTimeout } from "./studio-look-checks.mjs";
+import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
@@ -147,6 +150,8 @@ const browser = await chromium.launch();
 // Wide enough that the preview, beside No code and Smith, shows lists as tables.
 const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 try {
+  await checkStaticStates(browser);
+  await checkPublicLook(browser);
   for (let i = 0; i < 120 * P; i++) {
     try {
       if ((await fetch(`http://localhost:${port + 1}/health`)).ok) break;
@@ -268,6 +273,16 @@ try {
       if (made.length) throw new Error(`a new app has changes: ${JSON.stringify(made[0])}`);
     },
   );
+  await step("Edit look shares the current preview and keeps drafts read-only", async () => {
+    // The main preview's legacy sign-in can still be completing after its sign-in HTML hydrates.
+    // Establish its actual app session before taking the editor's no-write baseline.
+    await openPreview("/customers");
+    await preview
+      .locator('body[data-page="customers"][data-hydrated=true]')
+      .waitFor({ timeout: 90000 * P });
+    await checkStudioLook(page, dir);
+    await checkStudioLookTimeout(page, dir);
+  });
   await step("a notice left for Studio is shown once, then gone", async () => {
     const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
     await alert.waitFor();

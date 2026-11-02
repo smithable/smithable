@@ -1,0 +1,24 @@
+{
+  "name": "@smithable/look-editor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared theme draft editor with public, local and Studio host adapters.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./theme-text": "./src/theme-text.ts",
+    "./theme-draft": "./src/theme-draft.ts",
+    "./project-look": "./src/project-look.ts",
+    "./guide": "./src/Guide.tsx"
+  },
+  "dependencies": {
+    "@smithable/core": "workspace:*",
+    "@smithable/adapter-tanstack": "workspace:*",
+    "react": "19.3.0",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0"
+  }
+}

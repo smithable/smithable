@@ -9,8 +9,8 @@ import {
   validateUx,
 } from "../packages/core/dist/index.js";
 
-export async function checkThemeLab(page) {
-  const start = await page.evaluate(() => fetch("/api/start").then((r) => r.json()));
+export async function checkThemeLab(page, context) {
+  const start = context ?? (await page.evaluate(() => fetch("/api/start").then((r) => r.json())));
   const select = page.getByLabel("Start from theme", { exact: true });
   const source = page.locator("textarea");
   await page.locator("iframe[data-frame]").first().waitFor({ timeout: 90000 });

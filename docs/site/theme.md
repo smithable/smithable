@@ -48,7 +48,7 @@ dark:
   foreground: "#e3e9ef"
 ```
 
-The fields and their values are in the spec reference's [Themes](../spec/v0.1.md#themes) section: twenty fonts, and for headings, labels, surfaces, buttons, pictures and tables a few choices each, with a texture and the modes.
+The fields and their values are in the spec reference's [Themes](../spec/v0.1.md#themes) section: curated fonts, and for headings, labels, surfaces, buttons, pictures and tables a few choices each, with a texture and the modes.
 
 ## 3. Add it
 
@@ -97,7 +97,18 @@ The lab opens in the browser beside a real app: by default a booking app with a 
 - **Phone** shows the pages at a phone's width. **Greyscale** takes the color out: if two themes still look different without it, they are two designs and not one design in two colors.
 - **Show the motion** plays the landing page once, with the theme's motion: `none`, `subtle` or `lively`.
 - Under the pages, a line for each look the app can ask for says whether the theme suits it ("flat cards on this background have no edge"), and the check's errors are shown in red.
-- **Save to the project** adds the theme to the project through `addTheme`, as above, so it is one change like any other and `smithable undo` takes it back. Save adds a new available theme; it does not select it or update an existing name. Use `setTheme` to select the saved theme. Without `--project`, inside a project folder the lab saves to that project, and anywhere else the button is **Save theme** and writes `themes/<name>.yml` into the current folder.
+- **Save as new theme** adds the theme to the project through `addTheme`, as above, so it is one change like any other and `smithable undo` takes it back. Save adds a new available theme; it does not select it or update an existing name. Use `setTheme` to select the saved theme. Without `--project`, inside a project folder the lab saves to that project, and anywhere else the button is **Save theme** and writes `themes/<name>.yml` into the current folder.
+
+In Studio, **Edit look** opens the current page using the app’s existing preview. Its draft
+history is separate from project Undo. Closing an unsaved draft asks before discarding it.
+**Apply look** creates or updates and selects the theme in one checkpoint; built-ins must first
+be copied. A newer source edit is refused rather than overwritten. Apply waits for the saved
+CSS generation and checks its rendered values before clearing the draft preview.
+
+**Sign in / viewer** opens the app’s native sign-in controls. Studio preserves the current app
+session; selecting a design never grants a role. Denied pages remain denied. A disconnected
+preview offers **Reconnect preview** and retains the draft. Static exports keep their original
+data; validation/dialog capture skips states that would submit a network mutation.
 
 ### The pages as files
 
