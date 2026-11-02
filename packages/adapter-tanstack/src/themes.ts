@@ -7,6 +7,7 @@ import {
   resolveLook,
   rgbToOklch,
   type ThemeIR,
+  themeStructure,
   type UxIR,
 } from "@smithable/core";
 import { FONT_ASSETS, FONT_PACKAGES } from "./fonts.js";
@@ -72,7 +73,7 @@ const pageUx = (ux: UxIR, page: string): UxIR => pageLookUx(ux, page);
 
 /** Whether a page's theme (its own, or the app's) bands its sections (surfaces.sections). */
 export const bandedPage = (ux: UxIR, page: string, themes: readonly ThemeIR[] = []): boolean =>
-  themeOf(pageUx(ux, page), themes).style.surfaces.sections === "banded";
+  themeStructure(themeOf(pageUx(ux, page), themes)).bands;
 
 /** The pages with a theme of their own. */
 const themedPages = (ux: UxIR) =>

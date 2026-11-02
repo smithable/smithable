@@ -17,6 +17,7 @@ import { Languages } from "./Languages";
 import { Look } from "./Look";
 import { OutgoingTemplate } from "./OutgoingTemplate";
 import { SpecForm } from "./SpecForm";
+import { UxSource } from "./UxSource";
 import { WhoCan } from "./WhoCan";
 import { Wizard, type WizardKind } from "./Wizard";
 
@@ -294,7 +295,9 @@ export function NoCode({
           />
         </>
       ) : sub === "look" ? (
-        <Look spec={spec} run={run} themes={project.themes} />
+        <UxSource text={project.files.ux} ux={spec.ux}>
+          <Look spec={spec} run={run} themes={project.themes} />
+        </UxSource>
       ) : sub === "who" ? (
         <WhoCan spec={spec} run={run} authText={project.files.auth} />
       ) : (

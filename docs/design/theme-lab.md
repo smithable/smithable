@@ -265,3 +265,27 @@ The standalone development lab retains its existing admin sign-in behavior. Succ
 actual frame acknowledgement; a deadline displays a failure and Retry. This does not establish
 hosted authorization. Public snapshots use the same record-discovery probe and remain labeled
 static exports with their own generating identity.
+
+
+## Theme defaults and the shared gallery
+
+Themes may carry bounded UX defaults for the app shell, page kinds and section kinds. The core
+UX reader applies them only to omitted source keys, validates them in the real page/model/auth
+context, and records used, masked and skipped facts. Generator, Studio and the editor consume
+that one result. Explicit platform values remain authored; Inherit is a separate operation.
+
+The shared editor's Look gallery uses theme token thumbnails and its existing page manifest,
+resolver, draft history and atomic Apply. Arrow keys/Home/End move between choices; Enter/Space
+selects. Gallery mode owns at most one app frame. Public gallery frames are saved starter
+snapshots, labeled as such; thumbnails are not screenshots of the current app.
+
+`lookImpact` compares validated effective structural capabilities and the generator's theme
+markup policy (section banding and appearance controls). Masked defaults and token edits retain
+the fast CSS path. Changes that need generated markup display **Structural preview unavailable**
+and hide the draft frame. No real project files, database, uploads or hooks are borrowed for an
+isolated render. Apply regenerates through the canonical atomic operation and then opens the
+saved app. A CSS generation acknowledgement is not a claim of structural draft fidelity.
+
+An isolated structural renderer remains unavailable. Adding one requires a separate disposable
+data/filesystem/network boundary; temporarily rewriting real source and rolling it back is not
+that boundary. The gallery and all independent presentation work remain usable without it.

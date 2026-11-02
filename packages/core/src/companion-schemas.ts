@@ -18,6 +18,7 @@ import {
   TONES,
   UX_VERSION,
 } from "./ux.js";
+import { UX_CAPABILITIES } from "./ux-capabilities.js";
 
 const strings = (description: string): JsonSchema => ({
   type: "array",
@@ -321,7 +322,7 @@ export const UX_SCHEMA: JsonSchema = {
                 description: "On a wide screen: a table, or cards (a phone shows cards anyway).",
               },
               mark: {
-                enum: ["initials", "picture"],
+                enum: UX_CAPABILITIES.mark.values,
                 description:
                   "A round mark before each record's title: its initials on a colour of their own, or the model's first picture.",
               },

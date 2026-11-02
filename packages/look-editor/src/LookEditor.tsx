@@ -25,6 +25,7 @@ import {
   type ThemeIR,
   TOKEN_NAMES,
   themeFit,
+  themeThumbnail,
 } from "@smithable/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Guide, guideFirst } from "./Guide";
@@ -34,6 +35,7 @@ import {
   changeModes,
   draftHistory,
   editDraft,
+  newDraft,
   redoDraft,
   remember,
   undoDraft,
@@ -148,6 +150,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   const [mode, setMode] = useState<"light" | "dark">("light");
   const [width, setWidth] = useState(1280);
   const [beside, setBeside] = useState(false);
+  const [gallery, setGallery] = useState(false);
   const [grey, setGrey] = useState(false);
   const [signedIn, setSignedIn] = useState(host.kind !== "local");
   const [signInError, setSignInError] = useState(false);
@@ -293,6 +296,18 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
     }
   }, [theme, start?.look, targetPage, activePage, history.present.resets]);
   const projectPreview = projectDraft.preview;
+  const structural =
+    projectPreview?.impact.kind === "structural" || (!start?.look && !!theme?.defaults);
+  const galleryThemes = useMemo(
+    () => [
+      ...BUILT_IN_THEMES.map((theme) => ({ value: theme.name, theme })),
+      ...(start?.look?.themeFiles ?? start?.themes ?? []).flatMap((file) => {
+        const theme = parseTheme({ path: `themes/${file.name}.yml`, text: file.text }).theme;
+        return theme ? [{ value: `${start?.look ? "shown" : "own"}:${file.name}`, theme }] : [];
+      }),
+    ],
+    [start?.look?.themeFiles, start?.themes, start?.look],
+  );
   const css = useMemo(
     () =>
       theme && (!start?.look || projectPreview)
@@ -719,8 +734,13 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
       start?.look?.themeFiles.find((t) => `shown:${t.name}` === value) ??
       start?.themes.find((t) => `own:${t.name}` === value);
     const builtIn = BUILT_IN_THEMES.find((t) => t.name === value);
-    if (own) setHistory(draftHistory(own.text));
-    else if (builtIn) setHistory(draftHistory(themeText(builtIn)));
+    const source = own?.text ?? (builtIn && themeText(builtIn));
+    if (source)
+      setHistory((history) =>
+        history.present.text === source
+          ? history
+          : remember(history, { ...newDraft(source), resets: history.present.resets }),
+      );
     setPendingModes(undefined);
     setSaved(undefined);
   };
@@ -872,6 +892,16 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               )}
             </select>
           </label>
+          <button
+            type="button"
+            aria-expanded={gallery}
+            onClick={() => {
+              setGallery((value) => !value);
+              setBeside(false);
+            }}
+          >
+            Look gallery
+          </button>
           <label>
             Name{" "}
             <input aria-label="Name" value={name} onChange={(e) => set(["name"], e.target.value)} />
@@ -1098,7 +1128,9 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
           )}
           {start?.projectId && (
             <p role="status">
-              {protocol.status}{" "}
+              {structural && protocol.status.startsWith("Draft preview ready")
+                ? "Structural preview unavailable. Draft retained."
+                : protocol.status}{" "}
               <button type="button" onClick={protocol.reload}>
                 Reconnect preview
               </button>
@@ -1136,6 +1168,72 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               </button>
               .
             </p>
+          )}
+          {gallery && (
+            <section className="look-gallery" aria-label="Look gallery">
+              <p>
+                {PUBLIC
+                  ? "Token thumbnails. The frame below is a saved starter snapshot."
+                  : "Choose a look for this app. Explicit UX choices stay in place; Apply saves one undoable change."}
+              </p>
+              <ul
+                onKeyDown={(event) => {
+                  if (
+                    !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(
+                      event.key,
+                    )
+                  )
+                    return;
+                  const choices = [
+                    ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                      "button[data-look-choice]",
+                    ),
+                  ];
+                  const index = choices.indexOf(document.activeElement as HTMLButtonElement);
+                  if (index < 0) return;
+                  event.preventDefault();
+                  const next =
+                    event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? choices.length - 1
+                        : (index +
+                            (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1) +
+                            choices.length) %
+                          choices.length;
+                  choices[next]?.focus();
+                }}
+              >
+                {galleryThemes.map(({ value, theme: candidate }, index) => (
+                  <li key={value}>
+                    <button
+                      type="button"
+                      data-look-choice=""
+                      aria-label={`Choose ${candidate.name}`}
+                      aria-pressed={theme?.name === candidate.name}
+                      tabIndex={
+                        theme?.name === candidate.name ||
+                        (!galleryThemes.some((item) => item.theme.name === theme?.name) &&
+                          index === 0)
+                          ? 0
+                          : -1
+                      }
+                      onClick={() => startFrom(value)}
+                    >
+                      <img
+                        src={`data:image/svg+xml;utf8,${encodeURIComponent(themeThumbnail(candidate))}`}
+                        alt=""
+                        width={320}
+                        height={100}
+                        loading="lazy"
+                      />
+                      <span>{candidate.name}</span>
+                      <small>Token thumbnail</small>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
           <div className="bar">
             <fieldset aria-label="Page" data-guide="page">
@@ -1182,6 +1280,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               <input
                 type="checkbox"
                 checked={beside}
+                disabled={gallery}
                 onChange={(e) => setBeside(e.target.checked)}
               />{" "}
               Phone beside
@@ -1191,7 +1290,25 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               Greyscale
             </label>
           </div>
-          <div ref={stage} className={grey ? "stage grey" : "stage"}>
+          <div
+            ref={stage}
+            className={grey ? "stage grey" : "stage"}
+            data-structural={structural || undefined}
+          >
+            {structural && (
+              <div className="structural-unavailable" role="status">
+                <p>Structural preview unavailable.</p>
+                <p>
+                  {projectPreview?.impact.reasons.join(", ") ||
+                    "This theme changes generated presentation."}
+                </p>
+                <p>
+                  {PUBLIC
+                    ? "Download the theme to use it in a project."
+                    : "Apply will regenerate the app. This draft is kept; choose another look or Undo to return to a CSS preview."}
+                </p>
+              </div>
+            )}
             {making && (
               <p role="status" className="making">
                 {making.startsWith("Not ") ? making : `Making the ${making} app…`}
@@ -1250,7 +1367,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               // A pointer's drag; the width buttons are the keyboard's way.
               <div className="edge" title="Drag to change the width" onPointerDown={drag} />
             )}
-            {signedIn && beside && frame(true)}
+            {signedIn && beside && !gallery && frame(true)}
           </div>
           <section className="notes" data-guide="notes">
             {pendingModes && (

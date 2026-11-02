@@ -89,6 +89,59 @@
     color: #fff;
   }
   /* The frame's stage: most of the window's height, so a page is seen as a visitor sees it. */
+  .look-gallery ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    padding: 0;
+    list-style: none;
+  }
+  .look-gallery button {
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    border: 1px solid #aaa;
+    background: #fff;
+    color: #1d1d1f;
+  }
+  .look-gallery button[aria-pressed="true"] {
+    outline: 3px solid #1d1d1f;
+    outline-offset: 1px;
+  }
+  .look-gallery button:focus-visible {
+    outline: 3px solid #2159c4;
+    outline-offset: 2px;
+  }
+  .look-gallery img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .look-gallery span,
+  .look-gallery small {
+    display: block;
+    padding: 3px 8px;
+  }
+  .stage[data-structural] {
+    position: relative;
+  }
+  .stage[data-structural] .frame,
+  .stage[data-structural] .edge {
+    visibility: hidden;
+  }
+  .structural-unavailable {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+    background: #f6f6f7;
+    color: #1d1d1f;
+    z-index: 1;
+  }
   .stage {
     display: flex;
     gap: 0 16px;

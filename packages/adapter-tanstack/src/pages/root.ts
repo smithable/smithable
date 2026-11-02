@@ -3,6 +3,7 @@ import {
   type AnalyticsSetting,
   type AuthIR,
   type ContentIR,
+  hasAppearance,
   type Icon,
   type PageIR,
   pageAccess,
@@ -104,12 +105,11 @@ export function rootRoute(
   // How the menu marks the open page (ux menuActive); unsaid, the menu's own.
   const active = ux.menuActive ? ` active=${JSON.stringify(ux.menuActive)}` : "";
   // The appearance resolved before the first paint: the visitor's, or the theme's one mode.
-  const appearance =
-    modes === "both"
-      ? "APPEARANCE_SCRIPT"
-      : JSON.stringify(
-          `document.documentElement.dataset.appearance="${modes}";document.documentElement.style.colorScheme="${modes}"`,
-        );
+  const appearance = hasAppearance(modes)
+    ? "APPEARANCE_SCRIPT"
+    : JSON.stringify(
+        `document.documentElement.dataset.appearance="${modes}";document.documentElement.style.colorScheme="${modes}"`,
+      );
   // The consent bar's link to the privacy page, when the app has one (docs/design/analytics.md).
   const privacy = (
     ir.pages.find((p) => p.pattern.kind === "legal") ?? ir.pages.find((p) => p.id === "privacy")
@@ -229,7 +229,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
-${modes === "both" ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}\nimport { ${workspace.length ? "allows, " : ""}isRefusal } from "#/kit/access";
+${hasAppearance(modes) ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}\nimport { ${workspace.length ? "allows, " : ""}isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
 ${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}

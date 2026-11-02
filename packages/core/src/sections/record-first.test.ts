@@ -44,7 +44,7 @@ test("a record page leads with its thread or its form (A 215)", () => {
   expect(
     applyOperation({ spec, ux: set.files.ux as string }, "setRecordFirst", {
       page: "cases",
-      first: "form",
+      first: "inherit",
     }),
   ).toMatchObject({ ok: true, files: { ux } });
   // An explicit conversation-first choice is retained: removing its last thread is refused.

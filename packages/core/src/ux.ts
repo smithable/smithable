@@ -4,15 +4,18 @@ import { brandColors } from "./brand.js";
 import {
   checkKeys,
   mapEntries,
-  ParseContext,
+  type ParseContext,
   readBoolean,
   readNameList,
   readString,
 } from "./context.js";
+import { UxDefaultContext } from "./default-context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import type { FieldIR, ModelIR, NamePartIR, PageIR, SpecIR } from "./ir.js";
+import { finishUxDefaults, prepareUxDefaults, type UxInherited } from "./look-defaults.js";
 import { capitalize, humanize } from "./naming.js";
 import { pageModel, patternInfo } from "./patterns.js";
+import { type Band, SECTION_LOOKS } from "./section-looks.js";
 import { readNamePart } from "./sections/name-parts.js";
 import { didYouMean } from "./suggest.js";
 import {
@@ -30,6 +33,7 @@ import {
   HEADER_LOOKS,
   type LANDING_WIDTHS,
   NAVIGATIONS,
+  uxChoiceProblem,
 } from "./ux-capabilities.js";
 
 export { ACTIVES, CHROMES, HEADER_LOOKS, LANDING_WIDTHS, NAVIGATIONS } from "./ux-capabilities.js";
@@ -44,6 +48,8 @@ import { threadBindings } from "./thread.js";
 const NUMBERS = ["int", "decimal", "money"];
 
 export interface UxIR {
+  /** Derived provenance only; never an authorable UX key. */
+  inherited?: UxInherited;
   theme: {
     /** A built-in preset's name, or one of the project's themes (themes/<name>.yml). */
     preset: string;
@@ -331,45 +337,7 @@ export function weekBy(model: ModelIR, by?: string): FieldIR | undefined {
  * width on one of the theme's surfaces, its text in that surface's own color. none (the default)
  * is today's open section. Not on a hero (its layouts are its own) or a footer (the frame's).
  */
-export const BANDS = ["none", "muted", "inverse", "primary"] as const;
-export type Band = (typeof BANDS)[number];
-
-/**
- * The looks each section kind has: a key's allowed values, "text" for any (a pricing plan's
- * name), or "models" for a list of the spec's models (a hero's facts). The first value of a layout
- * is the kind's own look, used when none is given.
- */
-export const SECTION_LOOKS: Partial<
-  Record<string, Record<string, readonly (string | number)[] | "text" | "models" | "page">>
-> = {
-  hero: {
-    layout: ["split", "centered", "plain", "cover", "photo", "inset", "stage", "tiles"],
-    image: ["right", "left"],
-    overlay: ["brand", "dark"],
-    eyebrow: ["address", "hours"],
-    facts: "models",
-    stage: "page",
-    // Unsaid, the layout's own height; auto, the content's; full, the window's under the header.
-    height: ["auto", "full"],
-  },
-  features: { columns: [3, 2, 4, 5, 6], band: BANDS },
-  // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
-  records: {
-    layout: ["cards", "list", "grid", "ledger", "week"],
-    columns: [3, 2, 4, 5, 6],
-    band: BANDS,
-    by: "text",
-  },
-  testimonials: { layout: ["cards", "carousel", "one"], band: BANDS },
-  pricing: { highlight: "text", band: BANDS },
-  // An FAQ's columns are its list's (every answer shown); the accordion is one column.
-  faq: { layout: ["accordion", "list"], columns: [1, 2], band: BANDS },
-  gallery: { columns: [3, 2, 4, 5, 6], band: BANDS },
-  callToAction: { band: BANDS },
-  contact: { band: BANDS },
-  text: { band: BANDS },
-  calculator: { band: BANDS },
-};
+export { BANDS, type Band, SECTION_LOOKS } from "./section-looks.js";
 
 /** How a landing page's header looks; HEADER_LOOKS has its keys and values. */
 export interface HeaderLook {
@@ -790,13 +758,17 @@ export function validateUx(
     uniqueKeys: true,
     prettyErrors: false,
   });
-  const ctx = new ParseContext(file.path, lines);
+  const ctx = new UxDefaultContext(file.path, lines);
   const ux = emptyUx();
   const bands: BandAt[] = [];
-  const done = () => ({
-    ...(hasErrors(ctx.diagnostics) ? {} : { ux }),
-    diagnostics: [...ctx.diagnostics].sort((a, b) => a.line - b.line || a.column - b.column),
-  });
+  const done = () => {
+    const inherited = ctx.prepared && finishUxDefaults(ux, ctx.prepared);
+    if (inherited) ux.inherited = inherited;
+    return {
+      ...(hasErrors(ctx.diagnostics) ? {} : { ux }),
+      diagnostics: [...ctx.diagnostics].sort((a, b) => a.line - b.line || a.column - b.column),
+    };
+  };
   for (const error of doc.errors) {
     ctx.errorAtOffset(
       error.pos[0],
@@ -821,20 +793,26 @@ export function validateUx(
     );
     return done();
   }
-  const known = checkKeys(ctx, entries, "smithable.ux.yml", {
-    allowed: [
-      "smithableUx",
-      "theme",
-      "pages",
-      "tones",
-      "aiBadge",
-      "assistant",
-      "navigation",
-      "chrome",
-      "menuActive",
-    ],
-    later: ["menus", "sections"],
-  });
+  ctx.prepared = prepareUxDefaults(doc, ir, themes);
+  const known = checkKeys(
+    ctx,
+    mapEntries(ctx, doc.contents, "smithable.ux.yml") ?? [],
+    "smithable.ux.yml",
+    {
+      allowed: [
+        "smithableUx",
+        "theme",
+        "pages",
+        "tones",
+        "aiBadge",
+        "assistant",
+        "navigation",
+        "chrome",
+        "menuActive",
+      ],
+      later: ["menus", "sections"],
+    },
+  );
 
   for (const { key, value } of known) {
     if (key === "theme") readTheme(ctx, value, `"theme"`, themes, ux.theme);
@@ -1358,11 +1336,11 @@ export function validateUx(
                   "invalid-value",
                   `${owner} has no picture field to show; "initials" works for any model.`,
                 );
-              else if (mark !== undefined)
+              else if (mark !== undefined && mark !== "none")
                 ctx.error(
                   option.value,
                   "invalid-value",
-                  `"mark" of ${where} is initials or picture.`,
+                  `"mark" of ${where} is initials, picture or none.`,
                 );
             } else if (option.key === "actions") {
               const actions = readString(ctx, option.value, `"actions" of ${where}`);
@@ -1505,7 +1483,10 @@ export function validateUx(
           const count = hero?.shortcuts?.length ?? 0;
           if (hero && result.looks?.[hero.name]?.layout === "tiles" && (count < 2 || count > 3))
             ctx.error(
-              page.keyNode,
+              (doc.getIn(
+                ["pages", page.key, "sections", hero.name, "layout"],
+                true,
+              ) as ParsedNode) ?? page.keyNode,
               "invalid-value",
               `A tiles hero shows its shortcuts as tiles, two or three; ${page.key}'s hero has ${count}.`,
               `Give it two or three shortcuts in smithable.yml (setShortcuts ${page.key} <page> <page>).`,
@@ -1523,7 +1504,7 @@ export function validateUx(
             spec.pattern.kind === "landing" && spec.pattern.sections[0]?.kind === "hero";
           if (!first) {
             ctx.error(
-              headerNode,
+              (doc.getIn(["pages", page.key, "header", "over"], true) as ParsedNode) ?? headerNode,
               "invalid-value",
               `"over: hero" needs the hero first on ${page.key}, under the header.`,
             );
@@ -1531,7 +1512,7 @@ export function validateUx(
             if (!Object.keys(result.header).length) delete result.header;
           } else if (layout !== "cover" && layout !== "photo") {
             ctx.error(
-              headerNode,
+              (doc.getIn(["pages", page.key, "header", "over"], true) as ParsedNode) ?? headerNode,
               "invalid-value",
               `"over: hero" needs a cover or photo hero, whose picture runs across the width; ${page.key}'s hero is ${hero ? (layout ?? "split") : "missing"}.`,
             );
@@ -1542,6 +1523,26 @@ export function validateUx(
         ux.pages[page.key] = result;
       }
     }
+  }
+  // Reuse control compatibility for inherited no-op choices which legacy explicit UX
+  // permits. Explicit settings retain their existing diagnostic contract.
+  for (const fact of ctx.prepared?.facts ?? []) {
+    if (!fact.capability || !fact.page || ctx.prepared?.skipped.has(fact)) continue;
+    const page = ir.pages.find((page) => page.id === fact.page);
+    const model = ir.models.find((model) => model.name === (page && pageModel(page)));
+    const own = ux.pages[fact.page];
+    if (!page || !own) continue;
+    const summary = model && recordSummary(model, ux.tones);
+    const hero = page.sections.find((section) => section.kind === "hero");
+    const problem = uxChoiceProblem(fact.capability, String(fact.value), {
+      kind: page.pattern.kind,
+      hasPicture: !!model && !!recordPicture(model),
+      hasFilters: !!page.filters?.length,
+      hasThread: Object.values(own.lists ?? {}).includes("thread"),
+      hasSummary: !!summary && !!(summary.status || summary.amount || summary.dates.length),
+      headerOverHero: !!hero && ["cover", "photo"].includes(own.looks?.[hero.name]?.layout ?? ""),
+    });
+    if (problem) ctx.prepared?.skipped.set(fact, problem);
   }
   checkBands(ctx, ux, bands, themes);
   return done();
@@ -1749,7 +1750,7 @@ function readSectionLooks(
           );
         else if (!shown)
           ctx.error(
-            entry.value,
+            options.find((option) => option.key === "layout")?.value ?? entry.value,
             "invalid-value",
             `The stage shows a list page, and the app has none in its navigation.`,
           );
@@ -1758,7 +1759,9 @@ function readSectionLooks(
           !auth.public.read.includes(pageModel(shown) ?? "")
         )
           ctx.error(
-            stageOption?.value ?? entry.value,
+            stageOption?.value ??
+              options.find((option) => option.key === "layout")?.value ??
+              entry.value,
             "invalid-value",
             `${page.id} is public, and visitors may not read ${pageModel(shown)}: the stage would show what they may not see.`,
           );
@@ -1792,7 +1795,7 @@ function readSectionLooks(
     // Columns a layout does not have: an FAQ's accordion is one column, records as a list rows.
     if (section.kind === "faq" && look.columns !== undefined && look.layout !== "list")
       ctx.warning(
-        entry.value,
+        options.find((option) => option.key === "columns")?.value ?? entry.value,
         "invalid-value",
         `"columns" of ${at} is for the list layout; the accordion is one column.`,
         `Add layout: list (setSectionLook ${page.id} ${entry.key} layout list).`,
@@ -1803,7 +1806,7 @@ function readSectionLooks(
       (look.layout === "list" || look.layout === "ledger" || look.layout === "week")
     )
       ctx.warning(
-        entry.value,
+        options.find((option) => option.key === "columns")?.value ?? entry.value,
         "invalid-value",
         `"columns" of ${at} is for cards and a grid; a list, a ledger or a week is one row per record.`,
       );
@@ -1815,7 +1818,8 @@ function readSectionLooks(
         delete look.by;
       } else if (look.layout === "week" && model && !weekBy(model, look.by)) {
         ctx.error(
-          entry.value,
+          options.find((option) => option.key === (look.by === undefined ? "layout" : "by"))
+            ?.value ?? entry.value,
           "invalid-value",
           look.by === undefined
             ? `A week needs a date to place each record by; ${model.name} has none.`
@@ -1825,7 +1829,12 @@ function readSectionLooks(
       }
     }
     if (look.band && look.band !== "none")
-      bands.push({ page: page.id, section: entry.key, band: look.band, node: entry.value });
+      bands.push({
+        page: page.id,
+        section: entry.key,
+        band: look.band,
+        node: options.find((option) => option.key === "band")?.value ?? entry.value,
+      });
     looks[entry.key] = look;
   }
   return looks;

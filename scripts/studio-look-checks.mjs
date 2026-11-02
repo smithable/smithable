@@ -339,3 +339,186 @@ export async function checkStudioLookTimeout(page, dir) {
     await page.unroute("**/*", block);
   }
 }
+
+export async function checkStudioLookGallery(page, dir) {
+  const baseline = projectRevision(dir);
+  const db = new DatabaseSync(join(dir, "data/db/app.db"), { readOnly: true });
+  const rows = () =>
+    JSON.stringify(
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+        )
+        .all()
+        .map(({ name }) => [
+          name,
+          db.prepare(`SELECT * FROM "${name.replaceAll('"', '""')}" ORDER BY rowid`).all(),
+        ]),
+    );
+  const before = rows();
+  let writes = 0;
+  const requested = (request) => {
+    if (
+      request.method() === "POST" &&
+      ["/api/op", "/api/apply"].includes(new URL(request.url()).pathname)
+    )
+      writes++;
+  };
+  page.on("request", requested);
+  try {
+    const cold = Date.now();
+    await page.getByRole("button", { name: "Edit look", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+    const textarea = dialog.locator("textarea");
+    await page.waitForFunction(
+      () => document.querySelector('dialog[aria-label="Edit look"] textarea')?.disabled === false,
+    );
+    const iframe = dialog.locator("iframe[data-frame]").first();
+    await iframe.waitFor();
+    const frame = await (await iframe.elementHandle()).contentFrame();
+    await frame.waitForSelector("#sm-theme", { state: "attached", timeout: 90000 });
+    const coldMs = Date.now() - cold;
+    await dialog.getByRole("button", { name: "Look gallery", exact: true }).click();
+    assert.equal(
+      await dialog.locator("iframe[data-frame]").count(),
+      1,
+      "gallery spawned additional app frames",
+    );
+    await dialog.getByRole("button", { name: "Choose minimal", exact: true }).click();
+    const selected = await textarea.inputValue();
+    assert.match(selected, /name: minimal/);
+    await dialog.getByRole("button", { name: "Choose corporate", exact: true }).click();
+    assert.match(await textarea.inputValue(), /name: corporate/);
+    await dialog.getByRole("button", { name: "Undo draft", exact: true }).click();
+    assert.equal(
+      await textarea.inputValue(),
+      selected,
+      "gallery skip/Undo lost the prior selection",
+    );
+    await dialog.getByRole("button", { name: "Choose minimal", exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    assert.match(
+      await page.evaluate(() => document.activeElement?.getAttribute("aria-label")),
+      /^Choose /,
+    );
+    await page.keyboard.press("Space");
+    assert.notEqual(
+      await textarea.inputValue(),
+      selected,
+      "keyboard selection did not change the draft",
+    );
+    await dialog.getByRole("button", { name: "Undo draft", exact: true }).click();
+    assert.equal(await textarea.inputValue(), selected);
+    await textarea.fill(
+      selected + "\ndefaults:\n  kinds:\n    crud:\n      table: {actions: menu}\n",
+    );
+    await dialog.getByText("Structural preview unavailable.", { exact: true }).waitFor();
+    assert.equal(
+      await iframe.evaluate((element) => getComputedStyle(element).visibility),
+      "hidden",
+      "structural draft was presented as a CSS preview",
+    );
+    await dialog.getByRole("button", { name: "Undo draft", exact: true }).click();
+    await dialog
+      .getByText("Structural preview unavailable.", { exact: true })
+      .waitFor({ state: "hidden" });
+    const steady = Date.now();
+    await dialog.getByLabel("radius", { exact: true }).fill("44px");
+    await frame.waitForFunction(() =>
+      document.getElementById("sm-theme")?.textContent.includes("--radius: 44px"),
+    );
+    const steadyMs = Date.now() - steady;
+    assert.equal(projectRevision(dir), baseline, "gallery wrote source");
+    assert.equal(rows(), before, "gallery wrote database rows");
+    assert.equal(writes, 0, "gallery invoked project mutation");
+    page.once("dialog", (question) => question.accept());
+    await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    console.log(
+      `  ✓ shared gallery keyboard/skip/Undo, one current-app frame, explicit unavailable structural draft, no writes; cold ${coldMs} ms, steady token ${steadyMs} ms`,
+    );
+  } finally {
+    page.off("request", requested);
+    db.close();
+  }
+}
+
+export async function checkStudioDefaultsApply(page, dir) {
+  const baseline = projectRevision(dir, false);
+  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+  await dialog
+    .getByRole("status")
+    .filter({ hasText: "Draft preview ready" })
+    .waitFor({ timeout: 45000 });
+  await dialog
+    .getByLabel("Name", { exact: true })
+    .fill(`default-browser-${crypto.randomUUID().slice(0, 8)}`);
+  const textarea = dialog.locator("textarea");
+  await textarea.fill((await textarea.inputValue()) + "\ndefaults:\n  app: {navigation: topbar}\n");
+  await dialog.getByText("Structural preview unavailable.", { exact: true }).waitFor();
+  assert.equal(projectRevision(dir, false), baseline, "structural draft wrote source before Apply");
+  const reply = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/op" &&
+      response.request().postDataJSON()?.name === "applyTheme",
+  );
+  await dialog.getByRole("button", { name: "Apply look", exact: true }).click();
+  const applied = await (await reply).json();
+  assert(applied.ok, applied.output);
+  await dialog
+    .getByRole("status")
+    .filter({ hasText: /^Applied:/ })
+    .waitFor({ timeout: 60000 });
+  await dialog
+    .getByText("Structural preview unavailable.", { exact: true })
+    .waitFor({ state: "hidden" });
+  const frame = await (
+    await dialog.locator("iframe[data-frame]").first().elementHandle()
+  ).contentFrame();
+  await frame.locator('[data-navigation="topbar"]').waitFor({ timeout: 45000 });
+  assert.equal(await frame.locator("#sm-theme").count(), 0);
+  const committed = projectRevision(dir, false);
+  assert.notEqual(committed, baseline);
+  await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+  await dialog.waitFor({ state: "detached" });
+  await page.getByRole("checkbox", { name: "No code", exact: true }).check({ force: true });
+  await page.getByRole("tab", { name: "Look", exact: true }).click();
+  const menu = page.getByLabel("Menu layout", { exact: true });
+  assert.equal(
+    await menu.inputValue(),
+    "__inherited",
+    "effective theme default was mislabeled as authored UX",
+  );
+  assert.match(await menu.locator('option[value="__inherited"]').innerText(), /Topbar/);
+  await page.getByRole("checkbox", { name: "Preview", exact: true }).check({ force: true });
+  const history = async (action, expected) => {
+    const response = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/${action.toLowerCase()}` &&
+        response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: action, exact: true }).click();
+    const result = await (await response).json();
+    assert(result.ok, result.output);
+    assert.equal(
+      projectRevision(dir, false),
+      expected,
+      `${action} did not restore the theme/source together`,
+    );
+  };
+  await history("Undo", baseline);
+  await page
+    .frameLocator('iframe[title="App preview"]')
+    .locator('[data-navigation="sidebar"]')
+    .waitFor({ state: "attached", timeout: 45000 });
+  await history("Redo", committed);
+  await page
+    .frameLocator('iframe[title="App preview"]')
+    .locator('[data-navigation="topbar"]')
+    .waitFor({ timeout: 45000 });
+  await history("Undo", baseline);
+  console.log(
+    "  ✓ structural defaults are unavailable before Apply; atomic Apply generates actual top navigation, clears transient CSS, and one-step Undo/Redo restores source and markup",
+  );
+}

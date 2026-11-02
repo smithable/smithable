@@ -5,6 +5,7 @@ import type { AuthIR } from "./auth.js";
 import { brandColors } from "./brand.js";
 import { hexOf } from "./color.js";
 import type { SpecIR } from "./ir.js";
+import type { UxInherited } from "./look-defaults.js";
 import {
   type ThemeIR,
   TOKEN_NAMES,
@@ -60,6 +61,8 @@ export function pageLookUx(ux: UxIR, page?: string): UxIR {
 }
 
 export interface ResolvedLook {
+  /** Already validated effective defaults and provenance; no second merge path. */
+  defaults?: UxInherited;
   theme: ThemeIR;
   settings: UxIR["theme"];
   font: string;
@@ -120,6 +123,15 @@ export function resolveLook(
         : { kind: "default" };
   };
   return {
+    ...(ux.inherited
+      ? {
+          defaults: {
+            used: ux.inherited.used.filter((fact) => !fact.page || fact.page === page),
+            masked: ux.inherited.masked.filter((fact) => !fact.page || fact.page === page),
+            skipped: ux.inherited.skipped.filter((fact) => !fact.page || fact.page === page),
+          },
+        }
+      : {}),
     theme,
     settings,
     font: settings.font ?? theme.font,

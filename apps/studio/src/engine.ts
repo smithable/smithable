@@ -46,7 +46,7 @@ export function checkFile(
         : !spec.ir
           ? []
           : file === "smithable.ux.yml"
-            ? validateUx({ path: file, text }, spec.ir, themes).diagnostics
+            ? validateUx({ path: file, text }, spec.ir, themes, spec.auth).diagnostics
             : validateContent({ path: file, text }, spec.ir).diagnostics;
   return { diagnostics: [...own, ...spec.diagnostics.filter((d) => d.severity === "error")] };
 }
@@ -99,7 +99,7 @@ export function readSpec(
         }
       : own;
   const ux = ir
-    ? validateUx({ path: "smithable.ux.yml", text: files.ux ?? "" }, ir, themes).ux
+    ? validateUx({ path: "smithable.ux.yml", text: files.ux ?? "" }, ir, themes, auth).ux
     : undefined;
   return {
     ...(ir ? { ir } : {}),

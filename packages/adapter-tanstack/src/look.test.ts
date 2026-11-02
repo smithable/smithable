@@ -322,3 +322,37 @@ navigation:
   expect(route).toContain("createOrderLine({ data: { ...values, orderId: row.id } as never })");
   expect(route).toContain("<RecordSummary");
 });
+
+test("finite theme defaults change actual generated navigation and hero markup deterministically", () => {
+  const site = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: {name: Things}\nmodels: {Item: {fields: {name: string!}}}\npages:\n  home: {route: /, landing: {hero: {}, catalog: {records: Item}}}\n  items: {crud: Item}\n",
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: none\npublic: {pages: [home, items], read: [Item]}\n",
+    },
+    site,
+  ).auth as AuthIR;
+  const theme: ThemeIR = {
+    ...(themeNamed("modern") as ThemeIR),
+    name: "direction",
+    source: "project",
+    defaults: {
+      app: { navigation: "topbar" },
+      sections: { hero: { layout: "cover", overlay: "dark" } },
+    },
+  };
+  const text = "smithableUx: 0.1\ntheme: {preset: direction}\n";
+  const ux = validateUx({ path: "smithable.ux.yml", text }, site, [theme], auth).ux;
+  expect(ux).toBeDefined();
+  const options = { smithableVersion: "0.0.0", auth, ux, themes: [theme] };
+  const files = generateApp(site, options);
+  expect(generateApp(site, options)).toEqual(files);
+  expect(files.find((f) => f.path === "src/routes/__root.tsx")?.content).toContain(
+    'navigation="topbar"',
+  );
+  expect(files.find((f) => f.path === "src/routes/index.tsx")?.content).toContain('layout="cover"');
+  expect(text).not.toContain("pages:");
+});

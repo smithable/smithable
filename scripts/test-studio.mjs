@@ -26,7 +26,11 @@ import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
-import { checkStudioLook, checkStudioLookTimeout } from "./studio-look-checks.mjs";
+import {
+  checkStudioLook,
+  checkStudioLookGallery,
+  checkStudioLookTimeout,
+} from "./studio-look-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
 
@@ -282,6 +286,7 @@ try {
       .waitFor({ timeout: 90000 * P });
     await checkStudioLook(page, dir);
     await checkStudioLookTimeout(page, dir);
+    await checkStudioLookGallery(page, dir);
   });
   await step("a notice left for Studio is shown once, then gone", async () => {
     const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });

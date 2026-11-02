@@ -7,6 +7,7 @@ import { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./color.
 import { checkKeys, mapEntries, ParseContext, readString } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
+import { readThemeDefaults, type ThemeUxDefaults } from "./theme-default-schema.js";
 import { THEME_LIBRARY } from "./theme-library.js";
 import { PRESET_TOKENS } from "./theme-presets.js";
 import { DEFAULT_STYLE, FONTS, readStyle, type ThemeStyle } from "./theme-style.js";
@@ -69,6 +70,7 @@ export interface ThemeIR {
    * mode's colours alone, the app shows it whatever the device says, and no mode switch is made.
    * Both `light` and `dark` are filled either way, so a reader needs no case.
    */
+  defaults?: ThemeUxDefaults;
   modes: "both" | "light" | "dark";
   light: Tokens;
   dark: Tokens;
@@ -188,6 +190,7 @@ export function parseTheme(
   const known = checkKeys(ctx, entries, "the theme", {
     allowed: [
       "smithableTheme",
+      "defaults",
       "name",
       "font",
       "fonts",
@@ -230,6 +233,8 @@ export function parseTheme(
       "invalid-value",
       `"font" must be one of ${FONTS.join(", ")}: fonts the app hosts itself.`,
     );
+  const defaultsNode = byKey.get("defaults");
+  const defaults = defaultsNode ? readThemeDefaults(ctx, defaultsNode.value) : undefined;
   const { body, style } = readStyle(ctx, byKey as never, named);
   const font = body ?? "Inter";
   const radius = optional("radius") ?? "12px";
@@ -360,6 +365,7 @@ export function parseTheme(
     theme: {
       name,
       source: "project",
+      ...(defaults ? { defaults } : {}),
       font,
       radius,
       shadow: SHADOWS[shadowName as keyof typeof SHADOWS],

@@ -13,7 +13,7 @@ import {
   SECTION_LOOKS,
   UX_CAPABILITIES,
 } from "@smithable/core";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { ICON_CHOICES } from "../properties";
@@ -22,6 +22,7 @@ import type { Run } from "./ChangeForms";
 import { UxLists } from "./UxLists";
 import { UxRecords } from "./UxRecords";
 import { UxShell } from "./UxShell";
+import { useUxSource } from "./UxSource";
 
 /** Each language the kit has words in, by its own name. */
 export const LANGUAGE_NAMES: Record<(typeof LANGUAGES)[number], string> = {
@@ -933,7 +934,7 @@ function SectionAppearance({
             );
           // Keys whose first value is not the section's own (a hero's overlay and eyebrow): a
           // Default of their own, which takes the key away.
-          const own = key === "overlay" || key === "eyebrow";
+
           return values === "text" ? (
             <label key={`${section.name}.${key}`} className="flex items-center gap-2">
               <span className="flex-1">{label}</span>
@@ -949,21 +950,65 @@ function SectionAppearance({
               />
             </label>
           ) : (
-            <div key={`${section.name}.${key}`} className="flex items-center justify-between gap-2">
-              <span>{label}</span>
-              <Segmented
-                label={label}
-                value={String(current ?? (own ? "default" : values[0]))}
-                options={[
-                  ...(own ? [["default", "Default"] as [string, string]] : []),
-                  ...values.map((v): [string, string] => [String(v), humanize(String(v))]),
-                ]}
-                onChange={(v) => set(!own && v === String(values[0]) ? "default" : v)}
-              />
-            </div>
+            <SectionChoice
+              key={`${section.name}.${key}`}
+              page={page}
+              section={section.name}
+              name={key}
+              values={values}
+              current={current}
+              label={label}
+              set={set}
+            />
           );
         }),
       )}
+    </div>
+  );
+}
+
+function SectionChoice({
+  page,
+  section,
+  name,
+  values,
+  current,
+  label,
+  set,
+}: {
+  page: string;
+  section: string;
+  name: string;
+  values: readonly (string | number)[];
+  current: unknown;
+  label: string;
+  set: (value: string) => unknown;
+}) {
+  const controlId = useId();
+  const fallback = name === "overlay" || name === "eyebrow" ? "none" : String(values[0]);
+  const authored = useUxSource(["pages", page, "sections", section, name], fallback);
+  const selected = authored.available
+    ? authored.present
+      ? String(authored.value)
+      : "inherit"
+    : String(current ?? "inherit");
+  return (
+    <div className="space-y-1">
+      <label htmlFor={controlId} className="flex items-center justify-between gap-2">
+        <span>{label}</span>
+        <Select
+          id={controlId}
+          aria-label={label}
+          value={selected}
+          options={[
+            ["inherit", authored.inherited],
+            ...values.map((value): [string, string] => [String(value), humanize(String(value))]),
+          ]}
+          onChange={(event) => void set(event.target.value)}
+          className="w-44"
+        />
+      </label>
+      {authored.reason && <p className="text-xs text-quiet">{authored.reason}</p>}
     </div>
   );
 }

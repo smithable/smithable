@@ -8,8 +8,10 @@ import { cli, newApp } from "./dev-app.mjs";
 import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
 import {
+  checkStudioDefaultsApply,
   checkStudioLook,
   checkStudioLookApply,
+  checkStudioLookGallery,
   checkStudioLookTimeout,
   checkStudioViewer,
 } from "./studio-look-checks.mjs";
@@ -101,7 +103,9 @@ try {
   );
   const before = previewChildren();
   assert.equal(before.length, 1, "expected the one existing Vite preview");
-  await checkStudioLook(page, dir);
+  if (process.env.STUDIO_LOOK_DEFAULTS !== "1") await checkStudioLook(page, dir);
+  if (process.env.STUDIO_LOOK_DEFAULTS === "1") await checkStudioDefaultsApply(page, dir);
+  if (process.env.STUDIO_LOOK_GALLERY === "1") await checkStudioLookGallery(page, dir);
   if (process.env.STUDIO_LOOK_TIMEOUT === "1") await checkStudioLookTimeout(page, dir);
   if (process.env.STUDIO_LOOK_APPLY === "1") {
     await checkStudioLookApply(page, dir);

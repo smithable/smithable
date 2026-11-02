@@ -3,6 +3,7 @@ import {
   BUILT_IN_THEMES,
   type LookReset,
   lookAuthorship,
+  lookImpact,
   type ProjectLook,
   parseTheme,
   resolveLook,
@@ -44,6 +45,7 @@ export function previewProjectLook(
   if (!resets.length && initialTheme && sameLookTheme(initialTheme, draft)) {
     const ux = read(project);
     return {
+      impact: { kind: "css" as const, reasons: [] },
       ux,
       themes: project.themes,
       draftName: initial.look.theme.name,
@@ -72,6 +74,7 @@ export function previewProjectLook(
   );
   const ux = staged.ux;
   return {
+    impact: lookImpact(read(project), ux, project.themes, themes),
     ux,
     themes,
     draftName: name,

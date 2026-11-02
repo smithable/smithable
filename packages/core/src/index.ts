@@ -164,6 +164,8 @@ export {
   resolveLook,
   sameLookTheme,
 } from "./look.js";
+export type { UxDefaultFact, UxInherited } from "./look-defaults.js";
+export * from "./look-impact.js";
 export * from "./look-protocol.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
@@ -289,8 +291,11 @@ export {
   tokensOf,
   withBackground,
 } from "./theme.js";
+export * from "./theme-default-schema.js";
 export { type Fit, themeFit } from "./theme-fit.js";
 export { stageThemeSelection } from "./theme-look-edit.js";
+export * from "./theme-schema.js";
+export * from "./theme-structure.js";
 export {
   DEFAULT_STYLE,
   DISPLAY_FONTS,

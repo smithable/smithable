@@ -163,7 +163,7 @@ const setCalendarColor: Operation<{ page: string; field: string }> = {
 };
 
 /** How a calendar shows its records (A 215): week (the default), agenda or days. */
-const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days" }> = {
+const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days" | "inherit" }> = {
   name: "setCalendarView",
   summary:
     "Show a calendar as the week's grid (the default), an agenda (the coming weeks as one list by day) or days (the coming days side by side, each a list).",
@@ -173,16 +173,21 @@ const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      view: { enum: UX_CAPABILITIES.calendarView.values, description: "week, agenda or days." },
+      view: {
+        enum: [...UX_CAPABILITIES.calendarView.values, "inherit"],
+        description: "week, agenda, days, or inherit.",
+      },
     },
   },
   positional: ["page", "view"],
   describe: ({ page, view }) =>
-    `Show the ${page} calendar as ${view === "week" ? "the week's grid" : view === "agenda" ? "an agenda" : "days side by side"}`,
+    view === "inherit"
+      ? `Inherit the calendar view of ${page} from its theme`
+      : `Show the ${page} calendar as ${view === "week" ? "the week's grid" : view === "agenda" ? "an agenda" : "days side by side"}`,
   destructive: () => false,
   apply({ ux }, { page, view }, ir) {
     calendarPage(ir, page);
-    put(ux, ["pages", page, "calendar", "view"], view === "week" ? undefined : view);
+    put(ux, ["pages", page, "calendar", "view"], view === "inherit" ? undefined : view);
     return [];
   },
 };
@@ -271,38 +276,41 @@ function calendarPage(ir: SpecIR, page: string) {
 }
 
 /** A list's mark before each title (look-gap §4); none takes it away. */
-const setTableMark: Operation<{ page: string; mark: "initials" | "picture" | "none" }> = {
-  name: "setTableMark",
-  summary:
-    "Put a round mark before each record's title in a list: its initials, or its picture; none takes it away.",
-  schema: {
-    type: "object",
-    required: ["page", "mark"],
-    additionalProperties: false,
-    properties: {
-      page: refTo({ ref: "page", label: "Page" }),
-      mark: {
-        type: "string",
-        enum: UX_CAPABILITIES.mark.values,
-        description: "initials, picture or none.",
+const setTableMark: Operation<{ page: string; mark: "initials" | "picture" | "none" | "inherit" }> =
+  {
+    name: "setTableMark",
+    summary:
+      "Put a round mark before each record's title in a list: its initials, or its picture; none takes it away.",
+    schema: {
+      type: "object",
+      required: ["page", "mark"],
+      additionalProperties: false,
+      properties: {
+        page: refTo({ ref: "page", label: "Page" }),
+        mark: {
+          type: "string",
+          enum: [...UX_CAPABILITIES.mark.values, "inherit"],
+          description: "initials, picture, none, or inherit.",
+        },
       },
     },
-  },
-  positional: ["page", "mark"],
-  describe: ({ page, mark }) =>
-    mark === "none"
-      ? `Show no mark before the titles on ${page}`
-      : `Mark each record on ${page} with its ${mark === "picture" ? "picture" : "initials"}`,
-  destructive: () => false,
-  apply({ ux }, { page, mark }, ir) {
-    pageNamed(ir, page);
-    put(ux, ["pages", page, "table", "mark"], mark === "none" ? undefined : mark);
-    return [];
-  },
-};
+    positional: ["page", "mark"],
+    describe: ({ page, mark }) =>
+      mark === "inherit"
+        ? `Inherit the record mark of ${page} from its theme`
+        : mark === "none"
+          ? `Show no mark before the titles on ${page}`
+          : `Mark each record on ${page} with its ${mark === "picture" ? "picture" : "initials"}`,
+    destructive: () => false,
+    apply({ ux }, { page, mark }, ir) {
+      pageNamed(ir, page);
+      put(ux, ["pages", page, "table", "mark"], mark === "inherit" ? undefined : mark);
+      return [];
+    },
+  };
 
 /** A list's rows' actions: buttons (below) or a menu at the row's end (look-gap §4). */
-const setRowActions: Operation<{ page: string; actions: "below" | "menu" }> = {
+const setRowActions: Operation<{ page: string; actions: "below" | "menu" | "inherit" }> = {
   name: "setRowActions",
   summary:
     "Show each row's actions as buttons (below, the default) or in a … menu at the row's end.",
@@ -314,20 +322,22 @@ const setRowActions: Operation<{ page: string; actions: "below" | "menu" }> = {
       page: refTo({ ref: "page", label: "Page" }),
       actions: {
         type: "string",
-        enum: UX_CAPABILITIES.rowActions.values,
-        description: "below or menu.",
+        enum: [...UX_CAPABILITIES.rowActions.values, "inherit"],
+        description: "below, menu, or inherit.",
       },
     },
   },
   positional: ["page", "actions"],
   describe: ({ page, actions }) =>
-    actions === "menu"
-      ? `Put each row's actions on ${page} in a menu`
-      : `Show each row's actions on ${page} as buttons`,
+    actions === "inherit"
+      ? `Inherit the row actions of ${page} from its theme`
+      : actions === "menu"
+        ? `Put each row's actions on ${page} in a menu`
+        : `Show each row's actions on ${page} as buttons`,
   destructive: () => false,
   apply({ ux }, { page, actions }, ir) {
     pageNamed(ir, page);
-    put(ux, ["pages", page, "table", "actions"], actions === "menu" ? "menu" : undefined);
+    put(ux, ["pages", page, "table", "actions"], actions === "inherit" ? undefined : actions);
     return [];
   },
 };
@@ -463,7 +473,10 @@ const setRecordLines: Operation<{ page: string; subtitle?: string; detail?: stri
   },
 };
 
-const setLandingWidth: Operation<{ page: string; width: "contained" | "wide" | "full" }> = {
+const setLandingWidth: Operation<{
+  page: string;
+  width: "contained" | "wide" | "full" | "inherit";
+}> = {
   name: "setLandingWidth",
   summary:
     "How wide a landing page's content runs: contained (72rem, the default), wide (80rem) or full (edge to edge).",
@@ -473,19 +486,24 @@ const setLandingWidth: Operation<{ page: string; width: "contained" | "wide" | "
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      width: { enum: UX_CAPABILITIES.width.values, description: "contained, wide or full." },
+      width: {
+        enum: [...UX_CAPABILITIES.width.values, "inherit"],
+        description: "contained, wide, full, or inherit.",
+      },
     },
   },
   positional: ["page", "width"],
   describe: ({ page, width }) =>
-    `Run the ${page} page's content ${width === "full" ? "edge to edge" : width}`,
+    width === "inherit"
+      ? `Inherit the page width of ${page} from its theme`
+      : `Run the ${page} page's content ${width === "full" ? "edge to edge" : width}`,
   destructive: () => false,
   apply(editors, { page, width }, ir) {
     const found = ir.pages.find((p) => p.id === page);
     if (!found) throw new OperationError(`There is no page named "${page}".`);
     if (found.pattern.kind !== "landing")
       throw new OperationError(`A width is for a landing page; ${page} is not one.`);
-    put(editors.ux, ["pages", page, "width"], width === "contained" ? undefined : width);
+    put(editors.ux, ["pages", page, "width"], width === "inherit" ? undefined : width);
     return [];
   },
 };
@@ -527,7 +545,7 @@ const setRecordList: Operation<{
   },
 };
 
-const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none" }> = {
+const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none" | "inherit" }> = {
   name: "setRecordPictures",
   summary:
     "Show a record's pictures large on its view: aside (beside the fields), top (across the top, with a strip to switch them) or none (among the fields, the default).",
@@ -537,19 +555,24 @@ const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      look: { enum: UX_CAPABILITIES.recordPictures.values, description: "aside, top or none." },
+      look: {
+        enum: [...UX_CAPABILITIES.recordPictures.values, "inherit"],
+        description: "aside, top, none, or inherit.",
+      },
     },
   },
   positional: ["page", "look"],
   describe: ({ page, look }) =>
-    look === "none"
-      ? `Show the ${page} page's pictures among the fields`
-      : `Show the ${page} page's pictures ${look === "aside" ? "beside the fields" : "across the top"}`,
+    look === "inherit"
+      ? `Inherit the record picture presentation of ${page} from its theme`
+      : look === "none"
+        ? `Show the ${page} page's pictures among the fields`
+        : `Show the ${page} page's pictures ${look === "aside" ? "beside the fields" : "across the top"}`,
   destructive: () => false,
   apply(editors, { page, look }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
-    put(editors.ux, ["pages", page, "record", "pictures"], look === "none" ? undefined : look);
+    put(editors.ux, ["pages", page, "record", "pictures"], look === "inherit" ? undefined : look);
     return [];
   },
 };
@@ -557,7 +580,7 @@ const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none
 const setRecordSummary: Operation<{
   page: string;
   place: "header" | "aside";
-  look: "summary" | "none";
+  look: "summary" | "none" | "inherit";
 }> = {
   name: "setRecordSummary",
   summary:
@@ -569,29 +592,34 @@ const setRecordSummary: Operation<{
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
       place: { enum: ["header", "aside"], description: "header or aside." },
-      look: { enum: UX_CAPABILITIES.recordHeader.values, description: "summary or none." },
+      look: {
+        enum: [...UX_CAPABILITIES.recordHeader.values, "inherit"],
+        description: "summary, none, or inherit.",
+      },
     },
   },
   positional: ["page", "place", "look"],
   describe: ({ page, place, look }) =>
-    look === "none"
-      ? `No summary ${place === "header" ? "in the title row" : "beside the form"} of the ${page} page's records`
-      : `A summary ${place === "header" ? "in the title row" : "beside the form"} of the ${page} page's records`,
+    look === "inherit"
+      ? `Inherit the record summary of ${page} from its theme`
+      : look === "none"
+        ? `No summary ${place === "header" ? "in the title row" : "beside the form"} of the ${page} page's records`
+        : `A summary ${place === "header" ? "in the title row" : "beside the form"} of the ${page} page's records`,
   destructive: () => false,
   apply(editors, { page, place, look }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
-    // None is the default: setting it takes the key away.
+    // Keep an explicit none distinct from inheriting a theme default.
     put(
       editors.ux,
       ["pages", page, place === "header" ? "record" : "form", place],
-      look === "none" ? undefined : look,
+      look === "inherit" ? undefined : look,
     );
     return [];
   },
 };
 
-const setRecordFirst: Operation<{ page: string; first: "form" | "thread" }> = {
+const setRecordFirst: Operation<{ page: string; first: "form" | "thread" | "inherit" }> = {
   name: "setRecordFirst",
   summary:
     "What a record page shows first: its form (the default), or its conversation (a list shown as a thread) before the form.",
@@ -601,20 +629,25 @@ const setRecordFirst: Operation<{ page: string; first: "form" | "thread" }> = {
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      first: { enum: UX_CAPABILITIES.recordFirst.values, description: "form or thread." },
+      first: {
+        enum: [...UX_CAPABILITIES.recordFirst.values, "inherit"],
+        description: "form, thread, or inherit.",
+      },
     },
   },
   positional: ["page", "first"],
   describe: ({ page, first }) =>
-    first === "thread"
-      ? `The ${page} page's records lead with their conversation`
-      : `The ${page} page's records lead with their form`,
+    first === "inherit"
+      ? `Inherit the record opening of ${page} from its theme`
+      : first === "thread"
+        ? `The ${page} page's records lead with their conversation`
+        : `The ${page} page's records lead with their form`,
   destructive: () => false,
   apply(editors, { page, first }, ir) {
     if (!ir.pages.some((p) => p.id === page))
       throw new OperationError(`There is no page named "${page}".`);
-    // The form is the default: setting it takes the key away.
-    put(editors.ux, ["pages", page, "record", "first"], first === "form" ? undefined : first);
+    // Keep an explicit form opening distinct from inheritance.
+    put(editors.ux, ["pages", page, "record", "first"], first === "inherit" ? undefined : first);
     return [];
   },
 };
@@ -780,13 +813,13 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
         throw new OperationError(
           `A header has no "${key}": it takes ${Object.keys(HEADER_LOOKS).join(", ")}.`,
         );
-      if (value !== "default" && !values.includes(value))
+      if (value !== "default" && value !== "inherit" && !values.includes(value))
         throw new OperationError(`"${key}" of a header is one of ${values.join(", ")}.`);
       put(
         editors.ux,
         ["pages", page, "header", key],
-        // none (over: none) is written as nothing.
-        value === "default" || value === "none" ? undefined : value,
+        // Explicit none masks a theme-provided over: hero.
+        value === "default" || value === "inherit" ? undefined : value,
       );
       return [];
     }
@@ -799,7 +832,8 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       );
     // A list of models (a hero's facts): the ux check says whether each may be counted there.
     if (allowed === "models") {
-      const models = value === "default" ? [] : value.split(/[\s,]+/).filter(Boolean);
+      const models =
+        value === "default" || value === "inherit" ? [] : value.split(/[\s,]+/).filter(Boolean);
       put(
         editors.ux,
         ["pages", page, "sections", section, key],
@@ -812,21 +846,33 @@ const setSectionLook: Operation<{ page: string; section: string; key: string; va
       put(
         editors.ux,
         ["pages", page, "sections", section, key],
-        value === "default" ? undefined : value,
+        value === "default" || value === "inherit" ? undefined : value,
       );
       return [];
     }
     const number = Number(value);
     const typed = allowed !== "text" && typeof allowed[0] === "number" ? number : value;
-    if (value !== "default" && allowed !== "text" && !allowed.includes(typed))
+    if (
+      value !== "default" &&
+      value !== "inherit" &&
+      allowed !== "text" &&
+      !allowed.includes(typed)
+    )
       throw new OperationError(`"${key}" of a ${kind} section is one of ${allowed.join(", ")}.`);
     put(
       editors.ux,
       ["pages", page, "sections", section, key],
-      value === "default" ? undefined : typed,
+      value === "default" || value === "inherit" ? undefined : typed,
     );
     // A hero's wash goes with a picture under the text: a layout without one takes it away.
-    if (kind === "hero" && key === "layout" && value !== "cover" && value !== "photo")
+    if (
+      kind === "hero" &&
+      key === "layout" &&
+      value !== "default" &&
+      value !== "inherit" &&
+      value !== "cover" &&
+      value !== "photo"
+    )
       put(editors.ux, ["pages", page, "sections", section, "overlay"], undefined);
     return [];
   },
@@ -998,25 +1044,27 @@ const setMenuLayout: Operation<{ navigation: string }> = {
     properties: {
       navigation: {
         type: "string",
-        enum: [...NAVIGATIONS, "default"],
-        description: "sidebar, topbar, topbar-centered, or default.",
+        enum: [...NAVIGATIONS, "default", "inherit"],
+        description: "sidebar, topbar, topbar-centered, inherit, or the legacy default reset.",
       },
     },
   },
   positional: ["navigation"],
   describe: ({ navigation }) =>
-    navigation === "default" || navigation === "sidebar"
-      ? "Put the menu in a sidebar"
-      : navigation === "topbar"
-        ? "Put the menu in a bar across the top"
-        : "Put the menu in a bar across the top, the name centred",
+    navigation === "inherit" || navigation === "default"
+      ? "Inherit the menu layout from the theme"
+      : navigation === "sidebar"
+        ? "Put the menu in a sidebar"
+        : navigation === "topbar"
+          ? "Put the menu in a bar across the top"
+          : "Put the menu in a bar across the top, the name centred",
   destructive: () => false,
   apply(editors, { navigation }) {
-    // The sidebar is the default, so it is written as nothing.
+    // Literal platform choices remain authored; only inheritance removes the key.
     put(
       editors.ux,
       ["navigation"],
-      navigation === "default" || navigation === "sidebar" ? undefined : navigation,
+      navigation === "default" || navigation === "inherit" ? undefined : navigation,
     );
     return [];
   },
@@ -1034,19 +1082,23 @@ const setMenuActive: Operation<{ active: string }> = {
     properties: {
       active: {
         type: "string",
-        enum: [...ACTIVES, "default"],
-        description: "filled, subtle, underline, or default.",
+        enum: [...ACTIVES, "default", "inherit"],
+        description: "filled, subtle, underline, inherit, or the legacy default reset.",
       },
     },
   },
   positional: ["active"],
   describe: ({ active }) =>
-    active === "default"
+    active === "default" || active === "inherit"
       ? "Mark the menu's open page as the menu does"
       : `Mark the menu's open page ${active}`,
   destructive: () => false,
   apply(editors, { active }) {
-    put(editors.ux, ["menuActive"], active === "default" ? undefined : active);
+    put(
+      editors.ux,
+      ["menuActive"],
+      active === "default" || active === "inherit" ? undefined : active,
+    );
     return [];
   },
 };
@@ -1063,19 +1115,19 @@ const setChrome: Operation<{ chrome: string }> = {
     properties: {
       chrome: {
         type: "string",
-        enum: [...CHROMES, "default"],
-        description: "light, dark, or default.",
+        enum: [...CHROMES, "default", "inherit"],
+        description: "light, dark, inherit, or the legacy default reset.",
       },
     },
   },
   positional: ["chrome"],
   describe: ({ chrome }) =>
-    chrome === "default"
+    chrome === "default" || chrome === "inherit"
       ? "Give the menu the theme's own colours"
       : `Give the menu a ${chrome} surface`,
   destructive: () => false,
   apply(editors, { chrome }) {
-    put(editors.ux, ["chrome"], chrome === "default" ? undefined : chrome);
+    put(editors.ux, ["chrome"], chrome === "default" || chrome === "inherit" ? undefined : chrome);
     return [];
   },
 };
@@ -1168,7 +1220,7 @@ const setFiltersShown: Operation<{ page: string; fields?: string[] }> = {
 };
 
 /** How a page's filters show (look-gap §4): today's controls (default) or a row of chips. */
-const setFiltersLook: Operation<{ page: string; look: "default" | "chips" }> = {
+const setFiltersLook: Operation<{ page: string; look: "default" | "chips" | "inherit" }> = {
   name: "setFiltersLook",
   summary:
     "Show a page's filters as today's controls (default: chips up to eight values, a list to pick from above) or every choice and reference as a row of chips (chips).",
@@ -1180,16 +1232,18 @@ const setFiltersLook: Operation<{ page: string; look: "default" | "chips" }> = {
       page: refTo({ ref: "page", label: "Page" }),
       look: {
         type: "string",
-        enum: UX_CAPABILITIES.filtersLook.values,
-        description: "default or chips.",
+        enum: [...UX_CAPABILITIES.filtersLook.values, "inherit"],
+        description: "default, chips, or inherit.",
       },
     },
   },
   positional: ["page", "look"],
   describe: ({ page, look }) =>
-    look === "chips"
-      ? `Show the filters of ${page} as chips`
-      : `Show the filters of ${page} as they are by default`,
+    look === "inherit"
+      ? `Inherit the filter presentation of ${page} from its theme`
+      : look === "chips"
+        ? `Show the filters of ${page} as chips`
+        : `Show the filters of ${page} as they are by default`,
   destructive: () => false,
   apply(editors, { page, look }, ir) {
     pageNamed(ir, page);
@@ -1197,7 +1251,7 @@ const setFiltersLook: Operation<{ page: string; look: "default" | "chips" }> = {
       throw new OperationError(
         `${page} has no filters (smithable.yml's filters) to show as chips.`,
       );
-    put(editors.ux, ["pages", page, "filters", "look"], look === "chips" ? look : undefined);
+    put(editors.ux, ["pages", page, "filters", "look"], look === "inherit" ? undefined : look);
     return [];
   },
 };

@@ -155,7 +155,8 @@
               "mark": {
                 "enum": [
                   "initials",
-                  "picture"
+                  "picture",
+                  "none"
                 ],
                 "description": "A round mark before each record's title: its initials on a colour of their own, or the model's first picture."
               },

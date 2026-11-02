@@ -47,6 +47,7 @@ export function themeText(theme: ThemeIR): string {
   return stringify({
     smithableTheme: 0.1,
     name: theme.name,
+    ...(theme.defaults ? { defaults: theme.defaults } : {}),
     fonts: {
       body: theme.font,
       ...(theme.style.headingFont ? { heading: theme.style.headingFont } : {}),

@@ -337,6 +337,16 @@ function count(n: number, noun: string): string {
  */
 export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
   const lines: string[] = [];
+  for (const fact of ux?.inherited?.used ?? [])
+    lines.push(`${fact.path.join(".")}: ${fact.value} (theme ${fact.theme} default)`);
+  for (const fact of ux?.inherited?.masked ?? [])
+    lines.push(
+      `${fact.path.join(".")}: explicit UX masks theme ${fact.theme} default ${fact.value}`,
+    );
+  for (const fact of ux?.inherited?.skipped ?? [])
+    lines.push(
+      `${fact.path.join(".")}: theme ${fact.theme} default ${fact.value} skipped: ${fact.reason}`,
+    );
   const scope = (s: UniqueScope | undefined) => (s === "owner" ? "per owner" : "in the whole app");
   for (const model of ir.models) {
     lines.push(

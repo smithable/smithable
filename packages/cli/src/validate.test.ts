@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
@@ -72,4 +72,33 @@ test("validate --explain says what a hero's buttons open, by rule or as written"
   const invoicing = captureIo();
   expect(await run(["validate", join(examples, "invoicing"), "--explain"], invoicing)).toBe(0);
   expect(invoicing.stdout).toContain("home hero: button opens overview; no second button");
+});
+
+test("Explain says which theme defaults apply, which explicit UX masks, and why others skip", async () => {
+  const dir = tempDir("smithable-look-defaults-explain-");
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: {name: Notes}\nmodels: {Note: {fields: {name: string!}}}\npages:\n  home: {route: /, landing: {hero: {}}}\n  notes: {crud: Note}\n",
+  );
+  writeFileSync(
+    join(dir, "smithable.auth.yml"),
+    "smithableAuth: 0.1\nsignIn: none\npublic: {pages: [home, notes], read: [Note]}\n",
+  );
+  writeFileSync(
+    join(dir, "smithable.ux.yml"),
+    "smithableUx: 0.1\ntheme: {preset: direction}\nnavigation: sidebar\n",
+  );
+  mkdirSync(join(dir, "themes"));
+  writeFileSync(
+    join(dir, "themes/direction.yml"),
+    'smithableTheme: 0.1\nmodes: light\nlight: {background: "#ffffff", foreground: "#111111", primary: "#2255aa"}\ndefaults: {app: {navigation: topbar}, kinds: {crud: {record: {header: summary}}}, sections: {hero: {layout: cover}}}\n',
+  );
+  const io = captureIo();
+  expect(await run(["validate", dir, "--explain"], io)).toBe(0);
+  expect(io.stdout).toContain("pages.home.sections.hero.layout: cover (theme direction default)");
+  expect(io.stdout).toContain("navigation: explicit UX masks theme direction default topbar");
+  expect(io.stdout).toContain(
+    "pages.notes.record.header: theme direction default summary skipped:",
+  );
+  expect(io.stdout).toContain("no status, amount or date fields");
 });
