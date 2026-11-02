@@ -1,10 +1,11 @@
 // Session-only draft history. Saved YAML contains only the enabled palettes.
-import { type Mode, oppositeMode, parseTheme, type ThemeIR } from "@smithable/core";
+import { type LookReset, type Mode, oppositeMode, parseTheme, type ThemeIR } from "@smithable/core";
 import { isNode, parseDocument } from "yaml";
 import { themeText } from "./theme-text";
 
 export interface ThemeDraft {
   text: string;
+  resets?: LookReset[];
   /** Full source snapshots retain palette comments as well as values. */
   palettes: Partial<Record<Mode, string>>;
 }
@@ -24,7 +25,7 @@ const read = (text: string) => parseTheme({ path: "draft.yml", text }).theme;
 /** Raw YAML is authoritative: a valid edit replaces any hidden palette history. Invalid text
  * keeps the last stash available for recovery, but mode controls never transform it. */
 export function editDraft(draft: ThemeDraft, text: string, yaml = false): ThemeDraft {
-  return { text, palettes: yaml && read(text) ? {} : draft.palettes };
+  return { ...draft, text, palettes: yaml && read(text) ? {} : draft.palettes };
 }
 
 /** An absent palette is offered for explicit generation, never silently invented. */
@@ -58,7 +59,7 @@ export function changeModes(
   }
   doc.set("modes", modes);
   const text = String(doc);
-  return { draft: read(text) ? { text, palettes } : draft };
+  return { draft: read(text) ? { ...draft, text, palettes } : draft };
 }
 
 export function remember(history: DraftHistory, draft: ThemeDraft): DraftHistory {

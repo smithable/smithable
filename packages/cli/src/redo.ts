@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
 import { runOperation } from "./op.js";
+import { projectRevision } from "./project-revision.js";
 
 /**
  * `smithable redo`: makes again the most recent change that was undone, as long as no other
@@ -39,8 +41,14 @@ export async function redo(dir: string, io: Io): Promise<number> {
     io.err("This change cannot be redone: make it again.\n");
     return 1;
   }
-  return runOperation(dir, io, recorded.op, recorded.args ?? {}, {
+  const revision = projectRevision(dir);
+  const args =
+    recorded.op === "applyTheme"
+      ? { ...recorded.args, expectedRevision: revision, requestId: randomUUID() }
+      : (recorded.args ?? {});
+  return runOperation(dir, io, recorded.op, args, {
     yes: true,
+    expectedRevision: revision,
     trailer: `Smithable-Redo: ${target.undo}`,
   });
 }

@@ -151,6 +151,19 @@ export {
   typeKey,
   USER_MODEL,
 } from "./ir.js";
+export {
+  LOOK_KEYS,
+  type LookAuthorship,
+  type LookKey,
+  type LookOrigin,
+  type LookReset,
+  lookAuthorship,
+  type ProjectLook,
+  pageLookUx,
+  type ResolvedLook,
+  resolveLook,
+  sameLookTheme,
+} from "./look.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export {
@@ -214,6 +227,7 @@ export {
 } from "./people.js";
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
+export { type PreviewPage, previewPages, previewRecordPath } from "./preview-pages.js";
 export {
   IMPORT_MAX,
   type ImportRecords,
@@ -275,6 +289,7 @@ export {
   withBackground,
 } from "./theme.js";
 export { type Fit, themeFit } from "./theme-fit.js";
+export { stageThemeSelection } from "./theme-look-edit.js";
 export {
   DEFAULT_STYLE,
   DISPLAY_FONTS,
@@ -322,4 +337,11 @@ export {
   validateUx,
   weekBy,
 } from "./ux.js";
+export {
+  UX_CAPABILITIES,
+  type UxCapability,
+  type UxCapabilityId,
+  type UxChoiceContext,
+  uxChoiceProblem,
+} from "./ux-capabilities.js";
 export { convertValue } from "./values.js";

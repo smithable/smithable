@@ -1,9 +1,10 @@
 import { formatDiagnostic } from "../diagnostics.js";
-import type { YamlEditor, YamlValue } from "../edit.js";
 import type { SpecIR } from "../ir.js";
+import { LOOK_KEYS, type LookKey, type LookReset, sameLookTheme } from "../look.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { pageModel } from "../patterns.js";
 import { parseTheme } from "../theme.js";
+import { resetThemeSetting, writeThemeSettings } from "../theme-look-edit.js";
 import {
   ACTIVES,
   CHROMES,
@@ -19,18 +20,11 @@ import {
   VOICES,
   type Voice,
 } from "../ux.js";
+import { UX_CAPABILITIES } from "../ux-capabilities.js";
+import { put } from "../ux-edit.js";
 import { partText, readNamePart } from "./name-parts.js";
 
-/** Sets `value` at `path` in smithable.ux.yml, creating what is missing, or removes it. */
-export function put(ux: YamlEditor, path: string[], value: YamlValue | undefined): void {
-  if (value === undefined || (Array.isArray(value) && value.length === 0)) {
-    if (ux.has(path)) ux.removeAndPrune(path, 0);
-  } else if (ux.has(path)) {
-    ux.set(path, value);
-  } else {
-    ux.add(path.slice(0, -1), path[path.length - 1] as string, value);
-  }
-}
+export { put } from "../ux-edit.js";
 
 const setTheme: Operation<{
   preset?: string;
@@ -100,33 +94,8 @@ const setTheme: Operation<{
       : `Set the look${where}: ${others.join(", ")}`;
   },
   destructive: () => false,
-  apply(editors, { page, ...args }, ir) {
-    const ux = editors.ux;
-    if (Object.keys(args).length === 0)
-      throw new OperationError(
-        "Say what to set: preset, primary, background, font, density or motion.",
-      );
-    // A landing page's own theme lives under the page, with the same keys as the app's.
-    if (page !== undefined && ir.pages.find((p) => p.id === page)?.pattern.kind !== "landing")
-      throw new OperationError(
-        `Only a landing page has a theme of its own; there is no landing page "${page}".`,
-      );
-    const at = page === undefined ? ["theme"] : ["pages", page, "theme"];
-    if (page === undefined && args.density === "none")
-      throw new OperationError(
-        "The app's density is comfortable, standard or compact; \"none\" returns a landing page's density to the app's.",
-      );
-    // On a page, "none" returns a key to the app's theme; for the app it removes a brand key.
-    // For motion alone, "none" is a value: no motion.
-    if (args.preset !== undefined)
-      put(ux, [...at, "preset"], page && args.preset === "none" ? undefined : args.preset);
-    if (args.density !== undefined)
-      put(ux, [...at, "density"], page && args.density === "none" ? undefined : args.density);
-    if (args.motion !== undefined) put(ux, [...at, "motion"], args.motion);
-    for (const key of ["primary", "background", "font"] as const) {
-      const value = args[key];
-      if (value !== undefined) put(ux, [...at, "brand", key], value === "none" ? undefined : value);
-    }
+  apply({ ux }, args, ir) {
+    writeThemeSettings(ux, args, ir);
     return [];
   },
 };
@@ -204,7 +173,7 @@ const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      view: { enum: ["week", "agenda", "days"], description: "week, agenda or days." },
+      view: { enum: UX_CAPABILITIES.calendarView.values, description: "week, agenda or days." },
     },
   },
   positional: ["page", "view"],
@@ -267,7 +236,7 @@ const setCalendarCapacity: Operation<{ page: string; left: string; of?: string; 
       of: { type: "string", description: "The number field of places there are (capacity)." },
       look: {
         type: "string",
-        enum: ["number", "pips", "bar"],
+        enum: UX_CAPABILITIES.capacityLook.values,
         description: "number (default), pips or bar.",
       },
     },
@@ -314,7 +283,7 @@ const setTableMark: Operation<{ page: string; mark: "initials" | "picture" | "no
       page: refTo({ ref: "page", label: "Page" }),
       mark: {
         type: "string",
-        enum: ["initials", "picture", "none"],
+        enum: UX_CAPABILITIES.mark.values,
         description: "initials, picture or none.",
       },
     },
@@ -343,7 +312,11 @@ const setRowActions: Operation<{ page: string; actions: "below" | "menu" }> = {
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      actions: { type: "string", enum: ["below", "menu"], description: "below or menu." },
+      actions: {
+        type: "string",
+        enum: UX_CAPABILITIES.rowActions.values,
+        description: "below or menu.",
+      },
     },
   },
   positional: ["page", "actions"],
@@ -500,7 +473,7 @@ const setLandingWidth: Operation<{ page: string; width: "contained" | "wide" | "
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      width: { enum: ["contained", "wide", "full"], description: "contained, wide or full." },
+      width: { enum: UX_CAPABILITIES.width.values, description: "contained, wide or full." },
     },
   },
   positional: ["page", "width"],
@@ -532,7 +505,7 @@ const setRecordList: Operation<{
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
       field: refTo({ ref: "field", page: "page", label: "List" }),
-      look: { enum: ["table", "thread", "inline"], description: "table, thread or inline." },
+      look: { enum: UX_CAPABILITIES.recordList.values, description: "table, thread or inline." },
     },
   },
   positional: ["page", "field", "look"],
@@ -548,14 +521,8 @@ const setRecordList: Operation<{
       throw new OperationError(`There is no page named "${page}".`);
     // A table is the default: setting it takes the key away, and an empty record block with it.
     put(editors.ux, ["pages", page, "record", "lists", field], look === "table" ? undefined : look);
-    // A page that led with its thread leads with its form once no thread is left.
-    const lists = ["pages", page, "record", "lists"];
-    if (
-      !Object.values(editors.ux.has(lists) ? (editors.ux.get(lists) as object) : {}).includes(
-        "thread",
-      )
-    )
-      put(editors.ux, ["pages", page, "record", "first"], undefined);
+    // Retain dependent authored settings: validation explains a conversation-first conflict
+    // instead of silently removing the user's record-opening choice.
     return [];
   },
 };
@@ -570,7 +537,7 @@ const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      look: { enum: ["aside", "top", "none"], description: "aside, top or none." },
+      look: { enum: UX_CAPABILITIES.recordPictures.values, description: "aside, top or none." },
     },
   },
   positional: ["page", "look"],
@@ -602,7 +569,7 @@ const setRecordSummary: Operation<{
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
       place: { enum: ["header", "aside"], description: "header or aside." },
-      look: { enum: ["summary", "none"], description: "summary or none." },
+      look: { enum: UX_CAPABILITIES.recordHeader.values, description: "summary or none." },
     },
   },
   positional: ["page", "place", "look"],
@@ -634,7 +601,7 @@ const setRecordFirst: Operation<{ page: string; first: "form" | "thread" }> = {
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      first: { enum: ["form", "thread"], description: "form or thread." },
+      first: { enum: UX_CAPABILITIES.recordFirst.values, description: "form or thread." },
     },
   },
   positional: ["page", "first"],
@@ -1211,7 +1178,11 @@ const setFiltersLook: Operation<{ page: string; look: "default" | "chips" }> = {
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
-      look: { type: "string", enum: ["default", "chips"], description: "default or chips." },
+      look: {
+        type: "string",
+        enum: UX_CAPABILITIES.filtersLook.values,
+        description: "default or chips.",
+      },
     },
   },
   positional: ["page", "look"],
@@ -1274,6 +1245,116 @@ const setFilterPick: Operation<{ page: string; filter: string; pick: "list" | "s
     },
   };
 
+/** Explicit reset, including density/motion where "none" already has another meaning. */
+const resetThemeOverride: Operation<{ key: LookKey; page?: string }> = {
+  name: "resetThemeOverride",
+  summary: "Remove one authored theme override so it inherits again.",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["key"],
+    properties: {
+      key: { type: "string", enum: LOOK_KEYS },
+      page: refTo({ ref: "page", label: "Landing page" }),
+    },
+  },
+  positional: ["key"],
+  describe: ({ key, page }) => `Reset ${key} to inherited${page ? ` on ${page}` : ""}`,
+  destructive: () => false,
+  apply({ ux }, args, ir) {
+    resetThemeSetting(ux, args, ir);
+    return [];
+  },
+};
+
+export type ApplyThemeArgs = {
+  name: string;
+  text: string;
+  mode: "create" | "update" | "select";
+  page?: string;
+  resets?: LookReset[];
+  expectedRevision: string;
+  requestId: string;
+};
+
+const applyTheme: Operation<ApplyThemeArgs> = {
+  name: "applyTheme",
+  summary:
+    "Create or update a project theme and select it, with requested override resets, as one change. Built-ins must be forked under a new name.",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["name", "text", "mode", "expectedRevision", "requestId"],
+    properties: {
+      name: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}$" },
+      text: { type: "string" },
+      mode: { type: "string", enum: ["create", "update", "select"] },
+      page: refTo({ ref: "page", label: "Landing page" }),
+      expectedRevision: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      requestId: { type: "string", pattern: "^[A-Za-z0-9_-]{8,80}$" },
+      resets: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["key"],
+          properties: {
+            key: { type: "string", enum: LOOK_KEYS.filter((key) => key !== "preset") },
+            page: { type: "string" },
+          },
+        },
+      },
+    },
+  },
+  positional: ["name"],
+  describe: ({ name, mode, page }) =>
+    `${mode === "update" ? "Update" : mode === "select" ? "Select" : "Create"} theme ${name} and use it${page ? ` on ${page}` : ""}`,
+  destructive: () => false,
+  apply(editors, args, ir) {
+    const { name, text, mode, page, resets = [] } = args;
+    if (text.length > 262144 || resets.length > 16)
+      throw new OperationError(
+        "A theme apply accepts at most 256 KiB of text and 16 override resets.",
+      );
+    if (mode !== "select" && THEME_PRESETS.includes(name as never))
+      throw new OperationError(
+        `The built-in theme "${name}" is immutable. Fork it under a new name.`,
+      );
+    const parsed = parseTheme({ path: `themes/${name}.yml`, text });
+    if (!parsed.theme)
+      throw new OperationError(
+        `The theme is refused:\n${parsed.diagnostics.map(formatDiagnostic).join("\n")}`,
+      );
+    if (parsed.theme.name !== name)
+      throw new OperationError(
+        `The file says "name: ${parsed.theme.name}"; use that name or rename the draft.`,
+      );
+    if (mode === "select") {
+      const saved = editors.themes.get?.(name);
+      if (!saved || !sameLookTheme(saved, parsed.theme))
+        throw new OperationError(
+          "This draft differs from the saved theme; update a project theme or create a copy.",
+        );
+    }
+    if (mode === "create" && editors.themes.names.includes(name))
+      throw new OperationError(
+        `There is already a theme "${name}"; update it or choose a new name.`,
+      );
+    if (
+      mode === "update" &&
+      (!editors.themes.projectNames?.includes(name) || !editors.themes.update)
+    )
+      throw new OperationError(`There is no project theme "${name}" to update.`);
+    // Validate every scope before any host file is changed. Only explicitly requested resets go.
+    for (const reset of resets) resetThemeOverride.apply(editors, reset, ir);
+    setTheme.apply(editors, { preset: name, ...(page ? { page } : {}) }, ir);
+    const source = text.endsWith("\n") ? text : `${text}\n`;
+    if (mode === "create") editors.themes.add(parsed.theme, source);
+    else if (mode === "update") editors.themes.update?.(parsed.theme, source);
+    return [];
+  },
+};
+
 const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
   name: "addTheme",
   summary: "Add a theme of the project's own (themes/<name>.yml), and use it with --use.",
@@ -1317,7 +1398,9 @@ const addTheme: Operation<{ name: string; text: string; use?: boolean }> = {
 
 export const uxOperations: AnyOperation[] = [
   addTheme,
+  applyTheme,
   setTheme,
+  resetThemeOverride,
   setSectionLook,
   setFrame,
   setColumns,

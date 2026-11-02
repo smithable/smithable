@@ -2,7 +2,6 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -24,6 +23,7 @@ import {
   operationsFor,
   PEOPLE_PATH,
   parseOperationArgs,
+  parseTheme,
   type SpecIR,
   storageOf,
   translationPath,
@@ -40,7 +40,14 @@ import {
   snapshotDatabase,
 } from "./database.js";
 import { generate } from "./generate.js";
-import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git.js";
+import {
+  discardChanges,
+  ensureRepository,
+  git,
+  ownRepository,
+  trailer,
+  uncommittedRefusal,
+} from "./git.js";
 import {
   dropImport,
   importOwner,
@@ -51,9 +58,12 @@ import {
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
 import { loadPlugins } from "./plugins.js";
+import { ProjectBusyError, withProjectMutation } from "./project-mutation.js";
+import { projectRevision } from "./project-revision.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
-import { projectThemes, projectTranslations } from "./validate.js";
+import { themeTransaction } from "./theme-transaction.js";
+import { projectThemeFiles, projectThemes, projectTranslations } from "./validate.js";
 
 const SPEC = "smithable.yml";
 const CONTENT = "smithable.content.yml";
@@ -62,6 +72,8 @@ const UX = "smithable.ux.yml";
 const OPLOG = ".smithable/oplog.jsonl";
 
 export interface OpFlags {
+  /** Host-only optimistic precondition for a queued redo or files plan. */
+  expectedRevision?: string;
   /** Confirms a destructive operation. */
   yes: boolean;
   /** Called through MCP: messages name the tools instead of CLI commands. */
@@ -172,10 +184,36 @@ export async function runFilesChange(
   plan: FilesPlan,
   flags: OpFlags,
 ): Promise<number> {
-  return runOperation(dir, io, plan.recorded.op, plan.recorded.args, flags, plan);
+  return runOperation(
+    dir,
+    io,
+    plan.recorded.op,
+    plan.recorded.args,
+    { ...flags, expectedRevision: flags.expectedRevision ?? projectRevision(dir) },
+    plan,
+  );
 }
 
 export async function runOperation(
+  dir: string,
+  io: Io,
+  name: string,
+  args: OperationArgs,
+  flags: OpFlags,
+  plan?: FilesPlan,
+): Promise<number> {
+  try {
+    return await withProjectMutation(dir, (root) =>
+      runOperationLocked(root, io, name, args, flags, plan),
+    );
+  } catch (error) {
+    if (!(error instanceof ProjectBusyError)) throw error;
+    io.err(`${error.message}\n`);
+    return 1;
+  }
+}
+
+async function runOperationLocked(
   dir: string,
   io: Io,
   name: string,
@@ -225,12 +263,50 @@ async function applyAndCheckpoint(
     io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
+  if (flags.expectedRevision && projectRevision(dir) !== flags.expectedRevision) {
+    io.err("The project changed while this change waited. Reload before retrying.\n");
+    return 1;
+  }
+  if (batch?.some((step) => step.op === "applyTheme")) {
+    io.err("applyTheme is already atomic; run it as a single operation.\n");
+    return 2;
+  }
+  if (name === "applyTheme") {
+    const previousText = trailer(git(dir, ["log", "-1", "--format=%B"]).out, "Smithable-Op");
+    let previous: { op?: string; args?: OperationArgs } | undefined;
+    try {
+      previous = previousText ? JSON.parse(previousText) : undefined;
+    } catch {}
+    if (previous?.op === "applyTheme" && previous.args?.requestId === args.requestId) {
+      if (JSON.stringify(canonical(previous.args)) !== JSON.stringify(canonical(args))) {
+        io.err("This Apply request id was already used for another draft.\n");
+        return 1;
+      }
+      if (uncommittedRefusal(dir)) {
+        io.err("The project changed after this Apply; reload before retrying.\n");
+        return 1;
+      }
+      io.out("This theme Apply was already committed; nothing changed.\n");
+      return 0;
+    }
+    if (
+      typeof args.expectedRevision !== "string" ||
+      projectRevision(dir) !== args.expectedRevision
+    ) {
+      io.err(
+        "The project source changed since this draft opened. Reload the saved look; the draft was not written.\n",
+      );
+      return 1;
+    }
+  }
   lap("start");
-  ensureRepository(dir);
+  if (name !== "applyTheme") ensureRepository(dir);
   lap("repository");
-  const refused = uncommittedRefusal(dir, "so the operation can be undone on its own");
+  const refused = ownRepository(dir)
+    ? uncommittedRefusal(dir, "so the operation can be undone on its own")
+    : undefined;
   lap("uncommitted");
-  if (refused) {
+  if (refused && name !== "applyTheme") {
     io.err(refused);
     return 1;
   }
@@ -249,6 +325,12 @@ async function applyAndCheckpoint(
     ...(existsSync(peoplePath) ? { people: readFileSync(peoplePath, "utf8") } : {}),
     plugins,
     themes: projectThemes(dir),
+    themePaths: Object.fromEntries(
+      projectThemeFiles(dir).flatMap((path) => {
+        const theme = parseTheme({ path, text: readFileSync(path, "utf8") }).theme;
+        return theme ? [[theme.name, `themes/${path.slice(path.lastIndexOf("/") + 1)}`]] : [];
+      }),
+    ),
     translations: projectTranslations(dir),
   };
   // An edit of the whole spec that only renames a key is the rename operation (core does the
@@ -271,6 +353,32 @@ async function applyAndCheckpoint(
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
     // A refusal, said in words: not a failure to report (only what throws below is one).
     return 1;
+  }
+  if (name === "applyTheme") {
+    const unchanged =
+      (["spec", "content", "auth", "ux", "context", "people"] as const).every(
+        (key) => result.files[key] === files[key],
+      ) &&
+      result.removed.length === 0 &&
+      result.added.every(
+        (file) =>
+          existsSync(join(dir, file.path)) &&
+          readFileSync(join(dir, file.path), "utf8") === file.text,
+      );
+    if (unchanged) {
+      io.out("The saved look already matches this draft; nothing changed.\n");
+      return 0;
+    }
+    if (refused) {
+      io.err(refused);
+      return 1;
+    }
+    if (!existsSync(join(dir, ".smithable/files.json"))) {
+      io.err(
+        "Generate this project before applying a look, so its compiler-owned output can be checked safely.\n",
+      );
+      return 1;
+    }
   }
   const before = validateSpec({ path: SPEC, text: files.spec }, { plugins: files.plugins })
     .ir as SpecIR;
@@ -326,10 +434,59 @@ async function applyAndCheckpoint(
     return 1;
   }
 
+  let applyBaseRevision = args.expectedRevision;
+  if (name === "applyTheme") {
+    if (projectRevision(dir) !== args.expectedRevision) {
+      io.err(
+        "The project source changed before Apply could write it. The draft was not written.\n",
+      );
+      return 1;
+    }
+    // Establish existing history only for a real change. Its initial checkpoint changes HEAD,
+    // which is our own change; verify all working source bytes independently across it.
+    const workingRevision = projectRevision(dir, false);
+    ensureRepository(dir);
+    if (projectRevision(dir, false) !== workingRevision) {
+      io.err(
+        "The project source changed while history was initialized. The draft was not written.\n",
+      );
+      return 1;
+    }
+    applyBaseRevision = projectRevision(dir);
+  }
+
   const id = new Date().toISOString().replace(/[-:.]/g, "").replace("T", "-").slice(0, 17);
   const snapshot = snapshotDatabase(dir, id);
   lap("database snapshot");
+  const themeWrites =
+    name === "applyTheme"
+      ? themeTransaction(dir, [
+          SPEC,
+          CONTENT,
+          AUTH,
+          UX,
+          "smithable.context.yml",
+          PEOPLE_PATH,
+          ...Object.keys(result.files.translations ?? {}).map(translationPath),
+          ...result.added.map((file) => file.path),
+        ])
+      : undefined;
+  let expectedSource: string | undefined;
+  const sourceMoved = () => {
+    if (expectedSource === undefined) return false;
+    try {
+      return projectRevision(dir) !== expectedSource || !!themeWrites?.externalChange();
+    } catch {
+      return true;
+    }
+  };
   const fail = (message: string) => {
+    if (name === "applyTheme" && sourceMoved()) {
+      io.err(
+        `${message} Source or files outside the transaction changed during Apply; rollback is incomplete. Newer source was preserved. Inspect the working diff before continuing.\n`,
+      );
+      return FAILED;
+    }
     discardChanges(dir);
     if (snapshot) restoreDatabase(dir, id);
     if (prepared) dropImport(dir, id);
@@ -337,7 +494,11 @@ async function applyAndCheckpoint(
     return FAILED;
   };
 
-  // From the first write to the commit: whatever throws, the files and the database go back.
+  if (name === "applyTheme" && projectRevision(dir) !== applyBaseRevision) {
+    io.err("The project source changed before Apply could write it. The draft was not written.\n");
+    return 1;
+  }
+  // From the first write to the commit: rollback only while no newer editor files would be lost.
   try {
     writeFileSync(join(dir, SPEC), result.files.spec);
     if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
@@ -391,6 +552,7 @@ async function applyAndCheckpoint(
           }))
         : [],
     );
+    if (name === "applyTheme") expectedSource = projectRevision(dir);
     const code = await generate(dir, io, {
       tools: true,
       onlyChanged: true,
@@ -398,13 +560,18 @@ async function applyAndCheckpoint(
       migration: { name: migrationName(result.description), renames, values, models, apply: true },
     });
     if (code !== 0) return fail(`Regenerating the app failed.`);
+    if (name === "applyTheme" && sourceMoved())
+      return fail("The project changed before its checkpoint.");
     lap("generate and tools");
 
     for (const effect of result.effects) {
       if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
     }
     if (prepared && auth) insertImport(dir, prepared, before, auth, owner?.id ?? null);
-    git(dir, ["add", "-A"]);
+    if (themeWrites) {
+      if (!themeWrites.stage()) return fail("Could not stage the theme change.");
+      if (sourceMoved()) return fail("The project changed while its checkpoint was staged.");
+    } else git(dir, ["add", "-A"]);
     // A whole edited spec is in the diff; the trailer stays short.
     const recorded = recordedArgs;
     const message = `${plan ? plan.subject : `smithable: ${result.description}`}\n\n${plan ? `${plan.body}\n` : ""}Smithable-Op: ${JSON.stringify({ op: recordedName, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
@@ -655,4 +822,16 @@ function dataImpact(dir: string, effects: Effect[], args: Record<string, unknown
     : "";
   if (removed) return `this deletes the ${field} column${values ? `; ${values}` : ""}.`;
   return `this converts ${model}.${field} to a different type; values that do not fit are lost${values ? ` (${values})` : ""}.`;
+}
+
+/** Stable payload identity for a retry with the same object keys in a different order. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => [key, canonical(item)]),
+    );
+  return value;
 }

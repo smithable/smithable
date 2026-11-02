@@ -22,6 +22,7 @@ import { op } from "./op.js";
 import { backupContinuous, restoreAt } from "./pitr.js";
 import { loadPlugins } from "./plugins.js";
 import { preview } from "./preview.js";
+import { projectRevision } from "./project-revision.js";
 import { redo } from "./redo.js";
 import { report } from "./report.js";
 import { type Level, security, updateSecurity } from "./security.js";
@@ -131,6 +132,10 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "inspect") return inspect(values.dir ?? ".", io, args[0], values.json === true);
   if (command === "customize") return customize(values.dir ?? ".", io, args[0]);
   if (command === "themes") return themes(args[0] ?? values.dir ?? ".", io);
+  if (command === "theme" && args[0] === "revision") {
+    io.out(`${projectRevision(values.dir ?? ".")}\n`);
+    return 0;
+  }
   if (command === "theme" && args[0] === "lab")
     return themeLab(io, Number(values.port ?? 4330), {
       ...(values.project ? { project: values.project } : {}),

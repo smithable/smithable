@@ -6,16 +6,31 @@
 // through addTheme into the project (--project, or the current folder when it is one), or as
 // themes/<name>.yml into a current folder that is no project, never over a file there.
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, extname, join, normalize, resolve } from "node:path";
-import { formatDiagnostic, parseTheme, type SpecIR } from "@smithable/core";
+import {
+  type ContentIR,
+  formatDiagnostic,
+  parseTheme,
+  previewPages,
+  type SpecIR,
+} from "@smithable/core";
 import { openBrowser } from "./dev.js";
 import { type Io, tool } from "./io.js";
 import { create } from "./new.js";
 import { runOperation } from "./op.js";
 import { previewConfig } from "./preview-editor.js";
+import { projectLook } from "./project-look.js";
 import { STARTERS } from "./starters.gen.js";
 import { loadSpec, projectThemeFiles } from "./validate.js";
 
@@ -69,29 +84,8 @@ async function labApp(io: Io, starter: string): Promise<string | undefined> {
   return dir;
 }
 
-/**
- * The pages the lab frames: the landing page (or the app's front page), then a list, its form
- * and a record; an app with no list of its own but a data page (the api starter) shows that one.
- */
-export function labFrames(
-  pages: { route: string; pattern: { kind: string } }[],
-): { label: string; path: string }[] {
-  const landing = pages.find((p) => p.pattern.kind === "landing");
-  const list = pages.find((p) => p.pattern.kind === "crud");
-  const data = pages.find((p) => p.pattern.kind === "data");
-  return [
-    { label: "Landing", path: landing?.route ?? "/" },
-    ...(list
-      ? [
-          { label: "List", path: list.route },
-          { label: "Form", path: `${list.route}/new` },
-          { label: "Record", path: `${list.route}/1` },
-        ]
-      : data
-        ? [{ label: "List", path: data.route }]
-        : []),
-  ];
-}
+/** The shared inventory includes every real page; records remain unresolved until read. */
+export const labFrames = previewPages;
 
 /** A request's JSON body; {} when it is not JSON, so a malformed one is refused, not a crash. */
 const bodyJson = async (req: IncomingMessage): Promise<Record<string, unknown>> => {
@@ -104,10 +98,22 @@ const bodyJson = async (req: IncomingMessage): Promise<Record<string, unknown>> 
 };
 
 const body = (req: IncomingMessage) =>
-  new Promise<string>((done) => {
+  new Promise<string>((done, fail) => {
     let text = "";
-    req.on("data", (d) => (text += d));
+    let bytes = 0;
+    let overflow = false;
+    req.on("data", (chunk) => {
+      if (overflow) return;
+      bytes += Buffer.byteLength(chunk);
+      if (bytes > 1024 * 1024) {
+        overflow = true;
+        fail(new Error("Request exceeds 1 MiB."));
+        return;
+      }
+      text += chunk;
+    });
     req.on("end", () => done(text));
+    req.on("error", fail);
   });
 
 export async function themeLab(
@@ -135,7 +141,9 @@ export async function themeLab(
   // switch replaces it with another starter's on the same port.
   const previewPort = port + 1;
   const preview = `http://localhost:${previewPort}`;
-  let shown: { starter?: string; app: string; ir: SpecIR; child: ChildProcess } | undefined;
+  let shown:
+    | { starter?: string; app: string; ir: SpecIR; content?: ContentIR; child: ChildProcess }
+    | undefined;
   // The app is forgotten only once it is gone, so a Ctrl+C meanwhile still removes its folder.
   const stop = async () => {
     const was = shown;
@@ -154,7 +162,7 @@ export async function themeLab(
   const show = async (starter?: string): Promise<boolean> => {
     const app = options.app ? resolve(options.app) : await labApp(io, starter ?? "booking");
     if (!app) return false;
-    const { ir } = loadSpec(app, io);
+    const { ir, content } = loadSpec(app, io);
     if (!ir) {
       if (!options.app) rmSync(join(app, ".."), { recursive: true, force: true });
       return false;
@@ -174,7 +182,7 @@ export async function themeLab(
       { cwd: app, env: { ...process.env, BETTER_AUTH_URL: preview, NO_COLOR: "1" } },
     );
     child.stderr?.on("data", (d) => io.err(String(d)));
-    shown = { ...(options.app ? {} : { starter: starter ?? "booking" }), app, ir, child };
+    shown = { ...(options.app ? {} : { starter: starter ?? "booking" }), app, ir, content, child };
     // Ready once the app answers (its first page compiles on the first request).
     for (let waited = 0; ; waited += 500) {
       const status = await fetch(`${preview}/sign-in`).then(
@@ -217,12 +225,29 @@ export async function themeLab(
     if (url.pathname === "/api/start")
       return json(200, {
         preview,
-        frames: shown ? labFrames(shown.ir.pages) : [],
+        frames: shown
+          ? labFrames(
+              shown.ir.pages,
+              Object.fromEntries(
+                Object.entries(shown.content?.pages ?? {}).flatMap(([id, p]) =>
+                  p.title ? [[id, p.title]] : [],
+                ),
+              ),
+            )
+          : [],
         // The starters the switch offers: none when the app was given.
         starters: options.app ? [] : starters,
         starter: shown?.starter,
         themes: ownThemes(),
+        look:
+          shown &&
+          projectLook(
+            shown.app,
+            shown.ir.pages.find((p) => p.route === labFrames(shown?.ir.pages ?? [])[0]?.path)?.id ??
+              shown.ir.pages[0]?.id,
+          ),
         project: Boolean(project),
+        canApply: Boolean(project && shown && realpathSync(project) === realpathSync(shown.app)),
         target,
       });
     if (url.pathname === "/api/starter" && req.method === "POST") {
@@ -239,11 +264,59 @@ export async function themeLab(
           await stop();
           return json(500, { error: `The ${name} app did not start.` });
         }
-        return json(200, { starter: name, frames: labFrames(shown?.ir.pages ?? []) });
+        return json(200, {
+          starter: name,
+          frames: labFrames(shown?.ir.pages ?? []),
+          look:
+            shown &&
+            projectLook(
+              shown.app,
+              shown.ir.pages.find((p) => p.pattern.kind === "landing")?.id ?? shown.ir.pages[0]?.id,
+            ),
+        });
       } finally {
         switching = false;
       }
     }
+    if (url.pathname === "/api/apply" && req.method === "POST") {
+      if (req.headers.origin !== `http://${req.headers.host}`)
+        return json(403, { error: "Not from the lab." });
+      if (!project || !shown || realpathSync(project) !== realpathSync(shown.app))
+        return json(409, {
+          error:
+            "Apply needs the previewed app as its project destination. Use --app and --project for the same app.",
+        });
+      const args = await bodyJson(req);
+      const said: string[] = [];
+      try {
+        const code = await runOperation(
+          project,
+          { ...io, out: (t) => said.push(t), err: (t) => said.push(t) },
+          "applyTheme",
+          args,
+          { yes: true, reportLater: true },
+        );
+        return json(code === 0 ? 200 : 409, {
+          ok: code === 0,
+          output: said.join(""),
+          ...(code === 0
+            ? {
+                look: projectLook(
+                  project,
+                  shown.ir.pages.find((p) => p.pattern.kind === "landing")?.id ??
+                    shown.ir.pages[0]?.id,
+                ),
+              }
+            : {}),
+        });
+      } catch (error) {
+        return json(409, {
+          ok: false,
+          output: `Apply refused: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }
+
     if (url.pathname === "/api/save" && req.method === "POST") {
       // Only the lab's own page saves (the request's origin is the lab).
       if (req.headers.origin !== `http://${req.headers.host}`)

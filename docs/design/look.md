@@ -200,3 +200,29 @@ From the UI feedback's product decisions (a tester's report of 2026-10-17; Johan
   which equals `--radius` in styles.css today), dialogs and drawers a step larger (`--radius-xl`,
   four pixels more). The kit's classes are checked to agree (A 136). Three keys in the theme
   file only if a theme author asks.
+
+## Studio controls and effective look (2026-11-02)
+
+The Look panel's **Page to style** selector limits page controls to one actual page. App shell
+controls choose navigation, chrome and active-menu indication. Landing pages expose width and
+header placement; lists expose marks, row actions and filter presentation; calendars expose
+view, compatible color/capacity fields and time-of-day filters. Record controls expose automatic
+summary, aside, picture placement, conversation-first and related-list table/conversation/inline
+presentation. Mixed-section pages reuse the section appearance controls. Unsupported choices
+explain their prerequisites; core validation still refuses invalid dependent configuration.
+“Inherited” removes the authored setting through its canonical operation. These immediate
+changes use project history; draft theme Undo remains separate.
+
+`UX_CAPABILITIES` is the bounded shared descriptor for these choices and their operation enums,
+paths, reset behavior, applicability and structural classification. `resolveLook` supplies one
+app/page theme resolution with optional raw-source authorship for provenance. Explicit app/page
+brand and font settings may mask theme edits; the theme editor labels them and stages requested
+resets. Opening and applying an unchanged look leave source and history unchanged.
+
+`applyTheme` creates and selects, updates and selects, or selects an unchanged existing theme in
+one operation checkpoint. Built-ins are immutable; an edited built-in requires a new project
+name. Updates affect all pages sharing that project theme. The host checks the working source
+revision inside the shared project mutation queue, supports identical-request retries, and
+preserves newer external edits if a rollback cannot safely complete. Normal generation failure
+uses the existing source/database rollback contract. One project Undo reverses the checkpoint;
+Redo obtains a fresh revision.

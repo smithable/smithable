@@ -3,16 +3,12 @@
 import {
   hexOf,
   hexToRgb,
-  type Mode,
+  pageLookUx,
+  resolveLook,
   rgbToOklch,
   type ThemeIR,
-  type Tokens,
-  themeNamed,
-  tokensOf,
   type UxIR,
-  withBackground,
 } from "@smithable/core";
-import { brandColors } from "./brand.js";
 import { FONT_ASSETS, FONT_PACKAGES } from "./fonts.js";
 
 export { FONT_PACKAGES } from "./fonts.js";
@@ -46,14 +42,12 @@ const MOTION = {
 
 /** The theme the ux file names, among the built-ins and the project's own. */
 export function themeOf(ux: UxIR, themes: readonly ThemeIR[] = []): ThemeIR {
-  const theme = themeNamed(ux.theme.preset, themes) ?? themeNamed("modern");
-  if (!theme) throw new Error("No built-in theme");
-  return theme;
+  return resolveLook(ux, themes).theme;
 }
 
 /** The font the app uses: the brand's, or the theme's. */
 export function themeFont(ux: UxIR, themes: readonly ThemeIR[] = []): string {
-  return ux.theme.font ?? themeOf(ux, themes).font;
+  return resolveLook(ux, themes).font;
 }
 
 /**
@@ -74,16 +68,7 @@ const HOVER = {
   --destructive-hover: color-mix(in oklch, var(--destructive), white 30%);`,
 };
 
-function tokens(ux: UxIR, theme: ThemeIR, mode: Mode): Tokens {
-  const base = (ux.theme.background && withBackground(theme, ux.theme.background)) || theme;
-  return tokensOf(base, mode, ux.theme.primary ? brandColors(ux.theme.primary, base, mode) : {});
-}
-
-/** A landing page's ux: the app's theme with the keys the page changes (look.md §1.5). */
-const pageUx = (ux: UxIR, page: string): UxIR => ({
-  ...ux,
-  theme: { ...ux.theme, ...ux.pages[page]?.theme },
-});
+const pageUx = (ux: UxIR, page: string): UxIR => pageLookUx(ux, page);
 
 /** Whether a page's theme (its own, or the app's) bands its sections (surfaces.sections). */
 export const bandedPage = (ux: UxIR, page: string, themes: readonly ThemeIR[] = []): boolean =>
@@ -99,11 +84,14 @@ const themedPages = (ux: UxIR) =>
 export function themeFonts(ux: UxIR, themes: readonly ThemeIR[] = []): string[] {
   return [
     ...new Set(
-      [ux, ...themedPages(ux).map((id) => pageUx(ux, id))].flatMap((u) => [
-        themeFont(u, themes),
-        themeOf(u, themes).style.headingFont ?? themeFont(u, themes),
-        themeOf(u, themes).style.labelsFont ?? themeFont(u, themes),
-      ]),
+      [ux, ...themedPages(ux).map((id) => pageUx(ux, id))].flatMap((u) => {
+        const look = resolveLook(u, themes);
+        return [
+          look.font,
+          look.theme.style.headingFont ?? look.font,
+          look.theme.style.labelsFont ?? look.font,
+        ];
+      }),
     ),
   ];
 }
@@ -265,14 +253,15 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
       .join("\n");
   /** One theme's variables under a selector: :root for the app, a page's own under its hook. */
   const scope = (selector: string, dark: string, from: UxIR) => {
-    const theme = themeOf(from, themes);
-    const font = themeFont(from, themes);
+    const look = resolveLook(from, themes);
+    const theme = look.theme;
+    const font = look.font;
     const density = DENSITY[from.theme.density];
     const motion = MOTION[from.theme.motion];
     return {
       light: `${selector} {
-${block(tokens(from, theme, "light"), "  ")}
-  --picture-filter: ${pictureFilter(theme, tokens(from, theme, "light").primary)};
+${block(look.tokens.light, "  ")}
+  --picture-filter: ${pictureFilter(theme, look.tokens.light.primary)};
   --radius: ${theme.radius};
   --font-body: ${fontStack(font)};
   --control-height: ${density.control};
@@ -289,8 +278,8 @@ ${block(styleVariables(theme, font), "  ")}
 ${HOVER.light}
 }`,
       dark: `${dark} {
-${block(tokens(from, theme, "dark"), "  ")}
-  --picture-filter: ${pictureFilter(theme, tokens(from, theme, "dark").primary)};
+${block(look.tokens.dark, "  ")}
+  --picture-filter: ${pictureFilter(theme, look.tokens.dark.primary)};
 ${HOVER.dark}
 }`,
       comment: `${theme.name}${from.theme.primary ? `, brand color ${from.theme.primary}` : ""}, font ${font}, ${from.theme.density}, motion ${from.theme.motion}`,

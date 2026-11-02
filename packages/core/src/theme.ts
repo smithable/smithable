@@ -385,8 +385,8 @@ const GLASS_OPACITY = 0.65;
  * came out a cool grey that read lilac beside the cream (the barbers' band, 2026-11-01).
  */
 function towards(from: string, to: string, share: number): string {
-  const [l1, c1, h1] = rgbToOklch(hexToRgb(from));
-  const [l2, c2, h2] = rgbToOklch(hexToRgb(to));
+  const [l1, c1, h1] = rgbToOklch(hexToRgb(hexOf(from)));
+  const [l2, c2, h2] = rgbToOklch(hexToRgb(hexOf(to)));
   const ab = (c: number, h: number) =>
     [c * Math.cos((h * Math.PI) / 180), c * Math.sin((h * Math.PI) / 180)] as const;
   const [a1, b1] = ab(c1, h1);
@@ -400,18 +400,19 @@ function towards(from: string, to: string, share: number): string {
 
 /** The text that reads best on a color. */
 const bestText = (bg: string) =>
-  contrast(LIGHT_TEXT, bg) >= contrast(DARK_TEXT, bg) ? LIGHT_TEXT : DARK_TEXT;
+  contrast(LIGHT_TEXT, hexOf(bg)) >= contrast(DARK_TEXT, hexOf(bg)) ? LIGHT_TEXT : DARK_TEXT;
 
 /** A color on `bg` moved towards `towardsColor` until it reads at `ratio`. */
 function readable(color: string, bg: string, towardsColor: string, ratio: number): string {
   let out = color;
-  for (let i = 0; i < 40 && contrast(out, bg) < ratio; i++) out = towards(out, towardsColor, 0.1);
+  for (let i = 0; i < 40 && contrast(hexOf(out), hexOf(bg)) < ratio; i++)
+    out = towards(out, towardsColor, 0.1);
   return out;
 }
 
 /** A hue-rotated color of the same lightness and chroma. */
 function rotate(color: string, degrees: number): string {
-  const [l, c, h] = rgbToOklch(hexToRgb(color));
+  const [l, c, h] = rgbToOklch(hexToRgb(hexOf(color)));
   return gamutMap([l, Math.max(c, 0.08), (h + degrees) % 360]);
 }
 

@@ -102,7 +102,11 @@ for (const starter of chosen.length ? chosen : all) {
       page,
       base,
       saving,
-      frames.map((f) => ({ ...f, file: f.label.toLowerCase() })),
+      frames.map((f) => ({
+        ...f,
+        path: f.path ?? f.discoverFrom,
+        file: f.id.replaceAll(":", "-"),
+      })),
       { imports: false },
     );
     await browser.close();
@@ -116,8 +120,14 @@ for (const starter of chosen.length ? chosen : all) {
 
     // The lab's own labels, for the frames that were saved (a skipped one is not listed).
     const exported = frames
-      .map((f) => ({ label: f.label, path: `/frames/${starter}/${f.label.toLowerCase()}.html` }))
-      .filter((f) => saved.frames.some((s) => s.path === `/frames/${f.label.toLowerCase()}.html`));
+      .map((f) => ({
+        ...f,
+        discoverFrom: undefined,
+        path: `/frames/${starter}/${f.id.replaceAll(":", "-")}.html`,
+      }))
+      .filter((f) =>
+        saved.frames.some((s) => s.path === `/frames/${f.id.replaceAll(":", "-")}.html`),
+      );
     for (const { label, reason } of saved.skipped)
       console.error(`${starter}: left out ${label}: ${reason}.`);
     sets.push({ name: starter, frames: exported, identity });

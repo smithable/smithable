@@ -1,9 +1,16 @@
 // Shared by the Studio gate and the focused standalone lab check.
 import assert from "node:assert/strict";
 import { FONT_ASSETS, themeCss } from "../packages/adapter-tanstack/dist/index.js";
-import { BUILT_IN_THEMES, emptyUx, parseTheme, TOKEN_NAMES } from "../packages/core/dist/index.js";
+import {
+  BUILT_IN_THEMES,
+  emptyUx,
+  parseTheme,
+  TOKEN_NAMES,
+  validateUx,
+} from "../packages/core/dist/index.js";
 
 export async function checkThemeLab(page) {
+  const start = await page.evaluate(() => fetch("/api/start").then((r) => r.json()));
   const select = page.getByLabel("Start from theme", { exact: true });
   const source = page.locator("textarea");
   await page.locator("iframe[data-frame]").first().waitFor({ timeout: 90000 });
@@ -28,14 +35,35 @@ export async function checkThemeLab(page) {
         { mode },
       );
       // The independent baseline is generated directly from the original preset, not its YAML.
-      const css = themeCss(
-        { ...emptyUx(), theme: { preset: name, density: theme.density, motion: theme.motion } },
-        [theme],
-      );
+      let expectedUx = {
+        ...emptyUx(),
+        theme: { preset: name, density: theme.density, motion: theme.motion },
+      };
+      let expectedThemes = [theme];
+      if (start.look) {
+        const original = validateUx(
+          { path: "smithable.ux.yml", text: start.look.uxText },
+          start.look.ir,
+          start.look.themes,
+          start.look.auth,
+        ).ux;
+        const target = original.pages[start.look.page]?.theme?.preset ?? original.theme.preset;
+        expectedThemes = [
+          ...start.look.themes.filter((t) => t.name !== target),
+          { ...theme, name: target },
+        ];
+        expectedUx = validateUx(
+          { path: "smithable.ux.yml", text: start.look.uxText },
+          start.look.ir,
+          expectedThemes,
+          start.look.auth,
+        ).ux;
+      }
+      const css = themeCss(expectedUx, expectedThemes);
       const pairs = await frame.evaluate(
         ({ css, tokens }) => {
           const probe = document.createElement("span");
-          document.body.append(probe);
+          (document.querySelector("[data-page]") ?? document.body).append(probe);
           const canvas = document.createElement("canvas");
           canvas.width = canvas.height = 1;
           const ctx = canvas.getContext("2d", { willReadFrequently: true });

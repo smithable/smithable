@@ -4,6 +4,7 @@
 // and lets table columns be dragged. The app's own builds never include it.
 import { createHash, timingSafeEqual } from "node:crypto";
 import { fontImportRuntime } from "@smithable/adapter-tanstack";
+import { RECORD_PROBE } from "./preview-discovery.js";
 
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
@@ -135,6 +136,22 @@ if (typeof window !== "undefined" && window.parent !== window) {
     document.documentElement.dataset.appearance = scheme;
     document.documentElement.style.colorScheme = scheme;
   };
+  // Bounded discovery runs inside the currently authorized rendered list. The parent must
+  // own this actual iframe; hosted authorization is supplied separately by the host adapter.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "smithable:discover-record") return;
+    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    const { request, base } = event.data;
+    if (typeof request !== "string" || request.length > 100 || typeof base !== "string" || base.length > 1000) return;
+    const until = Date.now() + 15000;
+    const read = () => {
+      if (document.body.dataset.hydrated !== "true" && Date.now() < until) return setTimeout(read, 100);
+      const path = location.pathname === base ? (${RECORD_PROBE})(base) : undefined;
+      window.parent.postMessage({source:"smithable-preview",type:"record-discovered",request,path,
+        status:location.pathname === "/sign-in" ? "sign-in" : path ? "found" : "empty"},event.origin);
+    };
+    read();
+  });
   // The theme lab signs itself in through the app's development sign-in (a button for each
   // role, there only in development): asked from the page this preview is in on this machine,
   // the sign-in page clicks the role's button once it is ready.
@@ -145,8 +162,13 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const tryClick = () => {
       const buttons = [...document.querySelectorAll("[data-dev-role]")];
       const button =
-        buttons.find((b) => b.dataset.devRole === event.data.role) ?? buttons[0];
-      if (document.body.dataset.hydrated === "true" && button) button.click();
+        buttons.find((b) => b.dataset.devRole === event.data.role);
+      if (location.pathname !== "/sign-in" && document.body.dataset.hydrated === "true") {
+        window.parent.postMessage({source:"smithable-preview",type:"signed-in",path:location.pathname},event.origin);
+      } else if (document.body.dataset.hydrated === "true" && button) {
+        button.click();
+        setTimeout(tryClick, 200);
+      }
       else if (Date.now() - started < 20000) setTimeout(tryClick, 200);
     };
     tryClick();

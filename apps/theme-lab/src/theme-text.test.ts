@@ -1,4 +1,11 @@
-import { BUILT_IN_THEMES, hexOf, parseTheme, type ThemeIR, TOKEN_NAMES } from "@smithable/core";
+import {
+  BUILT_IN_THEMES,
+  hexOf,
+  parseTheme,
+  type ThemeIR,
+  TOKEN_NAMES,
+  withBackground,
+} from "@smithable/core";
 import { expect, test } from "vitest";
 import { getField, resetColors, setField, themeText } from "./theme-text";
 
@@ -89,4 +96,28 @@ test("source edits preserve comments and explicit colours until reset is request
   for (const token of TOKEN_NAMES)
     expect(getField(reset, ["dark", token])).toEqual(getField(edit, ["dark", token]));
   expect(parseTheme({ path: "custom.yml", text: reset }).theme).toBeDefined();
+});
+
+test("app background overrides produce the same valid tokens before and after theme serialization", () => {
+  for (const theme of BUILT_IN_THEMES) {
+    const parsed = parseTheme({ path: "draft.yml", text: themeText(theme) }).theme;
+    if (!parsed) throw new Error(theme.name);
+    for (const background of ["#f5efe6", "#e11d48"]) {
+      const original = withBackground(theme, background);
+      const draft = withBackground(parsed, background);
+      expect(!!draft, theme.name).toBe(!!original);
+      if (!original || !draft) continue;
+      for (const mode of ["light", "dark"] as const) {
+        if (theme.modes !== "both" && theme.modes !== mode) continue;
+        for (const token of TOKEN_NAMES) {
+          expect(hexOf(original[mode][token]), `${theme.name}.${mode}.${token}`).toMatch(
+            /^#[0-9a-f]{6}$/i,
+          );
+          expect(hexOf(draft[mode][token]), `${theme.name}.${mode}.${token}`).toBe(
+            hexOf(original[mode][token]),
+          );
+        }
+      }
+    }
+  }
 });

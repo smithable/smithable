@@ -38,6 +38,7 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/Articles.tsx": [
     "data-kit="articles"",
     "data-part="row"",
+    "data-part="record-link"",
     "data-kit="article"",
     "data-part="title"",
   ],
@@ -148,6 +149,7 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="empty"",
     "data-part="thread"",
     "data-part="mark"",
+    "data-part="record-open"",
     "data-part="select"",
     "data-part="row"",
     "data-part="description"",

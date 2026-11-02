@@ -14,7 +14,11 @@ import {
   FONTS,
   hardToRead,
   hexOf,
+  LOOK_KEYS,
+  lookAuthorship,
   oppositeMode,
+  type PreviewPage,
+  type ProjectLook,
   parseTheme,
   SHADOWS,
   STYLE_VALUES,
@@ -24,6 +28,7 @@ import {
 } from "@smithable/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Guide, guideFirst } from "./Guide";
+import { openProjectLook, previewProjectLook } from "./project-look";
 import {
   changeModes,
   draftHistory,
@@ -34,7 +39,11 @@ import {
 } from "./theme-draft";
 import { getField, resetColors, setField, themeText } from "./theme-text";
 
-type Frames = { label: string; path: string }[];
+type Frames = (Partial<PreviewPage> & {
+  label: string;
+  path?: string;
+  discovery?: "loading" | "empty" | "error";
+})[];
 
 interface Start {
   preview: string;
@@ -46,7 +55,9 @@ interface Start {
   sets?: Record<string, Frames>;
   themes: { name: string; text: string }[];
   project: boolean;
+  canApply?: boolean;
   target: string;
+  look?: ProjectLook;
   staticIdentities?: Record<string, string>;
 }
 
@@ -74,6 +85,7 @@ const GAP = 16;
 
 export function App() {
   const [start, setStart] = useState<Start>();
+  const [startingTheme, setStartingTheme] = useState("modern");
   const [history, setHistory] = useState(() =>
     draftHistory(themeText(BUILT_IN_THEMES[0] as ThemeIR)),
   );
@@ -87,11 +99,19 @@ export function App() {
     );
   const [pendingModes, setPendingModes] = useState<ThemeIR["modes"]>();
   const [page, setPage] = useState<string>();
+  const [targetPage, setTargetPage] = useState<string | null>(null);
+  const [baseScope, setBaseScope] = useState<string | null>(null);
+  const [initialText, setInitialText] = useState(text);
+  const [applyBusy, setApplyBusy] = useState(false);
+  const [openingLook, setOpeningLook] = useState(false);
+  const applying = useRef(false);
+  const applyRequest = useRef<{ key: string; id: string } | undefined>(undefined);
   const [mode, setMode] = useState<"light" | "dark">("light");
   const [width, setWidth] = useState(1280);
   const [beside, setBeside] = useState(false);
   const [grey, setGrey] = useState(false);
   const [signedIn, setSignedIn] = useState(PUBLIC);
+  const [signInError, setSignInError] = useState(false);
   const [saved, setSaved] = useState<string>();
   // The guide (A 158): by itself once in a browser when the pages are in, again from its button.
   const [guiding, setGuiding] = useState(false);
@@ -135,7 +155,26 @@ export function App() {
     else
       void fetch("/api/start")
         .then((r) => r.json())
-        .then(setStart);
+        .then((data: Start) => {
+          if (data.look) {
+            const selected =
+              data.look.page && lookAuthorship(data.look.uxText)?.pages[data.look.page]?.preset
+                ? data.look.page
+                : null;
+            const opened = openProjectLook(data.look, selected);
+            setStartingTheme(
+              opened.look.theme.source === "project"
+                ? `shown:${opened.look.theme.name}`
+                : opened.look.theme.name,
+            );
+            const source = opened.text;
+            setHistory(draftHistory(source));
+            setInitialText(source);
+            setTargetPage(selected);
+            setBaseScope(selected);
+          }
+          setStart(data);
+        });
   }, []);
 
   // Once the pages are in and the frames signed in, so every place the guide points at is drawn.
@@ -174,20 +213,79 @@ export function App() {
   const lastGood = useRef<ThemeIR | undefined>(undefined);
   if (theme) lastGood.current = theme;
   const shown = theme ?? lastGood.current;
+  const selectedFrame = start?.frames.find((f) => (f.id ?? f.label) === page) ?? start?.frames[0];
+  const activePage = start?.look?.ir.pages
+    .filter(
+      (p) =>
+        selectedFrame?.path === p.route ||
+        (p.route !== "/" && selectedFrame?.path?.startsWith(`${p.route}/`)),
+    )
+    .sort((a, b) => b.route.length - a.route.length)[0]?.id;
+  const projectDraft = useMemo(() => {
+    if (!theme || !start?.look) return {};
+    try {
+      return {
+        preview: previewProjectLook(
+          start.look,
+          theme,
+          targetPage,
+          activePage,
+          history.present.resets,
+        ),
+      };
+    } catch (error) {
+      return { error: String(error instanceof Error ? error.message : error) };
+    }
+  }, [theme, start?.look, targetPage, activePage, history.present.resets]);
+  const projectPreview = projectDraft.preview;
   const css = useMemo(
     () =>
-      theme
-        ? // The theme's own density and motion, as a ux file that names only the theme gets them.
-          themeCss(
-            {
-              ...emptyUx(),
-              theme: { preset: theme.name, density: theme.density, motion: theme.motion },
-            },
-            [theme],
-          )
+      theme && (!start?.look || projectPreview)
+        ? projectPreview
+          ? themeCss(projectPreview.ux, projectPreview.themes)
+          : themeCss(
+              {
+                ...emptyUx(),
+                theme: { preset: theme.name, density: theme.density, motion: theme.motion },
+              },
+              [theme],
+            )
         : undefined,
-    [theme],
+    [theme, projectPreview, start?.look],
   );
+  const openPageLook = async () => {
+    if (!start?.look || openingLook || applyBusy) return;
+    setOpeningLook(true);
+    try {
+      const response = await fetch("/api/start");
+      if (!response.ok) throw new Error("The saved project did not answer.");
+      const fresh = (await response.json()) as Start;
+      if (!fresh.look) throw new Error("The saved project could not be validated.");
+      const currentPage = fresh.look.ir.pages.some((p) => p.id === activePage)
+        ? activePage
+        : fresh.look.page;
+      const selected =
+        currentPage && lookAuthorship(fresh.look.uxText)?.pages[currentPage]?.preset
+          ? currentPage
+          : null;
+      const opened = openProjectLook(fresh.look, selected);
+      setStartingTheme(
+        opened.look.theme.source === "project"
+          ? `shown:${opened.look.theme.name}`
+          : opened.look.theme.name,
+      );
+      setStart(fresh);
+      setHistory(draftHistory(opened.text));
+      setInitialText(opened.text);
+      setTargetPage(selected);
+      setBaseScope(selected);
+      setSaved(undefined);
+    } catch (error) {
+      setSaved(`Saved look did not open; the draft is kept. ${String(error)}`);
+    } finally {
+      setOpeningLook(false);
+    }
+  };
 
   // Every frame gets the CSS when it changes, and a frame that (re)loads gets it when it is ready.
   const frames = useRef(new Set<HTMLIFrameElement>());
@@ -205,13 +303,15 @@ export function App() {
     const heard = (event: MessageEvent) => {
       if (event.origin !== origin || event.data?.source !== "smithable-preview") return;
       const from = event.source as Window;
+      const ownedFrame = [...frames.current].find((f) => f.contentWindow === from);
+      if (!ownedFrame) return;
       if (event.data.type === "ready") {
         // The frame's mode: the app's dark rules follow it, not the visitor's setting.
         const frame = [...frames.current].find((f) => f.contentWindow === from);
         if (frame?.dataset.signIn !== undefined)
           from.postMessage({ type: "smithable:dev-sign-in", role: "admin" }, origin);
         if (css) from.postMessage({ type: "smithable:theme-css", css, mode }, origin);
-        if (touring.current && frame?.dataset.frame?.startsWith("Landing")) {
+        if (touring.current && frame?.dataset.frame?.startsWith(start?.frames[0]?.label ?? "")) {
           from.postMessage({ type: "smithable:motion-tour" }, origin);
           // Once per click: a later reload of the frame (a save, Vite's own) does not tour again.
           toured.current.add(frame.dataset.frame);
@@ -220,17 +320,60 @@ export function App() {
         // Asked for its place, the page says where it is (and from then on, each move).
         from.postMessage({ type: "smithable:select-mode", on: false }, origin);
       }
-      if (event.data.type === "navigated" && event.data.path !== "/sign-in") setSignedIn(true);
+      if (
+        event.data.type === "signed-in" &&
+        ownedFrame.dataset.signIn !== undefined &&
+        typeof event.data.path === "string" &&
+        event.data.path !== "/sign-in"
+      ) {
+        setSignInError(false);
+        setSignedIn(true);
+      }
+      if (event.data.type === "ready" && ownedFrame.dataset.discovery) {
+        from.postMessage(
+          {
+            type: "smithable:discover-record",
+            request: ownedFrame.dataset.discovery,
+            base: ownedFrame.dataset.base,
+          },
+          origin,
+        );
+      }
+      if (
+        event.data.type === "record-discovered" &&
+        event.data.request === ownedFrame.dataset.discovery
+      ) {
+        const path = event.data.path;
+        const base = ownedFrame.dataset.base;
+        const prefix = base === "/" ? "/" : `${base}/`;
+        const valid =
+          typeof path === "string" &&
+          path.startsWith(prefix) &&
+          !/[?#]/.test(path) &&
+          !path.slice(prefix.length).includes("/");
+        setStart(
+          (current) =>
+            current && {
+              ...current,
+              frames: current.frames.map((f) =>
+                f.id === event.data.request
+                  ? { ...f, path: valid ? path : undefined, discovery: valid ? undefined : "empty" }
+                  : f,
+              ),
+            },
+        );
+      }
     };
     window.addEventListener("message", heard);
     return () => window.removeEventListener("message", heard);
-  }, [css, origin, mode, beside]);
+  }, [css, origin, mode, beside, start?.frames]);
   // The frames open once the app has signed the lab in (its development sign-in, as an admin).
   useEffect(() => {
     if (round < 0) return;
-    const later = setTimeout(() => setSignedIn(true), 20000);
+    if (PUBLIC || signedIn) return;
+    const later = setTimeout(() => setSignInError(true), 20000);
     return () => clearTimeout(later);
-  }, [round]);
+  }, [round, signedIn]);
   // Another starter: public mode has its pages already; locally the lab makes its app, a few
   // seconds, on the same address, then signs in to it.
   const switchTo = async (name: string) => {
@@ -240,13 +383,31 @@ export function App() {
     if (set) return setStart({ ...start, starter: name, frames: set });
     setMaking(name);
     setSignedIn(false);
+    setSignInError(false);
     const answer = await fetch("/api/starter", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name }),
-    }).then((r) => r.json() as Promise<{ frames?: Frames; error?: string }>);
+    }).then((r) => r.json() as Promise<{ frames?: Frames; error?: string; look?: ProjectLook }>);
     if (!answer.frames) return setMaking(`Not switched: ${answer.error}`);
-    setStart({ ...start, starter: name, frames: answer.frames });
+    if (answer.look) {
+      const selected =
+        answer.look.page && lookAuthorship(answer.look.uxText)?.pages[answer.look.page]?.preset
+          ? answer.look.page
+          : null;
+      const opened = openProjectLook(answer.look, selected);
+      setStartingTheme(
+        opened.look.theme.source === "project"
+          ? `shown:${opened.look.theme.name}`
+          : opened.look.theme.name,
+      );
+      const source = opened.text;
+      setHistory(draftHistory(source));
+      setInitialText(source);
+      setTargetPage(selected);
+      setBaseScope(selected);
+    }
+    setStart({ ...start, starter: name, frames: answer.frames, look: answer.look });
     setMaking(undefined);
     setRound((n) => n + 1);
   };
@@ -254,6 +415,97 @@ export function App() {
   const set = (path: (string | number)[], value: unknown) => {
     setText((t) => setField(t, path, value));
     setSaved(undefined);
+  };
+  const dirty =
+    text !== initialText || !!history.present.resets?.length || targetPage !== baseScope;
+  const builtin = BUILT_IN_THEMES.find((t) => t.name === name);
+  const owned = start?.look?.themeFiles.find((t) => t.name === name);
+  const applyMode =
+    builtin && text === themeText(builtin)
+      ? "select"
+      : owned
+        ? text === owned.text
+          ? "select"
+          : "update"
+        : "create";
+  const needsCopy = !!builtin && applyMode !== "select";
+  const shared =
+    applyMode === "update" && start?.look
+      ? start.look.ir.pages
+          .filter((p) => openProjectLook(start.look as ProjectLook, p.id).look.theme.name === name)
+          .map((p) => p.id)
+      : [];
+  const copy = () => {
+    const taken = new Set([
+      ...BUILT_IN_THEMES.map((t) => t.name),
+      ...(start?.look?.themes ?? []).map((t) => t.name),
+    ]);
+    const base = name.slice(0, 48);
+    let next = `${base}-copy`;
+    let count = 2;
+    while (taken.has(next)) next = `${base}-copy-${count++}`;
+    set(["name"], next);
+  };
+  const apply = async () => {
+    if (applying.current || !start?.look?.revision || !theme) return;
+    applying.current = true;
+    setApplyBusy(true);
+    setSaved(undefined);
+    const payload = {
+      name,
+      text,
+      mode: applyMode,
+      ...(targetPage ? { page: targetPage } : {}),
+      resets: history.present.resets ?? [],
+      expectedRevision: start.look.revision,
+    };
+    const key = JSON.stringify(payload);
+    if (applyRequest.current?.key !== key) applyRequest.current = { key, id: crypto.randomUUID() };
+    try {
+      const answer = await fetch("/api/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...payload, requestId: applyRequest.current.id }),
+      }).then(
+        (r) =>
+          r.json() as Promise<{
+            ok?: boolean;
+            output?: string;
+            error?: string;
+            look?: ProjectLook;
+          }>,
+      );
+      if (!answer.ok || !answer.look) {
+        setSaved(`Not applied: ${answer.output ?? answer.error}`);
+        return;
+      }
+      const opened = openProjectLook(answer.look, targetPage);
+      setStartingTheme(
+        opened.look.theme.source === "project"
+          ? `shown:${opened.look.theme.name}`
+          : opened.look.theme.name,
+      );
+      const source = opened.text;
+      setStart((current) => current && { ...current, look: answer.look });
+      setHistory(draftHistory(source));
+      setInitialText(source);
+      setBaseScope(targetPage);
+      setSaved(`Applied: ${answer.output ?? name}`);
+    } catch (error) {
+      setSaved(
+        `Apply did not answer; the draft is kept. Retry uses the same request: ${String(error)}`,
+      );
+    } finally {
+      applying.current = false;
+      setApplyBusy(false);
+    }
+  };
+  const download = () => {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([text], { type: "text/yaml" }));
+    link.download = `${name}.yml`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
   const save = async () => {
     if (PUBLIC) {
@@ -264,15 +516,32 @@ export function App() {
       URL.revokeObjectURL(link.href);
       return setSaved(`Downloaded ${name}.yml: add it to a project with addTheme.`);
     }
-    const answer = await fetch("/api/save", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, text }),
-    }).then((r) => r.json() as Promise<{ saved?: string; error?: string }>);
-    setSaved(answer.saved ? `Saved: ${answer.saved}` : `Not saved: ${answer.error}`);
+    try {
+      const answer = await fetch("/api/save", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, text }),
+      }).then((r) => r.json() as Promise<{ saved?: string; error?: string }>);
+      if (!answer.saved) return setSaved(`Not saved: ${answer.error}`);
+      setSaved(`Saved: ${answer.saved}`);
+      // Save adds a checkpoint without selecting it. Refresh the known source revision and
+      // theme catalogue while retaining this draft and its currently discovered frame.
+      const response = await fetch("/api/start");
+      if (!response.ok) throw new Error("The saved project did not answer.");
+      const fresh = (await response.json()) as Start;
+      setStart((current) => current && { ...current, look: fresh.look, themes: fresh.themes });
+    } catch (error) {
+      setSaved(
+        `Save/context refresh did not finish; the draft is kept. Open the saved look before Apply. ${String(error)}`,
+      );
+    }
   };
+
   const startFrom = (value: string) => {
-    const own = start?.themes.find((t) => `own:${t.name}` === value);
+    setStartingTheme(value);
+    const own =
+      start?.look?.themeFiles.find((t) => `shown:${t.name}` === value) ??
+      start?.themes.find((t) => `own:${t.name}` === value);
     const builtIn = BUILT_IN_THEMES.find((t) => t.name === value);
     if (own) setHistory(draftHistory(own.text));
     else if (builtIn) setHistory(draftHistory(themeText(builtIn)));
@@ -309,16 +578,34 @@ export function App() {
     edge.addEventListener("pointermove", move);
     edge.addEventListener("pointerup", up);
   };
-  const onStage = start?.frames.find((f) => f.label === page) ?? start?.frames[0];
+  const onStage = start?.frames.find((f) => (f.id ?? f.label) === page) ?? start?.frames[0];
+  useEffect(() => {
+    if (!signedIn || !onStage?.id || onStage.path || onStage.discovery) return;
+    const id = onStage.id;
+    const deadline = setTimeout(
+      () =>
+        setStart(
+          (s) =>
+            s && {
+              ...s,
+              frames: s.frames.map((f) =>
+                f.id === id && !f.path ? { ...f, discovery: "error" } : f,
+              ),
+            },
+        ),
+      20000,
+    );
+    return () => clearTimeout(deadline);
+  }, [signedIn, onStage]);
   const frame = (phone: boolean) =>
     start &&
-    onStage && (
+    onStage?.path && (
       <div
         className="frame"
         style={{ width: (phone ? PHONE : width) * scale, height: room.height }}
       >
         <iframe
-          key={`${start.starter}-${round}-${onStage.path}-${onStage.label === "Landing" ? replay : 0}`}
+          key={`${start.starter}-${round}-${onStage.path}-${onStage === start.frames[0] ? replay : 0}`}
           title={`${onStage.label}, ${mode}${phone ? ", phone" : ""}`}
           src={`${start.preview}${onStage.path}`}
           data-frame={`${onStage.label}-${mode}${phone ? "-phone" : ""}`}
@@ -366,15 +653,24 @@ export function App() {
           <select
             aria-label="Start from theme"
             onChange={(e) => startFrom(e.target.value)}
-            defaultValue="modern"
+            value={startingTheme}
           >
             <optgroup label="Built in">
               {BUILT_IN_THEMES.map((t) => (
                 <option key={t.name}>{t.name}</option>
               ))}
             </optgroup>
-            {!!start?.themes.length && (
-              <optgroup label="This project's">
+            {!!start?.look?.themeFiles.length && (
+              <optgroup label="Preview app's themes">
+                {start.look.themeFiles.map((t) => (
+                  <option key={t.name} value={`shown:${t.name}`}>
+                    {t.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {!!start?.themes.length && !start?.canApply && (
+              <optgroup label="Save destination's themes">
                 {start.themes.map((t) => (
                   <option key={t.name} value={`own:${t.name}`}>
                     {t.name}
@@ -392,7 +688,7 @@ export function App() {
           type="button"
           disabled={!signedIn}
           onClick={() => {
-            setPage("Landing");
+            setPage(start?.frames[0]?.id ?? start?.frames[0]?.label);
             touring.current = true;
             toured.current.clear();
             setReplay((n) => n + 1);
@@ -406,8 +702,75 @@ export function App() {
           disabled={!theme || errors.length > 0}
           onClick={save}
         >
-          {PUBLIC ? "Download" : start?.project ? "Save to the project" : "Save theme"}
+          {PUBLIC ? "Download" : start?.project ? "Save as new theme" : "Save theme"}
         </button>
+        {!PUBLIC && (
+          <button type="button" onClick={download}>
+            Download draft
+          </button>
+        )}
+        {start?.canApply && (
+          <>
+            <label>
+              Apply theme to{" "}
+              <select
+                aria-label="Apply theme to"
+                value={targetPage ?? ""}
+                onChange={(e) => {
+                  const scope = e.target.value || null;
+                  if (
+                    !start.look ||
+                    (dirty && !window.confirm("Discard this draft and change its target?"))
+                  )
+                    return;
+                  const source = openProjectLook(start.look, scope).text;
+                  setHistory(draftHistory(source));
+                  setTargetPage(scope);
+                  setSaved(undefined);
+                  if (scope) {
+                    const route = start.look.ir.pages.find((p) => p.id === scope)?.route;
+                    const frame = start.frames.find((f) => f.path === route);
+                    if (frame) setPage(frame.id ?? frame.label);
+                  }
+                }}
+              >
+                <option value="">Entire app</option>
+                {start.look?.ir.pages
+                  .filter((p) => p.pattern.kind === "landing")
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.id}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={!dirty || !theme || errors.length > 0 || needsCopy || applyBusy}
+              onClick={apply}
+            >
+              {applyBusy
+                ? "Applying…"
+                : applyMode === "update"
+                  ? "Update theme and apply"
+                  : "Apply look"}
+            </button>
+            {(needsCopy || !!owned) && (
+              <button type="button" onClick={copy}>
+                Make a project copy
+              </button>
+            )}
+            {needsCopy && (
+              <span>Rename this edited built-in or make a project copy before applying.</span>
+            )}
+            {!!shared.length && (
+              <span>
+                Updating {name} also changes: {shared.join(", ")}. Make a copy to keep those pages
+                unchanged.
+              </span>
+            )}
+          </>
+        )}
         <button
           type="button"
           disabled={!history.past.length}
@@ -437,6 +800,74 @@ export function App() {
       </header>
       {guiding && <Guide onEnd={() => setGuiding(false)} />}
       <aside data-guide="controls">
+        {projectPreview && (
+          <fieldset aria-label="Effective look">
+            <legend>Current page look</legend>
+            <p>
+              Editing {name} for {targetPage ?? "the entire app"}.
+              {projectPreview.look.theme.name !== projectPreview.draftName
+                ? ` This page uses ${projectPreview.look.theme.name}; its theme selection masks this draft.`
+                : " The page shows this draft with its current UX overrides."}
+            </p>
+            <dl>
+              {LOOK_KEYS.map((key) => {
+                const origin = projectPreview.look.provenance[key];
+                return (
+                  <div key={key}>
+                    <dt>{key}</dt>
+                    <dd>
+                      {origin.kind === "theme"
+                        ? origin.name === projectPreview.draftName
+                          ? `Draft theme ${name}`
+                          : `${origin.source} theme ${origin.name}`
+                        : origin.kind === "page-ux"
+                          ? `Page UX (${origin.page})`
+                          : origin.kind === "app-ux"
+                            ? "App UX"
+                            : "Inherited default"}
+                      {key !== "preset" &&
+                        (origin.kind === "app-ux" || origin.kind === "page-ux") &&
+                        " — this override masks the draft theme value"}
+                      {key !== "preset" &&
+                        (origin.kind === "app-ux" || origin.kind === "page-ux") && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reset = {
+                                key,
+                                ...(origin.kind === "page-ux" ? { page: origin.page } : {}),
+                              };
+                              setHistory((h) =>
+                                remember(h, {
+                                  ...h.present,
+                                  resets: [...(h.present.resets ?? []), reset],
+                                }),
+                              );
+                              setSaved(undefined);
+                            }}
+                          >
+                            Reset {key} override in draft
+                          </button>
+                        )}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+            {Object.values(projectPreview.look.ignored).map((reason) => (
+              <p key={reason}>{reason}</p>
+            ))}
+            <button
+              type="button"
+              disabled={openingLook || applyBusy}
+              onClick={() => void openPageLook()}
+            >
+              {openingLook
+                ? "Opening saved look…"
+                : "Discard draft and open this page’s saved look"}
+            </button>
+          </fieldset>
+        )}
         {shown && (
           <Controls
             theme={shown}
@@ -467,14 +898,29 @@ export function App() {
             }}
           />
         )}
+        {signInError && !signedIn && (
+          <p role="alert">
+            Preview sign-in has not completed. Check the app's sign-in page, then{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setSignInError(false);
+                setRound((n) => n + 1);
+              }}
+            >
+              Retry
+            </button>
+            .
+          </p>
+        )}
         <div className="bar">
           <fieldset aria-label="Page" data-guide="page">
             {start?.frames.map((f) => (
               <button
                 type="button"
-                key={f.label}
+                key={f.id ?? f.label}
                 aria-pressed={f === onStage}
-                onClick={() => setPage(f.label)}
+                onClick={() => setPage(f.id ?? f.label)}
               >
                 {f.label}
               </button>
@@ -523,6 +969,49 @@ export function App() {
               {making.startsWith("Not ") ? making : `Making the ${making} app…`}
             </p>
           )}
+          {signedIn && onStage && !onStage.path && (
+            <>
+              <p role="status">
+                {onStage.discovery === "empty"
+                  ? "No readable record is shown on this page. Preview its list or create a record through the app."
+                  : onStage.discovery === "error"
+                    ? "Record discovery did not complete."
+                    : "Finding a readable record…"}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setRound((n) => n + 1);
+                  setStart(
+                    (s) =>
+                      s && {
+                        ...s,
+                        frames: s.frames.map((f) =>
+                          f === onStage ? { ...f, discovery: undefined } : f,
+                        ),
+                      },
+                  );
+                }}
+              >
+                Retry discovery
+              </button>
+              {onStage.discoverFrom && !onStage.discovery && (
+                <iframe
+                  key={`${round}:${onStage.id}`}
+                  hidden
+                  title="Finding a readable record"
+                  data-discovery={onStage.id}
+                  data-base={onStage.discoverFrom}
+                  src={`${start?.preview}${onStage.discoverFrom}`}
+                  ref={(f) => {
+                    if (!f) return;
+                    frames.current.add(f);
+                    return () => void frames.current.delete(f);
+                  }}
+                />
+              )}
+            </>
+          )}
           {signedIn && frame(false)}
           {signedIn && onStage && (
             // A pointer's drag; the width buttons are the keyboard's way.
@@ -540,6 +1029,11 @@ export function App() {
               <button type="button" onClick={() => setPendingModes(undefined)}>
                 Cancel
               </button>
+            </p>
+          )}
+          {projectDraft.error && (
+            <p role="alert" className="avoid">
+              Preview unavailable: {projectDraft.error} The draft is kept.
             </p>
           )}
           {errors.length > 0 && (

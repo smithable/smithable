@@ -13,7 +13,12 @@ import {
 } from "./preview-editor.js";
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
-function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
+function page(
+  at = "/",
+  storage: Record<string, string> = {},
+  crashed = false,
+  records: string[] = [],
+) {
   // The dev server's error overlay, put up by the test; the observers watching for it, and the
   // timers the runtime sets, run by hand.
   const overlay = { shown: false };
@@ -35,7 +40,7 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
   const ticks: (() => void)[] = [];
   const clicks: ((event: unknown) => void)[] = [];
   const head: { id: string; textContent: string; href?: string; rel?: string }[] = [];
-  const posted: { type: string }[] = [];
+  const posted: { type: string; path?: string; status?: string; request?: string }[] = [];
   const parent = { postMessage: (message: { type: string }) => posted.push(message) };
   const scrolled: number[] = [];
   const reloads: number[] = [];
@@ -60,15 +65,17 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
-      selector === "[data-dev-role]"
-        ? buttons
-        : selector === "button"
-          ? signInButtons
-          : selector === "[data-kit=error]" && crashed
-            ? [{}]
-            : selector === "vite-error-overlay" && overlay.shown
+      selector === '[data-part="record-open"][data-record-id]'
+        ? records.map((id) => ({ dataset: { recordId: id } }))
+        : selector === "[data-dev-role]"
+          ? buttons
+          : selector === "button"
+            ? signInButtons
+            : selector === "[data-kit=error]" && crashed
               ? [{}]
-              : [],
+              : selector === "vite-error-overlay" && overlay.shown
+                ? [{}]
+                : [],
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
     documentElement: {
@@ -288,7 +295,7 @@ test("a frame in one mode: the app's dark rules always apply, or never", () => {
 });
 
 test("the lab signs in through the development sign-in's button for the role it asks", () => {
-  const { send, clicked } = page();
+  const { send, clicked } = page("/sign-in");
   send({ type: "smithable:dev-sign-in", role: "admin" }, "https://example.com");
   expect(clicked).toEqual([]);
   send({ type: "smithable:dev-sign-in", role: "admin" });
@@ -486,4 +493,31 @@ test("a preview on this machine may be framed only from this machine", () => {
   expect(framed("127.0.0.1:5173").passed).toBe(true);
   // A hosted preview's address gets no such header here: its own guard frames it.
   expect(framed("app.example.org").csp).toBeUndefined();
+});
+
+test("record discovery reads only this authorized page and refuses wrong origin/frame", () => {
+  const { send, posted } = page("/cases", {}, false, ["opaque-case-a"]);
+  const request = { type: "smithable:discover-record", request: "cases:record", base: "/cases" };
+  const before = posted.length;
+  send(request, "https://sibling.example");
+  send(request, "http://localhost:5173", {});
+  expect(posted).toHaveLength(before);
+  send(request);
+  expect(posted.at(-1)).toMatchObject({
+    type: "record-discovered",
+    path: "/cases/opaque-case-a",
+    status: "found",
+  });
+  const empty = page("/cases");
+  empty.send(request);
+  expect(empty.posted.at(-1)).toMatchObject({ type: "record-discovered", status: "empty" });
+  const denied = page("/sign-in");
+  denied.send(request);
+  expect(denied.posted.at(-1)).toMatchObject({ type: "record-discovered", status: "sign-in" });
+});
+
+test("a requested unavailable role never falls back to another role", () => {
+  const { send, clicked } = page("/sign-in");
+  send({ type: "smithable:dev-sign-in", role: "unknown" });
+  expect(clicked).toEqual([]);
 });

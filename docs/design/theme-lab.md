@@ -232,3 +232,20 @@ Importing a theme from a site (`smithable theme --from` exists and stays), a mar
 themes, per-page themes beyond the landing page's own, custom CSS (the hooks in look.md §2 stay
 the developer's road), and any layout the ux file does not have: the lab shows layouts, it does
 not invent them.
+
+### Current project and page inventory (2026-11-02)
+
+Local mode opens the shown app's selected theme source and effective overrides. **Apply look**
+uses one project checkpoint for create/update/select and requested override resets. **Make a
+project copy** isolates edits from other pages sharing a project theme. Save as a new theme and
+Download draft remain separate actions. Unchanged Apply is disabled. Conflicts keep the draft
+and require reloading the saved look; they never overwrite newer source.
+
+Page tabs come from the shared spec page manifest, including every instance and extra data
+routes. Labels use page titles where available. Record/article states read bounded ids or links
+already rendered for the currently authorized viewer; they never assume record `1`, seed data,
+or switch role during discovery. No readable record yields an explicit empty state and Retry.
+The standalone development lab retains its existing admin sign-in behavior. Success requires an
+actual frame acknowledgement; a deadline displays a failure and Retry. This does not establish
+hosted authorization. Public snapshots use the same record-discovery probe and remain labeled
+static exports with their own generating identity.

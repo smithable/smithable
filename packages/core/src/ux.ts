@@ -24,6 +24,16 @@ import {
   tokensOf,
   withBackground,
 } from "./theme.js";
+import {
+  ACTIVES,
+  CHROMES,
+  HEADER_LOOKS,
+  type LANDING_WIDTHS,
+  NAVIGATIONS,
+} from "./ux-capabilities.js";
+
+export { ACTIVES, CHROMES, HEADER_LOOKS, LANDING_WIDTHS, NAVIGATIONS } from "./ux-capabilities.js";
+
 import { threadBindings } from "./thread.js";
 
 /**
@@ -71,9 +81,6 @@ export interface UxIR {
 }
 
 /** Where the menu sits, and its surface (look-gap.md §4). */
-export const NAVIGATIONS = ["sidebar", "topbar", "topbar-centered"] as const;
-export const CHROMES = ["light", "dark"] as const;
-export const ACTIVES = ["filled", "subtle", "underline"] as const;
 
 /** The assistant's voices: plain (short, no pleasantries), friendly, formal. */
 export const VOICES = ["plain", "friendly", "formal"] as const;
@@ -376,13 +383,9 @@ export interface HeaderLook {
  * scrolling (away with it); over: hero (drawn over a cover or photo hero, its own surface again
  * past it) or none.
  */
-export const HEADER_LOOKS: Record<string, readonly string[]> = {
-  position: ["sticky", "scrolling"],
-  over: ["none", "hero"],
-};
 
 /** How wide a landing page's content runs: contained (72rem, today's), wide (80rem) or full. */
-export const LANDING_WIDTHS = ["contained", "wide", "full"] as const;
+
 export type LandingWidth = (typeof LANDING_WIDTHS)[number];
 
 /** A records section's columns in the grid layout when the ux file does not say (today's four). */

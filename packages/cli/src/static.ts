@@ -13,6 +13,7 @@ import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { FRAME_RUNTIME } from "./frame-runtime.js";
 import { type Io, tool } from "./io.js";
+import { RECORD_PROBE } from "./preview-discovery.js";
 import { loadSpec } from "./validate.js";
 
 /** A page to save: where it is, what it is called, the file it goes to, and a state to put it in. */
@@ -21,6 +22,7 @@ export interface Frame {
   path: string;
   file: string;
   state?: "empty" | "errors" | "dialog";
+  discoverFrom?: string;
 }
 
 /** A search no record matches, for the list with nothing found. */
@@ -37,7 +39,12 @@ export function staticFrames(
     frames.push({ label: page.id, path: page.route, file: page.id });
     if (page.pattern.kind !== "crud") continue;
     frames.push({ label: `${page.id}: form`, path: `${route}/new`, file: `${page.id}-form` });
-    frames.push({ label: `${page.id}: record`, path: `${route}/1`, file: `${page.id}-record` });
+    frames.push({
+      label: `${page.id}: record`,
+      path: page.route,
+      discoverFrom: page.route,
+      file: `${page.id}-record`,
+    });
     if (!states) continue;
     frames.push(
       {
@@ -54,7 +61,8 @@ export function staticFrames(
       },
       {
         label: `${page.id}: delete dialog`,
-        path: `${route}/1`,
+        path: page.route,
+        discoverFrom: page.route,
         file: `${page.id}-dialog`,
         state: "dialog",
       },
@@ -152,6 +160,33 @@ export async function savePages(
   return saved;
 
   async function save(frame: Frame) {
+    if (frame.discoverFrom) {
+      const response = await page.goto(base + frame.discoverFrom, { waitUntil: "commit" });
+      if (response && response.status() >= 400) {
+        saved.skipped.push({
+          label: frame.label,
+          reason: `discovery answered ${response.status()}`,
+        });
+        return;
+      }
+      await page.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * patience });
+      if (new URL(page.url()).pathname !== frame.discoverFrom) {
+        saved.skipped.push({
+          label: frame.label,
+          reason: "discovery requires sign-in or redirected",
+        });
+        return;
+      }
+      const path = await page.evaluate(`(${RECORD_PROBE})(${JSON.stringify(frame.discoverFrom)})`);
+      if (typeof path !== "string") {
+        saved.skipped.push({
+          label: frame.label,
+          reason: "no readable record on the authorized page",
+        });
+        return;
+      }
+      frame = { ...frame, path };
+    }
     const response = await page.goto(base + frame.path, { waitUntil: "commit" });
     if (response && response.status() >= 400) {
       saved.skipped.push({ label: frame.label, reason: `answered ${response.status()}` });
