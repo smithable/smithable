@@ -156,6 +156,39 @@ Add a structured construct only if all of the following are true:
 
 Otherwise leave it as free text plus custom code. Review recurring `rules` periodically; the ones that keep appearing are candidates for promotion into the DSL.
 
+#### Bounded section rhythm, media composition and record emphasis
+
+The existing surface vocabulary changes paper/borders and --section-gap together; density sizes
+controls, rows and cards. Neither independently expresses editorial breathing room and reading
+measure. Booking's about/story needs airy reading; a short CRM overview briefing beside its
+existing dashboard needs compact reading. These are separate from touch-target or form density.
+
+| Growth question | Concrete reason |
+| --- | --- |
+| Common across applications? | A studio's story/team page and an operational briefing both need bounded section rhythm; booking and marketplace both need editorial image/text composition. |
+| Deterministic? | Three rhythm choices, two reading measures, fixed small-screen spacing reduction; named image fit/aspect/focal choices and split/stacked composition. No authored numeric margins or positions. |
+| Reduces ambiguity or AI use? | The same source selects repeatable spacing, crop and composition, and the editor explains/reset them through the same operation. |
+| Technology-neutral? | The spec holds static section identity, content holds image/text/link identity, UX holds finite presentation; CSS maps belong to the adapter. |
+| Better than scoped text plus custom code? | Two starter contexts share one component and lightbox instead of app-specific HTML/CSS forks; operation history preserves content, references, localization and access. |
+
+`standard` rhythm keeps a section's existing own spacing, including its surface style. Compact and
+airy use spacing tokens with a fixed mobile reduction. An opt-in presentation wrapper is generated
+only when needed; omission leaves page markup and visual spacing as before. Reading measure acts
+on text, never on input/card/touch-target density. Native full-image viewing remains available
+when an authored crop loses meaningful detail. Named aspect boxes reserve space before slow or
+missing images; no content dimensions or asset identity system is added.
+
+The new static mediaText section reuses the current section/content/operation pipeline. Text then
+image is the semantic and keyboard order; only visual column placement changes. Missing media
+leaves the text. It adds no data access; data-bound content continues to use existing guarded
+record sections. No arbitrary nested grids, HTML, custom CSS or theme-name branches.
+
+Explicit record emphasis is a bounded extension of existing automatic status/amount/date
+inference, not a formula/access model. Each optional slot is a list of existing readable fields:
+omission is automatic, [] is none, status/amount take one and dates at most two. Renames follow;
+removing a selected field diagnoses the dependent choice. Existing summary+activity and compact
+queue compositions in CRM/invoicing cover workflow needs; no new page kind or tab group is justified.
+
 ### 2.5 Mechanics
 
 - A JSON Schema for the manifest is published (at its `$id`, https://docs.smithable.ai/schema/smithable-0.1.json, with the spec reference on docs.smithable.ai, built by `pnpm site`) and used for validation, editor autocomplete and operation validation. Its keys carry `title` (a plain label where the name is technical), `examples` (a form's placeholder) and three keywords of Smithable's own, `x-hidden`, `x-semantic` and `x-docs`, for the forms Studio builds from the schema (studio-v3.md §5); validators ignore them (Ajv in strict mode wants them declared with `addVocabulary`).

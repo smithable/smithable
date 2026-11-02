@@ -31,3 +31,12 @@ pages:
     latest:
       eyebrow: Near you
       title: Like new
+    story:
+      title: A second home for good things
+      text: "A useful object can have more than one chapter. Meet people nearby, look closely at the details and pass on something you no longer need.\n\nClear pictures and an honest description help the next person choose with confidence."
+      caption: Find something useful in your neighbourhood.
+      button: Explore the market
+      image:
+        src: images/hero.webp
+        alt: An outdoor market with stalls of vegetables and flowers
+        generated: true

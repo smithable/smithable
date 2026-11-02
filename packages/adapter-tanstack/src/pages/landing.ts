@@ -173,7 +173,15 @@ export function landingRoute(
       alternate.has(section.name) && given.band === undefined ? { ...given, band: "muted" } : given,
     )
       // A hero's facts and its line from the contact section are props of their own (below).
-      .filter(([key]) => key !== "facts" && key !== "eyebrow" && key !== "stage" && key !== "by")
+      .filter(
+        ([key]) =>
+          key !== "facts" &&
+          key !== "eyebrow" &&
+          key !== "stage" &&
+          key !== "by" &&
+          key !== "rhythm" &&
+          key !== "measure",
+      )
       // The hero's "image" (which side) is imageSide: its image is the picture itself.
       .map(
         ([key, value]) =>
@@ -473,6 +481,15 @@ export function landingRoute(
         />`,
         ];
       }
+      case "mediaText": {
+        if (!own.title && !own.text && !own.image) return [];
+        imports.add("#/kit/Landing", "MediaText");
+        return [
+          `${open("MediaText")}
+          id=${attr(section.name)}${own.title ? `\n          title=${attr(own.title)}` : ""}${own.text ? `\n          text=${attr(own.text)}` : ""}${own.caption ? `\n          caption=${attr(own.caption)}` : ""}${own.image ? `\n          image={${literal({ ...own.image, src: `/${own.image.src}` })}}` : ""}${section.button ? `\n          link=${link(routeOf(section.button), own.button ?? t.pageTitleOf(section.button))}` : ""}
+        />`,
+        ];
+      }
       case "text": {
         // A heading and paragraphs; nothing until the content file gives it words.
         if (!own.title && !own.text) return [];
@@ -571,7 +588,17 @@ export function landingRoute(
       .forEach((s, i) => {
         if (i % 2 === 1) alternate.add(s.name);
       });
-  const parts = sections.flatMap(sectionParts);
+  const presentedParts = (section: LandingSection): string[] => {
+    const parts = sectionParts(section);
+    const look = ux.pages[page.id]?.looks?.[section.name];
+    if (!parts.length || (!look?.rhythm && !look?.measure)) return parts;
+    imports.add("#/kit/Landing", "SectionPresentation");
+    return [
+      `<SectionPresentation${look.rhythm ? ` rhythm=${attr(look.rhythm)}` : ""}${look.measure ? ` measure=${attr(look.measure)}` : ""}>`,
+      ...parts,
+      "</SectionPresentation>",
+    ];
+  };
   const footerSection = sections.find((s) => s.kind === "footer");
   const footerTexts = footerSection ? text(footerSection.name) : undefined;
   const footer = footerSection
@@ -584,8 +611,8 @@ export function landingRoute(
   if (framed === "parts") {
     // Before the kind's own part, and after it.
     const at = sections.findIndex((s) => s.own);
-    const before = sections.slice(0, Math.max(at, 0)).flatMap(sectionParts);
-    const after = sections.slice(at + 1).flatMap(sectionParts);
+    const before = sections.slice(0, Math.max(at, 0)).flatMap(presentedParts);
+    const after = sections.slice(at + 1).flatMap(presentedParts);
     const all = [...before, ...after];
     if (all.some((p) => p.includes("pageAccess["))) imports.add("#/generated/pages", "pageAccess");
     if (needsViewer(all)) imports.add("@tanstack/react-router", "useRouteContext");
@@ -608,6 +635,7 @@ ${
 `;
     return `${HEADER}${imports.render()}${part("Before", before)}${part("After", after)}`;
   }
+  const parts = sections.flatMap(presentedParts);
   // A page of sections without a hero is headed by its title, as other pages are.
   const headed = !framed && !sections.some((s) => s.kind === "hero");
   if (headed) imports.add("#/kit/AppShell", "PageHeader").add("#/generated/pages", "pageUi");

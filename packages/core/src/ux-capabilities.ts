@@ -266,6 +266,7 @@ export interface UxChoiceContext {
   hasThread?: boolean;
   hasFilters?: boolean;
   hasSummary?: boolean;
+  summaryReason?: string;
   headerOverHero?: boolean;
 }
 /** Explanations shared by controls and inherited-default compatibility checks. Core validation
@@ -288,7 +289,7 @@ export function uxChoiceProblem(
   if (id === "filtersLook" && value === "chips" && !context.hasFilters)
     return "This page has no filters.";
   if ((id === "recordHeader" || id === "formAside") && value === "summary" && !context.hasSummary)
-    return "This model has no status, amount or date fields to summarize.";
+    return context.summaryReason ?? "This model has no status, amount or date fields to summarize.";
   if (id === "headerOver" && value === "hero" && !context.headerOverHero)
     return "A header can float over a cover or photo hero.";
   return undefined;

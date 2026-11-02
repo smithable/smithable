@@ -26,6 +26,9 @@ pages:
     landing:
       hero: { button: catalog, secondButton: myItems }
       latest: { records: Item, search: true, filters: [category], where: { condition: likeNew }, limit: 4 }   # a slice of its own beside the stage
+      story:
+        button: catalog
+        mediaText:
       footer: {}
   catalog:
     route: /

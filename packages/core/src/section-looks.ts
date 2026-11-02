@@ -1,4 +1,12 @@
 // Pure finite section metadata shared by UX validation, defaults, operations and controls.
+export const RHYTHMS = ["standard", "compact", "airy"] as const;
+export const READING_MEASURES = ["reading", "wide"] as const;
+export const MEDIA_LOOKS = {
+  fit: ["cover", "contain"],
+  aspect: ["landscape", "portrait", "square"],
+  focal: ["center", "top", "bottom", "left", "right"],
+} as const;
+const RHYTHM = { rhythm: RHYTHMS };
 export const BANDS = ["none", "muted", "inverse", "primary"] as const;
 export type Band = (typeof BANDS)[number];
 
@@ -10,6 +18,14 @@ export type Band = (typeof BANDS)[number];
 export const SECTION_LOOKS: Partial<
   Record<string, Record<string, readonly (string | number)[] | "text" | "models" | "page">>
 > = {
+  mediaText: {
+    ...RHYTHM,
+    ...MEDIA_LOOKS,
+    measure: READING_MEASURES,
+    layout: ["split", "stacked"],
+    image: ["left", "right"],
+    band: BANDS,
+  },
   hero: {
     layout: ["split", "centered", "plain", "cover", "photo", "inset", "stage", "tiles"],
     image: ["right", "left"],
@@ -20,21 +36,22 @@ export const SECTION_LOOKS: Partial<
     // Unsaid, the layout's own height; auto, the content's; full, the window's under the header.
     height: ["auto", "full"],
   },
-  features: { columns: [3, 2, 4, 5, 6], band: BANDS },
+  features: { ...RHYTHM, columns: [3, 2, 4, 5, 6], band: BANDS },
   // Records' columns: the first (3) is for cards; a grid's own is 4 (RECORD_GRID_COLUMNS), a list has none.
   records: {
+    ...RHYTHM,
     layout: ["cards", "list", "grid", "ledger", "week"],
     columns: [3, 2, 4, 5, 6],
     band: BANDS,
     by: "text",
   },
-  testimonials: { layout: ["cards", "carousel", "one"], band: BANDS },
-  pricing: { highlight: "text", band: BANDS },
+  testimonials: { ...RHYTHM, layout: ["cards", "carousel", "one"], band: BANDS },
+  pricing: { ...RHYTHM, highlight: "text", band: BANDS },
   // An FAQ's columns are its list's (every answer shown); the accordion is one column.
-  faq: { layout: ["accordion", "list"], columns: [1, 2], band: BANDS },
-  gallery: { columns: [3, 2, 4, 5, 6], band: BANDS },
-  callToAction: { band: BANDS },
-  contact: { band: BANDS },
-  text: { band: BANDS },
-  calculator: { band: BANDS },
+  faq: { ...RHYTHM, layout: ["accordion", "list"], columns: [1, 2], band: BANDS },
+  gallery: { ...RHYTHM, ...MEDIA_LOOKS, columns: [3, 2, 4, 5, 6], band: BANDS },
+  callToAction: { ...RHYTHM, band: BANDS },
+  contact: { ...RHYTHM, band: BANDS },
+  text: { ...RHYTHM, measure: READING_MEASURES, band: BANDS },
+  calculator: { ...RHYTHM, band: BANDS },
 };

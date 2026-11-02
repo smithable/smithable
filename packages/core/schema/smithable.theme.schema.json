@@ -732,6 +732,67 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "mediaText": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
+                "fit": {
+                  "enum": [
+                    "cover",
+                    "contain"
+                  ]
+                },
+                "aspect": {
+                  "enum": [
+                    "landscape",
+                    "portrait",
+                    "square"
+                  ]
+                },
+                "focal": {
+                  "enum": [
+                    "center",
+                    "top",
+                    "bottom",
+                    "left",
+                    "right"
+                  ]
+                },
+                "measure": {
+                  "enum": [
+                    "reading",
+                    "wide"
+                  ]
+                },
+                "layout": {
+                  "enum": [
+                    "split",
+                    "stacked"
+                  ]
+                },
+                "image": {
+                  "enum": [
+                    "left",
+                    "right"
+                  ]
+                },
+                "band": {
+                  "enum": [
+                    "none",
+                    "muted",
+                    "inverse",
+                    "primary"
+                  ]
+                }
+              }
+            },
             "hero": {
               "type": "object",
               "additionalProperties": false,
@@ -778,6 +839,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "columns": {
                   "enum": [
                     3,
@@ -801,6 +869,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "layout": {
                   "enum": [
                     "cards",
@@ -833,6 +908,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "layout": {
                   "enum": [
                     "cards",
@@ -854,6 +936,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "band": {
                   "enum": [
                     "none",
@@ -868,6 +957,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "layout": {
                   "enum": [
                     "accordion",
@@ -894,6 +990,35 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
+                "fit": {
+                  "enum": [
+                    "cover",
+                    "contain"
+                  ]
+                },
+                "aspect": {
+                  "enum": [
+                    "landscape",
+                    "portrait",
+                    "square"
+                  ]
+                },
+                "focal": {
+                  "enum": [
+                    "center",
+                    "top",
+                    "bottom",
+                    "left",
+                    "right"
+                  ]
+                },
                 "columns": {
                   "enum": [
                     3,
@@ -917,6 +1042,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "band": {
                   "enum": [
                     "none",
@@ -931,6 +1063,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "band": {
                   "enum": [
                     "none",
@@ -945,6 +1084,19 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
+                "measure": {
+                  "enum": [
+                    "reading",
+                    "wide"
+                  ]
+                },
                 "band": {
                   "enum": [
                     "none",
@@ -959,6 +1111,13 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
+                "rhythm": {
+                  "enum": [
+                    "standard",
+                    "compact",
+                    "airy"
+                  ]
+                },
                 "band": {
                   "enum": [
                     "none",

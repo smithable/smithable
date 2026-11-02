@@ -3,6 +3,7 @@ import type { SpecIR } from "../ir.js";
 import { LOOK_KEYS, type LookKey, type LookReset, sameLookTheme } from "../look.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { pageModel } from "../patterns.js";
+import { SUMMARY_PARTS } from "../record-emphasis.js";
 import { parseTheme } from "../theme.js";
 import { resetThemeSetting, writeThemeSettings } from "../theme-look-edit.js";
 import {
@@ -615,6 +616,44 @@ const setRecordSummary: Operation<{
       ["pages", page, place === "header" ? "record" : "form", place],
       look === "inherit" ? undefined : look,
     );
+    return [];
+  },
+};
+
+const setRecordEmphasis: Operation<{
+  page: string;
+  part: "status" | "amount" | "dates";
+  fields?: string[];
+}> = {
+  name: "setRecordEmphasis",
+  summary:
+    "Select summary fields: one status or money amount, up to two dates; an empty list shows none, omitted fields restore automatic selection.",
+  schema: {
+    type: "object",
+    required: ["page", "part"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      part: { enum: SUMMARY_PARTS },
+      fields: refTo({ ref: "field", page: "page", label: "Summary fields" }, { maxItems: 2 }, true),
+    },
+  },
+  positional: ["page", "part", "...fields"],
+  describe: ({ page, part, fields }) =>
+    fields === undefined
+      ? `Use automatic summary ${part} on ${page}`
+      : fields.length
+        ? `Summarize ${fields.join(", ")} as ${part} on ${page}`
+        : `Show no summary ${part} on ${page}`,
+  destructive: () => false,
+  apply({ ux }, { page, part, fields }, ir) {
+    const found = ir.pages.find((p) => p.id === page);
+    if (!found || !pageModel(found))
+      throw new OperationError(`A summary needs a record page; ${page} has no model.`);
+    const path = ["pages", page, "record", "summary", part];
+    if (fields === undefined) put(ux, path, undefined);
+    else if (ux.has(path)) ux.set(path, fields);
+    else ux.add(path.slice(0, -1), part, fields); // Explicit [] must survive.
     return [];
   },
 };
@@ -1462,6 +1501,7 @@ export const uxOperations: AnyOperation[] = [
   setRecordList,
   setLandingWidth,
   setRecordSummary,
+  setRecordEmphasis,
   setRecordFirst,
   setRecordPictures,
   setRecordLines,

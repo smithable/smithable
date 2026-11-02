@@ -1,3 +1,7 @@
+import { readSummaryFields, recordSummary, type SummaryFields } from "./record-emphasis.js";
+
+export { recordSummary } from "./record-emphasis.js";
+
 import { isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
 import type { AuthIR } from "./auth.js";
 import { brandColors } from "./brand.js";
@@ -93,6 +97,8 @@ export const VOICES = ["plain", "friendly", "formal"] as const;
 export type Voice = (typeof VOICES)[number];
 
 export interface PageUx {
+  /** Omitted summary slots are automatic; explicit [] shows none. */
+  summaryFields?: SummaryFields;
   /** The page's icon in navigation; without it one is chosen from the model's name. */
   icon?: Icon;
   /** The table's columns, in order. */
@@ -196,26 +202,6 @@ export interface PageUx {
 }
 
 /**
- * What a record's summary shows (`record.header` and `form.aside`, A 215), read by type, never by
- * name: its first choice field with tones (else its first choice field) as the status, its first
- * money field or money formula as the amount, and its first two date fields as the key dates.
- */
-export function recordSummary(
-  model: ModelIR,
-  tones: UxIR["tones"],
-): { status?: FieldIR; amount?: FieldIR; dates: FieldIR[] } {
-  const choices = model.fields.filter((f) => f.type.kind === "choice");
-  const status = choices.find((f) => tones[`${model.name}.${f.name}`]) ?? choices[0];
-  const amount = model.fields.find((f) => f.type.kind === "scalar" && f.type.name === "money");
-  const dates = model.fields
-    .filter(
-      (f) => f.type.kind === "scalar" && (f.type.name === "date" || f.type.name === "datetime"),
-    )
-    .slice(0, 2);
-  return { ...(status ? { status } : {}), ...(amount ? { amount } : {}), dates };
-}
-
-/**
  * The fields a row of an inline list shows (`record.lists: { lines: inline }`, A 215): its values,
  * the entered ones as inputs and the computed ones as text, and its references as pickers. Not the
  * reference back to the parent (the row is on it, the first one as addable takes it), nor lists,
@@ -298,6 +284,11 @@ export function controlUnfit(field: FieldIR, control: Control): string | undefin
 
 /** How a landing section looks; which keys a section takes depends on its kind (SECTION_LOOKS). */
 export interface SectionLook {
+  rhythm?: "standard" | "compact" | "airy";
+  measure?: "reading" | "wide";
+  fit?: "cover" | "contain";
+  aspect?: "landscape" | "portrait" | "square";
+  focal?: "center" | "top" | "bottom" | "left" | "right";
   layout?: string;
   image?: "left" | "right";
   columns?: number;
@@ -476,6 +467,7 @@ function readRecord(
   where: string,
 ): {
   lists: Record<string, RecordList>;
+  summaryFields?: SummaryFields;
   subtitle?: NamePartIR;
   detail?: NamePartIR[];
   header?: "summary";
@@ -483,6 +475,7 @@ function readRecord(
   pictures?: "aside" | "top";
 } {
   const lists: Record<string, RecordList> = {};
+  let summaryFields: SummaryFields | undefined;
   let header: "summary" | undefined;
   let first: { at: ParsedNode } | undefined;
   let pictures: "aside" | "top" | undefined;
@@ -511,9 +504,14 @@ function readRecord(
     mapEntries(ctx, node, `the record of ${where}`) ?? [],
     `the record of ${where}`,
     {
-      allowed: ["lists", "subtitle", "detail", "header", "first", "pictures"],
+      allowed: ["lists", "subtitle", "detail", "header", "first", "pictures", "summary"],
     },
   )) {
+    if (option.key === "summary") {
+      const selected = readSummaryFields(ctx, option.value, model);
+      if (Object.keys(selected).length) summaryFields = selected;
+      continue;
+    }
     if (option.key === "first") {
       const look = readString(ctx, option.value, `"first" of the record of ${where}`);
       if (look === "thread") first = { at: option.value as ParsedNode };
@@ -696,6 +694,7 @@ function readRecord(
     );
   return {
     lists,
+    ...(summaryFields ? { summaryFields } : {}),
     ...(subtitle ? { subtitle } : {}),
     ...(detail ? { detail } : {}),
     ...(header ? { header } : {}),
@@ -1259,6 +1258,7 @@ export function validateUx(
           if (part.key === "record") {
             const record = readRecord(ctx, part.value, ir, model, where);
             if (Object.keys(record.lists).length) result.lists = record.lists;
+            if (record.summaryFields) result.summaryFields = record.summaryFields;
             if (record.subtitle) result.subtitle = record.subtitle;
             if (record.detail?.length) result.detail = record.detail;
             if (record.header) result.recordHeader = record.header;
@@ -1532,7 +1532,7 @@ export function validateUx(
     const model = ir.models.find((model) => model.name === (page && pageModel(page)));
     const own = ux.pages[fact.page];
     if (!page || !own) continue;
-    const summary = model && recordSummary(model, ux.tones);
+    const summary = model && recordSummary(model, ux.tones, own.summaryFields);
     const hero = page.sections.find((section) => section.kind === "hero");
     const problem = uxChoiceProblem(fact.capability, String(fact.value), {
       kind: page.pattern.kind,
@@ -1540,6 +1540,9 @@ export function validateUx(
       hasFilters: !!page.filters?.length,
       hasThread: Object.values(own.lists ?? {}).includes("thread"),
       hasSummary: !!summary && !!(summary.status || summary.amount || summary.dates.length),
+      ...(own.summaryFields
+        ? { summaryReason: "No summary fields are selected on this page." }
+        : {}),
       headerOverHero: !!hero && ["cover", "photo"].includes(own.looks?.[hero.name]?.layout ?? ""),
     });
     if (problem) ctx.prepared?.skipped.set(fact, problem);

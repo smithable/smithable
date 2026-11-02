@@ -1685,7 +1685,8 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       "route": "/about",
       "sections": [
         {
-          "kind": "text",
+          "button": "schedule",
+          "kind": "mediaText",
           "name": "story",
         },
         {
@@ -2374,6 +2375,10 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
           "kind": "tiles",
           "name": "dashboard",
           "own": true,
+        },
+        {
+          "kind": "text",
+          "name": "briefing",
         },
       ],
     },
@@ -3892,6 +3897,11 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
             },
           },
           {
+            "button": "catalog",
+            "kind": "mediaText",
+            "name": "story",
+          },
+          {
             "kind": "footer",
             "name": "footer",
           },
@@ -3917,6 +3927,11 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
           "where": {
             "condition": "likeNew",
           },
+        },
+        {
+          "button": "catalog",
+          "kind": "mediaText",
+          "name": "story",
         },
         {
           "kind": "footer",

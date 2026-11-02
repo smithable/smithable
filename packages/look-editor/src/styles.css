@@ -71,18 +71,23 @@
   }
   .bar fieldset {
     display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-inline-size: 0;
+    max-width: 100%;
     border: 0;
     margin: 0;
     padding: 0;
   }
   .bar button {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
     border: 1px solid #bbb;
     background: #fff;
     padding: 3px 8px;
     font: inherit;
-  }
-  .bar button + button {
-    border-left: 0;
   }
   .bar button[aria-pressed="true"] {
     background: #1d1d1f;

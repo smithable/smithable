@@ -226,3 +226,23 @@ revision inside the shared project mutation queue, supports identical-request re
 preserves newer external edits if a rollback cannot safely complete. Normal generation failure
 uses the existing source/database rollback contract. One project Undo reverses the checkpoint;
 Redo obtains a fresh revision.
+
+
+## Bounded section composition and record emphasis (2026-11-02)
+
+Section rhythm (`compact`, `standard`, `airy`) changes framed section spacing independently
+of control density. Reading measure (`reading`, `wide`) changes body-copy width on text and
+mediaText. The kit maps finite choices to existing spacing tokens with a fixed phone reduction;
+no numeric margins or positioning syntax is accepted. Omitted choices retain prior output.
+
+The reusable mediaText section uses existing content images, alt text, captions and page links.
+Split/stacked and image-side choices affect visual layout while source and keyboard order stay
+text then picture. Gallery and mediaText share finite fit/aspect/focal choices and the existing
+native full-picture dialog. Cropped thumbnails always offer an uncropped contain view. Booking
+and marketplace demonstrate different contexts through configuration of this one component.
+
+Record emphasis names optional compatible status, amount and date fields; omitted slots retain
+type-based automatic selection and empty lists opt out. Normal rename/removal validation and
+runtime access remain authoritative. CRM and invoicing compose existing summaries, activity and
+queues; the prototypes did not demonstrate a need for tab groups. See the spec for grammar and
+Architecture §2.4 for the schema-growth decision.

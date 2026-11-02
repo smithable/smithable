@@ -10,6 +10,13 @@ pages:
     sections:
       hero: { layout: stage, stage: catalog }   # the catalog itself beside the headline (look-breadth §3)
       latest: { layout: grid, columns: 4, band: muted }   # the like-new items' pictures, a row of four
+      story:
+        layout: stacked
+        rhythm: standard
+        measure: wide
+        fit: contain
+        aspect: landscape
+        focal: center
   catalog:
     table: { view: cards }
     record: { pictures: aside }        # an item's photos large beside its details

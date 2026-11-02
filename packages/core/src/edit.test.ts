@@ -283,3 +283,15 @@ test("removeItem takes a block list item with its lines, or an item of a flow li
   expect(flow.text).toBe("tags: [a, c]\n");
   expect(() => list.removeItem([], 4)).toThrow("has no item 5");
 });
+
+test("adding inside adjacent nested flow-map closers preserves the intended parent and siblings", () => {
+  const source =
+    "# keep\npages: {about: {sections: {intro: {text: true}}}, other: {landing: {hero: {}}}} # tail\n";
+  const editor = new YamlEditor(source);
+  editor.add(["pages", "about", "sections"], "story", { mediaText: null });
+  expect(editor.get(["pages", "about", "sections", "story"])).toEqual({ mediaText: null });
+  expect(editor.has(["pages", "about", "story"])).toBe(false);
+  expect(editor.get(["pages", "other"])).toEqual({ landing: { hero: {} } });
+  expect(editor.text.startsWith("# keep\n")).toBe(true);
+  expect(editor.text.endsWith("# tail\n")).toBe(true);
+});

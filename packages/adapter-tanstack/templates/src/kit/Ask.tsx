@@ -159,6 +159,7 @@ export function Ask({
     <>
       <button
         type="button"
+        data-kit="ask-launch"
         className="fixed right-4 bottom-4 z-20 inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border bg-card pr-5 pl-2 text-sm font-semibold text-card-foreground shadow-xl outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => sheet.current?.showModal()}
       >

@@ -224,6 +224,8 @@
   h2,
   h3 {
     font-family: var(--font-heading, inherit);
+    /* Long compounds must wrap inside their own column, including huge uppercase titles. */
+    overflow-wrap: anywhere;
   }
   [data-kit="model-table"] td {
     font-variant-numeric: var(--table-numbers, normal);
@@ -261,5 +263,48 @@
   from {
     opacity: 0;
     translate: 0 calc(var(--motion-distance) / 2);
+  }
+}
+
+/* Overrides apply only to opt-in section wrappers.
+   No authored numeric spacing, no changes to input/card/row/touch-target density. */
+[data-section-presentation][data-rhythm="compact"] {
+  --section-gap: calc(var(--spacing) * 4);
+  --section-padding: calc(var(--spacing) * 6);
+}
+[data-section-presentation][data-rhythm="airy"] {
+  --section-gap: calc(var(--spacing) * 12);
+  --section-padding: calc(var(--spacing) * 20);
+}
+[data-section-presentation]:is([data-rhythm="compact"], [data-rhythm="airy"])
+  > [data-kit="section"] {
+  padding-block: var(--section-padding);
+}
+/* Standard deliberately uses the section's existing own padding/surface spacing. */
+[data-section-presentation][data-measure="reading"] {
+  --reading-width: 66ch;
+}
+[data-section-presentation][data-measure="wide"] {
+  --reading-width: 80ch;
+}
+/* Allowed only for text/mediaText, whose body block uses this existing kit class. */
+[data-section-presentation][data-measure] > [data-kit="section"] .max-w-2xl {
+  max-width: min(100%, var(--reading-width));
+}
+@media (max-width: 639px) {
+  [data-section-presentation][data-rhythm="compact"] {
+    --section-gap: calc(var(--spacing) * 3);
+    --section-padding: calc(var(--spacing) * 4);
+  }
+  [data-section-presentation][data-rhythm="airy"] {
+    --section-gap: calc(var(--spacing) * 8);
+    --section-padding: calc(var(--spacing) * 12);
+  }
+}
+
+/* Leave a separate lane for the floating Ask launcher beside mobile sticky form actions. */
+@media (max-width: 639px) {
+  body:has([data-kit="ask-launch"]) [data-kit="model-form"] [data-part="actions"] {
+    padding-inline-end: max(var(--card-padding), 8rem);
   }
 }

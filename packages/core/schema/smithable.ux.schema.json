@@ -205,6 +205,40 @@
             "description": "The record page: how its lists of related records are shown, and its title row.",
             "additionalProperties": false,
             "properties": {
+              "summary": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Omitted slots are automatic; [] shows none; names select existing fields.",
+                "properties": {
+                  "status": {
+                    "description": "One choice field for status; omitted uses automatic selection, [] shows none.",
+                    "type": "array",
+                    "maxItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "amount": {
+                    "description": "One money field or formula for the amount; omitted uses automatic selection, [] shows none.",
+                    "type": "array",
+                    "maxItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "dates": {
+                    "description": "Up to two date/date-time fields in authored order; omitted uses automatic selection, [] shows none.",
+                    "type": "array",
+                    "maxItems": 2,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
               "lists": {
                 "type": "object",
                 "description": "By list field: table (the default), thread, a conversation with a reply box, e.g. { messages: thread }, or inline, rows edited in place, e.g. { lines: inline }.",
@@ -407,6 +441,75 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
+                    "fit": {
+                      "enum": [
+                        "cover",
+                        "contain"
+                      ],
+                      "description": "One of cover, contain; the first is the default."
+                    },
+                    "aspect": {
+                      "enum": [
+                        "landscape",
+                        "portrait",
+                        "square"
+                      ],
+                      "description": "One of landscape, portrait, square; the first is the default."
+                    },
+                    "focal": {
+                      "enum": [
+                        "center",
+                        "top",
+                        "bottom",
+                        "left",
+                        "right"
+                      ],
+                      "description": "One of center, top, bottom, left, right; the first is the default."
+                    },
+                    "measure": {
+                      "enum": [
+                        "reading",
+                        "wide"
+                      ],
+                      "description": "One of reading, wide; the first is the default."
+                    },
+                    "layout": {
+                      "enum": [
+                        "split",
+                        "stacked"
+                      ],
+                      "description": "One of split, stacked; the first is the default."
+                    },
+                    "image": {
+                      "enum": [
+                        "left",
+                        "right"
+                      ],
+                      "description": "One of left, right; the first is the default."
+                    },
+                    "band": {
+                      "enum": [
+                        "none",
+                        "muted",
+                        "inverse",
+                        "primary"
+                      ],
+                      "description": "The section across the width on a surface of the theme: none, muted, inverse, primary; none (the default) is an open section, or the muted band a banded theme gives every second section."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
                     "layout": {
                       "enum": [
                         "split",
@@ -465,6 +568,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "columns": {
                       "enum": [
                         3,
@@ -490,6 +601,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "layout": {
                       "enum": [
                         "cards",
@@ -529,6 +648,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "layout": {
                       "enum": [
                         "cards",
@@ -552,6 +679,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "highlight": {
                       "type": "string",
                       "description": "The name of the item to set apart."
@@ -571,6 +706,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "layout": {
                       "enum": [
                         "accordion",
@@ -600,6 +743,39 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
+                    "fit": {
+                      "enum": [
+                        "cover",
+                        "contain"
+                      ],
+                      "description": "One of cover, contain; the first is the default."
+                    },
+                    "aspect": {
+                      "enum": [
+                        "landscape",
+                        "portrait",
+                        "square"
+                      ],
+                      "description": "One of landscape, portrait, square; the first is the default."
+                    },
+                    "focal": {
+                      "enum": [
+                        "center",
+                        "top",
+                        "bottom",
+                        "left",
+                        "right"
+                      ],
+                      "description": "One of center, top, bottom, left, right; the first is the default."
+                    },
                     "columns": {
                       "enum": [
                         3,
@@ -625,6 +801,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "band": {
                       "enum": [
                         "none",
@@ -640,6 +824,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "band": {
                       "enum": [
                         "none",
@@ -655,6 +847,21 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
+                    "measure": {
+                      "enum": [
+                        "reading",
+                        "wide"
+                      ],
+                      "description": "One of reading, wide; the first is the default."
+                    },
                     "band": {
                       "enum": [
                         "none",
@@ -670,6 +877,14 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
+                    "rhythm": {
+                      "enum": [
+                        "standard",
+                        "compact",
+                        "airy"
+                      ],
+                      "description": "One of standard, compact, airy; the first is the default."
+                    },
                     "band": {
                       "enum": [
                         "none",

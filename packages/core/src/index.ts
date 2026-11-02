@@ -232,6 +232,12 @@ export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export { type PreviewPage, previewPages, previewRecordPath } from "./preview-pages.js";
 export {
+  SUMMARY_PARTS,
+  type SummaryFields,
+  type SummaryPart,
+  summaryEligible,
+} from "./record-emphasis.js";
+export {
   IMPORT_MAX,
   type ImportRecords,
   type ImportRefusal,
@@ -252,6 +258,7 @@ export {
 } from "./samples.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
+export { MEDIA_LOOKS, READING_MEASURES, RHYTHMS } from "./section-looks.js";
 export { parseFieldShorthand } from "./sections/field-type.js";
 export { incomingText } from "./sections/incoming.js";
 export {

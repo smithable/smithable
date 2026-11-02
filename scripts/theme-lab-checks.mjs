@@ -1,4 +1,5 @@
 // Shared by the Studio gate and the focused standalone lab check.
+
 import assert from "node:assert/strict";
 import { FONT_ASSETS, themeCss } from "../packages/adapter-tanstack/dist/index.js";
 import {
@@ -8,6 +9,7 @@ import {
   TOKEN_NAMES,
   validateUx,
 } from "../packages/core/dist/index.js";
+import { checkLookResponsive } from "./look-responsive-checks.mjs";
 
 export async function checkThemeLab(page, context) {
   const start = context ?? (await page.evaluate(() => fetch("/api/start").then((r) => r.json())));
@@ -18,6 +20,7 @@ export async function checkThemeLab(page, context) {
     await page.locator("iframe[data-frame]").first().elementHandle()
   ).contentFrame();
   await frame.waitForSelector("body[data-hydrated=true]", { timeout: 90000 });
+  await checkLookResponsive(page);
   for (const name of ["modern", "corporate", "brass"]) {
     const theme = BUILT_IN_THEMES.find((t) => t.name === name);
     if (!theme) continue;

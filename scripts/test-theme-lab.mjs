@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { chromium } from "playwright";
 import { cli, newApp, run } from "./dev-app.mjs";
+import { checkLookResponsive } from "./look-responsive-checks.mjs";
 import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages, checkPreviewTimeout } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
@@ -54,18 +55,21 @@ try {
   page = await context.newPage();
   page.on("pageerror", (error) => console.error("Lab page error:", String(error)));
   await page.goto(`http://localhost:${port}/?guide=off`);
-  await checkPreviewPages(page, dir);
-  if (process.env.CHECK_DISCOVERY === "1") await checkPreviewTimeout(page);
-  await checkThemeLab(page);
-  if (process.env.CHECK_SAVE_FIRST === "1") {
-    await page.getByLabel("Name", { exact: true }).fill(`saved-before-apply-${Date.now()}`);
-    await page.getByRole("button", { name: /^Save/ }).click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: /^Saved:/ })
-      .waitFor();
+  if (process.env.CHECK_RESPONSIVE_ONLY) await checkLookResponsive(page);
+  if (!process.env.CHECK_RESPONSIVE_ONLY) {
+    await checkPreviewPages(page, dir);
+    if (process.env.CHECK_DISCOVERY === "1") await checkPreviewTimeout(page);
+    await checkThemeLab(page);
+    if (process.env.CHECK_SAVE_FIRST === "1") {
+      await page.getByLabel("Name", { exact: true }).fill(`saved-before-apply-${Date.now()}`);
+      await page.getByRole("button", { name: /^Save/ }).click();
+      await page
+        .getByRole("status")
+        .filter({ hasText: /^Saved:/ })
+        .waitFor();
+    }
+    if (process.env.CHECK_PROJECT_APPLY === "1") applied = await checkProjectLookApply(page, dir);
   }
-  if (process.env.CHECK_PROJECT_APPLY === "1") applied = await checkProjectLookApply(page, dir);
   passed = true;
 } catch (error) {
   await page

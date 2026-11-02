@@ -102,3 +102,11 @@ test("Explain says which theme defaults apply, which explicit UX masks, and why 
   );
   expect(io.stdout).toContain("no status, amount or date fields");
 });
+
+test("Explain names explicit record emphasis instead of reporting automatic fields", async () => {
+  const io = captureIo();
+  expect(await run(["validate", join(examples, "invoicing"), "--explain"], io)).toBe(0);
+  expect(io.stdout).toContain(
+    "invoices summary (header and aside): status status, amount total, dates dueOn (named slots; omitted slots use automatic selection)",
+  );
+});

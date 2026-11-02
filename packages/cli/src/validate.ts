@@ -490,12 +490,12 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
     const model =
       page.pattern.kind === "crud" ? ir.models.find((m) => m.name === pageModel(page)) : undefined;
     if (!model || !look || (!look.recordHeader && !look.formAside)) continue;
-    const { status, amount, dates } = recordSummary(model, ux?.tones ?? {});
+    const { status, amount, dates } = recordSummary(model, ux?.tones ?? {}, look.summaryFields);
     const where = [look.recordHeader && "header", look.formAside && "aside"]
       .filter(Boolean)
       .join(" and ");
     lines.push(
-      `${page.id} summary (${where}): status ${status?.name ?? "none"}, amount ${amount?.name ?? "none"}, dates ${dates.map((d) => d.name).join(", ") || "none"} (the first choice with tones, money, dates)`,
+      `${page.id} summary (${where}): status ${status?.name ?? "none"}, amount ${amount?.name ?? "none"}, dates ${dates.map((d) => d.name).join(", ") || "none"} (${look.summaryFields ? "named slots; omitted slots use automatic selection" : "the first choice with tones, money, dates"})`,
     );
     if (look.recordHeader && look.formAside)
       lines.push(
