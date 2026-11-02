@@ -23,6 +23,7 @@ import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/d
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
+import { checkThemeLab } from "./theme-lab-checks.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
 // a check that waits a minute on a quiet machine waits three under load, so a slow answer is
@@ -3196,6 +3197,7 @@ if (!failed) {
         await labPage.getByLabel("Phone beside").uncheck();
         await tab("Landing").click();
         await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
+        await checkThemeLab(labPage);
         await labPage.getByLabel("Heading font", { exact: true }).selectOption("Fraunces");
         const sheet = frame.locator("style#sm-theme");
         for (

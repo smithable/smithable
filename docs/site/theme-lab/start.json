@@ -1,4 +1,12 @@
 {
+  "identity": {
+    "format": 1,
+    "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+    "engine": "0.0.0",
+    "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+    "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+    "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+  },
   "starters": [
     {
       "name": "booking",
@@ -19,7 +27,15 @@
           "label": "Record",
           "path": "/frames/booking/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "api",
@@ -32,7 +48,15 @@
           "label": "List",
           "path": "/frames/api/list.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "barbers",
@@ -49,7 +73,15 @@
           "label": "Form",
           "path": "/frames/barbers/form.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "crm",
@@ -70,7 +102,15 @@
           "label": "Record",
           "path": "/frames/crm/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "invoicing",
@@ -91,7 +131,15 @@
           "label": "Record",
           "path": "/frames/invoicing/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "kiosk",
@@ -112,7 +160,15 @@
           "label": "Record",
           "path": "/frames/kiosk/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "marketplace",
@@ -133,7 +189,15 @@
           "label": "Record",
           "path": "/frames/marketplace/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "records",
@@ -154,7 +218,15 @@
           "label": "Record",
           "path": "/frames/records/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "status",
@@ -175,7 +247,15 @@
           "label": "Record",
           "path": "/frames/status/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     },
     {
       "name": "support",
@@ -196,7 +276,15 @@
           "label": "Record",
           "path": "/frames/support/record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "engineBuild": "111a1e5e26ca0519b1af1600d328dfa906b9bed3439dc9480be44c0b14293a5f",
+        "engine": "0.0.0",
+        "kit": "4b9cc20baa07c6fd76f1f84a44a2bf7030fe98b157a62de06699fba9893f0009",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9",
+        "runtime": "197fffe1aa6fc139e5d217017852e7725bf17fa35a1a0db404e49fc47be36fa5"
+      }
     }
   ]
 }

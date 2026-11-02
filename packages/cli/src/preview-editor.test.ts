@@ -34,7 +34,7 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
   ];
   const ticks: (() => void)[] = [];
   const clicks: ((event: unknown) => void)[] = [];
-  const head: { id: string; textContent: string }[] = [];
+  const head: { id: string; textContent: string; href?: string; rel?: string }[] = [];
   const posted: { type: string }[] = [];
   const parent = { postMessage: (message: { type: string }) => posted.push(message) };
   const scrolled: number[] = [];
@@ -249,8 +249,14 @@ test("a theme's CSS from the lab replaces the app's until reload, its fonts at V
   const css = '@import "@fontsource-variable/fraunces";\n:root {\n  --radius: 0;\n}';
   send({ type: "smithable:theme-css", css });
   expect(theme()).toBe(
-    '@import "/node_modules/@fontsource-variable/fraunces/index.css";\n:root {\n  --radius: 0;\n}\n[data-part="appearance"] { display: none !important; }',
+    '\n:root {\n  --radius: 0;\n}\n[data-part="appearance"] { display: none !important; }',
   );
+  expect(head.find((e) => e.id === "sm-font:@fontsource-variable/fraunces")).toMatchObject({
+    rel: "stylesheet",
+    href: "/node_modules/@fontsource-variable/fraunces/index.css",
+  });
+  send({ type: "smithable:theme-css", css });
+  expect(head.filter((e) => e.id === "sm-font:@fontsource-variable/fraunces")).toHaveLength(1);
   // A second one replaces the first, still last in the head.
   send({ type: "smithable:theme-css", css: ":root { --radius: 4px; }" }, "http://127.0.0.1:8410");
   // The app's own appearance picker is hidden beside the lab's Light and Dark.

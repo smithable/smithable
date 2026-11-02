@@ -41,11 +41,25 @@
       }
       // The fonts' bare imports become the lab's copies. The lab's Light and Dark choose the
       // frame's mode, so the app's own appearance picker is not offered beside them.
-      sheet.textContent =
-        css.replace(
-          /@import "@fontsource-variable[/]([a-z0-9-]+)";/g,
-          '@import "../fonts/$1/index.css";',
-        ) + '\n[data-part="appearance"] { display: none !important; }';
+      sheet.textContent = ((css) => {
+    const urls = {"@fontsource-variable/inter":"../fonts/@fontsource-variable/inter/index.css","@fontsource-variable/inter/wght-italic.css":"../fonts/@fontsource-variable/inter/wght-italic.css","@fontsource-variable/nunito-sans":"../fonts/@fontsource-variable/nunito-sans/index.css","@fontsource-variable/nunito-sans/wght-italic.css":"../fonts/@fontsource-variable/nunito-sans/wght-italic.css","@fontsource-variable/source-sans-3":"../fonts/@fontsource-variable/source-sans-3/index.css","@fontsource-variable/source-sans-3/wght-italic.css":"../fonts/@fontsource-variable/source-sans-3/wght-italic.css","@fontsource-variable/source-serif-4":"../fonts/@fontsource-variable/source-serif-4/index.css","@fontsource-variable/source-serif-4/wght-italic.css":"../fonts/@fontsource-variable/source-serif-4/wght-italic.css","@fontsource-variable/fraunces":"../fonts/@fontsource-variable/fraunces/index.css","@fontsource-variable/fraunces/wght-italic.css":"../fonts/@fontsource-variable/fraunces/wght-italic.css","@fontsource-variable/archivo-narrow":"../fonts/@fontsource-variable/archivo-narrow/index.css","@fontsource-variable/archivo-narrow/wght-italic.css":"../fonts/@fontsource-variable/archivo-narrow/wght-italic.css","@fontsource-variable/dm-sans":"../fonts/@fontsource-variable/dm-sans/index.css","@fontsource-variable/dm-sans/wght-italic.css":"../fonts/@fontsource-variable/dm-sans/wght-italic.css","@fontsource-variable/outfit":"../fonts/@fontsource-variable/outfit/index.css","@fontsource-variable/hanken-grotesk":"../fonts/@fontsource-variable/hanken-grotesk/index.css","@fontsource-variable/hanken-grotesk/wght-italic.css":"../fonts/@fontsource-variable/hanken-grotesk/wght-italic.css","@fontsource-variable/instrument-sans":"../fonts/@fontsource-variable/instrument-sans/index.css","@fontsource-variable/instrument-sans/wght-italic.css":"../fonts/@fontsource-variable/instrument-sans/wght-italic.css","@fontsource-variable/mona-sans":"../fonts/@fontsource-variable/mona-sans/index.css","@fontsource-variable/mona-sans/wght-italic.css":"../fonts/@fontsource-variable/mona-sans/wght-italic.css","@fontsource-variable/bricolage-grotesque":"../fonts/@fontsource-variable/bricolage-grotesque/index.css","@fontsource-variable/oswald":"../fonts/@fontsource-variable/oswald/index.css","@fontsource-variable/big-shoulders-display":"../fonts/@fontsource-variable/big-shoulders-display/index.css","@fontsource/instrument-serif":"../fonts/@fontsource/instrument-serif/index.css","@fontsource/instrument-serif/400-italic.css":"../fonts/@fontsource/instrument-serif/400-italic.css","@fontsource/young-serif":"../fonts/@fontsource/young-serif/index.css","@fontsource-variable/newsreader":"../fonts/@fontsource-variable/newsreader/index.css","@fontsource-variable/newsreader/wght-italic.css":"../fonts/@fontsource-variable/newsreader/wght-italic.css","@fontsource-variable/bodoni-moda":"../fonts/@fontsource-variable/bodoni-moda/index.css","@fontsource-variable/bodoni-moda/wght-italic.css":"../fonts/@fontsource-variable/bodoni-moda/wght-italic.css","@fontsource/zilla-slab":"../fonts/@fontsource/zilla-slab/index.css","@fontsource/zilla-slab/400-italic.css":"../fonts/@fontsource/zilla-slab/400-italic.css","@fontsource/zilla-slab/300.css":"../fonts/@fontsource/zilla-slab/300.css","@fontsource/zilla-slab/300-italic.css":"../fonts/@fontsource/zilla-slab/300-italic.css","@fontsource/zilla-slab/500.css":"../fonts/@fontsource/zilla-slab/500.css","@fontsource/zilla-slab/500-italic.css":"../fonts/@fontsource/zilla-slab/500-italic.css","@fontsource/zilla-slab/600.css":"../fonts/@fontsource/zilla-slab/600.css","@fontsource/zilla-slab/600-italic.css":"../fonts/@fontsource/zilla-slab/600-italic.css","@fontsource/zilla-slab/700.css":"../fonts/@fontsource/zilla-slab/700.css","@fontsource/zilla-slab/700-italic.css":"../fonts/@fontsource/zilla-slab/700-italic.css","@fontsource-variable/jetbrains-mono":"../fonts/@fontsource-variable/jetbrains-mono/index.css","@fontsource-variable/jetbrains-mono/wght-italic.css":"../fonts/@fontsource-variable/jetbrains-mono/wght-italic.css"};
+    return css.replace(/@import\s+(?:"([^"]+)"|'([^']+)'|url\([^)]*\))[^;]*;/gi, (_, quoted, single) => {
+      const name = quoted ?? single;
+      const url = Object.hasOwn(urls, name) ? urls[name] : undefined;
+      if (url) {
+        const id = "sm-font:" + name;
+        if (!document.getElementById(id)) {
+          const link = document.createElement("link");
+          link.id = id;
+          link.rel = "stylesheet";
+          link.href = url;
+          document.head.append(link);
+        }
+      }
+      return "";
+    });
+  })(css)
+        + '\n[data-part="appearance"] { display: none !important; }';
       document.head.append(sheet);
       if (mode === "light" || mode === "dark") scheme = mode;
       if (scheme) applyScheme();

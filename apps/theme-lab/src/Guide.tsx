@@ -16,7 +16,7 @@ export const STOPS: Stop[] = [
   {
     anchor: "start",
     title: "Start from a theme",
-    text: "Choose a theme to begin with: its light and its dark colors both come with it.",
+    text: "Choose a theme to begin with: its supported palettes and authored color overrides come with it.",
   },
   {
     anchor: "controls",
@@ -26,7 +26,7 @@ export const STOPS: Stop[] = [
   {
     anchor: "mode",
     title: "Light and dark, each its own",
-    text: "Switch to see and change each mode's own colors: the theme's until you change them, then yours, however often you switch.",
+    text: "Switch to see each enabled palette. The modes control keeps disabled palettes in this draft; saving keeps only enabled palettes. Undo draft restores your earlier edit.",
   },
   {
     anchor: "page",

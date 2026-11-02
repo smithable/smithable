@@ -1,6 +1,14 @@
 // A theme as the file a project writes (docs/spec/v0.1.md, Themes), and one field of it changed.
 // The lab's controls and its text view both edit this text: it is what Save writes.
-import { DEFAULT_STYLE, SHADOWS, type ThemeIR } from "@smithable/core";
+import {
+  DEFAULT_STYLE,
+  deriveTokens,
+  hexOf,
+  SHADOWS,
+  type ThemeIR,
+  TOKEN_NAMES,
+  type Tokens,
+} from "@smithable/core";
 import { parseDocument, stringify } from "yaml";
 
 /** The colors a theme gives in each mode; the parser derives the rest from them. */
@@ -25,8 +33,17 @@ export function themeText(theme: ThemeIR): string {
           ] !== value,
       ),
     );
-  const colors = (mode: "light" | "dark") =>
-    Object.fromEntries(GIVEN.map((token) => [token, theme[mode][token]]));
+  const colors = (mode: "light" | "dark") => {
+    // Compare in the parser's hex representation. Keep effective exceptions, while colours
+    // that already derive correctly continue to follow primary/background edits.
+    const given = Object.fromEntries(
+      GIVEN.map((token) => [token, hexOf(theme[mode][token])]),
+    ) as Pick<Tokens, (typeof GIVEN)[number]> & Partial<Tokens>;
+    for (const token of TOKEN_NAMES)
+      if (hexOf(deriveTokens(given, mode)[token]) !== hexOf(theme[mode][token]))
+        given[token] = hexOf(theme[mode][token]);
+    return given;
+  };
   return stringify({
     smithableTheme: 0.1,
     name: theme.name,
@@ -63,5 +80,13 @@ export function setField(text: string, path: (string | number)[], value: unknown
   const at = path.join(".") === "fonts.body" && doc.has("font") ? ["font"] : path;
   if (value === undefined) doc.deleteIn(at);
   else doc.setIn(at, value);
+  return String(doc);
+}
+
+/** Remove optional authored colours explicitly; keep the three required palette anchors. */
+export function resetColors(text: string, mode: "light" | "dark"): string {
+  const doc = parseDocument(text);
+  for (const token of TOKEN_NAMES)
+    if (!["background", "foreground", "primary"].includes(token)) doc.deleteIn([mode, token]);
   return String(doc);
 }

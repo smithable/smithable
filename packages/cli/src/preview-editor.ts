@@ -3,6 +3,7 @@
 // in select mode, outlines the part of the spec under the pointer, reports a click to Studio,
 // and lets table columns be dragged. The app's own builds never include it.
 import { createHash, timingSafeEqual } from "node:crypto";
+import { fontImportRuntime } from "@smithable/adapter-tanstack";
 
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
@@ -99,10 +100,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
       sheet.id = "sm-theme";
     }
     // The lab's Light and Dark choose the frame's mode: the app's own picker is not offered.
-    sheet.textContent = event.data.css.replace(
-      /@import "(@fontsource-variable\\/[a-z0-9-]+)";/g,
-      '@import "/node_modules/$1/index.css";',
-    ) + '\\n[data-part="appearance"] { display: none !important; }';
+    sheet.textContent = (${fontImportRuntime("local")})(event.data.css)
+      + '\\n[data-part="appearance"] { display: none !important; }';
     // Last in the head, so its variables win over the app's theme.css.
     document.head.append(sheet);
     // A frame shown in one mode (the theme lab's light and dark frames): every rule for the dark

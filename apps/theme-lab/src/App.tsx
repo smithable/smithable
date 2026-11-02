@@ -7,6 +7,7 @@ import { themeCss } from "@smithable/adapter-tanstack";
 import {
   BUILT_IN_THEMES,
   contrast,
+  DISPLAY_FONTS,
   deriveTokens,
   emptyUx,
   FONT_WEIGHTS,
@@ -23,7 +24,15 @@ import {
 } from "@smithable/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Guide, guideFirst } from "./Guide";
-import { getField, setField, themeText } from "./theme-text";
+import {
+  changeModes,
+  draftHistory,
+  editDraft,
+  redoDraft,
+  remember,
+  undoDraft,
+} from "./theme-draft";
+import { getField, resetColors, setField, themeText } from "./theme-text";
 
 type Frames = { label: string; path: string }[];
 
@@ -38,6 +47,7 @@ interface Start {
   themes: { name: string; text: string }[];
   project: boolean;
   target: string;
+  staticIdentities?: Record<string, string>;
 }
 
 /** What each motion setting moves, beside its control; "Show the motion" plays it. */
@@ -64,7 +74,18 @@ const GAP = 16;
 
 export function App() {
   const [start, setStart] = useState<Start>();
-  const [text, setText] = useState(() => themeText(BUILT_IN_THEMES[0] as ThemeIR));
+  const [history, setHistory] = useState(() =>
+    draftHistory(themeText(BUILT_IN_THEMES[0] as ThemeIR)),
+  );
+  const text = history.present.text;
+  const setText = (edit: string | ((text: string) => string), yaml = false) =>
+    setHistory((h) =>
+      remember(
+        h,
+        editDraft(h.present, typeof edit === "function" ? edit(h.present.text) : edit, yaml),
+      ),
+    );
+  const [pendingModes, setPendingModes] = useState<ThemeIR["modes"]>();
   const [page, setPage] = useState<string>();
   const [mode, setMode] = useState<"light" | "dark">("light");
   const [width, setWidth] = useState(1280);
@@ -82,17 +103,34 @@ export function App() {
     if (PUBLIC)
       void fetch("start.json")
         .then((r) => r.json())
-        .then(({ starters }: { starters: { name: string; frames: Frames }[] }) =>
-          setStart({
-            preview: new URL(".", location.href).href.replace(/\/$/, ""),
-            frames: starters[0]?.frames ?? [],
-            starters: starters.map((s) => s.name),
-            starter: starters[0]?.name,
-            sets: Object.fromEntries(starters.map((s) => [s.name, s.frames])),
-            themes: [],
-            project: false,
-            target: "",
-          }),
+        .then(
+          ({
+            starters,
+          }: {
+            starters: {
+              name: string;
+              frames: Frames;
+              identity?: { engine: string; kit: string; fonts: string };
+            }[];
+          }) =>
+            setStart({
+              preview: new URL(".", location.href).href.replace(/\/$/, ""),
+              frames: starters[0]?.frames ?? [],
+              starters: starters.map((s) => s.name),
+              starter: starters[0]?.name,
+              sets: Object.fromEntries(starters.map((s) => [s.name, s.frames])),
+              themes: [],
+              project: false,
+              target: "",
+              staticIdentities: Object.fromEntries(
+                starters.map((s) => [
+                  s.name,
+                  s.identity
+                    ? `${s.identity.engine} / kit ${s.identity.kit.slice(0, 12)} / fonts ${s.identity.fonts.slice(0, 12)}`
+                    : "unversioned export",
+                ]),
+              ),
+            }),
         );
     else
       void fetch("/api/start")
@@ -113,6 +151,16 @@ export function App() {
     [name, text],
   );
   const errors = diagnostics.filter((d) => d.severity === "error");
+  const palettePolicy = theme?.modes;
+  useEffect(() => {
+    if (palettePolicy && palettePolicy !== "both") setMode(palettePolicy);
+  }, [palettePolicy]);
+  const modes = (value: ThemeIR["modes"], generate = false) => {
+    const result = changeModes(history.present, value, generate);
+    setPendingModes(result.missing ? value : undefined);
+    if (!result.missing) setHistory((h) => remember(h, result.draft));
+    setSaved(undefined);
+  };
   // A background on the wrong side (dark in light mode, pale in dark) cannot read with the
   // cards that mode makes; a refusal then says so first, in those words.
   const wrongSide = (["light", "dark"] as const).find((m) => {
@@ -226,8 +274,9 @@ export function App() {
   const startFrom = (value: string) => {
     const own = start?.themes.find((t) => `own:${t.name}` === value);
     const builtIn = BUILT_IN_THEMES.find((t) => t.name === value);
-    if (own) setText(own.text);
-    else if (builtIn) setText(themeText(builtIn));
+    if (own) setHistory(draftHistory(own.text));
+    else if (builtIn) setHistory(draftHistory(themeText(builtIn)));
+    setPendingModes(undefined);
     setSaved(undefined);
   };
 
@@ -292,6 +341,11 @@ export function App() {
     <div className="lab">
       <header>
         <strong>Theme lab</strong>
+        {PUBLIC && (
+          <span>
+            Static previews — {start?.staticIdentities?.[start.starter ?? ""] ?? "loading export"}
+          </span>
+        )}
         {!!start?.starters.length && (
           <label>
             App{" "}
@@ -309,7 +363,11 @@ export function App() {
         )}
         <label data-guide="start">
           Start from theme{" "}
-          <select onChange={(e) => startFrom(e.target.value)} defaultValue="modern">
+          <select
+            aria-label="Start from theme"
+            onChange={(e) => startFrom(e.target.value)}
+            defaultValue="modern"
+          >
             <optgroup label="Built in">
               {BUILT_IN_THEMES.map((t) => (
                 <option key={t.name}>{t.name}</option>
@@ -350,6 +408,28 @@ export function App() {
         >
           {PUBLIC ? "Download" : start?.project ? "Save to the project" : "Save theme"}
         </button>
+        <button
+          type="button"
+          disabled={!history.past.length}
+          onClick={() => {
+            setHistory(undoDraft);
+            setSaved(undefined);
+            setPendingModes(undefined);
+          }}
+        >
+          Undo draft
+        </button>
+        <button
+          type="button"
+          disabled={!history.future.length}
+          onClick={() => {
+            setHistory(redoDraft);
+            setSaved(undefined);
+            setPendingModes(undefined);
+          }}
+        >
+          Redo draft
+        </button>
         {saved && <span role="status">{saved}</span>}
         <button type="button" className="guide-open" onClick={() => setGuiding(true)}>
           Guide
@@ -357,7 +437,20 @@ export function App() {
       </header>
       {guiding && <Guide onEnd={() => setGuiding(false)} />}
       <aside data-guide="controls">
-        {shown && <Controls theme={shown} text={text} set={set} mode={mode} />}
+        {shown && (
+          <Controls
+            theme={shown}
+            text={text}
+            set={set}
+            mode={mode}
+            modes={modes}
+            valid={!!theme}
+            reset={() => {
+              setText((t) => resetColors(t, mode));
+              setSaved(undefined);
+            }}
+          />
+        )}
       </aside>
       <main>
         {start && !signedIn && !making && (
@@ -389,7 +482,13 @@ export function App() {
           </fieldset>
           <fieldset aria-label="Mode" data-guide="mode">
             {(["light", "dark"] as const).map((m) => (
-              <button type="button" key={m} aria-pressed={mode === m} onClick={() => setMode(m)}>
+              <button
+                type="button"
+                key={m}
+                aria-pressed={mode === m}
+                disabled={shown?.modes !== "both" && shown?.modes !== m}
+                onClick={() => setMode(m)}
+              >
                 {m === "light" ? "Light" : "Dark"}
               </button>
             ))}
@@ -432,6 +531,17 @@ export function App() {
           {signedIn && beside && frame(true)}
         </div>
         <section className="notes" data-guide="notes">
+          {pendingModes && (
+            <p role="status">
+              No authored palette is available for that mode.
+              <button type="button" onClick={() => modes(pendingModes, true)}>
+                Generate the missing palette
+              </button>
+              <button type="button" onClick={() => setPendingModes(undefined)}>
+                Cancel
+              </button>
+            </p>
+          )}
           {errors.length > 0 && (
             // Only a file that cannot make a theme (a colour that is no colour): never a choice of colours.
             <p className="avoid">
@@ -469,7 +579,8 @@ export function App() {
             spellCheck={false}
             value={text}
             onChange={(e) => {
-              setText(e.target.value);
+              setText(e.target.value, true);
+              setPendingModes(undefined);
               setSaved(undefined);
             }}
           />
@@ -500,7 +611,13 @@ function Controls({
   text,
   set,
   mode,
+  reset,
+  modes,
+  valid,
 }: {
+  modes: (value: ThemeIR["modes"]) => void;
+  valid: boolean;
+  reset: () => void;
   theme: ThemeIR;
   /** The mode on screen: its own colours are the ones shown and changed (Johan, 2026-10-25). */
   mode: "light" | "dark";
@@ -549,7 +666,6 @@ function Controls({
   // one of white and ink that reads on both best.
   const background = (mode: "light" | "dark", value: string) => {
     set([mode, "background"], value);
-    for (const token of ["muted", "border", "accent"]) set([mode, token], undefined);
     // The surfaces as they will be: chosen, or derived from the new background.
     const card =
       written(mode, "card") ??
@@ -598,11 +714,22 @@ function Controls({
         {color(mode, "background", "Background")}
         {color(mode, "card", "Surfaces (cards, menus, forms)")}
         {color(mode, "foreground", "Text")}
+        <button type="button" onClick={reset}>
+          Reset optional colours to derived
+        </button>
+        <p className="hint">
+          Authored colour overrides stay when primary or background changes. Reset removes optional
+          overrides in this palette so they follow those colours again.
+        </p>
         <label>
           <input type="checkbox" checked={follows} onChange={(e) => setFollows(e.target.checked)} />{" "}
           Text colour follows the others
         </label>
-        <button type="button" onClick={() => otherMode(mode)}>
+        <button
+          type="button"
+          disabled={!valid || theme.modes !== "both"}
+          onClick={() => otherMode(mode)}
+        >
           Make the {mode === "light" ? "dark" : "light"} mode from this one (replaces it)
         </button>
         <p className="hint">
@@ -622,7 +749,7 @@ function Controls({
             value={theme.font}
             onChange={(e) => font("body", e.target.value)}
           >
-            {FONTS.map((f) => (
+            {FONTS.filter((f) => !DISPLAY_FONTS.includes(f)).map((f) => (
               <option key={f}>{f}</option>
             ))}
           </select>
@@ -691,7 +818,24 @@ function Controls({
         {choice("density", ["density"], theme.density, ["comfortable", "standard", "compact"])}
         {choice("motion", ["motion"], theme.motion, ["none", "subtle", "lively"])}
         {choice("texture", ["texture"], theme.style.texture, ["none", "grain", "paper"])}
-        {choice("modes", ["modes"], theme.modes, ["both", "light", "dark"])}
+        <label>
+          modes
+          <select
+            aria-label="modes"
+            disabled={!valid}
+            value={theme.modes}
+            onChange={(e) => modes(e.target.value as ThemeIR["modes"])}
+          >
+            <option>both</option>
+            <option>light</option>
+            <option>dark</option>
+          </select>
+        </label>
+        <p className="hint">
+          Disabled palettes remain in this draft until you choose another theme or reload. Saving
+          writes only enabled palettes. A valid YAML edit replaces hidden palette history. Undo
+          draft restores earlier text and palettes.
+        </p>
         <p className="hint" data-motion-note>
           {MOTION_NOTES[theme.motion]}
         </p>

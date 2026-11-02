@@ -8,7 +8,23 @@ the two halves together: the **style layer**, the fields a theme gains so two th
 like two designs; and the **lab**, the page that edits a theme on the kit's real pages. Backlog
 Fable 26 and 28; A builds in the order of §7, Fable reviews the core and the kit's CSS.
 
-## 1. What a theme can say today, and what it cannot
+## Current implementation
+
+The historical design below predates the current style layer. Themes now support body, heading
+and label fonts, heading and surface styles, pictures, tables, texture and one-mode policies.
+Contrast is a warning for authored themes; curated defaults receive separate checks. The lab
+preserves preset token exceptions and offers explicit reset to derived colors. Draft mode changes
+stash disabled palettes for session undo/redo; only enabled palettes are saved. A valid raw YAML
+edit replaces that hidden palette history. Standalone Save adds a theme; selecting or updating
+one is a separate operation today.
+
+Local and static font URLs come from the adapter's typed font manifest. Static exports refresh
+normal and supported italic CSS, referenced language subsets and licenses on every run.
+`start.json` records engine version, kit hash and font manifest identity for newly exported sets;
+older sets in a partial export retain their original identity or remain unversioned.
+The public lab labels its pages as static previews.
+
+## 1. Original gap and scope
 
 A theme (`look.md` §3.1, `themes/<name>.yml`) is colours in two modes, one font, a radius, a
 shadow, a density, a motion and a chroma cap. The four design-delivery presets also have a
@@ -161,7 +177,7 @@ heading font at this scale needs a short title." "Cards in a grid: flat cards on
 background have no edge; add a border or a shadow." "Zebra rows with strong dividers: busy."
 Each is a rule in `theme-fit.ts` in core (pure, tested), returning `fine`, `note` or `avoid`
 with its sentence; the Look tab can show the same lines beside a theme later. The contrast
-errors are the same as `smithable validate`'s and block Save.
+warnings match `smithable validate` and do not block Save. Structural errors block Save; accepted colors may still need visual contrast checks over pictures and translucent surfaces.
 
 ## 5. The kit's part
 

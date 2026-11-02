@@ -1,3 +1,5 @@
+import { fontImportRuntime } from "@smithable/adapter-tanstack";
+
 // The runtime of a saved page (static.ts; the theme lab's public mode frames the same files,
 // scripts/theme-lab-export.mjs): what the preview editor's runtime does for the local lab
 // (preview-editor.ts), for a static page on the viewer's own origin. It shows a saved dialog as a
@@ -46,11 +48,8 @@ export const FRAME_RUNTIME = String.raw`(() => {
       }
       // The fonts' bare imports become the lab's copies. The lab's Light and Dark choose the
       // frame's mode, so the app's own appearance picker is not offered beside them.
-      sheet.textContent =
-        css.replace(
-          /@import "@fontsource-variable[/]([a-z0-9-]+)";/g,
-          '@import "../fonts/$1/index.css";',
-        ) + '\n[data-part="appearance"] { display: none !important; }';
+      sheet.textContent = (${fontImportRuntime("static")})(css)
+        + '\n[data-part="appearance"] { display: none !important; }';
       document.head.append(sheet);
       if (mode === "light" || mode === "dark") scheme = mode;
       if (scheme) applyScheme();
