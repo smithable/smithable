@@ -10,7 +10,7 @@ function sectionsPath(page: PageIR): string[] {
   return ["pages", page.id, page.pattern.kind === "landing" ? "landing" : "sections"];
 }
 
-import { filterValueProblem } from "./list-keys.js";
+import { filterThrough, filterValueProblem } from "./list-keys.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
 import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN, nameRule } from "./names.js";
 
@@ -683,10 +683,11 @@ const setDefaultFilter: Operation<{ page: string; field: string; value: string }
         `"${field}" is not among the filters of ${page}${p.filters?.length ? ` (${p.filters.join(", ")})` : ""}; add it with setFilters first.`,
       );
     const model = ir.models.find((m) => m.name === pageModel(p));
-    const problem = model ? filterValueProblem(model, field, value.trim()) : undefined;
+    const problem = model ? filterValueProblem(model, field, value.trim(), ir.models) : undefined;
     if (problem) throw new OperationError(problem);
     // Several values are a list for a choice or a person; a range keeps its decimal comma.
-    const f = model?.fields.find((x) => x.name === field);
+    const away = model && field.includes(".") ? filterThrough(model, field, ir.models) : undefined;
+    const f = away && "field" in away ? away.field : model?.fields.find((x) => x.name === field);
     const listed =
       f?.type.kind === "choice" || (f?.type.kind === "relation" && f.type.model === "User");
     const parts = listed ? value.split(",").map((v) => v.trim()) : [value.trim()];

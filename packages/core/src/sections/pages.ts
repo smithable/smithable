@@ -445,7 +445,7 @@ function readPage(
   const filterModel = model ?? calendarModel;
   let checkedFilters =
     filterModel && filters?.length
-      ? checkFilterFields(ctx, filters, filterModel, parsed, where)
+      ? checkFilterFields(ctx, filters, filterModel, parsed, where, Boolean(model))
       : undefined;
   // On a calendar the range of days is its date filter: no number or date ranges, no owner.
   if (calendarModel && checkedFilters) {

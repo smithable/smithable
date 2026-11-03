@@ -181,9 +181,29 @@ const crud: PagePattern<"crud"> = {
   manages: (p) => p.model,
   inMenu: true,
   operations: crudOperations,
-  follow(spec, page, effect) {
+  follow(spec, page, effect, ir) {
     // The page's search, filters and sort follow a renamed field, or lose a removed one.
     const f = fieldEffect(effect);
+    // A filter one reference away (reports.md §2.1) follows either side of its dot.
+    if (f) {
+      const own = ir?.models.find((m) => m.name === page.pattern.model);
+      for (const name of page.filters ?? []) {
+        const [through, far] = name.split(".");
+        if (!through || !far) continue;
+        const reference = own?.fields.find((x) => x.name === through);
+        const near = page.pattern.model === f.model && through === f.from;
+        const away =
+          reference?.type.kind === "relation" && reference.type.model === f.model && far === f.from;
+        if (!near && !away) continue;
+        const to = f.to && (near ? `${f.to}.${far}` : `${through}.${f.to}`);
+        followInList(spec, ["pages", page.id, "filters"], name, to, 3);
+        const defaulted = ["pages", page.id, "defaultFilter", name];
+        if (spec.has(defaulted)) {
+          if (to) spec.renameKey(defaulted, to);
+          else spec.removeAndPrune(defaulted, 3);
+        }
+      }
+    }
     if (f && page.pattern.model === f.model) {
       for (const key of ["search", "filters", "sortable"])
         followInList(spec, ["pages", page.id, key], f.from, f.to, 3);

@@ -266,6 +266,7 @@ export {
   checkSortableFields,
   filterable,
   filterableFields,
+  filterThrough,
   sortableBy,
 } from "./sections/list-keys.js";
 export { partText, readNamePart } from "./sections/name-parts.js";
