@@ -41,3 +41,10 @@
 - supportCase: Shared calendar not syncing to phones
   sender: agent
   content: Thank you for the details. The phone update changed a sync setting for shared calendars. We will send you short steps to switch it back, one phone at a time, this afternoon.
+- supportCase: Price for extra mailboxes
+  sender: agent
+  content: Two more mailboxes are no trouble. On your plan they come to six euros a month together, and we can have them ready the day after you say so. Which addresses would you like?
+- supportCase: Price for extra mailboxes
+  sender: customer
+  fromEmail: sara@saltvikfarm.example
+  content: That sounds fine. Let us say orders and summer, from the middle of April. Can two of us read the orders mailbox?
