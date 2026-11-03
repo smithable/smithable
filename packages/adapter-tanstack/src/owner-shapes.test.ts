@@ -20,6 +20,7 @@ models:
       subject: string!
       customerEmail: { type: email!, locked: true }
       status: open | closed
+      body: text
       attachments: files
       messages: Message[]
     ownedBy: customerEmail
@@ -93,7 +94,7 @@ function generate(specText: string, auth: string, ux?: string) {
   };
 }
 
-describe("the support portal: an owner by address and one step away", () => {
+describe("the support portal: an owner by address, and reading through a reference", () => {
   const app = generate(spec, authText, uxText);
   const cases = app.file("src/generated/support-case.server.ts");
   const messages = app.file("src/generated/message.server.ts");
@@ -102,10 +103,10 @@ describe("the support portal: an owner by address and one step away", () => {
     expect(app.errors).toEqual([]);
   });
 
-  test("a case belongs to whoever signed in as its address, proven; the comparison is lower-case and trimmed", () => {
+  test("a case belongs to whoever signed in as its address, proven; stored and compared lower-case and trimmed", () => {
     expect(cases).toContain("const address = viewer.proven ? addressOf(viewer) : null;");
     expect(cases).toContain(
-      "return address ? eq(sql`lower(trim(${schema.supportCases.customerEmail}))`, address) : sql`false`;",
+      "return address ? eq(schema.supportCases.customerEmail, address) : sql`false`;",
     );
     expect(cases).toContain(
       'return scope === "own" && viewer ? supportCaseData.own(viewer) : sql`false`;',
@@ -121,33 +122,44 @@ describe("the support portal: an owner by address and one step away", () => {
     );
   });
 
-  test("on create the address is the viewer's own unless they may choose; a visitor's form takes the address written", () => {
+  test("on create the address is the viewer's own proven one unless they may choose; a visitor's form takes the address written", () => {
     expect(cases).toContain(
-      "const owner = !viewer || chooses(viewer) ? (given ?? addressOf(viewer)) : addressOf(viewer);",
+      "const asAddress = (given: string | null | undefined) => given?.trim().toLowerCase() || null;",
+    );
+    expect(cases).toContain(
+      "const owner = !viewer || chooses(viewer) ? (asAddress(given) ?? addressOf(viewer)) : addressOf(viewer);",
+    );
+    expect(cases).toContain(
+      'throw new AccessDenied(true, "Prove your address first: sign in with a code sent to it, or with a provider that has confirmed it.");',
     );
     expect(cases).toContain(
       "values({ ...values, customerEmail: ownerFor(viewer, values.customerEmail) })",
     );
-    // On a change a chooser gives it or it stays; anyone else keeps the record's own.
+    // On a change: left out it stays; given, a chooser's as written, anyone else's own.
     expect(cases).toContain(
-      "const updated = { ...values, customerEmail: chooses(viewer) && values.customerEmail !== undefined ? values.customerEmail : row.customerEmail };",
+      "const updated = { ...values, customerEmail: values.customerEmail === undefined ? row.customerEmail : ownerFor(viewer, values.customerEmail) };",
     );
-    // Visitors' cases are counted in the audit log, since no owner column tells them apart.
+    // Visitors' cases are counted in the audit log, the last day, since no owner column tells them apart.
     expect(cases).toContain(
-      'from(schema.auditLog).where(and(eq(schema.auditLog.who, "visitor"), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, "SupportCase")))',
+      'eq(schema.auditLog.model, "SupportCase"), gt(schema.auditLog.at, new Date(Date.now() - 24 * 60 * 60 * 1000))',
     );
+    // ownerFor is the data function's too: an action's add, a copy, a split and a merge give the owner as create() does.
+    expect(cases).toContain("\n  ownerFor,\n");
   });
 
-  test("a message belongs to its case's owner, one step: read through the case, and the case must be readable", () => {
+  test("owning through a reference is reading: a message keeps its creator, and is read through its case", () => {
     expect(messages).toContain(
-      "return inArray(schema.messages.supportCaseId, db.select({ id: schema.supportCases.id }).from(schema.supportCases).where(supportCaseData.own(viewer)));",
+      "return or(eq(schema.messages.ownerId, viewer.id), inArray(schema.messages.supportCaseId, db.select({ id: schema.supportCases.id }).from(schema.supportCases).where(supportCaseData.readable(viewer)))) as SQL;",
+    );
+    expect(messages).not.toContain("whose(");
+    // The creator's column, as a model without ownedBy has it: change and delete are the creator's.
+    expect(messages).toContain(
+      "const made = tx.insert(schema.messages).values({ ...values, ownerId: personOf(viewer), agentId: personOf(viewer) })",
     );
     expect(messages).toContain(
-      "whose(viewer: Viewer | null, row: { supportCaseId: number | null }): string | null {",
+      'if (what === "changed") check(messageAccess.write, viewer, row.ownerId);',
     );
-    expect(messages).toContain(
-      "return parent ? addressOwner(parent.customerEmail, viewer) : null;",
-    );
+    expect(messages).toContain("function shownTo<R extends { ownerId: string | null }>");
     // The case named must be one the viewer may read (checkReferences), on create and on change.
     expect(messages).toContain(
       "if (values.supportCaseId != null && !supportCaseData.canRead(viewer, values.supportCaseId))",
@@ -157,20 +169,17 @@ describe("the support portal: an owner by address and one step away", () => {
     expect(messages).toContain(
       '"supportCaseId" in given && JSON.stringify(given.supportCaseId ?? null) !== JSON.stringify(before.supportCaseId ?? null)) throw new BadInput(w.cannotChangeNow("Support case"));',
     );
-    // No owner column beside the values: the message's case is in them.
-    expect(messages).toContain(
-      "const made = tx.insert(schema.messages).values({ ...values, agentId: personOf(viewer) })",
+    expect(app.file("src/generated/message.schema.ts")).toContain(
+      "omit({ id: true, ownerId: true,",
     );
-    expect(messages).not.toContain("ownerFor(");
   });
 
-  test("the record page and the action check the owner by kind; one step away only the server knows", () => {
-    const caseModule = app.file("src/generated/support-case.ts");
-    expect(caseModule).toContain(
+  test("the record page and the actions check the owner by kind, on the client too", () => {
+    expect(app.file("src/generated/support-case.ts")).toContain(
       "canWrite: allows(supportCaseAccess.write, viewer, addressOwner(row.customerEmail, viewer)),",
     );
     expect(app.file("src/generated/message.ts")).toContain(
-      "canWrite: allows(messageAccess.write, viewer, messageData.whose(viewer, row)),",
+      "canWrite: allows(messageAccess.write, viewer, row.ownerId),",
     );
     expect(app.file("src/generated/actions/close.server.ts")).toContain(
       "check(closeAccess, viewer, addressOwner(row.customerEmail, viewer));",
@@ -180,7 +189,7 @@ describe("the support portal: an owner by address and one step away", () => {
     );
   });
 
-  test("a written actions grant: customers run no action, their own cases included", () => {
+  test("actions none: customers run no action, their own cases included", () => {
     expect(app.file("src/generated/actions/close.ts")).toContain(`export const closeAccess: Rule = {
   public: false,
   roles: ["admin", "agent"],
@@ -189,18 +198,40 @@ describe("the support portal: an owner by address and one step away", () => {
 };`);
   });
 
-  test("the reply box writes our side for a viewer who reads everyone's messages, the other side for anyone else; the server checks it", () => {
+  test("the reply box writes our side for a role granted read or write on everyone's messages, the other side for anyone else; the server checks it", () => {
+    expect(app.file("src/generated/message.ts")).toContain(
+      'export const messageOurs: string[] = ["admin", "agent"];',
+    );
     expect(app.file("src/routes/cases/$id.tsx")).toContain(
-      'await createMessage({ data: { content: text, supportCaseId: row.id, sender: readScope(messageAccess.read, viewer) === "all" ? "agent" : "customer" } as never });',
+      'await createMessage({ data: { content: text, supportCaseId: row.id, sender: viewer && messageOurs.includes(viewer.role) ? "agent" : "customer" } as never });',
     );
-    expect(messages).toContain(
-      'if (readScope(messageAccess.read, viewer) !== "all") values = { ...values, sender: "customer" };',
+    expect(messages).toContain('if (!ours(viewer)) values = { ...values, sender: "customer" };');
+    expect(messages).toContain(`    if (!ours(viewer)) {
+      if (before.sender === "agent") throw new AccessDenied(viewer !== null);
+      updated.sender = "customer";
+    }`);
+    // Unread marks go by who wrote a message (its creator), as for any message model.
+    expect(cases).toContain("at: target.createdAt, by: target.ownerId }");
+  });
+
+  test("the side rule holds without the ux file too: a mail's reply makes the model a message model", () => {
+    const plain = generate(spec, authText);
+    expect(plain.file("src/generated/message.ts")).not.toContain("messageOurs");
+    const mailed = generate(
+      `${spec}incoming:
+  support:
+    mail: true
+    create: SupportCase
+    fields: { from: customerEmail, subject: subject, body: body }
+    reply:
+      create: Message
+      fields: { body: content }
+      set: { sender: customer }
+`,
+      authText,
     );
-    expect(messages).toContain(
-      'if (readScope(messageAccess.read, viewer) !== "all" && "sender" in updated) updated.sender = "customer";',
-    );
-    // Unread marks go by who wrote a message (its agent), not by whose it is.
-    expect(cases).toContain("at: target.createdAt, by: target.agentId }");
+    expect(mailed.errors).toEqual([]);
+    expect(mailed.file("src/generated/message.ts")).toContain("messageOurs");
   });
 
   test("a record's files follow its data function, so a message's attachments are read as the message is", () => {
@@ -215,35 +246,41 @@ describe("the support portal: an owner by address and one step away", () => {
     );
   });
 
-  test("an owner one step away from a User owner compares the user's id, with no viewer needed", () => {
-    const crm = generate(
+  test("a record added beside a form gets its owner as create() gives it, and its number per that owner", () => {
+    const shop = generate(
       `smithable: 0.1
-app: { name: CRM }
+app: { name: Shop }
 models:
   Customer:
     fields:
       name: string!
-      accountManager: User
+      email: email!
       orders: Order[]
-    ownedBy: accountManager
+    ownedBy: email
   Order:
-    fields: { number: string!, customer: Customer! }
+    fields:
+      number: { type: int!, sequence: true }
+      customer: Customer!
+      status: open | shipped
     ownedBy: customer
 pages:
-  customers: { crud: Customer }
+  customers: { crud: Customer, actions: [placeOrder] }
   orders: { crud: Order }
+actions:
+  placeOrder:
+    on: Customer
+    add:
+      Order: { status: open }
 `,
       "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles:\n  admin: all\n  sales: { pages: all, create: all }\ndefaultRole: sales\n",
     );
-    expect(crm.errors).toEqual([]);
-    const orders = crm.file("src/generated/order.server.ts");
+    expect(shop.errors).toEqual([]);
+    const action = shop.file("src/generated/actions/place-order.server.ts");
+    // The order's creator owns it (through is reading), numbered per that creator.
+    expect(action).toContain(", ownerId: personOf(viewer)");
+    const orders = shop.file("src/generated/order.server.ts");
     expect(orders).toContain(
-      "return inArray(schema.orders.customerId, db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.accountManagerId, viewer.id)));",
+      "return or(eq(schema.orders.ownerId, viewer.id), inArray(schema.orders.customerId, db.select({ id: schema.customers.id }).from(schema.customers).where(customerData.readable(viewer)))) as SQL;",
     );
-    expect(orders).toContain(
-      "whose(_viewer: Viewer | null, row: { customerId: number | null }): string | null {",
-    );
-    expect(orders).toContain("return parent ? parent.accountManagerId : null;");
-    expect(orders).not.toContain("addressOwner");
   });
 });

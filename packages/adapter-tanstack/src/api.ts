@@ -26,12 +26,12 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields, askedKeys } from "./actions.js";
 import {
+  addressOwned,
   dataKey,
   HEADER,
   literal,
   modelNamed,
   names,
-  ownerByKind,
   ownerKey,
   references,
   shownTitleKey,
@@ -959,7 +959,7 @@ function toolsModule(
   );
   // Whose a record is, for allows: its owner column, or what the kind's data function says for an
   // owner by address or one step away (docs/design/support-portal-path.md §2).
-  const ownerOfKind = models.some(({ model }) => ownerByKind(model))
+  const ownerOfKind = models.some(({ model }) => addressOwned(model))
     ? '"whose" in kind ? kind.whose(viewer, row) : row[kind.owner]'
     : "row[kind.owner]";
   const entries = models.map(({ model, n }) => {
@@ -990,7 +990,7 @@ function toolsModule(
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, ${ownerByKind(model) ? `whose: (viewer: Viewer | null, row: Record<string, unknown>) => ${n.data}.whose(viewer, row as never), ` : ""}targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, ${addressOwned(model) ? `whose: (viewer: Viewer | null, row: Record<string, unknown>) => ${n.data}.whose(viewer, row as never), ` : ""}targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
   });
   // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
   const proposals = actions.map((action) => {

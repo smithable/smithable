@@ -8,6 +8,7 @@ import {
   humanize,
   kebab,
   type ModelIR,
+  modelAccess,
   type PageIR,
   type PersonIR,
   pageModel,
@@ -199,6 +200,8 @@ export function names(model: ModelIR, t: Texts) {
     options: `${camel(model.name)}Options`,
     ownerOptions: `${camel(model.name)}OwnerOptions`,
     access: `${camel(model.name)}Access`,
+    /** The roles that write on our side of a conversation of its records (support-portal-path.md §4). */
+    ours: `${camel(model.name)}Ours`,
     data: `${camel(model.name)}Data`,
     values: `${model.name}Values`,
     settableValues: `${model.name}Settable`,
@@ -208,43 +211,54 @@ export function names(model: ModelIR, t: Texts) {
 }
 
 /**
- * The column holding a record's owner: the automatic owner, or the model's ownedBy field (a user's
- * or a reference's id, or the address itself; docs/design/support-portal-path.md §2).
+ * The column holding the owner whose record it is to change and delete: the creator (the app's
+ * own column, also for a record owned through a reference, which is reading only), or the
+ * model's ownedBy field: a user's id, or the address itself (docs/design/support-portal-path.md §2).
  */
 export function ownerKey(model: ModelIR): string {
-  if (!model.ownedBy) return "ownerId";
-  return model.ownerKind === "address" ? model.ownedBy : `${model.ownedBy}Id`;
+  if (creatorOwned(model)) return "ownerId";
+  return model.ownerKind === "address" ? (model.ownedBy as string) : `${model.ownedBy}Id`;
 }
 
-/** Whether the owner is found by its kind at read time (an address, the record one step away), not as a user id in a column. */
-export const ownerByKind = (model: ModelIR): boolean =>
-  model.ownerKind === "address" || model.ownerKind === "through";
+/** Whether the record's owner column holds its creator: no ownedBy, or one through a reference. */
+export const creatorOwned = (model: ModelIR): boolean =>
+  !model.ownedBy || model.ownerKind === "through";
+
+/** Whether the owner is the record's address, compared with the viewer's proven one at read time. */
+export const addressOwned = (model: ModelIR): boolean => model.ownerKind === "address";
 
 type Names = ReturnType<typeof names>;
 
 /**
- * The record's owner as `allows` compares it, a user id or null: the owner column for a User
- * owner; for an address, the viewer when it is their proven address (kit/access's addressOwner),
- * which the client works out too; one step away, the model's data function (`whose`), which only
- * the server has: on the client (`client`) the owner is unknown and the roles' grants decide.
+ * The record's owner as `allows` compares it, a user id or null: the owner column, or for an
+ * address the viewer when it is their proven address (kit/access's addressOwner), which the client
+ * works out from the row too.
  */
-export function ownerOf(
-  model: ModelIR,
-  n: Names,
-  row = "row",
-  viewer = "viewer",
-  client = false,
-): string {
-  if (model.ownerKind === "address") return `addressOwner(${row}.${model.ownedBy}, ${viewer})`;
-  if (model.ownerKind === "through") return client ? "null" : `${n.data}.whose(${viewer}, ${row})`;
+export function ownerOf(model: ModelIR, n: Names, row = "row", viewer = "viewer"): string {
+  if (addressOwned(model)) return `addressOwner(${row}.${model.ownedBy}, ${viewer})`;
   return `${row}.${ownerKey(model)}`;
 }
 
-/** The condition for the records that are the viewer's own, in a query (`viewer` is signed in). */
+/**
+ * The condition for the records the viewer reads as their own, in a query (`viewer` is signed
+ * in): the owner column, or the model's own rule for an address and for records read through the
+ * record one step away.
+ */
 export function ownCondition(model: ModelIR, n: Names, viewer = "viewer"): string {
-  return ownerByKind(model)
+  return addressOwned(model) || model.ownerKind === "through"
     ? `${n.data}.own(${viewer})`
     : `eq(${n.table}.${ownerKey(model)}, ${viewer}.id)`;
+}
+
+/**
+ * The owner a record written beside a form's create gets (an action's add or copy, a split, a
+ * merge into a new record), as create() gives it: the creator, or the model's ownerFor (a chooser's
+ * choice kept, anyone else their own, a refusal where create() refuses).
+ */
+export function ownerExpr(model: ModelIR, n: Names, values: string): string {
+  return creatorOwned(model)
+    ? "personOf(viewer)"
+    : `${n.data}.ownerFor(viewer, ${values}.${ownerKey(model)})`;
 }
 
 /**
@@ -270,12 +284,19 @@ export function dropUnused(text: string, names: string[]): string {
   return out;
 }
 
-/** What an insert gives the owner column beside the values checked: a user's own, an address's own, nothing one step away. */
-export function ownerInsert(model: ModelIR, values: string): string {
-  if (model.ownerKind === "through") return "";
-  if (model.ownerKind === "address")
-    return `, ${model.ownedBy}: ${values}.${model.ownedBy} ?? addressOf(viewer)`;
-  return `, ${ownerKey(model)}: personOf(viewer)`;
+/**
+ * The address field that owns the model's records, when a member's form leaves it out for whoever
+ * cannot choose (support-portal-path.md §2): not where visitors add these records, since their
+ * form takes the address written and one form serves them and the members.
+ */
+export function addressOwnedForm(model: ModelIR, auth: AuthIR): FieldIR | undefined {
+  if (!addressOwned(model) || modelAccess(model, auth).create.public) return undefined;
+  return model.fields.find((f) => f.name === model.ownedBy);
+}
+
+/** What an insert gives the owner column beside the values checked (ownerExpr). */
+export function ownerInsert(model: ModelIR, n: Names, values: string): string {
+  return `, ${ownerKey(model)}: ${ownerExpr(model, n, values)}`;
 }
 
 /** Fields that refer to a user, e.g. an account manager. */
@@ -592,6 +613,7 @@ export function optionsFor(
   model: ModelIR,
   t: Texts,
   ir: SpecIR,
+  auth?: AuthIR,
 ): { imports: string[]; expr: string } {
   const refs = references(model);
   const modules = new Map<string, string[]>();
@@ -608,7 +630,9 @@ export function optionsFor(
   const users = userFields(model).filter((f) => f.name !== model.ownedBy);
   if (users.length) modules.set("#/generated/users", ["userOptions"]);
   for (const f of users) entries.push(`${dataKey(f)}: await userOptions()`);
-  const owner = model.ownedBy && userFields(model).find((f) => f.name === model.ownedBy);
+  const owner =
+    (model.ownedBy && userFields(model).find((f) => f.name === model.ownedBy)) ||
+    (auth && addressOwnedForm(model, auth));
   if (owner) {
     const n = names(model, t);
     modules.set(n.module, [...(modules.get(n.module) ?? []), n.ownerOptions]);

@@ -554,15 +554,13 @@ function explainAction(
         `${role.name}'s write grant does not name ${model.name} and its actions grant does not name ${action.name}.`,
       ),
     );
-  // A written actions grant is the whole of what the role runs (support-portal-path.md §3).
-  if (role.grants !== "all" && role.grants.actions !== undefined)
+  // "actions: none" is no action at all, the role's own records included (support-portal-path.md §3).
+  if (role.grants !== "all" && role.grants.actions?.length === 0)
     return denied(
       changes,
       inAuth(
         `roles.${role.name}.actions`,
-        role.grants.actions.length === 0
-          ? `${role.name}'s actions grant is none: ${plural(role.name)} run no action, not on their own ${what} either.`
-          : `${role.name}'s actions grant does not name ${action.name}, and a written grant is the whole of what ${plural(role.name)} run: not on their own ${what} either.`,
+        `${role.name}'s actions grant is none: ${plural(role.name)} run no action, not on their own ${what} either.`,
       ),
     );
   const own = inAuth(

@@ -45,9 +45,8 @@ function shared(page: ArticlesPage, ctx: GenContext) {
   const imports = importList()
     .add("@tanstack/react-start", "createServerFn")
     .add("zod", "z")
-    .add(`${n.module}.server`, n.access, n.data)
+    .add(`${n.module}.server`, n.data)
     .add(n.module, `type ${model.name}Row`)
-    .add("#/kit/access", "allows")
     .add("#/lib/viewer.server", "currentViewer");
   const crud = ir.pages.find((x) => pageModel(x) === model.name);
   if (crud) imports.add("#/generated/pages", "pageAccess");
@@ -104,6 +103,7 @@ function listRoute(page: ArticlesPage, ctx: GenContext): string {
     .add("#/kit/params", "count", "optional", "type Search")
     .add("#/generated/pages", "pageAccess")
     .add("#/kit/access", "allows")
+    .add(`${n.module}.server`, n.access)
     .add("#/kit/page-guard", "guardPage");
   if (framed)
     imports
@@ -173,9 +173,10 @@ function articleRoute(page: ArticlesPage, ctx: GenContext): string {
     .add("@tanstack/react-router", "createFileRoute", "notFound")
     .add("@tanstack/react-start/server", "getRequestHeaders")
     .add("#/kit/Articles", "ArticleView")
-    .add("#/kit/access", "allows")
     .add("#/kit/page-guard", "guardPage");
   imports.add("#/generated/pages", "pageAccess");
+  // The Edit link needs the rules only where there is a page to edit on.
+  if (crud) imports.add("#/kit/access", "allows").add(`${n.module}.server`, n.access);
   if (framed)
     imports
       .add("#/kit/Landing", "LandingLayout")

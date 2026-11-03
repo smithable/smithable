@@ -49,8 +49,11 @@ import {
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
   addable,
+  addressOwned,
+  addressOwnedForm,
   code,
   composedName,
+  creatorOwned,
   dataKey,
   type GenContext,
   Getter,
@@ -65,7 +68,6 @@ import {
   modelNamed,
   names,
   ownCondition,
-  ownerByKind,
   ownerKey,
   ownerOf,
   references,
@@ -119,9 +121,16 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
       return r ? [`  ${f.name}: ${r},`] : [];
     }),
     // A required owner (ownedBy) may be left out: the server makes it the viewer's own (ownerFor),
-    // and a form leaves the field out for whoever cannot choose someone else.
+    // and a form leaves the field out for whoever cannot choose someone else. An address owner
+    // too, unless visitors add these records: their form takes the address written
+    // (support-portal-path.md §2), and one schema serves them and the members.
     ...model.fields
-      .filter((f) => f.name === model.ownedBy && f.required && f.type.kind === "relation")
+      .filter(
+        (f) =>
+          f.name === model.ownedBy &&
+          f.required &&
+          (model.ownerKind === "user" || (model.ownerKind === "address" && !visitors)),
+      )
       .map((f) => `  ${dataKey(f)}: (s) => s.optional(),`),
   ];
   const schema = refinements.length
@@ -130,7 +139,7 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
   // Never given: the id, the owner, the times, and a number counting up (the app counts it).
   const omitted = [
     "id",
-    ...(model.ownedBy || !hasSignIn(auth) ? [] : ["ownerId"]),
+    ...(!creatorOwned(model) || !hasSignIn(auth) ? [] : ["ownerId"]),
     "createdAt",
     "updatedAt",
     ...storedFields(model)
@@ -242,7 +251,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
     : `createInsertSchema(${n.table})`;
   const omitted = [
     "id",
-    ...(model.ownedBy || !hasSignIn(auth) ? [] : ["ownerId"]),
+    ...(!creatorOwned(model) || !hasSignIn(auth) ? [] : ["ownerId"]),
     "createdAt",
     "updatedAt",
   ];
@@ -263,6 +272,9 @@ export const ${n.options} = createServerFn().handler(async () =>
   // everyone's; anyone else makes their own (ownerFor), so the form leaves the field out.
   // The same test as optionsFor's, which calls it from the form's loader.
   const ownerField = userFields(model).find((f) => f.name === model.ownedBy);
+  // An address owner's field is left out the same way, for whoever cannot choose; where visitors
+  // add these records, their form needs it, and a member's value is replaced by their own.
+  const addressField = addressOwnedForm(model, auth);
   const ownerOptions = ownerField
     ? `
 /** Whom a ${n.label.toLowerCase()} can be given to: null for a viewer who can only make their own. */
@@ -271,7 +283,15 @@ export const ${n.ownerOptions} = createServerFn().handler(async () => {
   return (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? userChoices() : null;
 });
 `
-    : "";
+    : addressField
+      ? `
+/** Whether the viewer writes whose a ${n.label.toLowerCase()} is: null leaves the address out of their form, the app fills in their own (support-portal-path.md §2). */
+export const ${n.ownerOptions} = createServerFn().handler(async () => {
+  const viewer = await currentViewer();
+  return (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? undefined : null;
+});
+`
+      : "";
   // A capacity: the reservation block's server functions (docs/design/booking.md): a
   // record's places, and taking one in a step. Canceling is the delete above.
   const capacity = hasSignIn(auth) ? model.capacity : undefined;
@@ -337,7 +357,14 @@ async function writer() {
 }
 
 /** ${model.name} records as the kit reads them. */
-export type ${model.name}Row = ${rowType};
+export type ${model.name}Row = ${rowType};${
+    isMessageModel(model, ir, ux) && threadBindings(model).side
+      ? `
+
+/** The roles that write on our side of a conversation of ${n.pluralLabel.toLowerCase()} (support-portal-path.md §4): granted read or write on everyone's, and administrators. */
+export const ${n.ours}: string[] = ${literal(oursRoles(model, auth))};`
+      : ""
+  }
 ${
   model.occupies
     ? `
@@ -567,27 +594,32 @@ export function dataModule(
   const paged = isPaged(model);
   // Records with an owner the app keeps itself (not a field of the spec): who owns one is told only
   // to its owner and to roles that read every record, never to a visitor or another member.
-  const ownedAuto = signedIn && !model.ownedBy;
+  const ownedAuto = signedIn && creatorOwned(model);
   // An ownedBy field that must be filled: whose record it is is always someone.
-  const ownerField = model.fields.find((f) => f.name === model.ownedBy);
+  // A User or an address owner (one through a reference keeps the creator's column, ownedAuto).
+  const ownerField = creatorOwned(model)
+    ? undefined
+    : model.fields.find((f) => f.name === model.ownedBy);
   const ownerRequired = Boolean(ownerField?.required);
   const ownerLabel = ownerField
     ? (t.field(model, ownerField).label ?? humanize(ownerField.name)).toLowerCase()
     : "";
-  // An owner by address or one step away (support-portal-path.md §2): the records that are the
-  // viewer's own, as a condition, and whose a record is, as allows compares it, each by the kind.
-  const parent =
-    model.ownerKind === "through" && ownerField?.type.kind === "relation"
-      ? modelNamed(ir, ownerField.type.model)
+  // An owner by address, or reading through the record one step away (support-portal-path.md §2):
+  // the records the viewer reads as their own, as a condition, and for an address whose a record
+  // is, as allows compares it.
+  const throughField =
+    model.ownerKind === "through"
+      ? model.fields.find((f) => f.name === model.ownedBy && f.type.kind === "relation")
       : undefined;
-  const pn = parent ? { ...names(parent, t), table: tableRef(parent) } : undefined;
+  const parent =
+    throughField?.type.kind === "relation" ? modelNamed(ir, throughField.type.model) : undefined;
   const ownerMethods =
-    model.ownerKind === "address" && signedIn
+    addressOwned(model) && signedIn
       ? `
-  /** The ${n.pluralLabel.toLowerCase()} that are the viewer's own: their proven address is the record's (support-portal-path.md §2). */
+  /** The ${n.pluralLabel.toLowerCase()} that are the viewer's own: their proven address is the record's, stored as compared (support-portal-path.md §2). */
   own(viewer: Viewer): SQL {
     const address = viewer.proven ? addressOf(viewer) : null;
-    return address ? eq(sql\`lower(trim(\${${n.table}.${owner}}))\`, address) : sql\`false\`;
+    return address ? eq(${n.table}.${owner}, address) : sql\`false\`;
   },
 
   /** Whose a ${n.label.toLowerCase()} is: whoever signed in with its ${ownerLabel}, proven; the viewer, or no one they can be. */
@@ -595,27 +627,14 @@ export function dataModule(
     return addressOwner(row.${owner}, viewer);
   },
 `
-      : parent && pn && signedIn
+      : parent && throughField && signedIn
         ? `
-  /** The ${n.pluralLabel.toLowerCase()} that are the viewer's own: those of their own ${names(parent, t).pluralLabel.toLowerCase()} (support-portal-path.md §2). */
+  /** The ${n.pluralLabel.toLowerCase()} the viewer reads as their own: those they made, and those of the ${names(parent, t).pluralLabel.toLowerCase()} they may read (support-portal-path.md §2: owning through a reference is reading). */
   own(viewer: Viewer): SQL {
-    return inArray(${n.table}.${owner}, db.select({ id: ${pn.table}.id }).from(${pn.table}).where(${ownCondition(parent, pn)}));
-  },
-
-  /** Whose a ${n.label.toLowerCase()} is: its ${ownerLabel}'s owner, one step. */
-  whose(${parent.ownerKind === "address" ? "viewer" : "_viewer"}: Viewer | null, row: { ${owner}: number | null }): string | null {
-    if (row.${owner} == null) return null;
-    const parent = db.select({ ${ownerKey(parent)}: ${pn.table}.${ownerKey(parent)} }).from(${pn.table}).where(eq(${pn.table}.id, row.${owner})).get();
-    return parent ? ${ownerOf(parent, pn, "parent")} : null;
+    return or(eq(${n.table}.ownerId, viewer.id), inArray(${n.table}.${throughField.name}Id, db.select({ id: ${tableRef(parent)}.id }).from(${tableRef(parent)}).where(${names(parent, t).data}.readable(viewer)))) as SQL;
   },
 `
         : "";
-  const addresses = signedIn
-    ? [
-        ...(model.ownerKind === "address" ? ["addressOf", "addressOwner"] : []),
-        ...(parent?.ownerKind === "address" ? ["addressOwner"] : []),
-      ]
-    : [];
   // A record page's contact block mails the owner, whom only the server may know.
   const mailsOwner =
     ownedAuto &&
@@ -937,6 +956,8 @@ export function dataModule(
       ? ["count"]
       : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
+    ...(access.create.public && addressOwned(model) ? ["gt"] : []),
+    ...(model.ownerKind === "through" ? ["or"] : []),
     ...(capacity ? ["ne"] : []),
     ...(nameSearch.some((c) => c.includes("isNull(")) ? ["isNull"] : []),
     ...(wordCode.includes("or(") ? ["or"] : []),
@@ -1083,26 +1104,16 @@ export function dataModule(
   // A number counting up (`sequence: true`, orders.md §4): from the field's counter (per owner
   // where the number is unique per owner), kept ahead of the records' highest, in the change's
   // own transaction, so two records made at once never share one and a number is never given twice.
-  const ownerValue =
-    model.ownerKind === "through"
-      ? `values.${owner}`
-      : model.ownedBy
-        ? `ownerFor(viewer, values.${owner})`
-        : "personOf(viewer)";
+  const ownerValue = creatorOwned(model) ? "personOf(viewer)" : `ownerFor(viewer, values.${owner})`;
   const counted = sequenceEntries(model, auth, n.table, ownerValue);
   const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
   const createValues = !signedIn
     ? counted.length
       ? `{ ...values${set} }`
       : "values"
-    : model.ownerKind === "through"
-      ? // The record one step away is in the values, checked readable (checkReferences).
-        set
-        ? `{ ...values${set} }`
-        : "values"
-      : model.ownedBy
-        ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`
-        : `{ ...values, ownerId: personOf(viewer)${set} }`;
+    : creatorOwned(model)
+      ? `{ ...values, ownerId: personOf(viewer)${set} }`
+      : `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`;
   // A field's rules on the record (record-rules.md §2–3): a lock on a change made in a form, the
   // API or Ask (an action's set may change a locked field it names, which is how a case is
   // reopened; `frees` lists them), and
@@ -1173,24 +1184,29 @@ export function dataModule(
         .join("")}`
     : "";
   const self = n.data;
-  // A model shown as a conversation with a side (conversation.md §2): a viewer who reads only their
-  // own records writes on the other side, whatever was sent, as the app fills a `by: app` field
-  // (support-portal-path.md §4); the reply box fills the same value.
-  const sided = ir.models.some((m) =>
-    lists(m).some((f) => f.type.model === model.name && threadLists(m, ir, ux).includes(f.name)),
-  )
-    ? threadBindings(model).side
-    : undefined;
+  // A message model's side (conversation.md §2, support-portal-path.md §4): ours for a viewer whose
+  // role is granted read or write on everyone's records, or an administrator; the other side for
+  // anyone else, whatever was sent, as the app fills a `by: app` field. The model is a message
+  // model when its thread says so, a page shows it as a conversation, or mail replies become it.
+  const sided = isMessageModel(model, ir, ux) ? threadBindings(model).side : undefined;
   const theirs =
     sided?.field.type.kind === "choice"
       ? sided.field.type.values.find((v) => v !== sided.ours)
       : undefined;
   const sideRule = (values: string) =>
     sided && theirs
-      ? `    // The side of the thread (conversation.md §2): the other side for whoever reads only their own ${n.pluralLabel.toLowerCase()}.
-    if (readScope(${n.access}.read, viewer) !== "all"${values === "updated" ? ` && ${JSON.stringify(sided.field.name)} in updated` : ""}) ${values === "updated" ? `updated.${sided.field.name} = ${JSON.stringify(theirs)};` : `values = { ...values, ${sided.field.name}: ${JSON.stringify(theirs)} };`}
+      ? values === "updated"
+        ? `    // The side of the thread (conversation.md §2): anyone else writes on the other side, and never over ours.
+    if (!ours(viewer)) {
+      if (before.${sided.field.name} === ${JSON.stringify(sided.ours)}) throw new AccessDenied(viewer !== null);
+      updated.${sided.field.name} = ${JSON.stringify(theirs)};
+    }
+`
+        : `    // The side of the thread (conversation.md §2): anyone else writes on the other side.
+    if (!ours(viewer)) values = { ...values, ${sided.field.name}: ${JSON.stringify(theirs)} };
 `
       : "";
+
   // The checks a write must pass (A 153), each written once: create() and update() call them in
   // their transaction, and so do the actions that write in one of their own.
   const indent = (code: string) =>
@@ -1284,12 +1300,12 @@ ${updateBody}
     threadTarget && references(threadTarget).find((f) => f.type.model === model.name);
   const reads = threadTarget && threadRef ? `${n.table}Reads` : undefined;
   // Who wrote a message, so the viewer's own are not unread to them: its owner column when that
-  // holds a user, else its author field when that is one. An owner by address or one step away
-  // says whose a message is, not who wrote it.
+  // holds a user (the creator too, for a message owned through its case), else its author field
+  // when that is one; an address owner says whose a message is, not who wrote it.
   const author = threadTarget && threadBindings(threadTarget).author;
   const writer = !threadTarget
     ? undefined
-    : !ownerByKind(threadTarget)
+    : !addressOwned(threadTarget)
       ? ownerKey(threadTarget)
       : author?.type.kind === "relation"
         ? `${author.name}Id`
@@ -1741,7 +1757,7 @@ ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[
   .map((m) => `import { ${names(m, t).ui} } from "./${kebab(m.name)}";\n`)
   .join(
     "",
-  )}import { ${labelledKinds.has(model) ? `${n.ui}, ` : ""}type ${n.settableValues} } from "./${kebab(model.name)}";
+  )}import { ${[...(labelledKinds.has(model) ? [n.ui] : []), ...(sided ? [n.ours] : [])].map((x) => `${x}, `).join("")}type ${n.settableValues} } from "./${kebab(model.name)}";
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -1811,7 +1827,7 @@ function veiled<R extends { id: number }>(viewer: Viewer | null, rows: R[]): R[]
     signedIn
       ? `
   const owners = new Map(
-    db.select({ id: ${n.table}.id, ${ownerByKind(model) ? owner : "owner"}: ${n.table}.${owner} }).from(${n.table}).where(inArray(${n.table}.id, waiting.map((w) => w.recordId))).all().map((o) => [o.id, ${ownerByKind(model) ? ownerOf(model, n, "o") : "o.owner"}]),
+    db.select({ id: ${n.table}.id, ${addressOwned(model) ? owner : "owner"}: ${n.table}.${owner} }).from(${n.table}).where(inArray(${n.table}.id, waiting.map((w) => w.recordId))).all().map((o) => [o.id, ${addressOwned(model) ? ownerOf(model, n, "o") : "o.owner"}]),
   );`
       : ""
   }
@@ -1837,6 +1853,12 @@ function veiled<R extends { id: number }>(viewer: Viewer | null, rows: R[]): R[]
     : ""
 }/** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
 export const ${n.access}: ModelAccess = ${literal(access)};${
+    sided
+      ? `
+/** Whether the viewer writes on our side of the thread (support-portal-path.md §4): a role granted read or write on everyone's ${n.pluralLabel.toLowerCase()}, an administrator, or the app. */
+const ours = (viewer: Viewer | null) => !!viewer && (!!viewer.system || ${n.ours}.includes(viewer.role));`
+      : ""
+  }${
     model.review
       ? `
 /** The roles that approve or reject ${n.pluralLabel.toLowerCase()}' waiting files (docs/design/file-review.md). */
@@ -1892,32 +1914,37 @@ const BY: string[] = ${JSON.stringify(stored.filter((f) => f.type.kind === "choi
     : ""
 }
 ${
-  model.ownerKind === "address" && signedIn
+  addressOwned(model) && signedIn
     ? `
 /** Whether the viewer chooses whose record it is: a role that may change everyone's, or the app. */
 const chooses = (viewer: Viewer | null) => !!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role));
 
+/** An address as it is stored and compared: lower-case and trimmed; empty is none. */
+const asAddress = (given: string | null | undefined) => given?.trim().toLowerCase() || null;
+
 /**
  * Whose record it is (support-portal-path.md §2): the address given, for a visitor's form (what
- * someone wrote to us) and for a role that may change everyone's; the viewer's own address for
- * anyone else, whatever the form sent.
+ * someone wrote to us) and for a role that may change everyone's; anyone else's own proven
+ * address, whatever the form sent, and a refusal while theirs is not proven.
  */
 function ownerFor(viewer: Viewer | null, given: string | null | undefined): string${ownerRequired ? "" : " | null"} {
-  const owner = !viewer || chooses(viewer) ? (given ?? addressOf(viewer)) : addressOf(viewer);${
-    ownerRequired
-      ? `
+  const owner = !viewer || chooses(viewer) ? (asAddress(given) ?? addressOf(viewer)) : addressOf(viewer);
+  if (viewer && !chooses(viewer) && owner && !viewer.proven)
+    throw new AccessDenied(true, "Prove your address first: sign in with a code sent to it, or with a provider that has confirmed it.");${
+      ownerRequired
+        ? `
   // The record must have one: a key or a timer, who is no person, cannot be it.
   if (!owner)
     throw new AccessDenied(
       viewer !== null,
       viewer ? \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${ownerLabel} (${model.ownedBy}).\` : undefined,
     );`
-      : ""
-  }
+        : ""
+    }
   return owner;
 }
 `
-    : model.ownedBy && signedIn && model.ownerKind !== "through"
+    : ownerField && signedIn
       ? `
 /**
  * Whose record it is: anyone's for a role that may change everyone's, otherwise the viewer's
@@ -1987,7 +2014,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
 
 `
     : ""
-}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${shownRefsMethod()}${
+}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${ownerField && signedIn ? "\n  ownerFor," : ""}${shownRefsMethod()}${
     pictures.length
       ? `\n  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */\n  uses(file: string): boolean {\n    return ${stillShown("", "file")};\n  },\n`
       : ""
@@ -2039,8 +2066,8 @@ ${
     if (!REVIEWERS.includes(viewer.role)) {${
       signedIn
         ? `
-      const own = db.select({ ${ownerByKind(model) ? owner : "owner"}: ${n.table}.${owner} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
-      if (${ownerByKind(model) ? `!own || ${ownerOf(model, n, "own")} !== viewer.id` : "own?.owner !== viewer.id"}) return [];`
+      const own = db.select({ ${addressOwned(model) ? owner : "owner"}: ${n.table}.${owner} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
+      if (${addressOwned(model) ? `!own || ${ownerOf(model, n, "own")} !== viewer.id` : "own?.owner !== viewer.id"}) return [];`
         : "\n      return [];"
     }
     }
@@ -2486,7 +2513,7 @@ ${
 ${
   access.create.public
     ? `    // Visitors add these without an account: at most ${VISITOR_ROWS.toLocaleString("en")} of theirs, so a flood stops here.
-    const made = ${ownerByKind(model) ? `db.select({ n: count() }).from(schema.auditLog).where(and(eq(schema.auditLog.who, "visitor"), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)})))` : `db.select({ n: count() }).from(${n.table})${signedIn ? `.where(isNull(${n.table}.${owner}))` : ""}`}.get();
+    const made = ${addressOwned(model) ? `db.select({ n: count() }).from(schema.auditLog).where(and(eq(schema.auditLog.who, "visitor"), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)}), gt(schema.auditLog.at, new Date(Date.now() - 24 * 60 * 60 * 1000))))` : `db.select({ n: count() }).from(${n.table})${signedIn ? `.where(isNull(${n.table}.${owner}))` : ""}`}.get();
     if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
 `
     : ""
@@ -2518,10 +2545,10 @@ ${
     if (what === "changed") check(${n.access}.write, viewer, ${rowOwner});
 ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${
-      model.ownerKind === "address" && signedIn
-        ? // A chooser gives it, or it stays; anyone else keeps the record's own (support-portal-path.md §2).
-          `{ ...values, ${owner}: chooses(viewer) && values.${owner} !== undefined ? values.${owner} : row.${owner} }`
-        : model.ownedBy && signedIn && model.ownerKind !== "through"
+      addressOwned(model) && signedIn
+        ? // Left out it stays; given, a chooser's address as written, anyone else's own (support-portal-path.md §2).
+          `{ ...values, ${owner}: values.${owner} === undefined ? row.${owner} : ownerFor(viewer, values.${owner}) }`
+        : ownerField && signedIn
           ? ownerRequired
             ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }`
             : // A change keeps who is in it, as given: left out the record's own, empty stays empty (a
@@ -2929,4 +2956,33 @@ export function refinement(field: FieldIR, visitors = false, folder = ""): strin
     default:
       return undefined;
   }
+}
+
+/**
+ * The roles that write on our side of a conversation of the model's records (support-portal-path.md
+ * §4): granted read or write on everyone's records, and administrators.
+ */
+function oursRoles(model: ModelIR, auth: AuthIR): string[] {
+  return auth.roles
+    .filter(({ name, grants }) => {
+      if (name === "admin" || grants === "all") return true;
+      return (["read", "write"] as const).some((k) => {
+        const g = grants[k];
+        return g === "all" || (g?.includes(model.name) ?? false);
+      });
+    })
+    .map((r) => r.name);
+}
+
+/**
+ * Whether the model's records are messages of a conversation (conversation.md §2), so its side is
+ * written by who the viewer is (support-portal-path.md §4): its own `thread` says so, a record page
+ * shows it as a conversation, or a mail's reply becomes one of its records.
+ */
+export function isMessageModel(model: ModelIR, ir: SpecIR, ux: UxIR): boolean {
+  if (model.thread?.side) return true;
+  if (ir.incoming.some((i) => i.reply?.create === model.name)) return true;
+  return ir.models.some((m) =>
+    lists(m).some((f) => f.type.model === model.name && threadLists(m, ir, ux).includes(f.name)),
+  );
 }

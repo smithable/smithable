@@ -91,19 +91,10 @@ export function outgoingModule(
     users = true;
     return `people(tx, ${where})`;
   };
-  // The record's owner (support-portal-path.md §2): the user in its owner column; the address
-  // itself when the owner is an address; one step away, the owner of the record referred to.
+  // The record's owner (support-portal-path.md §2): the user in its owner column (its creator for a
+  // record owned through a reference), or the address itself when the owner is an address.
   const ownerOf = (model: ModelIR): string => {
     if (model.ownerKind === "address") return `[{ email: r.${model.ownedBy} as string | null }]`;
-    const field = model.fields.find((f) => f.name === model.ownedBy);
-    if (model.ownerKind === "through" && field?.type.kind === "relation") {
-      const parent = modelNamed(ir, field.type.model);
-      const owner = parent.ownerKind === "address" ? (parent.ownedBy as string) : ownerKey(parent);
-      const found = value(parent, owner, `r.${ownerKey(model)}`);
-      return parent.ownerKind === "address"
-        ? `[{ email: ${found} as string | null }]`
-        : `((id) => (id == null ? [] : ${people("eq(schema.user.id, String(id))")}))(${found})`;
-    }
     return `r.${ownerKey(model)} == null ? [] : ${people(`eq(schema.user.id, String(r.${ownerKey(model)}))`)}`;
   };
   // Whom an entry mails, read from the record `r` inside the transaction.

@@ -13,11 +13,13 @@ import {
 import { actionNames } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import {
+  addressOwned,
   dataKey,
   HEADER,
   literal,
   modelNamed,
   names,
+  ownerExpr,
   ownerInsert,
   ownerKey,
   ownerOf,
@@ -110,7 +112,7 @@ export function splitActionServer(
   const copied = (action.split?.copy ?? []).map((name) =>
     dataKey(model.fields.find((f) => f.name === name) as FieldIR),
   );
-  const numbered = sequenceEntries(model, auth, n.table, "personOf(viewer)")
+  const numbered = sequenceEntries(model, auth, n.table, ownerExpr(model, n, "values"))
     .map((e) => `, ${e}`)
     .join("");
   const childLive = child.trash ? `, isNull(${cn.table}.deletedAt)` : "";
@@ -171,7 +173,7 @@ function childrenOf(viewer: Viewer | null, id: number) {
     .select({ id: ${cn.table}.id${signedIn ? `, owner: ${cn.table}.${ownerKey(child)}` : ""} })
     .from(${cn.table})
     .where(and(eq(${cn.table}.${backKey}, id)${childLive}, ${cn.data}.readable(viewer)))
-    .all();
+    .all()${signedIn && addressOwned(child) ? "\n    .map((c) => ({ ...c, owner: addressOwner(c.owner, viewer) }))" : ""};
 }
 
 /**
@@ -198,7 +200,7 @@ export async function ${a.run}(viewer: Viewer | null, id: number, picked: number
     const values = ${n.schema}.parse({ ${copied.map((k) => `${k}: shown.${k}`).join(", ")} });
     created = db.transaction((tx) => {
       // Made as any new record is (A 153): its rules, its numbers counting up.
-      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, "values")}${numbered} }).returning().get();
+      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, n, "values")}${numbered} }).returning().get();
       // Only those still on it: one moved meanwhile stays where it went.
       tx.update(${cn.table}).set({ ${backKey}: made.id }).where(and(inArray(${cn.table}.id, chosen), eq(${cn.table}.${backKey}, id))).run();
       // What moved, so the split can be undone (by ids, never values).

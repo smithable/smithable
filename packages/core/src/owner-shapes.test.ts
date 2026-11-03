@@ -148,13 +148,45 @@ describe("a written actions grant is the whole of what the role runs", () => {
     expect(auth.roles.find((r) => r.name === "reader")?.grants).toEqual({ pages: ["cases"] });
   });
 
-  test("the owner rule stands for the roles without the key, and for them only", () => {
+  test("a self-reference is a chain too, refused without looping", () => {
+    expect(
+      errors(`smithable: 0.1
+app: { name: Tree }
+models:
+  Category:
+    fields:
+      name: string!
+      parent: Category
+      children: Category[]
+    ownedBy: parent
+pages:
+  categories: { crud: Category }
+`),
+    ).toEqual([
+      `invalid-owner: "ownedBy" of "Category": parent refers to Category, whose owner is parent, itself a reference: an owner is one step away, never two.`,
+    ]);
+  });
+
+  test("none is a grant for actions only; the other grants keep their parse", () => {
+    const other = validateAuth({
+      path: "smithable.auth.yml",
+      text: authText.replace(
+        "    pages: [cases]\n    actions: [reopen]",
+        "    pages: none\n    actions: [reopen]",
+      ),
+    });
+    expect(other.diagnostics.map((d) => d.message)).toContain(
+      '"pages" of role "picker" is "all" or a list of names, like [a, b].',
+    );
+  });
+
+  test("the owner rule stands for every role but one with actions none", () => {
     const allowed = actionAccess(close, auth, ir.models);
     expect(allowed).toEqual({
       public: false,
       roles: ["admin", "agent"],
       owner: true,
-      among: ["admin", "agent", "reader"],
+      among: ["admin", "agent", "reader", "picker"],
     });
     // Without a role that wrote the key, nothing is said beyond the owner rule.
     const plain = load(
@@ -178,10 +210,15 @@ describe("a written actions grant is the whole of what the role runs", () => {
       at: { file: "smithable.auth.yml", path: "roles.customer.actions" },
       text: "customer's actions grant is none: customers run no action, not on their own support cases either.",
     });
-    const picker = explainAccess(ir, auth, { as: "picker", record: "own" }, own, "run");
-    expect(picker.reasons.at(-1)?.text).toBe(
-      "picker's actions grant does not name close, and a written grant is the whole of what pickers run: not on their own support cases either.",
+    // A list keeps today's meaning: beside the named actions, the owner's own.
+    const picker = explainAccess(
+      ir,
+      auth,
+      { as: "picker", record: "own", values: { status: "open" } },
+      own,
+      "run",
     );
+    expect(picker.verdict).toBe("allowed");
     const reader = explainAccess(
       ir,
       auth,

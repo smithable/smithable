@@ -15,11 +15,13 @@ import {
 import { actionNames } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import {
+  addressOwned,
   dataKey,
   HEADER,
   literal,
   modelNamed,
   names,
+  ownerExpr,
   ownerInsert,
   ownerKey,
   ownerOf,
@@ -185,7 +187,7 @@ export function mergeActionServer(
       .join("")} }`;
     const lines = [
       `  // ${r.model.name}.${r.field.name}`,
-      `  const rows${i} = tx.select(${select}).from(${tb}).where(inArray(${tb}.${r.key}, [kept.id, ...others.map((o) => o.id)])).all();`,
+      `  const rows${i} = tx.select(${select}).from(${tb}).where(inArray(${tb}.${r.key}, [kept.id, ...others.map((o) => o.id)])).all()${signedIn && addressOwned(r.model) ? ".map((row) => ({ ...row, owner: addressOwner(row.owner, viewer) }))" : ""};`,
     ];
     if (r.unique)
       lines.push(
@@ -235,7 +237,7 @@ export function mergeActionServer(
   // Their words are their models' own (words-once.md): read from each model's ui.
   const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${names(m, t).ui}.label, plural: ${names(m, t).ui}.pluralLabel }`).join(", ")}]`;
   const readers = others.map((m) => names(m, t));
-  const numbered = sequenceEntries(model, auth, n.table, "personOf(viewer)")
+  const numbered = sequenceEntries(model, auth, n.table, ownerExpr(model, n, "values"))
     .map((e) => `, ${e}`)
     .join("");
   const combine = into === "new";
@@ -608,7 +610,7 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
         }
       // Made as any new record is (A 153): its rules, its numbers counting up; theirs who ran it.
       const values = ${n.data}.checkCreate(tx, viewer, valuesOf(raw, chosen, remove) as never);
-      const created = tx.insert(${n.table}).values({ ...values${signedIn ? ownerInsert(model, "values") : ""}${numbered} } as never).returning().get() as Raw;
+      const created = tx.insert(${n.table}).values({ ...values${signedIn ? ownerInsert(model, n, "values") : ""}${numbered} } as never).returning().get() as Raw;
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: created.id, details: { from: raw.map((r) => r.id), removed: remove } });
       return created;
     });

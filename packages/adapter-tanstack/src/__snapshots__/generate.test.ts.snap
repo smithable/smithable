@@ -464,10 +464,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("member");
@@ -7554,7 +7555,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -10047,7 +10048,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "873e6c40 generated",
   "src/db/seed.ts": "224df43d generated",
-  "src/generated/access.test.ts": "130041c9 generated",
+  "src/generated/access.test.ts": "00a584f7 generated",
   "src/generated/actions/complete.server.ts": "d78604b0 generated",
   "src/generated/actions/complete.ts": "cdd6a4a8 generated",
   "src/generated/actions/reopen.server.ts": "6d1e193a generated",
@@ -10142,7 +10143,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "7266fbb2 generated",
+  "src/routes/[_dev]/ask.ts": "d4accd30 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "df4f4e1e generated",
@@ -10684,10 +10685,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("member");
@@ -16376,7 +16378,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "90c30a3e generated",
   "src/db/seed.ts": "aeda6345 generated",
-  "src/generated/access.test.ts": "5b7039fb generated",
+  "src/generated/access.test.ts": "d33dc677 generated",
   "src/generated/actions/cancel.server.ts": "2de134e2 generated",
   "src/generated/actions/cancel.ts": "1bae0072 generated",
   "src/generated/actions/confirm.server.ts": "af0013e0 generated",
@@ -17110,10 +17112,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("member");
@@ -19043,6 +19046,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
 }
 
 export const bookingData = {
+  ownerFor,
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(viewer: Viewer | null, rows: R[]): R[] {
     return hideRefs(rows, "session", (ids, c = sessionData.readable(viewer)) => (c ? db.select({ id: schema.sessions.id }).from(schema.sessions).where(and(inArray(schema.sessions.id, ids), c)).all().map((r) => r.id) : ids)).map((row) => {
@@ -24424,7 +24428,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -26138,15 +26142,15 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { postAccess, postData } from "#/generated/post.server";
+import { postData, postAccess } from "#/generated/post.server";
 import { type PostRow } from "#/generated/post";
-import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { pageAccess } from "#/generated/pages";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { ArticleView } from "#/kit/Articles";
 import { guardPage } from "#/kit/page-guard";
+import { allows } from "#/kit/access";
 import { LandingLayout } from "#/kit/Landing";
 import { app } from "#/generated/app";
 import { site } from "#/generated/site";
@@ -26257,14 +26261,14 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { postAccess, postData } from "#/generated/post.server";
+import { postData, postAccess } from "#/generated/post.server";
 import { type PostRow } from "#/generated/post";
-import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArticleList } from "#/kit/Articles";
 import { count, optional, type Search } from "#/kit/params";
+import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { LandingLayout } from "#/kit/Landing";
 import { app } from "#/generated/app";
@@ -28979,7 +28983,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "5b764a9f generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "55ac05e0 generated",
+  "src/generated/access.test.ts": "ff2d7f3c generated",
   "src/generated/actions/publish.server.ts": "ecb9a2f6 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "e3dd87a3 generated",
@@ -28987,7 +28991,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/ask.server.ts": "c63659a8 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "6109d59a generated",
+  "src/generated/booking.server.ts": "4871720a generated",
   "src/generated/booking.ts": "40202f54 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
   "src/generated/class-type.server.ts": "a221d86c generated",
@@ -29097,7 +29101,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
+  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "292de64e generated",
@@ -29123,8 +29127,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/sessions/index.tsx": "c4703df1 generated",
   "src/routes/admin/sessions/new.tsx": "2e47bbf4 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/blog/$address.tsx": "44568891 generated",
-  "src/routes/blog/index.tsx": "0b818396 generated",
+  "src/routes/blog/$address.tsx": "50731e97 generated",
+  "src/routes/blog/index.tsx": "cbb5a740 generated",
   "src/routes/class-types/$id.tsx": "4931320d generated",
   "src/routes/class-types/index.tsx": "6c248008 generated",
   "src/routes/class-types/new.tsx": "bd5005cb generated",
@@ -29616,10 +29620,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("sales");
@@ -31498,6 +31503,7 @@ function ownerFor(viewer: Viewer | null, given: string | null | undefined): stri
 const TRASH_DAYS = 30;
 const DAY = 24 * 60 * 60 * 1000;
 export const customerData = {
+  ownerFor,
   /** The rows with each reference to a record the viewer may not read set to nothing: a related record's title is shown only to who may read it (only its id stays). */
   shownRefs<R extends Record<string, unknown>>(_viewer: Viewer | null, rows: R[]): R[] {
     return rows;
@@ -35250,7 +35256,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -37732,7 +37738,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "dfded9d9 generated",
   "src/db/seed.ts": "962bef0c generated",
-  "src/generated/access.test.ts": "b4aa6998 generated",
+  "src/generated/access.test.ts": "3c1ae244 generated",
   "src/generated/actions/merge-customers.server.ts": "672ac5eb generated",
   "src/generated/actions/merge-customers.ts": "68575f8a generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
@@ -37743,7 +37749,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/ask.server.ts": "ac456eb2 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "3e0faf5c generated",
+  "src/generated/customer.server.ts": "76551dac generated",
   "src/generated/customer.ts": "79b283e3 generated",
   "src/generated/dev-door.server.ts": "29bff84f generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
@@ -37830,7 +37836,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/router.tsx": "1da2e059 kit",
   "src/routes/-start-parts.tsx": "c178be52 generated",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "bd24beb4 generated",
+  "src/routes/[_dev]/ask.ts": "cf55946a generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "be123362 generated",
@@ -38405,10 +38411,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("member");
@@ -44196,7 +44203,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -46102,7 +46109,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "635f945d generated",
   "src/db/seed.ts": "9bacb9ab generated",
-  "src/generated/access.test.ts": "d18de62d generated",
+  "src/generated/access.test.ts": "9f3754b9 generated",
   "src/generated/actions/mark-overdue.server.ts": "a437fc92 generated",
   "src/generated/actions/mark-overdue.ts": "0a89cc21 generated",
   "src/generated/actions/mark-paid.server.ts": "3fe1938a generated",
@@ -46210,7 +46217,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
+  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "0bdfaa95 generated",
@@ -46795,10 +46802,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("staff");
@@ -54043,7 +54051,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "4e6dc7c4 generated",
   "src/db/seed.ts": "21dc41c6 generated",
-  "src/generated/access.test.ts": "ae254a9d generated",
+  "src/generated/access.test.ts": "03cd3e4d generated",
   "src/generated/actions/accept.server.ts": "978806c7 generated",
   "src/generated/actions/accept.ts": "38e5215d generated",
   "src/generated/actions/back-on.server.ts": "98b7c8d2 generated",
@@ -54576,10 +54584,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("member");
@@ -57209,7 +57218,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -58963,7 +58972,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "38b92cb2 generated",
   "src/db/seed.ts": "c3d62db3 generated",
-  "src/generated/access.test.ts": "c18d562c generated",
+  "src/generated/access.test.ts": "7098d28e generated",
   "src/generated/activity.server.ts": "1e9769c9 generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/ask.server.ts": "1b72c788 generated",
@@ -59048,7 +59057,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "2fb77809 generated",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
+  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "61439043 generated",
@@ -59414,10 +59423,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("member");
@@ -61459,7 +61469,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -62580,7 +62590,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "2bfe6ed1 generated",
   "src/db/seed.ts": "71825882 generated",
-  "src/generated/access.test.ts": "4951fd9a generated",
+  "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "be6541a2 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/ask.server.ts": "994f1f1e generated",
@@ -62655,7 +62665,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "21176ef6 generated",
+  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "fa6e00da generated",
@@ -63179,10 +63189,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("staff");
@@ -71083,7 +71094,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -71940,15 +71951,15 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { incidentAccess, incidentData } from "#/generated/incident.server";
+import { incidentData, incidentAccess } from "#/generated/incident.server";
 import { type IncidentRow } from "#/generated/incident";
-import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { pageAccess } from "#/generated/pages";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { ArticleView } from "#/kit/Articles";
 import { guardPage } from "#/kit/page-guard";
+import { allows } from "#/kit/access";
 import { LandingLayout } from "#/kit/Landing";
 import { app } from "#/generated/app";
 import { site } from "#/generated/site";
@@ -72056,14 +72067,14 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { incidentAccess, incidentData } from "#/generated/incident.server";
+import { incidentData, incidentAccess } from "#/generated/incident.server";
 import { type IncidentRow } from "#/generated/incident";
-import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArticleList } from "#/kit/Articles";
 import { count, optional, type Search } from "#/kit/params";
+import { allows } from "#/kit/access";
 import { guardPage } from "#/kit/page-guard";
 import { LandingLayout } from "#/kit/Landing";
 import { app } from "#/generated/app";
@@ -74273,7 +74284,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "3fe7c621 generated",
   "src/db/seed.ts": "a04b6693 generated",
-  "src/generated/access.test.ts": "41f7c3b5 generated",
+  "src/generated/access.test.ts": "1d025385 generated",
   "src/generated/actions/identified.server.ts": "0dd99323 generated",
   "src/generated/actions/identified.ts": "08a14f22 generated",
   "src/generated/actions/monitoring.server.ts": "059bada1 generated",
@@ -74377,7 +74388,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "4a0b13f2 generated",
+  "src/routes/[_dev]/ask.ts": "e508f570 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "aefe28ea generated",
@@ -74394,8 +74405,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/components/index.tsx": "a387097e generated",
   "src/routes/components/new.tsx": "294efdf1 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/history/$address.tsx": "1eca6bcb generated",
-  "src/routes/history/index.tsx": "1a28851f generated",
+  "src/routes/history/$address.tsx": "6071b9ad generated",
+  "src/routes/history/index.tsx": "49170ded generated",
   "src/routes/incidents/$id.tsx": "d77f9e9e generated",
   "src/routes/incidents/index.tsx": "0bad2659 generated",
   "src/routes/incidents/new.tsx": "1abbbdfc generated",
@@ -74922,10 +74933,11 @@ const next = () => ++counter;
 /** A new signed-in user with the role. */
 function signedIn(role: string): Viewer {
   const n = next();
-  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role };
-  db.insert(user).values(viewer).run();
+  const viewer = { id: \`test-user-\${n}\`, name: \`Test \${role} \${n}\`, email: \`user\${n}@example.com\`, role, proven: true };
+  db.insert(user).values({ ...viewer, emailVerified: true }).run();
   return viewer;
 }
+
 
 /** Owns the records that are someone else's. */
 const stranger = signedIn("agent");
@@ -77382,7 +77394,7 @@ import { deleteFile } from "#/kit/uploads";
 import { acceptFiles } from "#/kit/receipts.server";
 import { afterChange, afterDelete } from "./hooks";
 import { supportCaseData } from "./support-case.server";
-import { type MessageSettable } from "./message";
+import { messageOurs, type MessageSettable } from "./message";
 
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -77394,6 +77406,8 @@ export const messageAccess: ModelAccess = {
   write: { public: false, roles: ["admin", "agent"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
+/** Whether the viewer writes on our side of the thread (support-portal-path.md §4): a role granted read or write on everyone's messages, an administrator, or the app. */
+const ours = (viewer: Viewer | null) => !!viewer && (!!viewer.system || messageOurs.includes(viewer.role));
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
 function shownTo<R extends { ownerId: string | null }>(viewer: Viewer | null, row: R): R {
@@ -77481,6 +77495,8 @@ export const messageData = {
     let values = given;
     values = checkFiles(viewer, values);
     checkReferences(viewer, values);
+    // The side of the thread (conversation.md §2): anyone else writes on the other side.
+    if (!ours(viewer)) values = { ...values, sender: "customer" };
 
     return values;
   },
@@ -77493,6 +77509,11 @@ export const messageData = {
   checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<MessageSettable>, before: typeof schema.messages.$inferSelect): Partial<MessageSettable> {
     const updated = checkFiles(viewer, given, before);
     checkReferences(viewer, updated);
+    // The side of the thread (conversation.md §2): anyone else writes on the other side, and never over ours.
+    if (!ours(viewer)) {
+      if (before.sender === "agent") throw new AccessDenied(viewer !== null);
+      updated.sender = "customer";
+    }
 
     return updated;
   },
@@ -77875,6 +77896,9 @@ export type MessageRow = typeof schema.messages.$inferSelect & {
   agent?: { id: string; name: string } | null;
   supportCase?: { id: number; subject: string } | null;
 };
+
+/** The roles that write on our side of a conversation of messages (support-portal-path.md §4): granted read or write on everyone's, and administrators. */
+export const messageOurs: string[] = ["admin", "agent"];
 
 export const messageUi: RecordUi<MessageRow> = {
   model: "Message",
@@ -79654,7 +79678,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         if (typeof question !== "string" || !question.trim())
@@ -81421,7 +81445,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "b2b5bc8f generated",
   "src/db/seed.ts": "59920618 generated",
-  "src/generated/access.test.ts": "caa1406d generated",
+  "src/generated/access.test.ts": "f5a7206f generated",
   "src/generated/actions/assign-to-me.server.ts": "6abf9eb9 generated",
   "src/generated/actions/assign-to-me.ts": "7f1c30db generated",
   "src/generated/actions/assign-to.server.ts": "43b6e198 generated",
@@ -81439,8 +81463,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3388ad3d generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "cb4d2981 generated",
-  "src/generated/message.ts": "f4cafefa generated",
+  "src/generated/message.server.ts": "e509a07c generated",
+  "src/generated/message.ts": "bbf512fd generated",
   "src/generated/outgoing.server.ts": "0dc0e782 generated",
   "src/generated/pages.ts": "1c961974 generated",
   "src/generated/roles.ts": "19b94e12 generated",
@@ -81521,7 +81545,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "76641e97 generated",
+  "src/routes/[_dev]/ask.ts": "3e2813c1 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "daa69b40 generated",

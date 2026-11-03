@@ -234,6 +234,8 @@ export function storageOf(field: Pick<FieldIR, "type" | "formula">): Storage {
 export function ownerShape(
   field: FieldIR,
   models: ModelIR[],
+  /** Looking at the owner of the record one step away: a reference there is a chain, not followed. */
+  nested = false,
 ): { kind: OwnerKind } | { why: string } {
   const { type } = field;
   if (type.kind === "scalar" && type.name === "email") return { kind: "address" };
@@ -242,13 +244,14 @@ export function ownerShape(
       why: `${field.name} is ${type.kind === "relation" ? "a list" : type.kind === "scalar" ? `a ${type.name}` : "a choice"}: an owner is a User field, an email field, or a reference to a record with an owner.`,
     };
   if (type.model === USER_MODEL) return { kind: "user" };
+  if (nested) return { kind: "through" };
   const target = models.find((m) => m.name === type.model);
   const owner = target?.fields.find((f) => f.name === target.ownedBy);
   if (!target || !owner)
     return {
       why: `${field.name} refers to ${type.model}, which has no "ownedBy": a record one step away owns it only when that record has an owner of its own.`,
     };
-  const shape = ownerShape(owner, models);
+  const shape = ownerShape(owner, models, true);
   if ("why" in shape)
     return {
       why: `${field.name} refers to ${type.model}, whose "ownedBy" (${owner.name}) is not in order: a record one step away owns it only when that record has an owner of its own.`,

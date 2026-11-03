@@ -103,7 +103,7 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
         throw new OperationError(
           `There is no ${kind} named "${name}". ${didYouMean(name, known) ?? ""}`.trim(),
         );
-    // "actions: none" is written: the whole of what the role runs, its own records included
+    // "actions: none" is written: no action at all, the role's own records included
     // (docs/design/support-portal-path.md §3); any other grant of nothing is the key left out.
     const value: YamlValue | undefined =
       names.length === 0 || names[0] === "none"

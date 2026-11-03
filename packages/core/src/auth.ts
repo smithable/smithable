@@ -316,7 +316,7 @@ export function validateAuth(
             );
             continue;
           }
-          const read = readGrant(ctx, entry.value, `"${grant}" of ${where}`);
+          const read = readGrant(ctx, entry.value, `"${grant}" of ${where}`, grant === "actions");
           if (!read) continue;
           (role.grants as RoleGrants)[grant] = read.names;
           grantNodes.push({ role: key, key: grant, at: entry.keyNode, items: read.items });
@@ -778,13 +778,17 @@ function readGrant(
   ctx: ParseContext,
   node: At,
   what: string,
+  /** `none` is a grant too: the actions grant, where it means no action at all, the role's own records included (support-portal-path.md §3). */
+  none = false,
 ): { names: GrantNames; items: { name: string; at: At }[] } | undefined {
   if (isScalar(node) && node.value === "all") return { names: "all", items: [] };
-  // "none" is written where it means more than leaving the key out: an actions grant of none is
-  // the whole of what the role runs, its own records included (support-portal-path.md §3).
-  if (isScalar(node) && node.value === "none") return { names: [], items: [] };
+  if (none && isScalar(node) && node.value === "none") return { names: [], items: [] };
   if (!isSeq(node)) {
-    ctx.error(node, "expected-list", `${what} is "all", "none" or a list of names, like [a, b].`);
+    ctx.error(
+      node,
+      "expected-list",
+      `${what} is "all"${none ? ', "none"' : ""} or a list of names, like [a, b].`,
+    );
     return undefined;
   }
   const items = readNameList(ctx, node, what);

@@ -22,14 +22,16 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields, askOptions } from "../actions.js";
 import { hasSignIn } from "../auth.js";
-import { cancelNames, reserveElement, savedToggle, trashNames } from "../data.js";
+import { cancelNames, isMessageModel, reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
 import { nameFunction } from "../names.js";
 import {
   addable,
+  addressOwnedForm,
   appStart,
   attr,
   composedName,
+  creatorOwned,
   dataKey,
   dataRoute,
   fieldOrder,
@@ -80,7 +82,10 @@ export function recordPageRoute(
   const n = names(model, t);
   const component = `${pascal(page.id)}Page`;
   const fn = `get${pascal(page.id)}`;
-  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  const options =
+    hasChoices(model) || (auth && addressOwnedForm(model, auth))
+      ? optionsFor(model, t, ir, auth)
+      : undefined;
   const start = appStart(ir)?.route ?? "/";
   const imports = importList()
     .add("@tanstack/react-router", "createFileRoute")
@@ -232,11 +237,21 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
 `;
 }
 
-export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR): string {
+export function newRoute(
+  page: PageIR,
+  model: ModelIR,
+  t: Texts,
+  ir: SpecIR,
+  ux: UxIR,
+  auth?: AuthIR,
+): string {
   const n = names(model, t);
   const order = fieldOrder(page, model, ux, t);
   const component = `New${model.name}Page`;
-  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  const options =
+    hasChoices(model) || (auth && addressOwnedForm(model, auth))
+      ? optionsFor(model, t, ir, auth)
+      : undefined;
   // A model on a calendar: the new form can start at the hour chosen there (?startsAt=…).
   const start = calendarStart(model, ir);
   const timed = start?.type.kind === "scalar" && start.type.name === "datetime";
@@ -388,7 +403,10 @@ export function detailRoute(
     : title === "id"
       ? `\`${n.label} #\${row.id}\``
       : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${n.label} #\${row.id}\``;
-  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  const options =
+    hasChoices(model) || (auth && addressOwnedForm(model, auth))
+      ? optionsFor(model, t, ir, auth)
+      : undefined;
   // The trash (docs/design/trash.md): Move to trash, and a trashed record read-only with Restore.
   const trash = Boolean(model.trash && !within);
   const imports = new Map<string, string[]>([
@@ -548,20 +566,16 @@ export function detailRoute(
       const ref = add?.ref;
       if (thread.replies && ref)
         imports.set(tn.module, [...(imports.get(tn.module) ?? []), tn.create]);
-      // The side (conversation.md §2): ours for a viewer who reads everyone's messages, the other
-      // side for anyone else; the server checks the value the same way.
+      // The side (conversation.md §2): ours for a viewer whose role is granted read or write on
+      // everyone's messages, or an administrator; the other side for anyone else. The server
+      // checks the value the same way (support-portal-path.md §4).
       const side =
-        thread.side?.theirs !== undefined
-          ? `, ${thread.side.field}: readScope(${tn.access}.read, viewer) === "all" ? ${JSON.stringify(thread.side.ours)} : ${JSON.stringify(thread.side.theirs)}`
+        thread.side?.theirs !== undefined && isMessageModel(target, ir, ux)
+          ? `, ${thread.side.field}: viewer && ${tn.ours}.includes(viewer.role) ? ${JSON.stringify(thread.side.ours)} : ${JSON.stringify(thread.side.theirs)}`
           : "";
       if (thread.replies && ref && side) {
         sided = true;
-        imports.set(`#/generated/${kebab(target.name)}.server`, [
-          ...new Set([
-            ...(imports.get(`#/generated/${kebab(target.name)}.server`) ?? []),
-            tn.access,
-          ]),
-        ]);
+        imports.set(tn.module, [...new Set([...(imports.get(tn.module) ?? []), tn.ours])]);
       }
       const reply =
         thread.replies && ref
@@ -710,7 +724,7 @@ export function detailRoute(
   const buttons = [
     ...offered.map(
       (a) =>
-        `{allows(${a.name}Access, viewer, ${ownerOf(model, n, "row", "viewer", true)}) && ${a.name}Fits(row, viewer) && (
+        `{allows(${a.name}Access, viewer, ${ownerOf(model, n)}) && ${a.name}Fits(row, viewer) && (
               ${actionButton(a, "row", page.route, t, ir)}
             )}`,
     ),
@@ -766,7 +780,7 @@ ${
 }import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
-${options ? `${options.imports.join("\n")}\n` : ""}${offered.length || merges.length || splits.length || sided ? `import { ${[...(offered.length && model.ownerKind === "address" ? ["addressOwner"] : []), ...(offered.length || merges.length || splits.length ? ["allows"] : []), ...(sided ? ["readScope"] : [])].join(", ")} } from "#/kit/access";\n` : ""}import { guardPage } from "#/kit/page-guard";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
+${options ? `${options.imports.join("\n")}\n` : ""}${offered.length || merges.length || splits.length ? `import { ${[...(offered.length && model.ownerKind === "address" ? ["addressOwner"] : []), "allows"].join(", ")} } from "#/kit/access";\n` : ""}import { guardPage } from "#/kit/page-guard";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { ${within ? "" : "BackTo, "}LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
@@ -1052,7 +1066,7 @@ ${
   contact.to === "owner" && model.ownerKind === "address"
     ? `    // The owner is the address itself (support-portal-path.md §2).
     const to = row.${key} ? { email: row.${key} } : undefined;`
-    : `    const recipient = ${contact.to === "owner" && !model.ownedBy ? `${n.data}.ownerOf(viewer, row.id)` : contact.to === "owner" && model.ownerKind === "through" ? `${n.data}.whose(viewer, row)` : `row.${key}`};
+    : `    const recipient = ${contact.to === "owner" && creatorOwned(model) ? `${n.data}.ownerOf(viewer, row.id)` : `row.${key}`};
     const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;`
 }
     if (!to?.email) throw new Error("The ${recipient} cannot be reached.");

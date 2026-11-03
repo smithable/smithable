@@ -20,6 +20,7 @@ import { actionNames, askedFields, askOptions } from "../actions.js";
 import { hasSignIn } from "../auth.js";
 import { savedToggle, trashNames } from "../data.js";
 import {
+  addressOwned,
   attr,
   code,
   DATA_LIMIT,
@@ -37,7 +38,6 @@ import {
   modelNamed,
   names,
   ownCondition,
-  ownerByKind,
   ownerKey,
   ownerOf,
   paramsUsed,
@@ -102,6 +102,7 @@ export function filterCode(
   let people = false;
   let lists = false;
   let toggles = false;
+  let own = false;
   let mine = false;
   // The viewer's saved records (marketplace.md §2.3): always (only), or in the Saved view.
   if (favorites) {
@@ -113,12 +114,14 @@ export function filterCode(
   }
   // A page of only the viewer's own records (mine: true): always, so no Mine toggle there.
   if (ownOnly) {
-    toggles = true;
-    conditions.push(
-      ownerByKind(model)
-        ? `viewer ? ${ownCondition(model, n)} : sql\`false\``
-        : `eq(${n.table}.${ownerKey(model)}, viewer?.id ?? "")`,
-    );
+    // An address owner, and records read through another: the model's own condition.
+    if (addressOwned(model) || model.ownerKind === "through") {
+      own = true;
+      conditions.push(`viewer ? ${ownCondition(model, n)} : sql\`false\``);
+    } else {
+      toggles = true;
+      conditions.push(`eq(${n.table}.${ownerKey(model)}, viewer?.id ?? "")`);
+    }
   }
   if (unread) {
     conditions.push(`data.f?.unread === "1" ? ${n.data}.unread(viewer) : undefined`);
@@ -318,7 +321,7 @@ const ${v} = createServerFn()
     unread,
     favorites,
     defaults: page.defaultFilter,
-    imports: { ranges, dated, lists, titles, people, toggles: toggles || mine },
+    imports: { ranges, dated, lists, titles, people, toggles: toggles || mine, own },
   };
 }
 
@@ -589,6 +592,7 @@ export function listParts(
       route.add("drizzle-orm", "inArray");
     if (filtering) route.add("drizzle-orm", "and");
     if (filtering?.imports.toggles || filtering?.imports.people) route.add("drizzle-orm", "eq");
+    if (filtering?.imports.own) route.add("drizzle-orm", "sql");
     if (filtering?.imports.people)
       route.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
     if (filtering?.imports.ranges) route.add("#/kit/filter", "inRange");
@@ -658,7 +662,7 @@ export function listParts(
       .add("@tanstack/react-router", "useRouter")
       .add("#/kit/SelectionBar", "SelectionBar")
       .add("#/kit/csv", "csvName", "csvOf", "download")
-      .add("#/kit/access", "allows")
+      .add("#/kit/access", ...(addressOwned(model) ? ["addressOwner"] : []), "allows")
       .add(n.module, n.removeMany, n.deleteRule);
     if (longTitle(model)) view.add("#/kit/format", "titleOf");
     for (const a of many) view.add(actionNames(a).module, actionNames(a).many);
@@ -682,8 +686,7 @@ export function listParts(
         ...(a.input.length > 1 ? [actionNames(a).askUi, actionNames(a).asks] : []),
       );
   }
-  // On the client the owner is known from the row for a user or an address, not one step away.
-  const owner = ownerOf(model, n, "row", "viewer", true);
+  const owner = ownerOf(model, n);
   const fits = (a: (typeof many)[number]) =>
     `allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row, viewer)`;
   view.add("#/generated/app", "app").add(n.module, n.ui).add("#/kit/words", "w");

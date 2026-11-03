@@ -315,7 +315,7 @@ export function viewerFor(who: unknown): Viewer | null | undefined {
   const person = SAMPLE_PEOPLE.find((p) => p.id === who);
   if (!person) return undefined;
   // The role as the database has it: a change on the users page counts.
-  const viewer = () => db.select({ id: user.id, name: user.name, email: user.email, role: user.role }).from(user).where(eq(user.id, person.id)).get();
+  const viewer = () => db.select({ id: user.id, name: user.name, email: user.email, role: user.role, proven: user.emailVerified }).from(user).where(eq(user.id, person.id)).get();
   const found = viewer();
   if (found) return found;
   // One added since the seed (Smith's "add three customers") becomes a user the first time.
@@ -527,7 +527,7 @@ export const Route = createFileRoute("/_dev/ask")({
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
-            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role }
+            ? { id: \`dev-door-\${role}\`, name: \`Sample \${role}\`, email: \`\${role}@sample.example\`, role, proven: true }
             : viewerFor(user);
         if (viewer === undefined) return ${refusedUser};
         if (typeof question !== "string" || !question.trim())

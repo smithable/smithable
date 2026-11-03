@@ -25,6 +25,7 @@ import { hasKeys, KEY_TABLE } from "./keys.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
+  creatorOwned,
   dataKey,
   type GenerateOptions,
   HEADER,
@@ -83,7 +84,7 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
       imports.add(uses);
       return [`  ${field.name}: ${expr},`];
     });
-    if (hasSignIn(auth) && !model.ownedBy)
+    if (hasSignIn(auth) && creatorOwned(model))
       columns.push(`  ownerId: text().references(() => user.id, { onDelete: "set null" }),`);
     // The owner's column first for a per-owner value, once when the rule names it itself (ownedBy).
     const on = (fields: FieldIR[], owner: boolean) =>

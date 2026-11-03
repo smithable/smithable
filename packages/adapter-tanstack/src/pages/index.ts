@@ -38,7 +38,7 @@ export const PAGE_GENERATORS: {
       const custom = options.customPages?.includes(page.id) ?? false;
       return {
         "index.tsx": listRoute(page, model, t, ir, custom, ux, undefined, auth),
-        "new.tsx": newRoute(page, model, t, ir, ux),
+        "new.tsx": newRoute(page, model, t, ir, ux, auth),
         "$id.tsx": detailRoute(page, model, t, ir, ux, undefined, auth),
         ...(model.trash ? { "trash.tsx": trashRoute(page, model, t) } : {}),
       };
