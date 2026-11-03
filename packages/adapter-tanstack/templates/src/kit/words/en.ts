@@ -442,6 +442,11 @@ export const w = {
   youAreBooked: "You're booked",
   yourEmail: "Your email",
   yourName: "Your name",
+  yourTimeZone: "Your time zone",
+  yourClock: "Your clock",
+  asTheApp: "As the app",
+  clock12: "12-hour",
+  clock24: "24-hour",
   yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */
   alreadyHas: (label: string, field: string) =>

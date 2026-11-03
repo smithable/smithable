@@ -21,7 +21,7 @@ import {
   textMarker,
 } from "./model";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
-import { timeParts } from "./time-text";
+import { shownZone, timeParts } from "./time-text";
 import { language, w } from "./words";
 
 interface ModelFormProps<S extends z.ZodType> {
@@ -756,7 +756,7 @@ function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string 
         .filter(Boolean)
         .map((at) =>
           new Intl.DateTimeFormat(language(), {
-            timeZone,
+            timeZone: shownZone(timeZone),
             ...timeParts(),
           }).format(new Date(at)),
         )

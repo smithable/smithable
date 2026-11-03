@@ -3,7 +3,7 @@
 import { Card } from "#/components/ui/card";
 import { AppLink } from "./AppLink";
 import type { AppUi } from "./model";
-import { hourCycle } from "./time-text";
+import { hourCycle, shownZone } from "./time-text";
 import { w } from "./words";
 
 type Kind = "money" | "int" | "decimal";
@@ -198,6 +198,7 @@ export function RecentChanges({
                   dateStyle: "short",
                   timeStyle: "short",
                   hourCycle: hourCycle(),
+                  timeZone: shownZone(),
                 }).format(new Date(line.at))}
               </time>
             </li>

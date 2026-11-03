@@ -9,7 +9,7 @@ import { Button } from "#/components/ui/button";
 import { PageHeader } from "./AppShell";
 import { ModelForm } from "./ModelForm";
 import type { AppUi, ModelUi } from "./model";
-import { timeParts } from "./time-text";
+import { shownZone, timeParts } from "./time-text";
 import { w } from "./words";
 
 /** One thing to choose, as the menu gives it. */
@@ -71,7 +71,7 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
     ? new Intl.DateTimeFormat(undefined, {
         weekday: "long",
         ...timeParts(),
-        timeZone: app.timeZone,
+        timeZone: shownZone(app.timeZone),
       }).format(new Date(menu.opens))
     : undefined;
 

@@ -1,7 +1,7 @@
 // Smithable app kit: converts stored values to display text and to form input text, and back.
 
 import type { AppUi, FieldUi, RecordFieldUi } from "./model";
-import { hourCycle, timeParts } from "./time-text";
+import { hourCycle, shownZone, timeParts } from "./time-text";
 import { instantOf, wallTime } from "./zoned";
 
 /** The value to show for a field of a record: for a reference, the related record's title. */
@@ -38,7 +38,7 @@ export function shortWhen(value: unknown, dateOnly: boolean, timeZone?: string):
     weekday: "short",
     day: "numeric",
     month: "short",
-    ...(dateOnly ? { timeZone: "UTC" } : { ...timeParts(), timeZone }),
+    ...(dateOnly ? { timeZone: "UTC" } : { ...timeParts(), timeZone: shownZone(timeZone) }),
   }).format(instant);
 }
 
@@ -83,7 +83,7 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
         dateStyle: "medium",
         timeStyle: "short",
         hourCycle: hourCycle(),
-        timeZone: app.timeZone,
+        timeZone: shownZone(app.timeZone),
       }).format(value instanceof Date ? value : new Date(String(value)));
     case "choice":
       return field.choices?.find((c) => c.value === value)?.label ?? String(value);
@@ -101,7 +101,7 @@ export function toInput(field: FieldUi, value: unknown, timeZone?: string): stri
   if (value === null || value === undefined) return "";
   if (field.kind === "money") return (Number(value) / 100).toFixed(2);
   if (field.kind === "datetime")
-    return wallTime(value instanceof Date ? value : new Date(String(value)), timeZone);
+    return wallTime(value instanceof Date ? value : new Date(String(value)), shownZone(timeZone));
   if (
     field.kind === "picture" ||
     field.kind === "pictures" ||
@@ -124,7 +124,7 @@ export function fromInput(field: FieldUi, input: string | boolean, timeZone?: st
     case "money":
       return Math.round(Number(text.replace(",", ".")) * 100);
     case "datetime":
-      return instantOf(text, timeZone);
+      return instantOf(text, shownZone(timeZone));
     case "relation":
       return Number(text);
     case "picture":

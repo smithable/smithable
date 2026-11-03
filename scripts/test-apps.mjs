@@ -660,6 +660,65 @@ async function clockFlow(dir, base) {
   }
 }
 
+/**
+ * A person's own time zone and clock (A 220): chosen under their name, every time they read is in
+ * theirs at once, through a reload, and taken away again; the record itself does not change.
+ */
+async function personTimeFlow(base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/sessions/1`);
+    const when = page.locator('[data-kit="activity-log"], [data-part="last-change"]').first();
+    await when.waitFor({ timeout: 10000 * P });
+    const before = await when.innerText();
+    const name = page.locator('[data-kit="app-shell"] button[title]').first();
+    const choose = async (fill) => {
+      await name.click();
+      const dialog = page.getByRole("dialog", { name: "Your name" });
+      await fill(dialog);
+      // The whole page loads again with the person's own time.
+      const reloaded = page.waitForEvent("load", { timeout: 30000 * P });
+      await dialog.getByRole("button", { name: "Save" }).click();
+      await reloaded;
+      await open(page, `${base}/sessions/1`);
+    };
+    await choose(async (dialog) => {
+      await dialog.getByLabel("Your time zone").fill("Pacific/Kiritimati");
+      await dialog.getByLabel("Your clock").selectOption({ label: "12-hour" });
+    });
+    const theirs = await when.innerText();
+    if (theirs === before || !/(AM|PM)/i.test(theirs))
+      throw new Error(`the time reads "${theirs}" in their own zone and clock, was "${before}"`);
+    await page.reload();
+    await when.waitFor({ timeout: 10000 * P });
+    if ((await when.innerText()) !== theirs) throw new Error("a reload lost their own time");
+    // A new browser of theirs reads it from their record, and the page keeps it from then on.
+    await page.context().clearCookies({ name: "time" });
+    await open(page, `${base}/sessions/1`);
+    if ((await when.innerText()) !== theirs) throw new Error("their record's time was not used");
+    if (!(await page.context().cookies()).some((c) => c.name === "time"))
+      throw new Error("the page did not keep their own time");
+    await choose(async (dialog) => {
+      await dialog.getByLabel("Your time zone").fill("");
+      await dialog.getByLabel("Your clock").selectOption({ label: "As the app" });
+    });
+    if ((await when.innerText()) !== before)
+      throw new Error(`the time reads "${await when.innerText()}" after taking theirs away`);
+    console.log(
+      "  ✓ browser: a person's own time zone and clock show at once, through a reload, and go again",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("person time flow");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function bookingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -8140,6 +8199,7 @@ test("the session cookie's name and attributes", async () => {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await clockFlow(dir, base);
+        await personTimeFlow(base);
         await outgoingFlow(dir, base);
         await sessionsListFlow(base);
         await refusalFlow(base);
