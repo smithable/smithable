@@ -213,7 +213,7 @@ export function operationFor(
     path.length === 2 &&
     first === "app" &&
     typeof key === "string" &&
-    ["name", "description", "currency", "timezone"].includes(key) &&
+    ["name", "description", "currency", "timezone", "clock"].includes(key) &&
     typeof value === "string"
   )
     return ["setApp", { [key]: value }];

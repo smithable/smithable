@@ -52,6 +52,8 @@ export interface AppIR extends SemanticText {
   currency?: string;
   /** IANA time zone, e.g. "Europe/Mariehamn". */
   timezone?: string;
+  /** How times are written; unsaid, 24-hour. */
+  clock?: "12h" | "24h";
 }
 
 /** Where a unique value is unique: among one owner's records, or in the whole app. */

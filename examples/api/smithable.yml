@@ -5,7 +5,8 @@ smithable: 0.1
 app:
   name: Team Tasks
   description: Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.
-  timezone: Europe/Stockholm
+  timezone: UTC                    # an API speaks ISO timestamps
+  clock: 24h
 models:
   Project:
     fields:
