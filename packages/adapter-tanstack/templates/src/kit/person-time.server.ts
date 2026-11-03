@@ -16,7 +16,16 @@ import {
 const store = new AsyncLocalStorage<Person>();
 
 /** The person this request is for, from the page's store or, in a server function, the cookie. */
-const requester = (): Person => store.getStore() ?? readPerson(getRequestHeader("cookie") ?? "");
+function requester(): Person {
+  const held = store.getStore();
+  if (held) return held;
+  try {
+    return readPerson(getRequestHeader("cookie") ?? "");
+  } catch {
+    // No request at all (a timer, a job): the app's zone.
+    return {};
+  }
+}
 
 /** The zone a filter's days are in: the viewer's own, else the app's. */
 export function personZone(appZone?: string): string | undefined {

@@ -41,8 +41,8 @@ export function inRange(
     if (kind === "date") return value;
     // The whole day where the viewer is: its last millisecond for the end.
     return end
-      ? new Date(instantOf(`${value}T23:59`, timeZone).getTime() + 59_999)
-      : instantOf(`${value}T00:00`, timeZone);
+      ? new Date(instantOf(`${value}T23:59`, timeZone ?? "UTC").getTime() + 59_999)
+      : instantOf(`${value}T00:00`, timeZone ?? "UTC");
   };
   const low = bound(from, false);
   const high = bound(to, true);
