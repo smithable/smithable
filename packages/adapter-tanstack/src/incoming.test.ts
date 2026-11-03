@@ -63,6 +63,43 @@ test("a call that adds a record: its route checks the secret, fills the values f
   expect(file("src/db/schema.ts")?.content).toContain('"incoming_seen"');
 });
 
+test("twice is once: the id is taken on a unique index before the call acts, and given back when it does not", () => {
+  const route = file("src/routes/incoming/monitorDown.ts")?.content ?? "";
+  // One statement, not a read and then a write: a second delivery at the same moment finds the
+  // row and changes nothing (a row older than a day is taken over).
+  expect(route).toContain(
+    "const taken = db.insert(incomingSeen).values({ name: NAME, key }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: new Date() }, setWhere: lt(incomingSeen.at, new Date(Date.now() - DAY)) }).run();",
+  );
+  expect(route).toContain(
+    "if (taken.changes === 0) return answer(200, { received: true, repeat: true });",
+  );
+  expect(route).not.toContain(".select().from(incomingSeen)");
+  // The record is made inside the claim; a refusal or a failure releases the id for the retry.
+  expect(route).toContain("let acted = false;\n        try {");
+  expect(route).toContain("acted = true;\n            return answer(201, { id: made.id });");
+  expect(route).toContain(
+    "} finally {\n          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key))).run();",
+  );
+  // A custom call too.
+  const custom = file("src/routes/incoming/paymentReceived.ts")?.content ?? "";
+  expect(custom).toContain("acted = true;\n            return answer(200, { received: true });");
+  expect(custom).toContain("} finally {");
+  const schema = file("src/db/schema.ts")?.content ?? "";
+  expect(schema).toContain('uniqueIndex("incoming_seen_key").on(t.name, t.key)');
+  expect(schema).toMatch(/import \{[^}]*uniqueIndex[^}]*\} from "drizzle-orm\/sqlite-core"/);
+});
+
+test("a mail's id is its Message-ID: delivered twice, it makes one record", () => {
+  const route = file("src/routes/incoming/support.ts")?.content ?? "";
+  expect(route).toContain(
+    'const key = request.headers.get("idempotency-key") ?? text((body as Mail).messageId);',
+  );
+  // The call's own id wins where the entry names one.
+  expect(file("src/routes/incoming/monitorDown.ts")?.content).toContain(
+    'const key = request.headers.get("idempotency-key") ?? fill("{event.id}", body);',
+  );
+});
+
 test("a custom, signed call: an HMAC of the body, and a stub of the project's own, written once", () => {
   const route = file("src/routes/incoming/paymentReceived.ts")?.content ?? "";
   expect(route).toContain('createHmac("sha256", secret).update(raw)');
@@ -107,9 +144,21 @@ test("a mail becomes a record: sender, subject and text to their fields, attachm
   expect(route).toContain("title: text(mail.subject),");
   expect(route).toContain("body: bodyOf(mail),");
   expect(route).toContain("attachments: files,");
-  expect(route).toContain('const files = await saved(mail, "request", requestData.uses);');
-  expect(route).toContain('files.push(saveFile(model, bytes, text(name) || "attachment"));');
+  expect(route).toContain(
+    'const files = await saved(mail, "request", "attachments", requestData.uses);',
+  );
+  expect(route).toContain('const stored = saveFile(model, bytes, text(name) || "attachment");');
+  // The receipt the record's create demands of any upload (receipts.server.ts), given to the
+  // call itself: the trusted path keeps the checks and the quota, and needs no browser.
+  expect(route).toContain(
+    "files.push({ ...stored, receipt: receiptFor(caller.id, model, field, stored.file) });",
+  );
+  expect(route).toContain('import { receiptFor } from "#/kit/receipts.server";');
   expect(route).toContain("if (bytes.byteLength > FILE_MAX_BYTES || !roomFor(bytes.byteLength))");
+  // A refused attachment gives back the room held for the ones before it.
+  expect(route).toContain("held += bytes.byteLength;");
+  expect(route).toContain("release(held);");
+  expect(route).toContain("if (error instanceof BadFile) return refused(422, error.message);");
   expect(route).toContain("if (parts.length > 10)");
   expect(route).toContain(
     'replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, " ").replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, " ")',
