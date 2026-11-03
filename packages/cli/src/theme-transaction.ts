@@ -36,18 +36,25 @@ export function themeTransaction(dir: string, sourcePaths: string[]) {
       .map((path) => [path, digest(join(dir, path))]),
   );
   const currentOwned = () => new Set([...owned, ...generated(dir)]);
+  const externalChanges = (): string[] => {
+    try {
+      const allowed = currentOwned();
+      const changed = [...protectedFiles]
+        .filter(([path, hash]) => digest(join(dir, path)) !== hash)
+        .map(([path]) => path);
+      const appeared = paths(dir, ["ls-files", "--others", "--exclude-standard", "-z"]).filter(
+        (path) => !allowed.has(path),
+      );
+      return [...changed, ...appeared];
+    } catch {
+      return ["(the working tree could not be read)"];
+    }
+  };
   return {
+    /** The files outside the transaction that changed or appeared since it began, by path. */
+    externalChanges,
     externalChange(): boolean {
-      try {
-        for (const [path, hash] of protectedFiles)
-          if (digest(join(dir, path)) !== hash) return true;
-        const allowed = currentOwned();
-        return paths(dir, ["ls-files", "--others", "--exclude-standard", "-z"]).some(
-          (path) => !allowed.has(path),
-        );
-      } catch {
-        return true;
-      }
+      return externalChanges().length > 0;
     },
     stage(): boolean {
       // Existing generated files may have been removed, so include both manifests' paths.

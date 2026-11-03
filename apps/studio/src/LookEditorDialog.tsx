@@ -46,7 +46,9 @@ export default function LookEditorDialog({
           });
           if (!response.ok) return response;
           const value = await response.json();
-          return value.projectId === project.lookProject
+          // The context's projectId is the preview's identity, for the frames; lookProject is
+          // the project's, which must still be the one this dialog opened.
+          return value.lookProject === project.lookProject
             ? Response.json(value)
             : Response.json(
                 { error: "The project changed. Keep this draft or reopen the current project." },
@@ -60,10 +62,16 @@ export default function LookEditorDialog({
             headers: { ...Object.fromEntries(new Headers(init?.headers)), "x-smithable": "1" },
           });
         if (route === "/api/apply" || route === "/api/save") {
-          const args = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+          // The editor's precondition and request id travel beside the operation's arguments.
+          const { expectedRevision, requestId, ...args } = JSON.parse(
+            String(init?.body ?? "{}"),
+          ) as Record<string, unknown>;
           const result =
             route === "/api/apply"
-              ? await api.applyLook("applyTheme", args, project.lookProject ?? "")
+              ? await api.applyLook("applyTheme", args, project.lookProject ?? "", {
+                  ...(typeof expectedRevision === "string" ? { expectedRevision } : {}),
+                  ...(typeof requestId === "string" ? { requestId } : {}),
+                })
               : await api.applyLook("addTheme", args, project.lookProject ?? "");
           if (!result.ok)
             return Response.json(

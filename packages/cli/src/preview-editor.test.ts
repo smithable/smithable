@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import {
   framedLocally,
   guardUpgrades,
@@ -11,6 +11,9 @@ import {
   tokenGuard,
   type UpgradeServer,
 } from "./preview-editor.js";
+
+// The config test runs an operation: no real generation.
+vi.mock("./generate.js", () => ({ generate: vi.fn(async () => 0) }));
 
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
 function page(
@@ -528,4 +531,45 @@ test("a design-owned frame keeps the current viewer and never clicks development
   design.send({ type: "smithable:dev-sign-in", role: "admin" });
   design.tick();
   expect(design.clicked).toEqual([]);
+});
+
+test("the preview's config is the same text before and after a change: its look identity is the run's, never the project's", async () => {
+  // Studio writes the config once with the run's preview id (studio.ts: previewId, not the
+  // lookProject that a replaced app rotates); a dev server restarts when its config changes.
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { runOperation } = await import("./op.js");
+  const { captureIo } = await import("./test-io.js");
+  const look = {
+    project: "run-1",
+    parentOrigins: ["http://localhost:8400"],
+    previewOrigin: "http://localhost:8401",
+  };
+  const before = previewConfig(undefined, undefined, { holdUpdates: true, look });
+  expect(before).toContain('"project":"run-1"');
+  const dir = mkdtempSync(join(tmpdir(), "smithable-preview-config-"));
+  try {
+    writeFileSync(
+      join(dir, "smithable.yml"),
+      "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  items: { crud: Item }\n",
+    );
+    writeFileSync(join(dir, "smithable.ux.yml"), "smithableUx: 0.1\ntheme: { preset: modern }\n");
+    mkdirSync(join(dir, ".smithable"), { recursive: true });
+    writeFileSync(join(dir, ".smithable/files.json"), '{"files":{}}\n');
+    const io = captureIo();
+    expect(
+      await runOperation(
+        dir,
+        io,
+        "setTheme",
+        { primary: "#334455" },
+        { yes: true, reportLater: true },
+      ),
+      io.stderr,
+    ).toBe(0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  expect(previewConfig(undefined, undefined, { holdUpdates: true, look })).toBe(before);
 });

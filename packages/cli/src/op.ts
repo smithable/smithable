@@ -59,7 +59,7 @@ import {
 import { type Io, lap, lapFrom } from "./io.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, withProjectMutation } from "./project-mutation.js";
-import { projectRevision } from "./project-revision.js";
+import { projectRevision, sourceDigests } from "./project-revision.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
 import { themeTransaction } from "./theme-transaction.js";
@@ -74,8 +74,17 @@ const OPLOG = ".smithable/oplog.jsonl";
 export interface OpFlags {
   /** Host-only identity guard, checked after acquiring the project mutation queue. */
   projectCheck?: () => boolean;
-  /** Host-only optimistic precondition for a queued redo or files plan. */
+  /**
+   * Host-only optimistic precondition for a queued redo or files plan, and for a theme Apply the
+   * source revision the draft was opened on (the look editor's), checked again before it writes.
+   */
   expectedRevision?: string;
+  /**
+   * Host-only id of a theme Apply request (the look editor's), recorded with the base revision in
+   * the commit's Smithable-Apply trailer and never among the operation's arguments: a retry of
+   * the same request after a lost answer is answered as already done.
+   */
+  requestId?: string;
   /** Confirms a destructive operation. */
   yes: boolean;
   /** Called through MCP: messages name the tools instead of CLI commands. */
@@ -269,21 +278,23 @@ async function applyAndCheckpoint(
     io.err(`Unknown operation "${name}".\n`);
     return 2;
   }
-  if (flags.expectedRevision && projectRevision(dir) !== flags.expectedRevision) {
-    io.err("The project changed while this change waited. Reload before retrying.\n");
-    return 1;
-  }
   if (batch?.some((step) => step.op === "applyTheme")) {
     io.err("applyTheme is already atomic; run it as a single operation.\n");
     return 2;
   }
-  if (name === "applyTheme") {
-    const previousText = trailer(git(dir, ["log", "-1", "--format=%B"]).out, "Smithable-Op");
+  if (name === "applyTheme" && flags.requestId) {
+    // The same request again (its first answer was lost): done already, when the last commit is
+    // its Apply of the same draft. Before the revision check, since that Apply moved the revision.
+    const head = git(dir, ["log", "-1", "--format=%B"]).out;
     let previous: { op?: string; args?: OperationArgs } | undefined;
+    let request: { requestId?: string } | undefined;
     try {
-      previous = previousText ? JSON.parse(previousText) : undefined;
+      const op = trailer(head, "Smithable-Op");
+      const apply = trailer(head, "Smithable-Apply");
+      previous = op ? JSON.parse(op) : undefined;
+      request = apply ? JSON.parse(apply) : undefined;
     } catch {}
-    if (previous?.op === "applyTheme" && previous.args?.requestId === args.requestId) {
+    if (previous?.op === "applyTheme" && request?.requestId === flags.requestId) {
       if (JSON.stringify(canonical(previous.args)) !== JSON.stringify(canonical(args))) {
         io.err("This Apply request id was already used for another draft.\n");
         return 1;
@@ -295,15 +306,14 @@ async function applyAndCheckpoint(
       io.out("This theme Apply was already committed; nothing changed.\n");
       return 0;
     }
-    if (
-      typeof args.expectedRevision !== "string" ||
-      projectRevision(dir) !== args.expectedRevision
-    ) {
-      io.err(
-        "The project source changed since this draft opened. Reload the saved look; the draft was not written.\n",
-      );
-      return 1;
-    }
+  }
+  if (flags.expectedRevision && projectRevision(dir) !== flags.expectedRevision) {
+    io.err(
+      name === "applyTheme"
+        ? "The project source changed since this draft opened. Reload the saved look; the draft was not written.\n"
+        : "The project changed while this change waited. Reload before retrying.\n",
+    );
+    return 1;
   }
   lap("start");
   if (name !== "applyTheme") ensureRepository(dir);
@@ -444,9 +454,11 @@ async function applyAndCheckpoint(
     io.err("The current project changed before this request could write. Reopen its editor.\n");
     return 1;
   }
-  let applyBaseRevision = args.expectedRevision;
+  // The source revision Apply writes against: the host's precondition, or the source as it is
+  // now (the CLI, MCP), checked again across every step until the commit.
+  let applyBaseRevision = flags.expectedRevision;
   if (name === "applyTheme") {
-    if (projectRevision(dir) !== args.expectedRevision) {
+    if (applyBaseRevision && projectRevision(dir) !== applyBaseRevision) {
       io.err(
         "The project source changed before Apply could write it. The draft was not written.\n",
       );
@@ -482,6 +494,7 @@ async function applyAndCheckpoint(
         ])
       : undefined;
   let expectedSource: string | undefined;
+  let expectedSourceFiles: Record<string, string> = {};
   const sourceMoved = () => {
     if (expectedSource === undefined) return false;
     try {
@@ -490,10 +503,22 @@ async function applyAndCheckpoint(
       return true;
     }
   };
+  /** The files someone else changed while Apply ran: the source files, and those outside it. */
+  const movedFiles = () => {
+    try {
+      const now = sourceDigests(dir);
+      const source = Object.keys({ ...expectedSourceFiles, ...now }).filter(
+        (file) => expectedSourceFiles[file] !== now[file],
+      );
+      return [...new Set([...source, ...(themeWrites?.externalChanges() ?? [])])];
+    } catch {
+      return ["(the source files could not be read)"];
+    }
+  };
   const fail = (message: string) => {
     if (name === "applyTheme" && sourceMoved()) {
       io.err(
-        `${message} Source or files outside the transaction changed during Apply; rollback is incomplete. Newer source was preserved. Inspect the working diff before continuing.\n`,
+        `${message} While Apply ran, these files were changed by something else: ${movedFiles().join(", ")}. They were kept as they are now, so what Apply wrote before it failed was not rolled back. Operations are refused until the project's files are committed or discarded: look at the working diff (git status, git diff), keep or drop the changes, then continue.\n`,
       );
       return FAILED;
     }
@@ -562,7 +587,10 @@ async function applyAndCheckpoint(
           }))
         : [],
     );
-    if (name === "applyTheme") expectedSource = projectRevision(dir);
+    if (name === "applyTheme") {
+      expectedSource = projectRevision(dir);
+      expectedSourceFiles = sourceDigests(dir);
+    }
     const code = await generate(dir, io, {
       tools: true,
       onlyChanged: true,
@@ -584,7 +612,13 @@ async function applyAndCheckpoint(
     } else git(dir, ["add", "-A"]);
     // A whole edited spec is in the diff; the trailer stays short.
     const recorded = recordedArgs;
-    const message = `${plan ? plan.subject : `smithable: ${result.description}`}\n\n${plan ? `${plan.body}\n` : ""}Smithable-Op: ${JSON.stringify({ op: recordedName, args: recorded })}\nSmithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
+    // A theme Apply's request id and the source revision it was made against: the host's
+    // envelope, in a trailer of their own (the retry check reads it), not in the operation's record.
+    const applied =
+      name === "applyTheme" && flags.requestId
+        ? `Smithable-Apply: ${JSON.stringify({ requestId: flags.requestId, revision: applyBaseRevision })}\n`
+        : "";
+    const message = `${plan ? plan.subject : `smithable: ${result.description}`}\n\n${plan ? `${plan.body}\n` : ""}Smithable-Op: ${JSON.stringify({ op: recordedName, args: recorded })}\n${applied}Smithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
     const commit = git(dir, ["commit", "-q", "-m", message]);
     if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
     lap("commit");

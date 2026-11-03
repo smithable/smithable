@@ -419,6 +419,13 @@ export async function studio(
   }
   const previewPort = port + 1;
   const preview = options.previewUrl ?? `http://localhost:${previewPort}`;
+  // Two identities for the look editor. The preview's, `previewId`, is fixed for this Studio run:
+  // it goes in the preview's config and in its tickets, and the frame answers to it. The project's,
+  // `lookProject`, is new every time the app is replaced by another (Smith's new draft): an Apply
+  // or a Save asked for the old one is refused (/api/op's check). Only the first is written to the
+  // preview's config, so a change never touches that file: a running dev server restarts when it
+  // changes.
+  const previewId = randomUUID();
   let lookProject = randomUUID();
   const configuredParent = process.env.STUDIO_ORIGIN;
   const parentUrl = configuredParent ? URL.parse(configuredParent) : undefined;
@@ -429,6 +436,9 @@ export async function studio(
       ? [parentUrl.origin]
       : []
     : [`http://localhost:${port}`, `http://127.0.0.1:${port}`];
+  // The key that signs the look editor's preview tickets (look-ticket.ts): a secret of its own,
+  // new each start and never the Studio bearer, since the preview's process holds it in full
+  // (SMITHABLE_LOOK_KEY) to verify tickets. Of the Studio bearer the preview gets the digest only.
   const lookKey = randomBytes(32).toString("hex");
   // Behind a proxy the preview takes Studio's token on every request (the editor plugin's guard):
   // the daemon's own requests to it carry it too. The preview's process gets the token's digest
@@ -534,7 +544,8 @@ export async function studio(
   // dependency set) may be served too.
   const store = process.env.pnpm_config_virtual_store_dir;
   // Written only when it is not there as it should be: a dev server that is running starts
-  // itself again when its settings file is touched.
+  // itself again when its settings file is touched. Its text is the same for the whole run
+  // (previewId, never the rotating lookProject), so a change leaves the file alone.
   const writePreviewConfig = () => {
     const text = previewConfig(
       options.previewUrl,
@@ -547,7 +558,7 @@ export async function studio(
         ...(lookOrigins.length
           ? {
               look: {
-                project: lookProject,
+                project: previewId,
                 parentOrigins: lookOrigins,
                 previewOrigin: new URL(preview).origin,
               },
@@ -734,7 +745,9 @@ export async function studio(
       trace: trace(dir),
       // Whether Redo has a change it would make again.
       canRedo: Boolean(redoTarget(dir)),
-      lookProject,
+      // The Look entry shows only where its tickets can be minted: on a host, that needs a valid
+      // STUDIO_ORIGIN for the parent origin.
+      ...(lookOrigins.length ? { lookProject } : {}),
       preview,
       ...(options.home ? { home: options.home } : {}),
       ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
@@ -909,7 +922,7 @@ export async function studio(
         if (
           typeof parentOrigin !== "string" ||
           !lookOrigins.includes(parentOrigin) ||
-          value.project !== lookProject ||
+          value.project !== previewId ||
           typeof value.document !== "string" ||
           !/^[\w-]{8,100}$/.test(value.document) ||
           typeof value.generation !== "string" ||
@@ -918,7 +931,7 @@ export async function studio(
           return json({ error: "Preview binding refused." }, 403);
         return json(
           mintLookTicket(lookKey, {
-            project: lookProject,
+            project: previewId,
             document: value.document,
             generation: value.generation,
             parentOrigin,
@@ -927,7 +940,12 @@ export async function studio(
       }
       if (url.pathname === "/api/look" && req.method === "GET") {
         try {
-          return json(lookContext(dir, preview, lookProject, url.searchParams.get("path") ?? "/"));
+          // projectId is the preview's identity (the frames answer to it); lookProject the
+          // project's, which the dialog compares with the one it opened.
+          return json({
+            ...lookContext(dir, preview, previewId, url.searchParams.get("path") ?? "/"),
+            lookProject,
+          });
         } catch (error) {
           return json({ error: error instanceof Error ? error.message : String(error) }, 409);
         }
@@ -1021,7 +1039,17 @@ export async function studio(
           409,
         );
       if (req.method === "POST" && url.pathname === "/api/op") {
-        const { name, args, confirm, file, lookProject: expectedLookProject } = await body();
+        // The look editor's Apply brings its envelope beside the arguments: the project it opened,
+        // the source revision its draft was opened on and its request id (OpFlags).
+        const {
+          name,
+          args,
+          confirm,
+          file,
+          lookProject: expectedLookProject,
+          expectedRevision,
+          requestId,
+        } = await body();
         if (expectedLookProject !== undefined && expectedLookProject !== lookProject)
           return json(
             {
@@ -1080,6 +1108,8 @@ export async function studio(
             ...(expectedLookProject !== undefined
               ? { projectCheck: () => expectedLookProject === lookProject }
               : {}),
+            ...(typeof expectedRevision === "string" ? { expectedRevision } : {}),
+            ...(typeof requestId === "string" ? { requestId } : {}),
             reportLater: true,
             trace: traceIdOf(req.headers.traceparent),
             ...(given && bytes ? { files: [{ path: given.path as string, bytes }] } : {}),

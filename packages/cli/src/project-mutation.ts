@@ -8,22 +8,38 @@ import { DatabaseSync } from "node:sqlite";
 const turns = new Map<string, Promise<void>>();
 export class ProjectBusyError extends Error {}
 
+/**
+ * Takes the project's turn. Every way the lock cannot be taken is a refusal of this one change,
+ * said with its reason (a ProjectBusyError the callers answer with), never an error that would
+ * fail every operation the same way without saying why.
+ */
 function lock(root: string, wait: number): DatabaseSync {
   // Coordination only, never durable project state or a tracked file. Do not unlink lock files:
   // other processes may hold their inodes. OS locks release on crash/reboot automatically.
   const data = join(tmpdir(), `sm-project-mutation-locks-${process.getuid?.() ?? "user"}`);
-  mkdirSync(data, { recursive: true, mode: 0o700 });
-  const owner = lstatSync(data);
-  if (
-    !owner.isDirectory() ||
-    owner.isSymbolicLink() ||
-    (process.getuid && (owner.uid !== process.getuid() || (owner.mode & 0o077) !== 0))
-  )
-    throw new Error("The project coordination folder is not private to this user.");
   const path = join(data, `${createHash("sha256").update(root).digest("hex")}.db`);
-  if (existsSync(path) && (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()))
-    throw new Error("The project coordination database must be a regular file.");
-  const database = new DatabaseSync(path);
+  let database: DatabaseSync;
+  try {
+    mkdirSync(data, { recursive: true, mode: 0o700 });
+    const owner = lstatSync(data);
+    if (
+      !owner.isDirectory() ||
+      owner.isSymbolicLink() ||
+      (process.getuid && (owner.uid !== process.getuid() || (owner.mode & 0o077) !== 0))
+    )
+      throw new Error(
+        `the coordination folder ${data} is not a private folder of this user (a symbolic link, another owner or open permissions). Fix or remove it, then retry.`,
+      );
+    if (existsSync(path) && (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()))
+      throw new Error(
+        `the coordination file ${path} is not a regular file. Remove it, then retry.`,
+      );
+    database = new DatabaseSync(path);
+  } catch (error) {
+    throw new ProjectBusyError(
+      `This project cannot be changed right now: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   try {
     database.exec(`PRAGMA busy_timeout = ${wait}`);
     database.exec("BEGIN IMMEDIATE");

@@ -12,13 +12,7 @@ const spec = Object.values(
 const text =
   '# keep my palette\nsmithableTheme: 0.1\nname: paper\ndensity: compact\nmodes: light\nlight: { background: "#ffffff", foreground: "#101522", primary: "#335588", sidebar: "#112233" }\n';
 const theme = parseTheme({ path: "paper.yml", text }).theme as ThemeIR;
-const args = {
-  name: "paper",
-  text,
-  mode: "create",
-  expectedRevision: "a".repeat(64),
-  requestId: "request_123",
-};
+const args = { name: "paper", text, mode: "create" };
 
 test("new theme plus selection and requested resets are one validated operation", () => {
   const result = applyOperation(
@@ -59,8 +53,9 @@ test.each([
   { text: "x".repeat(262145) },
   { page: "missing" },
   { resets: [{ key: "density", page: "missing" }] },
-  { expectedRevision: "bad" },
-  { requestId: "short" },
+  // The host's precondition and request id travel beside the operation, never as arguments.
+  { expectedRevision: "a".repeat(64) },
+  { requestId: "request_123" },
   { mode: "update" },
 ])("invalid apply refuses the whole edit before producing files: %j", (override) => {
   expect(applyOperation({ spec }, "applyTheme", { ...args, ...override }).ok).toBe(false);
