@@ -19,11 +19,27 @@ export function readPerson(cookies: string): Person {
     .map((c) => c.trim())
     .find((c) => c.startsWith(`${TIME_COOKIE}=`))
     ?.slice(TIME_COOKIE.length + 1);
+  if (value === read.value) return read.person;
   const [zone, clock] = (value ?? "").split("~");
-  return {
-    ...(zone && zone !== "-" ? { zone: decodeURIComponent(zone) } : {}),
-    ...(clock === "12h" || clock === "24h" ? { clock } : {}),
+  const person = {
+    ...(zone && zone !== "-" && knownZone(zone) ? { zone: decodeURIComponent(zone) } : {}),
+    ...(clock === "12h" || clock === "24h" ? { clock: clock as "12h" | "24h" } : {}),
   };
+  read = { value, person };
+  return person;
+}
+
+/** The last cookie read: a page formats many times, and checks a zone's name once. */
+let read: { value?: string; person: Person } = { person: {} };
+
+/** Whether a cookie's zone is one the runtime knows: a browser's cookie may say anything. */
+function knownZone(written: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: decodeURIComponent(written) });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** The cookie's value for a person's settings. */

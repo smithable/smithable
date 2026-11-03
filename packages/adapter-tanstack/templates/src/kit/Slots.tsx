@@ -71,11 +71,18 @@ function Slots({
   }, [load, resource, length, day, today]);
 
   /** A wall time in the app's zone ("2026-10-21T10:15") as the language writes a clock. */
-  const clock = (wall: string) =>
-    new Intl.DateTimeFormat(language(), {
-      timeZone: shownZone(timeZone),
+  const clock = (wall: string) => {
+    const at = instantOf(wall, timeZone);
+    const zone = shownZone(timeZone);
+    return new Intl.DateTimeFormat(language(), {
+      timeZone: zone,
+      // Past midnight where the person is: the day says so, under the app's day it belongs to.
+      ...(wallTime(at, zone).slice(0, 10) === wall.slice(0, 10)
+        ? {}
+        : { weekday: "short" as const }),
       ...timeParts(),
-    }).format(instantOf(wall, timeZone));
+    }).format(at);
+  };
   const dayName = (date: string) =>
     new Intl.DateTimeFormat(language(), {
       timeZone: "UTC",

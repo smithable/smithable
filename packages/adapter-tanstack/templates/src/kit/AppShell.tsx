@@ -441,6 +441,8 @@ function YourName({
                   <Combobox
                     id={zoneId}
                     value={time.zone ?? ""}
+                    required={false}
+                    invalid={false}
                     options={Intl.supportedValuesOf("timeZone").map((z) => ({
                       value: z,
                       label: z,
