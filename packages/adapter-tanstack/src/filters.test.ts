@@ -99,10 +99,10 @@ test("the list route applies the page's defaults and the time zone, and marks fo
     'withDefaults(given.f ?? {}, { startsAt: "upcoming", status: "open,full" })',
   );
   expect(route).toContain(
-    'inRange(schema.sessions.startsAt, data.f?.startsAt, "instant", 1, app.timeZone)',
+    'inRange(schema.sessions.startsAt, data.f?.startsAt, "instant", 1, personZone(app.timeZone))',
   );
   expect(route).toContain(
-    'inRange(schema.sessions.createdAt, data.f?.createdAt, "instant", 1, app.timeZone)',
+    'inRange(schema.sessions.createdAt, data.f?.createdAt, "instant", 1, personZone(app.timeZone))',
   );
   expect(route).toContain('inRange(schema.sessions.places, data.f?.places, "number")');
   expect(route).toContain('import { app } from "#/generated/app";');

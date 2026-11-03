@@ -5,9 +5,10 @@ import { instantOf, RELATIVE, type Relative, relativeDays } from "./zoned";
 /**
  * Records whose value lies in a filter's range, "from..to" with either side left out: numbers
  * (amounts in the currency's units, stored in cents with `scale` 100), or dates as written
- * ("2026-10-05"; a date and time column compares from the start of "from" to the end of "to").
+ * ("2026-10-05"; a date and time column compares from the start of "from" to the end of "to", in
+ * `timeZone`).
  * A date filter also takes a relative value (upcoming, past, today, thisWeek, thisMonth), read
- * when the query runs in the app's time zone: "upcoming" is from this moment, "past" before it.
+ * when the query runs in `timeZone`, the viewer's own or the app's: "upcoming" is from this moment, "past" before it.
  * "all" is no condition.
  */
 export function inRange(
@@ -38,7 +39,10 @@ export function inRange(
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
     if (kind === "date") return value;
-    return new Date(`${value}T${end ? "23:59:59.999" : "00:00:00.000"}Z`);
+    // The whole day where the viewer is: its last millisecond for the end.
+    return end
+      ? new Date(instantOf(`${value}T23:59`, timeZone).getTime() + 59_999)
+      : instantOf(`${value}T00:00`, timeZone);
   };
   const low = bound(from, false);
   const high = bound(to, true);

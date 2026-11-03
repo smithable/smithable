@@ -6152,6 +6152,7 @@ import type { RecordUi } from "#/kit/model";
 import { projectAccess, projectData } from "./project.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { projectSchema } from "./project.schema";
 
 export type { ProjectSettable, ProjectValues } from "./project.schema";
@@ -6215,7 +6216,7 @@ export const getProject = createServerFn()
 
 /** Choices for fields that refer to a project. */
 export const projectOptions = createServerFn().handler(async () =>
-  projectData.options(await currentViewer()),
+  asPerson(async () => projectData.options(await currentViewer())),
 );
 
 export const createProject = createServerFn({ method: "POST" })
@@ -10137,7 +10138,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/pages.ts": "3984a4bc generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
   "src/generated/project.server.ts": "877da3e6 generated",
-  "src/generated/project.ts": "0c7272f3 generated",
+  "src/generated/project.ts": "1c4b37f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
   "src/generated/task.server.ts": "7ae69457 generated",
@@ -10193,7 +10194,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -12492,6 +12493,7 @@ import { barberAccess, barberData } from "./barber.server";
 import { timeOffAccess } from "./time-off.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { barberSchema } from "./barber.schema";
 
 export type { BarberSettable, BarberValues } from "./barber.schema";
@@ -12564,7 +12566,7 @@ export const getBarber = createServerFn()
 
 /** Choices for fields that refer to a barber. */
 export const barberOptions = createServerFn().handler(async () =>
-  barberData.options(await currentViewer()),
+  asPerson(async () => barberData.options(await currentViewer())),
 );
 
 export const createBarber = createServerFn({ method: "POST" })
@@ -13615,6 +13617,7 @@ import type { RecordUi } from "#/kit/model";
 import { serviceAccess, serviceData } from "./service.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { serviceSchema } from "./service.schema";
 
 export type { ServiceSettable, ServiceValues } from "./service.schema";
@@ -13693,7 +13696,7 @@ export const getService = createServerFn()
 
 /** Choices for fields that refer to a service. */
 export const serviceOptions = createServerFn().handler(async () =>
-  serviceData.options(await currentViewer()),
+  asPerson(async () => serviceData.options(await currentViewer())),
 );
 
 export const createService = createServerFn({ method: "POST" })
@@ -16530,7 +16533,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
   "src/generated/barber.server.ts": "0cdaec9b generated",
-  "src/generated/barber.ts": "c6cb9e61 generated",
+  "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "e9b5540a generated",
   "src/generated/hooks.ts": "199beb1e generated",
@@ -16540,7 +16543,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
   "src/generated/service.server.ts": "1cfd3766 generated",
-  "src/generated/service.ts": "9b30fa43 generated",
+  "src/generated/service.ts": "dd2b9287 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
   "src/generated/time-off.server.ts": "766baa05 generated",
@@ -16580,7 +16583,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -16593,7 +16596,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -20308,6 +20311,7 @@ import { classTypeAccess, classTypeData } from "./class-type.server";
 import { sessionAccess } from "./session.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { classTypeSchema } from "./class-type.schema";
 
 export type { ClassTypeSettable, ClassTypeValues } from "./class-type.schema";
@@ -20394,7 +20398,7 @@ export const getClassType = createServerFn()
 
 /** Choices for fields that refer to a class type. */
 export const classTypeOptions = createServerFn().handler(async () =>
-  classTypeData.options(await currentViewer()),
+  asPerson(async () => classTypeData.options(await currentViewer())),
 );
 
 export const createClassType = createServerFn({ method: "POST" })
@@ -21750,6 +21754,7 @@ import { instructorAccess, instructorData } from "./instructor.server";
 import { sessionAccess } from "./session.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { instructorSchema } from "./instructor.schema";
 
 export type { InstructorSettable, InstructorValues } from "./instructor.schema";
@@ -21824,7 +21829,7 @@ export const getInstructor = createServerFn()
 
 /** Choices for fields that refer to a instructor. */
 export const instructorOptions = createServerFn().handler(async () =>
-  instructorData.options(await currentViewer()),
+  asPerson(async () => instructorData.options(await currentViewer())),
 );
 
 export const createInstructor = createServerFn({ method: "POST" })
@@ -23946,6 +23951,7 @@ import { sessionAccess, sessionData } from "./session.server";
 import { bookingAccess } from "./booking.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { sessionSchema } from "./session.schema";
 
 export type { SessionSettable, SessionValues } from "./session.schema";
@@ -24042,7 +24048,7 @@ export const getSession = createServerFn()
 
 /** Choices for fields that refer to a session. */
 export const sessionOptions = createServerFn().handler(async () =>
-  sessionData.options(await currentViewer()),
+  asPerson(async () => sessionData.options(await currentViewer())),
 );
 
 export const createSession = createServerFn({ method: "POST" })
@@ -28052,6 +28058,7 @@ import { Reserve } from "#/kit/Reserve";
 import { classTypeData } from "#/generated/class-type.server";
 import { sessionName } from "#/generated/session.name";
 import { Filters } from "#/kit/Filters";
+import { asPerson } from "#/kit/person-time.server";
 import { instructorData } from "#/generated/instructor.server";
 
 /** The sessions whose start falls in the range shown, among those the viewer may read. */
@@ -28089,12 +28096,12 @@ const getRange = createServerFn()
 /** The class types the viewer may read whose name has the text, for the classType filter (a few). */
 const pickClassType = createServerFn()
   .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
-  .handler(async ({ data }) => classTypeData.pick(await currentViewer(), data.text));
+  .handler(async ({ data }) => asPerson(async () => classTypeData.pick(await currentViewer(), data.text)));
 
 /** The instructors the viewer may read whose name has the text, for the instructor filter (a few). */
 const pickInstructor = createServerFn()
   .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
-  .handler(async ({ data }) => instructorData.pick(await currentViewer(), data.text));
+  .handler(async ({ data }) => asPerson(async () => instructorData.pick(await currentViewer(), data.text)));
 
 export const Route = createFileRoute("/schedule/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["schedule"], context.viewer, location.href),
@@ -28310,6 +28317,7 @@ import { sessionAccess, sessionData } from "#/generated/session.server";
 import { allows } from "#/kit/access";
 import { inArray, and } from "drizzle-orm";
 import { inRange, orderOf } from "#/kit/filter";
+import { asPerson, personZone } from "#/kit/person-time.server";
 import { app } from "#/generated/app";
 import { withDefaults, type Search, count, listQuery, optional, text } from "#/kit/params";
 import { classTypeData } from "#/generated/class-type.server";
@@ -28340,7 +28348,7 @@ const searchSessions = createServerFn()
       undefined,
       pickClassTypeMany ? (pickClassTypeChosen.length ? inArray(schema.sessions.classTypeId, pickClassTypeChosen.map((r) => Number(r.value))) : undefined) : data.f?.classType ? inArray(schema.sessions.classTypeId, data.f?.classType.split(",").map(Number).filter(Number.isInteger)) : undefined,
       pickInstructorMany ? (pickInstructorChosen.length ? inArray(schema.sessions.instructorId, pickInstructorChosen.map((r) => Number(r.value))) : undefined) : data.f?.instructor ? inArray(schema.sessions.instructorId, data.f?.instructor.split(",").map(Number).filter(Number.isInteger)) : undefined,
-      data.f?.startsAt ? inRange(schema.sessions.startsAt, data.f?.startsAt, "instant", 1, app.timeZone) : undefined,
+      data.f?.startsAt ? inRange(schema.sessions.startsAt, data.f?.startsAt, "instant", 1, personZone(app.timeZone)) : undefined,
     );
     // The order the viewer chose, among the fields the page offers; else the newest first.
     const order = orderOf({ startsAt: schema.sessions.startsAt, capacity: schema.sessions.capacity }, data.sort);
@@ -28354,12 +28362,12 @@ const searchSessions = createServerFn()
 /** The class types the viewer may read whose name has the text, for the classType filter (a few). */
 const pickClassType = createServerFn()
   .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
-  .handler(async ({ data }) => classTypeData.pick(await currentViewer(), data.text));
+  .handler(async ({ data }) => asPerson(async () => classTypeData.pick(await currentViewer(), data.text)));
 
 /** The instructors the viewer may read whose name has the text, for the instructor filter (a few). */
 const pickInstructor = createServerFn()
   .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
-  .handler(async ({ data }) => instructorData.pick(await currentViewer(), data.text));
+  .handler(async ({ data }) => asPerson(async () => instructorData.pick(await currentViewer(), data.text)));
 
 export const Route = createFileRoute("/sessions/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["sessions"], context.viewer, location.href),
@@ -29233,7 +29241,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.ts": "40202f54 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
   "src/generated/class-type.server.ts": "a221d86c generated",
-  "src/generated/class-type.ts": "4579f208 generated",
+  "src/generated/class-type.ts": "ada91c5e generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "d3acafca generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
@@ -29242,7 +29250,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/hooks.ts": "dad75c4a generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
   "src/generated/instructor.server.ts": "2e767d80 generated",
-  "src/generated/instructor.ts": "fd304a3a generated",
+  "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "87ba6eb0 generated",
   "src/generated/message.ts": "f222d475 generated",
@@ -29257,7 +29265,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
   "src/generated/session.server.ts": "079a1524 generated",
-  "src/generated/session.ts": "2a8dc93c generated",
+  "src/generated/session.ts": "e2a3ab62 generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "5236c791 generated",
   "src/generated/uploads.ts": "11494e99 generated",
@@ -29307,7 +29315,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -29321,7 +29329,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -29393,9 +29401,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/new.tsx": "7be9f470 generated",
   "src/routes/privacy/index.tsx": "05f75ae3 generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
-  "src/routes/schedule/index.tsx": "3cb0600f generated",
+  "src/routes/schedule/index.tsx": "79cdbac7 generated",
   "src/routes/sessions/$id.tsx": "651b876b generated",
-  "src/routes/sessions/index.tsx": "090d8339 generated",
+  "src/routes/sessions/index.tsx": "74241632 generated",
   "src/routes/sessions/new.tsx": "55613a12 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
@@ -32318,6 +32326,7 @@ import { followUpAccess } from "./follow-up.server";
 import { writeAllowed } from "#/kit/limit";
 import { userChoices } from "./user-choices.server";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { customerSchema } from "./customer.schema";
 
 export type { CustomerSettable, CustomerValues } from "./customer.schema";
@@ -32433,7 +32442,7 @@ export const getCustomer = createServerFn()
 
 /** Choices for fields that refer to a customer. */
 export const customerOptions = createServerFn().handler(async () =>
-  customerData.options(await currentViewer()),
+  asPerson(async () => customerData.options(await currentViewer())),
 );
 
 /** Whom a customer can be given to: null for a viewer who can only make their own. */
@@ -38058,7 +38067,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "76551dac generated",
-  "src/generated/customer.ts": "79b283e3 generated",
+  "src/generated/customer.ts": "8c21bca9 generated",
   "src/generated/dev-door.server.ts": "29bff84f generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
@@ -38116,7 +38125,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -38128,7 +38137,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -41696,6 +41705,7 @@ import { clientAccess, clientData } from "./client.server";
 import { invoiceAccess } from "./invoice.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { clientSchema } from "./client.schema";
 
 export type { ClientSettable, ClientValues } from "./client.schema";
@@ -41774,7 +41784,7 @@ export const getClient = createServerFn()
 
 /** Choices for fields that refer to a client. */
 export const clientOptions = createServerFn().handler(async () =>
-  clientData.options(await currentViewer()),
+  asPerson(async () => clientData.options(await currentViewer())),
 );
 
 export const createClient = createServerFn({ method: "POST" })
@@ -43080,6 +43090,7 @@ import { invoiceDefaults, withInvoiceFormulas } from "./invoice.formulas";
 import { invoiceAccess, invoiceData } from "./invoice.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { invoiceSchema } from "./invoice.schema";
 
 export type { InvoiceSettable, InvoiceValues } from "./invoice.schema";
@@ -43192,7 +43203,7 @@ export const getInvoice = createServerFn()
 
 /** Choices for fields that refer to a invoice. */
 export const invoiceOptions = createServerFn().handler(async () =>
-  invoiceData.options(await currentViewer()),
+  asPerson(async () => invoiceData.options(await currentViewer())),
 );
 
 export const createInvoice = createServerFn({ method: "POST" })
@@ -45321,6 +45332,7 @@ import { invoiceAccess, invoiceData } from "#/generated/invoice.server";
 import { allows } from "#/kit/access";
 import { or, inArray, and } from "drizzle-orm";
 import { contains } from "#/kit/search";
+import { asPerson } from "#/kit/person-time.server";
 import { orderOf } from "#/kit/filter";
 import { clientData } from "#/generated/client.server";
 import { currentViewer } from "#/lib/viewer.server";
@@ -45364,7 +45376,7 @@ const searchInvoices = createServerFn()
 /** The clients the viewer may read whose name has the text, for the client filter (a few). */
 const pickClient = createServerFn()
   .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
-  .handler(async ({ data }) => clientData.pick(await currentViewer(), data.text));
+  .handler(async ({ data }) => asPerson(async () => clientData.pick(await currentViewer(), data.text)));
 
 export const Route = createFileRoute("/invoices/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
@@ -46499,7 +46511,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
   "src/generated/client.server.ts": "28707bb6 generated",
-  "src/generated/client.ts": "3e66d5ac generated",
+  "src/generated/client.ts": "ef4091ce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "91e332bc generated",
   "src/generated/hooks.ts": "f860bab0 generated",
@@ -46511,7 +46523,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "378fe20d generated",
-  "src/generated/invoice.ts": "847402f3 generated",
+  "src/generated/invoice.ts": "f4863bb7 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "11bc8997 generated",
   "src/generated/pages.ts": "d347f5d5 generated",
@@ -46560,7 +46572,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -46574,7 +46586,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -46609,7 +46621,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "0cdc647a generated",
   "src/routes/invoices/$id.tsx": "99070619 generated",
-  "src/routes/invoices/index.tsx": "0842286d generated",
+  "src/routes/invoices/index.tsx": "dbb193e9 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "4d3a90ef generated",
   "src/routes/privacy/index.tsx": "a2c437ac generated",
@@ -49802,6 +49814,7 @@ import { bindPicture } from "#/kit/PictureInput";
 import { dishAccess, dishData } from "./dish.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { dishSchema } from "./dish.schema";
 
 export type { DishSettable, DishValues } from "./dish.schema";
@@ -49922,7 +49935,7 @@ export const getDish = createServerFn()
 
 /** Choices for fields that refer to a dish. */
 export const dishOptions = createServerFn().handler(async () =>
-  dishData.options(await currentViewer()),
+  asPerson(async () => dishData.options(await currentViewer())),
 );
 
 export const createDish = createServerFn({ method: "POST" })
@@ -50423,6 +50436,7 @@ import { orderDefaults, withOrderFormulas } from "./order.formulas";
 import { orderAccess, orderData } from "./order.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { orderSchema } from "./order.schema";
 
 export type { OrderSettable, OrderValues } from "./order.schema";
@@ -50548,7 +50562,7 @@ export const getOrder = createServerFn()
 
 /** Choices for fields that refer to a order. */
 export const orderOptions = createServerFn().handler(async () =>
-  orderData.options(await currentViewer()),
+  asPerson(async () => orderData.options(await currentViewer())),
 );
 
 export const createOrder = createServerFn({ method: "POST" })
@@ -54516,7 +54530,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dev-door.server.ts": "49b70bff generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
   "src/generated/dish.server.ts": "ba5b7d9b generated",
-  "src/generated/dish.ts": "b7cb2173 generated",
+  "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
@@ -54526,7 +54540,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "143c00b6 generated",
-  "src/generated/order.ts": "4fdb55f6 generated",
+  "src/generated/order.ts": "db4c9478 generated",
   "src/generated/outgoing.server.ts": "14522d6c generated",
   "src/generated/pages.ts": "9e24be32 generated",
   "src/generated/roles.ts": "6b44c69a generated",
@@ -54570,7 +54584,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
@@ -54584,7 +54598,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -59542,7 +59556,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -59554,7 +59568,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
@@ -63218,7 +63232,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -63230,7 +63244,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -67214,6 +67228,7 @@ import { incidentAccess } from "./incident.server";
 import { maintenanceAccess } from "./maintenance.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { componentSchema } from "./component.schema";
 
 export type { ComponentSettable, ComponentValues } from "./component.schema";
@@ -67293,7 +67308,7 @@ export const getComponent = createServerFn()
 
 /** Choices for fields that refer to a component. */
 export const componentOptions = createServerFn().handler(async () =>
-  componentData.options(await currentViewer()),
+  asPerson(async () => componentData.options(await currentViewer())),
 );
 
 export const createComponent = createServerFn({ method: "POST" })
@@ -68570,6 +68585,7 @@ import { incidentAccess, incidentData } from "./incident.server";
 import { incidentUpdateAccess } from "./incident-update.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { incidentSchema } from "./incident.schema";
 
 export type { IncidentSettable, IncidentValues } from "./incident.schema";
@@ -68675,7 +68691,7 @@ export const getIncident = createServerFn()
 
 /** Choices for fields that refer to a incident. */
 export const incidentOptions = createServerFn().handler(async () =>
-  incidentData.options(await currentViewer()),
+  asPerson(async () => incidentData.options(await currentViewer())),
 );
 
 export const createIncident = createServerFn({ method: "POST" })
@@ -74950,7 +74966,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/ask.server.ts": "712a64ca generated",
   "src/generated/component.schema.ts": "8a49641f generated",
   "src/generated/component.server.ts": "466e0bad generated",
-  "src/generated/component.ts": "04dc29d8 generated",
+  "src/generated/component.ts": "59b2f88c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "ce9e7d19 generated",
   "src/generated/hooks.ts": "a654df5e generated",
@@ -74959,7 +74975,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
   "src/generated/incident.server.ts": "ea8b4902 generated",
-  "src/generated/incident.ts": "c9a0216a generated",
+  "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "ccd5e01d generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
@@ -75013,7 +75029,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -75026,7 +75042,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -79517,6 +79533,7 @@ import { bindFiles } from "#/kit/FileInput";
 import { supportCaseAccess, supportCaseData } from "./support-case.server";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
+import { asPerson } from "#/kit/person-time.server";
 import { supportCaseSchema } from "./support-case.schema";
 
 export type { SupportCaseSettable, SupportCaseValues } from "./support-case.schema";
@@ -79630,7 +79647,7 @@ export const getSupportCase = createServerFn()
 
 /** Choices for fields that refer to a support case. */
 export const supportCaseOptions = createServerFn().handler(async () =>
-  supportCaseData.options(await currentViewer()),
+  asPerson(async () => supportCaseData.options(await currentViewer())),
 );
 
 export const createSupportCase = createServerFn({ method: "POST" })
@@ -82188,7 +82205,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
   "src/generated/support-case.server.ts": "4c14966b generated",
-  "src/generated/support-case.ts": "6fd6eca7 generated",
+  "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
   "src/generated/users.server.ts": "89ad054e generated",
@@ -82230,7 +82247,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/filter.ts": "01c49cf2 kit",
+  "src/kit/filter.ts": "5b6476c7 kit",
   "src/kit/format.ts": "fb6e724a kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
@@ -82244,7 +82261,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "49667e84 kit",
+  "src/kit/person-time.server.ts": "62c53c5b kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
