@@ -38436,7 +38436,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "e0293325 kit",
+  "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -45909,7 +45909,7 @@ import { invoiceUi } from "#/generated/invoice";
 import { ModelTable } from "#/kit/ModelTable";
 
 const getOverview = createServerFn()
-  .validator((data: { period?: string }) => ({ period: data?.period ? String(data.period).slice(0, 40) : undefined }))
+  .validator((data: { period?: unknown }) => ({ period: typeof data?.period === "string" && data.period ? data.period.slice(0, 40) : undefined }))
   .handler(async ({ data }) => {
   const viewer = await currentViewer();
   const invoices = await invoiceData.list(viewer);
@@ -46898,7 +46898,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "e0293325 kit",
+  "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -46960,7 +46960,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoices/$id.tsx": "99070619 generated",
   "src/routes/invoices/index.tsx": "1e0cec38 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
-  "src/routes/overview/index.tsx": "357d16c0 generated",
+  "src/routes/overview/index.tsx": "e7b45adf generated",
   "src/routes/privacy/index.tsx": "a2c437ac generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/settings/index.tsx": "dd4e71b0 generated",
@@ -75358,7 +75358,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "e0293325 kit",
+  "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/api.server.ts": "0f0e73ff kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",

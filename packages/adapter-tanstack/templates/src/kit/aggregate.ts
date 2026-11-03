@@ -85,7 +85,7 @@ export function byPeriod<R>(
   if (!last) return [];
   const first = [...totals.keys()].sort()[0] ?? last;
   let count = SPAN[period];
-  if (inside) for (count = 1; count < 120 && before(last, period, count - 1) > first; ) count++;
+  if (inside) for (count = 1; before(last, period, count - 1) > first; ) count++;
   return Array.from({ length: count }, (_, i) => {
     const key = before(last, period, count - 1 - i);
     return { key, value: totals.get(key) ?? 0 };

@@ -406,27 +406,42 @@ function addToMainMenu(spec: YamlEditor, page: string): void {
   }
 }
 
-const setPeriod: Operation<{ page: string; field: string; model?: string }> = {
+const setPeriod: Operation<{
+  page: string;
+  field?: string;
+  byModel?: Record<string, string>;
+}> = {
   name: "setPeriod",
   summary:
     "Give a dashboard a period: the date field its tiles are scoped by, with chips on the page (none takes it away).",
   schema: {
     type: "object",
-    required: ["page", "field"],
+    required: ["page"],
     additionalProperties: false,
     properties: {
       page: refTo({ ref: "page", label: "Page" }),
       field: { type: "string", description: "A date field every tile's model has, or none." },
-      model: { type: "string", description: "The one model this field is for, when they differ." },
+      byModel: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        description:
+          "A date field per model, when they differ: { Invoice: issuedOn, Payment: paidOn }.",
+      },
     },
   },
-  positional: ["page", "field", "model"],
-  describe: ({ page, field, model }) =>
+  positional: ["page", "field"],
+  describe: ({ page, field, byModel }) =>
     field === "none"
       ? `Take the period from ${page}`
-      : `Scope ${page} by ${model ? `${model}.` : ""}${field}`,
+      : `Scope ${page} by ${
+          byModel
+            ? Object.entries(byModel)
+                .map(([m, f]) => `${m}.${f}`)
+                .join(", ")
+            : field
+        }`,
   destructive: () => false,
-  apply({ spec }, { page, field, model }, ir) {
+  apply({ spec }, { page, field, byModel }, ir) {
     const p = ir.pages.find((x) => x.id === page);
     if (!p) throw new OperationError(`There is no page named "${page}".`);
     if (p.pattern.kind !== "dashboard") throw new OperationError(`${page} is not a dashboard.`);
@@ -435,7 +450,8 @@ const setPeriod: Operation<{ page: string; field: string; model?: string }> = {
       if (spec.has(path)) spec.remove(path);
       return [];
     }
-    const written: YamlValue = model ? { ...p.period, [model]: field } : field;
+    const written: YamlValue | undefined = byModel ?? field;
+    if (written === undefined) throw new OperationError("Say a date field, or one per model.");
     if (spec.has(path)) spec.set(path, written);
     else spec.add(["pages", page], "period", written);
     return [];

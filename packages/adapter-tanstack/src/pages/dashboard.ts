@@ -252,7 +252,7 @@ export function dashboardParts(
   const serverFn = `const ${fn} = createServerFn()${
     period
       ? `
-  .validator((data: { period?: string }) => ({ period: data?.period ? String(data.period).slice(0, 40) : undefined }))
+  .validator((data: { period?: unknown }) => ({ period: typeof data?.period === "string" && data.period ? data.period.slice(0, 40) : undefined }))
   .handler(async ({ data }) => {`
       : ".handler(async () => {"
   }

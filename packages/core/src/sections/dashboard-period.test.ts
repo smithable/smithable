@@ -86,4 +86,10 @@ test("setPeriod writes and takes away; a rename follows; a removal is refused", 
   if (!none.ok) throw new Error(none.message);
   expect(none.files.spec).not.toContain("period:");
   expect(applyOperation(files, "setPeriod", { page: "overview", field: "note" }).ok).toBe(false);
+  const both = applyOperation({ spec: spec(BOTH) }, "setPeriod", {
+    page: "overview",
+    byModel: { Invoice: "issuedOn", Payment: "paidOn" },
+  });
+  if (!both.ok) throw new Error(both.message);
+  expect(both.files.spec).toContain("Payment: paidOn");
 });
