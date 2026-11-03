@@ -443,6 +443,8 @@ export interface PageIR extends SemanticText {
   sortable?: string[];
   /** A heart on each record and a "Saved" view of the list ("all"), or a list of only the viewer's saved records ("only"). */
   favorites?: "all" | "only";
+  /** false: the list offers no Export CSV (the API's CSV, for a key, stays). */
+  export?: false;
   /** The page lists only the viewer's own records (my items, my orders); it needs sign-in. */
   mine?: true;
   /** A "contact" block on the record page that mails the record's owner, or the user a field of the model names; `keep` names a model a copy of each message is stored in. */

@@ -656,12 +656,12 @@ export function listParts(
   const selecting =
     !within &&
     (many.length > 0 || onRows.length > 0 || merges.length > 0 || Boolean(auth && hasSignIn(auth)));
+  if (selecting && page.export !== false) view.add("#/kit/csv", "csvName", "csvOf", "download");
   if (selecting) {
     view
       .add("react", "useState")
       .add("@tanstack/react-router", "useRouter")
       .add("#/kit/SelectionBar", "SelectionBar")
-      .add("#/kit/csv", "csvName", "csvOf", "download")
       .add("#/kit/access", ...(addressOwned(model) ? ["addressOwner"] : []), "allows")
       .add(n.module, n.removeMany, n.deleteRule);
     if (longTitle(model)) view.add("#/kit/format", "titleOf");
@@ -898,8 +898,12 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(${n.ui}), csvOf(${n.ui}, chosen))}
-        />
+${
+  page.export === false
+    ? ""
+    : `          onExport={() => download(csvName(${JSON.stringify(page.id)}, app.timeZone), csvOf(${n.ui}, chosen, app.timeZone))}
+`
+}        />
       )}
 `
     : ""
@@ -917,10 +921,10 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
 }      <ModelTable
         ui={${n.ui}}${totalled ? `\n        totals={totals && { count: totals.count, sums: Object.fromEntries(Object.entries(totals.sums).filter(([key]) => ${literal(own)}.includes(key))) }}` : ""}${within ? "" : `\n        page=${attr(page.id)}\n        ${scrolling ? "more={{ total, load: loadMore }}" : `paging={{ page: at, size, total, to: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}`}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}${
-          within || capped || owned
+          within || capped || owned || page.export === false
             ? ""
             : `
-        exportRows={async () => (await ${loading}({ data: ${exportArgs} }))}`
+        exportRows={async () => (await ${loading}({ data: ${exportArgs} }))} exportName=${JSON.stringify(page.id)}`
         }
         rows={${(() => {
           const ordered = sort
