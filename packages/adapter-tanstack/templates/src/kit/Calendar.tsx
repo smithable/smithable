@@ -7,7 +7,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "#/components/ui/button";
-import { wallClock } from "./time-text";
+import { shownZone, wallClock } from "./time-text";
 import { w } from "./words";
 import { instantOf, wallTime } from "./zoned";
 
@@ -163,10 +163,11 @@ function weekStart(week: string): string {
  */
 export function calendarRange(
   search: CalendarSearch,
-  timeZone?: string,
+  appZone?: string,
   /** The page's own view (smithable.ux.yml): week unless agenda or days. */
   own: "week" | "agenda" | "days" = "week",
 ) {
+  const timeZone = shownZone(appZone);
   const today = wallTime(new Date(), timeZone).slice(0, 10);
   const view: "day" | "week" | "month" | "agenda" | "days" = search.day
     ? "day"
@@ -298,7 +299,7 @@ const HOUR = 3; // rem per hour on the week grid
 export function Calendar({
   search,
   items,
-  timeZone,
+  timeZone: appZone,
   dateOnly,
   onNavigate,
   onOpen,
@@ -334,7 +335,8 @@ export function Calendar({
   /** Morning, afternoon and evening as chips over the records (the calendar's own filter). */
   timeOfDay?: boolean;
 }) {
-  const range = calendarRange(search, timeZone, own);
+  const range = calendarRange(search, appZone, own);
+  const timeZone = shownZone(appZone);
   const panel = useRef<HTMLDialogElement>(null);
   // The panel was opened here (a history entry of its own): closing it steps back, so Back and
   // Close agree. Opened from an address (a return from sign-in), closing takes `open` away.

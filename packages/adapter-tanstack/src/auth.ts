@@ -244,6 +244,8 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       role: { type: "string", required: true, defaultValue: ${JSON.stringify(auth.defaultRole)}, input: false },
+      timezone: { type: "string", required: false, input: false },
+      clock: { type: "string", required: false, input: false },
     },
   },
   databaseHooks: {
@@ -643,6 +645,8 @@ function betterAuthTables(auth: AuthIR): string {
   emailVerified: integer({ mode: "boolean" }).default(false).notNull(),
   image: text(),
   role: text().notNull().default(${JSON.stringify(auth.defaultRole)}),
+  timezone: text(),
+  clock: text(),
   createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer({ mode: "timestamp_ms" })
     .notNull()
