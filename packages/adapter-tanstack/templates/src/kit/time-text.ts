@@ -10,7 +10,7 @@ export interface Person {
 }
 
 /** The cookie that carries it, so the server renders a page as the browser will. */
-export const TIME_COOKIE = "smithable-time";
+export const TIME_COOKIE = "time";
 
 /** A day: then the person's record is read again, so a change on another device reaches this one. */
 export const TIME_COOKIE_SECONDS = 86_400;
@@ -99,10 +99,11 @@ export function timeParts() {
   } as const;
 }
 
-/** A wall time ("14:30") as the app writes a clock. */
+/** A wall time ("14:30", or "9:00" as a day's hours write it) as the app writes a clock. */
 export function wallClock(time: string): string {
+  const [hour = 0, minute = 0] = time.split(":").map(Number);
   return new Intl.DateTimeFormat(language(), {
     timeZone: "UTC",
     ...timeParts(),
-  }).format(new Date(`2000-01-01T${time}:00Z`));
+  }).format(Date.UTC(2000, 0, 1, hour, minute));
 }
