@@ -12,6 +12,7 @@ import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
 import { formatValue } from "./format";
 import { type AppUi, textMarker } from "./model";
+import { type Person, personNow } from "./time-text";
 import { tx, w } from "./words";
 
 export interface MenuUi {
@@ -33,6 +34,8 @@ interface ShellProps {
   onSignOut?: () => Promise<void>;
   /** Sets the signed-in person's own name, the one others see (an invited person has none yet). */
   onRename?: (name: string) => Promise<void>;
+  /** Keeps the person's own time zone and clock. */
+  onTime?: (time: Person) => Promise<void>;
   /** A number beside a menu entry, by its route: the files waiting on the review page. */
   counts?: Record<string, number>;
   /**
@@ -258,6 +261,7 @@ function Navigation({
   viewer,
   onSignOut,
   onRename,
+  onTime,
   counts,
   onNavigate,
   active,
@@ -319,7 +323,12 @@ function Navigation({
           {viewer ? (
             <>
               {onRename ? (
-                <YourName name={viewer.name} email={viewer.email} onRename={onRename} />
+                <YourName
+                  name={viewer.name}
+                  email={viewer.email}
+                  onRename={onRename}
+                  onTime={onTime}
+                />
               ) : (
                 <p className="truncate font-semibold" title={viewer.email}>
                   {viewer.name}
@@ -352,17 +361,24 @@ function YourName({
   name,
   email,
   onRename,
+  onTime,
 }: {
   name: string;
   email: string;
   onRename: (name: string) => Promise<void>;
+  /** Keeps the person's own time zone and clock. */
+  onTime?: (time: Person) => Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   // Drawn twice, in the sidebar and in the phone's menu: each its own id.
   const inputId = useId();
   const [value, setValue] = useState(name);
+  const [time, setTime] = useState<Person>({});
+  const [opened, setOpened] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
+  const zoneId = useId();
+  const clockId = useId();
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!value.trim()) return;
@@ -370,6 +386,8 @@ function YourName({
     setFailure(undefined);
     try {
       await onRename(value.trim());
+      const before = personNow();
+      if (onTime && (time.zone !== before.zone || time.clock !== before.clock)) await onTime(time);
       dialog.current?.close();
     } catch {
       setFailure(w.tryAgain);
@@ -383,6 +401,8 @@ function YourName({
         title={email}
         onClick={() => {
           setValue(name);
+          setTime(personNow());
+          setOpened(true);
           dialog.current?.showModal();
         }}
         className="block min-h-6 max-w-full truncate rounded-sm text-left font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
@@ -415,6 +435,50 @@ function YourName({
               />
               <p className="text-sm text-muted-foreground">{w.yourNameHelp}</p>
             </div>
+            {/* Only once it opens: four hundred zones are no part of every page, and the server's
+                list and the browser's need not be the same. */}
+            {onTime && opened && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor={zoneId}>{w.yourTimeZone}</Label>
+                  {/* The browser's own list: it filters as one types, and no dialog's edge clips it. */}
+                  <Input
+                    id={zoneId}
+                    list={`${zoneId}-zones`}
+                    autoComplete="off"
+                    placeholder={w.search}
+                    value={time.zone ?? ""}
+                    onChange={(e) =>
+                      setTime((t) => ({ ...t, zone: e.target.value.trim() || undefined }))
+                    }
+                    disabled={busy}
+                  />
+                  <datalist id={`${zoneId}-zones`}>
+                    {Intl.supportedValuesOf("timeZone").map((z) => (
+                      <option key={z} value={z} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={clockId}>{w.yourClock}</Label>
+                  <select
+                    id={clockId}
+                    className="h-control w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={time.clock ?? ""}
+                    onChange={(e) =>
+                      setTime((t) => ({
+                        ...t,
+                        clock: (e.target.value || undefined) as Person["clock"],
+                      }))
+                    }
+                  >
+                    <option value="">{w.asTheApp}</option>
+                    <option value="12h">{w.clock12}</option>
+                    <option value="24h">{w.clock24}</option>
+                  </select>
+                </div>
+              </>
+            )}
             {failure && (
               <p role="alert" className="text-sm text-destructive">
                 {failure}

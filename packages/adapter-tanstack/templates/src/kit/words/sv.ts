@@ -410,6 +410,11 @@ export const w = {
   youAreBooked: "Du är bokad",
   yourEmail: "Din e-post",
   yourName: "Ditt namn",
+  yourTimeZone: "Din tidszon",
+  yourClock: "Din klocka",
+  asTheApp: "Som appen",
+  clock12: "12-timmars",
+  clock24: "24-timmars",
   yourNameHelp: "Namnet andra ser i appen.",
   alreadyHas: (_label: string, field: string) =>
     `Det finns redan en post med samma ${field.toLowerCase()}.`,
