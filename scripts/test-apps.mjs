@@ -2425,6 +2425,8 @@ async function filtersFlow(base) {
     // Export CSV: the list as it is filtered and sorted, then only the chosen row.
     const saved = async (click) => {
       const [file] = await Promise.all([page.waitForEvent("download"), click()]);
+      if (!/^[a-z-]+-\d{4}-\d{2}-\d{2}\.csv$/.test(file.suggestedFilename()))
+        throw new Error(`the export is named ${file.suggestedFilename()}`);
       return readFileSync(await file.path(), "utf8");
     };
     const csv = await saved(() => page.getByRole("button", { name: "Export CSV" }).click());

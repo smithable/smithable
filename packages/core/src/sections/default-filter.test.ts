@@ -277,3 +277,18 @@ test("the ux file says how a filter on a reference is picked; setFilterPick writ
   });
   expect(wrong.ok ? "" : wrong.message).toContain('sessions has no filter named "notes"');
 });
+
+test("export: false takes a crud page's Export CSV away; setExport says it and undoes it", () => {
+  expect(read("    export: false\n").ir?.pages[0]?.export).toBe(false);
+  expect(messages("    export: true\n").join()).toMatch(/can only be false/);
+  const files = {
+    spec: SPEC,
+    auth: "smithableAuth: 0.1\nsignIn:\n  providers: [google]\ndefaultAccess: shared\nroles:\n  admin: {}\n",
+  };
+  const off = applyOperation(files, "setExport", { page: "sessions", offered: "off" });
+  if (!off.ok) throw new Error(off.message);
+  expect(off.files.spec).toContain("export: false");
+  const on = applyOperation(off.files, "setExport", { page: "sessions", offered: "on" });
+  if (!on.ok) throw new Error(on.message);
+  expect(on.files.spec).not.toContain("export:");
+});

@@ -69,12 +69,20 @@ quiet morning.
 
 ### 2.3 An export
 
-`export: csv` on a crud page (or `export: [csv, xlsx]` later): a "Download" button beside the
-filters that gives the list as it stands, the filters, search and sort applied, within what the
-viewer may read, the table's columns with their labels as the first row, values as the table shows
-them (dates in the app's zone, amounts with their currency, a reference by its title, a choice by
-its label), named `<page>-<date>.csv`. Files and pictures are left out; a list field is its count.
-A page without `export` offers nothing: an export is a way out of the app, so it is said.
+Every list already has one: **Export CSV** under the table, and on the selection bar for the chosen
+rows. It gives the list as it stands, the filters, search and sort applied, within what the viewer
+may read, up to the app's cap (fewer for a visitor), and says so when it cuts. So no key turns it
+on, and what the bookings and invoices pages need they have.
+
+What changes: the file is named `<page>-<date>.csv` (the app's day), and times are ISO in the app's
+zone with their offset (`2026-11-03T09:00:00+02:00`), so a column reads as the app does. Values stay
+what a spreadsheet can use: amounts plain decimals that sum, a reference by its title, a choice by
+its label, the table's labels as the first row. Files and pictures are left out, and so is a list
+field (`bookings: Booking[]`); a count of one is a formula field, and that is exported as its number.
+
+`export: false` on a crud page takes the button away, from the list and the selection bar, for a
+page an owner wants kept in the app. It takes nothing from existing apps. The API's CSV is a separate
+door, for a program with a key, and stays.
 
 ### 2.4 A period on a dashboard
 
@@ -129,7 +137,7 @@ spec changes: `admins` and roles already carry it.
 2. Core and adapter: 2.2 (a timer with no record, an outgoing entry with `list` and `empty`, the
    mail's table), the booking starter's morning mail; a content-file text (A, with Fable on the
    core grammar).
-3. Adapter: 2.3 (`export: csv`), on the bookings and invoices pages (A).
+3. Adapter and core: 2.3 (the file's name and zone, `export: false`) (A).
 4. Core and adapter: 2.4 (`period`), the invoicing starter's overview (A).
 5. The three people (§3): starters' roles and texts (A), docs (C), Studio's owner question (A).
 Each step its own pull request; the spec reference with each.

@@ -700,6 +700,39 @@ const setDefaultFilter: Operation<{ page: string; field: string; value: string }
   },
 };
 
+const setExport: Operation<{ page: string; offered: "on" | "off" }> = {
+  name: "setExport",
+  summary:
+    "Offer Export CSV on a list page (on, as a list does unless it says otherwise) or not (off).",
+  schema: {
+    type: "object",
+    required: ["page", "offered"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      offered: {
+        type: "string",
+        enum: ["on", "off"],
+        description: "on: the list offers Export CSV; off: its records stay in the app.",
+      },
+    },
+  },
+  positional: ["page", "offered"],
+  describe: ({ page, offered }) =>
+    offered === "off" ? `Offer no Export CSV on ${page}` : `Offer Export CSV on ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, offered }, ir) {
+    const p = ir.pages.find((x) => x.id === page);
+    if (!p) throw new OperationError(`There is no page named "${page}".`);
+    if (p.pattern.kind !== "crud") throw new OperationError(`${page} is not a list page.`);
+    const path = ["pages", page, "export"];
+    if (offered === "on") {
+      if (spec.has(path)) spec.remove(path);
+    } else if (!spec.has(path)) spec.add(["pages", page], "export", false);
+    return [];
+  },
+};
+
 const setFavorites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = {
   name: "setFavorites",
   summary:
@@ -1152,6 +1185,7 @@ export const crudOperations: AnyOperation[] = [
   setDefaultFilter,
   setSortable,
   setFavorites,
+  setExport,
   setContact,
   setMine,
 ];

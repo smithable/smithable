@@ -8819,6 +8819,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { noteUi } from "#/generated/note";
 import { noteData } from "#/generated/note.server";
 import { apiCall } from "#/kit/api.server";
+import { app } from "#/generated/app";
 import { csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
@@ -8834,7 +8835,7 @@ export const Route = createFileRoute("/api/v1/notes.csv")({
             sort: query.get("sort") ?? undefined,
             limit: 10_000,
           });
-          return new Response(csvOf(noteUi, items as never), {
+          return new Response(csvOf(noteUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
               "Content-Disposition": 'attachment; filename="notes.csv"',
@@ -8963,6 +8964,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { projectUi } from "#/generated/project";
 import { projectData } from "#/generated/project.server";
 import { apiCall } from "#/kit/api.server";
+import { app } from "#/generated/app";
 import { csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
@@ -8978,7 +8980,7 @@ export const Route = createFileRoute("/api/v1/projects.csv")({
             sort: query.get("sort") ?? undefined,
             limit: 10_000,
           });
-          return new Response(csvOf(projectUi, items as never), {
+          return new Response(csvOf(projectUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
               "Content-Disposition": 'attachment; filename="projects.csv"',
@@ -9110,6 +9112,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { taskUi } from "#/generated/task";
 import { taskData } from "#/generated/task.server";
 import { apiCall } from "#/kit/api.server";
+import { app } from "#/generated/app";
 import { csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
@@ -9125,7 +9128,7 @@ export const Route = createFileRoute("/api/v1/tasks.csv")({
             sort: query.get("sort") ?? undefined,
             limit: 10_000,
           });
-          return new Response(csvOf(taskUi, items as never), {
+          return new Response(csvOf(taskUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
               "Content-Disposition": 'attachment; filename="tasks.csv"',
@@ -10108,7 +10111,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -10126,7 +10129,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/format.ts": "bdf085b6 kit",
   "src/kit/formula.ts": "d73c0380 kit",
@@ -10152,7 +10155,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -10179,15 +10182,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/notes/$id.$field.ts": "b9f75a6b generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
-  "src/routes/api/v1/notes[.]csv.ts": "e62019cf generated",
+  "src/routes/api/v1/notes[.]csv.ts": "00ba485f generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/api/v1/projects/$id.ts": "cc89aacd generated",
   "src/routes/api/v1/projects/index.ts": "789eeb5b generated",
-  "src/routes/api/v1/projects[.]csv.ts": "d0b1382e generated",
+  "src/routes/api/v1/projects[.]csv.ts": "26a284d0 generated",
   "src/routes/api/v1/tasks/$id.actions.$action.ts": "3afab909 generated",
   "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
-  "src/routes/api/v1/tasks[.]csv.ts": "dace99ee generated",
+  "src/routes/api/v1/tasks[.]csv.ts": "953348b8 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
@@ -14648,9 +14651,9 @@ import { buttonVariants } from "#/components/ui/button";
 import { confirm, confirmAccess, confirmFits, confirmMany } from "#/generated/actions/confirm";
 import { cancel, cancelAccess, cancelFits, cancelMany } from "#/generated/actions/cancel";
 import { ActionButton } from "#/kit/ActionButton";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteAppointments, appointmentDeleteRule, appointmentUi } from "#/generated/appointment";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -14746,7 +14749,7 @@ function AppointmentsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(appointmentUi), csvOf(appointmentUi, chosen))}
+          onExport={() => download(csvName("appointments", app.timeZone), csvOf(appointmentUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -14754,7 +14757,7 @@ function AppointmentsPage() {
         page="appointments"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/appointments", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchAppointments({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchAppointments({ data: { q, sort, f: values, all: true } }))} exportName="appointments"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
@@ -14978,9 +14981,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteBarbers, barberDeleteRule, barberUi } from "#/generated/barber";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -15039,7 +15042,7 @@ function BarbersPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(barberUi), csvOf(barberUi, chosen))}
+          onExport={() => download(csvName("barbers", app.timeZone), csvOf(barberUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -15047,7 +15050,7 @@ function BarbersPage() {
         page="barbers"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/barbers", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listBarbers({ data: { all: true } }))}
+        exportRows={async () => (await listBarbers({ data: { all: true } }))} exportName="barbers"
         rows={rows}
         icon={List}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -15421,9 +15424,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteServices, serviceDeleteRule, serviceUi } from "#/generated/service";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -15481,7 +15484,7 @@ function ServicesPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(serviceUi), csvOf(serviceUi, chosen))}
+          onExport={() => download(csvName("services", app.timeZone), csvOf(serviceUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -15489,7 +15492,7 @@ function ServicesPage() {
         page="services"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/services", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listServices({ data: { all: true } }))}
+        exportRows={async () => (await listServices({ data: { all: true } }))} exportName="services"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -15809,9 +15812,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteTimeOffs, timeOffDeleteRule, timeOffUi } from "#/generated/time-off";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -15869,7 +15872,7 @@ function TimeOffPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(timeOffUi), csvOf(timeOffUi, chosen))}
+          onExport={() => download(csvName("time-off", app.timeZone), csvOf(timeOffUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -15877,7 +15880,7 @@ function TimeOffPage() {
         page="time-off"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/time-off", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listTimeOffs({ data: { all: true } }))}
+        exportRows={async () => (await listTimeOffs({ data: { all: true } }))} exportName="time-off"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -16455,7 +16458,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -16471,7 +16474,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -16498,7 +16501,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -16510,10 +16513,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "ca694fa8 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/appointments/$id.tsx": "05b6e945 generated",
-  "src/routes/appointments/index.tsx": "5c325600 generated",
+  "src/routes/appointments/index.tsx": "601536d7 generated",
   "src/routes/appointments/new.tsx": "cf4771c5 generated",
   "src/routes/barbers/$id.tsx": "96fac3f5 generated",
-  "src/routes/barbers/index.tsx": "0f2665e4 generated",
+  "src/routes/barbers/index.tsx": "a23dac2a generated",
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
@@ -16524,12 +16527,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/privacy/index.tsx": "e98a1cc0 generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "bddd0cd6 generated",
-  "src/routes/services/index.tsx": "b3231c66 generated",
+  "src/routes/services/index.tsx": "5982b707 generated",
   "src/routes/services/new.tsx": "5d1280e4 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/time-off/$id.tsx": "e91b5ca4 generated",
-  "src/routes/time-off/index.tsx": "a874232b generated",
+  "src/routes/time-off/index.tsx": "00ec507b generated",
   "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "3120f1ba kit",
@@ -26545,9 +26548,9 @@ import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteClassTypes, classTypeDeleteRule, classTypeUi } from "#/generated/class-type";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -26630,7 +26633,7 @@ function ClassTypesPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(classTypeUi), csvOf(classTypeUi, chosen))}
+          onExport={() => download(csvName("class-types", app.timeZone), csvOf(classTypeUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -26638,7 +26641,7 @@ function ClassTypesPage() {
         page="class-types"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/class-types", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchClassTypes({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchClassTypes({ data: { q, sort, f: values, all: true } }))} exportName="class-types"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No class types match the search and filters." : undefined}
@@ -26927,9 +26930,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteInstructors, instructorDeleteRule, instructorUi } from "#/generated/instructor";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -26988,7 +26991,7 @@ function InstructorsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(instructorUi), csvOf(instructorUi, chosen))}
+          onExport={() => download(csvName("instructors", app.timeZone), csvOf(instructorUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -26996,7 +26999,7 @@ function InstructorsPage() {
         page="instructors"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/instructors", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listInstructors({ data: { all: true } }))}
+        exportRows={async () => (await listInstructors({ data: { all: true } }))} exportName="instructors"
         rows={rows}
         icon={Users}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -27161,9 +27164,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteMessages, messageDeleteRule, messageUi } from "#/generated/message";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -27221,7 +27224,7 @@ function MessagesPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(messageUi), csvOf(messageUi, chosen))}
+          onExport={() => download(csvName("messages", app.timeZone), csvOf(messageUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -27229,7 +27232,7 @@ function MessagesPage() {
         page="messages"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/messages", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listMessages({ data: { all: true } }))}
+        exportRows={async () => (await listMessages({ data: { all: true } }))} exportName="messages"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -27412,9 +27415,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteBookings, bookingDeleteRule, bookingUi } from "#/generated/booking";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -27479,7 +27482,7 @@ function MyBookingsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(bookingUi), csvOf(bookingUi, chosen))}
+          onExport={() => download(csvName("my-bookings", app.timeZone), csvOf(bookingUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -27487,7 +27490,7 @@ function MyBookingsPage() {
         page="my-bookings"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/my-bookings", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listBookings({ data: { all: true } }))}
+        exportRows={async () => (await listBookings({ data: { all: true } }))} exportName="my-bookings"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -27663,9 +27666,9 @@ import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deletePosts, postDeleteRule, postUi } from "#/generated/post";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -27749,7 +27752,7 @@ function PostsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(postUi), csvOf(postUi, chosen))}
+          onExport={() => download(csvName("posts", app.timeZone), csvOf(postUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -27757,7 +27760,7 @@ function PostsPage() {
         page="posts"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/posts", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchPosts({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchPosts({ data: { q, sort, f: values, all: true } }))} exportName="posts"
         rows={rows}
         icon={BookOpen}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -28158,9 +28161,9 @@ import { classTypeData } from "#/generated/class-type.server";
 import { instructorData } from "#/generated/instructor.server";
 import { currentViewer } from "#/lib/viewer.server";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteSessions, sessionDeleteRule, sessionUi } from "#/generated/session";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
@@ -28279,7 +28282,7 @@ function SessionsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(sessionUi), csvOf(sessionUi, chosen))}
+          onExport={() => download(csvName("sessions", app.timeZone), csvOf(sessionUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -28287,7 +28290,7 @@ function SessionsPage() {
         page="sessions"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/sessions", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchSessions({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchSessions({ data: { q, sort, f: values, all: true } }))} exportName="sessions"
         rows={rows}
         sorting={{ keys: { startsAt: "startsAt", capacity: "capacity" }, value: sort, onChange: (next) => navigate({ to: "/sessions", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -29124,7 +29127,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "d9977018 kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -29144,7 +29147,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -29173,7 +29176,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -29209,7 +29212,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/blog/$address.tsx": "50731e97 generated",
   "src/routes/blog/index.tsx": "cbb5a740 generated",
   "src/routes/class-types/$id.tsx": "3af3b04e generated",
-  "src/routes/class-types/index.tsx": "6c248008 generated",
+  "src/routes/class-types/index.tsx": "ec46d5f6 generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -29217,23 +29220,23 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f8b34265 generated",
   "src/routes/instructors/$id.tsx": "42f0ce40 generated",
-  "src/routes/instructors/index.tsx": "b013732e generated",
+  "src/routes/instructors/index.tsx": "c49f7fb9 generated",
   "src/routes/instructors/new.tsx": "8bd30440 generated",
   "src/routes/messages/$id.tsx": "c0a4d7de generated",
-  "src/routes/messages/index.tsx": "e64446c6 generated",
+  "src/routes/messages/index.tsx": "731e7813 generated",
   "src/routes/messages/new.tsx": "09a8fde8 generated",
   "src/routes/my-bookings/$id.tsx": "79f453fa generated",
   "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
-  "src/routes/my-bookings/index.tsx": "db98ed6c generated",
+  "src/routes/my-bookings/index.tsx": "4bc2ac5d generated",
   "src/routes/my-bookings/new.tsx": "574871aa generated",
   "src/routes/posts/$id.tsx": "f83087d3 generated",
-  "src/routes/posts/index.tsx": "a1fbc7fe generated",
+  "src/routes/posts/index.tsx": "17f23836 generated",
   "src/routes/posts/new.tsx": "7be9f470 generated",
   "src/routes/privacy/index.tsx": "05f75ae3 generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "3cb0600f generated",
   "src/routes/sessions/$id.tsx": "651b876b generated",
-  "src/routes/sessions/index.tsx": "090d8339 generated",
+  "src/routes/sessions/index.tsx": "4613256f generated",
   "src/routes/sessions/new.tsx": "55613a12 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
@@ -35874,9 +35877,9 @@ import { buttonVariants } from "#/components/ui/button";
 import { scheduleFollowUpsAccess } from "#/generated/actions/schedule-follow-ups";
 import { TrashNotice, rememberTrashed } from "#/kit/Trash";
 import { restoreCustomers, deleteCustomers, customerDeleteRule, customerUi } from "#/generated/customer";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { mergeCustomers, mergeCustomersAccess, mergeCustomersKeep, mergeCustomersPreview } from "#/generated/actions/merge-customers";
 import { MergeButton } from "#/kit/MergeDialog";
 import { app } from "#/generated/app";
@@ -35996,7 +35999,7 @@ function CustomersPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(customerUi), csvOf(customerUi, chosen))}
+          onExport={() => download(csvName("customers", app.timeZone), csvOf(customerUi, chosen, app.timeZone))}
         />
       )}
       <TrashNotice
@@ -36011,7 +36014,7 @@ function CustomersPage() {
         page="customers"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/customers", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchCustomers({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchCustomers({ data: { q, sort, f: values, all: true } }))} exportName="customers"
         rows={rows}
         sorting={{ keys: { name: "name" }, value: sort, onChange: (next) => navigate({ to: "/customers", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -36252,9 +36255,9 @@ import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { TrashNotice } from "#/kit/Trash";
 import { restoreFollowUps, deleteFollowUps, followUpDeleteRule, followUpUi } from "#/generated/follow-up";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { titleOf } from "#/kit/format";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -36344,7 +36347,7 @@ function FollowUpsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(followUpUi), csvOf(followUpUi, chosen))}
+          onExport={() => download(csvName("followUps", app.timeZone), csvOf(followUpUi, chosen, app.timeZone))}
         />
       )}
       <TrashNotice
@@ -36359,7 +36362,7 @@ function FollowUpsPage() {
         page="followUps"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/follow-ups", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchFollowUps({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchFollowUps({ data: { q, sort, f: values, all: true } }))} exportName="followUps"
         rows={rows}
         sorting={{ keys: { dueOn: "dueOn" }, value: sort, onChange: (next) => navigate({ to: "/follow-ups", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -36677,9 +36680,9 @@ import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
 import { TrashNotice } from "#/kit/Trash";
 import { restoreOrders, deleteOrders, orderDeleteRule, orderUi } from "#/generated/order";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
 import { PageHeader } from "#/kit/AppShell";
@@ -36779,7 +36782,7 @@ function OrdersPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(orderUi), csvOf(orderUi, chosen))}
+          onExport={() => download(csvName("orders", app.timeZone), csvOf(orderUi, chosen, app.timeZone))}
         />
       )}
       <TrashNotice
@@ -36794,7 +36797,7 @@ function OrdersPage() {
         page="orders"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } }))} exportName="orders"
         rows={rows}
         sorting={{ keys: { placedAt: "placedAt", total: "total", number: "number" }, value: sort, onChange: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -37880,7 +37883,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
@@ -37899,7 +37902,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -37923,7 +37926,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -37938,17 +37941,17 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "e8c61d80 generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "0fb22ed7 generated",
-  "src/routes/customers/index.tsx": "f6b21926 generated",
+  "src/routes/customers/index.tsx": "c6b26792 generated",
   "src/routes/customers/new.tsx": "101540c3 generated",
   "src/routes/customers/trash.tsx": "7848b304 generated",
   "src/routes/follow-ups/$id.tsx": "180573bb generated",
-  "src/routes/follow-ups/index.tsx": "ebd1edd0 generated",
+  "src/routes/follow-ups/index.tsx": "219f8d24 generated",
   "src/routes/follow-ups/new.tsx": "e6b35f58 generated",
   "src/routes/follow-ups/trash.tsx": "182e9c79 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "7f70752a generated",
   "src/routes/orders/$id.tsx": "d906427c generated",
-  "src/routes/orders/index.tsx": "1c895882 generated",
+  "src/routes/orders/index.tsx": "d79f8244 generated",
   "src/routes/orders/new.tsx": "c9d034f0 generated",
   "src/routes/orders/trash.tsx": "80862bb0 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
@@ -44703,9 +44706,9 @@ import { orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteClients, clientDeleteRule, clientUi } from "#/generated/client";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -44795,7 +44798,7 @@ function ClientsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(clientUi), csvOf(clientUi, chosen))}
+          onExport={() => download(csvName("clients", app.timeZone), csvOf(clientUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -44803,7 +44806,7 @@ function ClientsPage() {
         page="clients"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/clients", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchClients({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchClients({ data: { q, sort, f: values, all: true } }))} exportName="clients"
         rows={rows}
         sorting={{ keys: { name: "name" }, value: sort, onChange: (next) => navigate({ to: "/clients", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -45063,9 +45066,9 @@ import { buttonVariants } from "#/components/ui/button";
 import { markSent, markSentAccess, markSentFits, markSentMany } from "#/generated/actions/mark-sent";
 import { markPaid, markPaidAccess, markPaidFits, markPaidMany } from "#/generated/actions/mark-paid";
 import { ActionButton } from "#/kit/ActionButton";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteInvoices, invoiceDeleteRule, invoiceUi } from "#/generated/invoice";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -45193,7 +45196,7 @@ function InvoicesPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(invoiceUi), csvOf(invoiceUi, chosen))}
+          onExport={() => download(csvName("invoices", app.timeZone), csvOf(invoiceUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -45201,7 +45204,7 @@ function InvoicesPage() {
         page="invoices"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/invoices", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchInvoices({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchInvoices({ data: { q, sort, f: values, all: true } }))} exportName="invoices"
         rows={rows}
         sorting={{ keys: { issuedOn: "issuedOn", dueOn: "dueOn", number: "number" }, value: sort, onChange: (next) => navigate({ to: "/invoices", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -46268,7 +46271,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -46289,7 +46292,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -46318,7 +46321,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -46331,7 +46334,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/__root.tsx": "522fde11 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "ccab8f93 generated",
-  "src/routes/clients/index.tsx": "411542d1 generated",
+  "src/routes/clients/index.tsx": "0a7b2e0e generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -46339,7 +46342,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "0cdc647a generated",
   "src/routes/invoices/$id.tsx": "99070619 generated",
-  "src/routes/invoices/index.tsx": "0842286d generated",
+  "src/routes/invoices/index.tsx": "0fd6b378 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "4d3a90ef generated",
   "src/routes/privacy/index.tsx": "a2c437ac generated",
@@ -52292,9 +52295,9 @@ import { buttonVariants } from "#/components/ui/button";
 import { soldOut, soldOutAccess, soldOutFits, soldOutMany } from "#/generated/actions/sold-out";
 import { backOn, backOnAccess, backOnFits, backOnMany } from "#/generated/actions/back-on";
 import { ActionButton } from "#/kit/ActionButton";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteDishes, dishDeleteRule, dishUi } from "#/generated/dish";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -52393,7 +52396,7 @@ function DishesPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(dishUi), csvOf(dishUi, chosen))}
+          onExport={() => download(csvName("dishes", app.timeZone), csvOf(dishUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -52401,7 +52404,7 @@ function DishesPage() {
         page="dishes"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/dishes", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchDishes({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchDishes({ data: { q, sort, f: values, all: true } }))} exportName="dishes"
         rows={rows}
         icon={List}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -52769,9 +52772,9 @@ import { collected, collectedAccess, collectedFits, collectedMany } from "#/gene
 import { decline, declineAccess, declineFits, declineAskUi, declineAsks, declineMany } from "#/generated/actions/decline";
 import { ActionButton } from "#/kit/ActionButton";
 import { Overflow } from "#/kit/Overflow";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteOrders, orderDeleteRule, orderUi } from "#/generated/order";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -52889,7 +52892,7 @@ function OrdersPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(orderUi), csvOf(orderUi, chosen))}
+          onExport={() => download(csvName("orders", app.timeZone), csvOf(orderUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -52897,7 +52900,7 @@ function OrdersPage() {
         page="orders"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchOrders({ data: { q, sort, f: values, all: true } }))} exportName="orders"
         rows={rows}
         sorting={{ keys: { wanted: "wanted" }, value: sort, onChange: (next) => navigate({ to: "/orders", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -53301,9 +53304,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteStops, stopDeleteRule, stopUi } from "#/generated/stop";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -53361,7 +53364,7 @@ function StopsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(stopUi), csvOf(stopUi, chosen))}
+          onExport={() => download(csvName("stops", app.timeZone), csvOf(stopUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -53369,7 +53372,7 @@ function StopsPage() {
         page="stops"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/stops", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listStops({ data: { all: true } }))}
+        exportRows={async () => (await listStops({ data: { all: true } }))} exportName="stops"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -54228,7 +54231,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "a8985342 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -54245,7 +54248,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -54273,7 +54276,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -54285,7 +54288,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/__root.tsx": "0781636c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/dishes/$id.tsx": "ae74c5c1 generated",
-  "src/routes/dishes/index.tsx": "445c3904 generated",
+  "src/routes/dishes/index.tsx": "31d7f594 generated",
   "src/routes/dishes/new.tsx": "7aa588df generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -54293,13 +54296,13 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f71e6cf2 generated",
   "src/routes/orders/$id.tsx": "1072b050 generated",
-  "src/routes/orders/index.tsx": "289d3af5 generated",
+  "src/routes/orders/index.tsx": "373465f9 generated",
   "src/routes/orders/new.tsx": "1739d5ad generated",
   "src/routes/robots[.]txt.ts": "933017e8 generated",
   "src/routes/sign-in.tsx": "7572bbad generated",
   "src/routes/sitemap[.]xml.ts": "215860da generated",
   "src/routes/stops/$id.tsx": "7d3c395b generated",
-  "src/routes/stops/index.tsx": "14c213d0 generated",
+  "src/routes/stops/index.tsx": "f2c986e8 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "201476a9 generated",
   "src/routes/team/index.tsx": "283a8e3a generated",
@@ -57623,9 +57626,9 @@ import { inRange, orderOf } from "#/kit/filter";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, oneOf, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteItems, itemDeleteRule, itemUi, toggleSavedItem } from "#/generated/item";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -57753,7 +57756,7 @@ function CatalogPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(itemUi), csvOf(itemUi, chosen))}
+          onExport={() => download(csvName("catalog", app.timeZone), csvOf(itemUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -57761,7 +57764,7 @@ function CatalogPage() {
         page="catalog"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, view, f: values, all: true } }))}
+        exportRows={async () => (await searchItems({ data: { q, sort, view, f: values, all: true } }))} exportName="catalog"
         rows={rows}
         sorting={{ keys: { price: "price" }, value: sort, onChange: (next) => navigate({ to: "/", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         icon={Package}
@@ -57892,9 +57895,9 @@ import { and, eq } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteItems, itemDeleteRule, itemUi } from "#/generated/item";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -57965,7 +57968,7 @@ function MyItemsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(itemUi), csvOf(itemUi, chosen))}
+          onExport={() => download(csvName("myItems", app.timeZone), csvOf(itemUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -57973,7 +57976,7 @@ function MyItemsPage() {
         page="myItems"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/my-items", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))} exportName="myItems"
         rows={rows}
         icon={Package}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -58284,9 +58287,9 @@ import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteItems, itemDeleteRule, itemUi, toggleSavedItem } from "#/generated/item";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -58368,7 +58371,7 @@ function SavedPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(itemUi), csvOf(itemUi, chosen))}
+          onExport={() => download(csvName("saved", app.timeZone), csvOf(itemUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -58376,7 +58379,7 @@ function SavedPage() {
         page="saved"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/saved", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))} exportName="saved"
         rows={rows}
         icon={Package}
         saved={{ ids: saved, onToggle: toggleSaved }}
@@ -59145,7 +59148,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -59163,7 +59166,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -59190,7 +59193,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -59207,16 +59210,16 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/index.tsx": "ea504bd4 generated",
+  "src/routes/index.tsx": "589f9181 generated",
   "src/routes/my-items/$id.tsx": "5e517763 generated",
-  "src/routes/my-items/index.tsx": "e8a2b3db generated",
+  "src/routes/my-items/index.tsx": "4465aeda generated",
   "src/routes/my-items/new.tsx": "d513e438 generated",
   "src/routes/new.tsx": "f7a5182d generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "3fc62105 generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
   "src/routes/saved/$id.tsx": "603d45a0 generated",
-  "src/routes/saved/index.tsx": "c8f54b4b generated",
+  "src/routes/saved/index.tsx": "c71fd6f6 generated",
   "src/routes/saved/new.tsx": "6599de80 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
@@ -62011,9 +62014,9 @@ import { inArray, and } from "drizzle-orm";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional, text } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteItems, itemDeleteRule, itemUi } from "#/generated/item";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -62102,7 +62105,7 @@ function ItemsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(itemUi), csvOf(itemUi, chosen))}
+          onExport={() => download(csvName("items", app.timeZone), csvOf(itemUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -62110,7 +62113,7 @@ function ItemsPage() {
         page="items"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/items", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchItems({ data: { q, sort, f: values, all: true } }))} exportName="items"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyMessage={q || Object.values(values).some(Boolean) ? "No items match the search and filters." : undefined}
@@ -62769,7 +62772,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
@@ -62785,7 +62788,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -62809,7 +62812,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -62824,7 +62827,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "a8c39617 generated",
   "src/routes/items/$id.tsx": "6a20f2c4 generated",
-  "src/routes/items/index.tsx": "afc3ac02 generated",
+  "src/routes/items/index.tsx": "03618d1b generated",
   "src/routes/items/new.tsx": "6d8d9bc4 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
@@ -71623,6 +71626,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { componentUi } from "#/generated/component";
 import { componentData } from "#/generated/component.server";
 import { openApiCall } from "#/kit/api.server";
+import { app } from "#/generated/app";
 import { csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
@@ -71638,7 +71642,7 @@ export const Route = createFileRoute("/api/v1/components.csv")({
             sort: query.get("sort") ?? undefined,
             limit: 10_000,
           });
-          return new Response(csvOf(componentUi, items as never), {
+          return new Response(csvOf(componentUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
               "Content-Disposition": 'attachment; filename="components.csv"',
@@ -71767,6 +71771,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { incidentUi } from "#/generated/incident";
 import { incidentData } from "#/generated/incident.server";
 import { openApiCall } from "#/kit/api.server";
+import { app } from "#/generated/app";
 import { csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
@@ -71782,7 +71787,7 @@ export const Route = createFileRoute("/api/v1/incidents.csv")({
             sort: query.get("sort") ?? undefined,
             limit: 10_000,
           });
-          return new Response(csvOf(incidentUi, items as never), {
+          return new Response(csvOf(incidentUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
               "Content-Disposition": 'attachment; filename="incidents.csv"',
@@ -71985,9 +71990,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteComponents, componentDeleteRule, componentUi } from "#/generated/component";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -72045,7 +72050,7 @@ function ComponentsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(componentUi), csvOf(componentUi, chosen))}
+          onExport={() => download(csvName("components", app.timeZone), csvOf(componentUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -72053,7 +72058,7 @@ function ComponentsPage() {
         page="components"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/components", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listComponents({ data: { all: true } }))}
+        exportRows={async () => (await listComponents({ data: { all: true } }))} exportName="components"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -72504,9 +72509,9 @@ import { monitoring, monitoringAccess, monitoringFits, monitoringMany } from "#/
 import { resolve, resolveAccess, resolveFits, resolveMany } from "#/generated/actions/resolve";
 import { ActionButton } from "#/kit/ActionButton";
 import { Overflow } from "#/kit/Overflow";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteIncidents, incidentDeleteRule, incidentUi } from "#/generated/incident";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -72608,7 +72613,7 @@ function IncidentsPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(incidentUi), csvOf(incidentUi, chosen))}
+          onExport={() => download(csvName("incidents", app.timeZone), csvOf(incidentUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -72616,7 +72621,7 @@ function IncidentsPage() {
         page="incidents"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/incidents", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchIncidents({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchIncidents({ data: { q, sort, f: values, all: true } }))} exportName="incidents"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         rowActions={(row) => (
@@ -73040,9 +73045,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteMaintenances, maintenanceDeleteRule, maintenanceUi } from "#/generated/maintenance";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -73100,7 +73105,7 @@ function MaintenancePage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(maintenanceUi), csvOf(maintenanceUi, chosen))}
+          onExport={() => download(csvName("maintenance", app.timeZone), csvOf(maintenanceUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -73108,7 +73113,7 @@ function MaintenancePage() {
         page="maintenance"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/maintenance", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listMaintenances({ data: { all: true } }))}
+        exportRows={async () => (await listMaintenances({ data: { all: true } }))} exportName="maintenance"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -73808,9 +73813,9 @@ import { allows } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { type Search, count, listQuery, optional } from "#/kit/params";
 import { buttonVariants } from "#/components/ui/button";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteIncidentUpdates, incidentUpdateDeleteRule, incidentUpdateUi } from "#/generated/incident-update";
 import { titleOf } from "#/kit/format";
 import { app } from "#/generated/app";
@@ -73869,7 +73874,7 @@ function UpdatesPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(incidentUpdateUi), csvOf(incidentUpdateUi, chosen))}
+          onExport={() => download(csvName("updates", app.timeZone), csvOf(incidentUpdateUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -73877,7 +73882,7 @@ function UpdatesPage() {
         page="updates"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/updates", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await listIncidentUpdates({ data: { all: true } }))}
+        exportRows={async () => (await listIncidentUpdates({ data: { all: true } }))} exportName="updates"
         rows={rows}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
         emptyAction={newButton || undefined}
@@ -74507,7 +74512,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "d9977018 kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
@@ -74526,7 +74531,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -74551,7 +74556,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -74565,25 +74570,25 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
-  "src/routes/api/v1/components[.]csv.ts": "e4b9a050 generated",
+  "src/routes/api/v1/components[.]csv.ts": "a1c6c5a6 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
   "src/routes/api/v1/incidents/$id.ts": "02e50507 generated",
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
-  "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
+  "src/routes/api/v1/incidents[.]csv.ts": "4b3e5cf9 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/components/$id.tsx": "b8a3aa18 generated",
-  "src/routes/components/index.tsx": "a387097e generated",
+  "src/routes/components/index.tsx": "c9355033 generated",
   "src/routes/components/new.tsx": "0fbd3870 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "6071b9ad generated",
   "src/routes/history/index.tsx": "49170ded generated",
   "src/routes/incidents/$id.tsx": "6b3b7246 generated",
-  "src/routes/incidents/index.tsx": "0bad2659 generated",
+  "src/routes/incidents/index.tsx": "5decea31 generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
   "src/routes/incoming/chatCommand.ts": "506f15af generated",
   "src/routes/index.tsx": "aea24c4f generated",
   "src/routes/maintenance/$id.tsx": "0ad33c2b generated",
-  "src/routes/maintenance/index.tsx": "7b866e09 generated",
+  "src/routes/maintenance/index.tsx": "4e95ec4a generated",
   "src/routes/maintenance/new.tsx": "569f7977 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "349243f0 generated",
@@ -74593,7 +74598,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/team/activity.tsx": "a8e492c5 generated",
   "src/routes/team/index.tsx": "ebf79135 generated",
   "src/routes/updates/$id.tsx": "68a6081c generated",
-  "src/routes/updates/index.tsx": "ce99a44f generated",
+  "src/routes/updates/index.tsx": "736bc41e generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "3120f1ba kit",
@@ -80296,9 +80301,9 @@ import { close, closeAccess, closeFits, closeAskUi, closeAsks, closeAskOptions, 
 import { reopen, reopenAccess, reopenFits, reopenMany } from "#/generated/actions/reopen";
 import { ActionButton } from "#/kit/ActionButton";
 import { Overflow } from "#/kit/Overflow";
+import { csvName, csvOf, download } from "#/kit/csv";
 import { useState } from "react";
 import { SelectionBar } from "#/kit/SelectionBar";
-import { csvName, csvOf, download } from "#/kit/csv";
 import { deleteSupportCases, supportCaseDeleteRule, supportCaseUi } from "#/generated/support-case";
 import { app } from "#/generated/app";
 import { w } from "#/kit/words";
@@ -80439,7 +80444,7 @@ function CasesPage() {
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(supportCaseUi), csvOf(supportCaseUi, chosen))}
+          onExport={() => download(csvName("cases", app.timeZone), csvOf(supportCaseUi, chosen, app.timeZone))}
         />
       )}
       <ModelTable
@@ -80447,7 +80452,7 @@ function CasesPage() {
         page="cases"
         paging={{ page: at, size, total, to: (next) => navigate({ to: "/cases", search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}
         app={app}
-        exportRows={async () => (await searchSupportCases({ data: { q, sort, f: values, all: true } }))}
+        exportRows={async () => (await searchSupportCases({ data: { q, sort, f: values, all: true } }))} exportName="cases"
         rows={rows}
         sorting={{ keys: { priority: "priority" }, value: sort, onChange: (next) => navigate({ to: "/cases", search: (prev) => ({ ...prev, sort: next, page: undefined }), replace: true, resetScroll: false }) }}
         selection={selectable ? { ids: selected, onChange: setSelected } : undefined}
@@ -81670,7 +81675,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
+  "src/kit/ModelTable.tsx": "9bf85d17 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -81689,7 +81694,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/audit.server.ts": "72df8647 kit",
   "src/kit/call.server.ts": "2103c69d kit",
   "src/kit/consent.ts": "d0c2966f kit",
-  "src/kit/csv.ts": "b2f17b2d kit",
+  "src/kit/csv.ts": "7d2a0f31 kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
   "src/kit/format.ts": "bdf085b6 kit",
@@ -81718,7 +81723,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "94e7b88d kit",
-  "src/kit/zoned.ts": "8225716c kit",
+  "src/kit/zoned.ts": "b294277d kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -81731,7 +81736,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "5c0b430c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "74f8aab9 generated",
-  "src/routes/cases/index.tsx": "c4825317 generated",
+  "src/routes/cases/index.tsx": "854d0e70 generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",

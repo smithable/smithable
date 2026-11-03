@@ -601,6 +601,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ${n.ui} } from "${n.module}";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${reads} } from "#/kit/api.server";
+import { app } from "#/generated/app";
 import { csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
@@ -616,7 +617,7 @@ export const Route = createFileRoute("/api/v1/${path}.csv")({
             sort: query.get("sort") ?? undefined,
             limit: 10_000,
           });
-          return new Response(csvOf(${n.ui}, items as never), {
+          return new Response(csvOf(${n.ui}, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
               "Content-Disposition": 'attachment; filename="${path}.csv"',

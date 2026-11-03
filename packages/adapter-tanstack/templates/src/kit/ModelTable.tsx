@@ -81,6 +81,8 @@ interface ModelTableProps<R extends Row> {
   /** The rows to export, or with how many fit (an export past the cap says so); a page copied
    * before the count came may still give the rows alone. */
   exportRows?: () => Promise<R[] | { rows: R[]; total?: number }>;
+  /** The page's name, for the file's: bookings-2026-11-03.csv. */
+  exportName?: string;
   /**
    * Sorting by a column's header (the page's sortable fields): each column's key in the address,
    * the order now ("key", or "-key" for largest or latest first) and choosing another.
@@ -198,6 +200,7 @@ export function ModelTable<R extends Row>({
   more,
   totals,
   exportRows,
+  exportName,
   sorting,
 }: ModelTableProps<R>) {
   // The row a shift-click selects from: a range, as in a file list or a spreadsheet.
@@ -720,7 +723,14 @@ export function ModelTable<R extends Row>({
       )}
       {paging && <Pager {...paging} />}
       {more && <MoreOnScroll shown={rows.length} total={more.total} onMore={more.load} />}
-      {exportRows && <ExportCsv ui={ui} all={exportRows} />}
+      {exportRows && (
+        <ExportCsv
+          ui={ui}
+          all={exportRows}
+          name={exportName ?? ui.pluralLabel}
+          timeZone={app.timeZone}
+        />
+      )}
     </div>
   );
 }
@@ -733,9 +743,13 @@ export function ModelTable<R extends Row>({
 function ExportCsv<R extends Row>({
   ui,
   all,
+  name,
+  timeZone,
 }: {
   ui: RecordUi<R>;
   all: () => Promise<R[] | { rows: R[]; total?: number }>;
+  name: string;
+  timeZone?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [cut, setCut] = useState<string>();
@@ -748,7 +762,10 @@ function ExportCsv<R extends Row>({
       const cut = total > rows.length;
       setCut(cut ? w.exportedSome(rows.length, total) : undefined);
       // The file stays a table (its first line the header); its name says what it holds.
-      download(csvName(ui, cut ? { shown: rows.length, total } : undefined), csvOf(ui, rows));
+      download(
+        csvName(name, timeZone, cut ? { shown: rows.length, total } : undefined),
+        csvOf(ui, rows, timeZone),
+      );
     } finally {
       setBusy(false);
     }

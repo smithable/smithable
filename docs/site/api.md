@@ -113,7 +113,7 @@ The same list as CSV: add `.csv` to its address, with the same filters, `search`
 curl -s "https://status.example.com/api/v1/incidents.csv?status=resolved&sort=-detectedAt" -H "Authorization: Bearer $KEY" -o incidents.csv
 ```
 
-The first line has the fields' labels as the app shows them; amounts are decimals (`12.50`), dates and times ISO, a reference is its record's title and a choice its label; pictures and documents are left out. The file is UTF-8 with a byte-order mark, so a spreadsheet reads the letters right; a cell that starts like a formula (`=`, `+`, `-`, `@`) is written with a `'` in front, so it stays text. In the app itself, "Export CSV" under a list saves the list as it is filtered, and the selection bar's Export CSV saves only the chosen records; neither needs the API.
+The first line has the fields' labels as the app shows them; amounts are decimals (`12.50`), dates ISO, times ISO in the app's time zone with their offset (`2026-11-03T09:00:00+02:00`), a reference is its record's title and a choice its label; pictures and documents are left out. The file is UTF-8 with a byte-order mark, so a spreadsheet reads the letters right; a cell that starts like a formula (`=`, `+`, `-`, `@`) is written with a `'` in front, so it stays text. In the app itself, "Export CSV" under a list saves the list as it is filtered, and the selection bar's Export CSV saves only the chosen records; neither needs the API.
 
 ### The trash
 

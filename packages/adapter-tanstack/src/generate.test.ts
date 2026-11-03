@@ -235,7 +235,7 @@ describe("custom pages", () => {
       generated
         .slice(generated.indexOf("function CustomersPage"))
         .replace(/\bRoute\.use/g, "route.use")
-        .replace(/\n {8}exportRows=\{[^\n]*\}/, ""),
+        .replace(/\n {8}exportRows=\{[^\n]*/, ""),
     );
   });
 
