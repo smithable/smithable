@@ -664,7 +664,7 @@ async function clockFlow(dir, base) {
  * A person's own time zone and clock (A 220): chosen under their name, every time they read is in
  * theirs at once, through a reload, and taken away again; the record itself does not change.
  */
-async function personTimeFlow(base) {
+async function personTimeFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
@@ -689,6 +689,39 @@ async function personTimeFlow(base) {
       await dialog.getByLabel("Your clock").selectOption({ label: "12-hour" });
     });
     const theirs = await when.innerText();
+    // A list's days are theirs too, on the page and through the filter: one session now, one just
+    // past their midnight, the rest far off.
+    const midnight =
+      (Math.floor((Date.now() + 14 * 3600000) / 86400000) + 1) * 86400000 - 14 * 3600000;
+    write(
+      dir,
+      `CREATE TABLE kept_times AS SELECT id, starts_at FROM sessions;
+       UPDATE sessions SET starts_at = ${Date.now() + 60 * 86400000};
+       UPDATE sessions SET starts_at = ${Date.now()} WHERE id = (SELECT MIN(id) FROM sessions);
+       UPDATE sessions SET starts_at = ${midnight + 60000} WHERE id = (SELECT MAX(id) FROM sessions);`,
+    );
+    try {
+      const rows = page.locator("main tbody tr");
+      const oneRow = async (how) => {
+        for (let i = 0; i < 100 * P && (await rows.count()) !== 1; i++)
+          await page.waitForTimeout(100);
+        if ((await rows.count()) !== 1)
+          throw new Error(`${how}, today in their zone is ${await rows.count()} sessions, not 1`);
+      };
+      await open(page, `${base}/sessions?startsAt=today`);
+      await oneRow("opening the page");
+      await open(page, `${base}/sessions?startsAt=thisMonth`);
+      await page.getByRole("button", { name: "Today", exact: true }).click();
+      await page.waitForURL(/[?&]startsAt=today/, { timeout: 10000 * P });
+      await oneRow("through the filter");
+    } finally {
+      write(
+        dir,
+        `UPDATE sessions SET starts_at = (SELECT starts_at FROM kept_times k WHERE k.id = sessions.id);
+         DROP TABLE kept_times;`,
+      );
+    }
+    await open(page, `${base}/sessions/1`);
     if (theirs === before || !/(AM|PM)/i.test(theirs))
       throw new Error(`the time reads "${theirs}" in their own zone and clock, was "${before}"`);
     await page.reload();
@@ -8267,7 +8300,7 @@ test("the session cookie's name and attributes", async () => {
         await calendarFlow(base);
         await bookingFlow(dir, base);
         await clockFlow(dir, base);
-        await personTimeFlow(base);
+        await personTimeFlow(dir, base);
         await outgoingFlow(dir, base);
         await sessionsListFlow(base);
         await bookingsListFlow(dir, base);

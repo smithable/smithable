@@ -202,7 +202,7 @@ export function filterCode(
         const when = kind === "date" || kind === "datetime";
         if (when) dated = true;
         const how = kind === "date" ? '"date"' : kind === "datetime" ? '"instant"' : '"number"';
-        const range = `inRange(${far}, ${value}, ${how}${kind === "money" ? ", 100" : when ? ", 1, app.timeZone" : ""})`;
+        const range = `inRange(${far}, ${value}, ${how}${kind === "money" ? ", 100" : when ? ", 1, personZone(app.timeZone)" : ""})`;
         // A range the address cannot read, or All, is no condition: every record stays.
         conditions.push(through(range, `${value} && ${range}`));
         controls.push({
@@ -229,7 +229,7 @@ export function filterCode(
       ranges = true;
       dated = true;
       conditions.push(
-        `${value} ? inRange(${n.table}.${auto.key}, ${value}, "instant", 1, app.timeZone) : undefined`,
+        `${value} ? inRange(${n.table}.${auto.key}, ${value}, "instant", 1, personZone(app.timeZone)) : undefined`,
       );
       controls.push({ name, label: auto.label, kind: "range", input: "date", ...fold(name) });
       continue;
@@ -298,7 +298,7 @@ export function filterCode(
 /** The ${tn.pluralLabel.toLowerCase()} the viewer may read whose name has the text, for the ${name} filter (a few). */
 const ${v} = createServerFn()
   .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
-  .handler(async ({ data }) => ${tn.data}.pick(await currentViewer(), data.text));
+  .handler(async ({ data }) => asPerson(async () => ${tn.data}.pick(await currentViewer(), data.text)));
 `);
         controls.push({
           name,
@@ -343,7 +343,7 @@ const ${v} = createServerFn()
         const how = kind === "date" ? '"date"' : kind === "datetime" ? '"instant"' : '"number"';
         if (kind === "date" || kind === "datetime") dated = true;
         conditions.push(
-          `${value} ? inRange(${n.table}.${dataKey(field)}, ${value}, ${how}${kind === "money" ? ", 100" : kind === "date" || kind === "datetime" ? ", 1, app.timeZone" : ""}) : undefined`,
+          `${value} ? inRange(${n.table}.${dataKey(field)}, ${value}, ${how}${kind === "money" ? ", 100" : kind === "date" || kind === "datetime" ? ", 1, personZone(app.timeZone)" : ""}) : undefined`,
         );
         controls.push({
           name,
@@ -694,7 +694,9 @@ export function listParts(
     if (filtering?.imports.people)
       route.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
     if (filtering?.imports.ranges) route.add("#/kit/filter", "inRange");
-    if (filtering?.imports.dated) route.add("#/generated/app", "app");
+    if (filtering?.picks.length) route.add("#/kit/person-time.server", "asPerson");
+    if (filtering?.imports.dated)
+      route.add("#/generated/app", "app").add("#/kit/person-time.server", "personZone");
     if (filtering?.defaults) route.add("#/kit/params", "withDefaults");
     if (filtering?.imports.titles) route.add("#/kit/format", "titleOf");
     if (filtering?.columns.length) route.add("#/kit/filter", "orderOf");

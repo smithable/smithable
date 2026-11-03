@@ -191,6 +191,9 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
     if (filtering.imports.people)
       imports.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
     if (filtering.imports.ranges) imports.add("#/kit/filter", "inRange");
+    if (filtering.picks.length) imports.add("#/kit/person-time.server", "asPerson");
+    if (filtering.imports.dated)
+      imports.add("#/generated/app", "app").add("#/kit/person-time.server", "personZone");
     if (filtering.imports.titles) imports.add("#/kit/format", "titleOf");
     for (const m of filtering.modules) imports.add(m.module, m.data);
   }

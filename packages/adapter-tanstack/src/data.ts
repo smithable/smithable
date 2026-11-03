@@ -264,7 +264,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
     ? `
 /** Choices for fields that refer to a ${n.label.toLowerCase()}. */
 export const ${n.options} = createServerFn().handler(async () =>
-  ${n.data}.options(await currentViewer()),
+  asPerson(async () => ${n.data}.options(await currentViewer())),
 );
 `
     : "";
@@ -344,7 +344,7 @@ ${perModel && perModel !== model ? `import { ${perData} } from "./${kebab(perMod
   .join(
     "",
   )}import { writeAllowed } from "#/kit/limit";${ownerField ? '\nimport { userChoices } from "./user-choices.server";' : ""}
-import { currentViewer } from "#/lib/viewer.server";
+import { currentViewer } from "#/lib/viewer.server";${referenced ? '\nimport { asPerson } from "#/kit/person-time.server";' : ""}
 import { ${n.schema}${capacity ? `, type ${n.values}` : ""} } from "./${kebab(model.name)}.schema";
 
 export type { ${n.settableValues}, ${n.values} } from "./${kebab(model.name)}.schema";
