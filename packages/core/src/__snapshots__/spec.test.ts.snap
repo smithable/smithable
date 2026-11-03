@@ -1040,6 +1040,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         },
       ],
       "ownedBy": "attendee",
+      "ownerKind": "user",
     },
     {
       "description": "News and articles on the studio's blog.",
@@ -1988,6 +1989,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       ],
       "name": "Customer",
       "ownedBy": "accountManager",
+      "ownerKind": "user",
       "trash": true,
     },
     {

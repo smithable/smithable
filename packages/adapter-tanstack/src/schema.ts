@@ -25,6 +25,8 @@ import { hasKeys, KEY_TABLE } from "./keys.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
+  addressOwned,
+  creatorOwned,
   dataKey,
   type GenerateOptions,
   HEADER,
@@ -83,7 +85,7 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
       imports.add(uses);
       return [`  ${field.name}: ${expr},`];
     });
-    if (hasSignIn(auth) && !model.ownedBy)
+    if (hasSignIn(auth) && creatorOwned(model))
       columns.push(`  ownerId: text().references(() => user.id, { onDelete: "set null" }),`);
     // The owner's column first for a per-owner value, once when the rule names it itself (ownedBy).
     const on = (fields: FieldIR[], owner: boolean) =>
@@ -522,10 +524,15 @@ export function seedModule(
           return `${dataKey(field)}: [${own.map((p) => sample(p.picture, p.alt, p.generated)).join(", ")}].filter((p) => p !== null)`;
         // A sample file's row without a field that has a default (one added since) gets the
         // default, as the form would: a required choice cannot be empty.
-        const given =
+        const filled =
           own === undefined && options.samples?.[model.name] && field.default !== undefined
             ? field.default
             : own;
+        // An address that owns is stored as it is compared, lower-case and trimmed.
+        const given =
+          addressOwned(model) && field.name === model.ownedBy && typeof filled === "string"
+            ? filled.trim().toLowerCase()
+            : filled;
         const value = sampleLiteral(field, given);
         // A sample picture from public/images/samples/, when the app ships any.
         if (storesPictures(field) && options.samples?.[model.name])

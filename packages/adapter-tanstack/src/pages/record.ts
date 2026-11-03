@@ -22,14 +22,16 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields, askOptions } from "../actions.js";
 import { hasSignIn } from "../auth.js";
-import { cancelNames, reserveElement, savedToggle, trashNames } from "../data.js";
+import { cancelNames, isMessageModel, reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
 import { nameFunction } from "../names.js";
 import {
   addable,
+  addressOwnedForm,
   appStart,
   attr,
   composedName,
+  creatorOwned,
   dataKey,
   dataRoute,
   fieldOrder,
@@ -50,6 +52,7 @@ import {
   names,
   optionsFor,
   ownerKey,
+  ownerOf,
   parentRefs,
   references,
   splitActions,
@@ -79,7 +82,10 @@ export function recordPageRoute(
   const n = names(model, t);
   const component = `${pascal(page.id)}Page`;
   const fn = `get${pascal(page.id)}`;
-  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  const options =
+    hasChoices(model) || (auth && addressOwnedForm(model, auth))
+      ? optionsFor(model, t, ir, auth)
+      : undefined;
   const start = appStart(ir)?.route ?? "/";
   const imports = importList()
     .add("@tanstack/react-router", "createFileRoute")
@@ -89,12 +95,12 @@ export function recordPageRoute(
     .add(n.module, n.create, n.ui)
     .add(`${n.module}.schema`, n.schema)
     .add(`#/generated/${kebab(model.name)}.server`, n.access, n.data)
-    .add("#/kit/access", "allows")
+    .add("#/kit/access", "allows", ...(model.ownerKind === "address" ? ["addressOwner"] : []))
     .add("#/kit/page-guard", "guardPage")
     .add("#/kit/ModelForm", "ModelForm")
     .add("#/kit/words", "w")
     .add("#/lib/viewer.server", "currentViewer");
-  const writeCheck = `allows(${n.access}.write, viewer${hasSignIn(auth) ? `, row.${ownerKey(model)}` : ""})`;
+  const writeCheck = `allows(${n.access}.write, viewer${hasSignIn(auth) ? `, ${ownerOf(model, n)}` : ""})`;
   const server = `
 /** The viewer's ${n.label.toLowerCase()}: the first one they may read. */
 const ${fn} = createServerFn().handler(async () => {
@@ -231,11 +237,21 @@ ${options ? "  const { options } = Route.useLoaderData();\n" : ""}  const naviga
 `;
 }
 
-export function newRoute(page: PageIR, model: ModelIR, t: Texts, ir: SpecIR, ux: UxIR): string {
+export function newRoute(
+  page: PageIR,
+  model: ModelIR,
+  t: Texts,
+  ir: SpecIR,
+  ux: UxIR,
+  auth?: AuthIR,
+): string {
   const n = names(model, t);
   const order = fieldOrder(page, model, ux, t);
   const component = `New${model.name}Page`;
-  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  const options =
+    hasChoices(model) || (auth && addressOwnedForm(model, auth))
+      ? optionsFor(model, t, ir, auth)
+      : undefined;
   // A model on a calendar: the new form can start at the hour chosen there (?startsAt=…).
   const start = calendarStart(model, ir);
   const timed = start?.type.kind === "scalar" && start.type.name === "datetime";
@@ -349,7 +365,18 @@ function threadOf(target: ModelIR, owner: ModelIR) {
   return {
     text: dataKey(text),
     ...(writer ? { writer: dataKey(writer) } : {}),
-    ...(side ? { side: { field: side.field.name, ours: side.ours } } : {}),
+    ...(side
+      ? {
+          side: {
+            field: side.field.name,
+            ours: side.ours,
+            theirs:
+              side.field.type.kind === "choice"
+                ? side.field.type.values.find((v) => v !== side.ours)
+                : undefined,
+          },
+        }
+      : {}),
     files: files.map(dataKey),
     badges: badges.map(dataKey),
     replies,
@@ -377,7 +404,10 @@ export function detailRoute(
     : title === "id"
       ? `\`${n.label} #\${row.id}\``
       : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${n.label} #\${row.id}\``;
-  const options = hasChoices(model) ? optionsFor(model, t, ir) : undefined;
+  const options =
+    hasChoices(model) || (auth && addressOwnedForm(model, auth))
+      ? optionsFor(model, t, ir, auth)
+      : undefined;
   // The trash (docs/design/trash.md): Move to trash, and a trashed record read-only with Restore.
   const trash = Boolean(model.trash && !within);
   const imports = new Map<string, string[]>([
@@ -493,6 +523,8 @@ export function detailRoute(
     ]);
   let tables = false;
   let threads = false;
+  // A reply box that writes the thread's side by who the viewer is (support-portal-path.md §4).
+  let sided = false;
   let inlines = false;
   let totals = false;
   // Each inline list's choices for its rows' references, loaded with the record.
@@ -535,10 +567,21 @@ export function detailRoute(
       const ref = add?.ref;
       if (thread.replies && ref)
         imports.set(tn.module, [...(imports.get(tn.module) ?? []), tn.create]);
+      // The side (conversation.md §2): ours for a viewer whose role is granted read or write on
+      // everyone's messages, or an administrator; the other side for anyone else. The server
+      // checks the value the same way (support-portal-path.md §4).
+      const side =
+        thread.side?.theirs !== undefined && isMessageModel(target, ir, ux)
+          ? `, ${thread.side.field}: viewer && ${tn.ours}.includes(viewer.role) ? ${JSON.stringify(thread.side.ours)} : ${JSON.stringify(thread.side.theirs)}`
+          : "";
+      if (thread.replies && ref && side) {
+        sided = true;
+        imports.set(tn.module, [...new Set([...(imports.get(tn.module) ?? []), tn.ours])]);
+      }
       const reply =
         thread.replies && ref
           ? `canAdd?.${field.name} ? async (text) => {
-              await ${tn.create}({ data: { ${thread.text}: text, ${dataKey(ref)}: row.id } as never });
+              await ${tn.create}({ data: { ${thread.text}: text, ${dataKey(ref)}: row.id${side} } as never });
               await router.invalidate();
             } : undefined`
           : "undefined";
@@ -552,7 +595,7 @@ export function detailRoute(
           ui={${tn.ui}}
           app={app}
           rows={row.${field.name}}
-          text="${thread.text}"${thread.writer ? `\n          writer="${thread.writer}"` : ""}${thread.side ? `\n          side={${literal(thread.side)}}` : ""}${thread.files.length ? `\n          files={${literal(thread.files)}}` : ""}${thread.badges.length ? `\n          badges={${literal(thread.badges)}}` : ""}
+          text="${thread.text}"${thread.writer ? `\n          writer="${thread.writer}"` : ""}${thread.side ? `\n          side={${literal({ field: thread.side.field, ours: thread.side.ours })}}` : ""}${thread.files.length ? `\n          files={${literal(thread.files)}}` : ""}${thread.badges.length ? `\n          badges={${literal(thread.badges)}}` : ""}
           empty={w.noneYet(${JSON.stringify(tn.pluralLabel.toLowerCase())})}
           reply={${reply}}
         />
@@ -678,11 +721,11 @@ export function detailRoute(
   const history = Boolean(auth && hasSignIn(auth) && !within);
   const keys = history && auth ? hasKeys(ir, auth) : false;
   const viewer =
-    contact || favorite || offered.length > 0 || merges.length > 0 || splits.length > 0;
+    contact || favorite || sided || offered.length > 0 || merges.length > 0 || splits.length > 0;
   const buttons = [
     ...offered.map(
       (a) =>
-        `{allows(${a.name}Access, viewer, row.${ownerKey(model)}) && ${a.name}Fits(row, viewer) && (
+        `{allows(${a.name}Access, viewer, ${ownerOf(model, n)}) && ${a.name}Fits(row, viewer) && (
               ${actionButton(a, "row", page.route, t, ir)}
             )}`,
     ),
@@ -738,7 +781,7 @@ ${
 }import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";
 ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(", ")} } from "${module}";`).join("\n")}
-${options ? `${options.imports.join("\n")}\n` : ""}${offered.length || merges.length || splits.length ? 'import { allows } from "#/kit/access";\n' : ""}import { guardPage } from "#/kit/page-guard";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
+${options ? `${options.imports.join("\n")}\n` : ""}${offered.length || merges.length || splits.length ? `import { ${[...(offered.length && model.ownerKind === "address" ? ["addressOwner"] : []), "allows"].join(", ")} } from "#/kit/access";\n` : ""}import { guardPage } from "#/kit/page-guard";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { ${within ? "" : "BackTo, "}LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
 ${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
@@ -1024,8 +1067,13 @@ const contact${model.name} = createServerFn({ method: "POST" })
     writeAllowed(viewer, getRequestHeaders());
     const row = await ${n.data}.get(viewer, data.id);
     if (!row) throw new Error("This ${n.label.toLowerCase()} is not there any more.");
-    const recipient = ${contact.to === "owner" && !model.ownedBy ? `${n.data}.ownerOf(viewer, row.id)` : `row.${key}`};
-    const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;
+${
+  contact.to === "owner" && model.ownerKind === "address"
+    ? `    // The owner is the address itself (support-portal-path.md §2).
+    const to = row.${key} ? { email: row.${key} } : undefined;`
+    : `    const recipient = ${contact.to === "owner" && creatorOwned(model) ? `${n.data}.ownerOf(viewer, row.id)` : `row.${key}`};
+    const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;`
+}
     if (!to?.email) throw new Error("The ${recipient} cannot be reached.");
     const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
     const name = ${title === "id" ? `\`${n.label} #\${row.id}\`` : `String(row.${title})`};

@@ -94,7 +94,10 @@ const may = (allowed: Allowed, actor: Actor): boolean =>
  */
 const reaches = (allowed: Allowed, actor: Actor, model: ModelIR, adds: boolean): boolean =>
   may(allowed, actor) ||
-  (actor !== "visitor" && allowed.owner && (model.ownedBy !== undefined || adds));
+  (actor !== "visitor" &&
+    allowed.owner &&
+    (!allowed.among || allowed.among.includes(actor.role)) &&
+    (model.ownedBy !== undefined || adds));
 
 /** The slot a field makes; none for a field the move cannot fill (a picture, a document, a user). */
 function slotOf(field: FieldIR): Slot | undefined {

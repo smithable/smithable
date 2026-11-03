@@ -15,12 +15,17 @@ import {
 import { actionNames } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import {
+  addressFrom,
+  addressOwned,
   dataKey,
   HEADER,
   literal,
   modelNamed,
   names,
+  ownerExpr,
+  ownerInsert,
   ownerKey,
+  ownerOf,
   SCHEMA_IMPORT,
   sequenceEntries,
   shownTitleKey,
@@ -132,7 +137,7 @@ export function mergeActionServer(
   const merge = action.merge ?? { into: "chosen", fields: {} as Record<string, string> };
   const into = merge.into;
   const signedIn = hasSignIn(auth);
-  const owner = (m: ModelIR, row: string) => (signedIn ? `, ${row}.${ownerKey(m)}` : "");
+  const owner = (m: ModelIR, row: string) => (signedIn ? `, ${ownerOf(m, names(m, t), row)}` : "");
   const referrers = referrersOf(ir, model.name);
   // Each field's rule, by its stored key; what the spec does not name, the person decides.
   const rules = Object.fromEntries(
@@ -183,7 +188,7 @@ export function mergeActionServer(
       .join("")} }`;
     const lines = [
       `  // ${r.model.name}.${r.field.name}`,
-      `  const rows${i} = tx.select(${select}).from(${tb}).where(inArray(${tb}.${r.key}, [kept.id, ...others.map((o) => o.id)])).all();`,
+      `  const rows${i} = tx.select(${select}).from(${tb}).where(inArray(${tb}.${r.key}, [kept.id, ...others.map((o) => o.id)])).all()${signedIn && addressOwned(r.model) ? ".map((row) => ({ ...row, owner: addressOwner(row.owner, viewer) }))" : ""};`,
     ];
     if (r.unique)
       lines.push(
@@ -233,7 +238,12 @@ export function mergeActionServer(
   // Their words are their models' own (words-once.md): read from each model's ui.
   const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${names(m, t).ui}.label, plural: ${names(m, t).ui}.pluralLabel }`).join(", ")}]`;
   const readers = others.map((m) => names(m, t));
-  const numbered = sequenceEntries(model, auth, n.table, "personOf(viewer)")
+  const numbered = sequenceEntries(
+    model,
+    auth,
+    n.table,
+    ownerExpr(model, n, "values", addressFrom(model, "raw[0]")),
+  )
     .map((e) => `, ${e}`)
     .join("");
   const combine = into === "new";
@@ -241,7 +251,7 @@ export function mergeActionServer(
   return `${HEADER}import { ${combine ? "" : "and, "}eq, inArray${numbered ? ", max" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
-import { AccessDenied, allows, check, Conflict, ${signedIn ? "personOf, " : ""}type Viewer } from "#/kit/access";
+import { AccessDenied, addressOf, addressOwner, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 ${numbered ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}import { w } from "#/kit/words";
@@ -606,7 +616,7 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
         }
       // Made as any new record is (A 153): its rules, its numbers counting up; theirs who ran it.
       const values = ${n.data}.checkCreate(tx, viewer, valuesOf(raw, chosen, remove) as never);
-      const created = tx.insert(${n.table}).values({ ...values${signedIn ? `, ${ownerKey(model)}: personOf(viewer)` : ""}${numbered} } as never).returning().get() as Raw;
+      const created = tx.insert(${n.table}).values({ ...values${signedIn ? ownerInsert(model, n, "values", addressFrom(model, "raw[0]")) : ""}${numbered} } as never).returning().get() as Raw;
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: created.id, details: { from: raw.map((r) => r.id), removed: remove } });
       return created;
     });
@@ -688,7 +698,7 @@ function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer
   // A value the merge gave the kept one, still as it left it, goes back to what it was.
   const kept = tx.select().from(${n.table}).where(eq(${n.table}.id, merged.into)).get();
   // Only by one who may change the kept record.
-  if (kept && !allows(${n.access}.write, viewer${signedIn ? `, kept.${ownerKey(model)}` : ""})) stayed += Object.keys(merged.after ?? {}).length;
+  if (kept && !allows(${n.access}.write, viewer${signedIn ? `, ${ownerOf(model, n, "kept")}` : ""})) stayed += Object.keys(merged.after ?? {}).length;
   else if (kept) {
     // Dates were written as text in the line: compared as the line has them.
     const now = JSON.parse(JSON.stringify(kept)) as Record<string, unknown>;

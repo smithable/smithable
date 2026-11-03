@@ -1,6 +1,6 @@
 import { GRANT_KEYS, type GrantKey } from "../auth.js";
 import type { YamlValue } from "../edit.js";
-import { USER_MODEL } from "../ir.js";
+import { ownerShape } from "../ir.js";
 import { humanize, plural } from "../naming.js";
 import { type AnyOperation, type Operation, OperationError, refTo } from "../operation.js";
 import { didYouMean } from "../suggest.js";
@@ -51,7 +51,7 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
       return what === "pages"
         ? `${role} may open no page`
         : what === "actions"
-          ? `${role} may run no action`
+          ? `${role} may run no action, not on their own records either`
           : what === "create"
             ? `${role} may add no records`
             : what === "review"
@@ -103,8 +103,16 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
         throw new OperationError(
           `There is no ${kind} named "${name}". ${didYouMean(name, known) ?? ""}`.trim(),
         );
+    // "actions: none" is written: no action at all, the role's own records included
+    // (docs/design/support-portal-path.md §3); any other grant of nothing is the key left out.
     const value: YamlValue | undefined =
-      names.length === 0 || names[0] === "none" ? undefined : names[0] === "all" ? "all" : names;
+      names.length === 0 || names[0] === "none"
+        ? key === "actions"
+          ? "none"
+          : undefined
+        : names[0] === "all"
+          ? "all"
+          : names;
     // A role that was "all" becomes a block of every grant but this one.
     if (block === "all") {
       auth.set(path, {
@@ -126,7 +134,7 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
 const setOwner: Operation<{ model: string; field?: string }> = {
   name: "setOwner",
   summary:
-    'Say whose a record is: the user in one of its User fields (the account manager, the salesperson who handles it) instead of whoever created it. Without a field, the creator again. "The owner" in the access rules is then that user.',
+    "Say whose a record is, instead of whoever created it: the user in one of its User fields (the account manager who handles it), whoever signed in with the address in one of its email fields (a case's customer), or the owner of the record one of its references names (a message's case). Without a field, the creator again. \"The owner\" in the access rules is then that person.",
   schema: {
     type: "object",
     required: ["model"],
@@ -137,16 +145,24 @@ const setOwner: Operation<{ model: string; field?: string }> = {
         { ref: "field", model: "model", label: "Owner" },
         {
           description:
-            "A field of the model that refers to User, e.g. accountManager. Leave it out to make the creator the owner again.",
+            "A field of the model: one that refers to User (accountManager), an email field (customerEmail), or a reference to a record with an owner (supportCase). Leave it out to make the creator the owner again.",
         },
       ),
     },
   },
   positional: ["model", "field"],
-  describe: ({ model, field }) =>
-    field
-      ? `${humanize(plural(model))} belong to their ${humanize(field).toLowerCase()}`
-      : `${humanize(plural(model))} belong to whoever created them`,
+  describe: ({ model, field }, ir) => {
+    const what = humanize(plural(model));
+    if (!field) return `${what} belong to whoever created them`;
+    const found = ir.models.find((m) => m.name === model);
+    const named = found?.fields.find((f) => f.name === field);
+    const shape = named ? ownerShape(named, ir.models) : undefined;
+    const kind = shape && "kind" in shape ? shape.kind : "user";
+    const label = humanize(field).toLowerCase();
+    if (kind === "address") return `${what} belong to whoever signed in as their ${label}`;
+    if (kind === "through") return `${what} belong to their ${label}'s owner`;
+    return `${what} belong to their ${label}`;
+  },
   destructive: () => false,
   apply({ spec }, { model, field }, ir) {
     const found = ir.models.find((m) => m.name === model);
@@ -164,15 +180,20 @@ const setOwner: Operation<{ model: string; field?: string }> = {
       if (spec.has(path)) spec.remove(path);
       return [];
     }
-    const users = found.fields
-      .filter((f) => f.type.kind === "relation" && f.type.model === USER_MODEL && !f.type.many)
-      .map((f) => f.name);
-    if (!users.includes(field))
+    const named = found.fields.find((f) => f.name === field);
+    const shape = named ? ownerShape(named, ir.models) : undefined;
+    if (!shape || "why" in shape) {
+      const able = found.fields
+        .filter((f) => "kind" in ownerShape(f, ir.models))
+        .map((f) => f.name);
       throw new OperationError(
-        users.length
-          ? `The owner is one of ${model}'s fields that refer to a user: ${users.join(", ")}.`
-          : `${model} has no field that refers to a user. Add one first, e.g. addField ${model} handledBy User.`,
+        `${shape ? `${shape.why} ` : `${model} has no field named "${field}". `}${
+          able.length
+            ? `The owner is one of ${model}'s fields that can own it: ${able.join(", ")}.`
+            : `${model} has no field that can own it. Add one first, e.g. addField ${model} handledBy User.`
+        }`,
       );
+    }
     if (spec.has(path)) spec.set(path, field);
     else spec.add(["models", model], "ownedBy", field);
     return [];

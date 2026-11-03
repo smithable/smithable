@@ -14,7 +14,15 @@ import { actionNames } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import { sampleRows } from "./sample-data.js";
 import { dependencyOrder } from "./schema.js";
-import { dataKey, HEADER, modelNamed, ownerKey, SCHEMA_IMPORT, tableRef } from "./shared.js";
+import {
+  creatorOwned,
+  dataKey,
+  HEADER,
+  modelNamed,
+  ownerKey,
+  SCHEMA_IMPORT,
+  tableRef,
+} from "./shared.js";
 
 type Value = FieldValue | null | FieldValue[];
 
@@ -70,7 +78,7 @@ export function examplesTest(action: CustomActionIR, ir: SpecIR, auth: AuthIR): 
           `${dataKey(f)}: ${f.type.kind === "scalar" && f.type.name === "datetime" && value !== null ? `new Date(${JSON.stringify(value)})` : JSON.stringify(value)}`,
         ];
       });
-    const owner = signedIn && !model.ownedBy ? `, ${ownerKey(model)}: viewer.id` : "";
+    const owner = signedIn && creatorOwned(model) ? `, ${ownerKey(model)}: viewer.id` : "";
     const key = row.id === undefined ? `"#${i}"` : JSON.stringify(row.id);
     return `  given(${JSON.stringify(model.name)}, ${key}, db.insert(${tableRef(model)}).values({ ${entries.join(", ")}${owner} } as never).returning().get().id);`;
   };

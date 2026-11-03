@@ -3,7 +3,7 @@
 // knowledge, so the host only runs statements; pure, so the same input gives the same SQL.
 import { type AuthIR, type FieldIR, type ModelIR, plural, snake } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
-import { dataKey, ownerKey } from "./shared.js";
+import { addressOwned, creatorOwned, dataKey, ownerKey } from "./shared.js";
 
 /** A value as importRecords converted it, with references already looked up (their ids). */
 export type StoredValue = string | number | boolean | null;
@@ -36,9 +36,20 @@ export function insertRecord(
     const field = model.fields.find((f) => f.name === name);
     if (!field) continue;
     columns.push(fieldColumn(field));
-    params.push(stored(field, value, timeZone));
+    // An address that owns is stored as it is compared, lower-case and trimmed (support-portal-path.md §2).
+    params.push(
+      addressOwned(model) && name === model.ownedBy && typeof value === "string"
+        ? value.trim().toLowerCase()
+        : stored(field, value, timeZone),
+    );
   }
-  if (hasSignIn(auth) && !(model.ownedBy && model.ownedBy in values)) {
+  // The importer owns what has no owner of its own: the creator's column, or a User owner left out;
+  // an address owner stays the address written, or empty.
+  if (
+    hasSignIn(auth) &&
+    !addressOwned(model) &&
+    (creatorOwned(model) || !(model.ownedBy && model.ownedBy in values))
+  ) {
     columns.push(snake(ownerKey(model)));
     params.push(owner);
   }

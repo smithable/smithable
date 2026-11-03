@@ -17,7 +17,7 @@ import { type Condition, conditionFits, type SpecIR, USER_MODEL } from "./ir.js"
 
 export type { Condition } from "./ir.js";
 
-import { capitalize } from "./naming.js";
+import { capitalize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 import { FIELD_NAME_PATTERN, nameRule } from "./sections/names.js";
 import { didYouMean } from "./suggest.js";
@@ -155,6 +155,12 @@ export interface RoleIR {
   description?: string;
   /** `all` for the whole app (always admin's), or the role's grants, each absent when nothing. */
   grants: "all" | RoleGrants;
+  /**
+   * The block wrote `actions: none`: the role runs no action at all, its own records included,
+   * also where its write grant would let it (docs/design/support-portal-path.md §3). An empty
+   * list is not this: it is the key as good as absent.
+   */
+  actionsNone?: true;
 }
 
 export const AUTH_VERSION = "0.1";
@@ -316,9 +322,10 @@ export function validateAuth(
             );
             continue;
           }
-          const read = readGrant(ctx, entry.value, `"${grant}" of ${where}`);
+          const read = readGrant(ctx, entry.value, `"${grant}" of ${where}`, grant === "actions");
           if (!read) continue;
           (role.grants as RoleGrants)[grant] = read.names;
+          if (read.none) role.actionsNone = true;
           grantNodes.push({ role: key, key: grant, at: entry.keyNode, items: read.items });
           // Names of the spec's things, for a rename to follow (checked by checkGrants).
           if (grant !== "actions")
@@ -778,10 +785,17 @@ function readGrant(
   ctx: ParseContext,
   node: At,
   what: string,
-): { names: GrantNames; items: { name: string; at: At }[] } | undefined {
+  /** `none` is a grant too: the actions grant, where it means no action at all, the role's own records included (support-portal-path.md §3). */
+  none = false,
+): { names: GrantNames; items: { name: string; at: At }[]; none?: true } | undefined {
   if (isScalar(node) && node.value === "all") return { names: "all", items: [] };
+  if (none && isScalar(node) && node.value === "none") return { names: [], items: [], none: true };
   if (!isSeq(node)) {
-    ctx.error(node, "expected-list", `${what} is "all" or a list of names, like [a, b].`);
+    ctx.error(
+      node,
+      "expected-list",
+      `${what} is "all"${none ? ', "none"' : ""} or a list of names, like [a, b].`,
+    );
     return undefined;
   }
   const items = readNameList(ctx, node, what);
@@ -851,6 +865,40 @@ function checkGrants(
   const pages = ir.pages.map((p) => p.id);
   const models = ir.models.map((m) => m.name);
   const actions = ir.actions.map((a) => a.name);
+  // "actions: none" (support-portal-path.md §3): it wins over a write grant, and a form may still
+  // write what the actions it bars would set, unless the field is locked.
+  for (const role of auth.roles) {
+    if (!role.actionsNone || role.grants === "all") continue;
+    const at = grantNodes.find((g) => g.role === role.name && g.key === "actions")?.at;
+    if (!at) continue;
+    if (role.grants.write)
+      ctx.warning(
+        at,
+        "actions-none-with-write",
+        `${role.name} may change records (write) but runs no action (actions: none): none wins, so ${plural(role.name)} run no standard action on them either.`,
+        `Drop one of the two, or name the actions ${plural(role.name)} may run.`,
+      );
+    for (const action of ir.actions) {
+      if (action.custom) continue;
+      const model = ir.models.find((m) => m.name === action.on);
+      if (!model) continue;
+      // A form of theirs writes it when they may add the records, or own one (its owner field may
+      // name them without their adding it).
+      const create = modelAccess(model, auth).create;
+      if (!create.public && !create.roles.includes(role.name) && !model.ownedBy) continue;
+      const open = action.set
+        .map((v) => model.fields.find((f) => f.name === v.field))
+        .filter((f) => f && !f.locked && !f.byApp && !f.formula)
+        .map((f) => (f as { name: string }).name);
+      if (open.length)
+        ctx.warning(
+          at,
+          "actions-none-form-writes",
+          `${plural(role.name)} cannot run ${action.name}, but a form can still write ${open.join(", ")}: lock ${open.length > 1 ? "them" : "it"} or let them run it.`,
+          `Write "locked: true" on ${open.join(", ")} of ${model.name}, or name ${action.name} in ${role.name}'s actions.`,
+        );
+    }
+  }
   for (const { role, key, at, items } of grantNodes) {
     const names = key === "pages" ? pages : key === "actions" ? actions : models;
     const kind = key === "pages" ? "page" : key === "actions" ? "action" : "model";

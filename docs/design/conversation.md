@@ -77,7 +77,14 @@ pages:
   field is a badge or a line under the text. A model with no long text field cannot be a
   thread: validation refuses the key with that.
 - **The reply box** adds a record of the message model by its ordinary create, with the
-  reference to the page's record filled in and fixed (as "Add message" fills it today). So
+  reference to the page's record filled in and fixed (as "Add message" fills it today). Since
+  2026-11-03 (support-portal-path.md §4) the box also writes the side: its first value for a
+  viewer whose role is granted `read` or `write` on everyone's records of the message model, or
+  an administrator; its second for anyone else. The server checks the value as it checks a
+  `by: app` field on every create and change of a message model (its `thread` names a side, a
+  page shows it as a conversation, or mail replies become it), whatever file the page is in, so
+  a customer's reply never says it is ours; rows made before the model became a thread keep
+  their side as written. So
   every required field of the message model but the text must be filled without the box:
   `by: app` with a default, a choice (its first value), or the reference. Validation warns
   when one is not (`thread-needs-form`: "Message.priority is required and the reply box does

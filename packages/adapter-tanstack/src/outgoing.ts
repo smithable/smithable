@@ -91,10 +91,15 @@ export function outgoingModule(
     users = true;
     return `people(tx, ${where})`;
   };
+  // The record's owner (support-portal-path.md §2): the user in its owner column (its creator for a
+  // record owned through a reference), or the address itself when the owner is an address.
+  const ownerOf = (model: ModelIR): string => {
+    if (model.ownerKind === "address") return `[{ email: r.${model.ownedBy} as string | null }]`;
+    return `r.${ownerKey(model)} == null ? [] : ${people(`eq(schema.user.id, String(r.${ownerKey(model)}))`)}`;
+  };
   // Whom an entry mails, read from the record `r` inside the transaction.
   const recipients = (model: ModelIR, recipient: RecipientIR | undefined): string => {
-    if (!recipient || recipient.kind === "owner")
-      return `r.${ownerKey(model)} == null ? [] : ${people(`eq(schema.user.id, String(r.${ownerKey(model)}))`)}`;
+    if (!recipient || recipient.kind === "owner") return ownerOf(model);
     if (recipient.kind === "role")
       return people(`eq(schema.user.role, ${JSON.stringify(recipient.role)})`);
     if (recipient.kind === "list") {

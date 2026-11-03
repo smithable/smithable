@@ -251,13 +251,26 @@ describe("setOwner", () => {
     expect(back.files.spec).toContain("    ownedBy: accountManager\n");
   });
 
-  test("the owner is a field that refers to a user; the refusal names them, or how to add one", () => {
+  test("the owner is a field that can own: the refusal names those, or how to add one", () => {
     const wrong = applyOperation(files, "setOwner", { model: "Customer", field: "name" });
     expect(wrong).toMatchObject({ ok: false });
-    if (!wrong.ok) expect(wrong.message).toContain("accountManager");
+    if (!wrong.ok) {
+      expect(wrong.message).toContain("name is a string");
+      expect(wrong.message).toContain("email, accountManager");
+    }
+    // An order's customer has an owner (its account manager), so the order can belong to them.
     const none = applyOperation(files, "setOwner", { model: "Order", field: "number" });
     expect(none).toMatchObject({ ok: false });
-    if (!none.ok) expect(none.message).toContain("addField Order handledBy User");
+    if (!none.ok) expect(none.message).toContain("fields that can own it: customer");
+  });
+
+  test("an email field, or a reference to a record with an owner, owns too (support-portal-path.md §2)", () => {
+    const address = ok("setOwner", ["Customer", "email"]);
+    expect(address.description).toBe("Customers belong to whoever signed in as their email");
+    expect(address.files.spec).toContain("    ownedBy: email ");
+    const through = ok("setOwner", ["Order", "customer"]);
+    expect(through.description).toBe("Orders belong to their customer's owner");
+    expect(through.files.spec).toContain("    ownedBy: customer\n");
   });
 });
 
@@ -286,6 +299,19 @@ describe("grant", () => {
     expect(ok("grant", ["sales", "actions", "mergeCustomers"]).description).toBe(
       "sales may run merge customers",
     );
+  });
+
+  test("actions none is written: the whole of what the role runs, its own records included (support-portal-path.md §3)", () => {
+    const none = ok("grant", ["sales", "actions", "none"]);
+    expect(changed(authText, none.files.auth as string)).toEqual({
+      added: ["    actions: none"],
+      removed: [],
+    });
+    expect(none.description).toBe("sales may run no action, not on their own records either");
+    // Any other grant of nothing is the key left out, as before.
+    expect(
+      changed(authText, ok("grant", ["sales", "delete", "none"]).files.auth as string),
+    ).toEqual({ added: [], removed: [] });
   });
 
   test("a role as a whole: all, none, and a grant that takes it out of all", () => {

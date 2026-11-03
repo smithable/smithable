@@ -60,7 +60,7 @@ export function dataRoutes(
     };
     const folder = kebab(plural(name));
     files[`${folder}/index.tsx`] = listRoute(inside, model, t, ir, false, ux, within);
-    files[`${folder}/new.tsx`] = newRoute(inside, model, t, ir, ux);
+    files[`${folder}/new.tsx`] = newRoute(inside, model, t, ir, ux, auth);
     files[`${folder}/$id.tsx`] = detailRoute(inside, model, t, ir, ux, within);
   }
   return files;

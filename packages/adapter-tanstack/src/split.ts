@@ -13,12 +13,17 @@ import {
 import { actionNames } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import {
+  addressFrom,
+  addressOwned,
   dataKey,
   HEADER,
   literal,
   modelNamed,
   names,
+  ownerExpr,
+  ownerInsert,
   ownerKey,
+  ownerOf,
   SCHEMA_IMPORT,
   sequenceEntries,
   shownTitleKey,
@@ -108,7 +113,12 @@ export function splitActionServer(
   const copied = (action.split?.copy ?? []).map((name) =>
     dataKey(model.fields.find((f) => f.name === name) as FieldIR),
   );
-  const numbered = sequenceEntries(model, auth, n.table, "personOf(viewer)")
+  const numbered = sequenceEntries(
+    model,
+    auth,
+    n.table,
+    ownerExpr(model, n, "values", addressFrom(model, "row")),
+  )
     .map((e) => `, ${e}`)
     .join("");
   const childLive = child.trash ? `, isNull(${cn.table}.deletedAt)` : "";
@@ -124,7 +134,7 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   // The new record goes: the viewer must be one who may delete it.
-  if (!allows(${n.access}.delete, viewer${signedIn ? `, row.${ownerKey(model)}` : ""})) throw new AccessDenied(true);
+  if (!allows(${n.access}.delete, viewer${signedIn ? `, ${ownerOf(model, n)}` : ""})) throw new AccessDenied(true);
   const line = db
     .select({ details: schema.auditLog.details })
     .from(schema.auditLog)
@@ -154,7 +164,7 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
   return `${HEADER}import { and, eq, inArray${child.trash ? ", isNull" : ""}${numbered ? ", max" : ""}${model.trash ? ", sql" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
-import { AccessDenied, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
+import { AccessDenied, addressOf, addressOwner, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 ${numbered ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}import { w } from "#/kit/words";
@@ -169,7 +179,7 @@ function childrenOf(viewer: Viewer | null, id: number) {
     .select({ id: ${cn.table}.id${signedIn ? `, owner: ${cn.table}.${ownerKey(child)}` : ""} })
     .from(${cn.table})
     .where(and(eq(${cn.table}.${backKey}, id)${childLive}, ${cn.data}.readable(viewer)))
-    .all();
+    .all()${signedIn && addressOwned(child) ? "\n    .map((c) => ({ ...c, owner: addressOwner(c.owner, viewer) }))" : ""};
 }
 
 /**
@@ -196,7 +206,7 @@ export async function ${a.run}(viewer: Viewer | null, id: number, picked: number
     const values = ${n.schema}.parse({ ${copied.map((k) => `${k}: shown.${k}`).join(", ")} });
     created = db.transaction((tx) => {
       // Made as any new record is (A 153): its rules, its numbers counting up.
-      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values), ${ownerKey(model)}: personOf(viewer)${numbered} }).returning().get();
+      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, n, "values", addressFrom(model, "row"))}${numbered} }).returning().get();
       // Only those still on it: one moved meanwhile stays where it went.
       tx.update(${cn.table}).set({ ${backKey}: made.id }).where(and(inArray(${cn.table}.id, chosen), eq(${cn.table}.${backKey}, id))).run();
       // What moved, so the split can be undone (by ids, never values).

@@ -26,6 +26,7 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields, askedKeys } from "./actions.js";
 import {
+  addressOwned,
   dataKey,
   HEADER,
   literal,
@@ -956,6 +957,11 @@ function toolsModule(
       ];
     }),
   );
+  // Whose a record is, for allows: its owner column, or what the kind's data function says for an
+  // owner by address or one step away (docs/design/support-portal-path.md §2).
+  const ownerOfKind = models.some(({ model }) => addressOwned(model))
+    ? '"whose" in kind ? kind.whose(viewer, row) : row[kind.owner]'
+    : "row[kind.owner]";
   const entries = models.map(({ model, n }) => {
     const c = model.name[0]?.toLowerCase() + model.name.slice(1);
     const refs = model.fields
@@ -984,7 +990,7 @@ function toolsModule(
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, ${addressOwned(model) ? `whose: (viewer: Viewer | null, row: Record<string, unknown>) => ${n.data}.whose(viewer, row as never), ` : ""}targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
   });
   // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
   const proposals = actions.map((action) => {
@@ -1478,7 +1484,7 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     if (!kind) throw new NotFound(\`There is no kind "\${run.kind}".\`);
     // A combine names its records as ids: the first stands for them here, each is found at the run.
     const row = (args.id === undefined && Array.isArray(args.ids) ? await found(kind, viewer, args.ids[0]) : await found(kind, viewer, args.id, "change")) as Record<string, any>;
-    if (!allows(run.access, viewer, row[kind.owner])) throw new AccessDenied(true);
+    if (!allows(run.access, viewer, ${ownerOfKind})) throw new AccessDenied(true);
     if (!run.fits(row as never, viewer)) throw new BadInput("This cannot be done now.");
     // What the action asks for, checked now: a missing or wrong value is said here, not at Confirm.
     if (run.asks) {
@@ -1515,7 +1521,7 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
       card = { title: \`Add a \${kind.label}\`, changes: Object.entries(values).map(([k, v]) => ({ label: label(k), to: shownTo(k, v) })) };
     } else if (tool === "change") {
       const row = (await found(kind, viewer, args.id, "change")) as Record<string, any>;
-      if (!allows(kind.access.write, viewer, row[kind.owner])) throw new AccessDenied(true);
+      if (!allows(kind.access.write, viewer, ${ownerOfKind})) throw new AccessDenied(true);
       kind.fromApi(values, row);
       const now = kind.toApi(row) as Record<string, unknown>;
       kept = { ...args, id: row.id };

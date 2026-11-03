@@ -482,7 +482,7 @@
           },
           "ownedBy": {
             "type": "string",
-            "description": "A User field whose user owns the record, instead of its creator."
+            "description": "The field that owns the record instead of its creator: a User field, an email field (whoever signed in with that address), or a reference to a record with an owner of its own (one step, never two)."
           },
           "review": {
             "oneOf": [

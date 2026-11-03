@@ -352,9 +352,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 `;
 }

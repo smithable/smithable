@@ -2,7 +2,7 @@
 import { type AuthIR, humanize, type SpecIR, USER_MODEL } from "@smithable/core";
 import { hasSignIn, roleLabels } from "./auth.js";
 import { hasKeys } from "./keys.js";
-import { HEADER, literal, type Texts, tableRef } from "./shared.js";
+import { creatorOwned, HEADER, literal, type Texts, tableRef } from "./shared.js";
 
 /**
  * Every column that names a person: each reference to a user, and a record's owner. Removing a
@@ -24,7 +24,7 @@ function userUses(ir: SpecIR, auth: AuthIR, t: Texts) {
         : [],
     );
     const owner =
-      hasSignIn(auth) && !model.ownedBy
+      hasSignIn(auth) && creatorOwned(model)
         ? [{ column: "ownerId", field: null, required: false }]
         : [];
     return [...refs, ...owner].map((use) => ({
