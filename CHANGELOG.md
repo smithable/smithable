@@ -8,6 +8,18 @@ One section per release of the `smithable` packages. Each section has a **Breaki
 
 The entries are filled in from the merged pull requests at each release.
 
+## Unreleased
+
+### Breaking
+
+- Backup capture now briefly holds SQLite writes and requires source write access. A 30-second deadline bounds capture; staged uploads receive content-address checks.
+
+- Backup data containing symbolic links is refused. New CLI backups use a versioned file inventory and completion marker; restores verify file hashes before changing data and prefer complete versioned backups. Legacy backups remain explicitly selectable with a verification warning. These checks detect accidental corruption, not a malicious storage provider.
+
+### The app's API
+
+- User references accept the string identifiers returned by reads, including updates through the API and assistant conversions. Ordinary model references retain integer identifiers; generated OpenAPI descriptions distinguish the two.
+
 ## 0.1.1 (2026-10-13)
 
 ### Breaking

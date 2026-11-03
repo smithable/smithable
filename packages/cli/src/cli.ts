@@ -38,6 +38,15 @@ import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
 import { VERSION } from "./version.js";
 
+export { type ScenarioControls, sampleRunner } from "./sample-run.js";
+export {
+  captureScenario,
+  projectScenarioContext,
+  readScenario,
+  type SampleScenario,
+  type ScenarioContext,
+  writeScenario,
+} from "./sample-scenario.js";
 export { VERSION } from "./version.js";
 
 export async function run(argv: string[], io: Io = processIo): Promise<number> {

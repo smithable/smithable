@@ -59,6 +59,32 @@ export interface Making {
   error?: string;
 }
 
+export interface ReleaseReview {
+  maintenance: {
+    generatedEngine?: string;
+    generatedProfile?: string;
+    generatedKit?: string;
+    currentEngine: string;
+    currentProfile: string;
+    currentKit: string;
+    status: string;
+    dependencies: Record<string, string>;
+    upgrade?: { commit: string; from: string; to: string; engine: string };
+  };
+  baseline?: string;
+  comparison: string;
+  comparisonReason?: string;
+  access: string[];
+  migrations: string[];
+  checks?: {
+    at: string;
+    level: string;
+    current: boolean;
+    results: { what: string; ok: boolean; checked: boolean }[];
+  };
+  verifiedRestore?: string;
+}
+
 export interface Project {
   name: string;
   files: {
@@ -267,6 +293,7 @@ export interface PeopleState {
 
 export const api = {
   project: () => call<Project>("/api/project"),
+  releaseReview: () => call<ReleaseReview>("/api/release-review"),
   logs: () => call<string[]>("/api/logs"),
   outbox: () => call<KeptMail[]>("/api/outbox"),
   people: () => call<PeopleState>("/api/people"),

@@ -7,7 +7,8 @@ import { db } from "#/db";
 import { uploads } from "#/db/schema";
 import type { Viewer } from "./access";
 import { BadInput } from "./refusal";
-import { deleteFile } from "./uploads";
+import { log } from "./log.server";
+import { deleteFile, hasUpload } from "./uploads";
 import { w } from "./words";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -20,8 +21,33 @@ export function receiptFor(
   file: string,
 ): string {
   const receipt = randomBytes(16).toString("hex");
-  db.insert(uploads).values({ file, model, field, uploader, receipt }).run();
+  db.transaction(() => {
+    // A deduplication hit may have been removed between storage and receipt creation.
+    // Cleanup uses the same writer slot; never issue a receipt for missing bytes.
+    if (!hasUpload(file)) throw new BadInput(w.fileNotUploaded);
+    db.insert(uploads).values({ file, model, field, uploader, receipt }).run();
+  }, { behavior: "immediate" });
   return receipt;
+}
+
+/** An upload a person may still attach must survive another record's cleanup. */
+export function keepsUpload(file: string): boolean {
+  return !!db.select({ id: uploads.id }).from(uploads).where(
+    and(eq(uploads.file, file), gt(uploads.at, new Date(Date.now() - DAY))),
+  ).get();
+}
+
+/** Cleanup follows a committed mutation. A busy database defers only cleanup; it must not
+ * turn the already committed action into an apparent failure. Recheck references on retry. */
+export function cleanUploads(clean: () => void): void {
+  try {
+    db.transaction(clean, { behavior: "immediate" });
+  } catch (error) {
+    const code = (error as { code?: unknown })?.code;
+    if (typeof code === "string" && /^SQLITE_(BUSY|LOCKED)/.test(code))
+      setTimeout(() => cleanUploads(clean), 1000).unref?.();
+    else log.error("Upload cleanup failed; files retained for inspection", { error });
+  }
 }
 
 type Sent = { file: string; receipt?: string };
@@ -84,17 +110,21 @@ export async function sweepUploads(now = Date.now()): Promise<number> {
     .all();
   let gone = 0;
   for (const upload of old) {
-    const recent = db
-      .select({ id: uploads.id })
-      .from(uploads)
-      .where(and(eq(uploads.file, upload.file), gt(uploads.at, new Date(now - DAY))))
-      .get();
-    const used = Object.values(UPLOADS[upload.model] ?? {}).some((f) => f.data.uses(upload.file));
-    if (!recent && !used) {
-      deleteFile({ file: upload.file, name: "", type: "", size: 0 }, false);
-      gone++;
-    }
-    db.delete(uploads).where(eq(uploads.id, upload.id)).run();
+    // Fence the check and unlink with a writer hold, including during backup capture.
+    // A failed lock acquisition must leave both the receipt and the file intact.
+    db.transaction(() => {
+      const recent = db
+        .select({ id: uploads.id })
+        .from(uploads)
+        .where(and(eq(uploads.file, upload.file), gt(uploads.at, new Date(now - DAY))))
+        .get();
+      const used = Object.values(UPLOADS[upload.model] ?? {}).some((f) => f.data.uses(upload.file));
+      if (!recent && !used) {
+        deleteFile({ file: upload.file, name: "", type: "", size: 0 }, false);
+        gone++;
+      }
+      db.delete(uploads).where(eq(uploads.id, upload.id)).run();
+    }, { behavior: "immediate" });
   }
   return gone;
 }

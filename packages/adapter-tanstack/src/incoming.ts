@@ -182,7 +182,7 @@ ${
     ? `import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${n.schema} } from "#/generated/${kebab(model.name)}.schema";`
     : `import { handle } from "#/custom/incoming/${kebab(incoming.name)}";`
-}${reply?.imports ?? ""}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${saves ? '\nimport { BadFile, deleteFile, FILE_MAX_BYTES, roomFor, saveFile, scanned, type StoredFile } from "#/kit/uploads";' : ""}
+}${reply?.imports ?? ""}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${saves ? '\nimport { BadFile, deleteFile, FILE_MAX_BYTES, release, reserveUpload, saveFile, scanned, type StoredFile } from "#/kit/uploads";' : ""}
 
 const NAME = ${JSON.stringify(incoming.name)};
 const DAY = 86_400_000;
@@ -240,17 +240,21 @@ async function saved(mail: Mail, model: string, uses: (file: string) => boolean)
     const { name, data } = one as { name?: unknown; data?: unknown };
     const bytes = Buffer.from(text(data), "base64");
     if (bytes.byteLength === 0) continue;
-    if (bytes.byteLength > FILE_MAX_BYTES || !roomFor(bytes.byteLength)) {
-      for (const f of files) deleteFile(f, uses(f.file));
-      return answer(413, { error: \`\${text(name) || "An attachment"} is too large or storage is full.\` });
-    }
+    let held: Awaited<ReturnType<typeof reserveUpload>>;
     try {
+      held = bytes.byteLength <= FILE_MAX_BYTES ? await reserveUpload(bytes.byteLength) : undefined;
+      if (!held) {
+        for (const f of files) deleteFile(f, uses(f.file));
+        return answer(413, { error: \`\${text(name) || "An attachment"} is too large or storage is full.\` });
+      }
       await scanned(bytes);
-      files.push(saveFile(model, bytes, text(name) || "attachment"));
+      files.push(saveFile(model, bytes, text(name) || "attachment", held));
     } catch (error) {
       for (const f of files) deleteFile(f, uses(f.file));
       if (error instanceof BadFile) return answer(422, { error: error.message });
       throw error;
+    } finally {
+      release(held);
     }
   }
   return files;

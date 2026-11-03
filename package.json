@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "lint": "biome check . && node scripts/kit-words.mjs",
     "fix": "biome check --write .",
-    "check": "pnpm lint && pnpm build && pnpm test && pnpm site && pnpm test:apps && pnpm test:studio",
+    "check": "pnpm lint && pnpm build && pnpm test && pnpm site && pnpm test:apps && pnpm test:studio && pnpm test:release-review && pnpm test:ci-result && pnpm test:booking",
     "schema": "pnpm build && node scripts/write-schema.mjs",
     "embed": "node scripts/embed.mjs",
     "test:apps": "node scripts/test-apps-parallel.mjs",
@@ -22,7 +22,10 @@
     "test:fresh": "scripts/test-fresh.sh",
     "test:deploy": "node scripts/test-deploy.mjs",
     "test:apps:one": "node scripts/test-apps.mjs",
-    "site": "tsc -b packages/core packages/adapter-tanstack packages/cli && node scripts/build-docs.mjs"
+    "site": "tsc -b packages/core packages/adapter-tanstack packages/cli && node scripts/build-docs.mjs",
+    "test:booking": "node scripts/test-booking-assurance.mjs --calibrate",
+    "test:ci-result": "node --test scripts/ci-result.test.mjs",
+    "test:release-review": "node --test scripts/release-review-browser.test.mjs scripts/scenario-clock-http.test.mjs"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.9",

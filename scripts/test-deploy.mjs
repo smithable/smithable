@@ -66,9 +66,11 @@ const sql = (container, query) =>
   ]);
 
 let name;
+let uploadedRecord;
+const uploadBytes = "restored upload bytes from the recovery fixture";
 try {
   step("smithable new", () => {
-    run("node", [cli, "new", dir, "--starter", "crm"]);
+    run("node", [cli, "new", dir, "--starter", "crm", "--name", `Recovery Fixture ${process.pid}`]);
     run("git", ["init", "-q"], { cwd: dir });
     run("git", ["add", "-A"], { cwd: dir });
     run(
@@ -77,6 +79,8 @@ try {
       { cwd: dir },
     );
     name = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name;
+    smithable("op", "addField", "Customer", "receipt", "file", "--dir", dir);
+    smithable("op", "setPublic", "--read", "Customer", "--dir", dir);
   });
   step("an S3-compatible bucket runs (SeaweedFS, checking signatures)", () => {
     writeFileSync(
@@ -132,6 +136,27 @@ try {
       name,
       "insert into customers (name, segment, created_at, updated_at) values ('Backup Test Oy', 'smb', 0, 0)",
     );
+    const stored = JSON.parse(
+      run("docker", [
+        "exec",
+        name,
+        "/nodejs/bin/node",
+        "-e",
+        `const fs=require("fs"),crypto=require("crypto");const bytes=Buffer.from(${JSON.stringify(uploadBytes)});const file="customer/"+crypto.createHash("sha256").update(bytes).digest("hex").slice(0,24)+".txt";fs.mkdirSync("/data/uploads/customer",{recursive:true});fs.writeFileSync("/data/uploads/"+file,bytes);console.log(JSON.stringify({file,name:"backup.txt",type:"text/plain",size:bytes.length}));`,
+      ]),
+    );
+    sql(
+      name,
+      `update customers set receipt = '${JSON.stringify(stored)}' where name = 'Backup Test Oy'`,
+    );
+    uploadedRecord = JSON.parse(
+      sql(name, "select id from customers where name = 'Backup Test Oy'"),
+    )[0].id;
+    if (
+      run("curl", ["-fsS", `http://localhost:${port}/files/customer/${uploadedRecord}/receipt`]) !==
+      uploadBytes
+    )
+      throw new Error("fixture upload not readable through app");
     const out = smithable("backup", dir, "--container", name, "--to", "s3://backups/acme");
     if (!out.includes("Backed up to s3://backups/acme/")) throw new Error(out);
   });
@@ -163,6 +188,13 @@ try {
         throw new Error("the customer is not back");
       if (spawnSync("curl", ["-sf", `http://localhost:${port}/health`]).status !== 0)
         throw new Error("the app is not healthy");
+      if (
+        run("curl", [
+          "-fsS",
+          `http://localhost:${port}/files/customer/${uploadedRecord}/receipt`,
+        ]) !== uploadBytes
+      )
+        throw new Error("restored record upload bytes did not survive recovery");
     },
   );
   step("compose: compose.yaml with its secrets in .env, which Git ignores", () => {

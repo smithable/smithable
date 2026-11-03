@@ -462,6 +462,7 @@ function packageJson(ir: SpecIR, packages: Record<string, string> = {}): string 
 function smithableLock(ir: SpecIR, options: GenerateOptions): string {
   const lock = {
     smithable: options.smithableVersion,
+    ...(options.kitRevision ? { kitRevision: options.kitRevision } : {}),
     spec: ir.specVersion,
     adapter: "tanstack",
     stackProfile: STACK_PROFILE.id,

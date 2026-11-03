@@ -14,10 +14,11 @@ import {
   FILE_MAX_BYTES,
   PICTURE_MAX_BYTES,
   release,
-  roomFor,
+  reserveUpload,
   saveFile,
   savePicture,
   scanned,
+  type UploadReservation,
 } from "#/kit/uploads";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
@@ -38,19 +39,19 @@ export const Route = createFileRoute("/files/$model/$field")({
             },
           );
         // The room held for this upload, given back if it is refused or fails.
-        let held = 0;
+        let held: UploadReservation | undefined;
         try {
           writeAllowed(viewer, request.headers);
           const length = Number(request.headers.get("content-length") ?? 0);
           // The app's storage is full (UPLOADS_MAX_BYTES): told before anything is read.
-          if (!roomFor(length)) return new Response(w.storageFull, { status: 507 });
-          held = length;
+          held = await reserveUpload(length);
+          if (!held) return new Response(w.storageFull, { status: 507 });
           if (entry.kind === "file") {
             if (length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
             const bytes = new Uint8Array(await request.arrayBuffer());
             await scanned(bytes);
             const name = decodeURIComponent(request.headers.get("x-file-name") ?? "");
-            const stored = saveFile(params.model, bytes, name);
+            const stored = saveFile(params.model, bytes, name, held);
             // The receipt that lets this person put it on a record of this field.
             return Response.json({
               ...stored,
@@ -60,7 +61,7 @@ export const Route = createFileRoute("/files/$model/$field")({
           if (length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
           const bytes = new Uint8Array(await request.arrayBuffer());
           await scanned(bytes);
-          const { file, width, height } = savePicture(params.model, bytes, "");
+          const { file, width, height } = savePicture(params.model, bytes, "", false, held);
           return Response.json({
             file,
             width,
@@ -68,7 +69,6 @@ export const Route = createFileRoute("/files/$model/$field")({
             receipt: receiptFor(viewer?.id ?? null, params.model, params.field, file),
           });
         } catch (error) {
-          release(held);
           const known =
             error instanceof BadPicture ||
             error instanceof BadFile ||
@@ -80,6 +80,8 @@ export const Route = createFileRoute("/files/$model/$field")({
               status: known ? 400 : 500,
             },
           );
+        } finally {
+          release(held);
         }
       },
     },

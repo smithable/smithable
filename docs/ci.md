@@ -5,9 +5,9 @@ Two kinds of run, by cost. GitHub's runners are billed by the minute. The self-h
 | Run | Where | What |
 |---|---|---|
 | Every pull request (not plain documents) | GitHub, `ubuntu-latest` | `lint-build-units`: secrets scan, lint, build, units, site. About two minutes. |
-| The full check: engine pull requests with the `full-ci` label (every engine pull request while `FULL_CI` is on; off since 2026-10-22, so the local gate is a change's one full check), main twice a day, Run workflow | the self-hosted runner, labels `self-hosted, smithable` | `full`: one job running `scripts/gate.sh` (`pnpm check`: lint, build, units, site, every example in parallel, Studio in a real browser) with `SESSION=ci`, so it takes its turn in the machine's gate queue like a session's gate. Its five-hour limit covers the wait behind several gates on a loaded machine; a run it cancels is rerun from the workflow's page. |
+| The full check: all trusted engine pull requests, main twice a day, Run workflow | the self-hosted runner, labels `self-hosted, smithable` | `full`: one job running `scripts/gate.sh` (`pnpm check`: lint, build, units, site, every example in parallel, Studio in a real browser) with `SESSION=ci`, so it takes its turn in the machine's gate queue like a session's gate. Its five-hour limit covers the wait behind several gates on a loaded machine; a run it cancels is rerun from the workflow's page. |
 | A green scheduled full check on main | GitHub, `ubuntu-latest` | `release`: asks smithable-cloud's Release images to release that commit (`if_new`: only when either repository moved since the last release), so the beta gets at most two releases a day. Needs the secret `CLOUD_RELEASE_TOKEN` (smithable-cloud only, Actions read and write); without it, or when it has lapsed, the job is yellow and the cloud's own daily schedule releases. |
-| Pull requests from forks | never on the self-hosted runner | the `full` job's condition; and outside contributors' runs wait for a maintainer's approval (the repository's Actions setting) |
+| Engine pull requests from forks | GitHub ephemeral runner | `fork-full` runs `pnpm check`; untrusted code never runs on the persistent self-hosted runner. |
 
 ## The runner on the machine
 
@@ -83,3 +83,23 @@ sudo systemctl disable --now actions-runner-smithable
 token=$(gh api -X POST repos/smithable/smithable/actions/runners/remove-token --jq .token)
 sudo -u smithable-ci -H bash -c "cd ~/runner && ./config.sh remove --token '$token'"
 ```
+
+## Required coverage
+
+Engine pull requests require successful full generated-app and browser coverage for the commit under review. Trusted repository changes use the existing self-hosted gate. Fork pull requests use the `fork-full` job on an ephemeral GitHub runner with read-only permissions; they never run on the persistent runner. `FULL_CI` and the `full-ci` label no longer disable required coverage. Short runs remain available for changes outside engine scope.
+
+The aggregate `check` rejects skipped, absent, cancelled or failed required jobs. A local test result is useful evidence but does not substitute for the workflow's required full result. Branch protection must require this `check` on the exact reviewed commit; repository administrators must verify that operational setting separately. Scheduled coverage of an unchanged main retains the existing reuse rule.
+
+
+The full generated-app gate also runs `pnpm test:booking`: an independent published booking fixture with ordinary synthetic email-code login, direct browser/API/MCP authorization and file checks, final-place contention, cancellation/rebooking, complete versus scoped export, revoked keys and mobile navigation. The same oracle runs on clean generated code and three narrow fault-injected fixture builds (permission, count, persistence); a defect must fail its intended check. Fixture code lives in disposable directories, with no external mail or model calls. Only JSON evidence under `test-results/booking-*.json` is intended for sharing; retained failed fixture directories can contain synthetic credentials and raw browser diagnostics.
+
+`pnpm test:ci-result` checks the aggregate workflow's handling of missing, skipped, cancelled and failed required jobs. Both the basic CI job and local full gate invoke it. A change to either booking calibration script or the aggregate helper stays in engine CI scope.
+
+
+Local performance measurements: `node scripts/benchmark-expensive-paths.mjs --lifecycle` generates an owned temporary booking app, measures synthetic 1k/10k/100k datasets and small-file scans, and records environment, timings and failures under ignored `test-results/`. `--selection-only` separately checks numeric relation titles and explicit-list browser selection; `--out <file>` chooses its report. `--keep` retains the private disposable fixture for diagnosis. A cold rescan refers to the app's count cache, not cold operating-system caches. Build/preview timings describe this machine and do not establish hosted latency. These measurements are optional and are not another full gate.
+
+
+The Studio phase also runs `pnpm test:release-review`: a disposable project and real browser verify unknown, synthetic passed, stale and unavailable check states, access widening and potential data loss. Its positive evidence is explicitly seeded test metadata, not a real security scan or deployment. Unit fixtures separately verify source binding and missing recovery evidence. Local release evidence is not hosted operational evidence.
+
+
+`test:release-review` also exercises the generated development clock over authenticated HTTP. Versioned scenario/reset/clock/maintenance tests run with the CLI units. The CRM app gate reuses `scripts/upgrade-flow.mjs`; `node --test scripts/staged-upgrade.test.mjs` provides the same staged-upgrade check in isolation when working on maintenance. It does not add a second upgrade run to the gate.

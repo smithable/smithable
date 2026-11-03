@@ -21,3 +21,6 @@ packages/cli/studio/
 packages/cli/theme-lab/
 # TanStack Router's own scratch files, made beside whatever it is run in.
 .tanstack/
+
+# Local behavioral assurance and benchmark evidence.
+/test-results/

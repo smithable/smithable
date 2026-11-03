@@ -1,12 +1,6 @@
-# The gate. The required status is the `check` job, which only reports on the jobs it needs.
-# Every pull request runs lint, build, units and the site on GitHub's runners. The full check (the
-# example apps and Studio in a real browser, as `pnpm check`) runs on the self-hosted runner, one
-# job through scripts/gate.sh, when the change touches the
-# engine, the examples, the scripts `pnpm check` runs, the dependencies or this workflow, and either
-# the repository variable FULL_CI is "true" or the pull request has the label `full-ci` (for a
-# change someone judges risky). While the repository is private FULL_CI is off and the local
-# `pnpm check` is the gate for engine changes (CLAUDE.md); at the public flip it is switched on,
-# with no edit here.
+# The gate. Engine changes require full browser/generated-app coverage.
+# Trusted changes use the existing self-hosted gate; forks use an ephemeral GitHub runner.
+# The aggregate check rejects absent, skipped, failed or cancelled required coverage.
 # A pull request of plain documents alone (the list under paths-ignore: design notes, benchmark
 # reports, the Markdown at the root) starts no run: nothing here reads those files. It has no
 # `check` to wait for, so scripts/merge-green.sh merges it itself, after reading the same list from
@@ -64,7 +58,7 @@ jobs:
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          engine='^(packages/|apps/|examples/|scripts/test-[^/]*\.mjs$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
+          engine='^(packages/|apps/|examples/|scripts/(test-[^/]*|booking-assurance-calibration|release-review-browser\.test|scenario-clock-http\.test|upgrade-flow|staged-upgrade\.test)\.mjs$|scripts/ci-result(\.test\.mjs|\.sh)$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
             # The scheduled run before this one (this one is listed first, still running).
             last=$(gh run list --workflow ci.yml --event schedule --limit 2 --json headSha,conclusion \
@@ -90,9 +84,6 @@ jobs:
           else
             full=false; why="no engine files changed"
           fi
-          if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
-            full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
-          fi
           basics=true
           { echo "full=$full"; echo "basics=$basics"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -111,6 +102,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm build
       - run: pnpm test
+      - run: pnpm test:ci-result
       - run: pnpm site
 
   # The full check runs on the self-hosted runner (Johan's dev machine, docs/ci.md): no billed
@@ -156,6 +148,24 @@ jobs:
           path: ${{ runner.temp }}/smithable-studio-*/failure.png
           if-no-files-found: ignore
 
+  # Untrusted fork code runs only on an ephemeral GitHub runner.
+  fork-full:
+    needs: scope
+    if: needs.scope.outputs.full == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions: { contents: read }
+    env:
+      GIT_AUTHOR_NAME: CI
+      GIT_AUTHOR_EMAIL: ci@smithable.invalid
+      GIT_COMMITTER_NAME: CI
+      GIT_COMMITTER_EMAIL: ci@smithable.invalid
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./.github/actions/setup
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm check
+
   # Twice a day a main that passed everything goes to the beta (Johan, 2026-10-11): the cloud's
   # Release images run builds this commit, and skips it when neither repository has moved since
   # its last release. A scheduled run skipped because main had not moved asks nothing (the run
@@ -185,21 +195,24 @@ jobs:
           fi
           echo "Asked smithable-cloud's Release images to release $GITHUB_SHA if anything is new." | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # The required status: green when every job it needs passed, or was skipped on the short run.
+  # The required status checks each expected job, including full coverage.
   # Not for a run that was cancelled (a newer push, or the full-ci label added while the first
   # run was going: a pull request opened with the label starts two runs): its jobs are cancelled,
   # and reporting that as a failed `check` stood in the way of the newer run's result.
   check:
-    needs: [scope, lint-build-units, full]
+    needs: [scope, lint-build-units, full, fork-full]
     if: ${{ !cancelled() && github.event_name == 'pull_request' && (github.event.action != 'labeled' || github.event.label.name == 'full-ci') }}
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions: { contents: read }
     steps:
-      - name: Every job passed
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Required coverage passed
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          echo "Results: $RESULTS"
-          for r in $RESULTS; do
-            case "$r" in success|skipped) ;; *) echo "A job ended $r."; exit 1 ;; esac
-          done
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          BASICS_REQUIRED: ${{ needs.scope.outputs.basics }}
+          BASICS_RESULT: ${{ needs.lint-build-units.result }}
+          FULL_REQUIRED: ${{ needs.scope.outputs.full }}
+          FULL_RESULT: ${{ needs.full.result }}
+          FORK_FULL_RESULT: ${{ needs.fork-full.result }}
+          IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        run: bash scripts/ci-result.sh

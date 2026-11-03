@@ -35,6 +35,7 @@ import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
+import { ReleaseReview } from "./ReleaseReview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
@@ -95,6 +96,7 @@ function keepWaiting(shown: Project | undefined, next: Project): Project {
 
 export function App() {
   const [project, setProject] = useState<Project>();
+  const [reviewingRelease, setReviewingRelease] = useState(false);
   // Which windows are shown and where (studio-v3.md §8), kept in this browser.
   const [arrangement, setArrangement] = useArrangement();
   // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
@@ -1013,6 +1015,15 @@ export function App() {
           )}
           <div className="ml-auto flex items-center gap-3">
             {busy && <span className="text-xs text-quiet">Working…</span>}
+            {!project.making && (
+              <button
+                type="button"
+                className="text-xs font-medium text-accent hover:underline"
+                onClick={() => setReviewingRelease(true)}
+              >
+                Release review
+              </button>
+            )}
             {project.making ? null : project.home ? (
               <a
                 href={project.home}
@@ -1527,6 +1538,7 @@ export function App() {
           {smith(layer === "overlay" ? "overlay" : "panel")}
         </SmithLayer>
       )}
+      {reviewingRelease && <ReleaseReview onClose={() => setReviewingRelease(false)} />}
     </div>
   );
 }

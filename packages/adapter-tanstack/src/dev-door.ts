@@ -120,7 +120,7 @@ export function doorModule(
       ? `\n      candidates: await choices(viewer, ${literal(refs.map((s) => [s.field, s.model, s.required]))}),`
       : "";
     const records = (model: string, rule: string, fits?: string) =>
-      `\n      records: (await ${n(model).data}.list(viewer)).filter((row) => allows(${rule}, viewer, row.${ownerKey(modelNamed(ir, model))} as string | null)${fits ? ` && ${fits}(row as never, viewer)` : ""}).slice(0, 50).map((row) => row.id),`;
+      `\n      records: await ${n(model).data}.candidateIds(viewer, (row) => allows(${rule}, viewer, row.${ownerKey(modelNamed(ir, model))} as string | null)${fits ? ` && ${fits}(row as never, viewer)` : ""}),`;
     let body: string;
     if (m.kind === "open")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => (allows(pageAccess[${JSON.stringify(m.page)}], viewer) ? move : undefined),`;
@@ -128,7 +128,7 @@ export function doorModule(
     // other when it acts).
     if (m.kind === "merge")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => {
-    const records = (await ${n(m.model).data}.list(viewer))${m.into === "new" ? "" : `.filter((row) => allows(${n(m.model).access}.write, viewer, row.${ownerKey(modelNamed(ir, m.model))} as string | null))`}.slice(0, 50).map((row) => row.id);
+    const records = await ${n(m.model).data}.candidateIds(viewer${m.into === "new" ? "" : `, (row) => allows(${n(m.model).access}.write, viewer, row.${ownerKey(modelNamed(ir, m.model))} as string | null)`});
     return records.length > 1 ? { ...move, records } : undefined;
   },`;
     // A split: a record with two or more in its list (at least one goes, one stays).
@@ -138,7 +138,7 @@ export function doorModule(
     if (!allows(${actionNames(actionOf(m.action)).access}, viewer)) return undefined;
     const counts = new Map<number, number>();
     for (const row of await ${n(child.name).data}.list(viewer)) counts.set(row.${backKey} as number, (counts.get(row.${backKey} as number) ?? 0) + 1);
-    const records = (await ${n(m.model).data}.list(viewer)).filter((row) => (counts.get(row.id) ?? 0) > 1).slice(0, 50).map((row) => row.id);
+    const records = await ${n(m.model).data}.candidateIds(viewer, (row) => (counts.get(row.id as number) ?? 0) > 1);
     return records.length ? { ...move, records } : undefined;
   },`;
     }
@@ -150,7 +150,7 @@ export function doorModule(
       const a = actionNames(action);
       body =
         action.custom && m.rows && m.model
-          ? `\n      records: (await ${n(m.model).data}.list(viewer)).slice(0, 50).map((row) => row.id),${choices}`
+          ? `\n      records: await ${n(m.model).data}.candidateIds(viewer),${choices}`
           : !action.custom && m.model
             ? records(m.model, a.access, a.fits) + choices
             : choices;
@@ -183,7 +183,7 @@ export function doorModule(
       return `  ${id}: async (viewer, _move, body) => {
     // The record acted on first, then another the person may ${m.into === "new" ? "read" : "change"}.
     const kept = record(body);
-    const other = (await ${n(m.model).data}.list(viewer)).find((row) => row.id !== kept${m.into === "new" ? "" : ` && allows(${n(m.model).access}.write, viewer, row.${ownerKey(model)} as string | null)`})?.id;
+    const other = (await ${n(m.model).data}.candidateIds(viewer, (row) => row.id !== kept${m.into === "new" ? "" : ` && allows(${n(m.model).access}.write, viewer, row.${ownerKey(model)} as string | null)`}))[0];
     if (other === undefined) throw new Conflict(w.mergeSame);
     // Each field the two differ in: the first one's.
     const facts = await ${a.preview}(viewer, [kept, other]);
@@ -336,7 +336,7 @@ async function choices(viewer: Viewer | null, refs: [string, string, boolean][])
 }
 
 const CHOOSE: Record<string, (viewer: Viewer | null) => Promise<number[]>> = {
-${used.map(({ model, n: mn }) => `  ${JSON.stringify(model.name)}: async (viewer) => (await ${mn.data}.list(viewer)).map((row) => row.id),`).join("\n")}
+${used.map(({ model, n: mn }) => `  ${JSON.stringify(model.name)}: async (viewer) => await ${mn.data}.candidateIds(viewer),`).join("\n")}
 };
 
 `
@@ -476,7 +476,7 @@ export const Route = createFileRoute("/_dev/act")({
 // so "a week later" is a call; a demo has no such call.
 import { createFileRoute } from "@tanstack/react-router";
 import { doorShut } from "#/kit/dev-door.server";
-import { now, setClockOffset } from "#/kit/now";${ir.timers.length ? '\nimport { tick } from "#/generated/timers.server";' : ""}
+import { now, setClockAt, setClockOffset } from "#/kit/now";${ir.timers.length ? '\nimport { tick } from "#/generated/timers.server";' : ""}
 
 /** At most a year either way. */
 const MOST = 366 * 86_400_000;
@@ -487,10 +487,19 @@ export const Route = createFileRoute("/_dev/clock")({
       POST: async ({ request }) => {
         const shut = doorShut(request, true);
         if (shut) return shut;
-        const { offset } = (await request.json().catch(() => ({}))) as { offset?: unknown };
-        if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
-          return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
-        setClockOffset(offset);${
+        const received: unknown = await request.json().catch(() => ({}));
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { offset?: unknown; at?: unknown };
+        if (body.at !== undefined) {
+          const at = typeof body.at === "string" ? Date.parse(body.at) : Number.NaN;
+          if (!Number.isFinite(at) || Math.abs(at - Date.now()) > MOST)
+            return Response.json({ refused: true, status: 400, message: "at: an ISO time within a year." }, { status: 400 });
+          setClockAt(at);
+        } else {
+          const { offset } = body;
+          if (typeof offset !== "number" || !Number.isFinite(offset) || Math.abs(offset) > MOST)
+            return Response.json({ refused: true, status: 400, message: "offset: milliseconds from now, within a year." }, { status: 400 });
+          setClockOffset(offset);
+        }${
           ir.timers.length
             ? `
         // A development build has no tick of its own: what came due by the new "now" runs here.

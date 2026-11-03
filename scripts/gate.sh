@@ -195,13 +195,14 @@ if [ $# -eq 0 ]; then
   apps=${p#apps=}; apps=${apps%% studio=*}
   studio=${p#*studio=}; studio=${studio%% why=*}
   echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio."
-  pnpm lint && pnpm build && pnpm test && pnpm site &&
+  pnpm lint && pnpm build && pnpm test && pnpm test:ci-result && pnpm site &&
     case $apps in
       all) pnpm test:apps ;;
       none) true ;;
       *) node scripts/test-apps-parallel.mjs $apps ;;
     esac &&
-    { [ "$studio" = no ] || pnpm test:studio; }
+    { [ "$studio" = no ] || { pnpm test:studio && pnpm test:release-review; }; } &&
+    { [ "$apps" = none ] || pnpm test:booking; }
 else
   pnpm check "$@"
 fi

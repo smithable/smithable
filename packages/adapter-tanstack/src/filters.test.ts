@@ -166,11 +166,13 @@ pages:
   expect(counted.list).toContain(
     "search: options.roomSearch ? (text: string) => pickRoom({ data: { text } }) : undefined",
   );
-  // Said: always a search, or always the list as before.
+  // Explicit list remains chips below the threshold, then searches without truncating choices.
   expect(route("search").list).toContain("const pickRoomMany = true;");
   const listed = route("list").list;
-  expect(listed).not.toContain("pickRoom");
-  expect(listed).toContain("options: { room: (await roomData.list(viewer))");
+  expect(listed).toContain("const pickRoomMany = roomData.pickCount(viewer) >= 200;");
+  expect(listed).toContain(
+    "options: { room: pickRoomMany ? pickRoomChosen : (await roomData.list(viewer))",
+  );
 });
 
 test("filters.look: chips makes every choice and reference a row of chips, a picture on a related record's (look-gap §4)", () => {

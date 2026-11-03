@@ -15,6 +15,7 @@ import {
 } from "@smithable/adapter-tanstack";
 import { analyticsOf, YamlEditor } from "@smithable/core";
 import { exec, execQuiet, type Io, lap, tool } from "./io.js";
+import { templateKitRevision } from "./maintenance.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -97,6 +98,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     : undefined;
   const files = generateApp(ir, {
     smithableVersion: VERSION,
+    kitRevision: templateKitRevision,
     ...(analytics ? { analytics } : {}),
     ...(Object.keys(packages).length ? { packages } : {}),
     auth,

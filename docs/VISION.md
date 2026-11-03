@@ -6,7 +6,7 @@ Smithable is an app builder for everyone who wants to create web applications: p
 
 It competes with prompt-to-app builders such as Lovable, with one fundamental difference:
 
-> **Smithable understands the application.** Routine changes are made by deterministic generators, not by an AI rewriting code. So changes don't break your app, most of them cost nothing, and the result stays clean enough for a developer to take over.
+> **Smithable understands the application.** Routine changes are made by deterministic generators, not by an AI rewriting code. Supported changes are generated deterministically and checked before release; generator defects, custom code and changes outside those checks can still cause failures. Most routine changes require no model call, and the generated code remains available for a developer to take over.
 
 It combines:
 
@@ -47,18 +47,18 @@ These are the problems users of prompt-to-code builders commonly hit, and each o
 
 | Problem | Smithable's answer |
 |---|---|
-| Credits burned on the AI fixing its own bugs, sometimes in loops | Standard features are generated, not AI-written, so there is nothing to fix. Those changes cost 0 tokens |
-| One change breaks something else | Generated tests run on every change. A failing change rolls back automatically |
+| Credits burned on the AI fixing its own bugs, sometimes in loops | Routine supported changes use deterministic generators and need no model call. Generator defects and custom code can still need repair |
+| One change breaks something else | Generated checks cover supported changes; failed checks block release. Custom code and untested behavior need additional verification |
 | The AI loses track as the project grows | The spec is the memory. AI only ever sees a small, relevant slice |
 | Security holes, such as data exposed through misconfigured access rules | Access rules are declared in the spec, enforced server-side by generated code, and covered by generated tests |
 | Unpredictable costs | Most changes are free or nearly free. Every change shows what handled it and what it cost |
 | All generated apps look alike | Designed themes, brand input and a library of page patterns |
-| Database changes that lose data or cannot be rolled back | Migrations that keep data; undo includes the database |
+| Database changes that lose data or cannot be rolled back | Review migration effects and verify a recoverable snapshot before release. Editor undo, code rollback and data restore are separate; restoring a snapshot can lose later data |
 | Hard to hand over to developers or to leave the platform | Normal, idiomatic code, a detach command, standard hosting |
 | US-hosted, GDPR uncertainty, EU hosting only on expensive plans | EU hosting and EU-only AI as a setting on every plan, including the free one, and fully self-hostable |
 | Surprise hosting bills | Spending caps on by default |
 
-The headline: **changes don't break your app, and you don't pay for the AI's mistakes.**
+The headline: **checked supported changes, transparent model use, and recoverable releases.**
 
 ## The core bet
 

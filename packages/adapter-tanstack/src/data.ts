@@ -835,7 +835,6 @@ export function dataModule(
   // A list page filters by a reference to these records (A 208): its filter counts them, and
   // finds them by their title as the person types, without listing them all.
   const filteredBy =
-    titleColumn !== "id" &&
     model.name !== "User" &&
     ir.pages.some((p) => {
       const listed = ir.models.find((m) => m.name === pageModel(p));
@@ -879,8 +878,9 @@ export function dataModule(
     "and",
     "eq",
     "inArray",
+    "lt",
     "sql",
-    ...((referenced && titleColumn !== "id") || paged ? ["asc"] : []),
+    ...((referenced && titleColumn !== "id") || filteredBy || paged ? ["asc"] : []),
     ...(access.create.public ||
     capped ||
     paged ||
@@ -902,7 +902,7 @@ export function dataModule(
       : []),
     ...(access.read.where && signedIn && access.read.owner ? ["or"] : []),
     ...(paged ? ["avg", "desc", "isNotNull", "max", "min", "sum"] : []),
-    ...(model.trash ? ["desc", "isNotNull", "isNull", "lt"] : []),
+    ...(model.trash ? ["desc", "isNotNull", "isNull"] : []),
     ...(holds.some((m) => m.trash) ? ["isNull"] : []),
   ];
   // Visitors (and anyone reading only because it is public) read the records the public
@@ -1595,28 +1595,30 @@ ${dropPictures(
   // A replaced or removed picture's file goes, unless a record still shows the same one in any of
   // the model's picture fields (files are named by their content, so they may be shared).
   const stillShown = (_k: string, file: string) =>
-    `!!db.select({ id: ${n.table}.id }).from(${n.table}).where(sql\`${pictures.map((k) => `\${${n.table}.${k}} like \${\`%"file":"\${${file}}"%\`}`).join(" or ")}\`).get()`;
+    `keepsUpload(${file}) || !!db.select({ id: ${n.table}.id }).from(${n.table}).where(sql\`${pictures.map((k) => `\${${n.table}.${k}} like \${\`%"file":"\${${file}}"%\`}`).join(" or ")}\`).get()`;
   const dropPictures = (after: (key: string) => string, afterList: (key: string) => string) =>
-    [
-      ...singles.map(
-        (k) =>
-          `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, ${stillShown(k, `row.${k}.file`)});\n`,
-      ),
-      // Of several pictures, each one no longer among them.
-      ...pictureLists.map(
-        (k) =>
-          `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")});\n`,
-      ),
-      // Documents the same way.
-      ...docSingles.map(
-        (k) =>
-          `    if (row.${k} && row.${k}.file !== ${after(k)}) deleteFile(row.${k}, ${stillShown(k, `row.${k}.file`)});\n`,
-      ),
-      ...docLists.map(
-        (k) =>
-          `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deleteFile(p, ${stillShown(k, "p.file")});\n`,
-      ),
-    ].join("");
+    pictures.length
+      ? `    cleanUploads(() => {\n${[
+          ...singles.map(
+            (k) =>
+              `    if (row.${k} && row.${k}.file !== ${after(k)}) deletePicture(row.${k}, ${stillShown(k, `row.${k}.file`)});\n`,
+          ),
+          // Of several pictures, each one no longer among them.
+          ...pictureLists.map(
+            (k) =>
+              `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deletePicture(p, ${stillShown(k, "p.file")});\n`,
+          ),
+          // Documents the same way.
+          ...docSingles.map(
+            (k) =>
+              `    if (row.${k} && row.${k}.file !== ${after(k)}) deleteFile(row.${k}, ${stillShown(k, `row.${k}.file`)});\n`,
+          ),
+          ...docLists.map(
+            (k) =>
+              `    for (const p of row.${k} ?? []) if (!${afterList(k)}.includes(p.file)) deleteFile(p, ${stillShown(k, "p.file")});\n`,
+          ),
+        ].join("")}    });\n`
+      : "";
   return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${[...new Set(drizzle)].sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
@@ -1642,7 +1644,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2038,6 +2040,28 @@ ${
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
   },
+  /** Development candidates: check all eligible rows, fetching at most 200 at once. */
+  async candidateIds(viewer: Viewer | null, accepts: (row: Record<string, unknown>) => boolean = () => true): Promise<number[]> {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const ids: number[] = [];
+    let before: number | undefined;
+    while (ids.length < 50) {
+      const batch = await db.query.${n.tableKey}.findMany({
+        where: and(${self}.readable(viewer), before === undefined ? undefined : lt(${n.table}.id, before)),${withClause(listWith, "        ")}
+        orderBy: (t, { desc }) => [desc(t.id)],
+        limit: 200,
+      });
+      const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, batch);${ownedAuto ? `\n      const rows = found.map((row) => shownTo(viewer, row));` : ""}
+      ${asListed("rows", "const listed = ")}
+      for (const row of listed) {
+        if (accepts(row)) ids.push(row.id);
+        if (ids.length === 50) break;
+      }
+      if (batch.length < 200) break;
+      before = batch[batch.length - 1].id;
+    }
+    return ids;
+  },
 ${
   hasListPage
     ? `
@@ -2286,14 +2310,35 @@ ${
    */
   pick(viewer: Viewer | null, text: string, ids?: number[]): { value: string; label: string }[] {
     if (readScope(${n.access}.read, viewer) === "none" || ids?.length === 0) return [];
-    return db
+    if (ids && ids.length > 100) throw new BadInput("Choose at most 100 related records.");
+${
+  composedName(model)
+    ? `    // Names are computed only after hiding references the viewer cannot read.
+    const choices: { value: string; label: string }[] = [];
+    let before: number | undefined;
+    for (;;) {
+      const batch = db.query.${n.tableKey}.findMany({
+        where: and(${self}.readable(viewer), ids ? inArray(${n.table}.id, ids) : undefined, before === undefined ? undefined : lt(${n.table}.id, before)),
+        ...${nameColumns(ir, model)},
+        orderBy: (t, { desc }) => [desc(t.id)], limit: 200,
+      }).sync();
+      for (const row of ${self}.shownRefs(viewer, batch)) {
+        const label = ${nameFunction(model)}(row);
+        if (ids || label.toLowerCase().includes(text.toLowerCase())) choices.push({ value: String(row.id), label });
+        if (!ids && choices.length === 20) return choices;
+      }
+      if (batch.length < 200) return choices;
+      before = batch[batch.length - 1].id;
+    }`
+    : `    return db
       .select({ id: ${n.table}.id, title: ${n.table}.${titleColumn} })
       .from(${n.table})
       .where(and(${self}.readable(viewer), ids ? inArray(${n.table}.id, ids) : contains([${n.table}.${titleColumn}], text)))
       .orderBy(asc(${n.table}.${titleColumn}))
       .limit(ids ? ids.length : 20)
       .all()
-      .map((row) => ({ value: String(row.id), label: ${shownTitle(model, "row.title")} }));
+      .map((row) => ({ value: String(row.id), label: ${shownTitle(model, "row.title")} }));`
+}
   },
 
 `
