@@ -21,6 +21,7 @@ import {
   textMarker,
 } from "./model";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
+import { hourCycle } from "./time-text";
 import { language, w } from "./words";
 
 interface ModelFormProps<S extends z.ZodType> {
@@ -752,7 +753,7 @@ function failureMessage(ui: ModelUi, error: unknown, timeZone?: string): string 
             timeZone,
             hour: "2-digit",
             minute: "2-digit",
-            hourCycle: "h23",
+            hourCycle: hourCycle(),
           }).format(new Date(at)),
         )
         .join(", "),

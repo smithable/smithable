@@ -7,6 +7,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "#/components/ui/button";
+import { wallClock } from "./time-text";
 import { w } from "./words";
 import { instantOf, wallTime } from "./zoned";
 
@@ -290,6 +291,8 @@ function place(items: Placed[]): Placed[] {
 const minutes = (wall: string) => Number(wall.slice(11, 13)) * 60 + Number(wall.slice(14, 16));
 const clock = (m: number) =>
   `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+/** Minutes as the app writes a clock; `clock` stays the value's own form. */
+const written = (m: number) => wallClock(clock(m));
 const HOUR = 3; // rem per hour on the week grid
 
 export function Calendar({
@@ -403,7 +406,7 @@ export function Calendar({
   const when = (p: Placed) =>
     dateOnly
       ? longDay(p.day)
-      : `${longDay(p.day)}, ${clock(p.from)}–${clock(Math.min(p.to, 24 * 60 - 1))}`;
+      : `${longDay(p.day)}, ${written(p.from)}–${written(Math.min(p.to, 24 * 60 - 1))}`;
   const open = (p: Placed) => {
     if (onOpen) return onOpen(p.id);
     pushed.current = true;
@@ -533,7 +536,7 @@ export function Calendar({
                 className="text-right text-xs text-muted-foreground"
                 style={{ height: `${HOUR}rem` }}
               >
-                {clock(h * 60)}
+                {written(h * 60)}
               </div>
             ))}
           </div>
@@ -602,7 +605,7 @@ export function Calendar({
                       <button
                         key={h}
                         type="button"
-                        aria-label={w.newAt(newLabel, longDay(d), clock(h * 60))}
+                        aria-label={w.newAt(newLabel, longDay(d), written(h * 60))}
                         className="absolute inset-x-0 hidden border-t border-border/50 hover:bg-muted md:block"
                         style={{
                           top: `${((h - firstHour) * 60 * 100) / span}%`,
@@ -646,7 +649,7 @@ export function Calendar({
                                 aria-hidden
                                 className={`block ${accent ? "text-foreground" : "text-muted-foreground"}`}
                               >
-                                {clock(p.from)}
+                                {written(p.from)}
                               </span>
                             )}
                             {p.places && <Places places={p.places} look={places} plain={!accent} />}

@@ -3,6 +3,7 @@
 import { Card } from "#/components/ui/card";
 import { AppLink } from "./AppLink";
 import type { AppUi } from "./model";
+import { hourCycle } from "./time-text";
 import { w } from "./words";
 
 type Kind = "money" | "int" | "decimal";
@@ -196,7 +197,7 @@ export function RecentChanges({
                 {new Intl.DateTimeFormat(undefined, {
                   dateStyle: "short",
                   timeStyle: "short",
-                  hourCycle: "h23",
+                  hourCycle: hourCycle(),
                 }).format(new Date(line.at))}
               </time>
             </li>

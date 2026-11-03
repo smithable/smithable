@@ -8,6 +8,7 @@ import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import type { FieldControlProps } from "./model";
 import { addDays } from "./slots";
+import { hourCycle } from "./time-text";
 import { language, w } from "./words";
 import { wallTime } from "./zoned";
 
@@ -75,7 +76,7 @@ function Slots({
       timeZone: "UTC",
       hour: "2-digit",
       minute: "2-digit",
-      hourCycle: "h23",
+      hourCycle: hourCycle(),
     }).format(new Date(`${wall}:00Z`));
   const dayName = (date: string) =>
     new Intl.DateTimeFormat(language(), {

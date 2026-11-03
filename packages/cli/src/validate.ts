@@ -347,6 +347,7 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
     lines.push(
       `${fact.path.join(".")}: theme ${fact.theme} default ${fact.value} skipped: ${fact.reason}`,
     );
+  lines.push(ir.app.clock ? `clock: ${ir.app.clock} (clock)` : "clock: 24h (unsaid)");
   const scope = (s: UniqueScope | undefined) => (s === "owner" ? "per owner" : "in the whole app");
   for (const model of ir.models) {
     lines.push(

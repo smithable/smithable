@@ -9,6 +9,7 @@ import { Button } from "#/components/ui/button";
 import { PageHeader } from "./AppShell";
 import { ModelForm } from "./ModelForm";
 import type { AppUi, ModelUi } from "./model";
+import { hourCycle } from "./time-text";
 import { w } from "./words";
 
 /** One thing to choose, as the menu gives it. */
@@ -71,7 +72,7 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
         weekday: "long",
         hour: "2-digit",
         minute: "2-digit",
-        hourCycle: "h23",
+        hourCycle: hourCycle(),
         timeZone: app.timeZone,
       }).format(new Date(menu.opens))
     : undefined;

@@ -87,6 +87,8 @@ export async function create(
     name?: string;
     /** The administrator's address; without it, the Git user's (email-sign-in.md §3). */
     admin?: string;
+    /** The app's time zone (the hosted service's, from the account); without it, the machine's. */
+    timezone?: string;
     /** The packages are in place (a link to another project's): nothing is installed. */
     installed?: boolean;
     /** Told the drafted app's files as soon as the model has answered, before anything is built. */
@@ -312,6 +314,7 @@ export async function create(
     io.out(
       "No administrator was set (no --admin and no Git user.email): the starter's sample address is still in smithable.auth.yml. Set yours with: smithable op setAdmins you@your-domain\n",
     );
+  files = withTimeZone(files, options.timezone);
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
   // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
@@ -552,6 +555,25 @@ export function sampleFiles(
       },
     ];
   });
+}
+
+/**
+ * A new app's time zone where its spec names none, so it does not run on UTC unawares (A 220): the
+ * one given, else the machine's unless that is UTC. A starter's own zone stays; an app with no
+ * pages is only an API, and no one's clock is guessed for it.
+ */
+export function withTimeZone(
+  files: Record<string, string>,
+  given?: string,
+  machine = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): Record<string, string> {
+  const zone = given ?? (machine === "UTC" ? undefined : machine);
+  const spec = new YamlEditor(files["smithable.yml"] ?? "");
+  if (!zone || !spec.has(["app", "name"]) || spec.has(["app", "timezone"])) return files;
+  const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
+  if (!given && !ir?.pages.length) return files;
+  spec.add(["app"], "timezone", zone);
+  return { ...files, "smithable.yml": spec.text };
 }
 
 export function named(files: Record<string, string>, name: string): Record<string, string> {

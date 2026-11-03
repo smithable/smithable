@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "#/components/ui/button";
 import { AppLink } from "./AppLink";
 import { textMarker } from "./model";
+import { hourCycle } from "./time-text";
 import { w } from "./words";
 
 export interface Places {
@@ -29,7 +30,7 @@ function deadline(iso: string, timeZone: string | undefined): string {
     ...(day(at) === day(new Date()) ? {} : { weekday: "short", day: "numeric", month: "short" }),
     hour: "2-digit",
     minute: "2-digit",
-    hourCycle: "h23",
+    hourCycle: hourCycle(),
     timeZone,
   }).format(at);
 }

@@ -623,6 +623,43 @@ async function devDoorFlow(dir, base) {
   }
 }
 
+/** How times are written (app.clock, A 220): the schedule's hours in 12-hour time, once it is said. */
+async function clockFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const calendar = page.locator('[data-kit="calendar"]');
+  let changed = false;
+  try {
+    await open(page, `${base}/schedule`);
+    await calendar.waitFor({ timeout: 10000 * P });
+    if (/\d\s?(AM|PM)/i.test(await calendar.innerText()))
+      throw new Error("the schedule writes 12-hour times unasked");
+    const done = smithable(dir, "op", "setApp", "--clock", "12h");
+    if (done.code !== 0) throw new Error(`setApp --clock 12h: ${done.out}`);
+    changed = true;
+    for (let i = 0; ; i++) {
+      // The app reloads itself after the change: a load it interrupts is one more try.
+      await open(page, `${base}/schedule`).catch(() => {});
+      const text = await calendar.innerText().catch(() => "");
+      if (/\d\s?(AM|PM)/i.test(text)) break;
+      if (i === 40 * P) throw new Error("the schedule does not write 12-hour times");
+      await page.waitForTimeout(500);
+    }
+    console.log("  ✓ browser: times are 24-hour unsaid, and 12-hour once the app says clock: 12h");
+  } catch (error) {
+    console.log(
+      `  ✗ browser: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("clock flow");
+  } finally {
+    await browser.close();
+    if (changed) {
+      const back = smithable(dir, "undo");
+      if (back.code !== 0) failures.push(`clock put back: ${back.out}`);
+    }
+  }
+}
+
 async function bookingFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -8096,6 +8133,7 @@ test("the session cookie's name and attributes", async () => {
         await landingFlow(dir, base);
         await calendarFlow(base);
         await bookingFlow(dir, base);
+        await clockFlow(dir, base);
         await outgoingFlow(dir, base);
         await sessionsListFlow(base);
         await refusalFlow(base);

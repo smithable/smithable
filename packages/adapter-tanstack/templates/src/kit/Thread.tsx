@@ -8,6 +8,7 @@ import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import { displayValue, formatValue } from "./format";
 import type { AppUi, RecordUi, Row } from "./model";
+import { hourCycle } from "./time-text";
 import { w } from "./words";
 
 export function Thread<R extends Row>({
@@ -55,7 +56,7 @@ export function Thread<R extends Row>({
       ? new Intl.DateTimeFormat(undefined, {
           dateStyle: "medium",
           timeStyle: "short",
-          hourCycle: "h23",
+          hourCycle: hourCycle(),
           timeZone: app.timeZone,
         }).format(new Date(String(row.createdAt)))
       : "";

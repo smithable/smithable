@@ -1,5 +1,7 @@
 // Smithable app kit: converts stored values to display text and to form input text, and back.
+
 import type { AppUi, FieldUi, RecordFieldUi } from "./model";
+import { hourCycle } from "./time-text";
 import { instantOf, wallTime } from "./zoned";
 
 /** The value to show for a field of a record: for a reference, the related record's title. */
@@ -38,7 +40,7 @@ export function shortWhen(value: unknown, dateOnly: boolean, timeZone?: string):
     month: "short",
     ...(dateOnly
       ? { timeZone: "UTC" }
-      : { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone }),
+      : { hour: "2-digit", minute: "2-digit", hourCycle: hourCycle(), timeZone }),
   }).format(instant);
 }
 
@@ -82,7 +84,7 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
       return new Intl.DateTimeFormat(undefined, {
         dateStyle: "medium",
         timeStyle: "short",
-        hourCycle: "h23",
+        hourCycle: hourCycle(),
         timeZone: app.timeZone,
       }).format(value instanceof Date ? value : new Date(String(value)));
     case "choice":
