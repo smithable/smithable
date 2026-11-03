@@ -71,7 +71,11 @@ export function InlineRows({
                 {f.label}
               </TableHead>
             ))}
-            {editable && remove && <TableHead className="w-px" />}
+            {editable && remove && (
+              <TableHead className="w-px">
+                <span className="sr-only">{w.remove}</span>
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>

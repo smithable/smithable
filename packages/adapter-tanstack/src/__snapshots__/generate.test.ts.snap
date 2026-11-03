@@ -5583,9 +5583,11 @@ interface PageUi {
 export const pageUi = { team: { title: "Team" }, admin: { title: "Admin" } } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = \`\${ui.title} · \${app.name}\`;
+  const own = \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -8051,7 +8053,10 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/notes/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(row.title || \`Note #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getNote({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -8192,7 +8197,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/notes/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("note")),
   loader: async () => ({ options: { projectId: await projectOptions() } }),
   component: NewNotePage,
 });
@@ -8239,7 +8244,10 @@ import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/projects/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(row.name || \`Project #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getProject({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -8405,7 +8413,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/projects/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("project")),
   component: NewProjectPage,
 });
 
@@ -8448,7 +8456,10 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/tasks/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(row.title || \`Task #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getTask({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -8590,7 +8601,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/tasks/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("task")),
   loader: async () => ({ options: { projectId: await projectOptions(), assigneeId: await userOptions() } }),
   component: NewTaskPage,
 });
@@ -10064,7 +10075,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/note.schema.ts": "a44e751a generated",
   "src/generated/note.server.ts": "bbb212ff generated",
   "src/generated/note.ts": "bf579f2a generated",
-  "src/generated/pages.ts": "a1925af1 generated",
+  "src/generated/pages.ts": "3984a4bc generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
   "src/generated/project.server.ts": "877da3e6 generated",
   "src/generated/project.ts": "0c7272f3 generated",
@@ -10080,26 +10091,26 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4eb4cac1 kit",
+  "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "0f0e73ff kit",
@@ -10148,15 +10159,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/activity.tsx": "1ae4934d generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
   "src/routes/admin/index.tsx": "247d3d7b generated",
-  "src/routes/admin/notes/$id.tsx": "fd4a56a8 generated",
+  "src/routes/admin/notes/$id.tsx": "9ae5b154 generated",
   "src/routes/admin/notes/index.tsx": "54d57aec generated",
-  "src/routes/admin/notes/new.tsx": "ec53485b generated",
-  "src/routes/admin/projects/$id.tsx": "cbd85e7f generated",
+  "src/routes/admin/notes/new.tsx": "6d8a3ab3 generated",
+  "src/routes/admin/projects/$id.tsx": "d93cf459 generated",
   "src/routes/admin/projects/index.tsx": "e88da81e generated",
-  "src/routes/admin/projects/new.tsx": "e02c047b generated",
-  "src/routes/admin/tasks/$id.tsx": "8dca2f3c generated",
+  "src/routes/admin/projects/new.tsx": "c08aa83c generated",
+  "src/routes/admin/tasks/$id.tsx": "862cb3c5 generated",
   "src/routes/admin/tasks/index.tsx": "050d96d7 generated",
-  "src/routes/admin/tasks/new.tsx": "bc0cd40c generated",
+  "src/routes/admin/tasks/new.tsx": "0937d919 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/notes/$id.$field.ts": "b9f75a6b generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
@@ -13186,9 +13197,11 @@ export const pageUi = {
 } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -14519,7 +14532,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/appointments/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["appointments"], context.viewer, location.href),
-  head: () => pageHead("appointments"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("appointments", row ? String(row.name || \`Appointment #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getAppointment({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -14781,7 +14797,7 @@ import { optional, type Search, text } from "#/kit/params";
 
 export const Route = createFileRoute("/appointments/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["appointments"], context.viewer, location.href),
-  head: () => pageHead("appointments"),
+  head: () => pageHead("appointments", w.newOne("appointment")),
   validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40) }),
   loader: async () => ({ options: { serviceId: await serviceOptions(), barberId: await barberOptions() } }),
   component: NewAppointmentPage,
@@ -14861,7 +14877,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/barbers/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["barbers"], context.viewer, location.href),
-  head: () => pageHead("barbers"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("barbers", row ? String(row.name || \`Barber #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getBarber({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -15043,7 +15062,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/barbers/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["barbers"], context.viewer, location.href),
-  head: () => pageHead("barbers"),
+  head: () => pageHead("barbers", w.newOne("barber")),
   component: NewBarberPage,
 });
 
@@ -15323,7 +15342,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/services/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["services"], context.viewer, location.href),
-  head: () => pageHead("services"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("services", row ? String(row.name || \`Service #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getService({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -15481,7 +15503,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/services/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["services"], context.viewer, location.href),
-  head: () => pageHead("services"),
+  head: () => pageHead("services", w.newOne("service")),
   component: NewServicePage,
 });
 
@@ -15707,7 +15729,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/time-off/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["time-off"], context.viewer, location.href),
-  head: () => pageHead("time-off"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("time-off", row ? String(row.note || \`Time off #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getTimeOff({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -15868,7 +15893,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/time-off/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["time-off"], context.viewer, location.href),
-  head: () => pageHead("time-off"),
+  head: () => pageHead("time-off", w.newOne("time off")),
   validateSearch: (s: Search) => optional({ barber: count(s.barber) }),
   loader: async () => ({ options: { barberId: await barberOptions() } }),
   component: NewTimeOffPage,
@@ -16391,7 +16416,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "e9b5540a generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/outgoing.server.ts": "fac1c733 generated",
-  "src/generated/pages.ts": "0bc41f9d generated",
+  "src/generated/pages.ts": "9166a1c4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
   "src/generated/service.server.ts": "1cfd3766 generated",
@@ -16405,26 +16430,26 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Calendar.tsx": "880f2b64 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Slots.tsx": "b283cf8e kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "4dfaac5a kit",
@@ -16470,12 +16495,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "dc714c08 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/appointments/$id.tsx": "d3570ea5 generated",
+  "src/routes/appointments/$id.tsx": "21151241 generated",
   "src/routes/appointments/index.tsx": "5c325600 generated",
-  "src/routes/appointments/new.tsx": "35d50aba generated",
-  "src/routes/barbers/$id.tsx": "05481e8a generated",
+  "src/routes/appointments/new.tsx": "cf4771c5 generated",
+  "src/routes/barbers/$id.tsx": "0cba2a67 generated",
   "src/routes/barbers/index.tsx": "0f2665e4 generated",
-  "src/routes/barbers/new.tsx": "07a45f41 generated",
+  "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -16484,14 +16509,14 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "28261328 generated",
   "src/routes/privacy/index.tsx": "e98a1cc0 generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
-  "src/routes/services/$id.tsx": "8105c906 generated",
+  "src/routes/services/$id.tsx": "ccd9529e generated",
   "src/routes/services/index.tsx": "b3231c66 generated",
-  "src/routes/services/new.tsx": "331bb24d generated",
+  "src/routes/services/new.tsx": "5d1280e4 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
-  "src/routes/time-off/$id.tsx": "1e32b368 generated",
+  "src/routes/time-off/$id.tsx": "112a672e generated",
   "src/routes/time-off/index.tsx": "a874232b generated",
-  "src/routes/time-off/new.tsx": "467fc0d4 generated",
+  "src/routes/time-off/new.tsx": "007c55c8 generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",
@@ -22492,9 +22517,11 @@ export const pageUi = {
 } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -24917,7 +24944,10 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/bookings/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(bookingName(row as Record<string, unknown>)) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getBooking({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -25045,7 +25075,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/admin/bookings/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("booking")),
   validateSearch: (s: Search) => optional({ session: count(s.session) }),
   loader: async () => ({ options: { sessionId: await sessionOptions(), attendeeId: await bookingOwnerOptions() } }),
   component: NewBookingPage,
@@ -25095,7 +25125,10 @@ import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/class-types/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(row.name || \`Class type #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getClassType({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -25247,7 +25280,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/class-types/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("class type")),
   component: NewClassTypePage,
 });
 
@@ -25381,7 +25414,10 @@ import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/instructors/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(row.name || \`Instructor #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getInstructor({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -25535,7 +25571,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/instructors/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("instructor")),
   component: NewInstructorPage,
 });
 
@@ -25576,7 +25612,10 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/messages/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(row.name || \`Message #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getMessage({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -25715,7 +25754,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/messages/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("message")),
   component: NewMessagePage,
 });
 
@@ -25756,7 +25795,10 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/posts/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(row.title || \`Post #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getPost({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -25897,7 +25939,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/admin/posts/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("post")),
   component: NewPostPage,
 });
 
@@ -25954,7 +25996,10 @@ import { ModelTable } from "#/kit/ModelTable";
 
 export const Route = createFileRoute("/admin/sessions/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("admin", row ? String(sessionName(row as Record<string, unknown>)) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getSession({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -26097,7 +26142,7 @@ import { count, optional, type Search, text } from "#/kit/params";
 
 export const Route = createFileRoute("/admin/sessions/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["admin"], context.viewer, location.href),
-  head: () => pageHead("admin"),
+  head: () => pageHead("admin", w.newOne("session")),
   validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40), classType: count(s.classType), instructor: count(s.instructor) }),
   loader: async () => ({ options: { classTypeId: await classTypeOptions(), instructorId: await instructorOptions() } }),
   component: NewSessionPage,
@@ -26388,7 +26433,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/class-types/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["class-types"], context.viewer, location.href),
-  head: () => pageHead("class-types"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("class-types", row ? String(row.name || \`Class type #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getClassType({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -26596,7 +26644,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/class-types/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["class-types"], context.viewer, location.href),
-  head: () => pageHead("class-types"),
+  head: () => pageHead("class-types", w.newOne("class type")),
   component: NewClassTypePage,
 });
 
@@ -26769,7 +26817,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/instructors/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["instructors"], context.viewer, location.href),
-  head: () => pageHead("instructors"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("instructors", row ? String(row.name || \`Instructor #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getInstructor({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -26951,7 +27002,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/instructors/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["instructors"], context.viewer, location.href),
-  head: () => pageHead("instructors"),
+  head: () => pageHead("instructors", w.newOne("instructor")),
   component: NewInstructorPage,
 });
 
@@ -27022,7 +27073,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/messages/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["messages"], context.viewer, location.href),
-  head: () => pageHead("messages"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("messages", row ? String(row.name || \`Message #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getMessage({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -27180,7 +27234,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/messages/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["messages"], context.viewer, location.href),
-  head: () => pageHead("messages"),
+  head: () => pageHead("messages", w.newOne("message")),
   component: NewMessagePage,
 });
 
@@ -27254,7 +27308,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/my-bookings/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["my-bookings"], context.viewer, location.href),
-  head: () => pageHead("my-bookings"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("my-bookings", row ? String(bookingName(row as Record<string, unknown>)) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getBooking({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -27438,7 +27495,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/my-bookings/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["my-bookings"], context.viewer, location.href),
-  head: () => pageHead("my-bookings"),
+  head: () => pageHead("my-bookings", w.newOne("booking")),
   validateSearch: (s: Search) => optional({ session: count(s.session) }),
   loader: async () => ({ options: { sessionId: await sessionOptions(), attendeeId: await bookingOwnerOptions() } }),
   component: NewBookingPage,
@@ -27516,7 +27573,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/posts/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["posts"], context.viewer, location.href),
-  head: () => pageHead("posts"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("posts", row ? String(row.title || \`Post #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getPost({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -27704,7 +27764,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/posts/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["posts"], context.viewer, location.href),
-  head: () => pageHead("posts"),
+  head: () => pageHead("posts", w.newOne("post")),
   component: NewPostPage,
 });
 
@@ -27977,7 +28037,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/sessions/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["sessions"], context.viewer, location.href),
-  head: () => pageHead("sessions"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("sessions", row ? String(sessionName(row as Record<string, unknown>)) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getSession({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -28235,7 +28298,7 @@ import { count, optional, type Search, text } from "#/kit/params";
 
 export const Route = createFileRoute("/sessions/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["sessions"], context.viewer, location.href),
-  head: () => pageHead("sessions"),
+  head: () => pageHead("sessions", w.newOne("session")),
   validateSearch: (s: Search) => optional({ startsAt: text(s.startsAt, 40), classType: count(s.classType), instructor: count(s.instructor) }),
   loader: async () => ({ options: { classTypeId: await classTypeOptions(), instructorId: await instructorOptions() } }),
   component: NewSessionPage,
@@ -29002,7 +29065,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "2e082e3d generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/outgoing.server.ts": "f981b018 generated",
-  "src/generated/pages.ts": "59562a2b generated",
+  "src/generated/pages.ts": "3cded6da generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "e0b587d4 generated",
   "src/generated/post.ts": "3b8935b4 generated",
@@ -29021,7 +29084,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Articles.tsx": "63b22982 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
@@ -29029,17 +29092,17 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Calendar.tsx": "880f2b64 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -29047,7 +29110,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Reserve.tsx": "ecb54225 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -29100,55 +29163,55 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "292de64e generated",
   "src/routes/about/index.tsx": "52b48987 generated",
   "src/routes/admin/activity.tsx": "f5a0628c generated",
-  "src/routes/admin/bookings/$id.tsx": "42312200 generated",
+  "src/routes/admin/bookings/$id.tsx": "e2b3729d generated",
   "src/routes/admin/bookings/index.tsx": "3cede361 generated",
-  "src/routes/admin/bookings/new.tsx": "f4ba57ed generated",
-  "src/routes/admin/class-types/$id.tsx": "d13af679 generated",
+  "src/routes/admin/bookings/new.tsx": "9b91aaca generated",
+  "src/routes/admin/class-types/$id.tsx": "c4083bec generated",
   "src/routes/admin/class-types/index.tsx": "8db2bc16 generated",
-  "src/routes/admin/class-types/new.tsx": "3dd9d0fd generated",
+  "src/routes/admin/class-types/new.tsx": "15a01d89 generated",
   "src/routes/admin/index.tsx": "19b6cd26 generated",
-  "src/routes/admin/instructors/$id.tsx": "78a3bd8d generated",
+  "src/routes/admin/instructors/$id.tsx": "3c86b6af generated",
   "src/routes/admin/instructors/index.tsx": "a34071e2 generated",
-  "src/routes/admin/instructors/new.tsx": "241e08a5 generated",
-  "src/routes/admin/messages/$id.tsx": "5bcf1a31 generated",
+  "src/routes/admin/instructors/new.tsx": "f43b4446 generated",
+  "src/routes/admin/messages/$id.tsx": "eeb74cd7 generated",
   "src/routes/admin/messages/index.tsx": "98129097 generated",
-  "src/routes/admin/messages/new.tsx": "a2a68967 generated",
-  "src/routes/admin/posts/$id.tsx": "d1a5b171 generated",
+  "src/routes/admin/messages/new.tsx": "1e824aae generated",
+  "src/routes/admin/posts/$id.tsx": "d32ebb47 generated",
   "src/routes/admin/posts/index.tsx": "27da3624 generated",
-  "src/routes/admin/posts/new.tsx": "48fa25de generated",
-  "src/routes/admin/sessions/$id.tsx": "9b6d3c1f generated",
+  "src/routes/admin/posts/new.tsx": "2131bd64 generated",
+  "src/routes/admin/sessions/$id.tsx": "aa38e2dd generated",
   "src/routes/admin/sessions/index.tsx": "c4703df1 generated",
-  "src/routes/admin/sessions/new.tsx": "2e47bbf4 generated",
+  "src/routes/admin/sessions/new.tsx": "bdc24b1c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/blog/$address.tsx": "44568891 generated",
   "src/routes/blog/index.tsx": "0b818396 generated",
-  "src/routes/class-types/$id.tsx": "4931320d generated",
+  "src/routes/class-types/$id.tsx": "15c9e272 generated",
   "src/routes/class-types/index.tsx": "6c248008 generated",
-  "src/routes/class-types/new.tsx": "bd5005cb generated",
+  "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f8b34265 generated",
-  "src/routes/instructors/$id.tsx": "b7f2c35a generated",
+  "src/routes/instructors/$id.tsx": "4134d928 generated",
   "src/routes/instructors/index.tsx": "b013732e generated",
-  "src/routes/instructors/new.tsx": "8528819b generated",
-  "src/routes/messages/$id.tsx": "7ff7beea generated",
+  "src/routes/instructors/new.tsx": "8bd30440 generated",
+  "src/routes/messages/$id.tsx": "06f15b2a generated",
   "src/routes/messages/index.tsx": "e64446c6 generated",
-  "src/routes/messages/new.tsx": "ed02fa35 generated",
-  "src/routes/my-bookings/$id.tsx": "e849f6a5 generated",
+  "src/routes/messages/new.tsx": "09a8fde8 generated",
+  "src/routes/my-bookings/$id.tsx": "a3ccf33a generated",
   "src/routes/my-bookings/-my-bookings-parts.tsx": "c178be52 generated",
   "src/routes/my-bookings/index.tsx": "db98ed6c generated",
-  "src/routes/my-bookings/new.tsx": "ba1344a1 generated",
-  "src/routes/posts/$id.tsx": "ac3261bb generated",
+  "src/routes/my-bookings/new.tsx": "574871aa generated",
+  "src/routes/posts/$id.tsx": "7290a853 generated",
   "src/routes/posts/index.tsx": "a1fbc7fe generated",
-  "src/routes/posts/new.tsx": "cc22ec72 generated",
+  "src/routes/posts/new.tsx": "7be9f470 generated",
   "src/routes/privacy/index.tsx": "05f75ae3 generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "3cb0600f generated",
-  "src/routes/sessions/$id.tsx": "1788904b generated",
+  "src/routes/sessions/$id.tsx": "723448df generated",
   "src/routes/sessions/index.tsx": "090d8339 generated",
-  "src/routes/sessions/new.tsx": "4798f7b2 generated",
+  "src/routes/sessions/new.tsx": "55613a12 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "ca04f376 kit",
@@ -34506,9 +34569,11 @@ export const pageUi = {
 } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "start" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "start" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -35579,7 +35644,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/customers/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["customers"], context.viewer, location.href),
-  head: () => pageHead("customers"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("customers", row ? String(row.name || \`Customer #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getCustomer({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -35950,7 +36018,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/customers/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["customers"], context.viewer, location.href),
-  head: () => pageHead("customers"),
+  head: () => pageHead("customers", w.newOne("customer")),
   loader: async () => ({ options: { accountManagerId: await customerOwnerOptions() } }),
   component: NewCustomerPage,
 });
@@ -36066,7 +36134,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/follow-ups/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["followUps"], context.viewer, location.href),
-  head: () => pageHead("followUps"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("followUps", row ? String(titleOf(row.note) || \`Follow up #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getFollowUp({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -36296,7 +36367,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/follow-ups/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["followUps"], context.viewer, location.href),
-  head: () => pageHead("followUps"),
+  head: () => pageHead("followUps", w.newOne("follow up")),
   validateSearch: (s: Search) => optional({ customer: count(s.customer) }),
   loader: async () => ({ options: { customerId: await customerOptions() } }),
   component: NewFollowUpPage,
@@ -36488,7 +36559,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/orders/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
-  head: () => pageHead("orders"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("orders", row ? String(row.number || \`Order #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getOrder({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -36728,7 +36802,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/orders/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
-  head: () => pageHead("orders"),
+  head: () => pageHead("orders", w.newOne("order")),
   validateSearch: (s: Search) => optional({ customer: count(s.customer) }),
   loader: async () => ({ options: { customerId: await customerOptions() } }),
   component: NewOrderPage,
@@ -37752,7 +37826,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.schema.ts": "906a5fce generated",
   "src/generated/order.server.ts": "8cf32304 generated",
   "src/generated/order.ts": "739e757f generated",
-  "src/generated/pages.ts": "b7ba93ee generated",
+  "src/generated/pages.ts": "19b9a581 generated",
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "bd5ac85e generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
@@ -37763,29 +37837,29 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "e29fe7ca kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Trash.tsx": "77988823 kit",
-  "src/kit/Users.tsx": "4eb4cac1 kit",
+  "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "d6c77292 kit",
@@ -37831,20 +37905,20 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "be123362 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/customers/$id.tsx": "afdb118f generated",
+  "src/routes/customers/$id.tsx": "ce259a80 generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "0fb22ed7 generated",
   "src/routes/customers/index.tsx": "f6b21926 generated",
-  "src/routes/customers/new.tsx": "275bc6bf generated",
+  "src/routes/customers/new.tsx": "101540c3 generated",
   "src/routes/customers/trash.tsx": "7848b304 generated",
-  "src/routes/follow-ups/$id.tsx": "224cd7e7 generated",
+  "src/routes/follow-ups/$id.tsx": "f12cfda5 generated",
   "src/routes/follow-ups/index.tsx": "ebd1edd0 generated",
-  "src/routes/follow-ups/new.tsx": "339efb06 generated",
+  "src/routes/follow-ups/new.tsx": "e6b35f58 generated",
   "src/routes/follow-ups/trash.tsx": "182e9c79 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "7f70752a generated",
-  "src/routes/orders/$id.tsx": "4b3b2053 generated",
+  "src/routes/orders/$id.tsx": "dbeddf9e generated",
   "src/routes/orders/index.tsx": "1c895882 generated",
-  "src/routes/orders/new.tsx": "40bc5e0a generated",
+  "src/routes/orders/new.tsx": "c9d034f0 generated",
   "src/routes/orders/trash.tsx": "80862bb0 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "8c938050 generated",
@@ -43689,9 +43763,11 @@ export const pageUi = {
 } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -44498,7 +44574,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/clients/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["clients"], context.viewer, location.href),
-  head: () => pageHead("clients"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("clients", row ? String(row.name || \`Client #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getClient({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -44716,7 +44795,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/clients/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["clients"], context.viewer, location.href),
-  head: () => pageHead("clients"),
+  head: () => pageHead("clients", w.newOne("client")),
   component: NewClientPage,
 });
 
@@ -44832,7 +44911,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/invoices/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
-  head: () => pageHead("invoices"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("invoices", row ? String(row.number || \`Invoice #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getInvoice({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -45137,7 +45219,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/invoices/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["invoices"], context.viewer, location.href),
-  head: () => pageHead("invoices"),
+  head: () => pageHead("invoices", w.newOne("invoice")),
   validateSearch: (s: Search) => optional({ client: count(s.client) }),
   loader: async () => ({ options: { clientId: await clientOptions() } }),
   component: NewInvoicePage,
@@ -46126,7 +46208,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.server.ts": "378fe20d generated",
   "src/generated/invoice.ts": "847402f3 generated",
   "src/generated/outgoing.server.ts": "11bc8997 generated",
-  "src/generated/pages.ts": "e9e4dad4 generated",
+  "src/generated/pages.ts": "d347f5d5 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/timers.server.ts": "8ff1c211 generated",
@@ -46135,21 +46217,21 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "e29fe7ca kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -46157,7 +46239,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -46210,17 +46292,17 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "0bdfaa95 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/clients/$id.tsx": "6619c589 generated",
+  "src/routes/clients/$id.tsx": "758fe763 generated",
   "src/routes/clients/index.tsx": "411542d1 generated",
-  "src/routes/clients/new.tsx": "7af06c43 generated",
+  "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "0cdc647a generated",
-  "src/routes/invoices/$id.tsx": "7102729b generated",
+  "src/routes/invoices/$id.tsx": "c4821e39 generated",
   "src/routes/invoices/index.tsx": "0842286d generated",
-  "src/routes/invoices/new.tsx": "a9dc8138 generated",
+  "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "4d3a90ef generated",
   "src/routes/privacy/index.tsx": "a2c437ac generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
@@ -50740,9 +50822,11 @@ export const pageUi = {
 } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "menu" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "menu" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -52064,7 +52148,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/dishes/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["dishes"], context.viewer, location.href),
-  head: () => pageHead("dishes"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("dishes", row ? String(row.name || \`Dish #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getDish({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -52322,7 +52409,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/dishes/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["dishes"], context.viewer, location.href),
-  head: () => pageHead("dishes"),
+  head: () => pageHead("dishes", w.newOne("dish")),
   component: NewDishPage,
 });
 
@@ -52501,7 +52588,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/orders/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
-  head: () => pageHead("orders"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("orders", row ? String(row.name || \`Order #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getOrder({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -52836,7 +52926,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/orders/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["orders"], context.viewer, location.href),
-  head: () => pageHead("orders"),
+  head: () => pageHead("orders", w.newOne("order")),
   component: NewOrderPage,
 });
 
@@ -53100,7 +53190,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/stops/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["stops"], context.viewer, location.href),
-  head: () => pageHead("stops"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("stops", row ? String(row.place || \`Stop #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getStop({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -53258,7 +53351,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/stops/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["stops"], context.viewer, location.href),
-  head: () => pageHead("stops"),
+  head: () => pageHead("stops", w.newOne("stop")),
   component: NewStopPage,
 });
 
@@ -54067,7 +54160,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.server.ts": "5468ecab generated",
   "src/generated/order.ts": "4fdb55f6 generated",
   "src/generated/outgoing.server.ts": "14522d6c generated",
-  "src/generated/pages.ts": "01e38d43 generated",
+  "src/generated/pages.ts": "9e24be32 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "590f79d5 generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
@@ -54080,17 +54173,17 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "4d5da2da kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -54098,9 +54191,9 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4eb4cac1 kit",
+  "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -54145,23 +54238,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "cf93e9bc generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/dishes/$id.tsx": "7ce34e2c generated",
+  "src/routes/dishes/$id.tsx": "144f99a5 generated",
   "src/routes/dishes/index.tsx": "445c3904 generated",
-  "src/routes/dishes/new.tsx": "c43e9a3f generated",
+  "src/routes/dishes/new.tsx": "7aa588df generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f71e6cf2 generated",
-  "src/routes/orders/$id.tsx": "606b7e81 generated",
+  "src/routes/orders/$id.tsx": "67dc3c26 generated",
   "src/routes/orders/index.tsx": "289d3af5 generated",
-  "src/routes/orders/new.tsx": "2702b25b generated",
+  "src/routes/orders/new.tsx": "1739d5ad generated",
   "src/routes/robots[.]txt.ts": "933017e8 generated",
   "src/routes/sign-in.tsx": "7572bbad generated",
   "src/routes/sitemap[.]xml.ts": "215860da generated",
-  "src/routes/stops/$id.tsx": "154bb7c0 generated",
+  "src/routes/stops/$id.tsx": "eff656f7 generated",
   "src/routes/stops/index.tsx": "14c213d0 generated",
-  "src/routes/stops/new.tsx": "62b2c8e5 generated",
+  "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "201476a9 generated",
   "src/routes/team/index.tsx": "283a8e3a generated",
   "src/routes/where/index.tsx": "a3c07c1f generated",
@@ -56535,9 +56628,11 @@ export const pageUi = {
 } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "catalog" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "catalog" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -57078,7 +57173,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["catalog"], context.viewer, location.href),
-  head: () => pageHead("catalog"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("catalog", row ? String(row.title || \`Item #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getItem({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -57673,7 +57771,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/my-items/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["myItems"], context.viewer, location.href),
-  head: () => pageHead("myItems"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("myItems", row ? String(row.title || \`Item #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getItem({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -57849,7 +57950,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/my-items/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["myItems"], context.viewer, location.href),
-  head: () => pageHead("myItems"),
+  head: () => pageHead("myItems", w.newOne("item")),
   component: NewItemPage,
 });
 
@@ -57890,7 +57991,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["catalog"], context.viewer, location.href),
-  head: () => pageHead("catalog"),
+  head: () => pageHead("catalog", w.newOne("item")),
   component: NewItemPage,
 });
 
@@ -58048,7 +58149,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/saved/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["saved"], context.viewer, location.href),
-  head: () => pageHead("saved"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("saved", row ? String(row.title || \`Item #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getItem({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -58250,7 +58354,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/saved/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["saved"], context.viewer, location.href),
-  head: () => pageHead("saved"),
+  head: () => pageHead("saved", w.newOne("item")),
   component: NewItemPage,
 });
 
@@ -58966,7 +59070,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/item.schema.ts": "1585b602 generated",
   "src/generated/item.server.ts": "3fb76c31 generated",
   "src/generated/item.ts": "9051834d generated",
-  "src/generated/pages.ts": "0b749c7c generated",
+  "src/generated/pages.ts": "5e085a05 generated",
   "src/generated/review.server.ts": "05473a16 generated",
   "src/generated/review.ts": "c0f62730 generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -58976,20 +59080,20 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
@@ -58997,7 +59101,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Review.tsx": "5f595873 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -59039,7 +59143,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "a38dca44 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/$id.tsx": "2fb77809 generated",
+  "src/routes/$id.tsx": "bdea7fb6 generated",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
@@ -59051,16 +59155,16 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "ea504bd4 generated",
-  "src/routes/my-items/$id.tsx": "be0b7640 generated",
+  "src/routes/my-items/$id.tsx": "d397c26f generated",
   "src/routes/my-items/index.tsx": "e8a2b3db generated",
-  "src/routes/my-items/new.tsx": "b3116bbd generated",
-  "src/routes/new.tsx": "b9f7c55c generated",
+  "src/routes/my-items/new.tsx": "d513e438 generated",
+  "src/routes/new.tsx": "f7a5182d generated",
   "src/routes/review/file.$id.ts": "e0b138f6 generated",
   "src/routes/review/index.tsx": "3fc62105 generated",
   "src/routes/robots[.]txt.ts": "74de5562 generated",
-  "src/routes/saved/$id.tsx": "b895f00d generated",
+  "src/routes/saved/$id.tsx": "c9fb8d64 generated",
   "src/routes/saved/index.tsx": "c8f54b4b generated",
-  "src/routes/saved/new.tsx": "59f878f7 generated",
+  "src/routes/saved/new.tsx": "6599de80 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "abb491ed generated",
   "src/routes/welcome/index.tsx": "7b2851ad generated",
@@ -61166,9 +61270,11 @@ interface PageUi {
 export const pageUi = { home: { title: "Home" }, items: { title: "Items" } } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -61777,7 +61883,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/items/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["items"], context.viewer, location.href),
-  head: () => pageHead("items"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("items", row ? String(row.name || \`Item #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getItem({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -61970,7 +62079,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/items/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["items"], context.viewer, location.href),
-  head: () => pageHead("items"),
+  head: () => pageHead("items", w.newOne("item")),
   component: NewItemPage,
 });
 
@@ -62583,31 +62692,31 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.schema.ts": "0dc11389 generated",
   "src/generated/item.server.ts": "873d87d1 generated",
   "src/generated/item.ts": "380eeeef generated",
-  "src/generated/pages.ts": "eccb02bc generated",
+  "src/generated/pages.ts": "828c3cad generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "307674d6 generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -62654,9 +62763,9 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "a8c39617 generated",
-  "src/routes/items/$id.tsx": "35fd7306 generated",
+  "src/routes/items/$id.tsx": "2e7577f0 generated",
   "src/routes/items/index.tsx": "afc3ac02 generated",
-  "src/routes/items/new.tsx": "98a9e603 generated",
+  "src/routes/items/new.tsx": "6d8d9bc4 generated",
   "src/routes/robots[.]txt.ts": "01cda266 generated",
   "src/routes/sign-in.tsx": "3f9e1f3e generated",
   "src/routes/sitemap[.]xml.ts": "8c1882fb generated",
@@ -70362,9 +70471,11 @@ export const pageUi = {
 } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  const own = page === "home" ? app.name : \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -71697,7 +71808,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/components/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["components"], context.viewer, location.href),
-  head: () => pageHead("components"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("components", row ? String(row.name || \`Component #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getComponent({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -71900,7 +72014,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/components/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["components"], context.viewer, location.href),
-  head: () => pageHead("components"),
+  head: () => pageHead("components", w.newOne("component")),
   component: NewComponentPage,
 });
 
@@ -72190,7 +72304,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/incidents/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["incidents"], context.viewer, location.href),
-  head: () => pageHead("incidents"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("incidents", row ? String(row.title || \`Incident #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getIncident({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -72497,7 +72614,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/incidents/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["incidents"], context.viewer, location.href),
-  head: () => pageHead("incidents"),
+  head: () => pageHead("incidents", w.newOne("incident")),
   validateSearch: (s: Search) => optional({ component: count(s.component) }),
   loader: async () => ({ options: { componentId: await componentOptions() } }),
   component: NewIncidentPage,
@@ -72790,7 +72907,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/maintenance/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["maintenance"], context.viewer, location.href),
-  head: () => pageHead("maintenance"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("maintenance", row ? String(row.title || \`Maintenance #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getMaintenance({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -72951,7 +73071,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/maintenance/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["maintenance"], context.viewer, location.href),
-  head: () => pageHead("maintenance"),
+  head: () => pageHead("maintenance", w.newOne("maintenance")),
   validateSearch: (s: Search) => optional({ component: count(s.component) }),
   loader: async () => ({ options: { componentId: await componentOptions() } }),
   component: NewMaintenancePage,
@@ -73555,7 +73675,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/updates/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["updates"], context.viewer, location.href),
-  head: () => pageHead("updates"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("updates", row ? String(titleOf(row.message) || \`Incident update #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getIncidentUpdate({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -73717,7 +73840,7 @@ import { count, optional, type Search } from "#/kit/params";
 
 export const Route = createFileRoute("/updates/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["updates"], context.viewer, location.href),
-  head: () => pageHead("updates"),
+  head: () => pageHead("updates", w.newOne("incident update")),
   validateSearch: (s: Search) => optional({ incident: count(s.incident) }),
   loader: async () => ({ options: { incidentId: await incidentOptions() } }),
   component: NewIncidentUpdatePage,
@@ -74293,7 +74416,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.server.ts": "7d89d37a generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "c95c523a generated",
-  "src/generated/pages.ts": "89e62230 generated",
+  "src/generated/pages.ts": "5d37ab11 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
   "src/generated/users.server.ts": "89addff1 generated",
@@ -74302,31 +74425,31 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Articles.tsx": "63b22982 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "e29fe7ca kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
-  "src/kit/Landing.tsx": "24de4a50 kit",
+  "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4eb4cac1 kit",
+  "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "d6c77292 kit",
@@ -74381,20 +74504,20 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
   "src/routes/api/v1/incidents[.]csv.ts": "8e0626e5 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
-  "src/routes/components/$id.tsx": "8a1eacf6 generated",
+  "src/routes/components/$id.tsx": "1d3efa7c generated",
   "src/routes/components/index.tsx": "a387097e generated",
-  "src/routes/components/new.tsx": "294efdf1 generated",
+  "src/routes/components/new.tsx": "0fbd3870 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "1eca6bcb generated",
   "src/routes/history/index.tsx": "1a28851f generated",
-  "src/routes/incidents/$id.tsx": "d77f9e9e generated",
+  "src/routes/incidents/$id.tsx": "528df6ea generated",
   "src/routes/incidents/index.tsx": "0bad2659 generated",
-  "src/routes/incidents/new.tsx": "1abbbdfc generated",
+  "src/routes/incidents/new.tsx": "a9f07576 generated",
   "src/routes/incoming/chatCommand.ts": "506f15af generated",
   "src/routes/index.tsx": "aea24c4f generated",
-  "src/routes/maintenance/$id.tsx": "df48940a generated",
+  "src/routes/maintenance/$id.tsx": "ea2840ab generated",
   "src/routes/maintenance/index.tsx": "7b866e09 generated",
-  "src/routes/maintenance/new.tsx": "9bd0d9b0 generated",
+  "src/routes/maintenance/new.tsx": "569f7977 generated",
   "src/routes/mcp.ts": "0d8813db generated",
   "src/routes/overview/index.tsx": "349243f0 generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
@@ -74402,9 +74525,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
   "src/routes/team/activity.tsx": "a8e492c5 generated",
   "src/routes/team/index.tsx": "ebf79135 generated",
-  "src/routes/updates/$id.tsx": "19b1051c generated",
+  "src/routes/updates/$id.tsx": "f9de4858 generated",
   "src/routes/updates/index.tsx": "ce99a44f generated",
-  "src/routes/updates/new.tsx": "494f86c8 generated",
+  "src/routes/updates/new.tsx": "ac78941b generated",
   "src/start.ts": "ca04f376 kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",
@@ -78198,9 +78321,11 @@ interface PageUi {
 export const pageUi = { cases: { title: "Cases" }, team: { title: "Team" } } satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = \`\${ui.title} · \${app.name}\`;
+  const own = \`\${ui.title} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
@@ -79934,7 +80059,10 @@ const getHistory = createServerFn()
 
 export const Route = createFileRoute("/cases/$id")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["cases"], context.viewer, location.href),
-  head: () => pageHead("cases"),
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead("cases", row ? String(row.subject || \`Support case #\${row.id}\`) : undefined);
+  },
   loader: async ({ params }) => {
     const found = await getSupportCase({ data: Number(params.id) });
     if (!found) throw notFound();
@@ -80321,7 +80449,7 @@ import { w } from "#/kit/words";
 
 export const Route = createFileRoute("/cases/new")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["cases"], context.viewer, location.href),
-  head: () => pageHead("cases"),
+  head: () => pageHead("cases", w.newOne("support case")),
   loader: async () => ({ options: { assigneeId: await userOptions() } }),
   component: NewSupportCasePage,
 });
@@ -81432,7 +81560,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "cb4d2981 generated",
   "src/generated/message.ts": "f4cafefa generated",
   "src/generated/outgoing.server.ts": "0dc0e782 generated",
-  "src/generated/pages.ts": "1c961974 generated",
+  "src/generated/pages.ts": "f7a896bd generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
   "src/generated/support-case.server.ts": "4c14966b generated",
@@ -81446,27 +81574,27 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "aaf3d6fc kit",
+  "src/kit/AppShell.tsx": "99774ddf kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
-  "src/kit/FieldInput.tsx": "75ecca93 kit",
+  "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "01249aaa kit",
   "src/kit/Filters.tsx": "196a0352 kit",
-  "src/kit/InlineRows.tsx": "5d2b4f42 kit",
+  "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "b2871a17 kit",
-  "src/kit/ModelForm.tsx": "fbd512af kit",
-  "src/kit/ModelTable.tsx": "e3be0e9b kit",
+  "src/kit/ModelForm.tsx": "92c677fe kit",
+  "src/kit/ModelTable.tsx": "c3f4aa77 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
-  "src/kit/SignIn.tsx": "364cef63 kit",
+  "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4eb4cac1 kit",
+  "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -81516,9 +81644,9 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "daa69b40 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/cases/$id.tsx": "19be36a6 generated",
+  "src/routes/cases/$id.tsx": "d58244e1 generated",
   "src/routes/cases/index.tsx": "c4825317 generated",
-  "src/routes/cases/new.tsx": "68b8347e generated",
+  "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",

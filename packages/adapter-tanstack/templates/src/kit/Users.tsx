@@ -228,7 +228,13 @@ export function Users({
       <Card className="p-card">
         <form onSubmit={invite} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
-            <Label htmlFor="invite-email">{w.emailAddress}</Label>
+            <Label htmlFor="invite-email">
+              {w.emailAddress}
+              <span aria-hidden className="text-destructive">
+                {" "}
+                *
+              </span>
+            </Label>
             <Input
               id="invite-email"
               type="email"

@@ -378,33 +378,36 @@ export function ModelTable<R extends Row>({
     ) : (
       children
     );
-  // A record's checkbox; shift-click sets the range from the last one clicked to its state.
-  const check = (row: R, index: number, size = "size-4") =>
+  // A record's checkbox; shift-click sets the range from the last one clicked to its state. On a
+  // card its label is the 44 by 44 a finger needs, and the box keeps its size.
+  const check = (row: R, index: number, size = "size-4", target = "contents") =>
     selection && (
-      <input
-        type="checkbox"
-        data-part="select"
-        aria-label={w.selectIt(
-          title ? formatValue(title, displayValue(title, row), app) : `#${row.id}`,
-        )}
-        checked={selection.ids.has(row.id)}
-        onChange={(e) => {
-          const next = new Set(selection.ids);
-          const from =
-            (e.nativeEvent as MouseEvent).shiftKey && anchor.current !== null
-              ? anchor.current
-              : index;
-          for (let i = Math.min(from, index); i <= Math.max(from, index); i++) {
-            const id = shown[i]?.id;
-            if (id === undefined) continue;
-            if (e.target.checked) next.add(id);
-            else next.delete(id);
-          }
-          anchor.current = index;
-          selection.onChange(next);
-        }}
-        className={`relative z-10 ${size} cursor-pointer accent-primary`}
-      />
+      <label className={target}>
+        <input
+          type="checkbox"
+          data-part="select"
+          aria-label={w.selectIt(
+            title ? formatValue(title, displayValue(title, row), app) : `#${row.id}`,
+          )}
+          checked={selection.ids.has(row.id)}
+          onChange={(e) => {
+            const next = new Set(selection.ids);
+            const from =
+              (e.nativeEvent as MouseEvent).shiftKey && anchor.current !== null
+                ? anchor.current
+                : index;
+            for (let i = Math.min(from, index); i <= Math.max(from, index); i++) {
+              const id = shown[i]?.id;
+              if (id === undefined) continue;
+              if (e.target.checked) next.add(id);
+              else next.delete(id);
+            }
+            anchor.current = index;
+            selection.onChange(next);
+          }}
+          className={`relative z-10 ${size} cursor-pointer accent-primary`}
+        />
+      </label>
     );
   const all =
     selection !== undefined && shown.length > 0 && shown.every((r) => selection.ids.has(r.id));
@@ -435,8 +438,13 @@ export function ModelTable<R extends Row>({
             >
               {/* The checkbox sits in the picture's corner, or in a column of its own beside the title. */}
               {selection && view === "cards" && pictureField && (
-                <span className="absolute top-3 left-3 z-10 rounded-sm bg-card/90 p-1">
-                  {check(row, index, "size-6")}
+                <span className="absolute top-1 left-1 z-10">
+                  {check(
+                    row,
+                    index,
+                    "size-6",
+                    "relative flex size-11 cursor-pointer items-center justify-center before:absolute before:size-8 before:rounded-sm before:bg-card/90",
+                  )}
                 </span>
               )}
               {/* Cards of a model with pictures show the record's, or a placeholder without one. */}
@@ -467,7 +475,14 @@ export function ModelTable<R extends Row>({
                 ))}
               <div className="flex items-start justify-between gap-3">
                 {selection && !(view === "cards" && pictureField) && (
-                  <span className="-ml-1 shrink-0">{check(row, index, "size-6")}</span>
+                  <span className="relative z-10 -my-2.5 -ml-3 flex size-11 shrink-0">
+                    {check(
+                      row,
+                      index,
+                      "size-6",
+                      "flex size-11 cursor-pointer items-center justify-center",
+                    )}
+                  </span>
                 )}
                 {/* The mark before the title, on a card too (a phone shows cards); a cards view
                     with a picture shows it on top instead. */}

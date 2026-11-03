@@ -143,7 +143,7 @@ function LandingLayoutView({
         <li key={l.link ?? i}>
           <AppLink
             href={l.link}
-            className="underline-offset-4 hover:text-foreground hover:underline"
+            className="inline-flex min-h-11 items-center lg:min-h-0 underline-offset-4 hover:text-foreground hover:underline"
             {...mark(footer.texts, `items.${i}.label`)}
           >
             {l.label}
@@ -329,7 +329,7 @@ function LandingLayoutView({
                 © {new Date().getFullYear()} {appName}
               </p>
               <LegalLinks links={site?.legal} />
-              <ConsentSettings className="hover:underline" />
+              <ConsentSettings className="inline-flex min-h-11 items-center lg:min-h-0 hover:underline" />
               <AppearancePicker />
             </div>
           </div>
@@ -338,7 +338,7 @@ function LandingLayoutView({
             <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
             {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
             <LegalLinks links={site?.legal} />
-            <ConsentSettings className="text-left hover:underline" />
+            <ConsentSettings className="inline-flex min-h-11 items-center lg:min-h-0 text-left hover:underline" />
             <AppearancePicker />
           </div>
         )}
@@ -353,7 +353,11 @@ function LegalLinks({ links }: { links?: LandingLink[] }) {
   return (
     <>
       {links.map((l) => (
-        <Link key={String(l.to)} to={l.to} className="hover:underline">
+        <Link
+          key={String(l.to)}
+          to={l.to}
+          className="inline-flex min-h-11 items-center lg:min-h-0 hover:underline"
+        >
           {l.label}
         </Link>
       ))}

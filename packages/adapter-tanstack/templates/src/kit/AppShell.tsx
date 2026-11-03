@@ -2,7 +2,7 @@
 // menu stays in view while the page scrolls (a sidebar on wide screens, a bar at the top on a phone).
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { LogOut, type LucideIcon, Menu, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Input, Label } from "#/components/ui/input";
@@ -358,6 +358,8 @@ function YourName({
   onRename: (name: string) => Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  // Drawn twice, in the sidebar and in the phone's menu: each its own id.
+  const inputId = useId();
   const [value, setValue] = useState(name);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
@@ -395,9 +397,15 @@ function YourName({
         <Card className="rounded-xl p-card">
           <form onSubmit={save} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="your-name">{w.yourName}</Label>
+              <Label htmlFor={inputId}>
+                {w.yourName}
+                <span aria-hidden className="text-destructive">
+                  {" "}
+                  *
+                </span>
+              </Label>
               <Input
-                id="your-name"
+                id={inputId}
                 required
                 maxLength={100}
                 value={value}
@@ -480,7 +488,7 @@ export function BackTo({ to, title }: { to: LinkProps["to"]; title: string }) {
     <Link
       to={to}
       data-part="back"
-      className="mb-2 inline-flex min-h-6 items-center gap-1 rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+      className="mb-2 inline-flex min-h-11 items-center gap-1 rounded-sm lg:min-h-6 text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span aria-hidden>←</span>
       {tx(title)}

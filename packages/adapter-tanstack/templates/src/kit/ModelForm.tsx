@@ -118,6 +118,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   // Ids unique to this form: a page may show the same form twice (a row's action dialog in the
   // phone list and in the table), and a label must reach its own field.
   const formId = useId();
+  const deleteButton = useRef<HTMLButtonElement>(null);
   const recordName = initial?.[ui.titleField];
 
   // A field locked on the record as it is (record-rules.md §2): shown, not changed.
@@ -551,6 +552,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               {trash ? w.trashKeepsIt : w.cannotBeUndone}
             </p>
             <Button
+              ref={deleteButton}
               type="button"
               variant="outline"
               className="border-destructive text-destructive"
@@ -576,7 +578,11 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                 setInUse(undefined);
                 remove(true);
               }}
-              onClose={() => setInUse(undefined)}
+              onClose={() => {
+                setInUse(undefined);
+                // Disabled while it asked, the button lost the focus the dialog would give back.
+                requestAnimationFrame(() => deleteButton.current?.focus());
+              }}
             />
           )}
           {tells && (

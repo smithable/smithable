@@ -50,9 +50,11 @@ interface PageUi {
 export const pageUi = ${literal(words)} satisfies Record<string, PageUi>;
 
 /** A route's head: the tab's title ("<page> · <app>", the page at / the app's name alone), and the description search engines show. */
-export function pageHead(page: keyof typeof pageUi) {
+export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const ui: PageUi = pageUi[page];
-  const title = ${home.length ? `${home.map((id) => `page === ${JSON.stringify(id)}`).join(" || ")} ? app.name : ` : ""}\`\${${read("ui.title")}} · \${app.name}\`;
+  const own = ${home.length ? `${home.map((id) => `page === ${JSON.stringify(id)}`).join(" || ")} ? app.name : ` : ""}\`\${${read("ui.title")}} · \${app.name}\`;
+  // A record or a new form within the page: its own name first, so tabs can be told apart.
+  const title = lead ? \`\${lead} · \${own}\` : own;
   const described = ui.description ? [{ name: "description", content: ${read("ui.description")} }] : [];
   return { meta: [{ title }, ...described] };
 }
