@@ -10,7 +10,7 @@ function sectionsPath(page: PageIR): string[] {
   return ["pages", page.id, page.pattern.kind === "landing" ? "landing" : "sections"];
 }
 
-import { filterValueProblem } from "./list-keys.js";
+import { filterThrough, filterValueProblem } from "./list-keys.js";
 import { checkFieldArg, FIELD_ARG, type FieldArg } from "./model-operations.js";
 import { COMPONENT_PATTERN, FIELD_NAME_PATTERN, NAME_PATTERN, nameRule } from "./names.js";
 
@@ -683,10 +683,11 @@ const setDefaultFilter: Operation<{ page: string; field: string; value: string }
         `"${field}" is not among the filters of ${page}${p.filters?.length ? ` (${p.filters.join(", ")})` : ""}; add it with setFilters first.`,
       );
     const model = ir.models.find((m) => m.name === pageModel(p));
-    const problem = model ? filterValueProblem(model, field, value.trim()) : undefined;
+    const problem = model ? filterValueProblem(model, field, value.trim(), ir.models) : undefined;
     if (problem) throw new OperationError(problem);
     // Several values are a list for a choice or a person; a range keeps its decimal comma.
-    const f = model?.fields.find((x) => x.name === field);
+    const away = model && field.includes(".") ? filterThrough(model, field, ir.models) : undefined;
+    const f = away && "field" in away ? away.field : model?.fields.find((x) => x.name === field);
     const listed =
       f?.type.kind === "choice" || (f?.type.kind === "relation" && f.type.model === "User");
     const parts = listed ? value.split(",").map((v) => v.trim()) : [value.trim()];
@@ -696,6 +697,39 @@ const setDefaultFilter: Operation<{ page: string; field: string; value: string }
     else if (spec.has(["pages", page, "defaultFilter"]))
       spec.add(["pages", page, "defaultFilter"], field, written);
     else spec.add(["pages", page], "defaultFilter", { [field]: written });
+    return [];
+  },
+};
+
+const setExport: Operation<{ page: string; offered: "on" | "off" }> = {
+  name: "setExport",
+  summary:
+    "Offer Export CSV on a list page (on, as a list does unless it says otherwise) or not (off).",
+  schema: {
+    type: "object",
+    required: ["page", "offered"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      offered: {
+        type: "string",
+        enum: ["on", "off"],
+        description: "on: the list offers Export CSV; off: its records stay in the app.",
+      },
+    },
+  },
+  positional: ["page", "offered"],
+  describe: ({ page, offered }) =>
+    offered === "off" ? `Offer no Export CSV on ${page}` : `Offer Export CSV on ${page}`,
+  destructive: () => false,
+  apply({ spec }, { page, offered }, ir) {
+    const p = ir.pages.find((x) => x.id === page);
+    if (!p) throw new OperationError(`There is no page named "${page}".`);
+    if (p.pattern.kind !== "crud") throw new OperationError(`${page} is not a list page.`);
+    const path = ["pages", page, "export"];
+    if (offered === "on") {
+      if (spec.has(path)) spec.remove(path);
+    } else if (!spec.has(path)) spec.add(["pages", page], "export", false);
     return [];
   },
 };
@@ -1152,6 +1186,7 @@ export const crudOperations: AnyOperation[] = [
   setDefaultFilter,
   setSortable,
   setFavorites,
+  setExport,
   setContact,
   setMine,
 ];

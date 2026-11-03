@@ -1,8 +1,9 @@
 // Smithable app kit: a list as a CSV file (Export CSV): the model's fields by their labels,
-// values as a spreadsheet reads them (amounts as decimals, dates and times as ISO, a reference
+// values as a spreadsheet reads them (amounts as decimals, dates and times as ISO in the app's time zone, a reference
 // by its record's title, a choice by its label), nothing a picture or document field holds.
 import type { RecordUi, Row } from "./model";
 import { w } from "./words";
+import { isoIn, wallTime } from "./zoned";
 
 const SKIPPED = new Set(["picture", "pictures", "file", "files"]);
 
@@ -16,14 +17,18 @@ export function cell(value: unknown): string {
 }
 
 /** A field's value as the CSV gives it. */
-function fieldValue<R extends Row>(field: RecordUi<R>["fields"][number], row: R): unknown {
+function fieldValue<R extends Row>(
+  field: RecordUi<R>["fields"][number],
+  row: R,
+  timeZone?: string,
+): unknown {
   const value = field.get(row);
   if (value === null || value === undefined || value === "") return "";
   switch (field.kind) {
     case "money":
       return (Number(value) / 100).toFixed(2);
     case "datetime":
-      return value instanceof Date ? value.toISOString() : String(value);
+      return value instanceof Date ? isoIn(value, timeZone) : String(value);
     case "bool":
       return value ? w.yes : w.no;
     case "choice":
@@ -34,22 +39,24 @@ function fieldValue<R extends Row>(field: RecordUi<R>["fields"][number], row: R)
 }
 
 /** The rows as CSV text, a header line first; with a BOM so spreadsheets read it as UTF-8. */
-export function csvOf<R extends Row>(ui: RecordUi<R>, rows: R[]): string {
+export function csvOf<R extends Row>(ui: RecordUi<R>, rows: R[], timeZone?: string): string {
   const fields = ui.fields.filter((f) => !SKIPPED.has(f.kind));
   const shown = ui.compute ? rows.map((row) => ({ ...row, ...ui.compute?.(row) }) as R) : rows;
   const lines = [
     fields.map((f) => cell(f.label)).join(","),
-    ...shown.map((row) => fields.map((f) => cell(fieldValue(f, row))).join(",")),
+    ...shown.map((row) => fields.map((f) => cell(fieldValue(f, row, timeZone))).join(",")),
   ];
   return `\uFEFF${lines.join("\r\n")}\r\n`;
 }
 
-/** The file's name, e.g. customers.csv; cut at the cap, customers-10000-of-14200.csv. */
+/** The file's name, e.g. customers-2026-11-03.csv; cut at the cap, customers-2026-11-03-10000-of-14200.csv. */
 export function csvName(
-  ui: { pluralLabel: string },
+  page: string,
+  timeZone?: string,
   cut?: { shown: number; total: number },
+  now = new Date(),
 ): string {
-  const name = ui.pluralLabel.toLowerCase().replace(/\s+/g, "-");
+  const name = `${page}-${wallTime(now, timeZone).slice(0, 10)}`;
   return cut ? `${name}-${cut.shown}-of-${cut.total}.csv` : `${name}.csv`;
 }
 

@@ -3,6 +3,7 @@ import {
   type AuthIR,
   type CustomActionIR,
   type FieldIR,
+  filterThrough,
   humanize,
   kebab,
   type ModelIR,
@@ -101,6 +102,8 @@ export function filterCode(
   // A field that refers to a person, as a filter.
   let people = false;
   let lists = false;
+  let subSelects = false;
+  let liveThrough = false;
   let toggles = false;
   let own = false;
   let mine = false;
@@ -129,6 +132,89 @@ export function filterCode(
   }
   for (const name of page.filters ?? []) {
     if (name === "owner" && ownOnly) continue;
+    // One reference away (reports.md §2.1): the condition on the related table, as a sub-select,
+    // so the list's own query stays as it is.
+    if (name.includes(".")) {
+      const away = filterThrough(model, name, ir.models);
+      if ("problem" in away) continue;
+      const tn = names(away.target, t);
+      const value = `data.f?.[${JSON.stringify(name)}]`;
+      const far = `${tn.table}.${dataKey(away.field)}`;
+      // Only the related records this viewer may read, and not those in the trash.
+      const through = (condition: string, when = value) =>
+        `${when} ? inArray(${n.table}.${dataKey(away.through)}, db.select({ id: ${tn.table}.id }).from(${tn.table}).where(and(${condition}, ${tn.data}.readable(viewer)${away.target.trash ? `, isNull(${tn.table}.deletedAt)` : ""}))) : undefined`;
+      modules.push({ module: `#/generated/${kebab(away.target.name)}.server`, data: tn.data });
+      if (away.target.trash) liveThrough = true;
+      const label = `${t.field(model, away.through).label ?? humanize(away.through.name)}: ${(t.field(away.target, away.field).label ?? humanize(away.field.name)).toLowerCase()}`;
+      subSelects = true;
+      lists = true;
+      const type = away.field.type;
+      if (type.kind === "choice") {
+        conditions.push(
+          through(
+            `inArray(${far}, ${value}.split(",").filter((v) => ${literal(type.values)}.includes(v)) as (${type.values.map((v) => JSON.stringify(v)).join(" | ")})[])`,
+          ),
+        );
+        controls.push({
+          name,
+          label,
+          kind: "chips",
+          ...chips,
+          options: code(
+            `${tn.ui}.fields.find((f) => f.name === ${JSON.stringify(dataKey(away.field))})?.choices`,
+          ),
+          ...fold(name),
+        });
+        modules.push({ module: tn.module, data: tn.ui });
+      } else if (type.kind === "relation") {
+        const related = modelNamed(ir, type.model);
+        const rn = names(related, t);
+        const title = relatedTitle(ir, related.name);
+        if (longTitle(related)) titles = true;
+        modules.push({ module: `#/generated/${kebab(related.name)}.server`, data: rn.data });
+        conditions.push(
+          through(`inArray(${far}, ${value}.split(",").map(Number).filter(Number.isInteger))`),
+        );
+        const option = `"${name}"`;
+        options.push(
+          `${option}: (await ${rn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(related, `r.${title}`)} }))`,
+        );
+        controls.push({
+          name,
+          label,
+          kind: "chips",
+          ...chips,
+          options: code(`options[${option}]`),
+          ...fold(name),
+        });
+      } else if (type.kind === "scalar" && type.name === "bool") {
+        toggles = true;
+        conditions.push(
+          through(
+            `eq(${far}, ${value} === "true")`,
+            `(${value} === "true" || ${value} === "false")`,
+          ),
+        );
+        controls.push({ name, label, kind: "toggle", ...fold(name) });
+      } else if (type.kind === "scalar") {
+        ranges = true;
+        const kind = type.name;
+        const when = kind === "date" || kind === "datetime";
+        if (when) dated = true;
+        const how = kind === "date" ? '"date"' : kind === "datetime" ? '"instant"' : '"number"';
+        const range = `inRange(${far}, ${value}, ${how}${kind === "money" ? ", 100" : when ? ", 1, personZone(app.timeZone)" : ""})`;
+        // A range the address cannot read, or All, is no condition: every record stays.
+        conditions.push(through(range, `${value} && ${range}`));
+        controls.push({
+          name,
+          label,
+          kind: "range",
+          input: when ? "date" : "number",
+          ...fold(name),
+        });
+      }
+      continue;
+    }
     // The owner: a "Mine" toggle for those signed in, never a list of people.
     if (name === "owner") {
       mine = true;
@@ -321,7 +407,17 @@ const ${v} = createServerFn()
     unread,
     favorites,
     defaults: page.defaultFilter,
-    imports: { ranges, dated, lists, titles, people, toggles: toggles || mine, own },
+    imports: {
+      ranges,
+      dated,
+      lists,
+      subSelects,
+      liveThrough,
+      titles,
+      people,
+      toggles: toggles || mine,
+      own,
+    },
   };
 }
 
@@ -432,7 +528,7 @@ const ${fn} = createServerFn()
     };
   });
 ${filtering.picks.join("")}`,
-      options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => (k === "unread" ? 'unread: String(s.unread) === "1" ? "1" : undefined' : `${k}: text(s.${k})`)).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
+      options: `  validateSearch: (s: Search) => optional({ ${keys.map((k) => (k === "unread" ? 'unread: String(s.unread) === "1" ? "1" : undefined' : k.includes(".") ? `${JSON.stringify(k)}: text(s[${JSON.stringify(k)}])` : `${k}: text(s.${k})`)).join(", ")}${view ? ', view: oneOf(s.view, ["saved"] as const)' : ""}, page: ${PAGE} }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps: { q, sort, ${view ? "view, " : ""}page, ...f } }) => ${fn}({ data: { q, sort, ${view ? "view, " : ""}f, page } }),
   // While a search or filter loads, the page stays (and its controls keep their focus).
@@ -592,6 +688,8 @@ export function listParts(
       route.add("drizzle-orm", "inArray");
     if (filtering) route.add("drizzle-orm", "and");
     if (filtering?.imports.toggles || filtering?.imports.people) route.add("drizzle-orm", "eq");
+    if (filtering?.imports.subSelects) route.add("#/db", "db");
+    if (filtering?.imports.liveThrough) route.add("drizzle-orm", "isNull");
     if (filtering?.imports.own) route.add("drizzle-orm", "sql");
     if (filtering?.imports.people)
       route.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
@@ -658,12 +756,12 @@ export function listParts(
   const selecting =
     !within &&
     (many.length > 0 || onRows.length > 0 || merges.length > 0 || Boolean(auth && hasSignIn(auth)));
+  if (selecting && page.export !== false) view.add("#/kit/csv", "csvName", "csvOf", "download");
   if (selecting) {
     view
       .add("react", "useState")
       .add("@tanstack/react-router", "useRouter")
       .add("#/kit/SelectionBar", "SelectionBar")
-      .add("#/kit/csv", "csvName", "csvOf", "download")
       .add("#/kit/access", ...(addressOwned(model) ? ["addressOwner"] : []), "allows")
       .add(n.module, n.removeMany, n.deleteRule);
     if (longTitle(model)) view.add("#/kit/format", "titleOf");
@@ -900,8 +998,12 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
             setSelected(new Set());
             await router.invalidate();
           }}
-          onExport={() => download(csvName(${n.ui}), csvOf(${n.ui}, chosen))}
-        />
+${
+  page.export === false
+    ? ""
+    : `          onExport={() => download(csvName(${JSON.stringify(page.id)}, app.timeZone), csvOf(${n.ui}, chosen, app.timeZone))}
+`
+}        />
       )}
 `
     : ""
@@ -919,10 +1021,10 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
 }      <ModelTable
         ui={${n.ui}}${totalled ? `\n        totals={totals && { count: totals.count, sums: Object.fromEntries(Object.entries(totals.sums).filter(([key]) => ${literal(own)}.includes(key))) }}` : ""}${within ? "" : `\n        page=${attr(page.id)}\n        ${scrolling ? "more={{ total, load: loadMore }}" : `paging={{ page: at, size, total, to: (next) => navigate({ to: ${JSON.stringify(page.route)}, search: (prev) => ({ ...prev, page: next > 1 ? next : undefined }) }) }}`}`}${columns ? `\n        columns={${literal(columns)}}` : ""}${below.length ? `\n        below={${literal(Object.fromEntries(below))}}` : ""}
         app={app}${
-          within || capped || owned
+          within || capped || owned || page.export === false
             ? ""
             : `
-        exportRows={async () => (await ${loading}({ data: ${exportArgs} }))}`
+        exportRows={async () => (await ${loading}({ data: ${exportArgs} }))} exportName=${JSON.stringify(page.id)}`
         }
         rows={${(() => {
           const ordered = sort

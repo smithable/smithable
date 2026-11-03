@@ -1156,6 +1156,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "schedule",
         "my-bookings",
         "sessions",
+        "bookings",
       ],
     },
     {
@@ -1753,6 +1754,29 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         {
           "kind": "text",
           "name": "cancelling",
+        },
+      ],
+    },
+    {
+      "defaultFilter": {
+        "session.startsAt": "today",
+      },
+      "filters": [
+        "session.startsAt",
+        "session.classType",
+      ],
+      "id": "bookings",
+      "pattern": {
+        "kind": "crud",
+        "model": "Booking",
+      },
+      "route": "/bookings",
+      "sections": [
+        {
+          "kind": "crud",
+          "model": "Booking",
+          "name": "crud",
+          "own": true,
         },
       ],
     },

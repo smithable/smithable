@@ -112,11 +112,11 @@ export const pagesSection: SpecSection<"pages"> = {
           type: "array",
           items: { type: "string" },
           description:
-            "Fields the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle.",
+            "Fields the list can be filtered by, on a crud page also one reference away (session.startsAt): choices and references as chips, numbers and dates as a range, yes/no as a toggle.",
         },
         defaultFilter: {
           type: "object",
-          propertyNames: { pattern: "^[a-z][A-Za-z0-9]*$" },
+          propertyNames: { pattern: "^[a-z][A-Za-z0-9]*(\\.[a-z][A-Za-z0-9]*)?$" },
           additionalProperties: { type: ["string", "boolean", "array"], items: { type: "string" } },
           description:
             'Filter values applied when the address says nothing, by filter, e.g. { startsAt: upcoming }: a date takes upcoming, past, today, thisWeek, thisMonth or a range; "all" in the address clears one.',
@@ -135,6 +135,11 @@ export const pagesSection: SpecSection<"pages"> = {
           oneOf: [{ type: "boolean" }, { const: "only" }],
           description:
             "true: a heart on each record and a Saved view of the list; only: a list of the viewer's saved records.",
+        },
+        export: {
+          const: false,
+          description:
+            "false: the list offers no Export CSV, for a page whose records are to stay in the app. Unsaid, it does.",
         },
         contact: {
           oneOf: [
@@ -232,6 +237,7 @@ function readPage(
       "defaultFilter",
       "sortable",
       "favorites",
+      "export",
       "contact",
       "mine",
       ...TEXT_KEYS,
@@ -252,6 +258,7 @@ function readPage(
   let defaultFilter: { name: string; value: string; at: At }[] | undefined;
   let sortable: { name: string; at: At }[] | undefined;
   let favorites: PageIR["favorites"] | undefined;
+  let noExport = false;
   let mine = false;
   let contact: { to: string; keep?: string; toAt: At; keepAt?: At } | undefined;
   for (const { key, value } of known) {
@@ -315,6 +322,14 @@ function readPage(
           value,
           "invalid-value",
           `"favorites" in ${where} must be true (a heart and a Saved view) or only (the viewer's saved records).`,
+        );
+    } else if (key === "export") {
+      if (isScalar(value) && value.value === false) noExport = true;
+      else
+        ctx.error(
+          value,
+          "invalid-value",
+          `"export" in ${where} can only be false: a list offers Export CSV unless it says so.`,
         );
     } else if (key === "contact") {
       if (isScalar(value) && typeof value.value === "string") {
@@ -419,6 +434,7 @@ function readPage(
         "defaultFilter",
         "sortable",
         "favorites",
+        "export",
         "contact",
         "mine",
       ].includes(e.key),
@@ -445,7 +461,7 @@ function readPage(
   const filterModel = model ?? calendarModel;
   let checkedFilters =
     filterModel && filters?.length
-      ? checkFilterFields(ctx, filters, filterModel, parsed, where)
+      ? checkFilterFields(ctx, filters, filterModel, parsed, where, Boolean(model))
       : undefined;
   // On a calendar the range of days is its date filter: no number or date ranges, no owner.
   if (calendarModel && checkedFilters) {
@@ -491,6 +507,7 @@ function readPage(
       ? { sortable: checkSortableFields(ctx, sortable, model, parsed, where) }
       : {}),
     ...(model && favorites ? { favorites } : {}),
+    ...(model && noExport ? { export: false as const } : {}),
     ...(model && mine ? { mine: true as const } : {}),
     ...(model && contact ? checkContact(ctx, contact, model, parsed, where) : {}),
     ...readSemanticText(ctx, known),

@@ -35,6 +35,16 @@ export function wallTime(instant: Date, timeZone?: string): string {
   return new Date(instant.getTime() + shift).toISOString().slice(0, 16);
 }
 
+/** An instant as ISO in a time zone, with its offset: "2026-09-30T09:00:00+03:00". */
+export function isoIn(instant: Date, timeZone?: string): string {
+  const shift = timeZone
+    ? offsetAt(instant.getTime(), timeZone)
+    : -instant.getTimezoneOffset() * 60_000;
+  const minutes = Math.abs(shift) / 60_000;
+  const part = (n: number) => String(Math.floor(n)).padStart(2, "0");
+  return `${new Date(instant.getTime() + shift).toISOString().slice(0, 19)}${shift < 0 ? "-" : "+"}${part(minutes / 60)}:${part(minutes % 60)}`;
+}
+
 /**
  * The instant a wall time ("2026-09-30T09:00") is in `timeZone`. Around a change to or from summer
  * time both offsets are tried: a wall time that happens twice (03:30 on the autumn night) is its
