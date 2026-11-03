@@ -50,7 +50,7 @@ const SHOTS = {
   // The cases with their unread counts, and a case's conversation with the reply box.
   support: [
     ["cases", "list", "admin"],
-    ["cases", 2, "admin", true],
+    ["cases", 8, "admin", true], // a question about a price: a sign-in trouble read as a fault of the app itself
   ],
   // Where the truck is this week, under its evening photo, and the orders as staff see them.
   kiosk: [
