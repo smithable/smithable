@@ -908,7 +908,7 @@ async function bookingsListFlow(dir, base) {
     await page.waitForURL(/[?&]session\.startsAt=all/, { timeout: 10000 * P });
     await count(2, "all bookings");
     const later = new URL(page.url());
-    later.searchParams.set("session.classType", "1");
+    later.searchParams.set("session.classType", '"1"');
     await open(page, later.toString());
     await count(1, "one class type's bookings");
     const member = await (
