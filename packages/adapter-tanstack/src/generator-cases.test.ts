@@ -62,3 +62,27 @@ test("a seed whose dated samples are all dates imports no instant conversion", (
   expect(seed).toContain('import { wallTime } from "#/kit/zoned";');
   expect(seed).not.toContain("instantOf");
 });
+
+test("a sample file that is an empty list seeds nothing for its model (Drizzle refuses an insert of no rows)", () => {
+  const app = generateApp(ir, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    samples: { Tool: [] },
+  });
+  const seed = app.find((f) => f.path === "src/db/seed.ts")?.content ?? "";
+  expect(seed).not.toContain("schema.tools");
+  expect(seed).not.toContain("values([\n    ])");
+  // The other models still get their rows.
+  expect(seed).toContain("db.insert(schema.invoices)");
+  // Every model empty: a seed with nothing to import.
+  const empty = generateApp(ir, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+    samples: { Tool: [], Invoice: [], Line: [], Payment: [] },
+  });
+  const none = empty.find((f) => f.path === "src/db/seed.ts")?.content ?? "";
+  expect(none).not.toContain("import { db }");
+  expect(none).not.toContain("import * as schema");
+});

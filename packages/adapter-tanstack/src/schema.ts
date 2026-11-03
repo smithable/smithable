@@ -227,7 +227,7 @@ export const ${n.table}Reads = sqliteTable(
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
   for (const used of ["index", "integer", "text"]) imports.add(used);
-  if (ir.timers.length) imports.add("uniqueIndex");
+  if (ir.timers.length || ir.incoming.length) imports.add("uniqueIndex");
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   const documents = ir.models.some((m) => m.fields.some(storesFiles));
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
@@ -505,8 +505,7 @@ export function seedModule(
       skipped.add(model.name);
   }
   const ordered = dependencyOrder(ir.models).filter((m) => !skipped.has(m.name));
-  const tables = ordered.map((m) => tableNames(m).table);
-  const blocks = ordered.map((model) => {
+  const blocks = ordered.flatMap((model) => {
     const n = tableNames(model);
     // A calendar's records are placed around the day the samples are loaded, never an empty week.
     const start = calendarStart(model, ir);
@@ -544,25 +543,32 @@ export function seedModule(
       });
       return `    { ${entries.join(", ")} },`;
     });
+    // A sample file that is an empty list: the model starts empty, and the seed inserts nothing
+    // (an insert of no rows is refused).
+    if (!rows.length) return [];
     // A required picture may have no sample to come from: such a row is left out, not inserted
     // without its picture (the column refuses it, and the types would too).
     const needed = model.fields.filter((f) => isPicture(f) && f.required).map(dataKey);
     if (needed.length)
-      return `if (db.select().from(schema.${n.table}).limit(1).all().length === 0) {
+      return [
+        `if (db.select().from(schema.${n.table}).limit(1).all().length === 0) {
   type Row = typeof schema.${n.table}.$inferInsert;
   const rows: (Omit<Row, ${needed.map((k) => JSON.stringify(k)).join(" | ")}> & { ${needed.map((k) => `${k}: Picture | null`).join("; ")} })[] = [
 ${rows.map((r) => `  ${r}`).join("\n")}
   ];
   const pictured = rows.filter((r) => ${needed.map((k) => `r.${k} !== null`).join(" && ")}) as Row[];
   if (pictured.length) db.insert(schema.${n.table}).values(pictured).run();
-}`;
-    return `if (db.select().from(schema.${n.table}).limit(1).all().length === 0) {
+}`,
+      ];
+    return [
+      `if (db.select().from(schema.${n.table}).limit(1).all().length === 0) {
   db.insert(schema.${n.table})
     .values([
 ${rows.join("\n")}
     ])
     .run();
-}`;
+}`,
+    ];
   });
   // The sample users (samples/people.yml), in an app where people sign in: users of the
   // development database who sign in nowhere; the development door acts as them.
@@ -583,7 +589,7 @@ ${people.map((u) => `      { id: ${JSON.stringify(u.id)}, name: ${JSON.stringify
   // A model that needs a person who signs in gets no sample rows; with no rows at all, the seed
   // has nothing to import.
   return `${HEADER}// Sample data for development. Run with \`pnpm db:seed\`; tables that already have rows are left alone.
-${blocks.length ? 'import { db } from "./index";\n' : ""}${tables.length || people.length ? 'import * as schema from "./schema";\n' : ""}${pictures ? `import { ${blocks.some((b) => b.includes(": Picture")) ? "type Picture, " : ""}samplePicture } from "#/kit/uploads";\n` : ""}${
+${blocks.length ? 'import { db } from "./index";\n' : ""}${blocks.length ? 'import * as schema from "./schema";\n' : ""}${pictures ? `import { ${blocks.some((b) => b.includes(": Picture")) ? "type Picture, " : ""}samplePicture } from "#/kit/uploads";\n` : ""}${
   // The calendar's helper, only when a sample is moved with it (a skipped model moves none).
   blocks.some((b) => b.includes("aroundToday("))
     ? `import { app } from "#/generated/app";
