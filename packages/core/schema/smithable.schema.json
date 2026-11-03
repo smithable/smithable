@@ -2388,12 +2388,12 @@
             "items": {
               "type": "string"
             },
-            "description": "Fields the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle."
+            "description": "Fields the list can be filtered by, on a crud page also one reference away (session.startsAt): choices and references as chips, numbers and dates as a range, yes/no as a toggle."
           },
           "defaultFilter": {
             "type": "object",
             "propertyNames": {
-              "pattern": "^[a-z][A-Za-z0-9]*$"
+              "pattern": "^[a-z][A-Za-z0-9]*(\\.[a-z][A-Za-z0-9]*)?$"
             },
             "additionalProperties": {
               "type": [

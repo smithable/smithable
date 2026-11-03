@@ -112,11 +112,11 @@ export const pagesSection: SpecSection<"pages"> = {
           type: "array",
           items: { type: "string" },
           description:
-            "Fields the list can be filtered by: choices and references as chips, numbers and dates as a range, yes/no as a toggle.",
+            "Fields the list can be filtered by, on a crud page also one reference away (session.startsAt): choices and references as chips, numbers and dates as a range, yes/no as a toggle.",
         },
         defaultFilter: {
           type: "object",
-          propertyNames: { pattern: "^[a-z][A-Za-z0-9]*$" },
+          propertyNames: { pattern: "^[a-z][A-Za-z0-9]*(\\.[a-z][A-Za-z0-9]*)?$" },
           additionalProperties: { type: ["string", "boolean", "array"], items: { type: "string" } },
           description:
             'Filter values applied when the address says nothing, by filter, e.g. { startsAt: upcoming }: a date takes upcoming, past, today, thisWeek, thisMonth or a range; "all" in the address clears one.',
