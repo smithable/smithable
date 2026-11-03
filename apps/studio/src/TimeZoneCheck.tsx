@@ -68,7 +68,8 @@ export function TimeZoneCheck({
     <div
       data-part="time-zone-check"
       role="status"
-      className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-1.5 text-xs"
+      // A card at the window's foot, clear of the menus above and Smith's panel at the side.
+      className="fixed bottom-4 left-1/2 z-[60] flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 flex-wrap items-center gap-2 rounded-lg border border-line bg-panel px-3 py-2 text-xs shadow-2xl"
     >
       <span>
         {!zone
