@@ -873,6 +873,72 @@ async function bookingFlow(dir, base) {
  * change, so each is waited for in the outbox.
  */
 /**
+ * The staff's bookings (reports.md §2.1): the list opens on today's classes by a filter on the
+ * session a booking names, All shows every booking, a class type narrows them, and a member is
+ * not let in. One booking on a class moved to now, one on a class a month away.
+ */
+async function bookingsListFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  write(
+    dir,
+    `CREATE TABLE kept AS SELECT id, starts_at, class_type_id FROM sessions;
+     UPDATE sessions SET starts_at = ${Date.now()}, class_type_id = (SELECT MIN(id) FROM class_types) WHERE id = (SELECT MIN(id) FROM sessions);
+     UPDATE sessions SET starts_at = ${Date.now() + 30 * 86400000}, class_type_id = (SELECT MAX(id) FROM class_types) WHERE id = (SELECT MAX(id) FROM sessions);
+     INSERT INTO bookings (session_id, created_at, updated_at) SELECT MIN(id), 1, 1 FROM sessions;
+     INSERT INTO bookings (session_id, created_at, updated_at) SELECT MAX(id), 1, 1 FROM sessions;`,
+  );
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/bookings`);
+    const chips = page.getByRole("list", { name: "Active filters" });
+    await chips
+      .getByRole("listitem")
+      .filter({ hasText: "Session: starts at: Today" })
+      .waitFor({ timeout: 10000 * P });
+    const rows = page.locator("main tbody tr");
+    const count = async (want, what) => {
+      for (let i = 0; i < 100 * P && (await rows.count()) !== want; i++)
+        await page.waitForTimeout(100);
+      if ((await rows.count()) !== want)
+        throw new Error(`${what}: ${await rows.count()} rows, not ${want}`);
+    };
+    await count(1, "today's bookings");
+    await chips.getByRole("button", { name: "All", exact: true }).click();
+    await page.waitForURL(/[?&]session\.startsAt=all/, { timeout: 10000 * P });
+    await count(2, "all bookings");
+    const later = new URL(page.url());
+    later.searchParams.set("session.classType", '"1"');
+    await open(page, later.toString());
+    await count(1, "one class type's bookings");
+    const member = await (
+      await browser.newContext({ viewport: { width: 1440, height: 1000 } })
+    ).newPage();
+    await signInAs(member, base, "member");
+    await open(member, `${base}/bookings`);
+    if (await member.getByRole("list", { name: "Active filters" }).count())
+      throw new Error("a member opens the staff's bookings");
+    await member.context().close();
+    console.log(
+      "  ✓ browser: the staff's bookings open on today's classes through the session they name, All shows every one, a class type narrows them, a member is not let in",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser (bookings list): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("bookings list");
+  } finally {
+    write(
+      dir,
+      `DELETE FROM bookings WHERE created_at = 1;
+       UPDATE sessions SET starts_at = (SELECT starts_at FROM kept WHERE kept.id = sessions.id), class_type_id = (SELECT class_type_id FROM kept WHERE kept.id = sessions.id);
+       DROP TABLE kept;`,
+    );
+    await browser.close();
+  }
+}
+
+/**
  * The staff's list of sessions (filters.md, A 135): it opens on what is to come (the page's
  * defaultFilter), shown as a chip with All, which shows the past too; the instructor filter waits
  * behind "More filters" (the ux file's filters.shown) and shows at once with a value.
@@ -8204,6 +8270,7 @@ test("the session cookie's name and attributes", async () => {
         await personTimeFlow(base);
         await outgoingFlow(dir, base);
         await sessionsListFlow(base);
+        await bookingsListFlow(dir, base);
         await refusalFlow(base);
         await visitorMailFlow(dir, base);
         await markdownFlow(base);

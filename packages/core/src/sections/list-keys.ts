@@ -40,6 +40,39 @@ const DATE_RANGE = /^(?:\d{4}-\d{2}-\d{2})?\.\.(?:\d{4}-\d{2}-\d{2})?$/;
 const NUMBER_RANGE = /^(?:-?\d+(?:[.,]\d+)?)?\.\.(?:-?\d+(?:[.,]\d+)?)?$/;
 
 /**
+ * A filter one reference away (reports.md §2.1), `session.startsAt`: the reference, and the field
+ * of the record it names; what is wrong with it, or nothing.
+ */
+export function filterThrough(
+  model: ModelIR,
+  name: string,
+  models: readonly ModelIR[],
+): { through: FieldIR; target: ModelIR; field: FieldIR } | { problem: string; near?: string[] } {
+  const [first = "", second = "", ...more] = name.split(".");
+  if (more.length) return { problem: `"${name}" goes one reference away at most.` };
+  const through = model.fields.find((f) => f.name === first);
+  if (!through) return { problem: `${model.name} has no field named "${first}".` };
+  if (through.type.kind !== "relation" || through.type.many || through.type.model === "User")
+    return {
+      problem: `"${first}" is not a reference to one record, so "${name}" cannot be a filter.`,
+    };
+  const targetName = through.type.model;
+  const target = models.find((m) => m.name === targetName);
+  if (!target) return { problem: `There is no model named "${targetName}".` };
+  const field = target.fields.find((f) => f.name === second);
+  if (!field)
+    return {
+      problem: `${target.name} has no field named "${second}".`,
+      near: target.fields.map((f) => f.name),
+    };
+  if (!filterable(field) || (field.type.kind === "relation" && field.type.model === "User"))
+    return {
+      problem: `"${name}" cannot be a filter: one reference away, only choices, references to records, numbers, amounts, dates and yes/no fields can.`,
+    };
+  return { through, target, field };
+}
+
+/**
  * What is wrong with a filter's value as the address would carry it (a default filter's), or
  * nothing: a date takes a relative word or a range, a number a range, a choice its values, yes/no
  * true or false, the owner "mine", a person "me" or "none"; a reference to another record takes
@@ -49,7 +82,13 @@ export function filterValueProblem(
   model: ModelIR,
   name: string,
   value: string,
+  models: readonly ModelIR[] = [],
 ): string | undefined {
+  if (name.includes(".")) {
+    const away = filterThrough(model, name, models);
+    if ("problem" in away) return away.problem;
+    return filterValueProblem(away.target, away.field.name, value);
+  }
   const range = (text: string, re: RegExp, kind: string) =>
     re.test(text) && text !== ".."
       ? undefined
@@ -115,7 +154,7 @@ export function checkDefaultFilter(
       );
       continue;
     }
-    const problem = filterValueProblem(target, name, value);
+    const problem = filterValueProblem(target, name, value, parsed.models ?? []);
     if (problem)
       ctx.error(at, "invalid-default-filter", `The default filter of ${where}: ${problem}`);
     else out[name] = value;
@@ -134,6 +173,7 @@ function checkListFields(
   model: string,
   parsed: Partial<SpecIR>,
   where: string,
+  away = false,
 ): string[] {
   const target = parsed.models?.find((m) => m.name === model);
   if (!target) return fields.map((f) => f.name); // reported as an unknown model
@@ -144,6 +184,21 @@ function checkListFields(
     // and who owns it (a "Mine" toggle for those signed in); never an order by owner.
     if (name === "createdAt" || name === "updatedAt" || (name === "owner" && key === "filters")) {
       if (names.includes(name))
+        ctx.error(at, "duplicate-field", `"${name}" is listed twice in the ${key} of ${where}.`);
+      else names.push(name);
+      continue;
+    }
+    // One reference away (reports.md §2.1): a list's filter only, never a calendar's or an order.
+    if (name.includes(".") && key === "filters" && away) {
+      const found = filterThrough(target, name, parsed.models ?? []);
+      if ("problem" in found)
+        ctx.error(
+          at,
+          "invalid-filter",
+          `The filters of ${where}: ${found.problem}`,
+          found.near ? didYouMean(name.split(".")[1] ?? "", found.near) : undefined,
+        );
+      else if (names.includes(name))
         ctx.error(at, "duplicate-field", `"${name}" is listed twice in the ${key} of ${where}.`);
       else names.push(name);
       continue;
@@ -183,7 +238,9 @@ export const checkFilterFields = (
   model: string,
   parsed: Partial<SpecIR>,
   where: string,
-): string[] => checkListFields(ctx, "filters", fields, model, parsed, where);
+  /** Whether a filter may go one reference away: a crud page's. */
+  away = false,
+): string[] => checkListFields(ctx, "filters", fields, model, parsed, where, away);
 
 /** The fields a list may be sorted by, checked against the model; the valid ones, in order. */
 export const checkSortableFields = (
