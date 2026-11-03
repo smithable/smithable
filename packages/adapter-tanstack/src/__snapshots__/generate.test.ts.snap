@@ -7642,10 +7642,13 @@ import { ask, asks } from "#/generated/ask.server";
 import { aiFacts } from "#/kit/assistant.server";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -10091,7 +10094,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/InlineRows.tsx": "5d2b4f42 kit",
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -10112,7 +10115,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -10128,7 +10131,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -10146,7 +10149,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/[_dev]/ask.ts": "7266fbb2 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "df4f4e1e generated",
+  "src/routes/__root.tsx": "230b2356 generated",
   "src/routes/admin/activity.tsx": "1ae4934d generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
   "src/routes/admin/index.tsx": "247d3d7b generated",
@@ -14315,10 +14318,13 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -16419,7 +16425,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "5d2b4f42 kit",
   "src/kit/Landing.tsx": "24de4a50 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -16428,7 +16434,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "364cef63 kit",
-  "src/kit/Slots.tsx": "ff66acf6 kit",
+  "src/kit/Slots.tsx": "eb9628e8 kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "4dfaac5a kit",
   "src/kit/address.server.ts": "ef02319c kit",
@@ -16439,7 +16445,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -16457,7 +16463,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/slots.ts": "911e04a7 kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -16472,7 +16478,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "dc714c08 generated",
+  "src/routes/__root.tsx": "ca694fa8 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/appointments/$id.tsx": "d3570ea5 generated",
   "src/routes/appointments/index.tsx": "5c325600 generated",
@@ -24519,10 +24525,13 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -29043,13 +29052,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
-  "src/kit/Reserve.tsx": "bd5dade5 kit",
+  "src/kit/Reserve.tsx": "ded32b41 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "364cef63 kit",
@@ -29067,7 +29076,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -29085,7 +29094,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -29103,7 +29112,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "292de64e generated",
+  "src/routes/__root.tsx": "c42970ee generated",
   "src/routes/about/index.tsx": "52b48987 generated",
   "src/routes/admin/activity.tsx": "f5a0628c generated",
   "src/routes/admin/bookings/$id.tsx": "42312200 generated",
@@ -35341,10 +35350,13 @@ import { ask, asks } from "#/generated/ask.server";
 import { aiFacts } from "#/kit/assistant.server";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -37782,7 +37794,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "24de4a50 kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -37805,7 +37817,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -37819,7 +37831,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -37837,7 +37849,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/[_dev]/ask.ts": "bd24beb4 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "be123362 generated",
+  "src/routes/__root.tsx": "66454bf6 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/customers/$id.tsx": "afdb118f generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "0fb22ed7 generated",
@@ -44293,10 +44305,13 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -46157,7 +46172,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "24de4a50 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
@@ -46182,7 +46197,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -46200,7 +46215,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -46218,7 +46233,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "0bdfaa95 generated",
+  "src/routes/__root.tsx": "522fde11 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/clients/$id.tsx": "6619c589 generated",
   "src/routes/clients/index.tsx": "411542d1 generated",
@@ -51866,10 +51881,13 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -54100,10 +54118,10 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "196a0352 kit",
   "src/kit/InlineRows.tsx": "5d2b4f42 kit",
   "src/kit/Landing.tsx": "24de4a50 kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
-  "src/kit/OrderPage.tsx": "446f8b5c kit",
+  "src/kit/OrderPage.tsx": "a8985342 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "112de59b kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
@@ -54121,7 +54139,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -54140,7 +54158,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/sequence.server.ts": "89a0dd0d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -54155,7 +54173,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "cf93e9bc generated",
+  "src/routes/__root.tsx": "0781636c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/dishes/$id.tsx": "7ce34e2c generated",
   "src/routes/dishes/index.tsx": "445c3904 generated",
@@ -57305,11 +57323,14 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { waitingCount } from "#/generated/review.server";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -59001,7 +59022,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/InlineRows.tsx": "5d2b4f42 kit",
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "24de4a50 kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -59023,7 +59044,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -59039,7 +59060,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -59058,7 +59079,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "61439043 generated",
+  "src/routes/__root.tsx": "1fce3049 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
@@ -61556,10 +61577,13 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -62615,7 +62639,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "5d2b4f42 kit",
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "24de4a50 kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -62635,7 +62659,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -62649,7 +62673,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -62666,7 +62690,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "fa6e00da generated",
+  "src/routes/__root.tsx": "c4cc6bfa generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "a8c39617 generated",
@@ -71181,10 +71205,13 @@ import { LandingLayout } from "#/kit/Landing";
 import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -74334,7 +74361,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Landing.tsx": "24de4a50 kit",
   "src/kit/Markdown.tsx": "bbaa8b8d kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -74357,7 +74384,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -74372,7 +74399,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -74389,7 +74416,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/[_dev]/ask.ts": "4a0b13f2 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "aefe28ea generated",
+  "src/routes/__root.tsx": "2dfba966 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
@@ -79751,10 +79778,13 @@ import { ask, asks } from "#/generated/ask.server";
 import { aiFacts } from "#/kit/assistant.server";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
+import { clockFrom } from "#/kit/time-text";
 import { pageHeaders } from "#/kit/security";
 import { w } from "#/kit/words";
 import { authClient } from "#/lib/auth-client";
 import appCss from "#/styles.css?url";
+
+clockFrom(() => "24h");
 
 const menus: MenuUi[] = [
   {
@@ -81475,7 +81505,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "196a0352 kit",
   "src/kit/InlineRows.tsx": "5d2b4f42 kit",
   "src/kit/Inspector.tsx": "c490e5bf kit",
-  "src/kit/ModelForm.tsx": "3ca32ab5 kit",
+  "src/kit/ModelForm.tsx": "1777c20d kit",
   "src/kit/ModelTable.tsx": "e3be0e9b kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -81498,7 +81528,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/csv.ts": "b2f17b2d kit",
   "src/kit/dev-door.server.ts": "f8d865f5 kit",
   "src/kit/filter.ts": "01c49cf2 kit",
-  "src/kit/format.ts": "bcab1562 kit",
+  "src/kit/format.ts": "1589a96e kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
@@ -81516,7 +81546,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "94f75656 kit",
+  "src/kit/time-text.ts": "77694801 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -81534,7 +81564,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "76641e97 generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "daa69b40 generated",
+  "src/routes/__root.tsx": "5c0b430c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/cases/$id.tsx": "19be36a6 generated",
   "src/routes/cases/index.tsx": "c4825317 generated",

@@ -96,6 +96,14 @@ export async function create(
     onDraft?: (files: Record<string, string>, assumptions?: Assumption[]) => void;
   } = {},
 ): Promise<number> {
+  if (options.timezone) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: options.timezone });
+    } catch {
+      io.err(`Unknown time zone "${options.timezone}". Use a name like Europe/Mariehamn.\n`);
+      return 1;
+    }
+  }
   // A page as the starting point: what it says is the description (first-build.md §2.8).
   let pictures: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
   let fromPage = false;
@@ -559,20 +567,26 @@ export function sampleFiles(
 
 /**
  * A new app's time zone where its spec names none, so it does not run on UTC unawares (A 220): the
- * one given, else the machine's unless that is UTC. A starter's own zone stays; an app with no
- * pages is only an API, and no one's clock is guessed for it.
+ * one given, over a starter's too; else the machine's unless that is UTC, where a starter's own
+ * zone stays. An app with no pages is only an API, and no one's clock is guessed for it.
  */
 export function withTimeZone(
   files: Record<string, string>,
   given?: string,
   machine = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): Record<string, string> {
-  const zone = given ?? (machine === "UTC" ? undefined : machine);
   const spec = new YamlEditor(files["smithable.yml"] ?? "");
-  if (!zone || !spec.has(["app", "name"]) || spec.has(["app", "timezone"])) return files;
+  if (!spec.has(["app", "name"])) return files;
+  const said = spec.has(["app", "timezone"]);
+  if (given) {
+    if (said) spec.set(["app", "timezone"], given);
+    else spec.add(["app"], "timezone", given);
+    return { ...files, "smithable.yml": spec.text };
+  }
+  if (said || /^(Etc\/)?(UTC|UCT|GMT|Universal|Zulu)$/.test(machine)) return files;
   const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
-  if (!given && !ir?.pages.length) return files;
-  spec.add(["app"], "timezone", zone);
+  if (!ir?.pages.length) return files;
+  spec.add(["app"], "timezone", machine);
   return { ...files, "smithable.yml": spec.text };
 }
 

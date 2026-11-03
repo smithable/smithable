@@ -13,7 +13,13 @@ test("a new app takes the machine's time zone where its spec names none (A 220)"
   expect(withTimeZone(spec(app() + pages), undefined, "UTC")["smithable.yml"]).not.toContain(
     "timezone",
   );
-  // A starter's own zone stays, and one given wins over the machine's.
+  expect(withTimeZone(spec(app() + pages), undefined, "Etc/UTC")["smithable.yml"]).not.toContain(
+    "timezone",
+  );
+  // A starter's own zone stays against the machine's; one given wins over both.
+  expect(
+    withTimeZone(spec(app("  timezone: Asia/Tokyo\n") + pages), "Europe/Oslo")["smithable.yml"],
+  ).toContain("timezone: Europe/Oslo");
   const own = app("  timezone: Asia/Tokyo\n") + pages;
   expect(withTimeZone(spec(own), undefined, "Europe/Helsinki")["smithable.yml"]).toBe(own);
   expect(

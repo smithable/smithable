@@ -14,12 +14,20 @@ export function hourCycle(): "h12" | "h23" {
   return now() === "12h" ? "h12" : "h23";
 }
 
+/** A time's parts for Intl's formats: "14:30", or "2:30 PM" with no leading zero. */
+export function timeParts() {
+  const cycle = hourCycle();
+  return {
+    hour: cycle === "h12" ? "numeric" : "2-digit",
+    minute: "2-digit",
+    hourCycle: cycle,
+  } as const;
+}
+
 /** A wall time ("14:30") as the app writes a clock. */
 export function wallClock(time: string): string {
   return new Intl.DateTimeFormat(language(), {
     timeZone: "UTC",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: hourCycle(),
+    ...timeParts(),
   }).format(new Date(`2000-01-01T${time}:00Z`));
 }

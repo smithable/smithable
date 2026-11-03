@@ -231,10 +231,13 @@ ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}im
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 ${hasAppearance(modes) ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}\nimport { ${workspace.length ? "allows, " : ""}isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
-${ir.app.clock === "12h" ? 'import { clockFrom } from "#/kit/time-text";\n' : ""}${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
+import { clockFrom } from "#/kit/time-text";
+${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
-${ir.app.clock === "12h" ? '\nclockFrom(() => "12h");\n' : ""}
+
+clockFrom(() => "${ir.app.clock ?? "24h"}");
+
 const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];

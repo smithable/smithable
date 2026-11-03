@@ -36,7 +36,7 @@ export const COMMANDS: Command[] = [
       "--with-pictures also takes its pictures as sample pictures, after asking;",
       "--name \"Pulse API Status\" names the app, over the starter's or the draft's own name",
       "--admin you@your-domain makes that address the app's administrator (default: the Git user's),",
-      "--timezone Europe/Mariehamn sets its time zone where the starter names none (default: this machine's),",
+      "--timezone Europe/Mariehamn sets its time zone (default: the starter's, else this machine's),",
     ],
     options: [
       "starter",
