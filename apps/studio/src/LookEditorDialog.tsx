@@ -57,9 +57,15 @@ export default function LookEditorDialog({
         };
         if (route === "/api/start") return context();
         if (route === "/api/look-ticket")
+          // With the project this dialog opened: a dialog left open from a replaced project
+          // gets no ticket for the new one's frames.
           return fetch(route, {
             ...init,
             headers: { ...Object.fromEntries(new Headers(init?.headers)), "x-smithable": "1" },
+            body: JSON.stringify({
+              ...(JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>),
+              lookProject: project.lookProject,
+            }),
           });
         if (route === "/api/apply" || route === "/api/save") {
           // The editor's precondition and request id travel beside the operation's arguments.

@@ -46,7 +46,12 @@ import { openQuestions } from "./new.js";
 import { runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
 import { declaredPlugins, pluginPath } from "./plugins.js";
-import { PREVIEW_TOKEN_DIGEST, previewConfig, tokenDigest } from "./preview-editor.js";
+import {
+  PREVIEW_TOKEN_DIGEST,
+  previewConfig,
+  tokenDigest,
+  writePreviewConfig as writeConfig,
+} from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
 import {
   type AskingStage,
@@ -543,34 +548,31 @@ export async function studio(
   // Packages in a pnpm virtual store outside the project (hosted workspaces with a prepared
   // dependency set) may be served too.
   const store = process.env.pnpm_config_virtual_store_dir;
-  // Written only when it is not there as it should be: a dev server that is running starts
-  // itself again when its settings file is touched. Its text is the same for the whole run
-  // (previewId, never the rotating lookProject), so a change leaves the file alone.
-  const writePreviewConfig = () => {
-    const text = previewConfig(
-      options.previewUrl,
-      store ? [resolve(dir), resolve(store)] : undefined,
-      // Studio reloads the preview itself after a change (one reload, when the daemon says so);
-      // on a host, the preview takes Studio's token on every request.
-      {
-        holdUpdates: true,
-        token: Boolean(previewToken),
-        ...(lookOrigins.length
-          ? {
-              look: {
-                project: previewId,
-                parentOrigins: lookOrigins,
-                previewOrigin: new URL(preview).origin,
-              },
-            }
-          : {}),
-      },
+  // Its text is the same for the whole run (previewId, never the rotating lookProject), so a
+  // change leaves the file alone (writePreviewConfig writes only a text that is not there).
+  const writePreviewConfig = () =>
+    writeConfig(
+      join(dir, config),
+      previewConfig(
+        options.previewUrl,
+        store ? [resolve(dir), resolve(store)] : undefined,
+        // Studio reloads the preview itself after a change (one reload, when the daemon says so);
+        // on a host, the preview takes Studio's token on every request.
+        {
+          holdUpdates: true,
+          token: Boolean(previewToken),
+          ...(lookOrigins.length
+            ? {
+                look: {
+                  project: previewId,
+                  parentOrigins: lookOrigins,
+                  previewOrigin: new URL(preview).origin,
+                },
+              }
+            : {}),
+        },
+      ),
     );
-    const path = join(dir, config);
-    if (existsSync(path) && readFileSync(path, "utf8") === text) return;
-    mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-    writeFileSync(path, text);
-  };
   writePreviewConfig();
   // When the preview stops by itself (a crash), it starts again: at once for the first few
   // stops in a minute, then with a growing pause up to two minutes, and never for good, so a
@@ -923,6 +925,8 @@ export async function studio(
           typeof parentOrigin !== "string" ||
           !lookOrigins.includes(parentOrigin) ||
           value.project !== previewId ||
+          // The dialog's project too: one left open from a replaced project mints no ticket.
+          value.lookProject !== lookProject ||
           typeof value.document !== "string" ||
           !/^[\w-]{8,100}$/.test(value.document) ||
           typeof value.generation !== "string" ||
@@ -1058,6 +1062,13 @@ export async function studio(
                 "The project changed. Keep this draft or reopen the current project before Apply.",
             },
             409,
+          );
+        // A theme Apply from a host carries the revision its draft was opened on, always: without
+        // it, the check against the current source could not be made.
+        if (name === "applyTheme" && typeof expectedRevision !== "string")
+          return json(
+            { ok: false, output: "Apply needs the source revision its draft was opened on." },
+            400,
           );
         // The editor's text that only formats the file (studio-v3.md §7): no change, silently.
         if (unchangedEdit(dir, String(name), (args ?? {}) as Record<string, unknown>))

@@ -10,6 +10,7 @@ import {
   tokenDigest,
   tokenGuard,
   type UpgradeServer,
+  writePreviewConfig,
 } from "./preview-editor.js";
 
 // The config test runs an operation: no real generation.
@@ -533,23 +534,38 @@ test("a design-owned frame keeps the current viewer and never clicks development
   expect(design.clicked).toEqual([]);
 });
 
-test("the preview's config is the same text before and after a change: its look identity is the run's, never the project's", async () => {
-  // Studio writes the config once with the run's preview id (studio.ts: previewId, not the
-  // lookProject that a replaced app rotates); a dev server restarts when its config changes.
-  const { mkdtempSync, rmSync, writeFileSync, mkdirSync } = await import("node:fs");
+test("the preview's config is written once for a run: its look identity is the run's, never the project's", async () => {
+  // Studio writes the config with the run's preview id (studio.ts: previewId, not the lookProject
+  // that a replaced app rotates) and only when its text is not there: a dev server restarts when
+  // its config file is touched. Here as Studio does it: write, a change, write again.
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, statSync } = await import(
+    "node:fs"
+  );
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const { runOperation } = await import("./op.js");
   const { captureIo } = await import("./test-io.js");
-  const look = {
-    project: "run-1",
-    parentOrigins: ["http://localhost:8400"],
-    previewOrigin: "http://localhost:8401",
+  const previewId = "run-1";
+  const config = (lookProject: string) => {
+    // The project's identity is the request's, not the config's: the text takes none of it.
+    expect(lookProject).toBeTruthy();
+    return previewConfig(undefined, undefined, {
+      holdUpdates: true,
+      look: {
+        project: previewId,
+        parentOrigins: ["http://localhost:8400"],
+        previewOrigin: "http://localhost:8401",
+      },
+    });
   };
-  const before = previewConfig(undefined, undefined, { holdUpdates: true, look });
-  expect(before).toContain('"project":"run-1"');
   const dir = mkdtempSync(join(tmpdir(), "smithable-preview-config-"));
   try {
+    const path = join(dir, "data", ".smithable", "preview.vite.config.mjs");
+    expect(writePreviewConfig(path, config("project-1"))).toBe(true);
+    const written = readFileSync(path, "utf8");
+    expect(written).toContain('"project":"run-1"');
+    expect(written).not.toContain("project-1");
+    const first = statSync(path).mtimeMs;
     writeFileSync(
       join(dir, "smithable.yml"),
       "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  items: { crud: Item }\n",
@@ -568,8 +584,22 @@ test("the preview's config is the same text before and after a change: its look 
       ),
       io.stderr,
     ).toBe(0);
+    // After the change, and after the app is replaced (a new lookProject, the same previewId):
+    // the same text, so the file is left alone.
+    expect(writePreviewConfig(path, config("project-1"))).toBe(false);
+    expect(writePreviewConfig(path, config("project-2"))).toBe(false);
+    expect(statSync(path).mtimeMs).toBe(first);
+    expect(readFileSync(path, "utf8")).toBe(written);
+    // Another run's preview id is another text, and is written.
+    expect(
+      writePreviewConfig(
+        path,
+        previewConfig(undefined, undefined, {
+          look: { project: "run-2", parentOrigins: [], previewOrigin: "http://localhost:8401" },
+        }),
+      ),
+    ).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-  expect(previewConfig(undefined, undefined, { holdUpdates: true, look })).toBe(before);
 });

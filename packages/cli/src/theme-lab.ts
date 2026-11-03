@@ -344,6 +344,9 @@ export async function themeLab(
       const { expectedRevision, requestId, ...args } = (
         given && typeof given === "object" && !Array.isArray(given) ? given : {}
       ) as Record<string, unknown>;
+      // From a host, always with the revision the draft was opened on (the CLI may leave it out).
+      if (typeof expectedRevision !== "string")
+        return json(400, { error: "Apply needs the source revision its draft was opened on." });
       const said: string[] = [];
       try {
         const code = await runOperation(

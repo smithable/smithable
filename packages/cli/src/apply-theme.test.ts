@@ -78,6 +78,16 @@ test("create/use is one checkpoint; retry, no-op and one-step undo preserve tran
   expect(retry.stdout).toContain("already committed");
   expect(head(dir)).toBe(committed);
   expect(vi.mocked(generate)).toHaveBeenCalledTimes(1);
+  // The same id against another source revision is a conflict, not that Apply again.
+  const conflict = captureIo();
+  expect(
+    await runOperation(dir, conflict, "applyTheme", args(dir), {
+      ...envelope,
+      expectedRevision: "0".repeat(64),
+    }),
+  ).toBe(1);
+  expect(conflict.stderr).toContain("another version of the project source");
+  expect(head(dir)).toBe(committed);
   const noop = captureIo();
   expect(
     await runOperation(

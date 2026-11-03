@@ -58,7 +58,7 @@ import {
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
 import { loadPlugins } from "./plugins.js";
-import { ProjectBusyError, withProjectMutation } from "./project-mutation.js";
+import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
@@ -213,12 +213,29 @@ export async function runOperation(
   flags: OpFlags,
   plan?: FilesPlan,
 ): Promise<number> {
+  // A theme Apply's envelope given among the arguments, as callers before the flags sent it (an
+  // MCP client, an older host): it is the envelope when the flags have none, and never an argument
+  // of the operation (its schema takes none, and the record stays clean of it).
+  const { expectedRevision, requestId, ...rest } = args;
+  const given =
+    name === "applyTheme" && ("expectedRevision" in args || "requestId" in args)
+      ? {
+          args: rest,
+          flags: {
+            ...flags,
+            expectedRevision:
+              flags.expectedRevision ??
+              (typeof expectedRevision === "string" ? expectedRevision : undefined),
+            requestId: flags.requestId ?? (typeof requestId === "string" ? requestId : undefined),
+          },
+        }
+      : { args, flags };
   try {
     return await withProjectMutation(dir, (root) =>
-      runOperationLocked(root, io, name, args, flags, plan),
+      runOperationLocked(root, io, name, given.args, given.flags, plan),
     );
   } catch (error) {
-    if (!(error instanceof ProjectBusyError)) throw error;
+    if (!(error instanceof ProjectBusyError || error instanceof ProjectLockError)) throw error;
     io.err(`${error.message}\n`);
     return 1;
   }
@@ -295,7 +312,7 @@ async function applyAndCheckpoint(
     // its Apply of the same draft. Before the revision check, since that Apply moved the revision.
     const head = git(dir, ["log", "-1", "--format=%B"]).out;
     let previous: { op?: string; args?: OperationArgs } | undefined;
-    let request: { requestId?: string } | undefined;
+    let request: { requestId?: string; revision?: string } | undefined;
     try {
       const op = trailer(head, "Smithable-Op");
       const apply = trailer(head, "Smithable-Apply");
@@ -305,6 +322,13 @@ async function applyAndCheckpoint(
     if (previous?.op === "applyTheme" && request?.requestId === flags.requestId) {
       if (JSON.stringify(canonical(previous.args)) !== JSON.stringify(canonical(args))) {
         io.err("This Apply request id was already used for another draft.\n");
+        return 1;
+      }
+      // The same id against another source revision is not that Apply again but a conflict.
+      if (flags.expectedRevision !== undefined && request.revision !== flags.expectedRevision) {
+        io.err(
+          "This Apply request id was already used against another version of the project source.\n",
+        );
         return 1;
       }
       if (uncommittedRefusal(dir)) {

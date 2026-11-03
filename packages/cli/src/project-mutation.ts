@@ -1,17 +1,23 @@
 // Serialize cooperating writers across requests and processes. This database holds no app data.
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, realpathSync } from "node:fs";
+import { lstatSync, mkdirSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 const turns = new Map<string, Promise<void>>();
+/** Another writer holds the project: this change is refused for now, and may be asked again. */
 export class ProjectBusyError extends Error {}
+/**
+ * The lock itself cannot be set up (its folder or file is not what it must be, the database does
+ * not open): asking again changes nothing until someone fixes it, so not a ProjectBusyError.
+ */
+export class ProjectLockError extends Error {}
 
 /**
  * Takes the project's turn. Every way the lock cannot be taken is a refusal of this one change,
- * said with its reason (a ProjectBusyError the callers answer with), never an error that would
- * fail every operation the same way without saying why.
+ * said with its reason (an error the callers answer with), never an error that would fail every
+ * operation the same way without saying why.
  */
 function lock(root: string, wait: number): DatabaseSync {
   // Coordination only, never durable project state or a tracked file. Do not unlink lock files:
@@ -30,13 +36,15 @@ function lock(root: string, wait: number): DatabaseSync {
       throw new Error(
         `the coordination folder ${data} is not a private folder of this user (a symbolic link, another owner or open permissions). Fix or remove it, then retry.`,
       );
-    if (existsSync(path) && (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()))
+    // lstat, not exists: a dangling symbolic link is there too, and is refused.
+    const file = lstatSync(path, { throwIfNoEntry: false });
+    if (file && (!file.isFile() || file.isSymbolicLink()))
       throw new Error(
         `the coordination file ${path} is not a regular file. Remove it, then retry.`,
       );
     database = new DatabaseSync(path);
   } catch (error) {
-    throw new ProjectBusyError(
+    throw new ProjectLockError(
       `This project cannot be changed right now: ${error instanceof Error ? error.message : String(error)}`,
     );
   }

@@ -4,7 +4,8 @@
 // and lets table columns be dragged. The app's own builds never include it.
 
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fontImportRuntime } from "@smithable/adapter-tanstack";
 import { lookCommandRuntime } from "@smithable/core";
 import { LOOK_FRAME_BODY } from "./look-frame-runtime.js";
@@ -794,6 +795,17 @@ export function holdFullReloads(server: Pick<DevServer, "environments">) {
       send(...args);
     };
   }
+}
+
+/**
+ * Writes the preview's config only when it is not there as it should be, and says whether it did:
+ * a dev server that is running starts itself again when its settings file is touched.
+ */
+export function writePreviewConfig(path: string, text: string): boolean {
+  if (existsSync(path) && readFileSync(path, "utf8") === text) return false;
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, text);
+  return true;
 }
 
 /** The wrapper config: the app's own Vite config plus the editor, for the preview only. */
