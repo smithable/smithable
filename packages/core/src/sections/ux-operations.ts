@@ -540,15 +540,19 @@ const setRecordList: Operation<{
       throw new OperationError(`There is no page named "${page}".`);
     // A table is the default: setting it takes the key away, and an empty record block with it.
     put(editors.ux, ["pages", page, "record", "lists", field], look === "table" ? undefined : look);
-    // A page that led with its thread leads with its form once no thread is left (A 215 (10): the
-    // file stays valid, and the summary says so).
+    // A page that led with its thread leads with its form once no thread is left (A 215 (10)):
+    // `first: thread` goes, since the file would not be valid with it. An explicit `first: form`
+    // stays; it may mask a theme's default.
     const lists = ["pages", page, "record", "lists"];
+    const first = ["pages", page, "record", "first"];
     if (
+      editors.ux.has(first) &&
+      editors.ux.get(first) === "thread" &&
       !Object.values(editors.ux.has(lists) ? (editors.ux.get(lists) as object) : {}).includes(
         "thread",
       )
     )
-      put(editors.ux, ["pages", page, "record", "first"], undefined);
+      put(editors.ux, first, undefined);
     return [];
   },
 };

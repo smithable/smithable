@@ -54,4 +54,16 @@ test("a record page leads with its thread or its form (A 215)", () => {
     look: "table",
   });
   expect(table).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
+  // An explicit first: form stays (it may mask a theme's default): only first: thread goes.
+  const form = `${ux}      first: form\n`;
+  expect(
+    applyOperation({ spec, ux: form }, "setRecordList", {
+      page: "cases",
+      field: "messages",
+      look: "table",
+    }),
+  ).toMatchObject({
+    ok: true,
+    files: { ux: "smithableUx: 0.1\npages:\n  cases:\n    record:\n      first: form\n" },
+  });
 });

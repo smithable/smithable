@@ -1780,17 +1780,23 @@ function readSectionLooks(
               s.model === pageModel(shown) &&
               !Object.keys(s.where ?? {}).length,
           );
-          // On the layout's own node when no stage is named: inherited (a theme's default), the
-          // layout is then skipped with this reason instead of a warning nowhere in the file.
-          if (again)
-            ctx.warning(
+          if (again) {
+            const at =
               stageOption?.value ??
-                options.find((option) => option.key === "layout")?.value ??
-                entry.value,
+              options.find((option) => option.key === "layout")?.value ??
+              entry.value;
+            ctx.warning(
+              at,
               "stage-repeats",
               `The hero shows the first records of ${shown.id}; the ${again.name} section lists them again below.`,
               `Remove the ${again.name} section, or give it a where of its own.`,
             );
+            // On the layout's own node when no stage is named and the layout is a theme's default
+            // (a theme names no stage): the default is skipped with this reason instead of a
+            // warning nowhere in the file, and the hero falls back to its own layout here, so what
+            // is recorded as skipped is not drawn.
+            if (ctx instanceof UxDefaultContext && ctx.inherited(at)) delete look.layout;
+          }
         }
       }
       if (look.eyebrow && !page.sections.some((s) => s.kind === "contact")) {

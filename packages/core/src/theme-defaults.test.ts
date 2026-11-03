@@ -284,6 +284,47 @@ test("public-stage access incompatibility skips inherited layout and still refus
     explicit.diagnostics.some((d) => d.severity === "error" && /may not read/.test(d.message)),
   ).toBe(true);
 });
+test("an inherited stage whose records the page lists again is skipped, and the hero falls back", () => {
+  const shop = validateSpec({
+    path: "smithable.yml",
+    text: [
+      "smithable: 0.1",
+      "app: { name: Shop }",
+      "models:",
+      "  Item: { fields: { name: string! } }",
+      "pages:",
+      "  home: { route: /, landing: { hero: {}, catalogue: { records: Item } } }",
+      "  items: { crud: Item }",
+      "",
+    ].join("\n"),
+  }).ir;
+  if (!shop) throw new Error("invalid fixture");
+  const theme: ThemeIR = { ...direction, defaults: { sections: { hero: { layout: "stage" } } } };
+  const source = "smithableUx: 0.1\ntheme: {preset: direction}\n";
+  const inherited = validateUx({ path: "smithable.ux.yml", text: source }, shop, [theme]);
+  // No warning at 1:1, where nothing is written: the default is skipped with the reason.
+  expect(inherited.diagnostics).toEqual([]);
+  expect(inherited.ux?.pages.home?.looks?.hero?.layout).toBeUndefined();
+  expect(
+    inherited.ux?.inherited?.skipped.some(
+      (f) =>
+        f.path.join(".") === "pages.home.sections.hero.layout" && /lists them again/.test(f.reason),
+    ),
+  ).toBe(true);
+  // Written in the file, the layout stays and the warning stands on its line.
+  const explicit = validateUx(
+    {
+      path: "smithable.ux.yml",
+      text: source + "pages: {home: {sections: {hero: {layout: stage}}}}\n",
+    },
+    shop,
+    [theme],
+  );
+  expect(explicit.ux?.pages.home?.looks?.hero?.layout).toBe("stage");
+  expect(explicit.diagnostics).toMatchObject([
+    { severity: "warning", code: "stage-repeats", line: 3 },
+  ]);
+});
 
 // The design's guard (docs/spec/v0.1.md, Themes, defaults): a theme's defaults are added to the
 // parsed ux document as nodes of their own, which have no place in the file. A diagnostic on one
