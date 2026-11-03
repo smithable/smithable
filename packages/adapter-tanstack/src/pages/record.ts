@@ -299,7 +299,8 @@ import { ModelForm } from "#/kit/ModelForm";
 import { w } from "#/kit/words";
 ${timed ? 'import { instantOf } from "#/kit/zoned";\n' : ""}${searched.length ? `import { ${[...(parents.length ? ["count"] : []), "optional", "type Search", ...(start ? ["text"] : [])].join(", ")} } from "#/kit/params";\n` : ""}
 export const Route = createFileRoute(${JSON.stringify(join(page.route, "new"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${searched.length ? `  validateSearch: (s: Search) => optional({ ${searched.join(", ")} }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  head: () => pageHead(${JSON.stringify(page.id)}, w.newOne(${JSON.stringify(n.label.toLowerCase())})),
+${searched.length ? `  validateSearch: (s: Search) => optional({ ${searched.join(", ")} }),\n` : ""}${options ? `  loader: async () => ({ options: ${options.expr} }),\n` : ""}  component: ${component},
 });
 
 function ${component}() {
@@ -821,10 +822,14 @@ const getHistory = createServerFn()
 `
     : ""
 }export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: async ({ params }) => {
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
     const found = await ${n.get}({ data: Number(params.id) });
     if (!found) throw notFound();
     return { ...found${options ? `, options: ${options.expr}` : ""}${rowOptions.length ? `, rowOptions: { ${rowOptions.join(", ")} }` : ""}${history ? ", history: await getHistory({ data: Number(params.id) })" : ""} };
+  },
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead(${JSON.stringify(page.id)}, row ? String(${heading}) : undefined);
   },
   component: ${component},
 });

@@ -96,7 +96,13 @@ export function SignIn({
               )}
             </p>
             <div className="space-y-1">
-              <Label htmlFor="sign-in-code">{w.code}</Label>
+              <Label htmlFor="sign-in-code">
+                {w.code}
+                <span aria-hidden className="text-destructive">
+                  {" "}
+                  *
+                </span>
+              </Label>
               <Input
                 id="sign-in-code"
                 inputMode="numeric"
@@ -140,7 +146,13 @@ export function SignIn({
             }}
           >
             <div className="space-y-1">
-              <Label htmlFor="sign-in-email">{w.emailAddress}</Label>
+              <Label htmlFor="sign-in-email">
+                {w.emailAddress}
+                <span aria-hidden className="text-destructive">
+                  {" "}
+                  *
+                </span>
+              </Label>
               <Input
                 id="sign-in-email"
                 type="email"

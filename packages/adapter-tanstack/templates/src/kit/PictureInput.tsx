@@ -52,6 +52,10 @@ export function PictureInput({
   onChange,
   model,
   field,
+  // Not for the DOM.
+  values: _values,
+  set: _set,
+  timeZone: _timeZone,
   ...aria
 }: FieldControlProps & { model: string; field: string }) {
   const picture = parse(value);
@@ -190,6 +194,10 @@ export function PicturesInput({
   model,
   field,
   max,
+  // Not for the DOM.
+  values: _values,
+  set: _set,
+  timeZone: _timeZone,
   ...aria
 }: FieldControlProps & { model: string; field: string; max: number }) {
   const pictures = parseList(value);
