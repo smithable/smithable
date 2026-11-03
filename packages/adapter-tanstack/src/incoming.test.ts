@@ -68,17 +68,23 @@ test("twice is once: the id is taken on a unique index before the call acts, and
   // One statement, not a read and then a write: a second delivery at the same moment finds the
   // row and changes nothing (a row older than a day is taken over).
   expect(route).toContain(
-    "const taken = db.insert(incomingSeen).values({ name: NAME, key }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: new Date() }, setWhere: lt(incomingSeen.at, new Date(Date.now() - DAY)) }).run();",
+    "const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();",
   );
   expect(route).toContain(
     "if (taken.changes === 0) return answer(200, { received: true, repeat: true });",
   );
   expect(route).not.toContain(".select().from(incomingSeen)");
-  // The record is made inside the claim; a refusal or a failure releases the id for the retry.
+  // Ids older than a month go on each claim: the table stays bounded.
+  expect(route).toContain(
+    "db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();",
+  );
+  // The record is made inside the claim; a refusal or a failure releases the id for the retry,
+  // and only the row this call marked with its own time: a claim taken over by a later call
+  // (one older than a day) stays that call's.
   expect(route).toContain("let acted = false;\n        try {");
   expect(route).toContain("acted = true;\n            return answer(201, { id: made.id });");
   expect(route).toContain(
-    "} finally {\n          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key))).run();",
+    "} finally {\n          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();",
   );
   // A custom call too.
   const custom = file("src/routes/incoming/paymentReceived.ts")?.content ?? "";
@@ -89,11 +95,20 @@ test("twice is once: the id is taken on a unique index before the call acts, and
   expect(schema).toMatch(/import \{[^}]*uniqueIndex[^}]*\} from "drizzle-orm\/sqlite-core"/);
 });
 
-test("a mail's id is its Message-ID: delivered twice, it makes one record", () => {
+test("a mail's id is its Message-ID, or without one a digest of the mail: delivered twice, it makes one record", () => {
   const route = file("src/routes/incoming/support.ts")?.content ?? "";
   expect(route).toContain(
-    'const key = request.headers.get("idempotency-key") ?? text((body as Mail).messageId);',
+    'const key = request.headers.get("idempotency-key") ?? mailKey(body as Mail);',
   );
+  expect(route).toContain(
+    'text(mail.messageId) || `sha256:${createHash("sha256").update(JSON.stringify([mail.from, mail.date, mail.subject, mail.text, mail.html].map(text))).digest("hex")}`',
+  );
+  // The mail's id and date are read whether or not the entry takes replies.
+  expect(route).toContain("date?: unknown;");
+  expect(route).toContain("messageId?: unknown");
+  // Files saved for a call refused or failed after all are removed and their room given back.
+  expect(route).toContain("unsaved(files, requestData.uses);");
+  expect(route).toContain("release(files.reduce((n, f) => n + f.size, 0));");
   // The call's own id wins where the entry names one.
   expect(file("src/routes/incoming/monitorDown.ts")?.content).toContain(
     'const key = request.headers.get("idempotency-key") ?? fill("{event.id}", body);',

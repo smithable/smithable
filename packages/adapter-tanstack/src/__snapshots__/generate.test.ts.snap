@@ -72586,8 +72586,12 @@ export const Route = createFileRoute("/incoming/chatCommand")({
         const key = request.headers.get("idempotency-key") ?? \`sig:\${given}\`;
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
+        // The time written is this call's mark on the row: only the call that holds it may give it back.
+        const at = new Date();
         if (key) {
-          const taken = db.insert(incomingSeen).values({ name: NAME, key }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: new Date() }, setWhere: lt(incomingSeen.at, new Date(Date.now() - DAY)) }).run();
+          // Ids older than a month have no retry coming: the table stays small.
+          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();
+          const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();
           if (taken.changes === 0) return answer(200, { received: true, repeat: true });
         }
         // A call not acted on after all (refused, failed) gives its id back, so the service's retry is not a repeat.
@@ -72612,7 +72616,7 @@ export const Route = createFileRoute("/incoming/chatCommand")({
             return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
           }
         } finally {
-          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key))).run();
+          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();
         }
       },
     },
@@ -74360,7 +74364,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "d77f9e9e generated",
   "src/routes/incidents/index.tsx": "0bad2659 generated",
   "src/routes/incidents/new.tsx": "1abbbdfc generated",
-  "src/routes/incoming/chatCommand.ts": "2bf13dc4 generated",
+  "src/routes/incoming/chatCommand.ts": "205b50f9 generated",
   "src/routes/index.tsx": "aea24c4f generated",
   "src/routes/maintenance/$id.tsx": "df48940a generated",
   "src/routes/maintenance/index.tsx": "7b866e09 generated",
@@ -80351,8 +80355,11 @@ const digest = (s: string) => createHash("sha256").update(s).digest();
 const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
 
 /** The mail a host passes on: from, to, subject, text, html, attachments ({ name, type, data }). */
-type Mail = { from?: unknown; to?: unknown; subject?: unknown; text?: unknown; html?: unknown; attachments?: unknown; messageId?: unknown; inReplyTo?: unknown; references?: unknown; autoSubmitted?: unknown };
+type Mail = { from?: unknown; to?: unknown; date?: unknown; subject?: unknown; text?: unknown; html?: unknown; attachments?: unknown; messageId?: unknown; inReplyTo?: unknown; references?: unknown; autoSubmitted?: unknown };
 const text = (v: unknown) => (typeof v === "string" ? v : "");
+/** A mail's id: its Message-ID, or without one a digest of what it is (sender, date, subject, text), so a mail delivered twice is still one. */
+const mailKey = (mail: Mail) =>
+  text(mail.messageId) || \`sha256:\${createHash("sha256").update(JSON.stringify([mail.from, mail.date, mail.subject, mail.text, mail.html].map(text))).digest("hex")}\`;
 /** "Ada <ada@example.com>" → ada@example.com. */
 const address = (v: unknown) => (/<([^<>]+)>/.exec(text(v))?.[1] ?? text(v)).trim();
 /** The mail's text, or its HTML without the tags when it has no text. */
@@ -80395,6 +80402,11 @@ async function saved(mail: Mail, model: string, field: string, uses: (file: stri
   }
   return files;
 }
+/** The files saved for a call that is not acted on after all: removed, and the room held for them given back. */
+function unsaved(files: StoredFile[], uses: (file: string) => boolean) {
+  for (const f of files) deleteFile(f, uses(f.file));
+  release(files.reduce((n, f) => n + f.size, 0));
+}
 /** The mail's own id, kept in its record's thread so an answer to it finds the record. */
 function keeper(mailId: string) {
   return (record: number) => {
@@ -80424,11 +80436,15 @@ export const Route = createFileRoute("/incoming/support")({
           return answer(400, { error: "The body is not JSON." });
         }
         // A call seen in the last day is answered as received and not acted on again; a mail's id is its Message-ID.
-        const key = request.headers.get("idempotency-key") ?? text((body as Mail).messageId);
+        const key = request.headers.get("idempotency-key") ?? mailKey(body as Mail);
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
+        // The time written is this call's mark on the row: only the call that holds it may give it back.
+        const at = new Date();
         if (key) {
-          const taken = db.insert(incomingSeen).values({ name: NAME, key }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: new Date() }, setWhere: lt(incomingSeen.at, new Date(Date.now() - DAY)) }).run();
+          // Ids older than a month have no retry coming: the table stays small.
+          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();
+          const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();
           if (taken.changes === 0) return answer(200, { received: true, repeat: true });
         }
         // A call not acted on after all (refused, failed) gives its id back, so the service's retry is not a repeat.
@@ -80460,7 +80476,7 @@ export const Route = createFileRoute("/incoming/support")({
               attachments: files,
             });
             if (!joining.success) {
-              for (const f of files) deleteFile(f, messageData.uses(f.file));
+              unsaved(files, messageData.uses);
               return answer(422, { error: joining.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
             }
             const to = thread;
@@ -80473,7 +80489,7 @@ export const Route = createFileRoute("/incoming/support")({
               keep(to);
               return answer(201, { id: made.id, thread: to });
             } catch (error) {
-              for (const f of files) deleteFile(f, messageData.uses(f.file));
+              unsaved(files, messageData.uses);
               if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
               console.error("Incoming call failed:", error);
               return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
@@ -80489,7 +80505,7 @@ export const Route = createFileRoute("/incoming/support")({
             attachments: files,
           });
           if (!parsed.success) {
-            for (const f of files) deleteFile(f, supportCaseData.uses(f.file));
+            unsaved(files, supportCaseData.uses);
             return answer(422, { error: parsed.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
           }
           try {
@@ -80499,13 +80515,13 @@ export const Route = createFileRoute("/incoming/support")({
             keep(made.id);
             return answer(201, { id: made.id });
           } catch (error) {
-            for (const f of files) deleteFile(f, supportCaseData.uses(f.file));
+            unsaved(files, supportCaseData.uses);
             if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
             console.error("Incoming call failed:", error);
             return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
           }
         } finally {
-          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key))).run();
+          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();
         }
       },
     },
@@ -81481,7 +81497,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "cf445b15 generated",
+  "src/routes/incoming/support.ts": "2dfca1a0 generated",
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "f15377e4 generated",

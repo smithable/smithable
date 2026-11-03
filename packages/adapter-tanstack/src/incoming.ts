@@ -218,23 +218,26 @@ const fill = (template: string, body: unknown) =>
   incoming.mail
     ? `
 /** The mail a host passes on: from, to, subject, text, html, attachments ({ name, type, data }). */
-type Mail = { from?: unknown; to?: unknown; subject?: unknown; text?: unknown; html?: unknown; attachments?: unknown${reply ? "; messageId?: unknown; inReplyTo?: unknown; references?: unknown; autoSubmitted?: unknown" : ""} };
-const text = (v: unknown) => (typeof v === "string" ? v : "");${
-        mailFields.from || replyMail.from
-          ? `
+type Mail = { from?: unknown; to?: unknown; date?: unknown; subject?: unknown; text?: unknown; html?: unknown; attachments?: unknown; messageId?: unknown${reply ? "; inReplyTo?: unknown; references?: unknown; autoSubmitted?: unknown" : ""} };
+const text = (v: unknown) => (typeof v === "string" ? v : "");
+/** A mail's id: its Message-ID, or without one a digest of what it is (sender, date, subject, text), so a mail delivered twice is still one. */
+const mailKey = (mail: Mail) =>
+  text(mail.messageId) || \`sha256:\${createHash("sha256").update(JSON.stringify([mail.from, mail.date, mail.subject, mail.text, mail.html].map(text))).digest("hex")}\`;${
+    mailFields.from || replyMail.from
+      ? `
 /** "Ada <ada@example.com>" → ada@example.com. */
 const address = (v: unknown) => (/<([^<>]+)>/.exec(text(v))?.[1] ?? text(v)).trim();`
-          : ""
-      }${
-        mailFields.body || replyMail.body
-          ? `
+      : ""
+  }${
+    mailFields.body || replyMail.body
+      ? `
 /** The mail's text, or its HTML without the tags when it has no text. */
 const bodyOf = (mail: Mail) =>
   text(mail.text) || text(mail.html).replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, " ").replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, " ").replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();`
-          : ""
-      }${
-        saves
-          ? `
+      : ""
+  }${
+    saves
+      ? `
 /**
  * Each attachment checked and kept as an upload is (its kind by its first bytes, its size, the
  * app's room), with the receipt that lets this call, and no one else, put it on the record of
@@ -271,9 +274,14 @@ async function saved(mail: Mail, model: string, field: string, uses: (file: stri
     }
   }
   return files;
+}
+/** The files saved for a call that is not acted on after all: removed, and the room held for them given back. */
+function unsaved(files: StoredFile[], uses: (file: string) => boolean) {
+  for (const f of files) deleteFile(f, uses(f.file));
+  release(files.reduce((n, f) => n + f.size, 0));
 }`
-          : ""
-      }${reply?.helpers ?? ""}`
+      : ""
+  }${reply?.helpers ?? ""}`
     : ""
 }${
   usesNumbers
@@ -349,11 +357,15 @@ ${
     : ""
 }
         // A call seen in the last day is answered as received and not acted on again${incoming.mail && !incoming.id ? "; a mail's id is its Message-ID" : ""}.
-        const key = request.headers.get("idempotency-key") ?? ${incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : incoming.mail ? "text((body as Mail).messageId)" : stamp ? "`sig:${given}`" : '""'};
+        const key = request.headers.get("idempotency-key") ?? ${incoming.id ? `fill(${JSON.stringify(incoming.id)}, body)` : incoming.mail ? "mailKey(body as Mail)" : stamp ? "`sig:${given}`" : '""'};
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
+        // The time written is this call's mark on the row: only the call that holds it may give it back.
+        const at = new Date();
         if (key) {
-          const taken = db.insert(incomingSeen).values({ name: NAME, key }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: new Date() }, setWhere: lt(incomingSeen.at, new Date(Date.now() - DAY)) }).run();
+          // Ids older than a month have no retry coming: the table stays small.
+          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();
+          const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();
           if (taken.changes === 0) return answer(200, { received: true, repeat: true });
         }
         // A call not acted on after all (refused, failed) gives its id back, so the service's retry is not a repeat.
@@ -377,7 +389,7 @@ ${reply?.block ?? ""}${
 ${lines.map((l) => `          ${l}`).join("\n")}
         });
         if (!parsed.success) {
-${attachmentsField ? `          for (const f of files) deleteFile(f, ${n.data}.uses(f.file));\n` : ""}          return answer(422, { error: parsed.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
+${attachmentsField ? `          unsaved(files, ${n.data}.uses);\n` : ""}          return answer(422, { error: parsed.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
         }
         try {
           const made = ${
@@ -389,7 +401,7 @@ ${attachmentsField ? `          for (const f of files) deleteFile(f, ${n.data}.u
           acted = true;${reply ? "\n          keep(made.id);" : ""}
           return answer(201, { id: made.id });
         } catch (error) {
-${attachmentsField ? `          for (const f of files) deleteFile(f, ${n.data}.uses(f.file));\n` : ""}          if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
+${attachmentsField ? `          unsaved(files, ${n.data}.uses);\n` : ""}          if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
           console.error("Incoming call failed:", error);
           return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
         }`
@@ -406,7 +418,7 @@ ${attachmentsField ? `          for (const f of files) deleteFile(f, ${n.data}.u
   2,
 )}
         } finally {
-          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key))).run();
+          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();
         }
       },
     },
@@ -463,7 +475,7 @@ ${
 ${lines.map((l) => `            ${l}`).join("\n")}
           });
           if (!joining.success) {
-${files ? `            for (const f of files) deleteFile(f, ${rn.data}.uses(f.file));\n` : ""}            return answer(422, { error: joining.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
+${files ? `            unsaved(files, ${rn.data}.uses);\n` : ""}            return answer(422, { error: joining.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
           }
           const to = thread;
           try {
@@ -486,7 +498,7 @@ ${update.map((l) => `                  ${l}`).join("\n")}
             keep(to);
             return answer(201, { id: made.id, thread: to });
           } catch (error) {
-${files ? `            for (const f of files) deleteFile(f, ${rn.data}.uses(f.file));\n` : ""}            if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
+${files ? `            unsaved(files, ${rn.data}.uses);\n` : ""}            if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
             console.error("Incoming call failed:", error);
             return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
           }
