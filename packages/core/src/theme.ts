@@ -7,6 +7,7 @@ import { clamp, contrast, gamutMap, hexOf, hexToRgb, rgbToOklch } from "./color.
 import { checkKeys, mapEntries, ParseContext, readString } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
+import { readThemeDefaults, type ThemeUxDefaults } from "./theme-default-schema.js";
 import { THEME_LIBRARY } from "./theme-library.js";
 import { PRESET_TOKENS } from "./theme-presets.js";
 import { DEFAULT_STYLE, FONTS, readStyle, type ThemeStyle } from "./theme-style.js";
@@ -69,6 +70,7 @@ export interface ThemeIR {
    * mode's colours alone, the app shows it whatever the device says, and no mode switch is made.
    * Both `light` and `dark` are filled either way, so a reader needs no case.
    */
+  defaults?: ThemeUxDefaults;
   modes: "both" | "light" | "dark";
   light: Tokens;
   dark: Tokens;
@@ -188,6 +190,7 @@ export function parseTheme(
   const known = checkKeys(ctx, entries, "the theme", {
     allowed: [
       "smithableTheme",
+      "defaults",
       "name",
       "font",
       "fonts",
@@ -230,6 +233,8 @@ export function parseTheme(
       "invalid-value",
       `"font" must be one of ${FONTS.join(", ")}: fonts the app hosts itself.`,
     );
+  const defaultsNode = byKey.get("defaults");
+  const defaults = defaultsNode ? readThemeDefaults(ctx, defaultsNode.value) : undefined;
   const { body, style } = readStyle(ctx, byKey as never, named);
   const font = body ?? "Inter";
   const radius = optional("radius") ?? "12px";
@@ -360,6 +365,7 @@ export function parseTheme(
     theme: {
       name,
       source: "project",
+      ...(defaults ? { defaults } : {}),
       font,
       radius,
       shadow: SHADOWS[shadowName as keyof typeof SHADOWS],
@@ -385,8 +391,8 @@ const GLASS_OPACITY = 0.65;
  * came out a cool grey that read lilac beside the cream (the barbers' band, 2026-11-01).
  */
 function towards(from: string, to: string, share: number): string {
-  const [l1, c1, h1] = rgbToOklch(hexToRgb(from));
-  const [l2, c2, h2] = rgbToOklch(hexToRgb(to));
+  const [l1, c1, h1] = rgbToOklch(hexToRgb(hexOf(from)));
+  const [l2, c2, h2] = rgbToOklch(hexToRgb(hexOf(to)));
   const ab = (c: number, h: number) =>
     [c * Math.cos((h * Math.PI) / 180), c * Math.sin((h * Math.PI) / 180)] as const;
   const [a1, b1] = ab(c1, h1);
@@ -400,18 +406,19 @@ function towards(from: string, to: string, share: number): string {
 
 /** The text that reads best on a color. */
 const bestText = (bg: string) =>
-  contrast(LIGHT_TEXT, bg) >= contrast(DARK_TEXT, bg) ? LIGHT_TEXT : DARK_TEXT;
+  contrast(LIGHT_TEXT, hexOf(bg)) >= contrast(DARK_TEXT, hexOf(bg)) ? LIGHT_TEXT : DARK_TEXT;
 
 /** A color on `bg` moved towards `towardsColor` until it reads at `ratio`. */
 function readable(color: string, bg: string, towardsColor: string, ratio: number): string {
   let out = color;
-  for (let i = 0; i < 40 && contrast(out, bg) < ratio; i++) out = towards(out, towardsColor, 0.1);
+  for (let i = 0; i < 40 && contrast(hexOf(out), hexOf(bg)) < ratio; i++)
+    out = towards(out, towardsColor, 0.1);
   return out;
 }
 
 /** A hue-rotated color of the same lightness and chroma. */
 function rotate(color: string, degrees: number): string {
-  const [l, c, h] = rgbToOklch(hexToRgb(color));
+  const [l, c, h] = rgbToOklch(hexToRgb(hexOf(color)));
   return gamutMap([l, Math.max(c, 0.08), (h + degrees) % 360]);
 }
 

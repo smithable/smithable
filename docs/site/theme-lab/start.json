@@ -1,202 +1,954 @@
 {
+  "identity": {
+    "format": 1,
+    "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+    "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+    "engine": "0.0.0",
+    "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+    "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+  },
   "starters": [
     {
       "name": "booking",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/booking/landing.html"
+          "id": "home:page",
+          "page": "home",
+          "label": "Home",
+          "kind": "page",
+          "path": "/frames/booking/home-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/booking/list.html"
+          "id": "schedule:page",
+          "page": "schedule",
+          "label": "Schedule",
+          "kind": "page",
+          "path": "/frames/booking/schedule-page.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/booking/form.html"
+          "id": "sessions:page",
+          "page": "sessions",
+          "label": "Sessions",
+          "kind": "page",
+          "path": "/frames/booking/sessions-page.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/booking/record.html"
+          "id": "sessions:new",
+          "page": "sessions",
+          "label": "Sessions · New",
+          "kind": "new",
+          "path": "/frames/booking/sessions-new.html"
+        },
+        {
+          "id": "sessions:record",
+          "page": "sessions",
+          "label": "Sessions · Record",
+          "kind": "record",
+          "path": "/frames/booking/sessions-record.html"
+        },
+        {
+          "id": "class-types:page",
+          "page": "class-types",
+          "label": "Class types",
+          "kind": "page",
+          "path": "/frames/booking/class-types-page.html"
+        },
+        {
+          "id": "class-types:new",
+          "page": "class-types",
+          "label": "Class types · New",
+          "kind": "new",
+          "path": "/frames/booking/class-types-new.html"
+        },
+        {
+          "id": "class-types:record",
+          "page": "class-types",
+          "label": "Class types · Record",
+          "kind": "record",
+          "path": "/frames/booking/class-types-record.html"
+        },
+        {
+          "id": "instructors:page",
+          "page": "instructors",
+          "label": "Instructors",
+          "kind": "page",
+          "path": "/frames/booking/instructors-page.html"
+        },
+        {
+          "id": "instructors:new",
+          "page": "instructors",
+          "label": "Instructors · New",
+          "kind": "new",
+          "path": "/frames/booking/instructors-new.html"
+        },
+        {
+          "id": "instructors:record",
+          "page": "instructors",
+          "label": "Instructors · Record",
+          "kind": "record",
+          "path": "/frames/booking/instructors-record.html"
+        },
+        {
+          "id": "messages:page",
+          "page": "messages",
+          "label": "Messages",
+          "kind": "page",
+          "path": "/frames/booking/messages-page.html"
+        },
+        {
+          "id": "messages:new",
+          "page": "messages",
+          "label": "Messages · New",
+          "kind": "new",
+          "path": "/frames/booking/messages-new.html"
+        },
+        {
+          "id": "messages:record",
+          "page": "messages",
+          "label": "Messages · Record",
+          "kind": "record",
+          "path": "/frames/booking/messages-record.html"
+        },
+        {
+          "id": "blog:page",
+          "page": "blog",
+          "label": "Blog",
+          "kind": "page",
+          "path": "/frames/booking/blog-page.html"
+        },
+        {
+          "id": "blog:record",
+          "page": "blog",
+          "label": "Blog · Article",
+          "kind": "record",
+          "path": "/frames/booking/blog-record.html"
+        },
+        {
+          "id": "about:page",
+          "page": "about",
+          "label": "About",
+          "kind": "page",
+          "path": "/frames/booking/about-page.html"
+        },
+        {
+          "id": "privacy:page",
+          "page": "privacy",
+          "label": "Privacy",
+          "kind": "page",
+          "path": "/frames/booking/privacy-page.html"
+        },
+        {
+          "id": "posts:page",
+          "page": "posts",
+          "label": "Posts",
+          "kind": "page",
+          "path": "/frames/booking/posts-page.html"
+        },
+        {
+          "id": "posts:new",
+          "page": "posts",
+          "label": "Posts · New",
+          "kind": "new",
+          "path": "/frames/booking/posts-new.html"
+        },
+        {
+          "id": "posts:record",
+          "page": "posts",
+          "label": "Posts · Record",
+          "kind": "record",
+          "path": "/frames/booking/posts-record.html"
+        },
+        {
+          "id": "my-bookings:page",
+          "page": "my-bookings",
+          "label": "My bookings",
+          "kind": "page",
+          "path": "/frames/booking/my-bookings-page.html"
+        },
+        {
+          "id": "my-bookings:new",
+          "page": "my-bookings",
+          "label": "My bookings · New",
+          "kind": "new",
+          "path": "/frames/booking/my-bookings-new.html"
+        },
+        {
+          "id": "admin:page",
+          "page": "admin",
+          "label": "Admin",
+          "kind": "page",
+          "path": "/frames/booking/admin-page.html"
+        },
+        {
+          "id": "admin:sub:0",
+          "page": "admin",
+          "label": "Admin · Class types",
+          "kind": "page",
+          "path": "/frames/booking/admin-sub-0.html"
+        },
+        {
+          "id": "admin:sub:1",
+          "page": "admin",
+          "label": "Admin · Instructors",
+          "kind": "page",
+          "path": "/frames/booking/admin-sub-1.html"
+        },
+        {
+          "id": "admin:sub:2",
+          "page": "admin",
+          "label": "Admin · Sessions",
+          "kind": "page",
+          "path": "/frames/booking/admin-sub-2.html"
+        },
+        {
+          "id": "admin:sub:3",
+          "page": "admin",
+          "label": "Admin · Bookings",
+          "kind": "page",
+          "path": "/frames/booking/admin-sub-3.html"
+        },
+        {
+          "id": "admin:sub:4",
+          "page": "admin",
+          "label": "Admin · Posts",
+          "kind": "page",
+          "path": "/frames/booking/admin-sub-4.html"
+        },
+        {
+          "id": "admin:sub:5",
+          "page": "admin",
+          "label": "Admin · Messages",
+          "kind": "page",
+          "path": "/frames/booking/admin-sub-5.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "api",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/api/landing.html"
+          "id": "team:page",
+          "page": "team",
+          "label": "Team",
+          "kind": "page",
+          "path": "/frames/api/team-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/api/list.html"
+          "id": "admin:page",
+          "page": "admin",
+          "label": "Admin",
+          "kind": "page",
+          "path": "/frames/api/admin-page.html"
+        },
+        {
+          "id": "admin:sub:0",
+          "page": "admin",
+          "label": "Admin · Projects",
+          "kind": "page",
+          "path": "/frames/api/admin-sub-0.html"
+        },
+        {
+          "id": "admin:sub:1",
+          "page": "admin",
+          "label": "Admin · Tasks",
+          "kind": "page",
+          "path": "/frames/api/admin-sub-1.html"
+        },
+        {
+          "id": "admin:sub:2",
+          "page": "admin",
+          "label": "Admin · Notes",
+          "kind": "page",
+          "path": "/frames/api/admin-sub-2.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "barbers",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/barbers/landing.html"
+          "id": "home:page",
+          "page": "home",
+          "label": "Home",
+          "kind": "page",
+          "path": "/frames/barbers/home-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/barbers/list.html"
+          "id": "appointments:page",
+          "page": "appointments",
+          "label": "Appointments",
+          "kind": "page",
+          "path": "/frames/barbers/appointments-page.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/barbers/form.html"
+          "id": "appointments:new",
+          "page": "appointments",
+          "label": "Appointments · New",
+          "kind": "new",
+          "path": "/frames/barbers/appointments-new.html"
+        },
+        {
+          "id": "day:page",
+          "page": "day",
+          "label": "Day",
+          "kind": "page",
+          "path": "/frames/barbers/day-page.html"
+        },
+        {
+          "id": "services:page",
+          "page": "services",
+          "label": "Services",
+          "kind": "page",
+          "path": "/frames/barbers/services-page.html"
+        },
+        {
+          "id": "services:new",
+          "page": "services",
+          "label": "Services · New",
+          "kind": "new",
+          "path": "/frames/barbers/services-new.html"
+        },
+        {
+          "id": "services:record",
+          "page": "services",
+          "label": "Services · Record",
+          "kind": "record",
+          "path": "/frames/barbers/services-record.html"
+        },
+        {
+          "id": "barbers:page",
+          "page": "barbers",
+          "label": "Barbers",
+          "kind": "page",
+          "path": "/frames/barbers/barbers-page.html"
+        },
+        {
+          "id": "barbers:new",
+          "page": "barbers",
+          "label": "Barbers · New",
+          "kind": "new",
+          "path": "/frames/barbers/barbers-new.html"
+        },
+        {
+          "id": "barbers:record",
+          "page": "barbers",
+          "label": "Barbers · Record",
+          "kind": "record",
+          "path": "/frames/barbers/barbers-record.html"
+        },
+        {
+          "id": "time-off:page",
+          "page": "time-off",
+          "label": "Time off",
+          "kind": "page",
+          "path": "/frames/barbers/time-off-page.html"
+        },
+        {
+          "id": "time-off:new",
+          "page": "time-off",
+          "label": "Time off · New",
+          "kind": "new",
+          "path": "/frames/barbers/time-off-new.html"
+        },
+        {
+          "id": "privacy:page",
+          "page": "privacy",
+          "label": "Privacy",
+          "kind": "page",
+          "path": "/frames/barbers/privacy-page.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "crm",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/crm/landing.html"
+          "id": "customers:page",
+          "page": "customers",
+          "label": "Customers",
+          "kind": "page",
+          "path": "/frames/crm/customers-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/crm/list.html"
+          "id": "customers:new",
+          "page": "customers",
+          "label": "Customers · New",
+          "kind": "new",
+          "path": "/frames/crm/customers-new.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/crm/form.html"
+          "id": "customers:record",
+          "page": "customers",
+          "label": "Customers · Record",
+          "kind": "record",
+          "path": "/frames/crm/customers-record.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/crm/record.html"
+          "id": "orders:page",
+          "page": "orders",
+          "label": "Orders",
+          "kind": "page",
+          "path": "/frames/crm/orders-page.html"
+        },
+        {
+          "id": "orders:new",
+          "page": "orders",
+          "label": "Orders · New",
+          "kind": "new",
+          "path": "/frames/crm/orders-new.html"
+        },
+        {
+          "id": "orders:record",
+          "page": "orders",
+          "label": "Orders · Record",
+          "kind": "record",
+          "path": "/frames/crm/orders-record.html"
+        },
+        {
+          "id": "followUps:page",
+          "page": "followUps",
+          "label": "Follow ups",
+          "kind": "page",
+          "path": "/frames/crm/followUps-page.html"
+        },
+        {
+          "id": "followUps:new",
+          "page": "followUps",
+          "label": "Follow ups · New",
+          "kind": "new",
+          "path": "/frames/crm/followUps-new.html"
+        },
+        {
+          "id": "followUps:record",
+          "page": "followUps",
+          "label": "Follow ups · Record",
+          "kind": "record",
+          "path": "/frames/crm/followUps-record.html"
+        },
+        {
+          "id": "team:page",
+          "page": "team",
+          "label": "Team",
+          "kind": "page",
+          "path": "/frames/crm/team-page.html"
+        },
+        {
+          "id": "start:page",
+          "page": "start",
+          "label": "Start",
+          "kind": "page",
+          "path": "/frames/crm/start-page.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "invoicing",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/invoicing/landing.html"
+          "id": "home:page",
+          "page": "home",
+          "label": "Home",
+          "kind": "page",
+          "path": "/frames/invoicing/home-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/invoicing/list.html"
+          "id": "overview:page",
+          "page": "overview",
+          "label": "Overview",
+          "kind": "page",
+          "path": "/frames/invoicing/overview-page.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/invoicing/form.html"
+          "id": "invoices:page",
+          "page": "invoices",
+          "label": "Invoices",
+          "kind": "page",
+          "path": "/frames/invoicing/invoices-page.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/invoicing/record.html"
+          "id": "invoices:new",
+          "page": "invoices",
+          "label": "Invoices · New",
+          "kind": "new",
+          "path": "/frames/invoicing/invoices-new.html"
+        },
+        {
+          "id": "invoices:record",
+          "page": "invoices",
+          "label": "Invoices · Record",
+          "kind": "record",
+          "path": "/frames/invoicing/invoices-record.html"
+        },
+        {
+          "id": "clients:page",
+          "page": "clients",
+          "label": "Clients",
+          "kind": "page",
+          "path": "/frames/invoicing/clients-page.html"
+        },
+        {
+          "id": "clients:new",
+          "page": "clients",
+          "label": "Clients · New",
+          "kind": "new",
+          "path": "/frames/invoicing/clients-new.html"
+        },
+        {
+          "id": "clients:record",
+          "page": "clients",
+          "label": "Clients · Record",
+          "kind": "record",
+          "path": "/frames/invoicing/clients-record.html"
+        },
+        {
+          "id": "privacy:page",
+          "page": "privacy",
+          "label": "Privacy",
+          "kind": "page",
+          "path": "/frames/invoicing/privacy-page.html"
+        },
+        {
+          "id": "settings:page",
+          "page": "settings",
+          "label": "Settings",
+          "kind": "page",
+          "path": "/frames/invoicing/settings-page.html"
+        },
+        {
+          "id": "welcome:page",
+          "page": "welcome",
+          "label": "Welcome",
+          "kind": "page",
+          "path": "/frames/invoicing/welcome-page.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "kiosk",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/kiosk/landing.html"
+          "id": "menu:page",
+          "page": "menu",
+          "label": "Menu",
+          "kind": "page",
+          "path": "/frames/kiosk/menu-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/kiosk/list.html"
+          "id": "orders:page",
+          "page": "orders",
+          "label": "Orders",
+          "kind": "page",
+          "path": "/frames/kiosk/orders-page.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/kiosk/form.html"
+          "id": "orders:new",
+          "page": "orders",
+          "label": "Orders · New",
+          "kind": "new",
+          "path": "/frames/kiosk/orders-new.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/kiosk/record.html"
+          "id": "orders:record",
+          "page": "orders",
+          "label": "Orders · Record",
+          "kind": "record",
+          "path": "/frames/kiosk/orders-record.html"
+        },
+        {
+          "id": "dishes:page",
+          "page": "dishes",
+          "label": "Dishes",
+          "kind": "page",
+          "path": "/frames/kiosk/dishes-page.html"
+        },
+        {
+          "id": "dishes:new",
+          "page": "dishes",
+          "label": "Dishes · New",
+          "kind": "new",
+          "path": "/frames/kiosk/dishes-new.html"
+        },
+        {
+          "id": "dishes:record",
+          "page": "dishes",
+          "label": "Dishes · Record",
+          "kind": "record",
+          "path": "/frames/kiosk/dishes-record.html"
+        },
+        {
+          "id": "stops:page",
+          "page": "stops",
+          "label": "Stops",
+          "kind": "page",
+          "path": "/frames/kiosk/stops-page.html"
+        },
+        {
+          "id": "stops:new",
+          "page": "stops",
+          "label": "Stops · New",
+          "kind": "new",
+          "path": "/frames/kiosk/stops-new.html"
+        },
+        {
+          "id": "stops:record",
+          "page": "stops",
+          "label": "Stops · Record",
+          "kind": "record",
+          "path": "/frames/kiosk/stops-record.html"
+        },
+        {
+          "id": "where:page",
+          "page": "where",
+          "label": "Where",
+          "kind": "page",
+          "path": "/frames/kiosk/where-page.html"
+        },
+        {
+          "id": "team:page",
+          "page": "team",
+          "label": "Team",
+          "kind": "page",
+          "path": "/frames/kiosk/team-page.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "marketplace",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/marketplace/landing.html"
+          "id": "home:page",
+          "page": "home",
+          "label": "Home",
+          "kind": "page",
+          "path": "/frames/marketplace/home-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/marketplace/list.html"
+          "id": "catalog:page",
+          "page": "catalog",
+          "label": "Catalog",
+          "kind": "page",
+          "path": "/frames/marketplace/catalog-page.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/marketplace/form.html"
+          "id": "catalog:new",
+          "page": "catalog",
+          "label": "Catalog · New",
+          "kind": "new",
+          "path": "/frames/marketplace/catalog-new.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/marketplace/record.html"
+          "id": "catalog:record",
+          "page": "catalog",
+          "label": "Catalog · Record",
+          "kind": "record",
+          "path": "/frames/marketplace/catalog-record.html"
+        },
+        {
+          "id": "myItems:page",
+          "page": "myItems",
+          "label": "My items",
+          "kind": "page",
+          "path": "/frames/marketplace/myItems-page.html"
+        },
+        {
+          "id": "myItems:new",
+          "page": "myItems",
+          "label": "My items · New",
+          "kind": "new",
+          "path": "/frames/marketplace/myItems-new.html"
+        },
+        {
+          "id": "saved:page",
+          "page": "saved",
+          "label": "Saved",
+          "kind": "page",
+          "path": "/frames/marketplace/saved-page.html"
+        },
+        {
+          "id": "saved:new",
+          "page": "saved",
+          "label": "Saved · New",
+          "kind": "new",
+          "path": "/frames/marketplace/saved-new.html"
+        },
+        {
+          "id": "review:page",
+          "page": "review",
+          "label": "Review",
+          "kind": "page",
+          "path": "/frames/marketplace/review-page.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "records",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/records/landing.html"
+          "id": "home:page",
+          "page": "home",
+          "label": "Home",
+          "kind": "page",
+          "path": "/frames/records/home-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/records/list.html"
+          "id": "items:page",
+          "page": "items",
+          "label": "Items",
+          "kind": "page",
+          "path": "/frames/records/items-page.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/records/form.html"
+          "id": "items:new",
+          "page": "items",
+          "label": "Items · New",
+          "kind": "new",
+          "path": "/frames/records/items-new.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/records/record.html"
+          "id": "items:record",
+          "page": "items",
+          "label": "Items · Record",
+          "kind": "record",
+          "path": "/frames/records/items-record.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "status",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/status/landing.html"
+          "id": "home:page",
+          "page": "home",
+          "label": "Home",
+          "kind": "page",
+          "path": "/frames/status/home-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/status/list.html"
+          "id": "history:page",
+          "page": "history",
+          "label": "History",
+          "kind": "page",
+          "path": "/frames/status/history-page.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/status/form.html"
+          "id": "history:record",
+          "page": "history",
+          "label": "History · Article",
+          "kind": "record",
+          "path": "/frames/status/history-record.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/status/record.html"
+          "id": "incidents:page",
+          "page": "incidents",
+          "label": "Incidents",
+          "kind": "page",
+          "path": "/frames/status/incidents-page.html"
+        },
+        {
+          "id": "incidents:new",
+          "page": "incidents",
+          "label": "Incidents · New",
+          "kind": "new",
+          "path": "/frames/status/incidents-new.html"
+        },
+        {
+          "id": "incidents:record",
+          "page": "incidents",
+          "label": "Incidents · Record",
+          "kind": "record",
+          "path": "/frames/status/incidents-record.html"
+        },
+        {
+          "id": "updates:page",
+          "page": "updates",
+          "label": "Updates",
+          "kind": "page",
+          "path": "/frames/status/updates-page.html"
+        },
+        {
+          "id": "updates:new",
+          "page": "updates",
+          "label": "Updates · New",
+          "kind": "new",
+          "path": "/frames/status/updates-new.html"
+        },
+        {
+          "id": "updates:record",
+          "page": "updates",
+          "label": "Updates · Record",
+          "kind": "record",
+          "path": "/frames/status/updates-record.html"
+        },
+        {
+          "id": "components:page",
+          "page": "components",
+          "label": "Components",
+          "kind": "page",
+          "path": "/frames/status/components-page.html"
+        },
+        {
+          "id": "components:new",
+          "page": "components",
+          "label": "Components · New",
+          "kind": "new",
+          "path": "/frames/status/components-new.html"
+        },
+        {
+          "id": "components:record",
+          "page": "components",
+          "label": "Components · Record",
+          "kind": "record",
+          "path": "/frames/status/components-record.html"
+        },
+        {
+          "id": "maintenance:page",
+          "page": "maintenance",
+          "label": "Maintenance",
+          "kind": "page",
+          "path": "/frames/status/maintenance-page.html"
+        },
+        {
+          "id": "maintenance:new",
+          "page": "maintenance",
+          "label": "Maintenance · New",
+          "kind": "new",
+          "path": "/frames/status/maintenance-new.html"
+        },
+        {
+          "id": "maintenance:record",
+          "page": "maintenance",
+          "label": "Maintenance · Record",
+          "kind": "record",
+          "path": "/frames/status/maintenance-record.html"
+        },
+        {
+          "id": "overview:page",
+          "page": "overview",
+          "label": "Overview",
+          "kind": "page",
+          "path": "/frames/status/overview-page.html"
+        },
+        {
+          "id": "team:page",
+          "page": "team",
+          "label": "Team",
+          "kind": "page",
+          "path": "/frames/status/team-page.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     },
     {
       "name": "support",
       "frames": [
         {
-          "label": "Landing",
-          "path": "/frames/support/landing.html"
+          "id": "cases:page",
+          "page": "cases",
+          "label": "Cases",
+          "kind": "page",
+          "path": "/frames/support/cases-page.html"
         },
         {
-          "label": "List",
-          "path": "/frames/support/list.html"
+          "id": "cases:new",
+          "page": "cases",
+          "label": "Cases · New",
+          "kind": "new",
+          "path": "/frames/support/cases-new.html"
         },
         {
-          "label": "Form",
-          "path": "/frames/support/form.html"
+          "id": "cases:record",
+          "page": "cases",
+          "label": "Cases · Record",
+          "kind": "record",
+          "path": "/frames/support/cases-record.html"
         },
         {
-          "label": "Record",
-          "path": "/frames/support/record.html"
+          "id": "team:page",
+          "page": "team",
+          "label": "Team",
+          "kind": "page",
+          "path": "/frames/support/team-page.html"
         }
-      ]
+      ],
+      "identity": {
+        "format": 1,
+        "runtime": "3a066d7f46668a6d7e0c9e60adf76092920fd02b31b99f5cc75fb3eeaae7f153",
+        "engineBuild": "0b710ab03eb6e8d67bef28ebfe1af6d954e96c133d908590115b6909129ac8ac",
+        "engine": "0.0.0",
+        "kit": "7ccd3b60e54821c8f336bcd0b2b7c91c489fe8ada51507234d18e28bd39dc324",
+        "fonts": "5b1c01842fc3a989de92833760116e6e04034199eaf98eef0fd737e3924dfdc9"
+      }
     }
   ]
 }

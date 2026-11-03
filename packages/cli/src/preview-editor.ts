@@ -2,11 +2,21 @@
 // app's own Vite config for the preview only. It injects a small runtime into the page that,
 // in select mode, outlines the part of the spec under the pointer, reports a click to Studio,
 // and lets table columns be dragged. The app's own builds never include it.
-import { createHash, timingSafeEqual } from "node:crypto";
+
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fontImportRuntime } from "@smithable/adapter-tanstack";
+import { lookCommandRuntime } from "@smithable/core";
+import { LOOK_FRAME_BODY } from "./look-frame-runtime.js";
+import { lookGeneration } from "./look-generation.js";
+import { type LookPreviewConfig, lookPreviewHandler } from "./look-preview.js";
+import { RECORD_PROBE } from "./preview-discovery.js";
 
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
 if (typeof window !== "undefined" && window.parent !== window) {
+  const designOnly = new URLSearchParams(location.search).has("__sm_look");
   let selecting = false;
   // In Studio's Code mode a text is not changed in place: Studio opens its line instead.
   let code = false;
@@ -47,7 +57,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   let watching = null;
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
+    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
     studio = event.origin;
     // Studio hears when the page has flashed (with the key it sent), so a change is flashed
     // once however often the page reloads for it, and never lost to a reload without it.
@@ -90,7 +100,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // Only from the page this preview is in, and only from this machine. The fonts' bare imports
   // become the paths Vite serves them at (every app has all seven).
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || event.data?.type !== "smithable:theme-css") return;
+    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:theme-css") return;
     if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
     if (typeof event.data.css !== "string") return;
     let sheet = document.getElementById("sm-theme");
@@ -99,10 +109,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
       sheet.id = "sm-theme";
     }
     // The lab's Light and Dark choose the frame's mode: the app's own picker is not offered.
-    sheet.textContent = event.data.css.replace(
-      /@import "(@fontsource-variable\\/[a-z0-9-]+)";/g,
-      '@import "/node_modules/$1/index.css";',
-    ) + '\\n[data-part="appearance"] { display: none !important; }';
+    sheet.textContent = (${fontImportRuntime("local")})(event.data.css)
+      + '\\n[data-part="appearance"] { display: none !important; }';
     // Last in the head, so its variables win over the app's theme.css.
     document.head.append(sheet);
     // A frame shown in one mode (the theme lab's light and dark frames): every rule for the dark
@@ -136,18 +144,39 @@ if (typeof window !== "undefined" && window.parent !== window) {
     document.documentElement.dataset.appearance = scheme;
     document.documentElement.style.colorScheme = scheme;
   };
+  // Bounded discovery runs inside the currently authorized rendered list. The parent must
+  // own this actual iframe; hosted authorization is supplied separately by the host adapter.
+  window.addEventListener("message", (event) => {
+    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:discover-record") return;
+    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    const { request, base } = event.data;
+    if (typeof request !== "string" || request.length > 100 || typeof base !== "string" || base.length > 1000) return;
+    const until = Date.now() + 15000;
+    const read = () => {
+      if (document.body.dataset.hydrated !== "true" && Date.now() < until) return setTimeout(read, 100);
+      const path = location.pathname === base ? (${RECORD_PROBE})(base) : undefined;
+      window.parent.postMessage({source:"smithable-preview",type:"record-discovered",request,path,
+        status:location.pathname === "/sign-in" ? "sign-in" : path ? "found" : "empty"},event.origin);
+    };
+    read();
+  });
   // The theme lab signs itself in through the app's development sign-in (a button for each
   // role, there only in development): asked from the page this preview is in on this machine,
   // the sign-in page clicks the role's button once it is ready.
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || event.data?.type !== "smithable:dev-sign-in") return;
+    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:dev-sign-in") return;
     if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
     const started = Date.now();
     const tryClick = () => {
       const buttons = [...document.querySelectorAll("[data-dev-role]")];
       const button =
-        buttons.find((b) => b.dataset.devRole === event.data.role) ?? buttons[0];
-      if (document.body.dataset.hydrated === "true" && button) button.click();
+        buttons.find((b) => b.dataset.devRole === event.data.role);
+      if (location.pathname !== "/sign-in" && document.body.dataset.hydrated === "true") {
+        window.parent.postMessage({source:"smithable-preview",type:"signed-in",path:location.pathname},event.origin);
+      } else if (document.body.dataset.hydrated === "true" && button) {
+        button.click();
+        setTimeout(tryClick, 200);
+      }
       else if (Date.now() - started < 20000) setTimeout(tryClick, 200);
     };
     tryClick();
@@ -155,7 +184,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // The theme lab shows a theme's motion: the page scrolls slowly to its end and back, so what
   // moves as it comes into view moves (same parent-and-machine rule).
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || event.data?.type !== "smithable:motion-tour") return;
+    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:motion-tour") return;
     if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
     const end = document.documentElement.scrollHeight - window.innerHeight;
     const started = Date.now();
@@ -172,7 +201,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
 
   window.addEventListener("message", (event) => {
     // Only the page this preview is in: Studio.
-    if (event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
+    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
     studio = event.origin;
     report();
     selecting = Boolean(event.data.on);
@@ -356,6 +385,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     true,
   );
   const signIn = setInterval(() => {
+    if (designOnly) return clearInterval(signIn);
     if (location.pathname !== "/sign-in") return clearInterval(signIn);
     if (document.body.dataset.hydrated !== "true") return;
     clearInterval(signIn);
@@ -484,7 +514,16 @@ interface DevServer {
   /** Node's HTTP server under the dev server; none in middleware mode. */
   httpServer?: UpgradeServer | null;
   /** Vite's environments (client, ssr), each with the channel to its hot-reload clients. */
-  environments?: Record<string, { hot: { send: (...args: unknown[]) => void } }>;
+  environments?: Record<
+    string,
+    {
+      hot: { send: (...args: unknown[]) => void };
+      moduleGraph?: {
+        getModulesByFile(file: string): Set<unknown> | undefined;
+        invalidateModule(module: unknown): void;
+      };
+    }
+  >;
   middlewares: {
     use(
       path: string,
@@ -632,7 +671,12 @@ export function guardUpgrades(server: UpgradeServer, digestHex: string | undefin
  */
 export const WORDS_MODULE = /\/src\/generated\/[a-z0-9-]+\.ts$/;
 
-export function smithableEditor(options: { holdUpdates?: boolean; token?: boolean } = {}) {
+export function smithableEditor(
+  options: { holdUpdates?: boolean; token?: boolean; look?: LookPreviewConfig } = {},
+) {
+  const boot = randomUUID();
+  const look = options.look;
+  const dir = process.cwd();
   return {
     name: "smithable-editor",
     apply: "serve",
@@ -673,11 +717,32 @@ export function smithableEditor(options: { holdUpdates?: boolean; token?: boolea
         if (server.httpServer) guardUpgrades(server.httpServer, digest);
       }
       server.middlewares.use(framedLocally);
+      if (look) {
+        server.middlewares.use((_, res, next) => {
+          res.setHeader(
+            "Content-Security-Policy",
+            "frame-ancestors 'self' " + look.parentOrigins.join(" "),
+          );
+          next();
+        });
+        server.middlewares.use(
+          "/__smithable/look",
+          lookPreviewHandler(look, dir, boot, process.env.SMITHABLE_LOOK_KEY ?? ""),
+        );
+      }
       if (options.holdUpdates) holdFullReloads(server);
       let changed = 0;
       for (const event of ["add", "change", "unlink"])
         server.watcher.on(event, () => {
           changed = Date.now();
+          // A content/auth/source change may regenerate identical CSS bytes. Invalidate the
+          // compiled generation marker anyway, so a new document cannot inherit an old label.
+          if (look)
+            for (const environment of Object.values(server.environments ?? {})) {
+              const graph = environment.moduleGraph;
+              for (const module of graph?.getModulesByFile(join(dir, "src/styles.css")) ?? [])
+                graph?.invalidateModule(module);
+            }
         });
       server.middlewares.use("/__smithable/settled", async (_req, res) => {
         const start = Date.now();
@@ -689,9 +754,25 @@ export function smithableEditor(options: { holdUpdates?: boolean; token?: boolea
       });
     },
     resolveId: (id: string) => (id === ID ? `\0${ID}` : undefined),
-    load: (id: string) => (id === `\0${ID}` ? RUNTIME : undefined),
-    transform: (code: string, id: string) =>
-      id.endsWith("/src/router.tsx") ? `${code}\nimport "${ID}";\n` : undefined,
+    load: (id: string) =>
+      id === `\0${ID}`
+        ? RUNTIME +
+          (look
+            ? `
+if (typeof window !== "undefined" && new URLSearchParams(location.search).has("__sm_look")) {
+  const lookConfig=${JSON.stringify({ ...look, boot })};
+  ${lookCommandRuntime()}
+  const applyFonts=${fontImportRuntime("local")};
+  const probeRecord=${RECORD_PROBE};
+  ${LOOK_FRAME_BODY}
+}`
+            : "")
+        : undefined,
+    transform: (code: string, id: string) => {
+      if (look && id.split("?")[0]?.endsWith("/src/styles.css") && !id.includes("?url"))
+        return `${code}\n:root { --sm-look-generation: "${lookGeneration(dir, boot)}"; }\n`;
+      return id.endsWith("/src/router.tsx") ? `${code}\nimport "${ID}";\n` : undefined;
+    },
   };
 }
 
@@ -716,14 +797,27 @@ export function holdFullReloads(server: Pick<DevServer, "environments">) {
   }
 }
 
+/**
+ * Writes the preview's config only when it is not there as it should be, and says whether it did:
+ * a dev server that is running starts itself again when its settings file is touched.
+ */
+export function writePreviewConfig(path: string, text: string): boolean {
+  if (existsSync(path) && readFileSync(path, "utf8") === text) return false;
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, text);
+  return true;
+}
+
 /** The wrapper config: the app's own Vite config plus the editor, for the preview only. */
 export function previewConfig(
   publicUrl?: string,
   allow?: string[],
-  options: { holdUpdates?: boolean; token?: boolean } = {},
+  options: { holdUpdates?: boolean; token?: boolean; look?: LookPreviewConfig } = {},
 ): string {
   const given = (["holdUpdates", "token"] as const).filter((key) => options[key]);
-  const pluginOptions = given.length ? `{ ${given.map((key) => `${key}: true`).join(", ")} }` : "";
+  const fields = given.map((key) => `${key}: true`);
+  if (options.look) fields.push(`look: ${JSON.stringify(options.look)}`);
+  const pluginOptions = fields.length ? `{ ${fields.join(", ")} }` : "";
   const plugin = new URL("./preview-editor.js", import.meta.url).pathname;
   const server: Record<string, unknown> = {};
   // Behind a proxy on its own public address, the dev server accepts that host and its

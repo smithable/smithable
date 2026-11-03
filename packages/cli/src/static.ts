@@ -13,6 +13,7 @@ import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { FRAME_RUNTIME } from "./frame-runtime.js";
 import { type Io, tool } from "./io.js";
+import { RECORD_PROBE } from "./preview-discovery.js";
 import { loadSpec } from "./validate.js";
 
 /** A page to save: where it is, what it is called, the file it goes to, and a state to put it in. */
@@ -21,6 +22,7 @@ export interface Frame {
   path: string;
   file: string;
   state?: "empty" | "errors" | "dialog";
+  discoverFrom?: string;
 }
 
 /** A search no record matches, for the list with nothing found. */
@@ -37,7 +39,12 @@ export function staticFrames(
     frames.push({ label: page.id, path: page.route, file: page.id });
     if (page.pattern.kind !== "crud") continue;
     frames.push({ label: `${page.id}: form`, path: `${route}/new`, file: `${page.id}-form` });
-    frames.push({ label: `${page.id}: record`, path: `${route}/1`, file: `${page.id}-record` });
+    frames.push({
+      label: `${page.id}: record`,
+      path: page.route,
+      discoverFrom: page.route,
+      file: `${page.id}-record`,
+    });
     if (!states) continue;
     frames.push(
       {
@@ -54,7 +61,8 @@ export function staticFrames(
       },
       {
         label: `${page.id}: delete dialog`,
-        path: `${route}/1`,
+        path: page.route,
+        discoverFrom: page.route,
         file: `${page.id}-dialog`,
         state: "dialog",
       },
@@ -71,9 +79,16 @@ export interface StaticPage {
   getByRole(role: "button", options: { name: string; exact?: boolean }): StaticLocator;
   /** An expression's value (the CLI has no DOM types, so the script is text). */
   evaluate(script: string): Promise<unknown>;
+  route(pattern: string, handler: (route: StaticRoute) => Promise<void>): Promise<void>;
+  unroute(pattern: string, handler: (route: StaticRoute) => Promise<void>): Promise<void>;
   request: {
     get(url: string): Promise<{ body(): Promise<Buffer>; headers(): Record<string, string> }>;
   };
+}
+export interface StaticRoute {
+  request(): { method(): string };
+  abort(): Promise<void>;
+  continue(): Promise<void>;
 }
 export interface StaticLocator {
   first(): StaticLocator;
@@ -139,19 +154,60 @@ export async function savePages(
   const sheets = new Map<string, string>();
   const saved: Saved = { frames: [], skipped: [], assets: 0 };
   for (const frame of frames) {
+    const controlled = frame.state === "errors" || frame.state === "dialog";
+    let blocked = false;
+    const guard = async (route: StaticRoute) => {
+      if (!["GET", "HEAD", "OPTIONS"].includes(route.request().method())) {
+        blocked = true;
+        await route.abort();
+      } else await route.continue();
+    };
     try {
-      await save(frame);
+      if (controlled) await page.route("**/*", guard);
+      await save(frame, () => blocked);
     } catch (error) {
       // A state that could not be reached (no form to submit, a slow page) leaves its frame out.
       const reason = String(error instanceof Error ? error.message : error).split("\n")[0] ?? "";
-      saved.skipped.push({ label: frame.label, reason: reason.replace(/\.$/, "") });
+      saved.skipped.push({
+        label: frame.label,
+        reason: blocked ? "state capture refused a network mutation" : reason.replace(/\.$/, ""),
+      });
+    } finally {
+      if (controlled) await page.unroute("**/*", guard);
     }
   }
   writeFileSync(join(out, "frames", "frame.js"), FRAME_RUNTIME);
   saved.assets = assets.size;
   return saved;
 
-  async function save(frame: Frame) {
+  async function save(frame: Frame, blocked: () => boolean) {
+    if (frame.discoverFrom) {
+      const response = await page.goto(base + frame.discoverFrom, { waitUntil: "commit" });
+      if (response && response.status() >= 400) {
+        saved.skipped.push({
+          label: frame.label,
+          reason: `discovery answered ${response.status()}`,
+        });
+        return;
+      }
+      await page.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * patience });
+      if (new URL(page.url()).pathname !== frame.discoverFrom) {
+        saved.skipped.push({
+          label: frame.label,
+          reason: "discovery requires sign-in or redirected",
+        });
+        return;
+      }
+      const path = await page.evaluate(`(${RECORD_PROBE})(${JSON.stringify(frame.discoverFrom)})`);
+      if (typeof path !== "string") {
+        saved.skipped.push({
+          label: frame.label,
+          reason: "no readable record on the authorized page",
+        });
+        return;
+      }
+      frame = { ...frame, path };
+    }
     const response = await page.goto(base + frame.path, { waitUntil: "commit" });
     if (response && response.status() >= 400) {
       saved.skipped.push({ label: frame.label, reason: `answered ${response.status()}` });
@@ -166,7 +222,7 @@ export async function savePages(
       // Saving an empty form: the messages appear.
       await page.locator("[data-kit=model-form] button[type=submit]").first().click();
       await page
-        .locator('[aria-invalid="true"], [role="alert"]')
+        .locator('[aria-invalid="true"]')
         .first()
         .waitFor({ timeout: 10000 * patience });
     } else if (frame.state === "dialog") {
@@ -182,6 +238,7 @@ export async function savePages(
         .first()
         .waitFor({ timeout: 10000 * patience });
     }
+    if (blocked()) throw new Error("State capture refused a network mutation.");
     const { html, css, title } = (await page.evaluate(`(() => {
       // Every rule the page has; the imported sheets' (the fonts') when asked.
       const imports = ${options.imports};

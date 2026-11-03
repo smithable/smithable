@@ -21,7 +21,7 @@ import { ruleOperations } from "./sections/rule-operations.js";
 import { specOperations } from "./sections/spec-operations.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
-import { type ThemeIR, themeNames } from "./theme.js";
+import { type ThemeIR, themeNamed, themeNames } from "./theme.js";
 
 /**
  * Every operation: those about the spec as a whole (rules and access belong to any concept),
@@ -51,6 +51,8 @@ export interface ProjectFiles {
   plugins?: SpecPlugin[];
   /** The project's own themes (themes/<name>.yml), which the ux file's preset may name. */
   themes?: ThemeIR[];
+  /** Existing project theme paths, so updates preserve .yaml and declared-name filenames. */
+  themePaths?: Record<string, string>;
   /** Its language files' texts, smithable.content.<language>.yml, by language. */
   translations?: Record<string, string>;
 }
@@ -188,10 +190,20 @@ export function applyOperation(
 
   // Each companion gets an editor: its file, or a new one if it may be created.
   const start = (key: (typeof COMPANIONS)[number]["key"], empty?: string) => files[key] ?? empty;
-  const added: { theme: ThemeIR; text: string }[] = [];
+  const added: { theme: ThemeIR; text: string; path?: string }[] = [];
   const themes: ThemeFiles = {
+    get: (name) => themeNamed(name, files.themes),
     names: themeNames(files.themes),
+    projectNames: (files.themes ?? []).map((theme) => theme.name),
     add: (theme, text) => void added.push({ theme, text }),
+    update: (theme, text) => {
+      if (!files.themes?.some((own) => own.name === theme.name))
+        throw new OperationError(`There is no project theme "${theme.name}" to update.`);
+      const path = files.themePaths?.[theme.name] ?? `themes/${theme.name}.yml`;
+      if (!/^themes\/[a-zA-Z0-9_-]+\.ya?ml$/.test(path))
+        throw new OperationError("A theme update must stay in this project's themes folder.");
+      added.push({ theme, text, path });
+    },
   };
   // The language files: those the project has, those added, those taken away.
   const translated = new Map(
@@ -273,7 +285,15 @@ export function applyOperation(
   // changed it. A theme added by the operation counts for the check, so the ux file may use it.
   const written: Partial<Record<(typeof COMPANIONS)[number]["key"], string>> = {};
   const known = added.length
-    ? { ...files, themes: [...(files.themes ?? []), ...added.map((a) => a.theme)] }
+    ? {
+        ...files,
+        themes: [
+          ...(files.themes ?? []).filter(
+            (theme) => !added.some((a) => a.theme.name === theme.name),
+          ),
+          ...added.map((a) => a.theme),
+        ],
+      }
     : files;
   for (const c of COMPANIONS) {
     const editor = editors[c.key];
@@ -306,10 +326,22 @@ export function applyOperation(
     ok: true,
     files: {
       spec: editors.spec.text,
+      ...(files.plugins ? { plugins: files.plugins } : {}),
+      ...(known.themes ? { themes: known.themes } : {}),
+      ...(files.themePaths || added.length
+        ? {
+            themePaths: {
+              ...files.themePaths,
+              ...Object.fromEntries(
+                added.map((a) => [a.theme.name, a.path ?? `themes/${a.theme.name}.yml`]),
+              ),
+            },
+          }
+        : {}),
       ...written,
       ...(translated.size ? { translations: translationsNow } : {}),
     },
-    added: added.map((a) => ({ path: `themes/${a.theme.name}.yml`, text: a.text })),
+    added: added.map((a) => ({ path: a.path ?? `themes/${a.theme.name}.yml`, text: a.text })),
     removed: [...removedLanguages].map(translationPath),
     description: [op.describe(args, before.ir), ...notes].join("; "),
     destructive: op.destructive(args, before.ir, after.ir),

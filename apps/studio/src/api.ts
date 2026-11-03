@@ -83,6 +83,8 @@ export interface Project {
   /** Redo would make again the last change undone (none made since). */
   canRedo?: boolean;
   preview: string;
+  /** Ephemeral identity of this editor project, supplied by its authenticated host. */
+  lookProject?: string;
   /** Where the project's publishing and settings live, when Studio is hosted. */
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
@@ -283,6 +285,17 @@ export const api = {
     confirm = false,
     file?: { path: string; data: string },
   ) => changing(call<Result>("/api/op", { name, args, confirm, file })),
+  /**
+   * The look editor's Apply or Save: `lookProject` is the project it opened, and for Apply the
+   * envelope carries the source revision the draft was opened on and the request's id, beside
+   * the operation's arguments (never among them).
+   */
+  applyLook: (
+    name: "applyTheme" | "addTheme",
+    args: Record<string, unknown>,
+    lookProject: string,
+    envelope: { expectedRevision?: string; requestId?: string } = {},
+  ) => changing(call<Result>("/api/op", { name, args, confirm: true, lookProject, ...envelope })),
   customize: (page: string) => changing(call<Result>("/api/customize", { page })),
   /** The language's empty texts drafted by the configured model (smithable translate). */
   translate: (language: string) => changing(call<Result>("/api/translate", { language })),

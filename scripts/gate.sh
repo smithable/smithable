@@ -19,7 +19,10 @@
 #
 # The gate runs what the change needs (plan below; Johan, 2026-10-22: speed first): lint, build,
 # the units and the site always; the example apps and Studio's check by what changed, every app
-# unless the change is only Studio's web app, only examples or only the adapter's page patterns.
+# unless the change is only Studio's web app, only examples or only the adapter's page patterns;
+# the visual matrix (pnpm test:visual, fourteen cases in a browser, three to four minutes) only
+# when the kit's templates, the adapter's page patterns or themes, the look editor or the visual
+# check itself changed. With nothing changed (CI's run on main) everything runs.
 # "scripts/gate.sh --plan" prints the plan without a ticket or the lock. The exit status is the
 # check's. The lock is released when the gate ends, however it ends.
 set -u
@@ -101,36 +104,43 @@ changes() {
 
 # Which suites a change needs (Johan, 2026-10-22: speed first, nothing tested for nothing). Lint,
 # build, the units and the site always run; this says which example apps and whether Studio's
-# check: "apps=<all|none|name…> studio=<yes|no> why=<reason>". Everything, unless the change is
-# only Studio's web app (its checks never load it), only examples (those examples; Studio's check
-# too when the CRM, its starter, is among them), or only the adapter's page patterns (the examples
-# whose spec has a page of that kind, and the CRM for Studio). Plain documents decide nothing.
+# check, and whether the visual matrix: "apps=<all|none|name…> studio=<yes|no> visual=<yes|no>
+# why=<reason>". Everything, unless the change is only Studio's web app (its checks never load
+# it), only examples (those examples; Studio's check too when the CRM, its starter, is among
+# them), or only the adapter's page patterns (the examples whose spec has a page of that kind,
+# and the CRM for Studio). The visual matrix runs when what it looks at changed: the kit's
+# templates, the adapter's page patterns and themes, the look editor, or its own scripts; and
+# when nothing changed. Plain documents decide nothing.
 plan() {
-  local changed rest apps studio kinds k list
+  local changed rest apps studio visual kinds k list
   changed=$(changes)
   rest=$(printf '%s\n' "$changed" | grep -vE '^(docs/|[^/]*\.md$|$)' || true)
-  if [ -z "$rest" ]; then echo "apps=all studio=yes why=a gate asked for, nothing but documents changed"; return; fi
+  visual=no
+  if [ -z "$rest" ] || printf '%s\n' "$rest" | grep -qE '^(packages/adapter-tanstack/(templates/|src/pages/|src/themes\.ts$)|packages/look-editor/|scripts/(test-visual|visual-[a-z]+-checks)\.mjs$)'; then
+    visual=yes
+  fi
+  if [ -z "$rest" ]; then echo "apps=all studio=yes visual=yes why=a gate asked for, nothing but documents changed"; return; fi
   if ! printf '%s\n' "$rest" | grep -qvE '^(apps/studio/|scripts/test-studio\.mjs$)'; then
-    echo "apps=none studio=yes why=only Studio's web app changed"; return
+    echo "apps=none studio=yes visual=$visual why=only Studio's web app changed"; return
   fi
   if ! printf '%s\n' "$rest" | grep -qvE '^examples/[^/]+/'; then
     apps=$(printf '%s\n' "$rest" | sed -nE 's#^examples/([^/]+)/.*#\1#p' | sort -u | tr '\n' ' ')
     studio=no; printf '%s\n' $apps | grep -qx crm && studio=yes
-    echo "apps=${apps% } studio=$studio why=only examples changed"; return
+    echo "apps=${apps% } studio=$studio visual=$visual why=only examples changed"; return
   fi
   if ! printf '%s\n' "$rest" | grep -qvE '^packages/adapter-tanstack/src/pages/[a-z-]+(\.test)?\.ts$'; then
     kinds=$(printf '%s\n' "$rest" | sed -nE 's#^packages/adapter-tanstack/src/pages/([a-z-]+)(\.test)?\.ts$#\1#p' | sort -u)
     list=crm
     for k in $kinds; do
       case $k in
-        index|list|record|data) echo "apps=all studio=yes why=a page file every app shares changed ($k)"; return ;;
+        index|list|record|data) echo "apps=all studio=yes visual=$visual why=a page file every app shares changed ($k)"; return ;;
       esac
       list="$list $(grep -lE "^[[:space:]]+$k:" examples/*/smithable.yml 2>/dev/null | sed -E 's#examples/([^/]+)/.*#\1#' | tr '\n' ' ')"
     done
     apps=$(printf '%s\n' $list | sort -u | tr '\n' ' ')
-    echo "apps=${apps% } studio=yes why=only page patterns changed ($(echo $kinds | tr '\n' ' '))"; return
+    echo "apps=${apps% } studio=yes visual=$visual why=only page patterns changed ($(echo $kinds | tr '\n' ' '))"; return
   fi
-  echo "apps=all studio=yes why=the change reaches every app"
+  echo "apps=all studio=yes visual=$visual why=the change reaches every app"
 }
 
 if [ "${1:-}" = --plan ]; then
@@ -193,15 +203,17 @@ fi
 if [ $# -eq 0 ]; then
   p=$(plan)
   apps=${p#apps=}; apps=${apps%% studio=*}
-  studio=${p#*studio=}; studio=${studio%% why=*}
-  echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio."
+  studio=${p#*studio=}; studio=${studio%% visual=*}
+  visual=${p#*visual=}; visual=${visual%% why=*}
+  echo "gate.sh: ${p#*why=}: apps $apps, Studio's check $studio, the visual matrix $visual."
   pnpm lint && pnpm build && pnpm test && pnpm site &&
     case $apps in
       all) pnpm test:apps ;;
       none) true ;;
       *) node scripts/test-apps-parallel.mjs $apps ;;
     esac &&
-    { [ "$studio" = no ] || pnpm test:studio; }
+    { [ "$studio" = no ] || pnpm test:studio; } &&
+    { [ "$visual" = no ] || pnpm test:visual; }
 else
   pnpm check "$@"
 fi

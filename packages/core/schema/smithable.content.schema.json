@@ -210,6 +210,10 @@
               "type": "string",
               "description": "A hero's line under the heading."
             },
+            "caption": {
+              "type": "string",
+              "description": "A media/text section picture caption."
+            },
             "text": {
               "type": "string",
               "description": "A paragraph under the heading."

@@ -1,9 +1,13 @@
+import { fontImportRuntime } from "@smithable/adapter-tanstack";
+import { lookCommandRuntime } from "@smithable/core";
+import { LOOK_FRAME_BODY } from "./look-frame-runtime.js";
+
 // The runtime of a saved page (static.ts; the theme lab's public mode frames the same files,
 // scripts/theme-lab-export.mjs): what the preview editor's runtime does for the local lab
 // (preview-editor.ts), for a static page on the viewer's own origin. It shows a saved dialog as a
 // modal again, takes a theme's CSS, shows one color scheme, plays the landing page's motion, and
 // keeps the page where it is (its links and forms lead nowhere). Written as frames/frame.js.
-export const FRAME_RUNTIME = String.raw`(() => {
+const SAVED_FRAME_RUNTIME = String.raw`(() => {
   // A dialog saved while open is a modal again (the saved page keeps only its open attribute).
   for (const dialog of document.querySelectorAll("dialog[open]")) {
     dialog.removeAttribute("open");
@@ -12,6 +16,7 @@ export const FRAME_RUNTIME = String.raw`(() => {
   if (window.parent === window) return;
   // A folder opened from a file has the origin "null", which postMessage refuses as a target.
   const origin = location.origin === "null" ? "*" : location.origin;
+  const designOnly=new URLSearchParams(location.search).has("__sm_look");
   const post = (message) =>
     window.parent.postMessage({ source: "smithable-preview", ...message }, origin);
   let scheme = "";
@@ -36,7 +41,7 @@ export const FRAME_RUNTIME = String.raw`(() => {
     document.documentElement.style.colorScheme = scheme;
   };
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || event.origin !== location.origin) return;
+    if (designOnly || event.source !== window.parent || event.origin !== location.origin) return;
     const { type, css, mode } = event.data ?? {};
     if (type === "smithable:theme-css" && typeof css === "string") {
       let sheet = document.getElementById("sm-theme");
@@ -46,11 +51,8 @@ export const FRAME_RUNTIME = String.raw`(() => {
       }
       // The fonts' bare imports become the lab's copies. The lab's Light and Dark choose the
       // frame's mode, so the app's own appearance picker is not offered beside them.
-      sheet.textContent =
-        css.replace(
-          /@import "@fontsource-variable[/]([a-z0-9-]+)";/g,
-          '@import "../fonts/$1/index.css";',
-        ) + '\n[data-part="appearance"] { display: none !important; }';
+      sheet.textContent = (${fontImportRuntime("static")})(css)
+        + '\n[data-part="appearance"] { display: none !important; }';
       document.head.append(sheet);
       if (mode === "light" || mode === "dark") scheme = mode;
       if (scheme) applyScheme();
@@ -75,3 +77,15 @@ export const FRAME_RUNTIME = String.raw`(() => {
   post({ type: "ready" });
 })();
 `;
+
+// Public exported frames have presentation authority only, scoped to their own hosting origin.
+export const LOOK_STATIC_RUNTIME = `
+if (new URLSearchParams(location.search).has("__sm_look") && /^https?:$/.test(location.protocol)) {
+  const lookConfig={static:true,project:"public-export",parentOrigins:[location.origin],generation:"static-v1"};
+  ${lookCommandRuntime()}
+  const applyFonts=${fontImportRuntime("static")};
+  const probeRecord=()=>undefined;
+  ${LOOK_FRAME_BODY.trim()}
+}`;
+
+export const FRAME_RUNTIME = SAVED_FRAME_RUNTIME + LOOK_STATIC_RUNTIME;

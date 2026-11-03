@@ -34,7 +34,7 @@ test("a calendar's view (week unsaid, agenda or days) and its own filter, timeOf
   );
 });
 
-test("setCalendarView and setCalendarFilters write the ux file; the defaults take the key away", () => {
+test("setCalendarView and setCalendarFilters write the ux file; inherit takes the key away", () => {
   const agenda = applyOperation({ spec }, "setCalendarView", { page: "schedule", view: "agenda" });
   if (!agenda.ok) throw new Error(agenda.message);
   expect(agenda.files.ux).toBe(
@@ -43,7 +43,7 @@ test("setCalendarView and setCalendarFilters write the ux file; the defaults tak
   expect(
     applyOperation({ spec, ux: agenda.files.ux as string }, "setCalendarView", {
       page: "schedule",
-      view: "week",
+      view: "inherit",
     }),
   ).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
   const timed = applyOperation({ spec }, "setCalendarFilters", {

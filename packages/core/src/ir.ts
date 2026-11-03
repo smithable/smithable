@@ -435,6 +435,7 @@ export const SECTION_KINDS = [
   "calculator",
   "custom",
   "text",
+  "mediaText",
 ] as const;
 /** A part of a page: the landing page's kinds, a text (heading and paragraphs) and a custom one. */
 export type SectionKind = (typeof SECTION_KINDS)[number];

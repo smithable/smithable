@@ -52,6 +52,12 @@ pages:
 
         We keep things simple. You book a mat online, you cancel it if plans change, and if you want to talk about
         your practice, there is time for that after class.
+      caption: Small classes in a bright studio by the harbour.
+      button: See the schedule
+      image:
+        src: images/hero.webp
+        alt: People stretching on yoga mats in a bright studio with large windows
+        generated: true
     team: { title: Who teaches }
     faq:
       title: Questions before you come

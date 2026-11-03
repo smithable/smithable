@@ -20,7 +20,7 @@ pages:
     # Each class coloured by its level, its places a dot each (look-gap §4).
     calendar: { colorBy: classType.level, capacity: { left: placesLeft, of: capacity, look: pips }, view: days, filters: [timeOfDay] }   # the coming days as lists, a timetable; morning, afternoon or evening
   my-bookings: { frame: site }
-  about: { frame: site }
+  about: { frame: site, sections: { story: { layout: split, image: left, rhythm: airy, measure: reading, fit: cover, aspect: portrait, focal: left } } }
   sessions:
     filters: { shown: [startsAt, classType], look: chips }   # the instructor behind "More filters"; every value a chip, an instructor's with their portrait
     # Under a session's name where there is room: who teaches it, and its level.

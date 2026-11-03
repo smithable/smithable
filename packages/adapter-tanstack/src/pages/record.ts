@@ -637,12 +637,27 @@ export function detailRoute(
   });
   // The record's summary (A 215): its status, amount and key dates, by type (recordSummary).
   const look = within ? undefined : ux.pages[page.id];
+  const selectedSummary =
+    look?.recordHeader || look?.formAside
+      ? recordSummary(model, ux.tones, look?.summaryFields)
+      : undefined;
   const summary =
-    look?.recordHeader || look?.formAside ? recordSummary(model, ux.tones) : undefined;
+    look?.summaryFields &&
+    selectedSummary &&
+    !(selectedSummary.status || selectedSummary.amount || selectedSummary.dates.length)
+      ? undefined
+      : selectedSummary;
+  const headerShown =
+    look?.recordHeader &&
+    (!look.summaryFields || !!(summary?.status || summary?.amount || summary?.dates.length));
+  const asideShown =
+    look?.formAside &&
+    (!look.summaryFields ||
+      !!(summary?.amount || summary?.dates.length || (!headerShown && summary?.status)));
   // With the summary in both places, each part stands in one (A 221): the status badge in the title
   // row, the amount and the dates beside the form.
-  const figures = (place: "header" | "aside") => place === "aside" || !look?.formAside;
-  const badge = (place: "header" | "aside") => place === "header" || !look?.recordHeader;
+  const figures = (place: "header" | "aside") => place === "aside" || !asideShown;
+  const badge = (place: "header" | "aside") => place === "header" || !headerShown;
   const summaryOf = (place: "header" | "aside") =>
     summary
       ? `<RecordSummary
@@ -813,7 +828,7 @@ function ${component}() {
       />`
             : `<PageHeader title={${heading}} />`
       }${
-        look?.recordHeader && (figures("header") || summary?.status)
+        headerShown && (figures("header") || summary?.status)
           ? `
       <div className="-mt-2 mb-6">
         ${summaryOf("header")}
@@ -874,7 +889,7 @@ ${sections
   .filter((_, i) => leading.has(i))
   .map((s) => `${s}\n`)
   .join("")}      ${
-    look?.formAside
+    asideShown
       ? `<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
       `
       : ""
@@ -900,7 +915,7 @@ ${options ? "        options={options}\n" : ""}        submitLabel={w.saveChange
             : undefined
         }
       />${
-        look?.formAside
+        asideShown
           ? `
         ${summaryOf("aside")}
       </div>`

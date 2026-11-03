@@ -5,6 +5,7 @@
     { "path": "packages/adapter-tanstack" },
     { "path": "packages/index" },
     { "path": "packages/ai" },
-    { "path": "packages/cli" }
+    { "path": "packages/cli" },
+    { "path": "packages/look-editor" }
   ]
 }

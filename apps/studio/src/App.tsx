@@ -59,6 +59,7 @@ import {
 // The Code window (its editor, CodeMirror) and the tour load when first shown, so No code
 // starts without them (the main chunk under Vite's 500 kB, backlog A 64).
 const Code = lazy(() => import("./studio/Code").then((m) => ({ default: m.Code })));
+const LookEditorDialog = lazy(() => import("./LookEditorDialog"));
 const Guide = lazy(() => import("./GuideTour").then((m) => ({ default: m.Guide })));
 
 import type { GuideLine, ShownChange } from "./GuideTour";
@@ -109,6 +110,7 @@ export function App() {
     notice?: boolean;
   }>();
   const [reporting, setReporting] = useState(false);
+  const [editingLook, setEditingLook] = useState<{ project: Project; path: string }>();
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
@@ -633,6 +635,7 @@ export function App() {
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector("dialog.look-editor-dialog[open]")) return;
       const t = e.target;
       const typing =
         t instanceof HTMLElement &&
@@ -1012,6 +1015,15 @@ export function App() {
             <PhoneSettingsButton settings={phone} onChange={setPhone} />
           )}
           <div className="ml-auto flex items-center gap-3">
+            {!project.making && project.lookProject && (
+              <Button
+                variant="ghost"
+                className="shrink-0 border border-line"
+                onClick={() => setEditingLook({ project, path: keptPage() })}
+              >
+                Edit look
+              </Button>
+            )}
             {busy && <span className="text-xs text-quiet">Working…</span>}
             {project.making ? null : project.home ? (
               <a
@@ -1501,6 +1513,15 @@ export function App() {
           </PhoneRow>
         )}
       </div>
+      {editingLook && (
+        <Suspense fallback={<p role="status">Opening look editor…</p>}>
+          <LookEditorDialog
+            project={editingLook.project}
+            path={editingLook.path}
+            onClose={() => setEditingLook(undefined)}
+          />
+        </Suspense>
+      )}
       {layerOn && (
         <SmithLayer
           mode={layer ?? "panel"}

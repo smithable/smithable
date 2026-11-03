@@ -1,7 +1,11 @@
 // Writes the published JSON Schemas: smithable.yml's, and each companion file's. Run after
 // `pnpm build`.
 import { writeFileSync } from "node:fs";
-import { buildJsonSchema, COMPANION_SCHEMAS } from "../packages/core/dist/index.js";
+import {
+  buildJsonSchema,
+  buildThemeSchema,
+  COMPANION_SCHEMAS,
+} from "../packages/core/dist/index.js";
 
 const dir = new URL("../packages/core/schema/", import.meta.url);
 const write = (name, schema) => {
@@ -10,5 +14,6 @@ const write = (name, schema) => {
   console.log(`Wrote ${path.pathname}`);
 };
 write("smithable.schema.json", buildJsonSchema());
+write("smithable.theme.schema.json", buildThemeSchema());
 for (const [file, schema] of Object.entries(COMPANION_SCHEMAS))
   write(file.replace(/\.yml$/, ".schema.json"), schema);

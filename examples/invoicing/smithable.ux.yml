@@ -30,3 +30,7 @@ pages:
     record:
       lists: { lines: inline }           # the lines edited in place, the total under them
       header: summary                    # the status, the total and the dates under the number
+      summary:
+        status: [status]
+        amount: [total]
+        dates: [dueOn]

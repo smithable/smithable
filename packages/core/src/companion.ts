@@ -316,6 +316,21 @@ const ux: Companion = {
           }
         }
     }
+    // Explicit summary slots follow renames; removing a selected field needs an explicit choice.
+    for (const page of ir.pages.filter((page) => pageModel(page) === m))
+      for (const part of ["status", "amount", "dates"]) {
+        const path = ["pages", page.id, "record", "summary", part];
+        const selected = editor.has(path) ? editor.get(path) : undefined;
+        if (!Array.isArray(selected) || !selected.includes(from)) continue;
+        if (!to)
+          return {
+            refusal: `${m}.${from} is selected for summary ${part} on ${page.id}; choose other fields, none or automatic first.`,
+          };
+        editor.set(
+          path,
+          selected.map((name) => (name === from ? to : name)),
+        );
+      }
     // The lines under a record's name (record-names.md §3): a part of the page's model, or one
     // reference away; a removed part is taken out, the key with the last one.
     for (const page of ir.pages) {

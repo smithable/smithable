@@ -80,6 +80,8 @@ export interface PageContent {
 }
 
 export interface SectionContent {
+  /** A media/text section picture caption. */
+  caption?: string;
   /** A short line over the title (a hero's or a section's), e.g. what the section is. */
   eyebrow?: string;
   title?: string;
@@ -133,6 +135,7 @@ const SECTION_TEXTS: Record<
   string,
   { texts: string[]; items?: string[]; image?: true; fields?: true }
 > = {
+  mediaText: { texts: ["eyebrow", "title", "text", "button", "caption"], image: true },
   hero: { texts: ["eyebrow", "title", "subtitle", "button", "secondButton"], image: true },
   features: { texts: ["eyebrow", "title", "text"], items: ["title", "text"] },
   records: { texts: ["eyebrow", "title", "text"] },

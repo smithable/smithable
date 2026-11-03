@@ -105,16 +105,19 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "theme",
-    usage: "theme --from <url> | theme lab",
+    usage: "theme --from <url> | theme lab | theme revision",
     text: [
       "A theme from a site: its colors, corners and font, read in a browser (needs Playwright),",
       "made readable and added as themes/<name>.yml; --name names it, --use makes it the app's.",
       "theme lab: make a theme on a real app's pages in the browser, one page at a time at the",
-      "width chosen, light or dark; --starter (booking) picks the app, switched in the lab too;",
+      "width chosen; --starter (booking) makes a preview, or --app <dir> previews an existing app.",
+      "--project <dir> chooses the save destination independently; --project alone previews a starter.",
       "Save adds it through addTheme to --project, or to the current folder when it is a",
-      "project; elsewhere it writes themes/<name>.yml, never over a file there; --port (4330)",
+      "project; elsewhere it writes themes/<name>.yml, never over a file there; --port (4330).",
+      "Save adds a new theme without selecting it; setTheme selects it. Low contrast warns; invalid data blocks saving.",
+      "theme revision --dir <app> prints the working-source revision for an atomic applyTheme request.",
     ],
-    options: ["from", "name", "use", "project", "port", "starter"],
+    options: ["from", "name", "use", "app", "project", "port", "starter"],
   },
   {
     name: "themes",

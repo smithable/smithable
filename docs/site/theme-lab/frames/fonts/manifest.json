@@ -1,0 +1,417 @@
+{
+  "version": 1,
+  "fonts": [
+    {
+      "font": "Inter",
+      "package": "@fontsource-variable/inter",
+      "weights": [
+        100,
+        900
+      ],
+      "family": "Inter Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/inter",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/inter/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Nunito Sans",
+      "package": "@fontsource-variable/nunito-sans",
+      "weights": [
+        200,
+        1000
+      ],
+      "family": "Nunito Sans Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/nunito-sans",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/nunito-sans/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Source Sans 3",
+      "package": "@fontsource-variable/source-sans-3",
+      "weights": [
+        200,
+        900
+      ],
+      "family": "Source Sans 3 Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/source-sans-3",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/source-sans-3/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.1"
+    },
+    {
+      "font": "Source Serif 4",
+      "package": "@fontsource-variable/source-serif-4",
+      "weights": [
+        200,
+        900
+      ],
+      "family": "Source Serif 4 Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/source-serif-4",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/source-serif-4/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.1"
+    },
+    {
+      "font": "Fraunces",
+      "package": "@fontsource-variable/fraunces",
+      "weights": [
+        100,
+        900
+      ],
+      "family": "Fraunces Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/fraunces",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/fraunces/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Archivo Narrow",
+      "package": "@fontsource-variable/archivo-narrow",
+      "weights": [
+        400,
+        700
+      ],
+      "family": "Archivo Narrow Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/archivo-narrow",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/archivo-narrow/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "DM Sans",
+      "package": "@fontsource-variable/dm-sans",
+      "weights": [
+        100,
+        1000
+      ],
+      "family": "DM Sans Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/dm-sans",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/dm-sans/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Outfit",
+      "package": "@fontsource-variable/outfit",
+      "weights": [
+        100,
+        900
+      ],
+      "family": "Outfit Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/outfit",
+          "file": "index.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Hanken Grotesk",
+      "package": "@fontsource-variable/hanken-grotesk",
+      "weights": [
+        100,
+        900
+      ],
+      "family": "Hanken Grotesk Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/hanken-grotesk",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/hanken-grotesk/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Instrument Sans",
+      "package": "@fontsource-variable/instrument-sans",
+      "weights": [
+        400,
+        700
+      ],
+      "family": "Instrument Sans Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/instrument-sans",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/instrument-sans/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Mona Sans",
+      "package": "@fontsource-variable/mona-sans",
+      "weights": [
+        200,
+        900
+      ],
+      "family": "Mona Sans Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/mona-sans",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/mona-sans/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Bricolage Grotesque",
+      "package": "@fontsource-variable/bricolage-grotesque",
+      "weights": [
+        200,
+        800
+      ],
+      "family": "Bricolage Grotesque Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/bricolage-grotesque",
+          "file": "index.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Oswald",
+      "package": "@fontsource-variable/oswald",
+      "weights": [
+        200,
+        700
+      ],
+      "family": "Oswald Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/oswald",
+          "file": "index.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Big Shoulders Display",
+      "package": "@fontsource-variable/big-shoulders-display",
+      "weights": [
+        100,
+        900
+      ],
+      "family": "Big Shoulders Display Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/big-shoulders-display",
+          "file": "index.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Instrument Serif",
+      "package": "@fontsource/instrument-serif",
+      "weights": [
+        400,
+        400
+      ],
+      "family": "Instrument Serif",
+      "variants": [
+        {
+          "import": "@fontsource/instrument-serif",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource/instrument-serif/400-italic.css",
+          "file": "400-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Young Serif",
+      "package": "@fontsource/young-serif",
+      "weights": [
+        400,
+        400
+      ],
+      "family": "Young Serif",
+      "variants": [
+        {
+          "import": "@fontsource/young-serif",
+          "file": "index.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Newsreader",
+      "package": "@fontsource-variable/newsreader",
+      "weights": [
+        200,
+        800
+      ],
+      "family": "Newsreader Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/newsreader",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/newsreader/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Bodoni Moda",
+      "package": "@fontsource-variable/bodoni-moda",
+      "weights": [
+        400,
+        900
+      ],
+      "family": "Bodoni Moda Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/bodoni-moda",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/bodoni-moda/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "Zilla Slab",
+      "package": "@fontsource/zilla-slab",
+      "weights": [
+        300,
+        700
+      ],
+      "family": "Zilla Slab",
+      "variants": [
+        {
+          "import": "@fontsource/zilla-slab",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/400-italic.css",
+          "file": "400-italic.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/300.css",
+          "file": "300.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/300-italic.css",
+          "file": "300-italic.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/500.css",
+          "file": "500.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/500-italic.css",
+          "file": "500-italic.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/600.css",
+          "file": "600.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/600-italic.css",
+          "file": "600-italic.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/700.css",
+          "file": "700.css"
+        },
+        {
+          "import": "@fontsource/zilla-slab/700-italic.css",
+          "file": "700-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    },
+    {
+      "font": "JetBrains Mono",
+      "package": "@fontsource-variable/jetbrains-mono",
+      "weights": [
+        100,
+        800
+      ],
+      "family": "JetBrains Mono Variable",
+      "variants": [
+        {
+          "import": "@fontsource-variable/jetbrains-mono",
+          "file": "index.css"
+        },
+        {
+          "import": "@fontsource-variable/jetbrains-mono/wght-italic.css",
+          "file": "wght-italic.css"
+        }
+      ],
+      "version": "5.3.0"
+    }
+  ]
+}

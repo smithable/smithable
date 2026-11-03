@@ -1,8 +1,8 @@
 # Make a theme
 
-A theme is how an app looks: its colors in light and dark mode, its fonts, how headings, cards, buttons, pictures and tables are drawn, its corners, shadows, spacing and motion. It is a small file of values, never CSS, so any theme works on any app and switching back is always safe. Which of the two modes a person sees is theirs to choose: **Appearance** in the app's menu, and in a public page's footer, offers System (the device's setting, the default), Light and Dark, kept in their browser.
+A theme is how an app looks: its colors in light and dark mode, its fonts, how headings, cards, buttons, pictures and tables are drawn, its corners, shadows, spacing and motion. It is a small file of values, never CSS, so any theme works on any app and switching back is always safe. Themes may provide both palettes or one mode by design. For a two-mode theme, which mode a person sees is theirs to choose: **Appearance** in the app's menu, and in a public page's footer, offers System (the device's setting, the default), Light and Dark, kept in their browser.
 
-This page makes a theme of its own for the booking starter, first as a file and then in the theme lab. Every command below was run for real on a new booking app, and the answers are shown as they came back.
+This page makes a theme of its own for the booking starter, first as a file and then in the theme lab. The examples show the commands and validation to expect; generated file counts depend on the engine version.
 
 ## 1. The themes there are
 
@@ -20,7 +20,7 @@ cafe             built in  Nunito Sans, 16px corners
 Add your own as themes/<name>.yml: see docs/spec/v0.1.md, Themes.
 ```
 
-Nineteen are built in (the list is cut short above), each in light and dark; the [spec reference](../spec/v0.1.md#themes) says what each looks like. `smithable op setTheme --preset cafe` uses one, and `smithable undo` takes it back.
+`smithable themes` lists the built-in catalogue for your installed version (the list is cut short above); themes may support both modes or just one; the [spec reference](../spec/v0.1.md#themes) says what each looks like. `smithable op setTheme --preset cafe` uses one, and `smithable undo` takes it back.
 
 ## 2. Write the file
 
@@ -48,7 +48,7 @@ dark:
   foreground: "#e3e9ef"
 ```
 
-The fields and their values are in the spec reference's [Themes](../spec/v0.1.md#themes) section: twenty fonts, and for headings, labels, surfaces, buttons, pictures and tables a few choices each, with a texture and the modes.
+The fields and their values are in the spec reference's [Themes](../spec/v0.1.md#themes) section: curated fonts, and for headings, labels, surfaces, buttons, pictures and tables a few choices each, with a texture and the modes.
 
 ## 3. Add it
 
@@ -68,21 +68,13 @@ Add theme harbour and use it. Undo with: smithable undo
 
 The file is now `themes/harbour.yml` in the project, `smithable.ux.yml` says `theme: { preset: harbour }`, and `smithable themes` lists it under the built-in ones as `themes/`. Without `--use`, the theme is only added, and `smithable op setTheme --preset harbour` uses it later.
 
-The check also measures every pair of colors the app puts together. Give the light mode a pale grey for its text, and nothing is added:
+The check also measures token contrast. Low contrast is a **warning**: your color choices can still be saved. Structural errors, such as a color that cannot be parsed or a heading weight the font does not have, prevent saving. Curated shipped themes have separate accessibility checks.
 
-```console
-$ smithable op addTheme harbour-pale --text @pale.yml
-The theme is refused:
-  themes/harbour-pale.yml:12:3  error  In "light", foreground on background is 2.8:1; it needs 4.5:1 to read.
-  themes/harbour-pale.yml:12:3  error  In "light", card-foreground on card is 3.0:1; it needs 4.5:1 to read.
-  …
-```
-
-Text needs 4.5:1 against what it sits on, and the focus ring 3:1, so a theme that is accepted is readable in both modes.
+Aim for 4.5:1 for ordinary text and 3:1 for focus indicators. An accepted custom theme is not a guarantee of readability: photos and translucent surfaces need a visual check with the actual content in each supported mode. The lab keeps its warnings visible while you choose colors.
 
 ## 4. Or make it in the theme lab
 
-The lab is also [on this site](https://docs.smithable.ai/theme-lab/index.html), with nothing to install: the same controls on every starter's pages as they were when this version of Smithable was released, and **Download** in place of Save; add the file with `addTheme`, as in step 3. Locally, it shows a running app and saves into the project:
+The lab is also [on this site](https://docs.smithable.ai/theme-lab/index.html), with nothing to install: the same controls on every starter's pages as they were when this version of Smithable was released, and **Download** in place of Save; add the file with `addTheme`, as in step 3. These are static snapshots, not your current app. Locally, it shows a running app and saves into the project:
 
 ```console
 $ smithable theme lab --project .
@@ -90,13 +82,33 @@ Making the lab's app (a booking app with every control)…
 The theme lab is at http://localhost:4330 (the app at http://localhost:4331). A theme saved goes to the project …, through addTheme. Ctrl+C stops it.
 ```
 
+To preview an existing app, pass `--app /path/to/app`; `--project /path/to/project` chooses the save destination. They can be the same path:
+
+```sh
+smithable theme lab --app . --project .
+```
+
+`--project` alone still creates a separate starter preview. The standalone command starts its own preview process; close another preview using that same app before running it.
+
 The lab opens in the browser beside a real app: by default a booking app with a field for every kind of control. **App** at the top makes another starter's app in its place (a few seconds), so a theme is judged on the kind of app it is for; `--starter crm` starts with that one. On the left are the theme's fields, grouped as the file is. In the middle, one of the app's pages is shown at full size: the landing page, a list, its form or a record, each chosen by its tab, in light or in dark. The width buttons (phone 390, tablet 820, laptop 1280, desktop 1600) set the frame's width, and its edge drags to any width in between. The frame is scaled down only when the window is narrower than the width. **Phone beside** shows the phone's width next to it. At the bottom is the theme file itself as text. A change to a control or to the text shows in the frame at once, with no regeneration in between.
 
-- **Start from theme** picks any of the built-in themes or the project's own, to rename and change.
+- **Start from theme** picks any of the built-in themes or the project's own, to rename and change. Palette exceptions are retained; optional colors can be reset to derivation explicitly.
+- **modes** chooses both, light or dark. Disabled palettes stay in this draft for reversible switching; Undo draft and Redo draft include them. A missing palette is generated only when you choose to do so. Saving writes only enabled palettes. Reloading, choosing another starting theme or a valid direct YAML edit clears hidden palette history.
 - **Phone** shows the pages at a phone's width. **Greyscale** takes the color out: if two themes still look different without it, they are two designs and not one design in two colors.
 - **Show the motion** plays the landing page once, with the theme's motion: `none`, `subtle` or `lively`.
 - Under the pages, a line for each look the app can ask for says whether the theme suits it ("flat cards on this background have no edge"), and the check's errors are shown in red.
-- **Save to the project** adds the theme to the project through `addTheme`, as above, so it is one change like any other and `smithable undo` takes it back. Without `--project`, inside a project folder the lab saves to that project, and anywhere else the button is **Save theme** and writes `themes/<name>.yml` into the current folder.
+- **Save as new theme** adds the theme to the project through `addTheme`, as above, so it is one change like any other and `smithable undo` takes it back. Save adds a new available theme; it does not select it or update an existing name. Use `setTheme` to select the saved theme. Without `--project`, inside a project folder the lab saves to that project, and anywhere else the button is **Save theme** and writes `themes/<name>.yml` into the current folder.
+
+In Studio, **Edit look** opens the current page using the app’s existing preview. Its draft
+history is separate from project Undo. Closing an unsaved draft asks before discarding it.
+**Apply look** creates or updates and selects the theme in one checkpoint; built-ins must first
+be copied. A newer source edit is refused rather than overwritten. Apply waits for the saved
+CSS generation and checks its rendered values before clearing the draft preview.
+
+**Sign in / viewer** opens the app’s native sign-in controls. Studio preserves the current app
+session; selecting a design never grants a role. Denied pages remain denied. A disconnected
+preview offers **Reconnect preview** and retains the draft. Static exports keep their original
+data; validation/dialog capture skips states that would submit a network mutation.
 
 ### The pages as files
 

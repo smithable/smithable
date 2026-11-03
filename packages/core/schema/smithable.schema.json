@@ -1650,7 +1650,7 @@
           },
           "landing": {
             "type": "object",
-            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom, text.",
+            "description": "Sections of a landing page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom, text, mediaText.",
             "additionalProperties": {
               "type": [
                 "object",
@@ -1743,6 +1743,13 @@
                     "null"
                   ],
                   "description": "A footer section under another name, written alone."
+                },
+                "mediaText": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A mediaText section under another name, written alone."
                 },
                 "search": {
                   "type": "boolean",
@@ -1829,7 +1836,7 @@
           },
           "sections": {
             "type": "object",
-            "description": "Sections of a page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom, text.",
+            "description": "Sections of a page, in order: hero, features, records, pricing, testimonials, faq, callToAction, contact, gallery, footer, calculator, custom, text, mediaText.",
             "additionalProperties": {
               "type": [
                 "object",
@@ -1922,6 +1929,13 @@
                     "null"
                   ],
                   "description": "A footer section under another name, written alone."
+                },
+                "mediaText": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "A mediaText section under another name, written alone."
                 },
                 "search": {
                   "type": "boolean",

@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import {
   framedLocally,
   guardUpgrades,
@@ -10,10 +10,20 @@ import {
   tokenDigest,
   tokenGuard,
   type UpgradeServer,
+  writePreviewConfig,
 } from "./preview-editor.js";
 
+// The config test runs an operation: no real generation.
+vi.mock("./generate.js", () => ({ generate: vi.fn(async () => 0) }));
+
 /** The runtime in a page stand-in, inside a frame; returns how to send it a message and its head. */
-function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
+function page(
+  at = "/",
+  storage: Record<string, string> = {},
+  crashed = false,
+  records: string[] = [],
+  search = "",
+) {
   // The dev server's error overlay, put up by the test; the observers watching for it, and the
   // timers the runtime sets, run by hand.
   const overlay = { shown: false };
@@ -34,8 +44,8 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
   ];
   const ticks: (() => void)[] = [];
   const clicks: ((event: unknown) => void)[] = [];
-  const head: { id: string; textContent: string }[] = [];
-  const posted: { type: string }[] = [];
+  const head: { id: string; textContent: string; href?: string; rel?: string }[] = [];
+  const posted: { type: string; path?: string; status?: string; request?: string }[] = [];
   const parent = { postMessage: (message: { type: string }) => posted.push(message) };
   const scrolled: number[] = [];
   const reloads: number[] = [];
@@ -60,15 +70,17 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     addEventListener: (type: string, listener: (event: unknown) => void) =>
       type === "click" && clicks.push(listener),
     querySelectorAll: (selector: string) =>
-      selector === "[data-dev-role]"
-        ? buttons
-        : selector === "button"
-          ? signInButtons
-          : selector === "[data-kit=error]" && crashed
-            ? [{}]
-            : selector === "vite-error-overlay" && overlay.shown
+      selector === '[data-part="record-open"][data-record-id]'
+        ? records.map((id) => ({ dataset: { recordId: id } }))
+        : selector === "[data-dev-role]"
+          ? buttons
+          : selector === "button"
+            ? signInButtons
+            : selector === "[data-kit=error]" && crashed
               ? [{}]
-              : [],
+              : selector === "vite-error-overlay" && overlay.shown
+                ? [{}]
+                : [],
     styleSheets: [{ cssRules: [darkRule] }],
     body: { dataset: { hydrated: "true" } },
     documentElement: {
@@ -96,7 +108,7 @@ function page(at = "/", storage: Record<string, string> = {}, crashed = false) {
     window,
     document,
     { pushState() {}, replaceState() {} },
-    { pathname: at, search: "", reload: () => reloads.push(1) },
+    { pathname: at, search, reload: () => reloads.push(1) },
     (tick: () => void) => ticks.push(tick),
     (timer: () => void) => timers.set(++timerId, timer) && timerId,
     noop,
@@ -249,8 +261,14 @@ test("a theme's CSS from the lab replaces the app's until reload, its fonts at V
   const css = '@import "@fontsource-variable/fraunces";\n:root {\n  --radius: 0;\n}';
   send({ type: "smithable:theme-css", css });
   expect(theme()).toBe(
-    '@import "/node_modules/@fontsource-variable/fraunces/index.css";\n:root {\n  --radius: 0;\n}\n[data-part="appearance"] { display: none !important; }',
+    '\n:root {\n  --radius: 0;\n}\n[data-part="appearance"] { display: none !important; }',
   );
+  expect(head.find((e) => e.id === "sm-font:@fontsource-variable/fraunces")).toMatchObject({
+    rel: "stylesheet",
+    href: "/node_modules/@fontsource-variable/fraunces/index.css",
+  });
+  send({ type: "smithable:theme-css", css });
+  expect(head.filter((e) => e.id === "sm-font:@fontsource-variable/fraunces")).toHaveLength(1);
   // A second one replaces the first, still last in the head.
   send({ type: "smithable:theme-css", css: ":root { --radius: 4px; }" }, "http://127.0.0.1:8410");
   // The app's own appearance picker is hidden beside the lab's Light and Dark.
@@ -282,7 +300,7 @@ test("a frame in one mode: the app's dark rules always apply, or never", () => {
 });
 
 test("the lab signs in through the development sign-in's button for the role it asks", () => {
-  const { send, clicked } = page();
+  const { send, clicked } = page("/sign-in");
   send({ type: "smithable:dev-sign-in", role: "admin" }, "https://example.com");
   expect(clicked).toEqual([]);
   send({ type: "smithable:dev-sign-in", role: "admin" });
@@ -480,4 +498,108 @@ test("a preview on this machine may be framed only from this machine", () => {
   expect(framed("127.0.0.1:5173").passed).toBe(true);
   // A hosted preview's address gets no such header here: its own guard frames it.
   expect(framed("app.example.org").csp).toBeUndefined();
+});
+
+test("record discovery reads only this authorized page and refuses wrong origin/frame", () => {
+  const { send, posted } = page("/cases", {}, false, ["opaque-case-a"]);
+  const request = { type: "smithable:discover-record", request: "cases:record", base: "/cases" };
+  const before = posted.length;
+  send(request, "https://sibling.example");
+  send(request, "http://localhost:5173", {});
+  expect(posted).toHaveLength(before);
+  send(request);
+  expect(posted.at(-1)).toMatchObject({
+    type: "record-discovered",
+    path: "/cases/opaque-case-a",
+    status: "found",
+  });
+  const empty = page("/cases");
+  empty.send(request);
+  expect(empty.posted.at(-1)).toMatchObject({ type: "record-discovered", status: "empty" });
+  const denied = page("/sign-in");
+  denied.send(request);
+  expect(denied.posted.at(-1)).toMatchObject({ type: "record-discovered", status: "sign-in" });
+});
+
+test("a requested unavailable role never falls back to another role", () => {
+  const { send, clicked } = page("/sign-in");
+  send({ type: "smithable:dev-sign-in", role: "unknown" });
+  expect(clicked).toEqual([]);
+});
+
+test("a design-owned frame keeps the current viewer and never clicks development sign-in", () => {
+  const design = page("/sign-in", {}, false, [], "?__sm_look=1");
+  design.send({ type: "smithable:dev-sign-in", role: "admin" });
+  design.tick();
+  expect(design.clicked).toEqual([]);
+});
+
+test("the preview's config is written once for a run: its look identity is the run's, never the project's", async () => {
+  // Studio writes the config with the run's preview id (studio.ts: previewId, not the lookProject
+  // that a replaced app rotates) and only when its text is not there: a dev server restarts when
+  // its config file is touched. Here as Studio does it: write, a change, write again.
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync, statSync } = await import(
+    "node:fs"
+  );
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { runOperation } = await import("./op.js");
+  const { captureIo } = await import("./test-io.js");
+  const previewId = "run-1";
+  const config = (lookProject: string) => {
+    // The project's identity is the request's, not the config's: the text takes none of it.
+    expect(lookProject).toBeTruthy();
+    return previewConfig(undefined, undefined, {
+      holdUpdates: true,
+      look: {
+        project: previewId,
+        parentOrigins: ["http://localhost:8400"],
+        previewOrigin: "http://localhost:8401",
+      },
+    });
+  };
+  const dir = mkdtempSync(join(tmpdir(), "smithable-preview-config-"));
+  try {
+    const path = join(dir, "data", ".smithable", "preview.vite.config.mjs");
+    expect(writePreviewConfig(path, config("project-1"))).toBe(true);
+    const written = readFileSync(path, "utf8");
+    expect(written).toContain('"project":"run-1"');
+    expect(written).not.toContain("project-1");
+    const first = statSync(path).mtimeMs;
+    writeFileSync(
+      join(dir, "smithable.yml"),
+      "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  items: { crud: Item }\n",
+    );
+    writeFileSync(join(dir, "smithable.ux.yml"), "smithableUx: 0.1\ntheme: { preset: modern }\n");
+    mkdirSync(join(dir, ".smithable"), { recursive: true });
+    writeFileSync(join(dir, ".smithable/files.json"), '{"files":{}}\n');
+    const io = captureIo();
+    expect(
+      await runOperation(
+        dir,
+        io,
+        "setTheme",
+        { primary: "#334455" },
+        { yes: true, reportLater: true },
+      ),
+      io.stderr,
+    ).toBe(0);
+    // After the change, and after the app is replaced (a new lookProject, the same previewId):
+    // the same text, so the file is left alone.
+    expect(writePreviewConfig(path, config("project-1"))).toBe(false);
+    expect(writePreviewConfig(path, config("project-2"))).toBe(false);
+    expect(statSync(path).mtimeMs).toBe(first);
+    expect(readFileSync(path, "utf8")).toBe(written);
+    // Another run's preview id is another text, and is written.
+    expect(
+      writePreviewConfig(
+        path,
+        previewConfig(undefined, undefined, {
+          look: { project: "run-2", parentOrigins: [], previewOrigin: "http://localhost:8401" },
+        }),
+      ),
+    ).toBe(true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

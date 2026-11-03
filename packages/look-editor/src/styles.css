@@ -1,0 +1,298 @@
+.sm-look-editor {
+  /* The lab's own look: plain and grey, so the frames are what one sees. The scheme is the
+     host's: the lab is light; in Studio's dialog the editor follows Studio's light or dark. */
+  & {
+    --ink: #1d1d1f;
+    --paper: #e8e8ea;
+    --panel: #fff;
+    --panel-2: #f6f6f7;
+    --line: #ccc;
+    --line-2: #bbb;
+    color-scheme: light;
+    font:
+      14px / 1.4 system-ui,
+      sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+  }
+
+  .lab {
+    display: grid;
+    grid-template: "head head" auto "side main" 1fr / 260px 1fr;
+    height: 100vh;
+  }
+  header {
+    grid-area: head;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  aside {
+    grid-area: side;
+    overflow: auto;
+    padding: 8px 12px;
+    background: var(--panel-2);
+    border-right: 1px solid var(--line);
+  }
+  fieldset {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 0 0 8px;
+    padding: 6px 0 0;
+  }
+  legend {
+    font-weight: 600;
+  }
+  aside label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 4px 0;
+  }
+  aside input:not([type="color"]),
+  aside select {
+    width: 130px;
+    /* A text field's padding inside the width, as a select's is: the two line up. */
+    box-sizing: border-box;
+  }
+  main {
+    grid-area: main;
+    overflow: auto;
+    padding: 16px;
+  }
+  iframe {
+    border: 0;
+    background: #fff;
+    box-shadow: 0 1px 4px #0003;
+  }
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .bar fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-inline-size: 0;
+    max-width: 100%;
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .bar button {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    border: 1px solid var(--line-2);
+    background: var(--panel);
+    padding: 3px 8px;
+    font: inherit;
+  }
+  .bar button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--panel);
+  }
+  /* The frame's stage: most of the window's height, so a page is seen as a visitor sees it. */
+  .look-gallery ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    padding: 0;
+    list-style: none;
+  }
+  .look-gallery button {
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    border: 1px solid var(--line-2);
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .look-gallery button[aria-pressed="true"] {
+    outline: 3px solid var(--ink);
+    outline-offset: 1px;
+  }
+  .look-gallery button:focus-visible {
+    outline: 3px solid #2159c4;
+    outline-offset: 2px;
+  }
+  .look-gallery img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .look-gallery span,
+  .look-gallery small {
+    display: block;
+    padding: 3px 8px;
+  }
+  .stage[data-structural] {
+    position: relative;
+  }
+  .stage[data-structural] .frame,
+  .stage[data-structural] .edge {
+    visibility: hidden;
+  }
+  .structural-unavailable {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+    background: var(--panel-2);
+    color: var(--ink);
+    z-index: 1;
+  }
+  .stage {
+    display: flex;
+    gap: 0 16px;
+    height: max(420px, calc(100vh - 150px));
+    overflow: hidden;
+  }
+  .stage.grey iframe {
+    filter: grayscale(1);
+  }
+  .frame {
+    flex: none;
+    overflow: hidden;
+  }
+  .edge {
+    flex: none;
+    width: 8px;
+    margin-left: -16px;
+    cursor: ew-resize;
+    background: linear-gradient(90deg, transparent 3px, #999 3px, #999 5px, transparent 5px);
+    touch-action: none;
+  }
+  .notes p {
+    margin: 4px 0;
+    padding-left: 8px;
+    border-left: 4px solid #2b8a3e;
+  }
+  .notes .note {
+    border-color: #e67700;
+  }
+  .notes .avoid {
+    border-color: #c92a2a;
+  }
+  .file {
+    display: block;
+    margin-top: 16px;
+    font-weight: 600;
+  }
+  details.file > summary {
+    cursor: pointer;
+  }
+  .file textarea {
+    display: block;
+    width: 100%;
+    min-height: 320px;
+    margin-top: 4px;
+    font:
+      13px / 1.4 ui-monospace,
+      monospace;
+  }
+  @media (max-width: 800px) {
+    .lab {
+      grid-template: "head" auto "main" 1fr "side" auto / 1fr;
+      height: auto;
+    }
+  }
+
+  .hint {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    color: #555;
+  }
+  .making {
+    margin: auto;
+    color: #555;
+  }
+
+  /* The guide (Guide.tsx): the place cut out of a dimmed screen, and a card beside it. */
+  .guide {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .guide::backdrop {
+    background: transparent;
+  }
+  .guide-place {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 6px;
+    outline: 2px solid #4f46e5;
+    box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.35);
+  }
+  .guide-card {
+    position: fixed;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    border: 1px solid #d4d4d8;
+    border-radius: 8px;
+    background: #fff;
+    color: #18181b;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.2);
+    font-size: 14px;
+  }
+  .guide-card h2 {
+    margin: 2px 0 6px;
+    font-size: 15px;
+  }
+  .guide-card p {
+    margin: 0 0 10px;
+    line-height: 1.45;
+  }
+  .guide-count {
+    color: #71717a;
+    font-size: 12px;
+  }
+  .guide-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .guide-buttons .primary {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #fff;
+  }
+  .guide-open {
+    margin-left: auto;
+  }
+}
+
+/* In Studio's dialog the editor follows Studio's scheme (the system's light or dark setting,
+   as Studio does): its own surfaces turn dark, the framed page keeps the theme's own modes. */
+.look-editor-dialog .sm-look-editor {
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  .look-editor-dialog .sm-look-editor {
+    --ink: #e8e8ea;
+    --paper: #18181b;
+    --panel: #232327;
+    --panel-2: #1d1d21;
+    --line: #3f3f46;
+    --line-2: #52525b;
+  }
+}

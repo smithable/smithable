@@ -19,6 +19,20 @@ pages:
         - { name: notes, fields: [notes] }
       columns: 2
       control: { accountManager: combobox, notes: textarea }   # a searchable picker for the person
+  start:
+    sections:
+      briefing:
+        rhythm: compact
+        measure: reading
+  orders:
+    record:
+      summary:
+        status: [status]
+        amount: [total]
+        dates: [placedAt]
+      header: summary
+    form:
+      aside: summary
 
 tones:
   Order.status: { shipped: success, canceled: danger }
