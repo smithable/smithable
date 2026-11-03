@@ -869,10 +869,11 @@ function checkGrants(
   // write what the actions it bars would set, unless the field is locked.
   for (const role of auth.roles) {
     if (!role.actionsNone || role.grants === "all") continue;
-    const at = roleNodes.get(role.name) ?? auth.roles[0]?.name ?? "";
+    const at = grantNodes.find((g) => g.role === role.name && g.key === "actions")?.at;
+    if (!at) continue;
     if (role.grants.write)
       ctx.warning(
-        at as At,
+        at,
         "actions-none-with-write",
         `${role.name} may change records (write) but runs no action (actions: none): none wins, so ${plural(role.name)} run no standard action on them either.`,
         `Drop one of the two, or name the actions ${plural(role.name)} may run.`,
@@ -881,15 +882,17 @@ function checkGrants(
       if (action.custom) continue;
       const model = ir.models.find((m) => m.name === action.on);
       if (!model) continue;
+      // A form of theirs writes it when they may add the records, or own one (its owner field may
+      // name them without their adding it).
       const create = modelAccess(model, auth).create;
-      if (!create.public && !create.roles.includes(role.name)) continue;
+      if (!create.public && !create.roles.includes(role.name) && !model.ownedBy) continue;
       const open = action.set
         .map((v) => model.fields.find((f) => f.name === v.field))
         .filter((f) => f && !f.locked && !f.byApp && !f.formula)
         .map((f) => (f as { name: string }).name);
       if (open.length)
         ctx.warning(
-          at as At,
+          at,
           "actions-none-form-writes",
           `${plural(role.name)} cannot run ${action.name}, but a form can still write ${open.join(", ")}: lock ${open.length > 1 ? "them" : "it"} or let them run it.`,
           `Write "locked: true" on ${open.join(", ")} of ${model.name}, or name ${action.name} in ${role.name}'s actions.`,

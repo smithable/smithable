@@ -241,7 +241,8 @@ ${Object.entries(expected(access, role))
     if (access.create.public && model.ownerKind === "address") {
       flooded.push(model.name);
       tests.push(`  test("visitors' ${humanize(plural(model.name)).toLowerCase()} stop at the cap, counted in the audit log", async () => {
-    const made = () => db.select({ n: count() }).from(schema.auditLog).where(and(inArray(schema.auditLog.who, ["visitor", "the app"]), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)}))).get()?.n ?? 0;
+    // The same count as the server's: the last day's lines.
+    const made = () => db.select({ n: count() }).from(schema.auditLog).where(and(inArray(schema.auditLog.who, ["visitor", "the app"]), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)}), gt(schema.auditLog.at, new Date(Date.now() - 24 * 60 * 60 * 1000)))).get()?.n ?? 0;
     process.env.VISITOR_ROWS = String(made() + 2);
     try {
       await ${data}.create(null, ${values}(null));
@@ -513,7 +514,7 @@ ${tests.join("\n\n")}
   const orm = [
     ...new Set([
       ...(audited ? ["and", "eq"] : standard.length || updates ? ["eq"] : []),
-      ...(flooded.length ? ["and", "count", "eq", "inArray"] : []),
+      ...(flooded.length ? ["and", "count", "eq", "gt", "inArray"] : []),
     ]),
   ].sort();
   if (audited) {

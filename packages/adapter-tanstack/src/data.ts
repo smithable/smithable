@@ -1953,13 +1953,18 @@ function ownerFor(viewer: Viewer | null, given: string | null | undefined): stri
  * record): a chooser's choice, else the other record's address, never the viewer's own.
  */
 function ownerLike(viewer: Viewer | null, given: string | null | undefined, from: string | null | undefined): string${ownerRequired ? "" : " | null"} {
-  const owner = chooses(viewer) && given !== undefined ? asAddress(given) : (asAddress(from) ?? asAddress(given));${
-    ownerRequired
-      ? `
-  if (!owner) throw new AccessDenied(viewer !== null, \`Name the ${ownerLabel} (${model.ownedBy}).\`);`
-      : ""
+  // A chooser's explicit value wins; anyone else gets the other record's address, else their own
+  // as ownerFor gives it (the proof, the key's refusal), never a value they supplied.
+  if (viewer && chooses(viewer) && given !== undefined) {
+    const owner = asAddress(given);${
+      ownerRequired
+        ? `
+    if (!owner) throw new AccessDenied(true, \`Name the ${ownerLabel} (${model.ownedBy}).\`);`
+        : ""
+    }
+    return owner;
   }
-  return owner;
+  return asAddress(from) ?? ownerFor(viewer, undefined);
 }
 `
     : ownerField && signedIn
@@ -2032,7 +2037,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
 
 `
     : ""
-}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${ownerField && signedIn ? "\n  ownerFor," : ""}${addressOwned(model) && signedIn ? "\n  ownerLike," : ""}${shownRefsMethod()}${
+}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${ownerField && signedIn ? "\n  ownerFor," : ""}${addressOwned(model) && signedIn ? "\n  chooses,\n  ownerLike," : ""}${shownRefsMethod()}${
     pictures.length
       ? `\n  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */\n  uses(file: string): boolean {\n    return ${stillShown("", "file")};\n  },\n`
       : ""
@@ -2565,8 +2570,8 @@ ${
 ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${
       addressOwned(model) && signedIn
-        ? // Left out it stays; given, a chooser's address as written, anyone else's own (support-portal-path.md §2).
-          `{ ...values, ${owner}: values.${owner} === undefined ? row.${owner} : ownerFor(viewer, values.${owner}) }`
+        ? // Left out it stays; given, a chooser's address as written; anyone else keeps the record's own: ownership never passes to them (support-portal-path.md §2).
+          `{ ...values, ${owner}: values.${owner} === undefined || !chooses(viewer) ? row.${owner} : ownerFor(viewer, values.${owner}) }`
         : ownerField && signedIn
           ? ownerRequired
             ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }`

@@ -134,7 +134,7 @@ describe("the support portal: an owner by address, and reading through a referen
     );
     // On a change: left out it stays; given, a chooser's as written, anyone else's own.
     expect(cases).toContain(
-      "const updated = { ...values, customerEmail: values.customerEmail === undefined ? row.customerEmail : ownerFor(viewer, values.customerEmail) };",
+      "const updated = { ...values, customerEmail: values.customerEmail === undefined || !chooses(viewer) ? row.customerEmail : ownerFor(viewer, values.customerEmail) };",
     );
     // Visitors' cases are counted in the audit log, the last day, since no owner column tells them apart.
     expect(cases).toContain(
@@ -262,10 +262,11 @@ describe("the support portal: an owner by address, and reading through a referen
   });
 
   test("a record made beside another takes that record's address, never the viewer's; a chooser's value wins", () => {
-    expect(cases).toContain(
-      "const owner = chooses(viewer) && given !== undefined ? asAddress(given) : (asAddress(from) ?? asAddress(given));",
-    );
-    expect(cases).toContain("\n  ownerLike,\n");
+    // A chooser's explicit value wins; anyone else never gets a value they supplied: the source's
+    // address, else their own through ownerFor (the proof and the key's refusal with it).
+    expect(cases).toContain("if (viewer && chooses(viewer) && given !== undefined) {");
+    expect(cases).toContain("return asAddress(from) ?? ownerFor(viewer, undefined);");
+    expect(cases).toContain("\n  chooses,\n  ownerLike,\n");
     const escalated = generate(
       `${spec}  escalate:
     on: SupportCase
@@ -286,8 +287,58 @@ pages:`,
     expect(escalated.errors).toEqual([]);
     const action = escalated.file("src/generated/actions/escalate.server.ts");
     expect(action).toContain("source: row.customerEmail,");
+    expect(action).toContain("added0: escalationSettable.partial({ customerEmail: true }).parse({");
     expect(action).toContain(
       "customerEmail: escalationData.ownerLike(viewer, one.added0.customerEmail, one.source)",
+    );
+    // Added beside a record that is not address-owned: ownerFor's rule (their own, or the chooser's value).
+    const fromMessage = generate(
+      `${spec}  escalate:
+    on: Message
+    add:
+      Escalation: { reason: Escalated by the team. }
+`.replace(
+        "pages:",
+        `  Escalation:
+    fields:
+      reason: text!
+      customerEmail: email!
+      message: Message!
+    ownedBy: customerEmail
+pages:`,
+      ),
+      authText,
+    );
+    expect(fromMessage.errors).toEqual([]);
+    const other = fromMessage.file("src/generated/actions/escalate.server.ts");
+    expect(other).not.toContain("source:");
+    expect(other).toContain(
+      "customerEmail: escalationData.ownerFor(viewer, one.added0.customerEmail)",
+    );
+    // On the action's own record, a non-chooser's plan keeps the owner as it was: an action without
+    // adds goes through update() (above); one with adds writes in its own transaction.
+    expect(app.file("src/generated/actions/close.server.ts")).not.toContain("ownerFor(");
+    const retargets = generate(
+      `${spec}  escalate:
+    on: SupportCase
+    set: { customerEmail: }
+    add:
+      Escalation: { reason: Escalated by the team. }
+`.replace(
+        "pages:",
+        `  Escalation:
+    fields:
+      reason: text!
+      customerEmail: email!
+      supportCase: SupportCase!
+    ownedBy: customerEmail
+pages:`,
+      ),
+      authText,
+    );
+    expect(retargets.errors).toEqual([]);
+    expect(retargets.file("src/generated/actions/escalate.server.ts")).toContain(
+      "{ ...one.values, ...(one.values.customerEmail === undefined ? {} : { customerEmail: supportCaseData.chooses(viewer) ? supportCaseData.ownerFor(viewer, one.values.customerEmail) : before.customerEmail }) }",
     );
   });
 
@@ -295,8 +346,11 @@ pages:`,
     const test = app.file("src/generated/access.test.ts");
     expect(test).toContain("visitors' support cases stop at the cap, counted in the audit log");
     expect(test).toContain('inArray(schema.auditLog.who, ["visitor", "the app"])');
-    expect(test).toContain('import { and, count, eq, inArray } from "drizzle-orm";');
+    expect(test).toContain('import { and, count, eq, gt, inArray } from "drizzle-orm";');
+    expect(test).toContain("gt(schema.auditLog.at, new Date(Date.now() - 24 * 60 * 60 * 1000))");
     expect(cases).toContain("(Number(process.env.VISITOR_ROWS) || 10000)");
+    // The module imports what the cap's query uses.
+    expect(cases).toMatch(/import \{[^}]*\bgt\b[^}]*\binArray\b[^}]*\} from "drizzle-orm";/);
   });
 
   test("a record added beside a form gets its owner as create() gives it, and its number per that owner", () => {

@@ -663,10 +663,13 @@ export function standardActionServer(
     .join("");
   // The record as it was, its change checked as update() checks one (A 153), the action's own
   // set freeing what it may change although locked; access is the action's, checked before.
+  // An address owner the action sets or asks for: a chooser's value as written, anyone else keeps
+  // the record's own (ownership never passes to the runner; support-portal-path.md §2).
+  const carriesOwner = addressOwned(model) && action.set.some((v) => v.field === model.ownedBy);
   const writes = (p: string) => `{
       const before = tx.select().from(${n.table}).where(eq(${n.table}.id, ${p}.id)).get();
       if (!before) throw new AccessDenied(viewer !== null);
-      const checked = ${n.data}.checkUpdate(tx, viewer, ${p}.id, ${addressOwned(model) ? `{ ...${p}.values, ...(${p}.values.${model.ownedBy} === undefined ? {} : { ${model.ownedBy}: ${n.data}.ownerFor(viewer, ${p}.values.${model.ownedBy}) }) }` : `${p}.values`}, before${checksLoaded(model) ? `, ${p}.loaded` : ""}${hasLocks(model) ? `, ${JSON.stringify(action.name)}, ${JSON.stringify(frees)}` : ""});
+      const checked = ${n.data}.checkUpdate(tx, viewer, ${p}.id, ${carriesOwner ? `{ ...${p}.values, ...(${p}.values.${model.ownedBy} === undefined ? {} : { ${model.ownedBy}: ${n.data}.chooses(viewer) ? ${n.data}.ownerFor(viewer, ${p}.values.${model.ownedBy}) : before.${model.ownedBy} }) }` : `${p}.values`}, before${checksLoaded(model) ? `, ${p}.loaded` : ""}${hasLocks(model) ? `, ${JSON.stringify(action.name)}, ${JSON.stringify(frees)}` : ""});
       const changed = tx.update(${n.table}).set(checked).where(eq(${n.table}.id, ${p}.id)).returning().get();
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });${tell(model.name, JSON.stringify(action.name), "changed", "before")}
       const inserted = [
@@ -699,7 +702,10 @@ ${values.map((v) => `      ${v}`).join("\n")}
     }),
 ${adds
   .map(
-    ({ add }, i) => `    added${i}: ${adds[i]?.tn.settable}.parse({
+    (
+      { add },
+      i,
+    ) => `    added${i}: ${adds[i]?.tn.settable}${addressOwned(adds[i]?.target as ModelIR) ? `.partial({ ${adds[i]?.target.ownedBy}: true })` : ""}.parse({
       ${dataKeyOf(add.reference)}: row.id,
 ${adds[i]?.values.map((v) => `      ${v}`).join("\n")}
     }),`,
