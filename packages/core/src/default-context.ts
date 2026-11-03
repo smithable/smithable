@@ -16,8 +16,10 @@ export class UxDefaultContext extends ParseContext {
   }
   override warning(at: At, code: string, message: string, hint?: string): void {
     const fact = at && typeof at === "object" ? this.prepared?.nodes.get(at) : undefined;
-    // Unusable inherited columns can be omitted; contrast warnings stay warnings.
-    if (fact && code === "invalid-value") {
+    // A warning on an inherited node has no line in the file to stand on: the default is unusable
+    // here and is skipped with the warning as its reason (an unusable column, a stage whose
+    // records the page lists again). A band's contrast stays a warning: the band is drawn.
+    if (fact && code !== "band-contrast") {
       if (!this.prepared?.skipped.has(fact)) this.prepared?.skipped.set(fact, message);
       return;
     }

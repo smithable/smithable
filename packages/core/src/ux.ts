@@ -331,9 +331,14 @@ export function weekBy(model: ModelIR, by?: string): FieldIR | undefined {
 export { BANDS, type Band, SECTION_LOOKS } from "./section-looks.js";
 
 /** How a landing page's header looks; HEADER_LOOKS has its keys and values. */
+/**
+ * A landing page's header. `over: none` is kept as the explicit choice it is in the file, so a
+ * theme's `over: hero` it masks shows as masked (`--explain`, the look's impact); the adapter
+ * draws nothing for it.
+ */
 export interface HeaderLook {
   position?: "sticky" | "scrolling";
-  over?: "hero";
+  over?: "hero" | "none";
 }
 
 /**
@@ -1610,8 +1615,7 @@ function readHeaderLook(ctx: ParseContext, node: ParsedNode | null, where: strin
       );
       continue;
     }
-    // none is the same as unsaid.
-    if (value !== "none") (look as Record<string, unknown>)[option.key] = value;
+    (look as Record<string, unknown>)[option.key] = value;
   }
   return look;
 }
@@ -1776,9 +1780,13 @@ function readSectionLooks(
               s.model === pageModel(shown) &&
               !Object.keys(s.where ?? {}).length,
           );
+          // On the layout's own node when no stage is named: inherited (a theme's default), the
+          // layout is then skipped with this reason instead of a warning nowhere in the file.
           if (again)
             ctx.warning(
-              stageOption?.value ?? entry.value,
+              stageOption?.value ??
+                options.find((option) => option.key === "layout")?.value ??
+                entry.value,
               "stage-repeats",
               `The hero shows the first records of ${shown.id}; the ${again.name} section lists them again below.`,
               `Remove the ${again.name} section, or give it a where of its own.`,

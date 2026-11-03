@@ -167,7 +167,7 @@ const setCalendarColor: Operation<{ page: string; field: string }> = {
 const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days" | "inherit" }> = {
   name: "setCalendarView",
   summary:
-    "Show a calendar as the week's grid (the default), an agenda (the coming weeks as one list by day) or days (the coming days side by side, each a list).",
+    "Show a calendar as the week's grid (the default), an agenda (the coming weeks as one list by day) or days (the coming days side by side, each a list). week keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
     type: "object",
     required: ["page", "view"],
@@ -314,7 +314,7 @@ const setTableMark: Operation<{ page: string; mark: "initials" | "picture" | "no
 const setRowActions: Operation<{ page: string; actions: "below" | "menu" | "inherit" }> = {
   name: "setRowActions",
   summary:
-    "Show each row's actions as buttons (below, the default) or in a … menu at the row's end.",
+    "Show each row's actions as buttons (below, the default) or in a … menu at the row's end. below keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
     type: "object",
     required: ["page", "actions"],
@@ -480,7 +480,7 @@ const setLandingWidth: Operation<{
 }> = {
   name: "setLandingWidth",
   summary:
-    "How wide a landing page's content runs: contained (72rem, the default), wide (80rem) or full (edge to edge).",
+    "How wide a landing page's content runs: contained (72rem, the default), wide (80rem) or full (edge to edge). contained keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
     type: "object",
     required: ["page", "width"],
@@ -516,7 +516,7 @@ const setRecordList: Operation<{
 }> = {
   name: "setRecordList",
   summary:
-    "Show a list of related records on a page's record as a table (the default), a thread (a conversation with a reply box) or inline (rows edited in place, each saved on its own).",
+    "Show a list of related records on a page's record as a table (the default), a thread (a conversation with a reply box) or inline (rows edited in place, each saved on its own). The last thread shown as a table or inline takes record.first with it.",
   schema: {
     type: "object",
     required: ["page", "field", "look"],
@@ -540,8 +540,15 @@ const setRecordList: Operation<{
       throw new OperationError(`There is no page named "${page}".`);
     // A table is the default: setting it takes the key away, and an empty record block with it.
     put(editors.ux, ["pages", page, "record", "lists", field], look === "table" ? undefined : look);
-    // Retain dependent authored settings: validation explains a conversation-first conflict
-    // instead of silently removing the user's record-opening choice.
+    // A page that led with its thread leads with its form once no thread is left (A 215 (10): the
+    // file stays valid, and the summary says so).
+    const lists = ["pages", page, "record", "lists"];
+    if (
+      !Object.values(editors.ux.has(lists) ? (editors.ux.get(lists) as object) : {}).includes(
+        "thread",
+      )
+    )
+      put(editors.ux, ["pages", page, "record", "first"], undefined);
     return [];
   },
 };
@@ -549,7 +556,7 @@ const setRecordList: Operation<{
 const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none" | "inherit" }> = {
   name: "setRecordPictures",
   summary:
-    "Show a record's pictures large on its view: aside (beside the fields), top (across the top, with a strip to switch them) or none (among the fields, the default).",
+    "Show a record's pictures large on its view: aside (beside the fields), top (across the top, with a strip to switch them) or none (among the fields, the default). none keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
     type: "object",
     required: ["page", "look"],
@@ -585,7 +592,7 @@ const setRecordSummary: Operation<{
 }> = {
   name: "setRecordSummary",
   summary:
-    "Show a record's summary (its status, its amount, its key dates) in the title row (header) or in a panel beside the form (aside); none takes it away.",
+    "Show a record's summary (its status, its amount, its key dates) in the title row (header) or in a panel beside the form (aside); none takes it away as an explicit choice, inherit leaves it to the theme.",
   schema: {
     type: "object",
     required: ["page", "place", "look"],
@@ -661,7 +668,7 @@ const setRecordEmphasis: Operation<{
 const setRecordFirst: Operation<{ page: string; first: "form" | "thread" | "inherit" }> = {
   name: "setRecordFirst",
   summary:
-    "What a record page shows first: its form (the default), or its conversation (a list shown as a thread) before the form.",
+    "What a record page shows first: its form (the default), or its conversation (a list shown as a thread) before the form. form keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
     type: "object",
     required: ["page", "first"],

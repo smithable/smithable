@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { applyOperation, applyOperations } from "./apply.js";
 import { parseTheme, type ThemeIR } from "./theme.js";
+import { THEME_LIBRARY } from "./theme-library.js";
 
 const spec = Object.values(
   import.meta.glob("../../../examples/booking/smithable.yml", {
@@ -88,4 +89,40 @@ test("atomic batches retain added/project theme and plugin context for later ste
   expect(result.files.ux).toContain("preset: paper");
   expect(result.files.themes?.map((t) => t.name)).toContain("paper");
   expect(result.added).toEqual([{ path: "themes/paper.yml", text }]);
+});
+
+test("select uses a theme as it is: an unchanged project theme, or a built-in given as its own text", () => {
+  const own = applyOperation({ spec, themes: [theme] }, "applyTheme", { ...args, mode: "select" });
+  if (!own.ok) throw new Error(own.message);
+  expect(own.added).toEqual([]);
+  expect(own.files.ux).toContain("preset: paper");
+  expect(own.files.themes?.map((t) => t.name)).toEqual(["paper"]);
+  // A built-in cannot be created or updated, but may be selected when the draft says the same
+  // (sameLookTheme reads the meaning, not the text), as the look editor's unchanged draft does.
+  const [name, library] = Object.entries(THEME_LIBRARY)[0] as [string, string];
+  const builtIn = applyOperation({ spec }, "applyTheme", {
+    ...args,
+    name,
+    text: library,
+    mode: "select",
+  });
+  if (!builtIn.ok) throw new Error(builtIn.message);
+  expect(builtIn.added).toEqual([]);
+  expect(builtIn.files.ux).toContain(`preset: ${name}`);
+  // A draft that differs is not a selection: update a project theme, or create a copy.
+  expect(
+    applyOperation({ spec, themes: [theme] }, "applyTheme", {
+      ...args,
+      mode: "select",
+      text: text.replace("density: compact", "density: standard"),
+    }).ok,
+  ).toBe(false);
+  expect(
+    applyOperation({ spec }, "applyTheme", {
+      ...args,
+      name,
+      text: library.replace(/radius: .*/, "radius: 0px"),
+      mode: "select",
+    }).ok,
+  ).toBe(false);
 });

@@ -104,7 +104,7 @@ test("context explanations distinguish legal choices from unavailable prerequisi
   expect(uxChoiceProblem("calendarView", "agenda", { kind: "crud" })).toMatch(/calendar/);
 });
 
-test("conversation-first dependencies are explained by refusal, and list reset retains valid source", () => {
+test("the last thread shown as a table takes first with it, and a list reset keeps the source valid", () => {
   const support = examples["../../../examples/support/smithable.yml"] as string;
   const initial = { spec: support, ux: "smithableUx: 0.1\n" };
   const thread = applyOperation(initial, "setRecordList", {
@@ -115,12 +115,13 @@ test("conversation-first dependencies are explained by refusal, and list reset r
   if (!thread.ok) throw new Error(thread.message);
   const first = applyOperation(thread.files, "setRecordFirst", { page: "cases", first: "thread" });
   if (!first.ok) throw new Error(first.message);
-  const broken = applyOperation(first.files, "setRecordList", {
+  // A 215 (10): the file stays valid, so first goes with the last thread.
+  const table = applyOperation(first.files, "setRecordList", {
     page: "cases",
     field: "messages",
     look: "table",
   });
-  expect(broken.ok).toBe(false);
+  expect(table).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
   const reset = applyOperation(first.files, "setRecordFirst", { page: "cases", first: "form" });
   if (!reset.ok) throw new Error(reset.message);
   const inline = applyOperation(reset.files, "setRecordList", {

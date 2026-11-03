@@ -6,7 +6,7 @@ import { validateAuth } from "./auth.js";
 import { validateSpec } from "./spec.js";
 import { BUILT_IN_THEMES, parseTheme, type ThemeIR } from "./theme.js";
 import type { ThemeUxDefaults } from "./theme-default-schema.js";
-import { themeDefaultsSchema } from "./theme-default-schema.js";
+import { THEME_DEFAULT_TREE, themeDefaultsSchema } from "./theme-default-schema.js";
 import { buildThemeSchema } from "./theme-schema.js";
 import { emptyUx, validateUx } from "./ux.js";
 import { UX_CAPABILITIES, type UxCapability } from "./ux-capabilities.js";
@@ -283,4 +283,65 @@ test("public-stage access incompatibility skips inherited layout and still refus
   expect(
     explicit.diagnostics.some((d) => d.severity === "error" && /may not read/.test(d.message)),
   ).toBe(true);
+});
+
+// The design's guard (docs/spec/v0.1.md, Themes, defaults): a theme's defaults are added to the
+// parsed ux document as nodes of their own, which have no place in the file. A diagnostic on one
+// of them would point at 1:1, where nothing is written; an unusable default is skipped with its
+// reason instead. Every finite default, one at a time, against every example app's ux file.
+test("no theme default raises a diagnostic at the file's first line in any example app", () => {
+  const examples = import.meta.glob("../../../examples/*/smithable*.yml", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+  const leaves = (tree: object, prefix: string[] = []): { path: string[]; values: unknown[] }[] =>
+    Object.entries(tree).flatMap(([key, value]) =>
+      Array.isArray(value)
+        ? [{ path: [...prefix, key], values: value }]
+        : leaves(value as object, [...prefix, key]),
+    );
+  const all = leaves(THEME_DEFAULT_TREE);
+  expect(all.length).toBeGreaterThan(5);
+  const nest = (path: string[], value: unknown): ThemeUxDefaults =>
+    path.reduceRight<unknown>((inner, key) => ({ [key]: inner }), value) as ThemeUxDefaults;
+  const atLineOne: string[] = [];
+  const apps = [...new Set(Object.keys(examples).map((path) => path.split("/").at(-2)))];
+  for (const app of apps) {
+    const file = (name: string) => examples[`../../../examples/${app}/${name}`];
+    const spec = file("smithable.yml");
+    if (!spec) continue;
+    const appIr = validateSpec({ path: "smithable.yml", text: spec }).ir;
+    if (!appIr) throw new Error(`${app}: the spec does not read`);
+    const authText = file("smithable.auth.yml");
+    const appAuth = authText
+      ? validateAuth({ path: "smithable.auth.yml", text: authText }, appIr).auth
+      : undefined;
+    const uxText = file("smithable.ux.yml") ?? "smithableUx: 0.1\n";
+    // The theme the file names (else modern) takes the default, as a project theme of that name.
+    const preset = parse(uxText)?.theme?.preset;
+    const named = typeof preset === "string" ? preset : "modern";
+    const own = BUILT_IN_THEMES.find((t) => t.name === named) ?? base;
+    for (const leaf of all)
+      for (const value of leaf.values) {
+        const theme: ThemeIR = {
+          ...own,
+          name: named,
+          source: "project",
+          defaults: nest(leaf.path, value),
+        };
+        const { diagnostics } = validateUx(
+          { path: "smithable.ux.yml", text: uxText },
+          appIr,
+          [theme],
+          appAuth,
+        );
+        for (const d of diagnostics)
+          if (d.line === 1 && d.code !== "yaml")
+            atLineOne.push(
+              `${app}: ${leaf.path.join(".")}=${String(value)}: ${d.code} ${d.message}`,
+            );
+      }
+  }
+  expect(atLineOne).toEqual([]);
 });
