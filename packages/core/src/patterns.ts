@@ -195,7 +195,7 @@ const crud: PagePattern<"crud"> = {
         const away =
           reference?.type.kind === "relation" && reference.type.model === f.model && far === f.from;
         if (!near && !away) continue;
-        const to = f.to && (near ? `${f.to}.${far}` : `${through}.${f.to}`);
+        const to = f.to && `${near ? f.to : through}.${away ? f.to : far}`;
         followInList(spec, ["pages", page.id, "filters"], name, to, 3);
         const defaulted = ["pages", page.id, "defaultFilter", name];
         if (spec.has(defaulted)) {

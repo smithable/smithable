@@ -104,3 +104,28 @@ test("a rename follows either side of the dot, and a removal drops the filter", 
   expect(gone.files.spec).not.toContain("session.startsAt");
   expect(gone.files.spec).toContain("session.status");
 });
+
+test("a rename of a reference to its own model follows both sides of the dot", () => {
+  const files = {
+    spec: `smithable: 0.1
+app:
+  name: Studio
+models:
+  Lesson:
+    fields:
+      title: string!
+      next: Lesson
+pages:
+  lessons:
+    crud: Lesson
+    filters: [next.next]
+`,
+  };
+  const renamed = applyOperation(files, "renameField", {
+    model: "Lesson",
+    from: "next",
+    to: "following",
+  });
+  if (!renamed.ok) throw new Error(renamed.message);
+  expect(renamed.files.spec).toContain("filters: [following.following]");
+});

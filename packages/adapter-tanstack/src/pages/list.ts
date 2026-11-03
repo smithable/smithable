@@ -103,6 +103,7 @@ export function filterCode(
   let people = false;
   let lists = false;
   let subSelects = false;
+  let liveThrough = false;
   let toggles = false;
   let own = false;
   let mine = false;
@@ -139,8 +140,11 @@ export function filterCode(
       const tn = names(away.target, t);
       const value = `data.f?.[${JSON.stringify(name)}]`;
       const far = `${tn.table}.${dataKey(away.field)}`;
-      const through = (condition: string) =>
-        `${value} ? inArray(${n.table}.${dataKey(away.through)}, db.select({ id: ${tn.table}.id }).from(${tn.table}).where(${condition})) : undefined`;
+      // Only the related records this viewer may read, and not those in the trash.
+      const through = (condition: string, when = value) =>
+        `${when} ? inArray(${n.table}.${dataKey(away.through)}, db.select({ id: ${tn.table}.id }).from(${tn.table}).where(and(${condition}, ${tn.data}.readable(viewer)${away.target.trash ? `, isNull(${tn.table}.deletedAt)` : ""}))) : undefined`;
+      modules.push({ module: `#/generated/${kebab(away.target.name)}.server`, data: tn.data });
+      if (away.target.trash) liveThrough = true;
       const label = `${t.field(model, away.through).label ?? humanize(away.through.name)}: ${(t.field(away.target, away.field).label ?? humanize(away.field.name)).toLowerCase()}`;
       subSelects = true;
       lists = true;
@@ -186,7 +190,10 @@ export function filterCode(
       } else if (type.kind === "scalar" && type.name === "bool") {
         toggles = true;
         conditions.push(
-          `${value} === "true" || ${value} === "false" ? inArray(${n.table}.${dataKey(away.through)}, db.select({ id: ${tn.table}.id }).from(${tn.table}).where(eq(${far}, ${value} === "true"))) : undefined`,
+          through(
+            `eq(${far}, ${value} === "true")`,
+            `(${value} === "true" || ${value} === "false")`,
+          ),
         );
         controls.push({ name, label, kind: "toggle", ...fold(name) });
       } else if (type.kind === "scalar") {
@@ -195,11 +202,9 @@ export function filterCode(
         const when = kind === "date" || kind === "datetime";
         if (when) dated = true;
         const how = kind === "date" ? '"date"' : kind === "datetime" ? '"instant"' : '"number"';
-        conditions.push(
-          through(
-            `inRange(${far}, ${value}, ${how}${kind === "money" ? ", 100" : when ? ", 1, app.timeZone" : ""}) as SQL`,
-          ),
-        );
+        const range = `inRange(${far}, ${value}, ${how}${kind === "money" ? ", 100" : when ? ", 1, app.timeZone" : ""})`;
+        // A range the address cannot read, or All, is no condition: every record stays.
+        conditions.push(through(range, `${value} && ${range}`));
         controls.push({
           name,
           label,
@@ -402,7 +407,17 @@ const ${v} = createServerFn()
     unread,
     favorites,
     defaults: page.defaultFilter,
-    imports: { ranges, dated, lists, subSelects, titles, people, toggles: toggles || mine, own },
+    imports: {
+      ranges,
+      dated,
+      lists,
+      subSelects,
+      liveThrough,
+      titles,
+      people,
+      toggles: toggles || mine,
+      own,
+    },
   };
 }
 
@@ -673,7 +688,8 @@ export function listParts(
       route.add("drizzle-orm", "inArray");
     if (filtering) route.add("drizzle-orm", "and");
     if (filtering?.imports.toggles || filtering?.imports.people) route.add("drizzle-orm", "eq");
-    if (filtering?.imports.subSelects) route.add("#/db", "db").add("drizzle-orm", "type SQL");
+    if (filtering?.imports.subSelects) route.add("#/db", "db");
+    if (filtering?.imports.liveThrough) route.add("drizzle-orm", "isNull");
     if (filtering?.imports.own) route.add("drizzle-orm", "sql");
     if (filtering?.imports.people)
       route.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");
