@@ -52,6 +52,7 @@ jobs:
     permissions: { contents: read, actions: read }
     outputs:
       full: ${{ steps.scope.outputs.full }}
+      engine: ${{ steps.scope.outputs.engine }}
       basics: ${{ steps.scope.outputs.basics }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,11 +91,12 @@ jobs:
           else
             full=false; why="no engine files changed"
           fi
+          engine=$full   # whether the engine changed, before FULL_CI's say: check reads it for a fork
           if [ "$full" = true ] && [ "$FULL_CI" != true ] && [ "$LABELLED" != true ] && [ "$why" != "$GITHUB_EVENT_NAME" ]; then
             full=false; why="$why, but FULL_CI is off and no full-ci label: the local pnpm check is the gate"
           fi
           basics=true
-          { echo "full=$full"; echo "basics=$basics"; } >> "$GITHUB_OUTPUT"
+          { echo "full=$full"; echo "basics=$basics"; echo "engine=$engine"; } >> "$GITHUB_OUTPUT"
           echo "Full check: $full ($why)" | tee -a "$GITHUB_STEP_SUMMARY"
 
   lint-build-units:
@@ -186,6 +188,10 @@ jobs:
           echo "Asked smithable-cloud's Release images to release $GITHUB_SHA if anything is new." | tee -a "$GITHUB_STEP_SUMMARY"
 
   # The required status: green when every job it needs passed, or was skipped on the short run.
+  # Not green for a pull request from a fork that changes the engine: its full check never runs here
+  # (a stranger's code stays off this machine) and the local gate is the maintainer's, so the
+  # status stays red, with the reason, until a maintainer has run scripts/gate.sh on the branch
+  # and merges as the administrator.
   # Not for a run that was cancelled (a newer push, or the full-ci label added while the first
   # run was going: a pull request opened with the label starts two runs): its jobs are cancelled,
   # and reporting that as a failed `check` stood in the way of the newer run's result.
@@ -198,8 +204,14 @@ jobs:
       - name: Every job passed
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          ENGINE: ${{ needs.scope.outputs.engine }}
         run: |
           echo "Results: $RESULTS"
           for r in $RESULTS; do
             case "$r" in success|skipped) ;; *) echo "A job ended $r."; exit 1 ;; esac
           done
+          if [ "$FORK" = true ] && [ "$ENGINE" = true ]; then
+            echo "This pull request comes from a fork and changes the engine. Its full check (the example apps, Studio) does not run here: a maintainer runs scripts/gate.sh on the branch and merges it as the administrator. Until then this status stays red." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
