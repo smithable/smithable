@@ -64,6 +64,10 @@ export function FileInput({
   onChange,
   model,
   field,
+  // Not for the DOM.
+  values: _values,
+  set: _set,
+  timeZone: _timeZone,
   ...aria
 }: FieldControlProps & { model: string; field: string }) {
   const current = parse(value);
@@ -153,6 +157,10 @@ export function FilesInput({
   model,
   field,
   max,
+  // Not for the DOM.
+  values: _values,
+  set: _set,
+  timeZone: _timeZone,
   ...aria
 }: FieldControlProps & { model: string; field: string; max: number }) {
   const files = parseList(value);

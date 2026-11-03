@@ -262,7 +262,7 @@ function Radios({
       data-part="radios"
     >
       {choices.map((choice) => (
-        <label key={choice.value} className="flex items-center gap-2 text-sm">
+        <label key={choice.value} className="flex min-h-11 items-center gap-2 text-sm lg:min-h-0">
           <input
             type="radio"
             name={name}
