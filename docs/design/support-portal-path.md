@@ -1,6 +1,6 @@
 # The support portal's path through the spec (design)
 
-Status: 2026-11-03, Fable, from Johan's decision the same day: the full support portal, built by
+Status: 2026-11-03, Fable, from Johan's decision the same day; §2–§4 sharpened the same evening after two second reviewers read the build (a message's writer, `none` alone, the proven address on create, a case's status by actions only): the full support portal, built by
 him on the hosted service and written about before it becomes the starter (backlog, The next
 starter; Fable 94). Two second reviewers' points taken. This note walks what the portal needs
 against the spec as it stands, so his build shows the product and not its holes, and designs what
@@ -17,11 +17,12 @@ the reply box's side for a customer.
 | Customers who write in their case but take, assign or close nothing | **Missing.** The owner of a record runs its standard actions (spec, Access); a customer owning their case would see Close and Assign to me. §3 |
 | A customer's reply in the portal sits on the customer's side of the thread | **Missing.** The reply box writes the side field's first value, our side (conversation.md §2). §4 |
 | A public knowledge base whose drafts stay private | `Article` under `public.read` with `where: { status: published }`; a public articles page; `smithable validate` warns when a public page shows such a model without a `where` |
+| A case's state moves by actions alone, also for its owner | `status` with `locked: true`: a form or the API cannot write it, an action's `set` can (spec, Fields). With §3 the customer runs none of them |
 | A case cannot close before an agent has replied | `close` with `when: { lastSender: agent }` over `lastSender: { type: string, formula: LAST(messages.sender) }`, `LAST` by when the messages were made: the button shows only then and the server refuses otherwise (spec, Actions). The starter's `close` gets this `when` |
 | Unread marks, also for the customer | The viewer's own marks on the conversation (conversation.md §1): a signed-in customer is a viewer like any other. The **Unread** filter on the cases list follows |
 | Mail when something happens | As mail-threads.md has it: an agent's reply mails the customer (`replySent`), a new case gets its receipt. A customer's reply written in the portal mails nobody; the agents see the unread mark, as for a reply by mail |
 
-Five rows are a spec the portal writes today. Three are constructs, below; all three are small.
+Six rows are a spec the portal writes today. Three are constructs, below; all three are small.
 
 ## 2. An owner that is an address, and an owner one reference away
 
@@ -39,7 +40,10 @@ takes a `User` field. Two more shapes name an owner just as plainly:
   record with their address, the earlier ones too. For a viewer who may not choose whose a record
   is, the form leaves the field out and the app fills in the viewer's address, exactly as a
   required `User` owner left out is filled with the viewer today (data.ts, `ownerFor`); a value
-  sent anyway is replaced by the viewer's. A visitor's public form takes the address written, as a
+  sent anyway is replaced by the viewer's, and a signed-in person whose address is not proven is
+  refused with the reason ("Prove your address first"), so nobody files records into a portal they
+  have not shown is theirs. The address is stored as it is compared, lower-case and trimmed, on
+  every write, so the comparison is a plain equality and an index serves it. A visitor's public form takes the address written, as a
   mail takes its `From`: the case is what someone wrote to us, and the thread shows the writer as
   it does for mail; nothing goes to that address but the receipt, so writing someone else's
   address plants a case in their portal and nothing more, the same as mailing in their name
@@ -55,6 +59,12 @@ takes a `User` field. Two more shapes name an owner just as plainly:
   their attachments, the agent (with `read: all`) reads everything, and a message's own `agent`
   field stays what it is: who wrote it, not who owns it. The record's files follow the record
   (`/files/<model>/<id>/<field>` is read through the model's data function already).
+  **Owning through a reference is reading.** The record keeps its creator as today (the app's
+  owner column), and changing or deleting it stays the creator's and the roles granted `write` or
+  `delete`: a customer reads the agents' replies and cannot edit or remove one, an agent cannot
+  edit a customer's words; the viewer's own unread marks and "a message they wrote is read for
+  them" go by that creator too. The owner's standard actions on a through-owned record follow
+  the same line: they are the creator's, not the reader's.
 
 What does not change: the record rule, the roles' grants, `review`, `where` on public reads. The
 operation `setOwner <model> [field]` writes `ownedBy` and accepts the two new shapes. The form's
@@ -68,12 +78,16 @@ that read every record, as today.
 
 Today the owner of a record runs its standard actions, beside the roles granted `write` or named
 in `actions` (spec, Access). The portal needs the opposite for customers: they own their cases
-and run nothing on them. The rule: when a role's block **writes** `actions` (a list, or `none`),
-that list is the whole of what the role runs, its own records included; without the key, the
-owner rule stands as today. `grant customer actions none` writes it, `grant customer actions
-reopen` lets them reopen their own case and nothing else; `smithable validate --explain` says
-"customers run no action, not on their own cases either". No new key: `none` was the record rule
-and now means what it says for actions.
+and run nothing on them. The rule: `actions: none`, written in a role's block, means the role runs
+no action at all, its own records included; a list keeps today's meaning (those actions, beside
+the owner's own), so no existing app changes (the spec's own `sales: actions: [mergeCustomers]`
+keeps closing its own orders). `grant customer actions none` writes it; `smithable validate
+--explain` says "customers run no action, not on their own cases either". No new key: `none` was
+the record rule and now means what it says for actions.
+
+What an action would change must then move by actions alone: the starter's `status` gets
+`locked: true`, set when the case is made and changed by `startWork`, `close` and `reopen` only,
+so a customer who owns the case cannot close it through the form or the API either.
 
 ## 4. The reply box's side
 
@@ -130,7 +144,7 @@ public:
    owner's read check and lock on create and change, the owner's actions by the role's written
    grant, the reply box's side by the viewer; `/files` follows (A, with Fable's core on main).
 3. The starter: `ownedBy: customerEmail` on `SupportCase`, `ownedBy: supportCase` on `Message`,
-   `close` with `when: { lastSender: agent }`, the `customer` role with `actions: none`, the
+   `status` locked, `close` with `when: { lastSender: agent }`, the `customer` role with `actions: none`, the
    public form into `SupportCase`, an `Article` model with a public knowledge page: after Johan's
    build, from his export, as starters.md says; the constructs are on main before it.
 4. The spec reference's `ownedBy` row, the Access section and conversation.md §2; this note's §1
