@@ -375,6 +375,7 @@ function YourName({
   const inputId = useId();
   const [value, setValue] = useState(name);
   const [time, setTime] = useState<Person>({});
+  const [opened, setOpened] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
   const zoneId = useId();
@@ -402,6 +403,7 @@ function YourName({
         onClick={() => {
           setValue(name);
           setTime(personNow());
+          setOpened(true);
           dialog.current?.showModal();
         }}
         className="block min-h-6 max-w-full truncate rounded-sm text-left font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
@@ -434,7 +436,9 @@ function YourName({
               />
               <p className="text-sm text-muted-foreground">{w.yourNameHelp}</p>
             </div>
-            {onTime && (
+            {/* Only once it opens: four hundred zones are no part of every page, and the server's
+                list and the browser's need not be the same. */}
+            {onTime && opened && (
               <>
                 <div className="space-y-1.5">
                   <Label htmlFor={zoneId}>{w.yourTimeZone}</Label>

@@ -4973,12 +4973,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -10126,7 +10130,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.server.ts": "2237f355 generated",
   "src/generated/keys.test.ts": "68c0a077 generated",
   "src/generated/mcp.server.ts": "5ece0f35 generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/note.schema.ts": "a44e751a generated",
   "src/generated/note.server.ts": "bbb212ff generated",
   "src/generated/note.ts": "bf579f2a generated",
@@ -10146,7 +10150,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -10189,12 +10193,12 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -13098,12 +13102,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -16526,7 +16534,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "e9b5540a generated",
   "src/generated/hooks.ts": "199beb1e generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "fac1c733 generated",
   "src/generated/pages.ts": "9166a1c4 generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -16542,7 +16550,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Calendar.tsx": "76f00783 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -16585,14 +16593,14 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/slots.ts": "911e04a7 kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -22439,12 +22447,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -29234,7 +29246,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "87ba6eb0 generated",
   "src/generated/message.ts": "f222d475 generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "f981b018 generated",
   "src/generated/pages.ts": "3cded6da generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
@@ -29255,7 +29267,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Articles.tsx": "63b22982 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
@@ -29309,13 +29321,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -33863,12 +33875,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -38049,7 +38065,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/follow-up.server.ts": "5f843f64 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.schema.ts": "906a5fce generated",
@@ -38066,7 +38082,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -38112,11 +38128,11 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -43858,12 +43874,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -46492,7 +46512,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "378fe20d generated",
   "src/generated/invoice.ts": "847402f3 generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "11bc8997 generated",
   "src/generated/pages.ts": "d347f5d5 generated",
   "src/generated/roles.ts": "d284ad2a generated",
@@ -46503,7 +46523,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -46554,13 +46574,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -50028,12 +50048,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -54494,7 +54518,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dish.server.ts": "ba5b7d9b generated",
   "src/generated/dish.ts": "b7cb2173 generated",
   "src/generated/hooks.ts": "5c440337 generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
   "src/generated/order-line.server.ts": "ff3daf07 generated",
@@ -54517,7 +54541,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
@@ -54560,14 +54584,14 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/sequence.server.ts": "89a0dd0d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -56967,12 +56991,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -59470,7 +59498,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/item.schema.ts": "1585b602 generated",
   "src/generated/item.server.ts": "3fb76c31 generated",
   "src/generated/item.ts": "9051834d generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "5e085a05 generated",
   "src/generated/review.server.ts": "05473a16 generated",
   "src/generated/review.ts": "c0f62730 generated",
@@ -59481,7 +59509,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -59526,13 +59554,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",
@@ -61675,12 +61703,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -63149,7 +63181,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.schema.ts": "0dc11389 generated",
   "src/generated/item.server.ts": "873d87d1 generated",
   "src/generated/item.ts": "380eeeef generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "828c3cad generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "307674d6 generated",
@@ -63157,7 +63189,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -63198,11 +63230,11 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -70918,12 +70950,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -74930,7 +74966,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.server.ts": "7d89d37a generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "c95c523a generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "5d37ab11 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
@@ -74940,7 +74976,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Articles.tsx": "63b22982 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
@@ -74990,11 +75026,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
@@ -78643,12 +78679,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))
@@ -82142,7 +82182,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.schema.ts": "4261619c generated",
   "src/generated/message.server.ts": "e509a07c generated",
   "src/generated/message.ts": "bbf512fd generated",
-  "src/generated/my-time.ts": "c2d1f095 generated",
+  "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "0dc0e782 generated",
   "src/generated/pages.ts": "f7a896bd generated",
   "src/generated/roles.ts": "19b94e12 generated",
@@ -82158,7 +82198,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ActivityLog.tsx": "cc50334d kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
   "src/kit/AppLink.tsx": "fe6438fa kit",
-  "src/kit/AppShell.tsx": "f0a88677 kit",
+  "src/kit/AppShell.tsx": "85907b17 kit",
   "src/kit/AppearancePicker.tsx": "2f334000 kit",
   "src/kit/Ask.tsx": "2bb2aede kit",
   "src/kit/Combobox.tsx": "c3a18c75 kit",
@@ -82204,13 +82244,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
-  "src/kit/person-time.server.ts": "904decaa kit",
+  "src/kit/person-time.server.ts": "49667e84 kit",
   "src/kit/receipts.server.ts": "672a3942 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
-  "src/kit/time-text.ts": "b7e9a45d kit",
+  "src/kit/time-text.ts": "67f67e08 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/uploads.ts": "10300804 kit",

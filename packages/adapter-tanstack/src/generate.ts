@@ -206,12 +206,16 @@ function knownZone(zone: string): boolean {
 
 /** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
 export const saveMyTime = createServerFn({ method: "POST" })
-  .validator((data: Person) => data)
+  .validator((data: Person): Person => {
+    if (data.zone !== undefined && (typeof data.zone !== "string" || !knownZone(data.zone)))
+      throw new Error("Unknown time zone.");
+    if (data.clock !== undefined && data.clock !== "12h" && data.clock !== "24h")
+      throw new Error("Unknown clock.");
+    return { zone: data.zone, clock: data.clock };
+  })
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     if (!viewer || viewer.id.startsWith("key:")) return;
-    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
-    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
     db.update(user)
       .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
       .where(eq(user.id, viewer.id))

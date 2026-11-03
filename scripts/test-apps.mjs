@@ -694,6 +694,12 @@ async function personTimeFlow(base) {
     await page.reload();
     await when.waitFor({ timeout: 10000 * P });
     if ((await when.innerText()) !== theirs) throw new Error("a reload lost their own time");
+    // A new browser of theirs reads it from their record, and the page keeps it from then on.
+    await page.context().clearCookies({ name: "smithable-time" });
+    await open(page, `${base}/sessions/1`);
+    if ((await when.innerText()) !== theirs) throw new Error("their record's time was not used");
+    if (!(await page.context().cookies()).some((c) => c.name === "smithable-time"))
+      throw new Error("the page did not keep their own time");
     await choose(async (dialog) => {
       await dialog.getByRole("combobox", { name: "Your time zone" }).fill("");
       await dialog.getByLabel("Your clock").selectOption({ label: "As the app" });

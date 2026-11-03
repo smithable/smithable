@@ -2,7 +2,14 @@
 // from the cookie, or for a new browser from their record. Pages only: what a server function does
 // (a mail to someone else) stays in the app's zone.
 import { AsyncLocalStorage } from "node:async_hooks";
-import { type Person, personFrom, readPerson, TIME_COOKIE, writtenPerson } from "./time-text";
+import {
+  type Person,
+  personFrom,
+  readPerson,
+  TIME_COOKIE,
+  TIME_COOKIE_SECONDS,
+  writtenPerson,
+} from "./time-text";
 
 const store = new AsyncLocalStorage<Person>();
 
@@ -22,7 +29,7 @@ export async function inPersonTime(
   try {
     response.headers.append(
       "Set-Cookie",
-      `${TIME_COOKIE}=${writtenPerson(person)}; Path=/; Max-Age=31536000; SameSite=Lax`,
+      `${TIME_COOKIE}=${writtenPerson(person)}; Path=/; Max-Age=${TIME_COOKIE_SECONDS}; SameSite=Lax`,
     );
   } catch {
     // A response whose headers are fixed (a redirect made elsewhere) keeps them.

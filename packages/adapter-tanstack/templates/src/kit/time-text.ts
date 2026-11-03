@@ -12,6 +12,9 @@ export interface Person {
 /** The cookie that carries it, so the server renders a page as the browser will. */
 export const TIME_COOKIE = "smithable-time";
 
+/** A day: then the person's record is read again, so a change on another device reaches this one. */
+export const TIME_COOKIE_SECONDS = 86_400;
+
 /** A person's settings from a Cookie header or document.cookie. */
 export function readPerson(cookies: string): Person {
   const value = cookies
@@ -64,7 +67,7 @@ export function shownZone(appZone?: string): string | undefined {
 /** Keeps a person's settings in this browser, or forgets them (signing out). */
 export function rememberPerson(settings?: Person): void {
   document.cookie = settings
-    ? `${TIME_COOKIE}=${writtenPerson(settings)}; path=/; max-age=31536000; samesite=lax`
+    ? `${TIME_COOKIE}=${writtenPerson(settings)}; path=/; max-age=${TIME_COOKIE_SECONDS}; samesite=lax`
     : `${TIME_COOKIE}=; path=/; max-age=0; samesite=lax`;
 }
 
