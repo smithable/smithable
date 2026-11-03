@@ -40,9 +40,10 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
     },
   ],
   "app": {
+    "clock": "24h",
     "description": "Tasks and notes, grouped in projects, that an AI assistant keeps for a small team.",
     "name": "Team Tasks",
-    "timezone": "Europe/Stockholm",
+    "timezone": "UTC",
   },
   "extensions": {},
   "incoming": [],

@@ -87,6 +87,8 @@ export async function create(
     name?: string;
     /** The administrator's address; without it, the Git user's (email-sign-in.md §3). */
     admin?: string;
+    /** The app's time zone (the hosted service's, from the account); without it, the machine's. */
+    timezone?: string;
     /** The packages are in place (a link to another project's): nothing is installed. */
     installed?: boolean;
     /** Told the drafted app's files as soon as the model has answered, before anything is built. */
@@ -94,6 +96,14 @@ export async function create(
     onDraft?: (files: Record<string, string>, assumptions?: Assumption[]) => void;
   } = {},
 ): Promise<number> {
+  if (options.timezone) {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: options.timezone });
+    } catch {
+      io.err(`Unknown time zone "${options.timezone}". Use a name like Europe/Mariehamn.\n`);
+      return 1;
+    }
+  }
   // A page as the starting point: what it says is the description (first-build.md §2.8).
   let pictures: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
   let fromPage = false;
@@ -312,6 +322,7 @@ export async function create(
     io.out(
       "No administrator was set (no --admin and no Git user.email): the starter's sample address is still in smithable.auth.yml. Set yours with: smithable op setAdmins you@your-domain\n",
     );
+  files = withTimeZone(files, options.timezone);
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
   // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
@@ -552,6 +563,31 @@ export function sampleFiles(
       },
     ];
   });
+}
+
+/**
+ * A new app's time zone where its spec names none, so it does not run on UTC unawares (A 220): the
+ * one given, over a starter's too; else the machine's unless that is UTC, where a starter's own
+ * zone stays. An app with no pages is only an API, and no one's clock is guessed for it.
+ */
+export function withTimeZone(
+  files: Record<string, string>,
+  given?: string,
+  machine = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): Record<string, string> {
+  const spec = new YamlEditor(files["smithable.yml"] ?? "");
+  if (!spec.has(["app", "name"])) return files;
+  const said = spec.has(["app", "timezone"]);
+  if (given) {
+    if (said) spec.set(["app", "timezone"], given);
+    else spec.add(["app"], "timezone", given);
+    return { ...files, "smithable.yml": spec.text };
+  }
+  if (said || /^(Etc\/)?(UTC|UCT|GMT|Universal|Zulu)$/.test(machine)) return files;
+  const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
+  if (!ir?.pages.length) return files;
+  spec.add(["app"], "timezone", machine);
+  return { ...files, "smithable.yml": spec.text };
 }
 
 export function named(files: Record<string, string>, name: string): Record<string, string> {

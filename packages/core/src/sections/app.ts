@@ -37,6 +37,13 @@ export const appSection: SpecSection<"app"> = {
         title: "Time zone",
         description:
           "The time zone dates and times are shown in, as its IANA name, e.g. Europe/Mariehamn.",
+        "x-suggest": "time-zones",
+      },
+      clock: {
+        type: "string",
+        enum: ["12h", "24h"],
+        title: "Clock",
+        description: "How times are written: 12h or 24h, the default.",
       },
       ...textSchema,
     },
@@ -46,7 +53,7 @@ export const appSection: SpecSection<"app"> = {
     const entries = mapEntries(ctx, node, `"app"`);
     if (!entries) return app;
     const known = checkKeys(ctx, entries, `"app"`, {
-      allowed: ["name", "currency", "timezone", ...TEXT_KEYS],
+      allowed: ["name", "currency", "timezone", "clock", ...TEXT_KEYS],
       content: ["title", "tagline"],
     });
     Object.assign(app, readSemanticText(ctx, known));
@@ -77,6 +84,11 @@ export const appSection: SpecSection<"app"> = {
         } else if (timezone !== undefined) {
           app.timezone = timezone;
         }
+      } else if (key === "clock") {
+        const clock = readString(ctx, value, `"app.clock"`);
+        if (clock === "12h" || clock === "24h") app.clock = clock;
+        else if (clock !== undefined)
+          ctx.error(value, "invalid-value", `"clock" under "app" is 12h or 24h.`);
       }
     }
     if (!known.some((e) => e.key === "name")) {
