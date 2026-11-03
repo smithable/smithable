@@ -59,6 +59,7 @@ export async function checkStudioLook(page, dir) {
       document.getElementById("sm-theme")?.textContent.includes("--radius: 21px"),
     );
     const css = await frame.locator("#sm-theme").textContent();
+    await dialog.getByText("Show the look as a file", { exact: true }).click();
     await dialog.locator("textarea").fill("smithableTheme: [");
     await dialog.getByText("Not applied yet:", { exact: false }).waitFor();
     assert.equal(
@@ -284,6 +285,7 @@ export async function checkStudioLookTimeout(page, dir) {
     );
     await page.getByRole("button", { name: "Edit look", exact: true }).click();
     await loading;
+    await dialog.getByText("Show the look as a file", { exact: true }).click();
     await dialog.locator("textarea").waitFor();
     assert(
       await dialog.locator("textarea").isDisabled(),
@@ -370,6 +372,7 @@ export async function checkStudioLookGallery(page, dir) {
     await page.getByRole("button", { name: "Edit look", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
     const textarea = dialog.locator("textarea");
+    await dialog.getByText("Show the look as a file", { exact: true }).click();
     await page.waitForFunction(
       () => document.querySelector('dialog[aria-label="Edit look"] textarea')?.disabled === false,
     );
@@ -412,7 +415,9 @@ export async function checkStudioLookGallery(page, dir) {
     await textarea.fill(
       selected + "\ndefaults:\n  kinds:\n    crud:\n      table: {actions: menu}\n",
     );
-    await dialog.getByText("Structural preview unavailable.", { exact: true }).waitFor();
+    await dialog
+      .getByText("A full preview of this layout is not available yet.", { exact: true })
+      .waitFor();
     assert.equal(
       await iframe.evaluate((element) => getComputedStyle(element).visibility),
       "hidden",
@@ -420,7 +425,7 @@ export async function checkStudioLookGallery(page, dir) {
     );
     await dialog.getByRole("button", { name: "Undo draft", exact: true }).click();
     await dialog
-      .getByText("Structural preview unavailable.", { exact: true })
+      .getByText("A full preview of this layout is not available yet.", { exact: true })
       .waitFor({ state: "hidden" });
     const steady = Date.now();
     await dialog.getByLabel("radius", { exact: true }).fill("44px");
@@ -454,9 +459,12 @@ export async function checkStudioDefaultsApply(page, dir) {
   await dialog
     .getByLabel("Name", { exact: true })
     .fill(`default-browser-${crypto.randomUUID().slice(0, 8)}`);
+  await dialog.getByText("Show the look as a file", { exact: true }).click();
   const textarea = dialog.locator("textarea");
   await textarea.fill((await textarea.inputValue()) + "\ndefaults:\n  app: {navigation: topbar}\n");
-  await dialog.getByText("Structural preview unavailable.", { exact: true }).waitFor();
+  await dialog
+    .getByText("A full preview of this layout is not available yet.", { exact: true })
+    .waitFor();
   assert.equal(projectRevision(dir, false), baseline, "structural draft wrote source before Apply");
   const reply = page.waitForResponse(
     (response) =>
@@ -471,7 +479,7 @@ export async function checkStudioDefaultsApply(page, dir) {
     .filter({ hasText: /^Applied:/ })
     .waitFor({ timeout: 60000 });
   await dialog
-    .getByText("Structural preview unavailable.", { exact: true })
+    .getByText("A full preview of this layout is not available yet.", { exact: true })
     .waitFor({ state: "hidden" });
   const frame = await (
     await dialog.locator("iframe[data-frame]").first().elementHandle()
