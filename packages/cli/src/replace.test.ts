@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { arrival, sync } from "./replace.js";
+import { arrival, replaceProject, sync } from "./replace.js";
 import { tempDir } from "./test-dir.js";
 
 test("a replacement writes what differs by a rename over the file, and removes the rest", () => {
@@ -44,4 +44,15 @@ test("the route tree comes in after the route files it names", () => {
     join("src", "routes", "__root.tsx"),
     join("src", "routeTree.gen.ts"),
   ]);
+});
+
+test("a time zone Intl does not know is refused before anything is touched", async () => {
+  const said: string[] = [];
+  const code = await replaceProject(
+    tempDir("smithable-dir-"),
+    { out: () => {}, err: (text) => said.push(text) },
+    { from: "/nowhere", timezone: "Foo/Bar" },
+  );
+  expect(code).toBe(2);
+  expect(said.join("")).toBe('Unknown time zone "Foo/Bar". Use a name like Europe/Mariehamn.\n');
 });

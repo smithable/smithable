@@ -92,6 +92,8 @@ export const doneKey = (app: string) => `guideDone:${app}`;
  * gives the tour without the overlay.
  */
 export const presentedKey = (app: string) => `presented:${app}`;
+/** That the app's time zone was confirmed in this browser. */
+export const zoneAskedKey = (app: string) => `zoneAsked:${app}`;
 
 /** Whether the address turns the tour off (the screenshot scripts and most of the tests). */
 export const guideOff = () =>

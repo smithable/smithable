@@ -20,7 +20,14 @@ import { dirname, join, resolve, sep } from "node:path";
 import type { Assumption } from "@smithable/ai";
 import { generate } from "./generate.js";
 import type { Io } from "./io.js";
-import { administered, create, named, withoutSampleDomains } from "./new.js";
+import {
+  administered,
+  create,
+  knownZone,
+  named,
+  withoutSampleDomains,
+  withTimeZone,
+} from "./new.js";
 
 export interface Replacement {
   /** A finished project on this machine's disk, as `smithable new` made it (no node_modules needed). */
@@ -32,6 +39,8 @@ export interface Replacement {
   /** The app's name as the person typed it, and their address as its administrator. */
   name?: string;
   admin?: string;
+  /** The zone of the person who asked (their browser's): the app's, as with `new --timezone`. */
+  timezone?: string;
 }
 
 const SPEC_FILES = [
@@ -179,6 +188,10 @@ export async function replaceProject(
   to: Replacement,
   progress: Progress = () => {},
 ): Promise<number> {
+  if (to.timezone && !knownZone(to.timezone)) {
+    io.err(`Unknown time zone "${to.timezone}". Use a name like Europe/Mariehamn.\n`);
+    return 2;
+  }
   if (to.from) {
     const from = resolve(to.from);
     if (!existsSync(join(from, "smithable.yml")) || !existsSync(join(from, "package.json"))) {
@@ -205,7 +218,7 @@ export async function replaceProject(
     rmSync(join(dir, ".git"), { recursive: true, force: true });
     // The person's name for the app and their own way in, as `smithable new` writes them; the
     // files that follow from the spec are generated again (no tool runs: the tables are the same).
-    if (to.name?.trim() || to.admin?.trim()) {
+    if (to.name?.trim() || to.admin?.trim() || to.timezone) {
       let files: Record<string, string> = Object.fromEntries(
         SPEC_FILES.filter((f) => existsSync(join(dir, f))).map((f) => [
           f,
@@ -214,6 +227,7 @@ export async function replaceProject(
       );
       if (to.name?.trim()) files = named(files, to.name.trim());
       if (to.admin?.trim()) files = withoutSampleDomains(administered(files, to.admin.trim()), io);
+      if (to.timezone) files = withTimeZone(files, to.timezone);
       for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
       const code = await generate(dir, io, { tools: false, force: false });
       if (code !== 0) return code;
@@ -229,7 +243,13 @@ export async function replaceProject(
   // link to them), then brought in like a finished one, under the running preview. So the
   // preview is not started again for it either, and a description the model could not make an
   // app from never leaves the project empty: the starter is made instead, and the reason said.
-  const options = { name: to.name, admin: to.admin, yes: true, installed: true };
+  const options = {
+    name: to.name,
+    admin: to.admin,
+    timezone: to.timezone,
+    yes: true,
+    installed: true,
+  };
   const beside = `${resolve(dir)}.incoming`;
   const fresh = () => {
     rmSync(beside, { recursive: true, force: true });

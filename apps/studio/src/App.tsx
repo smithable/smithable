@@ -39,6 +39,7 @@ import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
+import { TimeZoneCheck } from "./TimeZoneCheck";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
 import {
@@ -1143,6 +1144,26 @@ export function App() {
                 : "Your workspace is starting…"}
           </div>
         )}
+        {/* After the presentation and the tour: their Enter must not answer it. */}
+        {!project.making &&
+          !guideOff() &&
+          !overlaid &&
+          !guiding &&
+          !firstVisit &&
+          project.name &&
+          project.files.spec && (
+            <TimeZoneCheck
+              key={project.name}
+              app={project.name}
+              spec={project.files.spec}
+              onUse={async (zone) => (await run("setApp", { timezone: zone })) !== false}
+              onChange={() => {
+                nocodePlace({ sub: "behavior" });
+                if (narrow) showWindow("nocode");
+                else workIn("nocode");
+              }}
+            />
+          )}
         {(message || pending) && (
           // Hovering or focusing the notice keeps it while it is read.
           // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading

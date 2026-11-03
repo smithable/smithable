@@ -535,6 +535,15 @@ try {
         if (await card.count()) throw new Error("the guide came back after a reload");
         if (await fresh.getByRole("dialog", { name: /^Smith presents / }).count())
           throw new Error("the overlay came back after a reload");
+        // After the guide the app's time zone is asked about once in this browser, and the
+        // answer is remembered.
+        const zone = fresh.locator('[data-part="time-zone-check"]');
+        await zone.getByRole("button", { name: /^(Keep|Not now)/ }).click();
+        await zone.waitFor({ state: "detached", timeout: 5000 * P });
+        await fresh.reload();
+        await fresh.locator("header").getByRole("button", { name: "Guide" }).waitFor();
+        await fresh.waitForTimeout(1000);
+        if (await zone.count()) throw new Error("the time zone was asked about again");
         // Present the app again: in Smith's thread, without the overlay (smith-first.md §12.6).
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
         await fresh.getByRole("menuitem", { name: "Present the app again" }).click();
