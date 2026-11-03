@@ -9,7 +9,6 @@ import { Input, Label } from "#/components/ui/input";
 import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
-import { Combobox } from "./Combobox";
 import { ConsentSettings } from "./Consent";
 import { formatValue } from "./format";
 import { type AppUi, textMarker } from "./model";
@@ -442,17 +441,23 @@ function YourName({
               <>
                 <div className="space-y-1.5">
                   <Label htmlFor={zoneId}>{w.yourTimeZone}</Label>
-                  <Combobox
+                  {/* The browser's own list: it filters as one types, and no dialog's edge clips it. */}
+                  <Input
                     id={zoneId}
+                    list={`${zoneId}-zones`}
+                    autoComplete="off"
+                    placeholder={w.search}
                     value={time.zone ?? ""}
-                    required={false}
-                    invalid={false}
-                    options={Intl.supportedValuesOf("timeZone").map((z) => ({
-                      value: z,
-                      label: z,
-                    }))}
-                    onChange={(zone) => setTime((t) => ({ ...t, zone: zone || undefined }))}
+                    onChange={(e) =>
+                      setTime((t) => ({ ...t, zone: e.target.value.trim() || undefined }))
+                    }
+                    disabled={busy}
                   />
+                  <datalist id={`${zoneId}-zones`}>
+                    {Intl.supportedValuesOf("timeZone").map((z) => (
+                      <option key={z} value={z} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor={clockId}>{w.yourClock}</Label>

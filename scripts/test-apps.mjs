@@ -678,14 +678,14 @@ async function personTimeFlow(base) {
       await name.click();
       const dialog = page.getByRole("dialog", { name: "Your name" });
       await fill(dialog);
+      // The whole page loads again with the person's own time.
+      const reloaded = page.waitForEvent("load", { timeout: 30000 * P });
       await dialog.getByRole("button", { name: "Save" }).click();
-      await page.waitForLoadState("load");
-      await page.waitForTimeout(500);
+      await reloaded;
       await open(page, `${base}/sessions/1`);
     };
     await choose(async (dialog) => {
-      await dialog.getByRole("combobox", { name: "Your time zone" }).fill("Pacific/Kirit");
-      await dialog.getByRole("option", { name: "Pacific/Kiritimati" }).click();
+      await dialog.getByLabel("Your time zone").fill("Pacific/Kiritimati");
       await dialog.getByLabel("Your clock").selectOption({ label: "12-hour" });
     });
     const theirs = await when.innerText();
@@ -701,7 +701,7 @@ async function personTimeFlow(base) {
     if (!(await page.context().cookies()).some((c) => c.name === "smithable-time"))
       throw new Error("the page did not keep their own time");
     await choose(async (dialog) => {
-      await dialog.getByRole("combobox", { name: "Your time zone" }).fill("");
+      await dialog.getByLabel("Your time zone").fill("");
       await dialog.getByLabel("Your clock").selectOption({ label: "As the app" });
     });
     if ((await when.innerText()) !== before)
