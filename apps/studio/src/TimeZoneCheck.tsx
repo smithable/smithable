@@ -5,8 +5,29 @@ import { zoneAskedKey } from "./guide";
 
 /** The app's time zone as its spec says it. */
 export function zoneOf(spec: string | undefined): string | undefined {
-  return /^app:\n(?:[ \t]+.*\n)*?[ \t]+timezone:[ \t]*["']?([\w/+-]+)/m.exec(spec ?? "")?.[1];
+  const lines = (spec ?? "").split(/\r?\n/);
+  const start = lines.findIndex((l) => /^app:\s*(#.*)?$/.test(l));
+  if (start < 0) return undefined;
+  let indent: number | undefined;
+  for (const line of lines.slice(start + 1)) {
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+    const own = line.length - line.trimStart().length;
+    if (own === 0) return undefined;
+    indent ??= own;
+    const zone = /^\s*timezone:\s*["']?([\w/+-]+)/.exec(line)?.[1];
+    if (own === indent && zone) return zone;
+  }
+  return undefined;
 }
+
+/** A zone's canonical name, so Asia/Calcutta and Asia/Kolkata are one. */
+const canonical = (zone: string) => {
+  try {
+    return new Intl.DateTimeFormat("en", { timeZone: zone }).resolvedOptions().timeZone;
+  } catch {
+    return zone;
+  }
+};
 
 const asked = (app: string) => {
   try {
@@ -24,8 +45,8 @@ export function TimeZoneCheck({
 }: {
   app: string;
   spec: string | undefined;
-  /** Writes the zone to the app. */
-  onUse: (zone: string) => void;
+  /** Writes the zone to the app; whether it was written. */
+  onUse: (zone: string) => Promise<boolean>;
   /** Opens where the app's settings are changed. */
   onChange: () => void;
 }) {
@@ -33,6 +54,7 @@ export function TimeZoneCheck({
   if (done) return null;
   const browser = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const zone = zoneOf(spec);
+  const same = zone !== undefined && canonical(zone) === canonical(browser);
   const answered = () => {
     try {
       localStorage.setItem(zoneAskedKey(app), "1");
@@ -51,17 +73,16 @@ export function TimeZoneCheck({
       <span>
         {!zone
           ? `This app has no time zone yet, so its times run on UTC. Yours looks like ${browser}.`
-          : zone === browser
+          : same
             ? `Times in this app are in ${zone}, the zone your browser gave.`
             : `Times in this app are in ${zone}. Your browser says ${browser}.`}
       </span>
-      {zone !== browser && (
+      {!same && (
         <button
           type="button"
           className={button}
           onClick={() => {
-            onUse(browser);
-            answered();
+            void onUse(browser).then((written) => written && answered());
           }}
         >
           Use {browser}

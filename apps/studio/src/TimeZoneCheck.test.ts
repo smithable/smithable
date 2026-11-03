@@ -7,5 +7,9 @@ test("the app's time zone is read from its block, not from another one's", () =>
   );
   expect(zoneOf('app:\n  name: Notes\n  timezone: "Etc/GMT+2"\n')).toBe("Etc/GMT+2");
   expect(zoneOf("app:\n  name: Notes\nmodels:\n  Note:\n    timezone: nope\n")).toBeUndefined();
+  expect(zoneOf("app:\r\n  name: Notes\r\n\r\n  # where it is\r\n  timezone: Asia/Tokyo\r\n")).toBe(
+    "Asia/Tokyo",
+  );
+  expect(zoneOf("app:\n  texts:\n    timezone: nope\n  name: Notes\n")).toBeUndefined();
   expect(zoneOf(undefined)).toBeUndefined();
 });

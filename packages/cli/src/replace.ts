@@ -188,7 +188,7 @@ export async function replaceProject(
   to: Replacement,
   progress: Progress = () => {},
 ): Promise<number> {
-  if (to.timezone !== undefined && !knownZone(to.timezone)) {
+  if (to.timezone && !knownZone(to.timezone)) {
     io.err(`Unknown time zone "${to.timezone}". Use a name like Europe/Mariehamn.\n`);
     return 2;
   }

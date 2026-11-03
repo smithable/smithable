@@ -1144,11 +1144,12 @@ export function App() {
                 : "Your workspace is starting…"}
           </div>
         )}
-        {!project.making && !guideOff() && (
+        {!project.making && !guideOff() && project.name && project.files.spec && (
           <TimeZoneCheck
+            key={project.name}
             app={project.name}
             spec={project.files.spec}
-            onUse={(zone) => void run("setApp", { timezone: zone })}
+            onUse={async (zone) => (await run("setApp", { timezone: zone })) !== false}
             onChange={() => {
               nocodePlace({ sub: "behavior" });
               if (narrow) showWindow("nocode");
