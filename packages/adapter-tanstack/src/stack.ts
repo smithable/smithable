@@ -6,10 +6,10 @@ export const STACK_PROFILE = {
   id: "2026-09",
   packageManager: "pnpm@12.6.0",
   dependencies: {
-    "@tailwindcss/vite": "4.3.3",
+    "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-start": "1.169.4",
-    "better-auth": "1.7.13",
+    "better-auth": "1.7.15",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -20,9 +20,9 @@ export const STACK_PROFILE = {
     nodemailer: "10.1.7",
     react: "19.3.1",
     "react-dom": "19.3.1",
-    srvx: "1.0.7",
+    srvx: "1.0.8",
     "tailwind-merge": "3.7.0",
-    tailwindcss: "4.3.3",
+    tailwindcss: "4.3.4",
     zod: "4.6.7",
   },
   /** For Markdown fields (MIT). In every app, like the fonts: see packageJson in generate.ts. */
