@@ -779,14 +779,14 @@ const getHistory = createServerFn()
 `
     : ""
 }export const Route = createFileRoute(${JSON.stringify(join(page.route, "$id"))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  head: ({ loaderData }) => {
-    const row = loaderData?.row;
-    return pageHead(${JSON.stringify(page.id)}, row ? String(${heading}) : undefined);
-  },
-  loader: async ({ params }) => {
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) => {
     const found = await ${n.get}({ data: Number(params.id) });
     if (!found) throw notFound();
     return { ...found${options ? `, options: ${options.expr}` : ""}${rowOptions.length ? `, rowOptions: { ${rowOptions.join(", ")} }` : ""}${history ? ", history: await getHistory({ data: Number(params.id) })" : ""} };
+  },
+  head: ({ loaderData }) => {
+    const row = loaderData?.row;
+    return pageHead(${JSON.stringify(page.id)}, row ? String(${heading}) : undefined);
   },
   component: ${component},
 });

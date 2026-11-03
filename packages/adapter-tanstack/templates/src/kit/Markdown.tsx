@@ -16,7 +16,15 @@ export function MarkdownText({ text }: { text: string }) {
   );
 }
 
-export function MarkdownEditor({ value, onChange, record: _, ...control }: FieldControlProps) {
+export function MarkdownEditor({
+  value,
+  onChange,
+  record: _,
+  values: _values,
+  set: _set,
+  timeZone: _timeZone,
+  ...control
+}: FieldControlProps) {
   const [preview, setPreview] = useState(false);
   const tab = (on: boolean) =>
     on

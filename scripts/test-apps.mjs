@@ -5244,6 +5244,12 @@ async function addChildFlow(base) {
   try {
     await signInAs(page, base, "admin");
     await open(page, `${base}/invoices/1`);
+    // Its own title, so tabs can be told apart (A 227).
+    if (
+      !(await page.title()).endsWith(" · Invoices · Invoicely") ||
+      (await page.title()).startsWith("Invoices")
+    )
+      throw new Error(`the invoice's title is ${await page.title()}`);
     // The way back to the list, and when the record last changed (A 223).
     if ((await page.locator('[data-part="back"]').getAttribute("href")) !== "/invoices")
       throw new Error("the invoice has no way back to the invoices");
