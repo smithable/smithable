@@ -37,10 +37,10 @@ function fixture(history = true) {
   return dir;
 }
 const head = (dir: string) => git(dir, ["rev-parse", "HEAD"]).out;
-const args = (dir: string, requestId = "request_123") => ({
-  name: "paper",
-  text,
-  mode: "create",
+const args = (_dir?: string) => ({ name: "paper", text, mode: "create" });
+/** The host's envelope beside the operation: the source revision the draft opened on, the request's id. */
+const request = (dir: string, requestId = "request_123") => ({
+  ...flags,
   expectedRevision: projectRevision(dir),
   requestId,
 });
@@ -48,24 +48,34 @@ const args = (dir: string, requestId = "request_123") => ({
 test("create/use is one checkpoint; retry, no-op and one-step undo preserve transaction boundaries", async () => {
   const dir = fixture();
   const before = head(dir);
-  const request = args(dir);
+  const envelope = request(dir);
   const first = captureIo();
-  expect(await runOperation(dir, first, "applyTheme", request, flags), first.stderr).toBe(0);
+  expect(await runOperation(dir, first, "applyTheme", args(dir), envelope), first.stderr).toBe(0);
   const committed = head(dir);
   expect(committed).not.toBe(before);
   expect(git(dir, ["rev-list", "--count", `${before}..HEAD`]).out).toBe("1");
   expect(readFileSync(join(dir, "smithable.ux.yml"), "utf8")).toContain("preset: paper");
+  // The envelope is in a trailer of its own, never in the operation's record or the log.
+  const body = git(dir, ["log", "-1", "--format=%B"]).out;
+  expect(body).toContain(
+    `Smithable-Apply: ${JSON.stringify({ requestId: "request_123", revision: envelope.expectedRevision })}`,
+  );
+  expect(body).toContain(`Smithable-Op: ${JSON.stringify({ op: "applyTheme", args: args(dir) })}`);
+  expect(readFileSync(join(dir, ".smithable/oplog.jsonl"), "utf8")).not.toMatch(
+    /requestId|expectedRevision/,
+  );
   const retry = captureIo();
   expect(
     await runOperation(
       dir,
       retry,
       "applyTheme",
-      Object.fromEntries(Object.entries(request).reverse()),
-      flags,
+      Object.fromEntries(Object.entries(args(dir)).reverse()),
+      envelope,
     ),
     retry.stderr,
   ).toBe(0);
+  expect(retry.stdout).toContain("already committed");
   expect(head(dir)).toBe(committed);
   expect(vi.mocked(generate)).toHaveBeenCalledTimes(1);
   const noop = captureIo();
@@ -74,8 +84,8 @@ test("create/use is one checkpoint; retry, no-op and one-step undo preserve tran
       dir,
       noop,
       "applyTheme",
-      { ...args(dir, "noop_request"), mode: "update" },
-      flags,
+      { ...args(dir), mode: "update" },
+      request(dir, "noop_request"),
     ),
     noop.stderr,
   ).toBe(0);
@@ -92,11 +102,11 @@ test("create/use is one checkpoint; retry, no-op and one-step undo preserve tran
 
 test("external working bytes invalidate Apply even without a commit", async () => {
   const dir = fixture();
-  const request = args(dir);
+  const envelope = request(dir);
   const before = head(dir);
   writeFileSync(join(dir, "smithable.ux.yml"), "smithableUx: 0.1\ntheme: { preset: playful }\n");
   const io = captureIo();
-  expect(await runOperation(dir, io, "applyTheme", request, flags)).toBe(1);
+  expect(await runOperation(dir, io, "applyTheme", args(dir), envelope)).toBe(1);
   expect(io.stderr).toContain("source changed");
   expect(head(dir)).toBe(before);
   expect(existsSync(join(dir, "themes", "paper.yml"))).toBe(false);
@@ -107,13 +117,13 @@ test("external working bytes invalidate Apply even without a commit", async () =
 test("two simultaneous Apply requests create one checkpoint and regenerate once", async () => {
   const dir = fixture();
   const before = head(dir);
-  const request = args(dir);
+  const envelope = request(dir);
   const first = captureIo();
   const second = captureIo();
   expect(
     await Promise.all([
-      runOperation(dir, first, "applyTheme", request, flags),
-      runOperation(dir, second, "applyTheme", request, flags),
+      runOperation(dir, first, "applyTheme", args(dir), envelope),
+      runOperation(dir, second, "applyTheme", args(dir), envelope),
     ]),
   ).toEqual([0, 0]);
   expect(git(dir, ["rev-list", "--count", `${before}..HEAD`]).out).toBe("1");
@@ -155,7 +165,9 @@ test("an external source edit during generation is preserved and incomplete roll
   });
   const io = captureIo();
   expect(await runOperation(dir, io, "applyTheme", args(dir), flags)).toBe(1);
-  expect(io.stderr).toContain("rollback is incomplete");
+  expect(io.stderr).toContain("was not rolled back");
+  expect(io.stderr).toContain("changed by something else: smithable.ux.yml.");
+  expect(io.stderr).toContain("Operations are refused until");
   expect(readFileSync(join(dir, "smithable.ux.yml"), "utf8")).toBe(external);
   expect(head(dir)).toBe(before);
 });
@@ -169,7 +181,8 @@ test("untracked and custom editor files created during generation are neither co
   });
   const io = captureIo();
   expect(await runOperation(dir, io, "applyTheme", args(dir), flags)).toBe(1);
-  expect(io.stderr).toContain("rollback is incomplete");
+  expect(io.stderr).toContain("was not rolled back");
+  expect(io.stderr).toContain("changed by something else: editor-notes.txt.");
   expect(readFileSync(join(dir, "editor-notes.txt"), "utf8")).toBe("newer notes");
   expect(head(dir)).toBe(before);
 });

@@ -5,6 +5,16 @@ import { git, ownRepository } from "./git.js";
 
 /** Include working bytes and the set of theme/translation files, not only Git HEAD. */
 export function projectRevision(dir: string, includeHead = true): string {
+  const hash = createHash("sha256").update(
+    includeHead && ownRepository(dir) ? git(dir, ["rev-parse", "HEAD"]).out : "no-head",
+  );
+  for (const [name, digest] of Object.entries(sourceDigests(dir)))
+    hash.update(JSON.stringify(name)).update(":").update(digest).update("\n");
+  return hash.digest("hex");
+}
+
+/** Each source file's digest by its path (a missing one is "missing"), sorted; what a change in the revision is of. */
+export function sourceDigests(dir: string): Record<string, string> {
   const names = new Set([
     "smithable.yml",
     "smithable.ux.yml",
@@ -21,20 +31,21 @@ export function projectRevision(dir: string, includeHead = true): string {
       throw new Error("The themes folder must be a directory inside this project.");
     for (const name of readdirSync(themes)) if (/\.ya?ml$/.test(name)) names.add(`themes/${name}`);
   }
-  const hash = createHash("sha256").update(
-    includeHead && ownRepository(dir) ? git(dir, ["rev-parse", "HEAD"]).out : "no-head",
-  );
+  const digests: Record<string, string> = {};
   for (const name of [...names].sort()) {
     const path = join(dir, name);
-    hash.update(JSON.stringify(name));
     if (!existsSync(path)) {
-      hash.update("missing");
+      digests[name] = "missing";
       continue;
     }
     if (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink())
       throw new Error(`The source ${name} must be a regular file inside this project.`);
     const bytes = readFileSync(path);
-    hash.update(String(bytes.length)).update(":").update(bytes);
+    digests[name] = createHash("sha256")
+      .update(String(bytes.length))
+      .update(":")
+      .update(bytes)
+      .digest("hex");
   }
-  return hash.digest("hex");
+  return digests;
 }

@@ -2,7 +2,7 @@
   "name": "@smithable/theme-lab",
   "private": true,
   "type": "module",
-  "description": "The theme lab: a theme made on a real app's pages (docs/design/theme-lab.md \u00a73).",
+  "description": "The theme lab: a theme made on a real app's pages (docs/design/theme-lab.md §3).",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build"

@@ -43,6 +43,16 @@ import {
 import { getField, resetColors, setField, themeText } from "./theme-text";
 import { useLookFrames } from "./useLookFrames";
 
+/** The look's settings in the person's words (Studio's Look tab says the same). */
+const LOOK_LABELS: Record<(typeof LOOK_KEYS)[number], string> = {
+  preset: "Look",
+  primary: "Main colour",
+  background: "Background",
+  font: "Font",
+  density: "Density",
+  motion: "Motion",
+};
+
 export type Frames = (Partial<PreviewPage> & {
   label: string;
   path?: string;
@@ -831,15 +841,16 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
         />
       </div>
     );
+  const STUDIO = host.kind === "studio";
+  /** A page by its title (the frames have them), or the whole app. */
+  const pageTitle = (id: string | null) =>
+    id ? (start?.frames.find((f) => f.page === id && f.kind === "page")?.label ?? id) : null;
   return (
-    <div
-      className="sm-look-editor"
-      style={{ height: host.kind === "studio" ? "100%" : "100vh" }}
-      ref={lookRoot}
-    >
+    <div className="sm-look-editor" style={{ height: STUDIO ? "100%" : "100vh" }} ref={lookRoot}>
       <div className="lab" style={{ height: "100%" }}>
         <header inert={!start || openingLook || applyBusy || saving || switchBusy}>
-          <strong>{host.kind === "studio" ? "Edit look" : "Theme lab"}</strong>
+          {/* Studio's dialog carries the title; the lab says its own. */}
+          {!STUDIO && <strong>Theme lab</strong>}
           {PUBLIC && (
             <span>
               Static previews — {start?.staticIdentities?.[start.starter ?? ""] ?? "loading export"}
@@ -961,7 +972,8 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                     .filter((p) => p.pattern.kind === "landing")
                     .map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.id}
+                        {start.frames.find((f) => f.page === p.id && f.kind === "page")?.label ??
+                          p.id}
                       </option>
                     ))}
                 </select>
@@ -983,7 +995,10 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                 </button>
               )}
               {needsCopy && (
-                <span>Rename this edited built-in or make a project copy before applying.</span>
+                <span>
+                  This built-in look stays as it is: give your version a new name, or make a copy
+                  for this app, before applying.
+                </span>
               )}
               {!!shared.length && (
                 <span>
@@ -1027,32 +1042,41 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
         >
           {projectPreview && (
             <fieldset aria-label="Effective look">
-              <legend>Current page look</legend>
+              <legend>What this page shows</legend>
               <p>
-                Editing {name} for {targetPage ?? "the entire app"}.
+                Editing {name} for {pageTitle(targetPage) ?? "the whole app"}.
                 {projectPreview.look.theme.name !== projectPreview.draftName
-                  ? ` This page uses ${projectPreview.look.theme.name}; its theme selection masks this draft.`
-                  : " The page shows this draft with its current UX overrides."}
+                  ? ` This page uses the look ${projectPreview.look.theme.name}, so the draft does not show on it until it is applied.`
+                  : " The page shows this draft, with the settings made for the page kept."}
               </p>
               <dl>
                 {LOOK_KEYS.map((key) => {
                   const origin = projectPreview.look.provenance[key];
+                  const label = STUDIO ? LOOK_LABELS[key] : key;
                   return (
                     <div key={key}>
-                      <dt>{key}</dt>
+                      <dt>{label}</dt>
                       <dd>
                         {origin.kind === "theme"
                           ? origin.name === projectPreview.draftName
-                            ? `Draft theme ${name}`
-                            : `${origin.source} theme ${origin.name}`
+                            ? "this draft"
+                            : STUDIO
+                              ? `the saved look ${origin.name}`
+                              : `${origin.source} theme ${origin.name}`
                           : origin.kind === "page-ux"
-                            ? `Page UX (${origin.page})`
+                            ? STUDIO
+                              ? "this page's own setting"
+                              : `Page UX (${origin.page})`
                             : origin.kind === "app-ux"
-                              ? "App UX"
-                              : "Inherited default"}
+                              ? STUDIO
+                                ? "the app's own setting"
+                                : "App UX"
+                              : "the default"}
                         {key !== "preset" &&
                           (origin.kind === "app-ux" || origin.kind === "page-ux") &&
-                          " — this override masks the draft theme value"}
+                          (STUDIO
+                            ? ", which stays over the draft until it is removed"
+                            : " — this override masks the draft theme value")}
                         {key !== "preset" &&
                           (origin.kind === "app-ux" || origin.kind === "page-ux") && (
                             <button
@@ -1071,7 +1095,9 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                                 setSaved(undefined);
                               }}
                             >
-                              Reset {key} override in draft
+                              {STUDIO
+                                ? `Use the draft's ${label.toLowerCase()} here`
+                                : `Reset ${key} override in draft`}
                             </button>
                           )}
                       </dd>
@@ -1129,7 +1155,9 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
           {start?.projectId && (
             <p role="status">
               {structural && protocol.status.startsWith("Draft preview ready")
-                ? "Structural preview unavailable. Draft retained."
+                ? STUDIO
+                  ? "A full preview of this layout is not available yet. The draft is kept."
+                  : "Structural preview unavailable. Draft retained."
                 : protocol.status}{" "}
               <button type="button" onClick={protocol.reload}>
                 Reconnect preview
@@ -1173,8 +1201,8 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
             <section className="look-gallery" aria-label="Look gallery">
               <p>
                 {PUBLIC
-                  ? "Token thumbnails. The frame below is a saved starter snapshot."
-                  : "Choose a look for this app. Explicit UX choices stay in place; Apply saves one undoable change."}
+                  ? "Each card is a sample of a look's colours and type. The page below is a saved picture of a starter app."
+                  : "Choose a look for this app. The settings you made yourself stay; Apply saves it as one change you can undo."}
               </p>
               <ul
                 onKeyDown={(event) => {
@@ -1228,7 +1256,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                         loading="lazy"
                       />
                       <span>{candidate.name}</span>
-                      <small>Token thumbnail</small>
+                      <small>A sample of its colours and type</small>
                     </button>
                   </li>
                 ))}
@@ -1297,15 +1325,23 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
           >
             {structural && (
               <div className="structural-unavailable" role="status">
-                <p>Structural preview unavailable.</p>
+                <p>
+                  {STUDIO
+                    ? "A full preview of this layout is not available yet."
+                    : "Structural preview unavailable."}
+                </p>
                 <p>
                   {projectPreview?.impact.reasons.join(", ") ||
-                    "This theme changes generated presentation."}
+                    (STUDIO
+                      ? "This look changes how the pages are built, not only their colours and type."
+                      : "This theme changes generated presentation.")}
                 </p>
                 <p>
                   {PUBLIC
                     ? "Download the theme to use it in a project."
-                    : "Apply will regenerate the app. This draft is kept; choose another look or Undo to return to a CSS preview."}
+                    : STUDIO
+                      ? "Apply makes the app anew with it. The draft is kept; choose another look, or Undo draft to see the preview again."
+                      : "Apply will regenerate the app. This draft is kept; choose another look or Undo to return to a CSS preview."}
                 </p>
               </div>
             )}
@@ -1417,19 +1453,40 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                 </p>
               ))}
           </section>
-          <label className="file">
-            themes/{name}.yml
-            <textarea
-              spellCheck={false}
-              disabled={!start || openingLook || applyBusy || saving || switchBusy}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value, true);
-                setPendingModes(undefined);
-                setSaved(undefined);
-              }}
-            />
-          </label>
+          {/* The theme as its file: the lab is for designers and developers and shows it; in
+              Studio it is folded away, for the few who want it. */}
+          {STUDIO ? (
+            <details className="file">
+              <summary>Show the look as a file</summary>
+              <label className="file">
+                themes/{name}.yml
+                <textarea
+                  spellCheck={false}
+                  disabled={!start || openingLook || applyBusy || saving || switchBusy}
+                  value={text}
+                  onChange={(e) => {
+                    setText(e.target.value, true);
+                    setPendingModes(undefined);
+                    setSaved(undefined);
+                  }}
+                />
+              </label>
+            </details>
+          ) : (
+            <label className="file">
+              themes/{name}.yml
+              <textarea
+                spellCheck={false}
+                disabled={!start || openingLook || applyBusy || saving || switchBusy}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value, true);
+                  setPendingModes(undefined);
+                  setSaved(undefined);
+                }}
+              />
+            </label>
+          )}
         </main>
       </div>
     </div>
@@ -1561,16 +1618,23 @@ function Controls({
         {color(mode, "card", "Surfaces (cards, menus, forms)")}
         {color(mode, "foreground", "Text")}
         <button type="button" onClick={reset}>
-          Reset optional colours to derived
+          Let the other colours follow these again
         </button>
         <p className="hint">
-          Authored colour overrides stay when primary or background changes. Reset removes optional
-          overrides in this palette so they follow those colours again.
+          A colour you set yourself stays when the main colour or the background changes; this
+          button lets the others follow those two again.
         </p>
         <label>
           <input type="checkbox" checked={follows} onChange={(e) => setFollows(e.target.checked)} />{" "}
           Text colour follows the others
         </label>
+        <p className="hint">
+          {follows
+            ? "The text changes to white or ink when a background or surface would make it hard to read."
+            : "The text stays as chosen; a warning above says where it is hard to read."}{" "}
+          The text is one colour on the background and the surfaces; text on the primary colour
+          (buttons) is a second one, white or ink, whichever reads on it.
+        </p>
         <button
           type="button"
           disabled={!valid || theme.modes !== "both"}
@@ -1678,9 +1742,9 @@ function Controls({
           </select>
         </label>
         <p className="hint">
-          Disabled palettes remain in this draft until you choose another theme or reload. Saving
-          writes only enabled palettes. A valid YAML edit replaces hidden palette history. Undo
-          draft restores earlier text and palettes.
+          A mode you turn off keeps its colours in this draft, so turning it on again brings them
+          back; only the modes that are on are saved. Undo draft brings the earlier text and colours
+          back.
         </p>
         <p className="hint" data-motion-note>
           {MOTION_NOTES[theme.motion]}

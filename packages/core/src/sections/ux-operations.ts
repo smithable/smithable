@@ -1373,10 +1373,11 @@ export type ApplyThemeArgs = {
   mode: "create" | "update" | "select";
   page?: string;
   resets?: LookReset[];
-  expectedRevision: string;
-  requestId: string;
 };
 
+// The host's precondition (the source revision the draft was opened on) and its request id are
+// not arguments of the operation: the host passes them beside it (the CLI's OpFlags), so they
+// stay out of the operation log, the Smithable-Op trailer and a redo's record.
 const applyTheme: Operation<ApplyThemeArgs> = {
   name: "applyTheme",
   summary:
@@ -1384,14 +1385,12 @@ const applyTheme: Operation<ApplyThemeArgs> = {
   schema: {
     type: "object",
     additionalProperties: false,
-    required: ["name", "text", "mode", "expectedRevision", "requestId"],
+    required: ["name", "text", "mode"],
     properties: {
       name: { type: "string", pattern: "^[a-z][a-z0-9-]{0,63}$" },
       text: { type: "string" },
       mode: { type: "string", enum: ["create", "update", "select"] },
       page: refTo({ ref: "page", label: "Landing page" }),
-      expectedRevision: { type: "string", pattern: "^[a-f0-9]{64}$" },
-      requestId: { type: "string", pattern: "^[A-Za-z0-9_-]{8,80}$" },
       resets: {
         type: "array",
         items: {

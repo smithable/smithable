@@ -2,7 +2,7 @@
   "name": "@smithable/studio",
   "private": true,
   "type": "module",
-  "description": "Smithable Studio: one web app with Builder and Studio modes (ARCHITECTURE \u00a710.1).",
+  "description": "Smithable Studio: one web app with Builder and Studio modes (ARCHITECTURE §10.1).",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build"

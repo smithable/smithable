@@ -175,6 +175,16 @@ once in `frames/fonts/`; `start.json` lists the starters, booking first, and the
 server. A starter without a list of its own frames its data page as the list (api), and one
 without a landing page its front page.
 
+**The export is committed, and the gate reads it (2026-11-03).** `node scripts/theme-lab-export.mjs`
+writes `docs/site/theme-lab/` (the starters' pages, `frames/<starter>/frame.js`, the fonts,
+`start.json`), which is committed and copied into the site by `scripts/build-docs.mjs`. The
+public lab's check (`scripts/test-public-look.mjs`, run by `pnpm test:studio` and so by the gate)
+opens that built site and drives the exported frames' runtime, not the source of the day. So a
+change to `packages/cli/src/frame-runtime.ts` or `packages/cli/src/look-frame-runtime.ts` (what
+`frame.js` is built from), to the kit's pages or to the booking starter is not complete until
+`node scripts/theme-lab-export.mjs` has been run and its output committed with the change; without
+it the check fails on the stale export, and the check's message is to say which command to run.
+
 **The controls,** on the left, grouped as the file is: colours (the brand colour and
 background with the derived tokens shown, each overridable as `look.md` §3.3 says), fonts
 (body and heading with a specimen line each), headings, surfaces, buttons, pictures, tables,

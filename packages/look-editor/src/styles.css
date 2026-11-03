@@ -1,12 +1,19 @@
 .sm-look-editor {
-  /* The lab's own look: plain and grey, so the frames are what one sees. */
+  /* The lab's own look: plain and grey, so the frames are what one sees. The scheme is the
+     host's: the lab is light; in Studio's dialog the editor follows Studio's light or dark. */
   & {
+    --ink: #1d1d1f;
+    --paper: #e8e8ea;
+    --panel: #fff;
+    --panel-2: #f6f6f7;
+    --line: #ccc;
+    --line-2: #bbb;
     color-scheme: light;
     font:
       14px / 1.4 system-ui,
       sans-serif;
-    color: #1d1d1f;
-    background: #e8e8ea;
+    color: var(--ink);
+    background: var(--paper);
   }
 
   .lab {
@@ -21,19 +28,19 @@
     gap: 16px;
     align-items: center;
     padding: 8px 16px;
-    background: #fff;
-    border-bottom: 1px solid #ccc;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
   aside {
     grid-area: side;
     overflow: auto;
     padding: 8px 12px;
-    background: #f6f6f7;
-    border-right: 1px solid #ccc;
+    background: var(--panel-2);
+    border-right: 1px solid var(--line);
   }
   fieldset {
     border: 0;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid var(--line);
     margin: 0 0 8px;
     padding: 6px 0 0;
   }
@@ -84,14 +91,14 @@
     max-width: 100%;
     overflow-wrap: anywhere;
     white-space: normal;
-    border: 1px solid #bbb;
-    background: #fff;
+    border: 1px solid var(--line-2);
+    background: var(--panel);
     padding: 3px 8px;
     font: inherit;
   }
   .bar button[aria-pressed="true"] {
-    background: #1d1d1f;
-    color: #fff;
+    background: var(--ink);
+    color: var(--panel);
   }
   /* The frame's stage: most of the window's height, so a page is seen as a visitor sees it. */
   .look-gallery ul {
@@ -105,12 +112,12 @@
     width: 100%;
     padding: 0;
     text-align: left;
-    border: 1px solid #aaa;
-    background: #fff;
-    color: #1d1d1f;
+    border: 1px solid var(--line-2);
+    background: var(--panel);
+    color: var(--ink);
   }
   .look-gallery button[aria-pressed="true"] {
-    outline: 3px solid #1d1d1f;
+    outline: 3px solid var(--ink);
     outline-offset: 1px;
   }
   .look-gallery button:focus-visible {
@@ -143,8 +150,8 @@
     justify-content: center;
     padding: 24px;
     text-align: center;
-    background: #f6f6f7;
-    color: #1d1d1f;
+    background: var(--panel-2);
+    color: var(--ink);
     z-index: 1;
   }
   .stage {
@@ -183,6 +190,9 @@
     display: block;
     margin-top: 16px;
     font-weight: 600;
+  }
+  details.file > summary {
+    cursor: pointer;
   }
   .file textarea {
     display: block;
@@ -268,5 +278,21 @@
   }
   .guide-open {
     margin-left: auto;
+  }
+}
+
+/* In Studio's dialog the editor follows Studio's scheme (the system's light or dark setting,
+   as Studio does): its own surfaces turn dark, the framed page keeps the theme's own modes. */
+.look-editor-dialog .sm-look-editor {
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  .look-editor-dialog .sm-look-editor {
+    --ink: #e8e8ea;
+    --paper: #18181b;
+    --panel: #232327;
+    --panel-2: #1d1d21;
+    --line: #3f3f46;
+    --line-2: #52525b;
   }
 }

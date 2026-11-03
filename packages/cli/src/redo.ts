@@ -41,16 +41,22 @@ export async function redo(dir: string, io: Io): Promise<number> {
     io.err("This change cannot be redone: make it again.\n");
     return 1;
   }
-  const revision = projectRevision(dir);
-  const args =
-    recorded.op === "applyTheme"
-      ? { ...recorded.args, expectedRevision: revision, requestId: randomUUID() }
-      : (recorded.args ?? {});
-  return runOperation(dir, io, recorded.op, args, {
-    yes: true,
-    expectedRevision: revision,
-    trailer: `Smithable-Redo: ${target.undo}`,
-  });
+  // A theme Apply's precondition and request id are the host's, not the record's: this redo is
+  // a request of its own, against the source as it is now. A record from before 2026-11-03 still
+  // has them among its arguments; they are left out.
+  const { expectedRevision: _revision, requestId: _request, ...args } = recorded.args ?? {};
+  return runOperation(
+    dir,
+    io,
+    recorded.op,
+    recorded.op === "applyTheme" ? args : (recorded.args ?? {}),
+    {
+      yes: true,
+      expectedRevision: projectRevision(dir),
+      ...(recorded.op === "applyTheme" ? { requestId: randomUUID() } : {}),
+      trailer: `Smithable-Redo: ${target.undo}`,
+    },
+  );
 }
 
 /**
