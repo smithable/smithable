@@ -8820,7 +8820,7 @@ import { noteUi } from "#/generated/note";
 import { noteData } from "#/generated/note.server";
 import { apiCall } from "#/kit/api.server";
 import { app } from "#/generated/app";
-import { csvOf } from "#/kit/csv";
+import { csvName, csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
 export const Route = createFileRoute("/api/v1/notes.csv")({
@@ -8838,7 +8838,7 @@ export const Route = createFileRoute("/api/v1/notes.csv")({
           return new Response(csvOf(noteUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
-              "Content-Disposition": 'attachment; filename="notes.csv"',
+              "Content-Disposition": \`attachment; filename="\${csvName("notes", app.timeZone)}"\`,
             },
           });
         }),
@@ -8965,7 +8965,7 @@ import { projectUi } from "#/generated/project";
 import { projectData } from "#/generated/project.server";
 import { apiCall } from "#/kit/api.server";
 import { app } from "#/generated/app";
-import { csvOf } from "#/kit/csv";
+import { csvName, csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
 export const Route = createFileRoute("/api/v1/projects.csv")({
@@ -8983,7 +8983,7 @@ export const Route = createFileRoute("/api/v1/projects.csv")({
           return new Response(csvOf(projectUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
-              "Content-Disposition": 'attachment; filename="projects.csv"',
+              "Content-Disposition": \`attachment; filename="\${csvName("projects", app.timeZone)}"\`,
             },
           });
         }),
@@ -9113,7 +9113,7 @@ import { taskUi } from "#/generated/task";
 import { taskData } from "#/generated/task.server";
 import { apiCall } from "#/kit/api.server";
 import { app } from "#/generated/app";
-import { csvOf } from "#/kit/csv";
+import { csvName, csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
 export const Route = createFileRoute("/api/v1/tasks.csv")({
@@ -9131,7 +9131,7 @@ export const Route = createFileRoute("/api/v1/tasks.csv")({
           return new Response(csvOf(taskUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
-              "Content-Disposition": 'attachment; filename="tasks.csv"',
+              "Content-Disposition": \`attachment; filename="\${csvName("tasks", app.timeZone)}"\`,
             },
           });
         }),
@@ -10111,7 +10111,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -10182,15 +10182,15 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/notes/$id.$field.ts": "b9f75a6b generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
-  "src/routes/api/v1/notes[.]csv.ts": "00ba485f generated",
+  "src/routes/api/v1/notes[.]csv.ts": "78146a92 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/api/v1/projects/$id.ts": "cc89aacd generated",
   "src/routes/api/v1/projects/index.ts": "789eeb5b generated",
-  "src/routes/api/v1/projects[.]csv.ts": "26a284d0 generated",
+  "src/routes/api/v1/projects[.]csv.ts": "f598199b generated",
   "src/routes/api/v1/tasks/$id.actions.$action.ts": "3afab909 generated",
   "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
   "src/routes/api/v1/tasks/index.ts": "d5bdacd3 generated",
-  "src/routes/api/v1/tasks[.]csv.ts": "953348b8 generated",
+  "src/routes/api/v1/tasks[.]csv.ts": "b9d31159 generated",
   "src/routes/files/$model.$field.ts": "74f4ea7a kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
@@ -16458,7 +16458,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -29127,7 +29127,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Markdown.tsx": "d9977018 kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -37883,7 +37883,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/MergeDialog.tsx": "54b364dd kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
@@ -46271,7 +46271,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Onboarding.tsx": "b68216f0 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -54231,7 +54231,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/OrderPage.tsx": "a8985342 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
@@ -59148,7 +59148,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
@@ -62772,7 +62772,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
@@ -71627,7 +71627,7 @@ import { componentUi } from "#/generated/component";
 import { componentData } from "#/generated/component.server";
 import { openApiCall } from "#/kit/api.server";
 import { app } from "#/generated/app";
-import { csvOf } from "#/kit/csv";
+import { csvName, csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
 export const Route = createFileRoute("/api/v1/components.csv")({
@@ -71645,7 +71645,7 @@ export const Route = createFileRoute("/api/v1/components.csv")({
           return new Response(csvOf(componentUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
-              "Content-Disposition": 'attachment; filename="components.csv"',
+              "Content-Disposition": \`attachment; filename="\${csvName("components", app.timeZone)}"\`,
             },
           });
         }),
@@ -71772,7 +71772,7 @@ import { incidentUi } from "#/generated/incident";
 import { incidentData } from "#/generated/incident.server";
 import { openApiCall } from "#/kit/api.server";
 import { app } from "#/generated/app";
-import { csvOf } from "#/kit/csv";
+import { csvName, csvOf } from "#/kit/csv";
 import { whereFromQuery } from "#/kit/where";
 
 export const Route = createFileRoute("/api/v1/incidents.csv")({
@@ -71790,7 +71790,7 @@ export const Route = createFileRoute("/api/v1/incidents.csv")({
           return new Response(csvOf(incidentUi, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
-              "Content-Disposition": 'attachment; filename="incidents.csv"',
+              "Content-Disposition": \`attachment; filename="\${csvName("incidents", app.timeZone)}"\`,
             },
           });
         }),
@@ -74512,7 +74512,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Markdown.tsx": "d9977018 kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
@@ -74570,11 +74570,11 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
   "src/routes/api/v1/components/index.ts": "bc543a33 generated",
-  "src/routes/api/v1/components[.]csv.ts": "a1c6c5a6 generated",
+  "src/routes/api/v1/components[.]csv.ts": "304e2fb5 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
   "src/routes/api/v1/incidents/$id.ts": "02e50507 generated",
   "src/routes/api/v1/incidents/index.ts": "b72fbecf generated",
-  "src/routes/api/v1/incidents[.]csv.ts": "4b3e5cf9 generated",
+  "src/routes/api/v1/incidents[.]csv.ts": "766067c0 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/components/$id.tsx": "b8a3aa18 generated",
   "src/routes/components/index.tsx": "c9355033 generated",
@@ -81675,7 +81675,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "c490e5bf kit",
   "src/kit/ModelForm.tsx": "601708c0 kit",
-  "src/kit/ModelTable.tsx": "9bf85d17 kit",
+  "src/kit/ModelTable.tsx": "b9912b37 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
   "src/kit/Overflow.tsx": "fb3342a4 kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",

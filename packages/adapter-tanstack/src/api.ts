@@ -620,7 +620,7 @@ export const Route = createFileRoute("/api/v1/${path}.csv")({
           return new Response(csvOf(${n.ui}, items as never, app.timeZone), {
             headers: {
               "Content-Type": "text/csv; charset=utf-8",
-              "Content-Disposition": `attachment; filename="${csvName(${JSON.stringify(path)}, app.timeZone)}"`,
+              "Content-Disposition": \`attachment; filename="\${csvName(${JSON.stringify(path)}, app.timeZone)}"\`,
             },
           });
         }),
