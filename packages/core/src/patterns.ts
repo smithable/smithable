@@ -445,8 +445,22 @@ const dashboard: PagePattern<"dashboard"> = {
       }
       return undefined;
     }
+    const path = ["pages", page.id, "period"];
+    if (effect.kind === "rename-model" && spec.has([...path, effect.from]))
+      spec.renameKey([...path, effect.from], effect.to);
     const f = fieldEffect(effect);
     if (!f) return undefined;
+    // The clock: a field per model follows; one written for all becomes one per model when only
+    // this model's changed.
+    if (page.period?.[f.model] === f.from) {
+      if (!f.to)
+        return {
+          refusal: `The ${page.id} page's period uses ${f.model}.${f.from}; change or remove it first.`,
+        };
+      if (spec.has([...path, f.model])) spec.set([...path, f.model], f.to);
+      else if (Object.keys(page.period).length === 1) spec.set(path, f.to);
+      else spec.set(path, { ...page.period, [f.model]: f.to });
+    }
     for (const item of page.pattern.items) {
       // "by" may reach one reference away (customer.segment): the reference is this model's
       // field, the choice the other model's.

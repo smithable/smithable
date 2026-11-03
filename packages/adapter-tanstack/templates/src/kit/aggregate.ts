@@ -64,6 +64,7 @@ function before(bucket: string, period: Period, steps: number): string {
 /**
  * One total per period, up to the latest record's: eight weeks (from Monday), six months, four
  * quarters or three years, empty ones as 0, in the app's time zone. A record with no date is left out.
+ * `inside` (a dashboard's period): only the bars from the first record's to the last's.
  */
 export function byPeriod<R>(
   rows: R[],
@@ -71,6 +72,7 @@ export function byPeriod<R>(
   value: (row: R) => number,
   period: Period,
   timeZone: string,
+  inside = false,
 ): { key: string; value: number }[] {
   const totals = new Map<string, number>();
   for (const row of rows) {
@@ -81,7 +83,9 @@ export function byPeriod<R>(
   }
   const last = [...totals.keys()].sort().at(-1);
   if (!last) return [];
-  const count = SPAN[period];
+  const first = [...totals.keys()].sort()[0] ?? last;
+  let count = SPAN[period];
+  if (inside) for (count = 1; count < 120 && before(last, period, count - 1) > first; ) count++;
   return Array.from({ length: count }, (_, i) => {
     const key = before(last, period, count - 1 - i);
     return { key, value: totals.get(key) ?? 0 };

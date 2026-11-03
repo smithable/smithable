@@ -5367,6 +5367,60 @@ async function rowMenuFlow(dir, base) {
 }
 
 /** Formula defaults fill a new invoice. */
+/**
+ * A dashboard's period (reports.md §2.4) on the invoicing overview: all time unsaid; Last month
+ * scopes its list to the invoices of last month, and takes the chip off to give all time again.
+ * One invoice moved to last month, the rest to today.
+ */
+async function periodFlow(dir, base) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const now = new Date();
+  const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 15))
+    .toISOString()
+    .slice(0, 10);
+  write(
+    dir,
+    `CREATE TABLE kept_days AS SELECT id, issued_on FROM invoices;
+     UPDATE invoices SET issued_on = '${now.toISOString().slice(0, 10)}';
+     UPDATE invoices SET issued_on = '${lastMonth}' WHERE id = (SELECT MIN(id) FROM invoices);`,
+  );
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/overview`);
+    const rows = page.locator("main tbody tr");
+    await rows.first().waitFor({ timeout: 10000 * P });
+    const all = await rows.count();
+    if (all < 2) throw new Error(`the overview lists ${all} invoices, too few to tell`);
+    await page.getByRole("button", { name: "Last month", exact: true }).click();
+    await page.waitForURL(/[?&]period=lastMonth/, { timeout: 10000 * P });
+    for (let i = 0; i < 100 * P && (await rows.count()) !== 1; i++) await page.waitForTimeout(100);
+    if ((await rows.count()) !== 1)
+      throw new Error(`last month lists ${await rows.count()} invoices, not 1`);
+    await page.getByRole("button", { name: "Last month", exact: true }).click();
+    await page.waitForURL((url) => !url.searchParams.has("period"), { timeout: 10000 * P });
+    for (let i = 0; i < 100 * P && (await rows.count()) !== all; i++)
+      await page.waitForTimeout(100);
+    if ((await rows.count()) !== all)
+      throw new Error("taking the period off does not give all time");
+    console.log(
+      "  ✓ browser: a dashboard's period scopes its list to last month, in the address, and comes off again",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ browser (dashboard period): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("dashboard period");
+  } finally {
+    write(
+      dir,
+      `UPDATE invoices SET issued_on = (SELECT issued_on FROM kept_days k WHERE k.id = invoices.id);
+       DROP TABLE kept_days;`,
+    );
+    await browser.close();
+  }
+}
+
 async function formulaFlow(base) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -8337,6 +8391,7 @@ test("the session cookie's name and attributes", async () => {
         await copyFlow(base);
         await documentFlow(dir, base);
         await formulaFlow(base);
+        await periodFlow(dir, base);
         await rowMenuFlow(dir, base);
         await pickFlow(dir, base);
         await addChildFlow(base);
