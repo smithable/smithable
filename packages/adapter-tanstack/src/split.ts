@@ -18,7 +18,9 @@ import {
   literal,
   modelNamed,
   names,
+  ownerInsert,
   ownerKey,
+  ownerOf,
   SCHEMA_IMPORT,
   sequenceEntries,
   shownTitleKey,
@@ -124,7 +126,7 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
   // The new record goes: the viewer must be one who may delete it.
-  if (!allows(${n.access}.delete, viewer${signedIn ? `, row.${ownerKey(model)}` : ""})) throw new AccessDenied(true);
+  if (!allows(${n.access}.delete, viewer${signedIn ? `, ${ownerOf(model, n)}` : ""})) throw new AccessDenied(true);
   const line = db
     .select({ details: schema.auditLog.details })
     .from(schema.auditLog)
@@ -154,7 +156,7 @@ export async function ${a.undo}(viewer: Viewer | null, id: number) {
   return `${HEADER}import { and, eq, inArray${child.trash ? ", isNull" : ""}${numbered ? ", max" : ""}${model.trash ? ", sql" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
-import { AccessDenied, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
+import { AccessDenied, addressOf, addressOwner, allows, check, Conflict, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 ${numbered ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}import { w } from "#/kit/words";
@@ -196,7 +198,7 @@ export async function ${a.run}(viewer: Viewer | null, id: number, picked: number
     const values = ${n.schema}.parse({ ${copied.map((k) => `${k}: shown.${k}`).join(", ")} });
     created = db.transaction((tx) => {
       // Made as any new record is (A 153): its rules, its numbers counting up.
-      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values), ${ownerKey(model)}: personOf(viewer)${numbered} }).returning().get();
+      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, "values")}${numbered} }).returning().get();
       // Only those still on it: one moved meanwhile stays where it went.
       tx.update(${cn.table}).set({ ${backKey}: made.id }).where(and(inArray(${cn.table}.id, chosen), eq(${cn.table}.${backKey}, id))).run();
       // What moved, so the split can be undone (by ids, never values).

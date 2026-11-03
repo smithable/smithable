@@ -207,9 +207,75 @@ export function names(model: ModelIR, t: Texts) {
   };
 }
 
-/** The column holding a record's owner: the automatic owner, or the model's ownedBy field. */
+/**
+ * The column holding a record's owner: the automatic owner, or the model's ownedBy field (a user's
+ * or a reference's id, or the address itself; docs/design/support-portal-path.md §2).
+ */
 export function ownerKey(model: ModelIR): string {
-  return model.ownedBy ? `${model.ownedBy}Id` : "ownerId";
+  if (!model.ownedBy) return "ownerId";
+  return model.ownerKind === "address" ? model.ownedBy : `${model.ownedBy}Id`;
+}
+
+/** Whether the owner is found by its kind at read time (an address, the record one step away), not as a user id in a column. */
+export const ownerByKind = (model: ModelIR): boolean =>
+  model.ownerKind === "address" || model.ownerKind === "through";
+
+type Names = ReturnType<typeof names>;
+
+/**
+ * The record's owner as `allows` compares it, a user id or null: the owner column for a User
+ * owner; for an address, the viewer when it is their proven address (kit/access's addressOwner),
+ * which the client works out too; one step away, the model's data function (`whose`), which only
+ * the server has: on the client (`client`) the owner is unknown and the roles' grants decide.
+ */
+export function ownerOf(
+  model: ModelIR,
+  n: Names,
+  row = "row",
+  viewer = "viewer",
+  client = false,
+): string {
+  if (model.ownerKind === "address") return `addressOwner(${row}.${model.ownedBy}, ${viewer})`;
+  if (model.ownerKind === "through") return client ? "null" : `${n.data}.whose(${viewer}, ${row})`;
+  return `${row}.${ownerKey(model)}`;
+}
+
+/** The condition for the records that are the viewer's own, in a query (`viewer` is signed in). */
+export function ownCondition(model: ModelIR, n: Names, viewer = "viewer"): string {
+  return ownerByKind(model)
+    ? `${n.data}.own(${viewer})`
+    : `eq(${n.table}.${ownerKey(model)}, ${viewer}.id)`;
+}
+
+/**
+ * `text` without the named imports it never uses: a generated module imports what its owner's
+ * kind may need (kit/access's personOf, addressOf, addressOwner; kit/model's fits), and keeps only
+ * what its body names, so the app's type-check (noUnusedLocals) stays clean.
+ */
+export function dropUnused(text: string, names: string[]): string {
+  let out = text;
+  for (const name of names) {
+    if ((out.match(new RegExp(`\\b${name}\\b`, "g"))?.length ?? 0) !== 1) continue;
+    out = out
+      .replace(
+        new RegExp(`^(import \\{[^}]*?)${name}, ([^}]*\\} from .*)$`, "m"),
+        (_, a, b) => `${a}${b}`,
+      )
+      .replace(
+        new RegExp(`^(import \\{[^}]*?), ${name}( \\} from .*)$`, "m"),
+        (_, a, b) => `${a}${b}`,
+      )
+      .replace(new RegExp(`^import \\{ ${name} \\} from .*\\n`, "m"), "");
+  }
+  return out;
+}
+
+/** What an insert gives the owner column beside the values checked: a user's own, an address's own, nothing one step away. */
+export function ownerInsert(model: ModelIR, values: string): string {
+  if (model.ownerKind === "through") return "";
+  if (model.ownerKind === "address")
+    return `, ${model.ownedBy}: ${values}.${model.ownedBy} ?? addressOf(viewer)`;
+  return `, ${ownerKey(model)}: personOf(viewer)`;
 }
 
 /** Fields that refer to a user, e.g. an account manager. */

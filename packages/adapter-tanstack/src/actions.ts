@@ -27,7 +27,8 @@ import {
   literal,
   modelNamed,
   names,
-  ownerKey,
+  ownerInsert,
+  ownerOf,
   SCHEMA_IMPORT,
   sequenceEntries,
   shownTitleKey,
@@ -662,7 +663,7 @@ export function standardActionServer(
       const changed = tx.update(${n.table}).set(checked).where(eq(${n.table}.id, ${p}.id)).returning().get();
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });${tell(model.name, JSON.stringify(action.name), "changed", "before")}
       const inserted = [
-${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${tn.data}.checkCreate(tx, viewer, ${p}.added${i}), ${ownerKey(target)}: personOf(viewer)${numbered(target, tn.table)} }).returning().get(),`).join("\n")}
+${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${tn.data}.checkCreate(tx, viewer, ${p}.added${i})${ownerInsert(target, `${p}.added${i}`)}${numbered(target, tn.table)} }).returning().get(),`).join("\n")}
       ] as const;
 ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });${tell(target.name, '"created"', `inserted[${i}]`)}`).join("\n")}
       return { changed, inserted };
@@ -673,7 +674,7 @@ ${adds.map(({ target }, i) => `  await afterChange("afterCreate", ${JSON.stringi
   return `${HEADER}import { eq${sequenced ? ", max" : ""} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
-import { AccessDenied, allows, check, ${adds.length || all.some((v) => v.includes("personOf")) ? "personOf, " : ""}type Viewer } from "#/kit/access";
+import { AccessDenied, addressOf, addressOwner, allows, check, personOf, type Viewer } from "#/kit/access";
 import { audit } from "#/kit/audit.server";
 ${sequenced ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${[model.name, ...adds.map((x) => x.target.name)].some((m) => toldAbout(ir, m)) ? `${OUTGOING_IMPORT}\n` : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${[...imports].map((m) => `import { ${formulasName(m)} } from "#/generated/${kebab(m.name)}.formulas";\n`).join("")}import { afterChange } from "#/generated/hooks";
 import { ${n.settable} } from "${n.module}.schema";
@@ -704,7 +705,7 @@ ${adds[i]?.values.map((v) => `      ${v}`).join("\n")}
 export async function ${a.run}(viewer: Viewer | null, id: number${askedParam}) {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);
-  check(${a.access}, viewer, row.${ownerKey(model)});
+  check(${a.access}, viewer, ${ownerOf(model, n)});
   if (!${a.fits}(row, viewer)) throw new Error("This cannot be done now.");
 ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  const one = plan(viewer, row${askedArg});
 ${
@@ -728,7 +729,7 @@ ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  con
   const unique = [...new Set(ids)];
   for (const id of unique) {
     const row = await ${n.data}.get(viewer, id);
-    if (!row || !allows(${a.access}, viewer, row.${ownerKey(model)}) || !${a.fits}(row, viewer)) continue;
+    if (!row || !allows(${a.access}, viewer, ${ownerOf(model, n)}) || !${a.fits}(row, viewer)) continue;
     try {
       plans.push(plan(viewer, row${askedArg}));
     } catch (error) {
@@ -949,12 +950,12 @@ ${lists
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
     // A copy is checked as a new record is (A 153): its rules, capacity and time.
-    const created = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values), ${ownerKey(model)}: personOf(viewer)${numbered(model, n.table)} }).returning().get();
+    const created = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, "values")}${numbered(model, n.table)} }).returning().get();
     audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });${toldAbout(ir, model.name) ? `\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, "created", created);\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, ${JSON.stringify(action.name)}, created);` : ""}
 ${lists
   .map(
     (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
-      const copy = tx.insert(${l.ln.table}).values({ ...${l.ln.data}.checkCreate(tx, viewer, { ...item, ${l.back.name}Id: created.id }), ${ownerKey(l.listed)}: personOf(viewer)${numbered(l.listed, l.ln.table)} }).returning().get();
+      const copy = tx.insert(${l.ln.table}).values({ ...${l.ln.data}.checkCreate(tx, viewer, { ...item, ${l.back.name}Id: created.id })${ownerInsert(l.listed, "item")}${numbered(l.listed, l.ln.table)} }).returning().get();
       audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });${toldAbout(ir, l.listed.name) ? `\n      outgoing(tx, viewer, ${JSON.stringify(l.listed.name)}, "created", copy);` : ""}
       return copy;
     });`,

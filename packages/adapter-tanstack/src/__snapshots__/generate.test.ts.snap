@@ -7495,9 +7495,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -10100,7 +10101,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "0f0e73ff kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -10138,7 +10139,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "fdb6a54c generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "7266fbb2 generated",
@@ -14209,9 +14210,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -16427,7 +16429,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Slots.tsx": "b283cf8e kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "72df8647 kit",
@@ -16463,7 +16465,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d47f6028 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
@@ -24363,9 +24365,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -29049,7 +29052,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -29091,7 +29094,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "11bc860d generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
@@ -35188,9 +35191,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -37786,7 +37790,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Trash.tsx": "77988823 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "d6c77292 kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -37822,7 +37826,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "586d8fbf generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/-start-parts.tsx": "c178be52 generated",
   "src/routes/[_dev]/act.ts": "255511bc generated",
@@ -44133,9 +44137,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -46159,7 +46164,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "d6c77292 kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -46202,7 +46207,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "3f17bcfe generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
@@ -51752,9 +51757,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -54101,7 +54107,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "72df8647 kit",
@@ -54138,7 +54144,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a418a30 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/clock.ts": "db0664a3 generated",
@@ -56993,9 +56999,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -58999,7 +59006,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -59037,7 +59044,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "0e5c5ad7 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "2fb77809 generated",
   "src/routes/[_dev]/act.ts": "255511bc generated",
@@ -61393,9 +61400,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -62609,7 +62617,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -62644,7 +62652,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "99dd6921 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "21176ef6 generated",
@@ -71016,9 +71024,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -74327,7 +74336,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "d6c77292 kit",
   "src/kit/api.server.ts": "0f0e73ff kit",
@@ -74365,7 +74374,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "e782e4ca generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "4a0b13f2 generated",
@@ -79586,9 +79595,10 @@ import { auth } from "#/lib/auth";
 export async function currentViewer(): Promise<Viewer | null> {
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   if (!session) return null;
-  const { id, name, email, role } = session.user;
+  const { id, name, email, role, emailVerified } = session.user;
   traceWho(id, role);
-  return { id, name, email, role };
+  // Proven: a code by mail, or the provider says the address is verified (kit/access's Viewer).
+  return { id, name, email, role, proven: emailVerified === true };
 }
 "
 `;
@@ -81467,7 +81477,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/SignIn.tsx": "364cef63 kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4eb4cac1 kit",
-  "src/kit/access.ts": "4dfaac5a kit",
+  "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -81508,7 +81518,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "197468ce generated",
   "src/lib/utils.ts": "3e9dc081 kit",
-  "src/lib/viewer.server.ts": "a38dca44 generated",
+  "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/ask.ts": "76641e97 generated",

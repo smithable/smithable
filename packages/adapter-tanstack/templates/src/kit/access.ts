@@ -10,6 +10,12 @@ export interface Viewer {
   email: string;
   role: string;
   /**
+   * The address is proven: a code by mail proved it, or the sign-in provider says it is verified.
+   * A record whose owner is its address belongs to its proven owner only
+   * (docs/design/support-portal-path.md §2).
+   */
+  proven?: boolean;
+  /**
    * The app itself, as a timer runs (docs/design/timed-actions.md §2): no role's grants apply, so
    * every rule allows it. Never made from a request: only the timers' tick makes one.
    */
@@ -65,6 +71,27 @@ export class Conflict extends Error {}
  */
 export function personOf(viewer: Viewer | null): string | null {
   return viewer && !viewer.system && !viewer.id.startsWith("key:") ? viewer.id : null;
+}
+
+/**
+ * The address a person signed in with, as the app compares addresses (lower-case, trimmed); null
+ * for a visitor, a key or a timer, who have none.
+ */
+export function addressOf(viewer: Viewer | null): string | null {
+  return (personOf(viewer) && viewer?.email.trim().toLowerCase()) || null;
+}
+
+/**
+ * Who owns a record whose owner is its address (docs/design/support-portal-path.md §2): the
+ * viewer, when the address is theirs and their sign-in proved it; otherwise no one the viewer can
+ * be, so null. An empty address owns nothing.
+ */
+export function addressOwner(
+  address: string | null | undefined,
+  viewer: Viewer | null,
+): string | null {
+  if (!viewer?.proven || !address) return null;
+  return address.trim().toLowerCase() === addressOf(viewer) ? viewer.id : null;
 }
 
 /** Whether the viewer may do something; `ownerId` is the owner of the record involved, if any. */

@@ -36,7 +36,10 @@ import {
   mergeActions,
   modelNamed,
   names,
+  ownCondition,
+  ownerByKind,
   ownerKey,
+  ownerOf,
   paramsUsed,
   relatedTitle,
   scalarField,
@@ -111,7 +114,11 @@ export function filterCode(
   // A page of only the viewer's own records (mine: true): always, so no Mine toggle there.
   if (ownOnly) {
     toggles = true;
-    conditions.push(`eq(${n.table}.${ownerKey(model)}, viewer?.id ?? "")`);
+    conditions.push(
+      ownerByKind(model)
+        ? `viewer ? ${ownCondition(model, n)} : sql\`false\``
+        : `eq(${n.table}.${ownerKey(model)}, viewer?.id ?? "")`,
+    );
   }
   if (unread) {
     conditions.push(`data.f?.unread === "1" ? ${n.data}.unread(viewer) : undefined`);
@@ -122,9 +129,7 @@ export function filterCode(
     // The owner: a "Mine" toggle for those signed in, never a list of people.
     if (name === "owner") {
       mine = true;
-      conditions.push(
-        `data.f?.owner === "mine" && viewer ? eq(${n.table}.${ownerKey(model)}, viewer.id) : undefined`,
-      );
+      conditions.push(`data.f?.owner === "mine" && viewer ? ${ownCondition(model, n)} : undefined`);
       controls.push({ name, label: "Mine", kind: "mine", ...fold(name) });
       continue;
     }
@@ -619,7 +624,10 @@ export function listParts(
       ...(askedFields(a).length ? [actionNames(a).askUi, actionNames(a).asks] : []),
       ...(askOptions(a, ir, t) ? [actionNames(a).askOptions] : []),
     );
-  if (offered.length) view.add("#/kit/ActionButton", "ActionButton").add("#/kit/access", "allows");
+  if (offered.length)
+    view
+      .add("#/kit/ActionButton", "ActionButton")
+      .add("#/kit/access", ...(model.ownerKind === "address" ? ["addressOwner"] : []), "allows");
   if (offered.length > 2 || (menu && offered.length)) view.add("#/kit/Overflow", "Overflow");
   // Chosen rows (actions.md §9): the page's actions that change records, and Delete, on several.
   const many = offered.filter((a) => !a.copy);
@@ -674,12 +682,14 @@ export function listParts(
         ...(a.input.length > 1 ? [actionNames(a).askUi, actionNames(a).asks] : []),
       );
   }
-  const owner = `row.${ownerKey(model)}`;
+  // On the client the owner is known from the row for a user or an address, not one step away.
+  const owner = ownerOf(model, n, "row", "viewer", true);
   const fits = (a: (typeof many)[number]) =>
     `allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row, viewer)`;
   view.add("#/generated/app", "app").add(n.module, n.ui).add("#/kit/words", "w");
   if (!within) view.add("#/generated/pages", "pageUi");
-  if (actions.length) view.add("#/kit/access", "allows");
+  if (actions.length)
+    view.add("#/kit/access", ...(model.ownerKind === "address" ? ["addressOwner"] : []), "allows");
   view.add("#/kit/AppShell", "PageHeader").add("#/kit/ModelTable", "ModelTable");
   if (sort) view.add("#/kit/model", "sortRows");
   if (searchable) view.add("#/kit/SearchBox", "SearchBox");
@@ -931,7 +941,7 @@ ${merges.length ? "          extra={\n            <>\n" : ""}${merges
               .map(
                 (
                   a,
-                ) => `{allows(${actionNames(a).access}, viewer, row.${ownerKey(model)}) && ${actionNames(a).fits}(row, viewer) && (
+                ) => `{allows(${actionNames(a).access}, viewer, ${owner}) && ${actionNames(a).fits}(row, viewer) && (
               ${actionButton(a, "row", page.route, t, ir)}
             )}`,
               )

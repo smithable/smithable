@@ -3,7 +3,7 @@
 // knowledge, so the host only runs statements; pure, so the same input gives the same SQL.
 import { type AuthIR, type FieldIR, type ModelIR, plural, snake } from "@smithable/core";
 import { hasSignIn } from "./auth.js";
-import { dataKey, ownerKey } from "./shared.js";
+import { dataKey, ownerByKind, ownerKey } from "./shared.js";
 
 /** A value as importRecords converted it, with references already looked up (their ids). */
 export type StoredValue = string | number | boolean | null;
@@ -38,7 +38,7 @@ export function insertRecord(
     columns.push(fieldColumn(field));
     params.push(stored(field, value, timeZone));
   }
-  if (hasSignIn(auth) && !(model.ownedBy && model.ownedBy in values)) {
+  if (hasSignIn(auth) && !ownerByKind(model) && !(model.ownedBy && model.ownedBy in values)) {
     columns.push(snake(ownerKey(model)));
     params.push(owner);
   }

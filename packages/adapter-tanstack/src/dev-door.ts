@@ -14,7 +14,7 @@ import {
 import { actionNames, askedFields } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import { columnOf } from "./migrations.js";
-import { dataKey, HEADER, literal, modelNamed, names, ownerKey, type Texts } from "./shared.js";
+import { dataKey, HEADER, literal, modelNamed, names, ownerOf, type Texts } from "./shared.js";
 import { splitList } from "./split.js";
 
 /** A sample user as the development database has them: who signs in nowhere, the door acts as. */
@@ -120,7 +120,7 @@ export function doorModule(
       ? `\n      candidates: await choices(viewer, ${literal(refs.map((s) => [s.field, s.model, s.required]))}),`
       : "";
     const records = (model: string, rule: string, fits?: string) =>
-      `\n      records: (await ${n(model).data}.list(viewer)).filter((row) => allows(${rule}, viewer, row.${ownerKey(modelNamed(ir, model))} as string | null)${fits ? ` && ${fits}(row as never, viewer)` : ""}).slice(0, 50).map((row) => row.id),`;
+      `\n      records: (await ${n(model).data}.list(viewer)).filter((row) => allows(${rule}, viewer, ${ownerOf(modelNamed(ir, model), n(model))} as string | null)${fits ? ` && ${fits}(row as never, viewer)` : ""}).slice(0, 50).map((row) => row.id),`;
     let body: string;
     if (m.kind === "open")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => (allows(pageAccess[${JSON.stringify(m.page)}], viewer) ? move : undefined),`;
@@ -128,7 +128,7 @@ export function doorModule(
     // other when it acts).
     if (m.kind === "merge")
       return `  ${JSON.stringify(m.id)}: async (viewer, move) => {
-    const records = (await ${n(m.model).data}.list(viewer))${m.into === "new" ? "" : `.filter((row) => allows(${n(m.model).access}.write, viewer, row.${ownerKey(modelNamed(ir, m.model))} as string | null))`}.slice(0, 50).map((row) => row.id);
+    const records = (await ${n(m.model).data}.list(viewer))${m.into === "new" ? "" : `.filter((row) => allows(${n(m.model).access}.write, viewer, ${ownerOf(modelNamed(ir, m.model), n(m.model))} as string | null))`}.slice(0, 50).map((row) => row.id);
     return records.length > 1 ? { ...move, records } : undefined;
   },`;
     // A split: a record with two or more in its list (at least one goes, one stays).
@@ -183,7 +183,7 @@ export function doorModule(
       return `  ${id}: async (viewer, _move, body) => {
     // The record acted on first, then another the person may ${m.into === "new" ? "read" : "change"}.
     const kept = record(body);
-    const other = (await ${n(m.model).data}.list(viewer)).find((row) => row.id !== kept${m.into === "new" ? "" : ` && allows(${n(m.model).access}.write, viewer, row.${ownerKey(model)} as string | null)`})?.id;
+    const other = (await ${n(m.model).data}.list(viewer)).find((row) => row.id !== kept${m.into === "new" ? "" : ` && allows(${n(m.model).access}.write, viewer, ${ownerOf(model, n(m.model))} as string | null)`})?.id;
     if (other === undefined) throw new Conflict(w.mergeSame);
     // Each field the two differ in: the first one's.
     const facts = await ${a.preview}(viewer, [kept, other]);
@@ -268,7 +268,7 @@ export function doorModule(
 // make, read from the spec by rule, what each is open to now for a sample user, and each performed
 // as their session through the same functions the pages' server functions call, so grants,
 // validation, Activity and what the app tells hold as for a person at the keyboard.
-${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
+${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("addressOwner") ? "addressOwner, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove${uses("stored") ? ", stored" : ""} } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
 ${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}${words ? 'import { w } from "#/kit/words";\n' : ""}import { pageAccess } from "./pages";

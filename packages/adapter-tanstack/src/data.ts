@@ -27,6 +27,7 @@ import {
   snake,
   storesFiles,
   storesPictures,
+  threadBindings,
   trashGroup,
   USER_MODEL,
   type UxIR,
@@ -63,7 +64,10 @@ import {
   longTitle,
   modelNamed,
   names,
+  ownCondition,
+  ownerByKind,
   ownerKey,
+  ownerOf,
   references,
   relatedTitle,
   SCHEMA_IMPORT,
@@ -308,7 +312,7 @@ export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import type * as schema from "#/db/schema";
-import { allows, type Rule } from "#/kit/access";
+import { ${model.ownerKind === "address" ? "addressOwner, " : ""}allows, type Rule } from "#/kit/access";
 import { w } from "#/kit/words";
 ${t.translated ? 'import { tx } from "#/kit/words";\n' : ""}import type { RecordUi } from "#/kit/model";
 ${model.fields.some(isMarkdown) ? 'import { MarkdownEditor, MarkdownText } from "#/kit/Markdown";\n' : ""}${model.occupies ? 'import { bindSlots } from "#/kit/Slots";\n' : ""}${model.fields.some(storesPictures) ? `import { ${[...(model.fields.some(isPicture) ? ["bindPicture"] : []), ...(model.fields.some(isPictures) ? ["bindPictures"] : [])].join(", ")} } from "#/kit/PictureInput";\n` : ""}${model.fields.some(storesFiles) ? `import { ${[...(model.fields.some(isFile) ? ["bindFile"] : []), ...(model.fields.some(isFiles) ? ["bindFiles"] : [])].join(", ")} } from "#/kit/FileInput";\n` : ""}${formulas ? `import { ${defaultsName(model)}, ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}import { ${n.access}, ${n.data} } from "./${kebab(model.name)}.server";
@@ -395,8 +399,8 @@ export const ${n.get} = createServerFn()
       saved: ${n.data}.saved(viewer).includes(id),`
           : ""
       }
-      canWrite: allows(${n.access}.write, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),
-      canDelete: allows(${n.access}.delete, viewer${hasSignIn(auth) ? `, row.${owner}` : ""}),${
+      canWrite: allows(${n.access}.write, viewer${hasSignIn(auth) ? `, ${ownerOf(model, n)}` : ""}),
+      canDelete: allows(${n.access}.delete, viewer${hasSignIn(auth) ? `, ${ownerOf(model, n)}` : ""}),${
         adds.length
           ? `\n      // Who may add to its related lists from here ("Add line" on an invoice).\n      canAdd: { ${adds.map((a) => `${a.list.name}: allows(${names(a.target, t).access}.create, viewer)`).join(", ")} },`
           : ""
@@ -568,8 +572,50 @@ export function dataModule(
   const ownerField = model.fields.find((f) => f.name === model.ownedBy);
   const ownerRequired = Boolean(ownerField?.required);
   const ownerLabel = ownerField
-    ? (t.field(model, ownerField).label ?? ownerField.name).toLowerCase()
+    ? (t.field(model, ownerField).label ?? humanize(ownerField.name)).toLowerCase()
     : "";
+  // An owner by address or one step away (support-portal-path.md §2): the records that are the
+  // viewer's own, as a condition, and whose a record is, as allows compares it, each by the kind.
+  const parent =
+    model.ownerKind === "through" && ownerField?.type.kind === "relation"
+      ? modelNamed(ir, ownerField.type.model)
+      : undefined;
+  const pn = parent ? { ...names(parent, t), table: tableRef(parent) } : undefined;
+  const ownerMethods =
+    model.ownerKind === "address" && signedIn
+      ? `
+  /** The ${n.pluralLabel.toLowerCase()} that are the viewer's own: their proven address is the record's (support-portal-path.md §2). */
+  own(viewer: Viewer): SQL {
+    const address = viewer.proven ? addressOf(viewer) : null;
+    return address ? eq(sql\`lower(trim(\${${n.table}.${owner}}))\`, address) : sql\`false\`;
+  },
+
+  /** Whose a ${n.label.toLowerCase()} is: whoever signed in with its ${ownerLabel}, proven; the viewer, or no one they can be. */
+  whose(viewer: Viewer | null, row: { ${owner}: string | null }): string | null {
+    return addressOwner(row.${owner}, viewer);
+  },
+`
+      : parent && pn && signedIn
+        ? `
+  /** The ${n.pluralLabel.toLowerCase()} that are the viewer's own: those of their own ${names(parent, t).pluralLabel.toLowerCase()} (support-portal-path.md §2). */
+  own(viewer: Viewer): SQL {
+    return inArray(${n.table}.${owner}, db.select({ id: ${pn.table}.id }).from(${pn.table}).where(${ownCondition(parent, pn)}));
+  },
+
+  /** Whose a ${n.label.toLowerCase()} is: its ${ownerLabel}'s owner, one step. */
+  whose(${parent.ownerKind === "address" ? "viewer" : "_viewer"}: Viewer | null, row: { ${owner}: number | null }): string | null {
+    if (row.${owner} == null) return null;
+    const parent = db.select({ ${ownerKey(parent)}: ${pn.table}.${ownerKey(parent)} }).from(${pn.table}).where(eq(${pn.table}.id, row.${owner})).get();
+    return parent ? ${ownerOf(parent, pn, "parent")} : null;
+  },
+`
+        : "";
+  const addresses = signedIn
+    ? [
+        ...(model.ownerKind === "address" ? ["addressOf", "addressOwner"] : []),
+        ...(parent?.ownerKind === "address" ? ["addressOwner"] : []),
+      ]
+    : [];
   // A record page's contact block mails the owner, whom only the server may know.
   const mailsOwner =
     ownedAuto &&
@@ -915,8 +961,8 @@ export function dataModule(
   const ownOrPublic = !signedIn
     ? "sql`false`"
     : publicWhere && access.read.owner
-      ? `scope === "own" && viewer ? or(eq(${n.table}.${owner}, viewer.id), ${publicWhere}) : sql\`false\``
-      : `scope === "own" && viewer ? eq(${n.table}.${owner}, viewer.id) : sql\`false\``;
+      ? `scope === "own" && viewer ? or(${ownCondition(model, n)}, ${publicWhere}) : sql\`false\``
+      : `scope === "own" && viewer ? ${ownCondition(model, n)} : sql\`false\``;
   const capacityCounted = capacity
     ? [
         `eq(${n.table}.${capacity.per}Id, values.${capacity.per}Id)`,
@@ -1024,7 +1070,7 @@ export function dataModule(
         if (values.${field} < booked) throw new Conflict(\`booked:\${booked}\`);
       }`;
   });
-  const ownerOf = signedIn ? `row.${owner}` : "undefined";
+  const rowOwner = signedIn ? ownerOf(model, n) : "undefined";
   // A person's default ME(): who makes the record; a field the form shows keeps what was chosen.
   // The owner field is set by ownerFor below (which falls back to the viewer): not twice.
   const byMe = model.fields
@@ -1037,28 +1083,43 @@ export function dataModule(
   // A number counting up (`sequence: true`, orders.md §4): from the field's counter (per owner
   // where the number is unique per owner), kept ahead of the records' highest, in the change's
   // own transaction, so two records made at once never share one and a number is never given twice.
-  const ownerValue = model.ownedBy ? `ownerFor(viewer, values.${owner})` : "personOf(viewer)";
+  const ownerValue =
+    model.ownerKind === "through"
+      ? `values.${owner}`
+      : model.ownedBy
+        ? `ownerFor(viewer, values.${owner})`
+        : "personOf(viewer)";
   const counted = sequenceEntries(model, auth, n.table, ownerValue);
   const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
   const createValues = !signedIn
     ? counted.length
       ? `{ ...values${set} }`
       : "values"
-    : model.ownedBy
-      ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`
-      : `{ ...values, ownerId: personOf(viewer)${set} }`;
+    : model.ownerKind === "through"
+      ? // The record one step away is in the values, checked readable (checkReferences).
+        set
+        ? `{ ...values${set} }`
+        : "values"
+      : model.ownedBy
+        ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`
+        : `{ ...values, ownerId: personOf(viewer)${set} }`;
   // A field's rules on the record (record-rules.md §2–3): a lock on a change made in a form, the
   // API or Ask (an action's set may change a locked field it names, which is how a case is
   // reopened; `frees` lists them), and
   // a value required while the record fits a condition, on any change.
   const label = (f: FieldIR) => JSON.stringify(t.field(model, f).label ?? humanize(f.name));
-  const locks = model.fields.flatMap((f) =>
-    f.locked
+  // The reference a record belongs through is locked once the record exists: a message is never
+  // moved to another case (support-portal-path.md §2).
+  const lockOf = (f: FieldIR) =>
+    f.locked ?? (model.ownerKind === "through" && f.name === model.ownedBy ? true : undefined);
+  const locks = model.fields.flatMap((f) => {
+    const lock = lockOf(f);
+    return lock
       ? [
-          `          if ((what === "changed" || !frees.includes(${JSON.stringify(dataKey(f))})) && ${JSON.stringify(dataKey(f))} in given && JSON.stringify(given.${dataKey(f)} ?? null) !== JSON.stringify(before.${dataKey(f)} ?? null)${f.locked === true ? "" : ` && fits(${literal(f.locked)}, was)`}) throw new BadInput(w.cannotChangeNow(${label(f)}));`,
+          `          if ((what === "changed" || !frees.includes(${JSON.stringify(dataKey(f))})) && ${JSON.stringify(dataKey(f))} in given && JSON.stringify(given.${dataKey(f)} ?? null) !== JSON.stringify(before.${dataKey(f)} ?? null)${lock === true ? "" : ` && fits(${literal(lock)}, was)`}) throw new BadInput(w.cannotChangeNow(${label(f)}));`,
         ]
-      : [],
-  );
+      : [];
+  });
   const needs = (record: string) =>
     model.fields.flatMap((f) =>
       f.requiredWhen
@@ -1112,13 +1173,32 @@ export function dataModule(
         .join("")}`
     : "";
   const self = n.data;
+  // A model shown as a conversation with a side (conversation.md §2): a viewer who reads only their
+  // own records writes on the other side, whatever was sent, as the app fills a `by: app` field
+  // (support-portal-path.md §4); the reply box fills the same value.
+  const sided = ir.models.some((m) =>
+    lists(m).some((f) => f.type.model === model.name && threadLists(m, ir, ux).includes(f.name)),
+  )
+    ? threadBindings(model).side
+    : undefined;
+  const theirs =
+    sided?.field.type.kind === "choice"
+      ? sided.field.type.values.find((v) => v !== sided.ours)
+      : undefined;
+  const sideRule = (values: string) =>
+    sided && theirs
+      ? `    // The side of the thread (conversation.md §2): the other side for whoever reads only their own ${n.pluralLabel.toLowerCase()}.
+    if (readScope(${n.access}.read, viewer) !== "all"${values === "updated" ? ` && ${JSON.stringify(sided.field.name)} in updated` : ""}) ${values === "updated" ? `updated.${sided.field.name} = ${JSON.stringify(theirs)};` : `values = { ...values, ${sided.field.name}: ${JSON.stringify(theirs)} };`}
+`
+      : "";
   // The checks a write must pass (A 153), each written once: create() and update() call them in
   // their transaction, and so do the actions that write in one of their own.
   const indent = (code: string) =>
     code.replace(/\n {6,8}/g, (m) => `\n${" ".repeat(m.length - 3)}`);
-  const createBody = `${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${createRules}${indent(`${capacityCheck()}${closedCheck}`)}${occ ? `\n    checkTime(tx, { ${choiceDefaults}...values });` : ""}`;
-  const createViewer = uploadFields.length > 0 || refs.length > 0 || closedCheck !== "";
-  const updateBody = `${refs.length ? "    checkReferences(viewer, updated);\n" : ""}${holdChecks.length || capacity ? "    const values = updated;" : ""}${indent(holdChecks.join(""))}${indent(updateChecks)}${indent(updateRules)}${
+  const createBody = `${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${sideRule("values")}${createRules}${indent(`${capacityCheck()}${closedCheck}`)}${occ ? `\n    checkTime(tx, { ${choiceDefaults}...values });` : ""}`;
+  const createViewer =
+    uploadFields.length > 0 || refs.length > 0 || closedCheck !== "" || sideRule("values") !== "";
+  const updateBody = `${refs.length ? "    checkReferences(viewer, updated);\n" : ""}${sideRule("updated")}${holdChecks.length || capacity ? "    const values = updated;" : ""}${indent(holdChecks.join(""))}${indent(updateChecks)}${indent(updateRules)}${
     occ
       ? `
     // A change that moves the time it takes (or takes time again) is checked like a new one.
@@ -1134,7 +1214,7 @@ export function dataModule(
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}): ${n.settableValues} {
-    ${uploadFields.length ? "let" : "const"} values = given;
+    ${uploadFields.length || sideRule("values") ? "let" : "const"} values = given;
 ${createBody}
     return values;
   },
@@ -1203,6 +1283,17 @@ ${updateBody}
   const threadRef =
     threadTarget && references(threadTarget).find((f) => f.type.model === model.name);
   const reads = threadTarget && threadRef ? `${n.table}Reads` : undefined;
+  // Who wrote a message, so the viewer's own are not unread to them: its owner column when that
+  // holds a user, else its author field when that is one. An owner by address or one step away
+  // says whose a message is, not who wrote it.
+  const author = threadTarget && threadBindings(threadTarget).author;
+  const writer = !threadTarget
+    ? undefined
+    : !ownerByKind(threadTarget)
+      ? ownerKey(threadTarget)
+      : author?.type.kind === "relation"
+        ? `${author.name}Id`
+        : undefined;
   // The trash (docs/design/trash.md): a delete moves the record there.
   const trashing = Boolean(model.trash);
   // What points to a record with a required reference cannot exist without it: it goes to the
@@ -1412,7 +1503,7 @@ ${roots
   // A merged record's Restore puts back what the merge moved (docs/design/intents.md §3).
   const unmerge = unmergeCode(ir, model, auth, t);
   const trashedRows = `and(isNotNull(${n.table}.deletedAt), ${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer))`;
-  const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}))`;
+  const allowed = `.filter((row) => allows(${n.access}.delete, viewer, ${rowOwner}))`;
   const named = signedIn
     ? `
     const ids = [...new Set(rows.map((row) => row.deletedBy).filter((id): id is string => Boolean(id)))];
@@ -1445,7 +1536,7 @@ ${roots
       where: and(eq(${n.table}.id, id), ${trashedRows}),${withClause(getWith, "      ")}
     });
     const row = fetched && ${shownOne("fetched")};
-    if (!row || !allows(${n.access}.delete, viewer, ${ownerOf})) return null;
+    if (!row || !allows(${n.access}.delete, viewer, ${rowOwner})) return null;
     const rows = [row];${named.replace(/\n {4}/g, "\n    ")}
     const shown = ${ownedAuto ? "shownTo(viewer, row)" : "row"};
     return {
@@ -1559,7 +1650,7 @@ ${dropPictures(
   trashWith(tx: Tx, viewer: Viewer | null, fits: SQL, tag: string, when: Date): void {
     const rows = tx.select().from(${n.table}).where(and(fits, isNull(${n.table}.deletedAt))).all();
     for (const row of rows)
-      if (!allows(${n.access}.delete, viewer, ${ownerOf})) throw new Conflict("no-right:${names(model, t).label}");
+      if (!allows(${n.access}.delete, viewer, ${rowOwner})) throw new Conflict("no-right:${names(model, t).label}");
     if (rows.length === 0) return;
     tx.update(${n.table}).set({ deletedAt: when, deletedBy: personOf(viewer), deletedWith: tag }).where(and(fits, isNull(${n.table}.deletedAt))).run();
     for (const row of rows) {
@@ -1620,7 +1711,7 @@ ${dropPictures(
   return `${HEADER}import { ${paged ? "type AnyColumn, " : ""}${[...new Set(drizzle)].sort().join(", ")}, type SQL } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
-import { AccessDenied, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
+import { AccessDenied, addressOf, addressOwner, allows, check, Conflict, type ModelAccess, personOf, readScope, type Viewer } from "#/kit/access";
 import { audit, changedFields } from "#/kit/audit.server";
 import { refusal } from "#/kit/log.server";
 ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/kit/model";\n' : ""}${[
@@ -1720,7 +1811,7 @@ function veiled<R extends { id: number }>(viewer: Viewer | null, rows: R[]): R[]
     signedIn
       ? `
   const owners = new Map(
-    db.select({ id: ${n.table}.id, owner: ${n.table}.${owner} }).from(${n.table}).where(inArray(${n.table}.id, waiting.map((w) => w.recordId))).all().map((o) => [o.id, o.owner]),
+    db.select({ id: ${n.table}.id, ${ownerByKind(model) ? owner : "owner"}: ${n.table}.${owner} }).from(${n.table}).where(inArray(${n.table}.id, waiting.map((w) => w.recordId))).all().map((o) => [o.id, ${ownerByKind(model) ? ownerOf(model, n, "o") : "o.owner"}]),
   );`
       : ""
   }
@@ -1801,8 +1892,33 @@ const BY: string[] = ${JSON.stringify(stored.filter((f) => f.type.kind === "choi
     : ""
 }
 ${
-  model.ownedBy && signedIn
+  model.ownerKind === "address" && signedIn
     ? `
+/** Whether the viewer chooses whose record it is: a role that may change everyone's, or the app. */
+const chooses = (viewer: Viewer | null) => !!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role));
+
+/**
+ * Whose record it is (support-portal-path.md §2): the address given, for a visitor's form (what
+ * someone wrote to us) and for a role that may change everyone's; the viewer's own address for
+ * anyone else, whatever the form sent.
+ */
+function ownerFor(viewer: Viewer | null, given: string | null | undefined): string${ownerRequired ? "" : " | null"} {
+  const owner = !viewer || chooses(viewer) ? (given ?? addressOf(viewer)) : addressOf(viewer);${
+    ownerRequired
+      ? `
+  // The record must have one: a key or a timer, who is no person, cannot be it.
+  if (!owner)
+    throw new AccessDenied(
+      viewer !== null,
+      viewer ? \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${ownerLabel} (${model.ownedBy}).\` : undefined,
+    );`
+      : ""
+  }
+  return owner;
+}
+`
+    : model.ownedBy && signedIn && model.ownerKind !== "through"
+      ? `
 /**
  * Whose record it is: anyone's for a role that may change everyone's, otherwise the viewer's
  * own, whatever the form sent.
@@ -1825,7 +1941,7 @@ ${
 }`
 }
 `
-    : ""
+      : ""
 }${
   uploadFields.length
     ? `
@@ -1901,7 +2017,7 @@ ${model.trash ? "    // What is in the trash is gone to every reader (docs/desig
           ),
         ),
     );
-    return viewer ? or(waiting, eq(${n.table}.${owner}, viewer.id)) : waiting;
+    return viewer ? or(waiting, ${ownCondition(model, n)}) : waiting;
   },`
       : ""
   }
@@ -1914,7 +2030,7 @@ ${model.trash ? "    // What is in the trash is gone to every reader (docs/desig
     if (scope === "all") return undefined;
 ${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    return ${ownOrPublic};
   },
-
+${ownerMethods}
 ${
   model.review
     ? `  /** The record's files waiting for review, or rejected with a reason: for its owner and the reviewers only. */
@@ -1923,8 +2039,8 @@ ${
     if (!REVIEWERS.includes(viewer.role)) {${
       signedIn
         ? `
-      const own = db.select({ owner: ${n.table}.${owner} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
-      if (own?.owner !== viewer.id) return [];`
+      const own = db.select({ ${ownerByKind(model) ? owner : "owner"}: ${n.table}.${owner} }).from(${n.table}).where(eq(${n.table}.id, id)).get();
+      if (${ownerByKind(model) ? `!own || ${ownerOf(model, n, "own")} !== viewer.id` : "own?.owner !== viewer.id"}) return [];`
         : "\n      return [];"
     }
     }
@@ -1981,11 +2097,11 @@ ${
         : [],
     );
     const target = ${tableRef(threadTarget)};
-    for (const m of db.select({ parent: target.${dataKey(threadRef)}, at: target.createdAt, by: target.${ownerKey(threadTarget)} }).from(target).where(${threadTarget.trash ? `and(inArray(target.${dataKey(threadRef)}, ids), isNull(target.deletedAt))` : `inArray(target.${dataKey(threadRef)}, ids)`}).all()) {
+    for (const m of db.select({ parent: target.${dataKey(threadRef)}, at: target.createdAt${writer ? `, by: target.${writer}` : ""} }).from(target).where(${threadTarget.trash ? `and(inArray(target.${dataKey(threadRef)}, ids), isNull(target.deletedAt))` : `inArray(target.${dataKey(threadRef)}, ids)`}).all()) {
       if (m.parent === null) continue;
       const c = (counts[m.parent] ??= { count: 0, unread: 0 });
       c.count++;
-      if (viewer && m.by !== viewer.id && m.at.getTime() > (marks.get(m.parent) ?? 0)) c.unread++;
+      if (viewer${writer ? " && m.by !== viewer.id" : ""} && m.at.getTime() > (marks.get(m.parent) ?? 0)) c.unread++;
     }
     return counts;
   },
@@ -1999,7 +2115,7 @@ ${
       .select({ id: target.${dataKey(threadRef)} })
       .from(target)
       .leftJoin(${reads}, and(eq(${reads}.recordId, target.${dataKey(threadRef)}), eq(${reads}.userId, viewer.id)))
-      .where(and(isNotNull(target.${dataKey(threadRef)}),${threadTarget.trash ? " isNull(target.deletedAt)," : ""} or(isNull(target.${ownerKey(threadTarget)}), ne(target.${ownerKey(threadTarget)}, viewer.id)), gt(target.createdAt, sql\`coalesce(\${${reads}.readAt}, 0)\`)));
+      .where(and(isNotNull(target.${dataKey(threadRef)}),${threadTarget.trash ? " isNull(target.deletedAt)," : ""}${writer ? ` or(isNull(target.${writer}), ne(target.${writer}, viewer.id)),` : ""} gt(target.createdAt, sql\`coalesce(\${${reads}.readAt}, 0)\`)));
     return inArray(${n.table}.id, fresh) as SQL;
   },
 `
@@ -2263,7 +2379,7 @@ ${
   fitting(viewer: Viewer | null, where?: unknown, search?: string) {
     return and(
       ${self}.readable(viewer),
-      whereOf(FILTERABLE, where, ${signedIn ? `viewer ? eq(${n.table}.${owner}, viewer.id) : undefined, viewer?.id` : "undefined, undefined"}, {${namedRefs.join(", ")}}),
+      whereOf(FILTERABLE, where, ${signedIn ? `viewer ? ${ownCondition(model, n)} : undefined, viewer?.id` : "undefined, undefined"}, {${namedRefs.join(", ")}}),
       // Every word somewhere in the texts ("ship lamp" finds "ship's lamp").
       ...wordsOf(search).map(${wordCode}),
     );
@@ -2319,7 +2435,7 @@ ${
 
   /** The viewer's own ${n.label.toLowerCase()} for a ${capacity.per}, if they have one. */
   mine(viewer: Viewer, ${capacity.per}Id: number): number | undefined {
-    return db.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.${capacity.per}Id, ${capacity.per}Id), eq(${n.table}.${owner}, viewer.id)${model.trash ? `, isNull(${n.table}.deletedAt)` : ""})).get()?.id;
+    return db.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.${capacity.per}Id, ${capacity.per}Id), ${ownCondition(model, n)}${model.trash ? `, isNull(${n.table}.deletedAt)` : ""})).get()?.id;
   },
 
 `
@@ -2370,7 +2486,7 @@ ${
 ${
   access.create.public
     ? `    // Visitors add these without an account: at most ${VISITOR_ROWS.toLocaleString("en")} of theirs, so a flood stops here.
-    const made = db.select({ n: count() }).from(${n.table})${signedIn ? `.where(isNull(${n.table}.${owner}))` : ""}.get();
+    const made = ${ownerByKind(model) ? `db.select({ n: count() }).from(schema.auditLog).where(and(eq(schema.auditLog.who, "visitor"), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)})))` : `db.select({ n: count() }).from(${n.table})${signedIn ? `.where(isNull(${n.table}.${owner}))` : ""}`}.get();
     if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
 `
     : ""
@@ -2399,16 +2515,19 @@ ${
     if (!row) throw new AccessDenied(viewer !== null);
     // A form's change needs write on the record; an action (what names it) checked its own access
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
-    if (what === "changed") check(${n.access}.write, viewer, ${ownerOf});
+    if (what === "changed") check(${n.access}.write, viewer, ${rowOwner});
 ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
     const updated = ${
-      model.ownedBy && signedIn
-        ? ownerRequired
-          ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }`
-          : // A change keeps who is in it, as given: left out the record's own, empty stays empty (a
-            // writer never takes it by changing it); anyone else changes only their own.
-            `{ ...values, ${owner}: (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? (values.${owner} === undefined ? row.${owner} : values.${owner}) : personOf(viewer) }`
-        : "values"
+      model.ownerKind === "address" && signedIn
+        ? // A chooser gives it, or it stays; anyone else keeps the record's own (support-portal-path.md §2).
+          `{ ...values, ${owner}: chooses(viewer) && values.${owner} !== undefined ? values.${owner} : row.${owner} }`
+        : model.ownedBy && signedIn && model.ownerKind !== "through"
+          ? ownerRequired
+            ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }`
+            : // A change keeps who is in it, as given: left out the record's own, empty stays empty (a
+              // writer never takes it by changing it); anyone else changes only their own.
+              `{ ...values, ${owner}: (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? (values.${owner} === undefined ? row.${owner} : values.${owner}) : personOf(viewer) }`
+          : "values"
     };
     try {
       changed = db.transaction((tx) => {
@@ -2438,7 +2557,7 @@ ${dropPictures(
       .where(and(eq(${n.table}.id, id), ${self}.readable(viewer)))
       .get();
     if (!row) throw new AccessDenied(viewer !== null);
-    check(${n.access}.delete, viewer, ${ownerOf});
+    check(${n.access}.delete, viewer, ${rowOwner});
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -2482,7 +2601,7 @@ ${
       .from(${n.table})
       .where(and(inArray(${n.table}.id, ids), ${self}.readable(viewer)))
       .all()
-      .filter((row) => allows(${n.access}.delete, viewer, ${ownerOf}));
+      .filter((row) => allows(${n.access}.delete, viewer, ${rowOwner}));
     db.transaction((tx) => {${trashing ? "\n      const when = new Date();" : ""}
       for (const row of rows)
         try {
@@ -2736,7 +2855,8 @@ export const TEXT_MAX = { string: 200, text: 10_000, markdown: 50_000, publicTex
 /** A text's length rules: required (not only spaces), `min` and `max` characters. */
 /** Whether a field of the model is locked, so its change checks take what changes it (A 153). */
 export function hasLocks(model: ModelIR): boolean {
-  return model.fields.some((f) => f.locked);
+  // The reference a record belongs through is locked too (support-portal-path.md §2).
+  return model.fields.some((f) => f.locked) || model.ownerKind === "through";
 }
 
 /**
