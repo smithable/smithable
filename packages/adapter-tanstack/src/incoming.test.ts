@@ -68,7 +68,7 @@ test("twice is once: the id is taken on a unique index before the call acts, and
   // One statement, not a read and then a write: a second delivery at the same moment finds the
   // row and changes nothing (a row older than a day is taken over).
   expect(route).toContain(
-    "const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();",
+    "const taken = db.insert(incomingSeen).values({ name: NAME, key, at: claimedAt }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: claimedAt }, setWhere: lt(incomingSeen.at, new Date(claimedAt.getTime() - DAY)) }).run();",
   );
   expect(route).toContain(
     "if (taken.changes === 0) return answer(200, { received: true, repeat: true });",
@@ -76,7 +76,7 @@ test("twice is once: the id is taken on a unique index before the call acts, and
   expect(route).not.toContain(".select().from(incomingSeen)");
   // Ids older than a month go on each claim: the table stays bounded.
   expect(route).toContain(
-    "db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();",
+    "db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(claimedAt.getTime() - 30 * DAY)))).run();",
   );
   // The record is made inside the claim; a refusal or a failure releases the id for the retry,
   // and only the row this call marked with its own time: a claim taken over by a later call
@@ -84,8 +84,13 @@ test("twice is once: the id is taken on a unique index before the call acts, and
   expect(route).toContain("let acted = false;\n        try {");
   expect(route).toContain("acted = true;\n            return answer(201, { id: made.id });");
   expect(route).toContain(
-    "} finally {\n          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();",
+    "} finally {\n          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, claimedAt))).run();",
   );
+  // The mark's name is no local of the route's: a form call reads the body with its own `at`.
+  const chat = file("src/routes/incoming/chatCommand.ts")?.content ?? "";
+  expect(chat).toContain("const claimedAt = new Date();");
+  expect(chat).toContain("const at = (body: unknown, path: string): string => {");
+  expect(chat).not.toContain("const at = new Date()");
   // A custom call too.
   const custom = file("src/routes/incoming/paymentReceived.ts")?.content ?? "";
   expect(custom).toContain("acted = true;\n            return answer(200, { received: true });");

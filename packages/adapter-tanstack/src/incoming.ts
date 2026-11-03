@@ -361,11 +361,11 @@ ${
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
         // The time written is this call's mark on the row: only the call that holds it may give it back.
-        const at = new Date();
+        const claimedAt = new Date();
         if (key) {
           // Ids older than a month have no retry coming: the table stays small.
-          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();
-          const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();
+          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(claimedAt.getTime() - 30 * DAY)))).run();
+          const taken = db.insert(incomingSeen).values({ name: NAME, key, at: claimedAt }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: claimedAt }, setWhere: lt(incomingSeen.at, new Date(claimedAt.getTime() - DAY)) }).run();
           if (taken.changes === 0) return answer(200, { received: true, repeat: true });
         }
         // A call not acted on after all (refused, failed) gives its id back, so the service's retry is not a repeat.
@@ -418,7 +418,7 @@ ${attachmentsField ? `          unsaved(files, ${n.data}.uses);\n` : ""}        
   2,
 )}
         } finally {
-          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();
+          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, claimedAt))).run();
         }
       },
     },

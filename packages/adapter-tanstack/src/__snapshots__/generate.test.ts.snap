@@ -72587,11 +72587,11 @@ export const Route = createFileRoute("/incoming/chatCommand")({
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
         // The time written is this call's mark on the row: only the call that holds it may give it back.
-        const at = new Date();
+        const claimedAt = new Date();
         if (key) {
           // Ids older than a month have no retry coming: the table stays small.
-          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();
-          const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();
+          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(claimedAt.getTime() - 30 * DAY)))).run();
+          const taken = db.insert(incomingSeen).values({ name: NAME, key, at: claimedAt }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: claimedAt }, setWhere: lt(incomingSeen.at, new Date(claimedAt.getTime() - DAY)) }).run();
           if (taken.changes === 0) return answer(200, { received: true, repeat: true });
         }
         // A call not acted on after all (refused, failed) gives its id back, so the service's retry is not a repeat.
@@ -72616,7 +72616,7 @@ export const Route = createFileRoute("/incoming/chatCommand")({
             return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
           }
         } finally {
-          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();
+          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, claimedAt))).run();
         }
       },
     },
@@ -74364,7 +74364,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "d77f9e9e generated",
   "src/routes/incidents/index.tsx": "0bad2659 generated",
   "src/routes/incidents/new.tsx": "1abbbdfc generated",
-  "src/routes/incoming/chatCommand.ts": "205b50f9 generated",
+  "src/routes/incoming/chatCommand.ts": "506f15af generated",
   "src/routes/index.tsx": "aea24c4f generated",
   "src/routes/maintenance/$id.tsx": "df48940a generated",
   "src/routes/maintenance/index.tsx": "7b866e09 generated",
@@ -80440,11 +80440,11 @@ export const Route = createFileRoute("/incoming/support")({
         // The id is taken before anything is done, in one statement: a second delivery of it, even at the same
         // moment, finds it taken (the index is unique) and is answered as received; one older than a day is forgotten.
         // The time written is this call's mark on the row: only the call that holds it may give it back.
-        const at = new Date();
+        const claimedAt = new Date();
         if (key) {
           // Ids older than a month have no retry coming: the table stays small.
-          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(at.getTime() - 30 * DAY)))).run();
-          const taken = db.insert(incomingSeen).values({ name: NAME, key, at }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at }, setWhere: lt(incomingSeen.at, new Date(at.getTime() - DAY)) }).run();
+          db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), lt(incomingSeen.at, new Date(claimedAt.getTime() - 30 * DAY)))).run();
+          const taken = db.insert(incomingSeen).values({ name: NAME, key, at: claimedAt }).onConflictDoUpdate({ target: [incomingSeen.name, incomingSeen.key], set: { at: claimedAt }, setWhere: lt(incomingSeen.at, new Date(claimedAt.getTime() - DAY)) }).run();
           if (taken.changes === 0) return answer(200, { received: true, repeat: true });
         }
         // A call not acted on after all (refused, failed) gives its id back, so the service's retry is not a repeat.
@@ -80521,7 +80521,7 @@ export const Route = createFileRoute("/incoming/support")({
             return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
           }
         } finally {
-          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, at))).run();
+          if (key && !acted) db.delete(incomingSeen).where(and(eq(incomingSeen.name, NAME), eq(incomingSeen.key, key), eq(incomingSeen.at, claimedAt))).run();
         }
       },
     },
@@ -81497,7 +81497,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "2dfca1a0 generated",
+  "src/routes/incoming/support.ts": "e96c3b66 generated",
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "f15377e4 generated",
