@@ -108,8 +108,10 @@ Three people, in words the starters and the docs use the same way:
   builder says they run it too; the users page shows who the administrators are either way.
 - **The owner** is the app's administrator: the team (the users page), the settings, the money,
   the reports, the mail that comes in and goes out. `admins:` are the owners.
-- **The staff** is a role: the day's work (the schedule, the cases, the orders). Every starter gets
-  a `staff` role described as such, and its `admin` description says the owner's work.
+- **The staff** is a role: the day's work (the schedule, the cases, the orders). A starter with
+  day-to-day workers has one, in the domain's own word where it has one (`agent`, `sales`, `member`),
+  and a plain `staff` on booking and barbers; its `admin` description says the owner's work. A
+  starter where each member works for themselves (invoicing, marketplace, records) has none.
 
 What changes: each starter's roles and descriptions (A); the users page's words ("administrator"
 is the owner, never the builder) and the docs' "who is the administrator" paragraph (C); Studio's

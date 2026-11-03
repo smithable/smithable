@@ -8,7 +8,8 @@ signIn:
 defaultAccess: shared              # the team sees and writes everything
 
 roles:
-  admin: all
+  admin:
+    description: The owner. Runs the team and the settings, and keeps the components.
   staff:
     description: Writes incidents and their updates.
     pages: [overview, incidents, updates, maintenance]   # the components and the team are the administrators'

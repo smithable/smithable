@@ -952,8 +952,24 @@ async function bookingsListFlow(dir, base) {
     if (await member.getByRole("list", { name: "Active filters" }).count())
       throw new Error("a member opens the staff's bookings");
     await member.context().close();
+    // The staff role (reports.md §3): the day's work, not the owner's.
+    const staff = await (
+      await browser.newContext({ viewport: { width: 1440, height: 1000 } })
+    ).newPage();
+    await signInAs(staff, base, "staff");
+    await open(staff, `${base}/bookings`);
+    await staff
+      .getByRole("list", { name: "Active filters" })
+      .waitFor({ timeout: 10000 * P })
+      .catch(() => {
+        throw new Error("the staff do not open the bookings");
+      });
+    const owners = await staff.goto(`${base}/class-types`);
+    if (owners?.status() !== 403)
+      throw new Error(`the staff open the owner's class types: ${owners?.status()}`);
+    await staff.context().close();
     console.log(
-      "  ✓ browser: the staff's bookings open on today's classes through the session they name, All shows every one, a class type narrows them, a member is not let in",
+      "  ✓ browser: the staff's bookings open on today's classes through the session they name, All shows every one, a class type narrows them, a member is not let in; the staff role has the day, not the owner's pages",
     );
   } catch (error) {
     console.log(

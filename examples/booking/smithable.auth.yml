@@ -8,11 +8,20 @@ defaultAccess: private             # members only see their own records
 
 roles:                             # what each role may do, beyond their own records
   admin:
-    description: Studio staff. Manage the schedule, classes and teachers.
+    description: The studio's owner. Runs the team and the settings, the classes, the teachers and the website.
+  staff:
+    description: Reception. Runs the day, the sessions and who comes to them, and reads the messages.
+    pages: [sessions, bookings, messages]
+    read: [Session, Booking, Message]
+    create: [Session, Booking]
+    write: [Session, Booking]
+    delete: [Booking]
   member:
     description: A student who books classes.
     pages: [my-bookings]             # the public pages are open to everyone
     create: [Booking]                # members book; the classes and sessions are the staff's
+
+defaultRole: member
 
 admins: [owner@stillwater.example]
 

@@ -8,11 +8,21 @@ defaultAccess: private               # customers see only their own appointments
 
 roles:
   admin:
-    description: The shop. Keeps the services, the barbers and their time off; confirms appointments.
+    description: The shop's owner. Runs the team and the settings, the services and the barbers.
+  staff:
+    description: A barber. Runs the day, confirms and cancels appointments, and enters time off.
+    pages: [day, appointments, time-off]
+    read: [Appointment, TimeOff]
+    create: [Appointment, TimeOff]
+    write: [Appointment, TimeOff]
+    delete: [TimeOff]
+    actions: [confirm, cancel]
   member:
     description: A customer who books appointments.
     pages: [appointments]
     create: [Appointment]
+
+defaultRole: member
 
 admins: [owner@harbourcuts.example]
 
