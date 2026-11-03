@@ -21,15 +21,11 @@ import {
 import { checkVisualStates } from "./visual-state-checks.mjs";
 
 // The fixture's app serves on the fifth port of Studio's check (TEST_STUDIO_PORT + 4, which
-// scripts/test-studio.mjs reserves), or VISUAL_PORT on its own.
-const port = Number(
-  process.env.VISUAL_PORT ??
-    (process.env.TEST_STUDIO_PORT ? Number(process.env.TEST_STUDIO_PORT) + 4 : Number.NaN),
-);
+// scripts/test-studio.mjs reserves; 4904 when neither is set, as that check's 4900), or
+// VISUAL_PORT on its own.
+const port = Number(process.env.VISUAL_PORT ?? Number(process.env.TEST_STUDIO_PORT ?? 4900) + 4);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) {
-  console.error(
-    "The visual check needs a port: set TEST_STUDIO_PORT (it uses that + 4, as the gate does) or VISUAL_PORT.",
-  );
+  console.error("VISUAL_PORT or TEST_STUDIO_PORT is not a port number.");
   process.exit(1);
 }
 checkPorts("The visual check (VISUAL_PORT or TEST_STUDIO_PORT + 4)", [port]);

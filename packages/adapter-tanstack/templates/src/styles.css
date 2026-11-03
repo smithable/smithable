@@ -224,9 +224,10 @@
   h2,
   h3 {
     font-family: var(--font-heading, inherit);
-    /* A long compound breaks inside its column (huge uppercase titles too); break-word, not
-       anywhere, so the heading's min-content width is unchanged. */
-    overflow-wrap: break-word;
+    /* Long compounds must wrap inside their own column, including huge uppercase titles: anywhere,
+       since break-word keeps the heading's min-content width, and a grid or flex cell (the hero's
+       text column, a card) then grows past its column instead of breaking the word. */
+    overflow-wrap: anywhere;
   }
   [data-kit="model-table"] td {
     font-variant-numeric: var(--table-numbers, normal);

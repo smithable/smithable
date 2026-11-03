@@ -13,8 +13,9 @@ export const FIXTURE_OWNER = "visual-fixture";
  * on making it must say so too.
  */
 export function assertVisualFixture(dir, marker = true) {
+  const temp = realpathSync(tmpdir()).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   assert(
-    dir.startsWith(`${realpathSync(tmpdir())}/smithable-visual-`) && dir.endsWith("/app"),
+    new RegExp(`^${temp}/smithable-visual-[^/]+/app$`).test(dir),
     `The visual fixture must be this run's own disposable app under ${tmpdir()}, not ${dir}`,
   );
   if (marker)
