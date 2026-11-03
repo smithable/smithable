@@ -727,7 +727,7 @@ export function ModelTable<R extends Row>({
         <ExportCsv
           ui={ui}
           all={exportRows}
-          name={exportName ?? ui.pluralLabel}
+          name={exportName ?? ui.pluralLabel.toLowerCase().replace(/\s+/g, "-")}
           timeZone={app.timeZone}
         />
       )}
