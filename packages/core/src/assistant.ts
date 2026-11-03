@@ -509,7 +509,15 @@ function describeKind(model: ModelIR, actions: SpecIR["actions"], content: Conte
     ...fields,
     ...(rules.length ? ["Rules:", ...rules] : []),
     ...(on.length ? ["Actions:", ...on] : []),
-    ...(model.ownedBy ? [`A record belongs to its ${model.ownedBy}.`] : []),
+    ...(model.ownedBy
+      ? [
+          model.ownerKind === "address"
+            ? `A record belongs to whoever signed in as its ${model.ownedBy}.`
+            : model.ownerKind === "through"
+              ? `A record belongs to its ${model.ownedBy}'s owner.`
+              : `A record belongs to its ${model.ownedBy}.`,
+        ]
+      : []),
   ].join("\n");
 }
 

@@ -141,7 +141,24 @@ const notGranted = (role: RoleIR, key: GrantKey, name: string): AccessReason =>
 /** Whose the record is, as the scenario says. */
 function whose(model: ModelIR, kind: NonNullable<AccessScenario["record"]>): AccessReason {
   const path = `models.${model.name}${model.ownedBy ? ".ownedBy" : ""}`;
-  const owner = model.ownedBy ? `its ${humanize(model.ownedBy).toLowerCase()}` : "its owner";
+  const field = model.ownedBy ? humanize(model.ownedBy).toLowerCase() : "";
+  const what = record(model.name);
+  // An owner by address or one step away (support-portal-path.md §2), in the words of its rule.
+  if (model.ownerKind === "address") {
+    const rule = `a ${what} belongs to whoever signed in as its ${field}`;
+    if (kind === "own") return inSpec(path, `This ${what} is their own: ${rule}, and they did.`);
+    if (kind === "another's")
+      return inSpec(path, `This ${what} is someone else's: ${rule}, and that is another person.`);
+    return inSpec(path, `This ${what} has no owner: its ${field} is empty.`);
+  }
+  if (model.ownerKind === "through") {
+    const rule = `a ${what} belongs to its ${field}'s owner`;
+    if (kind === "own") return inSpec(path, `This ${what} is their own: ${rule}.`);
+    if (kind === "another's")
+      return inSpec(path, `This ${what} is someone else's: ${rule}, who is another person.`);
+    return inSpec(path, `This ${what} has no owner: its ${field} has none.`);
+  }
+  const owner = model.ownedBy ? `its ${field}` : "its owner";
   if (kind === "own")
     return inSpec(path, `This ${record(model.name)} is their own: they are ${owner}.`);
   if (kind === "another's")
@@ -535,6 +552,17 @@ function explainAction(
       inAuth(
         `roles.${role.name}`,
         `${role.name}'s write grant does not name ${model.name} and its actions grant does not name ${action.name}.`,
+      ),
+    );
+  // A written actions grant is the whole of what the role runs (support-portal-path.md §3).
+  if (role.grants !== "all" && role.grants.actions !== undefined)
+    return denied(
+      changes,
+      inAuth(
+        `roles.${role.name}.actions`,
+        role.grants.actions.length === 0
+          ? `${role.name}'s actions grant is none: ${plural(role.name)} run no action, not on their own ${what} either.`
+          : `${role.name}'s actions grant does not name ${action.name}, and a written grant is the whole of what ${plural(role.name)} run: not on their own ${what} either.`,
       ),
     );
   const own = inAuth(

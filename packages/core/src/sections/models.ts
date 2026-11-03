@@ -30,6 +30,7 @@ import {
   isUpload,
   type ModelIR,
   type NamePartIR,
+  ownerShape,
   SCALAR_TYPES,
   type SpecIR,
   type ThreadIR,
@@ -304,7 +305,8 @@ export const modelsSection: SpecSection<"models"> = {
         },
         ownedBy: {
           type: "string",
-          description: "A User field whose user owns the record, instead of its creator.",
+          description:
+            "The field that owns the record instead of its creator: a User field, an email field (whoever signed in with that address), or a reference to a record with an owner of its own (one step, never two).",
         },
         review: {
           oneOf: [
@@ -1386,19 +1388,20 @@ function checkRelations(ctx: ParseContext, models: ModelIR[], relationNodes: Rel
     checkCapacity(ctx, models, model);
     if (model.ownedBy !== undefined) {
       const owner = model.fields.find((f) => f.name === model.ownedBy);
-      if (owner?.type.kind !== "relation" || owner.type.model !== USER_MODEL || owner.type.many) {
+      const shape = owner && ownerShape(owner, models);
+      if (shape && "kind" in shape) model.ownerKind = shape.kind;
+      else
         ctx.error(
           ctx.at(`ownedBy:${model.name}`),
           "invalid-owner",
-          `"ownedBy" of "${model.name}" must name one of its ${USER_MODEL} fields.`,
+          shape
+            ? `"ownedBy" of "${model.name}": ${shape.why}`
+            : `"ownedBy" of "${model.name}" must name one of its fields: a ${USER_MODEL} field, an email field, or a reference to a record with an owner.`,
           didYouMean(
             model.ownedBy,
-            model.fields
-              .filter((f) => f.type.kind === "relation" && f.type.model === USER_MODEL)
-              .map((f) => f.name),
+            model.fields.filter((f) => "kind" in ownerShape(f, models)).map((f) => f.name),
           ),
         );
-      }
     }
     for (const field of model.fields) {
       if (field.type.kind !== "relation") continue;

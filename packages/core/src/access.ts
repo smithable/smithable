@@ -19,6 +19,12 @@ export interface Allowed {
   owner: boolean;
   /** Reading only: the records the public may read, when not all (`{ status: "published" }`). */
   where?: Condition;
+  /**
+   * A standard action only: the roles that run it at all, whichever way they qualify. The others
+   * wrote an `actions` grant that does not name it, which is the whole of what they run, their
+   * own records included (docs/design/support-portal-path.md §3).
+   */
+  among?: string[];
 }
 
 export type ModelAllowed = Record<AccessOperation, Allowed>;
@@ -188,7 +194,16 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
       owner: false,
     };
   }
-  return { public: false, roles, owner: write.owner };
+  // A role whose block writes `actions` runs that list and nothing else, its own records
+  // included (support-portal-path.md §3); the owner rule stands for the roles without the key.
+  const written = auth.roles
+    .filter((r) => r.grants !== "all" && r.grants.actions !== undefined && !roles.includes(r.name))
+    .map((r) => r.name);
+  const among =
+    write.owner && written.length
+      ? auth.roles.map((r) => r.name).filter((r) => !written.includes(r))
+      : undefined;
+  return { public: false, roles, owner: write.owner, ...(among ? { among } : {}) };
 }
 
 /**

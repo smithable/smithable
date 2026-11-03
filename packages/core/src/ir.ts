@@ -75,6 +75,9 @@ export interface ThreadIR {
   side?: { field: string; ours: string };
 }
 
+/** Whose a record is, by the shape of its `ownedBy` field. */
+export type OwnerKind = "user" | "address" | "through";
+
 export interface ModelIR extends SemanticText {
   name: string;
   fields: FieldIR[];
@@ -82,8 +85,14 @@ export interface ModelIR extends SemanticText {
   unique?: UniqueIR[];
   /** The model's records as messages of a conversation, where the inference should not guess. */
   thread?: ThreadIR;
-  /** A `User` field that owns the record instead of the automatic owner. */
+  /**
+   * The field that owns the record instead of the automatic owner (docs/design/support-portal-path.md
+   * §2): a `User` field, an `email` field (whoever signed in with that address, proven), or a
+   * reference to a model with an owner of either kind (the record belongs to that record's owner).
+   */
   ownedBy?: string;
+  /** What `ownedBy` names, once checked: a user, an address, or a reference one step away. */
+  ownerKind?: OwnerKind;
   /**
    * The one stored text field that names a record (`namedBy: company`): its title wherever one
    * record is shown or referred to (core's titleField). Set only when the name is that one field;
@@ -214,6 +223,40 @@ export function storageOf(field: Pick<FieldIR, "type" | "formula">): Storage {
   if (field.formula) return "none";
   if (field.type.kind !== "relation") return "value";
   return field.type.many ? "none" : "reference";
+}
+
+/**
+ * What a field can own records as (docs/design/support-portal-path.md §2): `user` for a `User`
+ * field, `address` for an `email` field (whoever signed in with that address, proven),
+ * `through` for a reference to a model whose own owner is a user or an address. Otherwise `why`
+ * says in plain words why not, for the diagnostic and the operation's refusal.
+ */
+export function ownerShape(
+  field: FieldIR,
+  models: ModelIR[],
+): { kind: OwnerKind } | { why: string } {
+  const { type } = field;
+  if (type.kind === "scalar" && type.name === "email") return { kind: "address" };
+  if (type.kind !== "relation" || type.many)
+    return {
+      why: `${field.name} is ${type.kind === "relation" ? "a list" : type.kind === "scalar" ? `a ${type.name}` : "a choice"}: an owner is a User field, an email field, or a reference to a record with an owner.`,
+    };
+  if (type.model === USER_MODEL) return { kind: "user" };
+  const target = models.find((m) => m.name === type.model);
+  const owner = target?.fields.find((f) => f.name === target.ownedBy);
+  if (!target || !owner)
+    return {
+      why: `${field.name} refers to ${type.model}, which has no "ownedBy": a record one step away owns it only when that record has an owner of its own.`,
+    };
+  const shape = ownerShape(owner, models);
+  if ("why" in shape)
+    return {
+      why: `${field.name} refers to ${type.model}, whose "ownedBy" (${owner.name}) is not in order: a record one step away owns it only when that record has an owner of its own.`,
+    };
+  if (shape.kind !== "through") return { kind: "through" };
+  return {
+    why: `${field.name} refers to ${type.model}, whose owner is ${owner.name}, itself a reference: an owner is one step away, never two.`,
+  };
 }
 
 /**

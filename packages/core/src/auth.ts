@@ -780,8 +780,11 @@ function readGrant(
   what: string,
 ): { names: GrantNames; items: { name: string; at: At }[] } | undefined {
   if (isScalar(node) && node.value === "all") return { names: "all", items: [] };
+  // "none" is written where it means more than leaving the key out: an actions grant of none is
+  // the whole of what the role runs, its own records included (support-portal-path.md §3).
+  if (isScalar(node) && node.value === "none") return { names: [], items: [] };
   if (!isSeq(node)) {
-    ctx.error(node, "expected-list", `${what} is "all" or a list of names, like [a, b].`);
+    ctx.error(node, "expected-list", `${what} is "all", "none" or a list of names, like [a, b].`);
     return undefined;
   }
   const items = readNameList(ctx, node, what);
