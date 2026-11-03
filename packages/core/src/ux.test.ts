@@ -347,7 +347,12 @@ test("a page's filters may show as a row of chips; setFiltersLook writes it (loo
   expect(chips.files.ux).toContain("    filters:\n      look: chips\n");
   const back = applyOperation(chips.files, "setFiltersLook", { page: "orders", look: "default" });
   if (!back.ok) throw new Error(back.message);
-  expect(back.files.ux).not.toContain("look");
+  expect(back.files.ux).toContain("look: default");
+  const inherited = applyOperation(back.files, "setFiltersLook", {
+    page: "orders",
+    look: "inherit",
+  });
+  expect(inherited.ok && inherited.files.ux).not.toContain("look");
   const none = applyOperation(files, "setFiltersLook", { page: "team", look: "chips" });
   expect(none.ok ? "" : none.message).toContain("has no filters");
 });
@@ -396,7 +401,7 @@ test("a list's mark before each title and its rows' actions as a menu (look-gap 
     'Customer has no picture field to show; "initials" works for any model.',
   );
   expect(read("{ mark: logo }").diagnostics[0]?.message).toBe(
-    '"mark" of page "customers" is initials or picture.',
+    '"mark" of page "customers" is initials, picture or none.',
   );
   const files = { spec: crm, ux: "smithableUx: 0.1\n" };
   const marked = applyOperation(files, "setTableMark", { page: "customers", mark: "initials" });
@@ -409,5 +414,10 @@ test("a list's mark before each title and its rows' actions as a menu (look-gap 
   expect(menu.files.ux).toContain("    table:\n      mark: initials\n      actions: menu\n");
   const back = applyOperation(menu.files, "setTableMark", { page: "customers", mark: "none" });
   if (!back.ok) throw new Error(back.message);
-  expect(back.files.ux).not.toContain("mark");
+  expect(back.files.ux).toContain("mark: none");
+  const inherited = applyOperation(back.files, "setTableMark", {
+    page: "customers",
+    mark: "inherit",
+  });
+  expect(inherited.ok && inherited.files.ux).not.toContain("mark");
 });

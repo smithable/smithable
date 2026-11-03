@@ -12,7 +12,8 @@
     "@smithable/core": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "yaml": "2.9.1"
+    "yaml": "2.9.1",
+    "@smithable/look-editor": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

@@ -126,6 +126,7 @@ export const LANDING_SECTIONS: Record<
   calculator: {},
   custom: {},
   text: {},
+  mediaText: { button: true },
 };
 
 function readComponent(ctx: ParseContext, value: ParsedNode | null, where: string) {

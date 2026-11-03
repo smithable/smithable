@@ -18,6 +18,7 @@ import {
   TONES,
   UX_VERSION,
 } from "./ux.js";
+import { UX_CAPABILITIES } from "./ux-capabilities.js";
 
 const strings = (description: string): JsonSchema => ({
   type: "array",
@@ -321,7 +322,7 @@ export const UX_SCHEMA: JsonSchema = {
                 description: "On a wide screen: a table, or cards (a phone shows cards anyway).",
               },
               mark: {
-                enum: ["initials", "picture"],
+                enum: UX_CAPABILITIES.mark.values,
                 description:
                   "A round mark before each record's title: its initials on a colour of their own, or the model's first picture.",
               },
@@ -360,6 +361,38 @@ export const UX_SCHEMA: JsonSchema = {
               "The record page: how its lists of related records are shown, and its title row.",
             additionalProperties: false,
             properties: {
+              summary: {
+                type: "object",
+                additionalProperties: false,
+                description:
+                  "Omitted slots are automatic; [] shows none; names select existing fields.",
+                properties: {
+                  status: {
+                    description:
+                      "One choice field for status; omitted uses automatic selection, [] shows none.",
+                    type: "array",
+                    maxItems: 1,
+                    uniqueItems: true,
+                    items: { type: "string" },
+                  },
+                  amount: {
+                    description:
+                      "One money field or formula for the amount; omitted uses automatic selection, [] shows none.",
+                    type: "array",
+                    maxItems: 1,
+                    uniqueItems: true,
+                    items: { type: "string" },
+                  },
+                  dates: {
+                    description:
+                      "Up to two date/date-time fields in authored order; omitted uses automatic selection, [] shows none.",
+                    type: "array",
+                    maxItems: 2,
+                    uniqueItems: true,
+                    items: { type: "string" },
+                  },
+                },
+              },
               lists: {
                 type: "object",
                 description:
@@ -600,6 +633,7 @@ const section: JsonSchema = {
     eyebrow: text("A short line over the heading, e.g. what the section is."),
     title: text("The section's heading."),
     subtitle: text("A hero's line under the heading."),
+    caption: text("A media/text section picture caption."),
     text: text("A paragraph under the heading."),
     button: text("The button's text."),
     secondButton: text(

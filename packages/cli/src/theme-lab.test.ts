@@ -4,25 +4,34 @@ import type { Io } from "./io.js";
 import { STARTERS } from "./starters.gen.js";
 import { labFrames, themeLab } from "./theme-lab.js";
 
-test("the lab frames the landing page, then the first list, its form and a record", () => {
-  const page = (route: string, kind: string) => ({ route, pattern: { kind } });
-  expect(
-    labFrames([
-      page("/dashboard", "dashboard"),
-      page("/", "landing"),
-      page("/class-types", "crud"),
-    ]),
-  ).toEqual([
-    { label: "Landing", path: "/" },
-    { label: "List", path: "/class-types" },
-    { label: "Form", path: "/class-types/new" },
-    { label: "Record", path: "/class-types/1" },
+test("every real page and instance is inventoried; no invented root or record id", () => {
+  const { ir } = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Inventory }
+models:
+  Task: { fields: { title: string! } }
+pages:
+  tasks: { crud: Task }
+  archive: { crud: Task }
+  team: { users: manage }
+`,
+  });
+  if (!ir) throw new Error("invalid fixture");
+  const frames = labFrames(ir.pages, { tasks: "Work queue" });
+  expect(frames.map((f) => f.label)).toEqual([
+    "Work queue",
+    "Work queue · New",
+    "Work queue · Record",
+    "Archive",
+    "Archive · New",
+    "Archive · Record",
+    "Team",
   ]);
-  expect(labFrames([page("/companies", "crud")])[0]).toEqual({ label: "Landing", path: "/" });
-  expect(labFrames([page("/team", "users"), page("/admin", "data")])).toEqual([
-    { label: "Landing", path: "/" },
-    { label: "List", path: "/admin" },
-  ]);
+  expect(frames.filter((f) => f.kind === "record").every((f) => !f.path && !!f.discoverFrom)).toBe(
+    true,
+  );
+  expect(new Set(frames.map((f) => f.id)).size).toBe(frames.length);
 });
 
 test("a starter the lab does not know is refused, naming the ones it has", async () => {
@@ -32,14 +41,17 @@ test("a starter the lab does not know is refused, naming the ones it has", async
   expect(said.join("")).toMatch(/There is no starter "bakery": .*booking.*crm/);
 });
 
-test("every starter gives the lab its front page and a list (api: its data page)", () => {
+test("every starter page has a preview, including non-list page patterns", () => {
   for (const name of Object.keys(STARTERS)) {
     const { ir } = validateSpec({
       path: "smithable.yml",
       text: STARTERS[name]?.["smithable.yml"] ?? "",
     });
-    expect(ir, name).toBeDefined();
-    const labels = labFrames(ir?.pages ?? []).map((f) => f.label);
-    expect(labels.slice(0, 2), name).toEqual(["Landing", "List"]);
+    if (!ir) throw new Error(`invalid starter ${name}`);
+    const frames = labFrames(ir.pages);
+    expect(frames.filter((f) => f.id === `${f.page}:page`).map((f) => f.page)).toEqual(
+      ir.pages.map((p) => p.id),
+    );
+    expect(frames.some((f) => f.path?.endsWith("/1"))).toBe(false);
   }
 });

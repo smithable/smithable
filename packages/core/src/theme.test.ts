@@ -170,6 +170,9 @@ test("an owner's background: a wash in light mode and a deep one in dark, everyt
     for (const color of ["#f5efe6", "#e11d48", "#0b1020"]) {
       const out = withBackground(theme, color);
       if (!out) throw new Error(`${name} ${color}`);
+      for (const mode of ["light", "dark"] as const)
+        for (const token of Object.values(out[mode]))
+          expect(hexOf(token)).toMatch(/^#[0-9a-f]{6}$/i);
       expect(checkContrast(out.light)).toEqual([]);
       expect(checkContrast(out.dark)).toEqual([]);
       expect(contrast(hexOf(out.light.background), "#000000")).toBeGreaterThan(17);

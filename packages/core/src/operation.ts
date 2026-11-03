@@ -8,6 +8,9 @@ export interface ThemeFiles {
   /** The names already taken: the built-in themes' and the project's. */
   readonly names: readonly string[];
   add(theme: ThemeIR, text: string): void;
+  get?(name: string): ThemeIR | undefined;
+  readonly projectNames?: readonly string[];
+  update?(theme: ThemeIR, text: string): void;
 }
 
 /** The files an operation may edit. */

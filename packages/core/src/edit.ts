@@ -190,7 +190,7 @@ export class YamlEditor {
     const map = this.doc.getIn(path, true) as ParsedNode;
     if (!isMap(map)) throw new EditError(`${path.join(".")} is not a mapping.`);
     if (map.flow) {
-      const close = this.source.lastIndexOf("}", map.range[1]);
+      const close = this.source.lastIndexOf("}", map.range[1] - 1);
       const inner = this.source.slice(map.range[0] + 1, close);
       const sep = inner.trim() === "" ? " " : inner.trimEnd().endsWith(",") ? " " : ", ";
       const trimmedClose = map.range[0] + 1 + inner.trimEnd().length;

@@ -139,7 +139,7 @@ test("setRecordSummary and setRecordList write the ux file, and the defaults tak
     applyOperation({ spec, ux: header.files.ux as string }, "setRecordSummary", {
       page: "invoices",
       place: "header",
-      look: "none",
+      look: "inherit",
     }),
   ).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
   const inline = applyOperation({ spec }, "setRecordList", {

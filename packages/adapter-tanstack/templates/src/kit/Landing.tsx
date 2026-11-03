@@ -78,7 +78,7 @@ function LandingLayoutView({
   logo?: string;
   link?: LandingLink;
   /**
-   * The header's look (smithable.ux.yml): it stays at the top as the page scrolls unless
+   * The header's look: it stays at the top as the page scrolls unless
    * scrolling; over the hero, on the hero's own wash (dark or brand) until the hero has passed.
    */
   header?: { position?: "sticky" | "scrolling"; over?: "dark" | "brand" };
@@ -504,8 +504,8 @@ function TextSectionView({
       {/* The paragraphs read from the start; their column moves to the middle with the heading. */}
       {text && (
         <div className={cn("mt-3 max-w-2xl space-y-3 text-lg", INLINE)} {...mark(texts, "text")}>
-          {text.split(/\n\s*\n/).map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
+          {text.split(/\n\s*\n/).map((paragraph, position) => (
+            <p key={`${position}:${paragraph}`}>{paragraph}</p>
           ))}
         </div>
       )}
@@ -1825,23 +1825,26 @@ function GalleryView({
   text,
   items,
   columns = 3,
-}: Banded & {
-  title?: string;
-  text?: string;
-  items: { image?: LandingImage; caption?: string }[];
-  /** Pictures side by side on wide screens: 2 to 6. */
-  columns?: 2 | 3 | 4 | 5 | 6;
-  texts?: string;
-  /** A short line over the title, e.g. what the section is ("Our rooms"). */
-  eyebrow?: string;
-}) {
+  fit,
+  aspect,
+  focal,
+}: Banded &
+  MediaLook & {
+    title?: string;
+    text?: string;
+    items: { image?: LandingImage; caption?: string }[];
+    /** Pictures side by side on wide screens: 2 to 6. */
+    columns?: 2 | 3 | 4 | 5 | 6;
+    texts?: string;
+    /** A short line over the title, e.g. what the section is ("Our rooms"). */
+    eyebrow?: string;
+  }) {
   const pictures = items.filter((i): i is { image: LandingImage; caption?: string } =>
     Boolean(i.image),
   );
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(0);
   const show = (i: number) => setOpen((i + pictures.length) % pictures.length);
-  const current = pictures[open];
   return (
     <Section id="gallery" texts={texts} band={band} eyebrow={eyebrow} title={title} text={text}>
       <ul className={cn("grid grid-cols-2 gap-3", GALLERY_COLUMNS[columns])}>
@@ -1862,9 +1865,11 @@ function GalleryView({
                     src={item.image.src}
                     alt={item.image.alt}
                     loading="lazy"
-                    width={600}
-                    height={400}
-                    className="aspect-[3/2] w-full object-cover transition-transform hover:scale-105"
+                    {...mediaSize(aspect)}
+                    className={cn(
+                      "aspect-[3/2] w-full object-cover transition-transform hover:scale-105",
+                      mediaClasses({ fit, aspect, focal }),
+                    )}
                   />
                 </AiMarked>
               </button>
@@ -1880,65 +1885,246 @@ function GalleryView({
           </li>
         ))}
       </ul>
-      {/* The browser's own dialog: Escape closes it, focus stays inside. */}
-      <dialog
-        ref={dialog}
-        aria-label={current?.image.alt}
-        className="m-auto max-h-[92vh] w-[min(1200px,94vw)] bg-transparent p-0 backdrop:bg-black/85"
-        onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowRight") show(open + 1);
-          if (e.key === "ArrowLeft") show(open - 1);
-        }}
-      >
-        {current && (
-          <figure className="relative">
-            {/* As wide as the picture, so the mark sits on its corner. */}
-            <AiMarked generated={current.image.generated} full className="mx-auto w-fit">
-              <img
-                src={current.image.src}
-                alt={current.image.alt}
-                className="mx-auto block max-h-[80vh] max-w-full rounded-lg"
-              />
-            </AiMarked>
-            {current.caption && (
-              <figcaption className="mt-3 text-center text-white">{current.caption}</figcaption>
-            )}
-            <div className="mt-3 flex justify-center gap-2">
-              {pictures.length > 1 && (
-                <button
-                  type="button"
-                  aria-label={w.previousPicture}
-                  className={buttonVariants({ variant: "secondary", size: "icon" })}
-                  onClick={() => show(open - 1)}
-                >
-                  <ChevronLeft aria-hidden />
-                </button>
-              )}
-              <button
-                type="button"
-                aria-label={w.close}
-                className={buttonVariants({ variant: "secondary", size: "icon" })}
-                onClick={() => dialog.current?.close()}
-              >
-                <X aria-hidden />
-              </button>
-              {pictures.length > 1 && (
-                <button
-                  type="button"
-                  aria-label={w.nextPicture}
-                  className={buttonVariants({ variant: "secondary", size: "icon" })}
-                  onClick={() => show(open + 1)}
-                >
-                  <ChevronRight aria-hidden />
-                </button>
-              )}
-            </div>
-          </figure>
-        )}
-      </dialog>
+      <PictureDialog dialog={dialog} pictures={pictures} open={open} show={show} />
     </Section>
   );
+}
+
+/** Shared full-image view: native focus/Escape plus gallery previous/next. */
+function PictureDialog({
+  dialog,
+  pictures,
+  open,
+  show,
+}: {
+  dialog: React.RefObject<HTMLDialogElement | null>;
+  pictures: { image: LandingImage; caption?: string }[];
+  open: number;
+  show: (index: number) => void;
+}) {
+  const current = pictures[open];
+  return (
+    <dialog
+      ref={dialog}
+      aria-label={current?.image.alt}
+      className="m-auto max-h-[92vh] w-[min(1200px,94vw)] bg-transparent p-0 backdrop:bg-black/85"
+      onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowRight") show(open + 1);
+        if (e.key === "ArrowLeft") show(open - 1);
+      }}
+    >
+      {current && (
+        <figure className="relative">
+          {/* As wide as the picture, so the mark sits on its corner. */}
+          <AiMarked generated={current.image.generated} full className="mx-auto w-fit">
+            <img
+              src={current.image.src}
+              alt={current.image.alt}
+              className="mx-auto block max-h-[80vh] max-w-full rounded-lg object-contain"
+            />
+          </AiMarked>
+          {current.caption && (
+            <figcaption className="mt-3 text-center text-white">{current.caption}</figcaption>
+          )}
+          <div className="mt-3 flex justify-center gap-2">
+            {pictures.length > 1 && (
+              <button
+                type="button"
+                aria-label={w.previousPicture}
+                className={buttonVariants({ variant: "secondary", size: "icon" })}
+                onClick={() => show(open - 1)}
+              >
+                <ChevronLeft aria-hidden />
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label={w.close}
+              className={buttonVariants({ variant: "secondary", size: "icon" })}
+              onClick={() => dialog.current?.close()}
+            >
+              <X aria-hidden />
+            </button>
+            {pictures.length > 1 && (
+              <button
+                type="button"
+                aria-label={w.nextPicture}
+                className={buttonVariants({ variant: "secondary", size: "icon" })}
+                onClick={() => show(open + 1)}
+              >
+                <ChevronRight aria-hidden />
+              </button>
+            )}
+          </div>
+        </figure>
+      )}
+    </dialog>
+  );
+}
+
+type MediaLook = {
+  fit?: "cover" | "contain";
+  aspect?: "landscape" | "portrait" | "square";
+  focal?: "center" | "top" | "bottom" | "left" | "right";
+};
+const MEDIA_ASPECT = {
+  landscape: "aspect-[3/2]",
+  portrait: "aspect-[3/4]",
+  square: "aspect-square",
+} as const;
+const MEDIA_FOCAL = {
+  center: "object-center",
+  top: "object-top",
+  bottom: "object-bottom",
+  left: "object-left",
+  right: "object-right",
+} as const;
+const mediaClasses = ({ fit, aspect, focal }: MediaLook) =>
+  cn(
+    fit && (fit === "contain" ? "object-contain" : "object-cover"),
+    aspect && MEDIA_ASPECT[aspect],
+    focal && MEDIA_FOCAL[focal],
+  );
+const mediaSize = (aspect: MediaLook["aspect"]) => ({
+  width: 600,
+  height: aspect === "portrait" ? 800 : aspect === "square" ? 600 : 400,
+});
+
+/** Added only when a finite section presentation is chosen; no control-density changes. */
+export function SectionPresentation({
+  rhythm,
+  measure,
+  children,
+}: {
+  rhythm?: "compact" | "standard" | "airy";
+  measure?: "reading" | "wide";
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      data-section-presentation=""
+      data-rhythm={rhythm}
+      data-measure={measure}
+      className="contents"
+    >
+      {children}
+    </div>
+  );
+}
+
+function MediaTextView({
+  id,
+  texts,
+  band = "none",
+  eyebrow,
+  title,
+  text,
+  image,
+  caption,
+  link,
+  layout = "split",
+  imageSide = "left",
+  fit = "cover",
+  aspect = "landscape",
+  focal = "center",
+}: Banded &
+  MediaLook & {
+    id: string;
+    texts?: string;
+    eyebrow?: string;
+    title?: string;
+    text?: string;
+    image?: LandingImage;
+    caption?: string;
+    link?: LandingLink;
+    layout?: "split" | "stacked";
+    imageSide?: "left" | "right";
+  }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  return (
+    <section
+      {...sectionHooks(texts)}
+      aria-labelledby={title ? `${id}-title` : undefined}
+      data-layout={layout}
+      {...frame(band, "py-12")}
+    >
+      <div
+        className={cn("grid items-center gap-8", image && layout === "split" && "lg:grid-cols-2")}
+      >
+        {/* Source and keyboard order stay text then picture, independent of visual side. */}
+        <div className="min-w-0">
+          {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
+          {title && (
+            <h2
+              id={`${id}-title`}
+              className={cn(
+                "text-[calc(1.5rem*var(--heading-scale))] leading-tight font-(--heading-weight) tracking-(--heading-tracking) [text-transform:var(--heading-case,none)]",
+                ALIGN,
+              )}
+              {...mark(texts, "title")}
+            >
+              {title}
+            </h2>
+          )}
+          {text && (
+            <div className="mt-3 max-w-2xl space-y-3 text-lg" {...mark(texts, "text")}>
+              {text.split(/\n\s*\n/).map((paragraph, position) => (
+                <p key={`${position}:${paragraph}`}>{paragraph}</p>
+              ))}
+            </div>
+          )}
+          {link && (
+            <Link to={link.to} className={cn(buttonVariants(), "mt-5")} {...mark(texts, "button")}>
+              {link.label}
+            </Link>
+          )}
+        </div>
+        {image && (
+          <figure
+            className={cn(
+              "min-w-0",
+              layout === "split" && imageSide === "left" && "lg:order-first",
+            )}
+          >
+            <button
+              type="button"
+              className="block w-full overflow-hidden rounded-lg bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              aria-label={w.openPicture(image.alt)}
+              onClick={() => dialog.current?.showModal()}
+            >
+              <AiMarked generated={image.generated}>
+                <img
+                  src={image.src}
+                  alt={image.alt}
+                  loading="lazy"
+                  {...mediaSize(aspect)}
+                  className={cn("block w-full", mediaClasses({ fit, aspect, focal }))}
+                />
+              </AiMarked>
+            </button>
+            {caption && (
+              <figcaption
+                className="mt-2 text-sm text-muted-foreground"
+                {...mark(texts, "caption")}
+              >
+                {caption}
+              </figcaption>
+            )}
+          </figure>
+        )}
+      </div>
+      <PictureDialog
+        dialog={dialog}
+        pictures={image ? [{ image, caption }] : []}
+        open={0}
+        show={() => {}}
+      />
+    </section>
+  );
+}
+export function MediaText(props: Parameters<typeof MediaTextView>[0]) {
+  return MediaTextView(translated(props));
 }
 
 /** The keys whose texts a person reads: those go through tx; addresses, records and markers do not. */

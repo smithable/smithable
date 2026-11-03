@@ -49,6 +49,7 @@ export function ArticleList({
                 <h2 className="text-lg font-semibold">
                   {/* The whole card opens the article; the link is the title. */}
                   <AppLink
+                    data-part="record-link"
                     href={item.href}
                     className="outline-none after:absolute after:inset-0 focus-visible:underline"
                   >

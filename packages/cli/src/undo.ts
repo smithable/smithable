@@ -17,6 +17,7 @@ import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
+import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
 import { projectThemes } from "./validate.js";
 
 /** A change in the history that can still be undone, newest first. */
@@ -256,6 +257,16 @@ function lostFieldsOf(dir: string, text: string): string[] {
  * its snapshot from before the operation.
  */
 export function undo(dir: string, io: Io): number {
+  try {
+    return withProjectMutationSync(dir, (root) => undoLocked(root, io));
+  } catch (error) {
+    if (!(error instanceof ProjectBusyError || error instanceof ProjectLockError)) throw error;
+    io.err(`${error.message}\n`);
+    return 1;
+  }
+}
+
+function undoLocked(dir: string, io: Io): number {
   if (!ownRepository(dir)) {
     io.err("There is nothing to undo: this project has no history yet.\n");
     return 1;

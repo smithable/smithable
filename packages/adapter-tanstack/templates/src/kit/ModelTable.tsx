@@ -365,6 +365,8 @@ export function ModelTable<R extends Row>({
     onOpen ? (
       <button
         type="button"
+        data-part="record-open"
+        data-record-id={String(row.id)}
         onClick={() => onOpen(row)}
         className={cn(
           "cursor-pointer text-left font-semibold outline-none after:absolute after:inset-0 focus-visible:after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring",

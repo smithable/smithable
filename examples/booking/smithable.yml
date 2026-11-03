@@ -153,7 +153,9 @@ pages:
     articles: Post
   about:                              # a page of parts: the story, who teaches, questions
     sections:
-      story: { text: }
+      story:
+        mediaText:
+        button: schedule
       team: { records: Instructor }
       faq:
   privacy:

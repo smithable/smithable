@@ -1,6 +1,7 @@
 // Smithable app kit: a record's summary (`record.header` and `form.aside: summary`): its status
 // as a badge, its amount, its key dates. Which fields they are is decided by type when the app
-// is generated (the first choice with tones, the first money field, the first two dates).
+// is generated: named record.summary fields, or the first choice with tones, first money
+// field and first two dates when omitted.
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/lib/utils";
 import { formatValue } from "./format";

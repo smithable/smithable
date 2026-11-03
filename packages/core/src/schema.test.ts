@@ -4,6 +4,7 @@ import { parse } from "yaml";
 import schemaText from "../schema/smithable.schema.json?raw";
 import { COMPANION_SCHEMAS } from "./companion-schemas.js";
 import { buildJsonSchema } from "./schema.js";
+import { buildThemeSchema } from "./theme-schema.js";
 
 const companions = import.meta.glob("../schema/smithable.*.schema.json", {
   query: "?raw",
@@ -31,6 +32,9 @@ const validate = new Ajv({ allErrors: true })
 
 test("the committed schema file is up to date (run `pnpm schema` to regenerate)", () => {
   expect(JSON.parse(schemaText)).toEqual(buildJsonSchema());
+  expect(JSON.parse(companions["../schema/smithable.theme.schema.json"] as string)).toEqual(
+    buildThemeSchema(),
+  );
   for (const [file, schema] of Object.entries(COMPANION_SCHEMAS)) {
     const committed = companions[`../schema/${file.replace(/\.yml$/, ".schema.json")}`];
     expect(committed, file).toBeDefined();

@@ -22,12 +22,18 @@ import { chromium } from "playwright";
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
+import { P } from "./patience.mjs";
 import { checkPorts } from "./ports.mjs";
-
-// How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
-// a check that waits a minute on a quiet machine waits three under load, so a slow answer is
-// not read as a failure.
-const P = Math.max(1, Number(process.env.TEST_PATIENCE) || 1);
+import { checkPreviewPages } from "./preview-pages-checks.mjs";
+import { checkProjectLookApply } from "./project-look-checks.mjs";
+import { checkStaticStates } from "./static-state-checks.mjs";
+import {
+  checkStudioLook,
+  checkStudioLookGallery,
+  checkStudioLookTimeout,
+} from "./studio-look-checks.mjs";
+import { checkPublicLook } from "./test-public-look.mjs";
+import { checkThemeLab } from "./theme-lab-checks.mjs";
 
 // A request on a kept-alive connection the server closed as idle at the same moment is reset
 // (ECONNRESET) before it is read: under load the client's own idle timer fires late, so it
@@ -46,7 +52,9 @@ const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");
 // Another checkout testing at the same time sets its own (TEST_APPS_PORT does the same for test-apps).
 const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
-checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1, port + 2, port + 3]);
+// Studio, its preview, the fake model and the MCP check; +4 is the visual matrix's own app
+// (scripts/test-visual.mjs), which the gate runs after this check.
+checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1, port + 2, port + 3, port + 4]);
 const base = `http://localhost:${port}`;
 let failed = false;
 
@@ -73,15 +81,15 @@ function png(width, height) {
   ]);
 }
 
-async function step(name, fn) {
+async function step(name, fn, shotPage = page) {
   try {
     await fn();
     console.log(`  ✓ ${name}`);
   } catch (error) {
     const shot = join(root, "failure.png");
-    await page.screenshot({ path: shot }).catch(() => {});
+    await shotPage.screenshot({ path: shot }).catch(() => {});
     // What Code mode's Problems list said, for a failure the picture alone cannot explain (CI).
-    const problems = await page
+    const problems = await shotPage
       .getByRole("list", { name: "Problems" })
       .innerText({ timeout: 1000 * P })
       .catch(() => "");
@@ -144,6 +152,8 @@ const browser = await chromium.launch();
 // Wide enough that the preview, beside No code and Smith, shows lists as tables.
 const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 try {
+  await checkStaticStates(browser);
+  await checkPublicLook(browser);
   for (let i = 0; i < 120 * P; i++) {
     try {
       if ((await fetch(`http://localhost:${port + 1}/health`)).ok) break;
@@ -265,6 +275,17 @@ try {
       if (made.length) throw new Error(`a new app has changes: ${JSON.stringify(made[0])}`);
     },
   );
+  await step("Edit look shares the current preview and keeps drafts read-only", async () => {
+    // The main preview's legacy sign-in can still be completing after its sign-in HTML hydrates.
+    // Establish its actual app session before taking the editor's no-write baseline.
+    await openPreview("/customers");
+    await preview
+      .locator('body[data-page="customers"][data-hydrated=true]')
+      .waitFor({ timeout: 90000 * P });
+    await checkStudioLook(page, dir);
+    await checkStudioLookTimeout(page, dir);
+    await checkStudioLookGallery(page, dir);
+  });
   await step("a notice left for Studio is shown once, then gone", async () => {
     const alert = page.getByRole("alert").filter({ hasText: "The description could not be used" });
     await alert.waitFor();
@@ -1174,6 +1195,7 @@ try {
       .getByText("Show Order.status shipped as success")
       .first()
       .waitFor({ timeout: 60000 * P });
+    await page.getByLabel("Page to style").selectOption("orders");
     await page
       .getByRole("region", { name: "Pages" })
       .getByLabel("Icon of Orders")
@@ -1808,6 +1830,7 @@ try {
       .getByText(/draft/i)
       .first()
       .waitFor({ timeout: 60000 * P });
+    await page.getByLabel("Page to style").selectOption("customers");
     // A second line under a column's value.
     await look("Pages").getByLabel("Second line under Email").first().selectOption("phone");
     for (let i = 0; i < 60 * P && !/email: phone/.test(ux()); i++)
@@ -1839,6 +1862,27 @@ try {
       if (!re.test(ux())) throw new Error(`no ${re} in smithable.ux.yml:\n${ux()}`);
     };
     const pages = look("Pages");
+    // Native selected-page controls have visible labels and keyboard focus. They use the same
+    // project history as chat: one Undo restores the original authored source.
+    const menu = pages.getByLabel("Menu layout", { exact: true });
+    await menu.focus();
+    if (!(await menu.evaluate((e) => document.activeElement === e)))
+      throw new Error("Menu layout cannot receive keyboard focus");
+    const shellBefore = ux();
+    await menu.selectOption("topbar");
+    await waitUx(/navigation: topbar/);
+    await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await status.getByText(/Undid:.*menu/i).waitFor({ timeout: 60000 * P });
+    if (ux() !== shellBefore) throw new Error("Undo did not restore the shell's source");
+    await pages.getByLabel("Row actions", { exact: true }).selectOption("menu");
+    await waitUx(/actions: menu/);
+    await pages.getByLabel("Row actions", { exact: true }).selectOption("__inherited");
+    for (let i = 0; /actions: menu/.test(ux()); i++) {
+      if (i === 60 * P) throw new Error("Row actions did not reset");
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+
     await pages
       .getByRole("group", { name: "View of Customers" })
       .getByRole("button", { name: "Cards" })
@@ -1941,6 +1985,7 @@ try {
         .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
       await sub("Look");
+      await page.getByLabel("Page to style").selectOption("home");
       await page.getByLabel("Theme of Home").selectOption("playful");
       await last
         .getByText(/theme on the home page/i)
@@ -1975,6 +2020,7 @@ try {
         await new Promise((r) => setTimeout(r, 1000));
       if (await down.isDisabled()) throw new Error("the sections' arrows did not follow the move");
       // A page's frame (page-sections.md §4): the customers in the site's frame, in the ux file.
+      await page.getByLabel("Page to style").selectOption("customers");
       await page.getByLabel("Frame of Customers").selectOption("site");
       const framed = () =>
         /customers:\s*\n(\s+\S.*\n)*?\s+frame: site/.test(
@@ -3136,7 +3182,8 @@ if (!failed) {
     [cli, "theme", "lab", "--app", dir, "--project", dir, "--port", String(port + 2)],
     { env: { ...process.env, SMITHABLE_NO_OPEN: "1" }, detached: true, stdio: "ignore" },
   );
-  const labPage = await labBrowser.newPage({ viewport: { width: 1600, height: 1000 } });
+  const labContext = await labBrowser.newContext({ viewport: { width: 1600, height: 1000 } });
+  const labPage = await labContext.newPage();
   try {
     await step(
       "the theme lab: a field changes its frames' CSS, and Save adds the theme",
@@ -3153,38 +3200,44 @@ if (!failed) {
         }
         await labPage.goto(`${labUrl}/?guide=off`);
         // The frames open once the app has signed the lab in; the landing page in light first.
-        const frame = labPage.frameLocator('[data-frame="Landing-light"]');
+        const inventory = await fetch(`${labUrl}/api/start`).then((r) => r.json());
+        const homeLabel = inventory.frames[0].label;
+        const listLabel = inventory.frames
+          .find((f) => f.id.endsWith(":new"))
+          .label.replace(/ · New$/, "");
+        const recordLabel = inventory.frames.find((f) => f.kind === "record").label;
+        const frame = labPage.frameLocator(`[data-frame="${homeLabel}-light"]`);
         await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 120000 * P });
         // One page at a time, chosen by its tab: signed in (no sign-in form in the list), and the
         // record's page shows a record.
         const tab = (name) =>
-          labPage.getByRole("group", { name: "Page" }).getByRole("button", { name });
-        await tab("List").click();
-        const list = labPage.frameLocator('[data-frame="List-light"]');
+          labPage.getByRole("group", { name: "Page" }).getByRole("button", { name, exact: true });
+        await tab(listLabel).click();
+        const list = labPage.frameLocator(`[data-frame="${listLabel}-light"]`);
         await list.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
         if (await list.getByText(/^Sign in to /).count())
           throw new Error("the lab's frames are not signed in");
-        await tab("Record").click();
-        const record = labPage.frameLocator('[data-frame="Record-light"]');
+        await tab(recordLabel).click();
+        const record = labPage.frameLocator(`[data-frame="${recordLabel}-light"]`);
         await record.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
         if (await record.getByText("does not exist, or you cannot see it").count())
           throw new Error("the record frame shows no record");
         // The width at 100 % when it fits, the phone beside it, and dark in the same frame.
         await labPage.getByRole("button", { name: "Phone 390" }).click();
         const shown = await labPage
-          .locator('[data-frame="Record-light"]')
+          .locator(`[data-frame="${recordLabel}-light"]`)
           .evaluate((f) => [f.clientWidth, f.getBoundingClientRect().width]);
         if (shown[0] !== 390 || Math.round(shown[1]) !== 390)
           throw new Error(`the phone width is shown as ${shown.join(" / ")}`);
         await labPage.getByRole("button", { name: "Laptop 1280" }).click();
         await labPage.getByLabel("Phone beside").check();
         await labPage
-          .frameLocator('[data-frame="Record-light-phone"]')
+          .frameLocator(`[data-frame="${recordLabel}-light-phone"]`)
           .locator("body[data-hydrated=true]")
           .waitFor({ timeout: 60000 * P });
         const background = (mode) =>
           labPage
-            .frameLocator(`[data-frame="Record-${mode}"]`)
+            .frameLocator(`[data-frame="${recordLabel}-${mode}"]`)
             .locator("body")
             .evaluate((b) => getComputedStyle(b).backgroundColor);
         const light = await background("light");
@@ -3194,8 +3247,10 @@ if (!failed) {
         if ((await background("dark")) === light) throw new Error("Dark left the frame light");
         await labPage.getByRole("button", { name: "Light", exact: true }).click();
         await labPage.getByLabel("Phone beside").uncheck();
-        await tab("Landing").click();
+        await tab(homeLabel).click();
         await frame.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
+        await checkPreviewPages(labPage, dir);
+        await checkThemeLab(labPage);
         await labPage.getByLabel("Heading font", { exact: true }).selectOption("Fraunces");
         const sheet = frame.locator("style#sm-theme");
         for (
@@ -3212,7 +3267,9 @@ if (!failed) {
         const saved = readFileSync(join(dir, "themes/lab-test.yml"), "utf8");
         if (!saved.includes("heading: Fraunces"))
           throw new Error(`saved without the font:\n${saved}`);
+        await checkProjectLookApply(labPage, dir);
       },
+      labPage,
     );
   } catch {
     // Reported above.

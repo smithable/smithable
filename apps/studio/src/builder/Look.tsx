@@ -11,13 +11,18 @@ import {
   type PageUx,
   pageModel,
   SECTION_LOOKS,
+  UX_CAPABILITIES,
 } from "@smithable/core";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { ICON_CHOICES } from "../properties";
 import { cx, Select } from "../ui";
 import type { Run } from "./ChangeForms";
+import { UxLists } from "./UxLists";
+import { UxRecords } from "./UxRecords";
+import { UxShell } from "./UxShell";
+import { useUxSource } from "./UxSource";
 
 /** Each language the kit has words in, by its own name. */
 export const LANGUAGE_NAMES: Record<(typeof LANGUAGES)[number], string> = {
@@ -43,8 +48,10 @@ export function Look({
   themes: Project["themes"];
 }) {
   const { ir, ux } = spec;
+  const [selectedPage, setSelectedPage] = useState("");
   if (!ir || !ux)
     return <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>;
+  const activePage = ir.pages.find((p) => p.id === selectedPage) ?? ir.pages[0];
   const theme = ux.theme;
   const choices = ir.models.flatMap((m) =>
     m.fields.flatMap((f) =>
@@ -155,72 +162,115 @@ export function Look({
         </p>
       </Group>
       <Group title="Pages">
-        {ir.pages.map((page) => {
-          const model = ir.models.find((m) => m.name === pageModel(page));
-          return (
-            <div key={page.id} className="space-y-2 border-b border-line pb-3 last:border-0">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium">{humanize(page.id)}</span>
-                <Select
-                  aria-label={`Icon of ${humanize(page.id)}`}
-                  value={ux.pages[page.id]?.icon ?? "auto"}
-                  onChange={(e) => run("setIcon", { page: page.id, icon: e.target.value })}
-                  options={ICON_CHOICES.map((i) => [
-                    i,
-                    i === "auto" ? "Automatic icon" : humanize(i),
-                  ])}
-                  className="w-44"
-                />
-              </div>
-              {model && (
-                <Columns
-                  page={page.id}
-                  fields={model.fields
-                    .filter((f) => !(f.type.kind === "relation" && f.type.many))
-                    .map((f) => f.name)}
-                  columns={ux.pages[page.id]?.columns}
-                  below={ux.pages[page.id]?.below ?? {}}
-                  run={run}
-                />
-              )}
-              {model && (
-                <ListAndForm
-                  page={page.id}
-                  fields={model.fields.filter((f) => !(f.type.kind === "relation" && f.type.many))}
-                  lists={model.fields
-                    .filter((f) => f.type.kind === "relation" && f.type.many)
-                    .map((f) => f.name)}
-                  ux={ux.pages[page.id] ?? {}}
-                  run={run}
-                />
-              )}
-              {page.pattern.kind !== "landing" && page.pattern.kind !== "onboarding" && (
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span>Frame</span>
+        <label
+          htmlFor="look-page-selector"
+          className="flex items-center justify-between gap-3 text-sm"
+        >
+          Page to style
+          <Select
+            id="look-page-selector"
+            aria-label="Page to style"
+            value={activePage?.id ?? ""}
+            options={ir.pages.map((p) => [p.id, humanize(p.id)])}
+            onChange={(e) => setSelectedPage(e.target.value)}
+          />
+        </label>
+        <UxShell ux={ux} page={activePage} run={run} />
+        {ir.pages
+          .filter((p) => p.id === activePage?.id)
+          .map((page) => {
+            const model = ir.models.find((m) => m.name === pageModel(page));
+            return (
+              <div key={page.id} className="space-y-2 border-b border-line pb-3 last:border-0">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">{humanize(page.id)}</span>
                   <Select
-                    aria-label={`Frame of ${humanize(page.id)}`}
-                    value={ux.pages[page.id]?.frame ?? "default"}
-                    onChange={(e) => run("setFrame", { page: page.id, frame: e.target.value })}
-                    options={FRAME_CHOICES}
+                    aria-label={`Icon of ${humanize(page.id)}`}
+                    value={ux.pages[page.id]?.icon ?? "auto"}
+                    onChange={(e) => run("setIcon", { page: page.id, icon: e.target.value })}
+                    options={ICON_CHOICES.map((i) => [
+                      i,
+                      i === "auto" ? "Automatic icon" : humanize(i),
+                    ])}
                     className="w-44"
                   />
                 </div>
-              )}
-              {page.pattern.kind !== "landing" && page.sections.length > 1 && (
-                <SectionOrder page={page.id} sections={page.sections} run={run} />
-              )}
-              {page.pattern.kind === "landing" && (
-                <LandingLook
-                  page={page.id}
-                  sections={page.pattern.sections}
+                {page.pattern.kind === "crud" && model && (
+                  <Columns
+                    page={page.id}
+                    fields={model.fields
+                      .filter((f) => !(f.type.kind === "relation" && f.type.many))
+                      .map((f) => f.name)}
+                    columns={ux.pages[page.id]?.columns}
+                    below={ux.pages[page.id]?.below ?? {}}
+                    run={run}
+                  />
+                )}
+                {page.pattern.kind === "crud" && model && (
+                  <ListAndForm
+                    page={page.id}
+                    fields={model.fields.filter(
+                      (f) => !(f.type.kind === "relation" && f.type.many),
+                    )}
+                    lists={model.fields
+                      .filter((f) => f.type.kind === "relation" && f.type.many)
+                      .map((f) => f.name)}
+                    ux={ux.pages[page.id] ?? {}}
+                    run={run}
+                  />
+                )}
+                {(page.pattern.kind === "crud" || page.pattern.kind === "calendar") && (
+                  <UxLists
+                    key={page.id}
+                    ir={ir}
+                    page={page}
+                    model={model}
+                    ux={ux.pages[page.id] ?? {}}
+                    run={run}
+                  />
+                )}
+                <UxRecords
+                  page={page}
+                  model={model}
                   ux={ux.pages[page.id] ?? {}}
-                  themes={themes.map((t) => t.name)}
+                  tones={ux.tones}
                   run={run}
                 />
-              )}
-            </div>
-          );
-        })}
+                {page.pattern.kind !== "landing" && page.pattern.kind !== "onboarding" && (
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span>Frame</span>
+                    <Select
+                      aria-label={`Frame of ${humanize(page.id)}`}
+                      value={ux.pages[page.id]?.frame ?? "default"}
+                      onChange={(e) => run("setFrame", { page: page.id, frame: e.target.value })}
+                      options={FRAME_CHOICES}
+                      className="w-44"
+                    />
+                  </div>
+                )}
+                {page.pattern.kind !== "landing" && page.sections.length > 1 && (
+                  <>
+                    <SectionOrder page={page.id} sections={page.sections} run={run} />
+                    <SectionAppearance
+                      page={page.id}
+                      sections={page.sections}
+                      ux={ux.pages[page.id] ?? {}}
+                      run={run}
+                    />
+                  </>
+                )}
+                {page.pattern.kind === "landing" && (
+                  <LandingLook
+                    page={page.id}
+                    sections={page.pattern.sections}
+                    ux={ux.pages[page.id] ?? {}}
+                    themes={themes.map((t) => t.name)}
+                    run={run}
+                  />
+                )}
+              </div>
+            );
+          })}
       </Group>
       {choices.length > 0 && (
         <Group title="Colors of choices">
@@ -597,10 +647,10 @@ function ListAndForm({
           <Segmented
             label={`${humanize(field)} on a record of ${title}`}
             value={ux.lists?.[field] ?? "table"}
-            options={[
-              ["table", "Table"],
-              ["thread", "Conversation"],
-            ]}
+            options={UX_CAPABILITIES.recordList.values.map((value) => [
+              value,
+              value === "thread" ? "Conversation" : humanize(value),
+            ])}
             onChange={(look) => run("setRecordList", { page, field, look })}
           />
         </div>
@@ -813,6 +863,24 @@ function LandingLook({
         />
       </div>
       <SectionOrder page={page} sections={sections} run={run} />
+      <SectionAppearance page={page} sections={sections} ux={ux} run={run} />
+    </div>
+  );
+}
+
+function SectionAppearance({
+  page,
+  sections,
+  ux,
+  run,
+}: {
+  page: string;
+  sections: { name: string; kind: string }[];
+  ux: PageUx;
+  run: Run;
+}) {
+  return (
+    <div className="space-y-2 text-sm">
       {sections.map((section) =>
         Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
           const label = `${humanize(key)} of ${humanize(section.name)}`;
@@ -866,7 +934,7 @@ function LandingLook({
             );
           // Keys whose first value is not the section's own (a hero's overlay and eyebrow): a
           // Default of their own, which takes the key away.
-          const own = key === "overlay" || key === "eyebrow";
+
           return values === "text" ? (
             <label key={`${section.name}.${key}`} className="flex items-center gap-2">
               <span className="flex-1">{label}</span>
@@ -882,21 +950,65 @@ function LandingLook({
               />
             </label>
           ) : (
-            <div key={`${section.name}.${key}`} className="flex items-center justify-between gap-2">
-              <span>{label}</span>
-              <Segmented
-                label={label}
-                value={String(current ?? (own ? "default" : values[0]))}
-                options={[
-                  ...(own ? [["default", "Default"] as [string, string]] : []),
-                  ...values.map((v): [string, string] => [String(v), humanize(String(v))]),
-                ]}
-                onChange={(v) => set(!own && v === String(values[0]) ? "default" : v)}
-              />
-            </div>
+            <SectionChoice
+              key={`${section.name}.${key}`}
+              page={page}
+              section={section.name}
+              name={key}
+              values={values}
+              current={current}
+              label={label}
+              set={set}
+            />
           );
         }),
       )}
+    </div>
+  );
+}
+
+function SectionChoice({
+  page,
+  section,
+  name,
+  values,
+  current,
+  label,
+  set,
+}: {
+  page: string;
+  section: string;
+  name: string;
+  values: readonly (string | number)[];
+  current: unknown;
+  label: string;
+  set: (value: string) => unknown;
+}) {
+  const controlId = useId();
+  const fallback = name === "overlay" || name === "eyebrow" ? "none" : String(values[0]);
+  const authored = useUxSource(["pages", page, "sections", section, name], fallback);
+  const selected = authored.available
+    ? authored.present
+      ? String(authored.value)
+      : "inherit"
+    : String(current ?? "inherit");
+  return (
+    <div className="space-y-1">
+      <label htmlFor={controlId} className="flex items-center justify-between gap-2">
+        <span>{label}</span>
+        <Select
+          id={controlId}
+          aria-label={label}
+          value={selected}
+          options={[
+            ["inherit", authored.inherited],
+            ...values.map((value): [string, string] => [String(value), humanize(String(value))]),
+          ]}
+          onChange={(event) => void set(event.target.value)}
+          className="w-44"
+        />
+      </label>
+      {authored.reason && <p className="text-xs text-quiet">{authored.reason}</p>}
     </div>
   );
 }

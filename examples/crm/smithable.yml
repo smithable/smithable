@@ -93,5 +93,8 @@ pages:
       openOrders: { count: Order, where: { status: [draft, placed] } }
       followUpsDue: { list: FollowUp, when: dueOn, within: 2 weeks, where: { done: false } }   # the overdue first, marked
       recent: { activity: changes }  # the latest changes, for administrators
+    sections:
+      briefing:
+        text:
 
 navigation: [start, customers, orders, followUps, team]

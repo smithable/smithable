@@ -337,6 +337,16 @@ function count(n: number, noun: string): string {
  */
 export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
   const lines: string[] = [];
+  for (const fact of ux?.inherited?.used ?? [])
+    lines.push(`${fact.path.join(".")}: ${fact.value} (theme ${fact.theme} default)`);
+  for (const fact of ux?.inherited?.masked ?? [])
+    lines.push(
+      `${fact.path.join(".")}: explicit UX masks theme ${fact.theme} default ${fact.value}`,
+    );
+  for (const fact of ux?.inherited?.skipped ?? [])
+    lines.push(
+      `${fact.path.join(".")}: theme ${fact.theme} default ${fact.value} skipped: ${fact.reason}`,
+    );
   const scope = (s: UniqueScope | undefined) => (s === "owner" ? "per owner" : "in the whole app");
   for (const model of ir.models) {
     lines.push(
@@ -480,12 +490,12 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
     const model =
       page.pattern.kind === "crud" ? ir.models.find((m) => m.name === pageModel(page)) : undefined;
     if (!model || !look || (!look.recordHeader && !look.formAside)) continue;
-    const { status, amount, dates } = recordSummary(model, ux?.tones ?? {});
+    const { status, amount, dates } = recordSummary(model, ux?.tones ?? {}, look.summaryFields);
     const where = [look.recordHeader && "header", look.formAside && "aside"]
       .filter(Boolean)
       .join(" and ");
     lines.push(
-      `${page.id} summary (${where}): status ${status?.name ?? "none"}, amount ${amount?.name ?? "none"}, dates ${dates.map((d) => d.name).join(", ") || "none"} (the first choice with tones, money, dates)`,
+      `${page.id} summary (${where}): status ${status?.name ?? "none"}, amount ${amount?.name ?? "none"}, dates ${dates.map((d) => d.name).join(", ") || "none"} (${look.summaryFields ? "named slots; omitted slots use automatic selection" : "the first choice with tones, money, dates"})`,
     );
     if (look.recordHeader && look.formAside)
       lines.push(

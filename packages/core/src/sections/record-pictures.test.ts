@@ -55,7 +55,7 @@ test("a model without pictures is refused; setRecordPictures writes and takes aw
   expect(
     applyOperation({ spec, ux: set.files.ux as string }, "setRecordPictures", {
       page: "catalog",
-      look: "none",
+      look: "inherit",
     }),
   ).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
 });

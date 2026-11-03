@@ -20,6 +20,9 @@ pages:
     openOrders: { label: Open orders }
     followUpsDue: { label: Follow-ups due }
     recent: { label: Latest changes }
+    briefing:
+      title: Today's handoff
+      text: Review the follow-ups due next, then check open orders. Each record keeps its activity with it so the next person can pick up the conversation.
   customers: { subtitle: Keep every relationship in view. }
   orders: { subtitle: Every order and where it stands. }
   team: { subtitle: Who has access and who is invited. }

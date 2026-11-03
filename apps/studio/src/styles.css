@@ -180,3 +180,22 @@ body {
 .motion .guide-lit {
   animation: guide-pulse 320ms ease-out;
 }
+
+.look-editor-dialog {
+  width: calc(100vw - 24px);
+  max-width: none;
+  height: calc(100dvh - 24px);
+  max-height: none;
+  margin: 12px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.look-editor-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.look-editor-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}

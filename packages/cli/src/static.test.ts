@@ -9,12 +9,12 @@ test("every page is saved; a list's form and first record too; the states when a
     ["home", "/"],
     ["customers", "/customers"],
     ["customers-form", "/customers/new"],
-    ["customers-record", "/customers/1"],
+    ["customers-record", "/customers"],
   ]);
   const states = staticFrames(pages, true);
   expect(states.map((f) => f.state).filter(Boolean)).toEqual(["empty", "errors", "dialog"]);
   expect(states.find((f) => f.state === "empty")?.path).toMatch(/^\/customers\?q=/);
-  expect(states.find((f) => f.state === "dialog")?.path).toBe("/customers/1");
+  expect(states.find((f) => f.state === "dialog")?.discoverFrom).toBe("/customers");
 });
 
 test("the index page lists the frames and shows the first; texts are escaped", () => {

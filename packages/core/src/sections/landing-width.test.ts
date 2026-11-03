@@ -32,7 +32,7 @@ test("a landing page's width: contained unsaid, wide or full (A 215)", () => {
   expect(orders.diagnostics[0]?.message).toBe("A width is for a landing page; orders is not one.");
 });
 
-test("a header over the hero needs a cover or photo hero; none is unsaid", () => {
+test("a header over the hero needs a cover or photo hero; none is kept as the explicit choice", () => {
   const photo = read("    header: { over: hero }\n    sections: { hero: { layout: photo } }\n");
   expect(photo.diagnostics).toEqual([]);
   expect(photo.ux?.pages.where?.header).toEqual({ over: "hero" });
@@ -42,17 +42,17 @@ test("a header over the hero needs a cover or photo hero; none is unsaid", () =>
   ).toBe(
     '"over: hero" needs a cover or photo hero, whose picture runs across the width; where\'s hero is split.',
   );
-  expect(read("    header: { over: none }\n").ux?.pages.where?.header).toBeUndefined();
+  expect(read("    header: { over: none }\n").ux?.pages.where?.header).toEqual({ over: "none" });
 });
 
-test("setLandingWidth and the header's over write the ux file; the defaults take the key away", () => {
+test("setLandingWidth and the header's over write the ux file; inherit takes the key away", () => {
   const wide = applyOperation({ spec }, "setLandingWidth", { page: "where", width: "wide" });
   if (!wide.ok) throw new Error(wide.message);
   expect(wide.files.ux).toBe("smithableUx: 0.1\npages:\n  where:\n    width: wide\n");
   expect(
     applyOperation({ spec, ux: wide.files.ux as string }, "setLandingWidth", {
       page: "where",
-      width: "contained",
+      width: "inherit",
     }),
   ).toMatchObject({ ok: true, files: { ux: "smithableUx: 0.1\n" } });
   const none = applyOperation({ spec }, "setSectionLook", {
@@ -62,5 +62,5 @@ test("setLandingWidth and the header's over write the ux file; the defaults take
     value: "none",
   });
   if (!none.ok) throw new Error(none.message);
-  expect(none.files.ux ?? "").not.toContain("over");
+  expect(none.files.ux ?? "").toContain("over: none");
 });

@@ -8,7 +8,39 @@ the two halves together: the **style layer**, the fields a theme gains so two th
 like two designs; and the **lab**, the page that edits a theme on the kit's real pages. Backlog
 Fable 26 and 28; A builds in the order of §7, Fable reviews the core and the kit's CSS.
 
-## 1. What a theme can say today, and what it cannot
+## Current implementation
+
+The historical design below predates the current style layer. Themes now support body, heading
+and label fonts, heading and surface styles, pictures, tables, texture and one-mode policies.
+Contrast is a warning for authored themes; curated defaults receive separate checks. The lab
+preserves preset token exceptions and offers explicit reset to derived colors. Draft mode changes
+stash disabled palettes for session undo/redo; only enabled palettes are saved. A valid raw YAML
+edit replaces that hidden palette history. Save adds a new theme without selecting it. Apply
+atomically creates/selects or updates/selects the look, with a source-revision precondition and
+one project checkpoint. Built-ins are forked before editing; shared-theme impact is shown.
+
+`packages/look-editor` provides the shared controls, draft history and styles. The standalone
+lab, public static lab and Studio use host adapters. Studio’s **Edit look** opens the current
+page in an owned frame on its existing preview service; opening, editing and discarding do not
+write project source or domain data. Closing an unsaved draft asks before discarding, and focus
+returns to the launch button. Draft Undo/Redo remains separate from project history.
+
+Design frames use a versioned presentation protocol with bounded CSS, document/session/page and
+revision checks, font acknowledgements and explicit reconnect. Studio and the local lab bind
+frames through authenticated short-lived presentation tickets, using server-configured parent
+origins. Static frames accept presentation only from their own hosting origin and have no
+project operations. Apply waits for the committed CSS generation and compares rendered theme
+variables before removing transient styling. This CSS generation check does not claim that a
+structural layout draft has been generated. The app’s existing sign-in page offers explicit
+viewer choices; opening Studio’s editor never silently signs in as an administrator.
+
+Local and static font URLs come from the adapter's typed font manifest. Static exports refresh
+normal and supported italic CSS, referenced language subsets and licenses on every run.
+`start.json` records engine version, kit hash and font manifest identity for newly exported sets;
+older sets in a partial export retain their original identity or remain unversioned.
+The public lab labels its pages as static previews.
+
+## 1. Original gap and scope
 
 A theme (`look.md` §3.1, `themes/<name>.yml`) is colours in two modes, one font, a radius, a
 shadow, a density, a motion and a chroma cap. The four design-delivery presets also have a
@@ -143,6 +175,16 @@ once in `frames/fonts/`; `start.json` lists the starters, booking first, and the
 server. A starter without a list of its own frames its data page as the list (api), and one
 without a landing page its front page.
 
+**The export is committed, and the gate reads it (2026-11-03).** `node scripts/theme-lab-export.mjs`
+writes `docs/site/theme-lab/` (the starters' pages, `frames/<starter>/frame.js`, the fonts,
+`start.json`), which is committed and copied into the site by `scripts/build-docs.mjs`. The
+public lab's check (`scripts/test-public-look.mjs`, run by `pnpm test:studio` and so by the gate)
+opens that built site and drives the exported frames' runtime, not the source of the day. So a
+change to `packages/cli/src/frame-runtime.ts` or `packages/cli/src/look-frame-runtime.ts` (what
+`frame.js` is built from), to the kit's pages or to the booking starter is not complete until
+`node scripts/theme-lab-export.mjs` has been run and its output committed with the change; without
+it the check fails on the stale export, and the check's message is to say which command to run.
+
 **The controls,** on the left, grouped as the file is: colours (the brand colour and
 background with the derived tokens shown, each overridable as `look.md` §3.3 says), fonts
 (body and heading with a specimen line each), headings, surfaces, buttons, pictures, tables,
@@ -161,7 +203,7 @@ heading font at this scale needs a short title." "Cards in a grid: flat cards on
 background have no edge; add a border or a shadow." "Zebra rows with strong dividers: busy."
 Each is a rule in `theme-fit.ts` in core (pure, tested), returning `fine`, `note` or `avoid`
 with its sentence; the Look tab can show the same lines beside a theme later. The contrast
-errors are the same as `smithable validate`'s and block Save.
+warnings match `smithable validate` and do not block Save. Structural errors block Save; accepted colors may still need visual contrast checks over pictures and translucent surfaces.
 
 ## 5. The kit's part
 
@@ -216,3 +258,44 @@ Importing a theme from a site (`smithable theme --from` exists and stays), a mar
 themes, per-page themes beyond the landing page's own, custom CSS (the hooks in look.md §2 stay
 the developer's road), and any layout the ux file does not have: the lab shows layouts, it does
 not invent them.
+
+### Current project and page inventory (2026-11-02)
+
+Local mode opens the shown app's selected theme source and effective overrides. **Apply look**
+uses one project checkpoint for create/update/select and requested override resets. **Make a
+project copy** isolates edits from other pages sharing a project theme. Save as a new theme and
+Download draft remain separate actions. Unchanged Apply is disabled. Conflicts keep the draft
+and require reloading the saved look; they never overwrite newer source.
+
+Page tabs come from the shared spec page manifest, including every instance and extra data
+routes. Labels use page titles where available. Record/article states read bounded ids or links
+already rendered for the currently authorized viewer; they never assume record `1`, seed data,
+or switch role during discovery. No readable record yields an explicit empty state and Retry.
+The standalone development lab retains its existing admin sign-in behavior. Success requires an
+actual frame acknowledgement; a deadline displays a failure and Retry. This does not establish
+hosted authorization. Public snapshots use the same record-discovery probe and remain labeled
+static exports with their own generating identity.
+
+
+## Theme defaults and the shared gallery
+
+Themes may carry bounded UX defaults for the app shell, page kinds and section kinds. The core
+UX reader applies them only to omitted source keys, validates them in the real page/model/auth
+context, and records used, masked and skipped facts. Generator, Studio and the editor consume
+that one result. Explicit platform values remain authored; Inherit is a separate operation.
+
+The shared editor's Look gallery uses theme token thumbnails and its existing page manifest,
+resolver, draft history and atomic Apply. Arrow keys/Home/End move between choices; Enter/Space
+selects. Gallery mode owns at most one app frame. Public gallery frames are saved starter
+snapshots, labeled as such; thumbnails are not screenshots of the current app.
+
+`lookImpact` compares validated effective structural capabilities and the generator's theme
+markup policy (section banding and appearance controls). Masked defaults and token edits retain
+the fast CSS path. Changes that need generated markup display **Structural preview unavailable**
+and hide the draft frame. No real project files, database, uploads or hooks are borrowed for an
+isolated render. Apply regenerates through the canonical atomic operation and then opens the
+saved app. A CSS generation acknowledgement is not a claim of structural draft fidelity.
+
+An isolated structural renderer remains unavailable. Adding one requires a separate disposable
+data/filesystem/network boundary; temporarily rewriting real source and rolling it back is not
+that boundary. The gallery and all independent presentation work remain usable without it.

@@ -151,6 +151,22 @@ export {
   typeKey,
   USER_MODEL,
 } from "./ir.js";
+export {
+  LOOK_KEYS,
+  type LookAuthorship,
+  type LookKey,
+  type LookOrigin,
+  type LookReset,
+  lookAuthorship,
+  type ProjectLook,
+  pageLookUx,
+  type ResolvedLook,
+  resolveLook,
+  sameLookTheme,
+} from "./look.js";
+export type { UxDefaultFact, UxInherited } from "./look-defaults.js";
+export * from "./look-impact.js";
+export * from "./look-protocol.js";
 export type { MigrateResult, SpecMigration } from "./migrate.js";
 export { MIGRATIONS, migrateSpec } from "./migrate.js";
 export {
@@ -214,6 +230,13 @@ export {
 } from "./people.js";
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
+export { type PreviewPage, previewPages, previewRecordPath } from "./preview-pages.js";
+export {
+  SUMMARY_PARTS,
+  type SummaryFields,
+  type SummaryPart,
+  summaryEligible,
+} from "./record-emphasis.js";
 export {
   IMPORT_MAX,
   type ImportRecords,
@@ -235,6 +258,7 @@ export {
 } from "./samples.js";
 export { buildJsonSchema } from "./schema.js";
 export type { JsonSchema, SectionKey, SpecSection } from "./section.js";
+export { MEDIA_LOOKS, READING_MEASURES, RHYTHMS } from "./section-looks.js";
 export { parseFieldShorthand } from "./sections/field-type.js";
 export { incomingText } from "./sections/incoming.js";
 export {
@@ -274,7 +298,11 @@ export {
   tokensOf,
   withBackground,
 } from "./theme.js";
+export * from "./theme-default-schema.js";
 export { type Fit, themeFit } from "./theme-fit.js";
+export { stageThemeSelection } from "./theme-look-edit.js";
+export * from "./theme-schema.js";
+export * from "./theme-structure.js";
 export {
   DEFAULT_STYLE,
   DISPLAY_FONTS,
@@ -322,4 +350,11 @@ export {
   validateUx,
   weekBy,
 } from "./ux.js";
+export {
+  UX_CAPABILITIES,
+  type UxCapability,
+  type UxCapabilityId,
+  type UxChoiceContext,
+  uxChoiceProblem,
+} from "./ux-capabilities.js";
 export { convertValue } from "./values.js";
