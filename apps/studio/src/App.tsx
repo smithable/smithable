@@ -39,6 +39,7 @@ import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
+import { TimeZoneCheck } from "./TimeZoneCheck";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
 import {
@@ -1142,6 +1143,18 @@ export function App() {
                 ? "Your workspace is starting; its packages are installed first, which takes about half a minute."
                 : "Your workspace is starting…"}
           </div>
+        )}
+        {!project.making && !guideOff() && (
+          <TimeZoneCheck
+            app={project.name}
+            spec={project.files.spec}
+            onUse={(zone) => void run("setApp", { timezone: zone })}
+            onChange={() => {
+              nocodePlace({ sub: "behavior" });
+              if (narrow) showWindow("nocode");
+              else workIn("nocode");
+            }}
+          />
         )}
         {(message || pending) && (
           // Hovering or focusing the notice keeps it while it is read.

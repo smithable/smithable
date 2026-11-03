@@ -544,6 +544,14 @@ try {
           .waitFor();
         if (await fresh.getByRole("dialog", { name: /^Smith presents / }).count())
           throw new Error("Present the app again opened the overlay");
+        // The app's time zone is confirmed once in this browser, and the answer is remembered.
+        const zone = fresh.locator('[data-part="time-zone-check"]');
+        await zone.getByRole("button", { name: /^(Keep|Not now)/ }).click();
+        await zone.waitFor({ state: "detached", timeout: 5000 * P });
+        await fresh.reload();
+        await fresh.locator("header").getByRole("button", { name: "Guide" }).waitFor();
+        await fresh.waitForTimeout(1000);
+        if (await zone.count()) throw new Error("the time zone was asked about again");
       } finally {
         await fresh.close();
       }

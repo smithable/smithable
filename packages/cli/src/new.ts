@@ -96,13 +96,9 @@ export async function create(
     onDraft?: (files: Record<string, string>, assumptions?: Assumption[]) => void;
   } = {},
 ): Promise<number> {
-  if (options.timezone) {
-    try {
-      new Intl.DateTimeFormat("en", { timeZone: options.timezone });
-    } catch {
-      io.err(`Unknown time zone "${options.timezone}". Use a name like Europe/Mariehamn.\n`);
-      return 1;
-    }
+  if (options.timezone && !knownZone(options.timezone)) {
+    io.err(`Unknown time zone "${options.timezone}". Use a name like Europe/Mariehamn.\n`);
+    return 1;
   }
   // A page as the starting point: what it says is the description (first-build.md §2.8).
   let pictures: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
@@ -563,6 +559,17 @@ export function sampleFiles(
       },
     ];
   });
+}
+
+/** Whether the runtime knows a time zone's name. */
+export function knownZone(name: unknown): boolean {
+  if (typeof name !== "string" || !name) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: name });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
