@@ -1349,10 +1349,13 @@ function readStandardAction(
     const what = `${key} in "add" of ${where}`;
     const added = read({ key, keyNode: at, value } as Entry, target, what, reference);
     const given = new Set(added.map((v) => v.field));
+    // The app fills a User or an address owner left out (the viewer's own, or the record's the
+    // action adds beside: support-portal-path.md §2), as a form's create does.
     const missing = target.fields.filter(
       (f) =>
         f.required &&
         f.name !== reference &&
+        !(f.name === target.ownedBy && target.ownerKind !== "through") &&
         !f.formula &&
         !f.sequence &&
         f.default === undefined &&

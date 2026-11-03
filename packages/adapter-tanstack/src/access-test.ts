@@ -4,6 +4,7 @@ import {
   camel,
   conditionText,
   type FieldIR,
+  humanize,
   isUpload,
   kebab,
   type ModelAllowed,
@@ -165,6 +166,8 @@ function insert${model.name}(owner: string | null, values: Record<string, unknow
 }`;
   });
   let updates = false;
+  // The models whose visitors' records are counted in the audit log (an address owns them).
+  const flooded: string[] = [];
   const describes = ir.models.map((model) => {
     const access = modelAccess(model, auth);
     const data = `${camel(model.name)}Data`;
@@ -231,6 +234,22 @@ ${Object.entries(expected(access, role))
     const related = (await ${data}.get(null, parent.id))?.${list.name} ?? [];
     expect(related.length).toBeGreaterThan(0);
     for (const row of related) expect(row.ownerId).toBeNull();
+  });`);
+    }
+    // Visitors' records stop at the cap (data.ts, VISITOR_ROWS): for an address-owned model they
+    // are counted in the audit log, as audit() writes them (who "visitor", or "the app" without a request).
+    if (access.create.public && model.ownerKind === "address") {
+      flooded.push(model.name);
+      tests.push(`  test("visitors' ${humanize(plural(model.name)).toLowerCase()} stop at the cap, counted in the audit log", async () => {
+    const made = () => db.select({ n: count() }).from(schema.auditLog).where(and(inArray(schema.auditLog.who, ["visitor", "the app"]), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)}))).get()?.n ?? 0;
+    process.env.VISITOR_ROWS = String(made() + 2);
+    try {
+      await ${data}.create(null, ${values}(null));
+      await ${data}.create(null, ${values}(null));
+      await expect(${data}.create(null, ${values}(null))).rejects.toThrow(AccessDenied);
+    } finally {
+      delete process.env.VISITOR_ROWS;
+    }
   });`);
     }
     // A related record's title only for who may read it: through a record the viewer may read,
@@ -490,6 +509,13 @@ ${tests.join("\n\n")}
         )
         .find(({ role, can }) => role !== null && can.create && can.changeOwn && can.deleteOwn)
     : undefined;
+  // What the test file imports from Drizzle: the audit lines' and the cap's queries.
+  const orm = [
+    ...new Set([
+      ...(audited ? ["and", "eq"] : standard.length || updates ? ["eq"] : []),
+      ...(flooded.length ? ["and", "count", "eq", "inArray"] : []),
+    ]),
+  ].sort();
   if (audited) {
     const { model, role } = audited;
     const data = `${camel(model.name)}Data`;
@@ -577,7 +603,7 @@ ${roles.some((r) => r !== null && r !== "admin") ? `    expect(() => forgetInLog
   ];
   return `${HEADER}// For every model and role: which records a user can read, create, change and delete.
 // "Own" records are owned by the user; "others" by someone else.
-${audited ? 'import { and, eq } from "drizzle-orm";\n' : standard.length || updates ? 'import { eq } from "drizzle-orm";\n' : ""}import { describe, expect, test } from "vitest";
+${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { describe, expect, test } from "vitest";
 import { db } from "#/db";
 ${signedIn || audited ? `import { ${[...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";\n` : ""}import * as schema from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";

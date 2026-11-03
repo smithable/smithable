@@ -19,6 +19,8 @@ import { checksLoaded, hasLocks, textBounds } from "./data.js";
 import { formulaCompiler, formulasName } from "./formulas.js";
 import { afterCustom, OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
 import {
+  addressFrom,
+  addressOwned,
   attr,
   dataKey,
   guard,
@@ -650,23 +652,25 @@ export function standardActionServer(
     .filter((v) => !("asked" in v))
     .map((v) => dataKey(model.fields.find((f) => f.name === v.field) as FieldIR));
   // A record an action adds gets its numbers counting up as a create does (orders.md §4).
-  const numbered = (m: ModelIR, table: string, values: string) =>
-    sequenceEntries(m, auth, table, ownerExpr(m, names(m, t), values))
+  const numbered = (m: ModelIR, table: string, values: string, source?: string) =>
+    sequenceEntries(m, auth, table, ownerExpr(m, names(m, t), values, source))
       .map((e) => `, ${e}`)
       .join("");
+  // A record added beside the action's own takes that record's address as its owner, never the viewer's.
+  const from = (p: string) => (addressOwned(model) ? `${p}.source` : undefined);
   const sequenced = adds
-    .map(({ target, tn }, i) => numbered(target, tn.table, `p.added${i}`))
+    .map(({ target, tn }, i) => numbered(target, tn.table, `p.added${i}`, from("p")))
     .join("");
   // The record as it was, its change checked as update() checks one (A 153), the action's own
   // set freeing what it may change although locked; access is the action's, checked before.
   const writes = (p: string) => `{
       const before = tx.select().from(${n.table}).where(eq(${n.table}.id, ${p}.id)).get();
       if (!before) throw new AccessDenied(viewer !== null);
-      const checked = ${n.data}.checkUpdate(tx, viewer, ${p}.id, ${p}.values, before${checksLoaded(model) ? `, ${p}.loaded` : ""}${hasLocks(model) ? `, ${JSON.stringify(action.name)}, ${JSON.stringify(frees)}` : ""});
+      const checked = ${n.data}.checkUpdate(tx, viewer, ${p}.id, ${addressOwned(model) ? `{ ...${p}.values, ...(${p}.values.${model.ownedBy} === undefined ? {} : { ${model.ownedBy}: ${n.data}.ownerFor(viewer, ${p}.values.${model.ownedBy}) }) }` : `${p}.values`}, before${checksLoaded(model) ? `, ${p}.loaded` : ""}${hasLocks(model) ? `, ${JSON.stringify(action.name)}, ${JSON.stringify(frees)}` : ""});
       const changed = tx.update(${n.table}).set(checked).where(eq(${n.table}.id, ${p}.id)).returning().get();
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: changed.id, fields: ${setFields} });${tell(model.name, JSON.stringify(action.name), "changed", "before")}
       const inserted = [
-${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${tn.data}.checkCreate(tx, viewer, ${p}.added${i})${ownerInsert(target, tn, `${p}.added${i}`)}${numbered(target, tn.table, `${p}.added${i}`)} }).returning().get(),`).join("\n")}
+${adds.map(({ target, tn }, i) => `        tx.insert(${tn.table}).values({ ...${tn.data}.checkCreate(tx, viewer, ${p}.added${i})${ownerInsert(target, tn, `${p}.added${i}`, from(p))}${numbered(target, tn.table, `${p}.added${i}`, from(p))} }).returning().get(),`).join("\n")}
       ] as const;
 ${adds.map(({ target }, i) => `      audit(tx, viewer, { action: "created", model: ${JSON.stringify(target.name)}, record: inserted[${i}].id, details: { by: ${JSON.stringify(action.name)} } });${tell(target.name, '"created"', `inserted[${i}]`)}`).join("\n")}
       return { changed, inserted };
@@ -689,7 +693,7 @@ type Row = NonNullable<Awaited<ReturnType<typeof ${n.data}.get>>>;
 /** The ${label}'s new values (only the fields the action sets${asked ? " and asks for" : ""})${adds.length ? " and the records it adds" : ""}, worked out on it as it was. */
 function plan(${all.some((v) => v.includes("viewer")) ? "viewer" : "_viewer"}: Viewer | null, row: Row${askedParam}) {
   return {
-    id: row.id,${checksLoaded(model) ? "\n    // As the page loads it, its formulas worked out: what a rule on a computed field reads.\n    loaded: row as Record<string, unknown>," : ""}
+    id: row.id,${checksLoaded(model) ? "\n    // As the page loads it, its formulas worked out: what a rule on a computed field reads.\n    loaded: row as Record<string, unknown>," : ""}${adds.length && addressOwned(model) ? `\n    // Whose the records it adds are: this record's address (support-portal-path.md §2).\n    source: row.${model.ownedBy},` : ""}
     values: ${n.settable}.partial().parse({
 ${values.map((v) => `      ${v}`).join("\n")}
     }),
@@ -908,13 +912,13 @@ function copyActionServer(
   const usesF = values.some((v) => v.includes("F."));
   const pick = (from: string, keys: string[]) => keys.map((k) => `${k}: ${from}.${k}`).join(", ");
   // The copy, and its lists' copies, get their own numbers counting up (orders.md §4).
-  const numbered = (m: ModelIR, table: string, values: string) =>
-    sequenceEntries(m, auth, table, ownerExpr(m, names(m, t), values))
+  const numbered = (m: ModelIR, table: string, values: string, source?: string) =>
+    sequenceEntries(m, auth, table, ownerExpr(m, names(m, t), values, source))
       .map((e) => `, ${e}`)
       .join("");
   const sequenced = [
-    numbered(model, n.table, "values"),
-    ...lists.map((l) => numbered(l.listed, l.ln.table, "item")),
+    numbered(model, n.table, "values", addressFrom(model, "row")),
+    ...lists.map((l) => numbered(l.listed, l.ln.table, "item", addressFrom(l.listed, "item"))),
   ].join("");
   const orm = [...(sequenced.includes("eq(") ? ["eq"] : []), ...(sequenced ? ["max"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { db } from "#/db";
@@ -953,12 +957,12 @@ ${lists
   // One transaction: the copy and its lists' records, or nothing.
   const { created${lists.map((l) => `, ${l.name}Copies`).join("")} } = db.transaction((tx) => {
     // A copy is checked as a new record is (A 153): its rules, capacity and time.
-    const created = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, n, "values")}${numbered(model, n.table, "values")} }).returning().get();
+    const created = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, n, "values", addressFrom(model, "row"))}${numbered(model, n.table, "values", addressFrom(model, "row"))} }).returning().get();
     audit(tx, viewer, { action: "copied", model: ${JSON.stringify(model.name)}, record: created.id, details: { from: row.id, by: ${JSON.stringify(action.name)} } });${toldAbout(ir, model.name) ? `\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, "created", created);\n    outgoing(tx, viewer, ${JSON.stringify(model.name)}, ${JSON.stringify(action.name)}, created);` : ""}
 ${lists
   .map(
     (l) => `    const ${l.name}Copies = ${l.name}.map((item) => {
-      const copy = tx.insert(${l.ln.table}).values({ ...${l.ln.data}.checkCreate(tx, viewer, { ...item, ${l.back.name}Id: created.id })${ownerInsert(l.listed, l.ln, "item")}${numbered(l.listed, l.ln.table, "item")} }).returning().get();
+      const copy = tx.insert(${l.ln.table}).values({ ...${l.ln.data}.checkCreate(tx, viewer, { ...item, ${l.back.name}Id: created.id })${ownerInsert(l.listed, l.ln, "item", addressFrom(l.listed, "item"))}${numbered(l.listed, l.ln.table, "item", addressFrom(l.listed, "item"))} }).returning().get();
       audit(tx, viewer, { action: "created", model: ${JSON.stringify(l.listed.name)}, record: copy.id, details: { by: ${JSON.stringify(action.name)} } });${toldAbout(ir, l.listed.name) ? `\n      outgoing(tx, viewer, ${JSON.stringify(l.listed.name)}, "created", copy);` : ""}
       return copy;
     });`,

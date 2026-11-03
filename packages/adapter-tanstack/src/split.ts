@@ -13,6 +13,7 @@ import {
 import { actionNames } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import {
+  addressFrom,
   addressOwned,
   dataKey,
   HEADER,
@@ -112,7 +113,12 @@ export function splitActionServer(
   const copied = (action.split?.copy ?? []).map((name) =>
     dataKey(model.fields.find((f) => f.name === name) as FieldIR),
   );
-  const numbered = sequenceEntries(model, auth, n.table, ownerExpr(model, n, "values"))
+  const numbered = sequenceEntries(
+    model,
+    auth,
+    n.table,
+    ownerExpr(model, n, "values", addressFrom(model, "row")),
+  )
     .map((e) => `, ${e}`)
     .join("");
   const childLive = child.trash ? `, isNull(${cn.table}.deletedAt)` : "";
@@ -200,7 +206,7 @@ export async function ${a.run}(viewer: Viewer | null, id: number, picked: number
     const values = ${n.schema}.parse({ ${copied.map((k) => `${k}: shown.${k}`).join(", ")} });
     created = db.transaction((tx) => {
       // Made as any new record is (A 153): its rules, its numbers counting up.
-      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, n, "values")}${numbered} }).returning().get();
+      const made = tx.insert(${n.table}).values({ ...${n.data}.checkCreate(tx, viewer, values)${ownerInsert(model, n, "values", addressFrom(model, "row"))}${numbered} }).returning().get();
       // Only those still on it: one moved meanwhile stays where it went.
       tx.update(${cn.table}).set({ ${backKey}: made.id }).where(and(inArray(${cn.table}.id, chosen), eq(${cn.table}.${backKey}, id))).run();
       // What moved, so the split can be undone (by ids, never values).

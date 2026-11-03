@@ -83,7 +83,8 @@ pages:
   an administrator; its second for anyone else. The server checks the value as it checks a
   `by: app` field on every create and change of a message model (its `thread` names a side, a
   page shows it as a conversation, or mail replies become it), whatever file the page is in, so
-  a customer's reply never says it is ours. So
+  a customer's reply never says it is ours; rows made before the model became a thread keep
+  their side as written. So
   every required field of the message model but the text must be filled without the box:
   `by: app` with a default, a choice (its first value), or the reference. Validation warns
   when one is not (`thread-needs-form`: "Message.priority is required and the reply box does

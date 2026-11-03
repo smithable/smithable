@@ -240,12 +240,12 @@ export function ownerOf(model: ModelIR, n: Names, row = "row", viewer = "viewer"
 }
 
 /**
- * The condition for the records the viewer reads as their own, in a query (`viewer` is signed
- * in): the owner column, or the model's own rule for an address and for records read through the
- * record one step away.
+ * The condition for the records that are the viewer's own, in a query (`viewer` is signed in):
+ * the owner column (the creator's, for a record owned through a reference: only reading reaches
+ * through, data.ts), or the model's own rule for an address.
  */
 export function ownCondition(model: ModelIR, n: Names, viewer = "viewer"): string {
-  return addressOwned(model) || model.ownerKind === "through"
+  return addressOwned(model)
     ? `${n.data}.own(${viewer})`
     : `eq(${n.table}.${ownerKey(model)}, ${viewer}.id)`;
 }
@@ -255,10 +255,13 @@ export function ownCondition(model: ModelIR, n: Names, viewer = "viewer"): strin
  * merge into a new record), as create() gives it: the creator, or the model's ownerFor (a chooser's
  * choice kept, anyone else their own, a refusal where create() refuses).
  */
-export function ownerExpr(model: ModelIR, n: Names, values: string): string {
-  return creatorOwned(model)
-    ? "personOf(viewer)"
-    : `${n.data}.ownerFor(viewer, ${values}.${ownerKey(model)})`;
+export function ownerExpr(model: ModelIR, n: Names, values: string, from?: string): string {
+  if (creatorOwned(model)) return "personOf(viewer)";
+  // An address owner made beside another record takes that record's address, never the viewer's
+  // own; a chooser's explicit value still wins (the data function's ownerLike).
+  if (addressOwned(model) && from)
+    return `${n.data}.ownerLike(viewer, ${values}.${ownerKey(model)}, ${from})`;
+  return `${n.data}.ownerFor(viewer, ${values}.${ownerKey(model)})`;
 }
 
 /**
@@ -268,8 +271,10 @@ export function ownerExpr(model: ModelIR, n: Names, values: string): string {
  */
 export function dropUnused(text: string, names: string[]): string {
   let out = text;
+  // Names are counted in code only: a comment naming one keeps no import.
+  const code = () => out.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   for (const name of names) {
-    if ((out.match(new RegExp(`\\b${name}\\b`, "g"))?.length ?? 0) !== 1) continue;
+    if ((code().match(new RegExp(`\\b${name}\\b`, "g"))?.length ?? 0) !== 1) continue;
     out = out
       .replace(
         new RegExp(`^(import \\{[^}]*?)${name}, ([^}]*\\} from .*)$`, "m"),
@@ -295,9 +300,13 @@ export function addressOwnedForm(model: ModelIR, auth: AuthIR): FieldIR | undefi
 }
 
 /** What an insert gives the owner column beside the values checked (ownerExpr). */
-export function ownerInsert(model: ModelIR, n: Names, values: string): string {
-  return `, ${ownerKey(model)}: ${ownerExpr(model, n, values)}`;
+export function ownerInsert(model: ModelIR, n: Names, values: string, from?: string): string {
+  return `, ${ownerKey(model)}: ${ownerExpr(model, n, values, from)}`;
 }
+
+/** The address a record made beside `row` of `model` takes as its owner: the row's own, when the model's owner is an address. */
+export const addressFrom = (model: ModelIR, row: string): string | undefined =>
+  addressOwned(model) ? `${row}.${model.ownedBy}` : undefined;
 
 /** Fields that refer to a user, e.g. an account manager. */
 export function userFields(fields: FieldIR[] | ModelIR): FieldIR[] {

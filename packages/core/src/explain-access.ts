@@ -521,6 +521,16 @@ function explainAction(
     `${humanize(action.name)} changes a ${record(model.name)}: whoever may change one runs it, and the roles whose actions grant names it.`,
   );
   const write = modelAccess(model, auth).write;
+  // "actions: none" is no action at all: not on the role's own records, not by its write grant
+  // (support-portal-path.md §3).
+  if (role.actionsNone)
+    return denied(
+      changes,
+      inAuth(
+        `roles.${role.name}.actions`,
+        `${role.name}'s actions grant is none: ${plural(role.name)} run no action, not on their own ${what} either${write.roles.includes(role.name) ? ", whatever their write grant says" : ""}.`,
+      ),
+    );
   if (a.roles.includes(role.name)) {
     const why = write.roles.includes(role.name)
       ? whyGranted(role, "write", model.name, what)
@@ -552,15 +562,6 @@ function explainAction(
       inAuth(
         `roles.${role.name}`,
         `${role.name}'s write grant does not name ${model.name} and its actions grant does not name ${action.name}.`,
-      ),
-    );
-  // "actions: none" is no action at all, the role's own records included (support-portal-path.md §3).
-  if (role.grants !== "all" && role.grants.actions?.length === 0)
-    return denied(
-      changes,
-      inAuth(
-        `roles.${role.name}.actions`,
-        `${role.name}'s actions grant is none: ${plural(role.name)} run no action, not on their own ${what} either.`,
       ),
     );
   const own = inAuth(

@@ -127,9 +127,6 @@ describe("the support portal: an owner by address, and reading through a referen
       "const asAddress = (given: string | null | undefined) => given?.trim().toLowerCase() || null;",
     );
     expect(cases).toContain(
-      "const owner = !viewer || chooses(viewer) ? (asAddress(given) ?? addressOf(viewer)) : addressOf(viewer);",
-    );
-    expect(cases).toContain(
       'throw new AccessDenied(true, "Prove your address first: sign in with a code sent to it, or with a provider that has confirmed it.");',
     );
     expect(cases).toContain(
@@ -244,6 +241,62 @@ describe("the support portal: an owner by address, and reading through a referen
     expect(messages).toContain(
       "where: and(eq(schema.messages.id, id), messageData.readable(viewer)),",
     );
+  });
+
+  test("a creator changes and deletes their own message: the creator's column is selected and checked", () => {
+    expect(messages).toContain(
+      ".select({ ownerId: schema.messages.ownerId, attachments: schema.messages.attachments })",
+    );
+    expect(messages).toContain("check(messageAccess.delete, viewer, row.ownerId);");
+    // Only reading reaches through the case: own(viewer) is the read scope's and nothing else's.
+    expect(messages.match(/messageData\.own\(viewer\)/g)?.length).toBe(1);
+  });
+
+  test("a chooser clearing an optional address owner gets none; left out, their own", () => {
+    expect(cases).toContain(
+      "const owner = !viewer ? asAddress(given) : chooses(viewer) ? (given === undefined ? addressOf(viewer) : asAddress(given)) : addressOf(viewer);",
+    );
+    expect(cases).toContain(
+      "viewer ? (personOf(viewer) ? `Name the customer email (customerEmail).`",
+    );
+  });
+
+  test("a record made beside another takes that record's address, never the viewer's; a chooser's value wins", () => {
+    expect(cases).toContain(
+      "const owner = chooses(viewer) && given !== undefined ? asAddress(given) : (asAddress(from) ?? asAddress(given));",
+    );
+    expect(cases).toContain("\n  ownerLike,\n");
+    const escalated = generate(
+      `${spec}  escalate:
+    on: SupportCase
+    add:
+      Escalation: { reason: Escalated by the team. }
+`.replace(
+        "pages:",
+        `  Escalation:
+    fields:
+      reason: text!
+      customerEmail: email!
+      supportCase: SupportCase!
+    ownedBy: customerEmail
+pages:`,
+      ),
+      authText,
+    );
+    expect(escalated.errors).toEqual([]);
+    const action = escalated.file("src/generated/actions/escalate.server.ts");
+    expect(action).toContain("source: row.customerEmail,");
+    expect(action).toContain(
+      "customerEmail: escalationData.ownerLike(viewer, one.added0.customerEmail, one.source)",
+    );
+  });
+
+  test("the visitors' cap is tested in the app, counted as audit() writes the lines", () => {
+    const test = app.file("src/generated/access.test.ts");
+    expect(test).toContain("visitors' support cases stop at the cap, counted in the audit log");
+    expect(test).toContain('inArray(schema.auditLog.who, ["visitor", "the app"])');
+    expect(test).toContain('import { and, count, eq, inArray } from "drizzle-orm";');
+    expect(cases).toContain("(Number(process.env.VISITOR_ROWS) || 10000)");
   });
 
   test("a record added beside a form gets its owner as create() gives it, and its number per that owner", () => {

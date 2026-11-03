@@ -21,8 +21,8 @@ export interface Allowed {
   where?: Condition;
   /**
    * A standard action only: the roles that run it at all, whichever way they qualify. The others
-   * wrote `actions: none`, which is no action at all, their own records included
-   * (docs/design/support-portal-path.md §3).
+   * wrote `actions: none`, which is no action at all, their own records included and whatever
+   * their write grant says (docs/design/support-portal-path.md §3).
    */
   among?: string[];
 }
@@ -194,16 +194,19 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
       owner: false,
     };
   }
-  // A role whose block writes `actions: none` runs no action at all, its own records included
-  // (support-portal-path.md §3); a list keeps today's meaning, beside the owner's own.
-  const none = auth.roles
-    .filter((r) => r.grants !== "all" && r.grants.actions?.length === 0)
-    .map((r) => r.name);
+  // A role whose block writes `actions: none` runs no action at all: not as owner, not by its
+  // write grant (support-portal-path.md §3); a list, or an empty one, keeps today's meaning.
+  const none = auth.roles.filter((r) => r.actionsNone).map((r) => r.name);
   const among =
     write.owner && none.length
       ? auth.roles.map((r) => r.name).filter((r) => !none.includes(r))
       : undefined;
-  return { public: false, roles, owner: write.owner, ...(among ? { among } : {}) };
+  return {
+    public: false,
+    roles: roles.filter((r) => !none.includes(r)),
+    owner: write.owner,
+    ...(among ? { among } : {}),
+  };
 }
 
 /**

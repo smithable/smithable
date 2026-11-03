@@ -979,11 +979,14 @@ export function dataModule(
         .map((entry) => fits(n.table, entry))
         .join(", ")})`
     : undefined;
+  // What the viewer reads as their own: through the record one step away for a through owner
+  // (support-portal-path.md §2); "mine", a capacity's own and the rest stay the creator's.
+  const readOwn = model.ownerKind === "through" ? `${n.data}.own(viewer)` : ownCondition(model, n);
   const ownOrPublic = !signedIn
     ? "sql`false`"
     : publicWhere && access.read.owner
-      ? `scope === "own" && viewer ? or(${ownCondition(model, n)}, ${publicWhere}) : sql\`false\``
-      : `scope === "own" && viewer ? ${ownCondition(model, n)} : sql\`false\``;
+      ? `scope === "own" && viewer ? or(${readOwn}, ${publicWhere}) : sql\`false\``
+      : `scope === "own" && viewer ? ${readOwn} : sql\`false\``;
   const capacityCounted = capacity
     ? [
         `eq(${n.table}.${capacity.per}Id, values.${capacity.per}Id)`,
@@ -1928,19 +1931,34 @@ const asAddress = (given: string | null | undefined) => given?.trim().toLowerCas
  * address, whatever the form sent, and a refusal while theirs is not proven.
  */
 function ownerFor(viewer: Viewer | null, given: string | null | undefined): string${ownerRequired ? "" : " | null"} {
-  const owner = !viewer || chooses(viewer) ? (asAddress(given) ?? addressOf(viewer)) : addressOf(viewer);
+  // A visitor's form and a chooser give it as written (a chooser leaving it out is their own, clearing it is none); anyone else is their own.
+  const owner = !viewer ? asAddress(given) : chooses(viewer) ? (given === undefined ? addressOf(viewer) : asAddress(given)) : addressOf(viewer);
   if (viewer && !chooses(viewer) && owner && !viewer.proven)
     throw new AccessDenied(true, "Prove your address first: sign in with a code sent to it, or with a provider that has confirmed it.");${
       ownerRequired
         ? `
-  // The record must have one: a key or a timer, who is no person, cannot be it.
+  // The record must have one: a key or a timer, who is no person, cannot be it; a chooser names it.
   if (!owner)
     throw new AccessDenied(
       viewer !== null,
-      viewer ? \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${ownerLabel} (${model.ownedBy}).\` : undefined,
+      viewer ? (personOf(viewer) ? \`Name the ${ownerLabel} (${model.ownedBy}).\` : \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${ownerLabel} (${model.ownedBy}).\`) : undefined,
     );`
         : ""
     }
+  return owner;
+}
+
+/**
+ * Whose a record made beside another is (an action's add, a copy, a split, a merge into a new
+ * record): a chooser's choice, else the other record's address, never the viewer's own.
+ */
+function ownerLike(viewer: Viewer | null, given: string | null | undefined, from: string | null | undefined): string${ownerRequired ? "" : " | null"} {
+  const owner = chooses(viewer) && given !== undefined ? asAddress(given) : (asAddress(from) ?? asAddress(given));${
+    ownerRequired
+      ? `
+  if (!owner) throw new AccessDenied(viewer !== null, \`Name the ${ownerLabel} (${model.ownedBy}).\`);`
+      : ""
+  }
   return owner;
 }
 `
@@ -2014,7 +2032,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
 
 `
     : ""
-}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${ownerField && signedIn ? "\n  ownerFor," : ""}${shownRefsMethod()}${
+}export const ${self} = {${ownedAuto ? "\n  shownTo," : ""}${ownerField && signedIn ? "\n  ownerFor," : ""}${addressOwned(model) && signedIn ? "\n  ownerLike," : ""}${shownRefsMethod()}${
     pictures.length
       ? `\n  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */\n  uses(file: string): boolean {\n    return ${stillShown("", "file")};\n  },\n`
       : ""
@@ -2513,8 +2531,9 @@ ${
 ${
   access.create.public
     ? `    // Visitors add these without an account: at most ${VISITOR_ROWS.toLocaleString("en")} of theirs, so a flood stops here.
-    const made = ${addressOwned(model) ? `db.select({ n: count() }).from(schema.auditLog).where(and(eq(schema.auditLog.who, "visitor"), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)}), gt(schema.auditLog.at, new Date(Date.now() - 24 * 60 * 60 * 1000))))` : `db.select({ n: count() }).from(${n.table})${signedIn ? `.where(isNull(${n.table}.${owner}))` : ""}`}.get();
-    if (viewer === null && (made?.n ?? 0) >= ${VISITOR_ROWS}) throw new AccessDenied(false);
+    const made = ${addressOwned(model) ? `db.select({ n: count() }).from(schema.auditLog).where(and(inArray(schema.auditLog.who, ["visitor", "the app"]), eq(schema.auditLog.action, "created"), eq(schema.auditLog.model, ${JSON.stringify(model.name)}), gt(schema.auditLog.at, new Date(Date.now() - 24 * 60 * 60 * 1000))))` : `db.select({ n: count() }).from(${n.table})${signedIn ? `.where(isNull(${n.table}.${owner}))` : ""}`}.get();
+    // The cap is a setting of the server (VISITOR_ROWS), ${VISITOR_ROWS.toLocaleString("en")} unless said.
+    if (viewer === null && (made?.n ?? 0) >= (Number(process.env.VISITOR_ROWS) || ${VISITOR_ROWS})) throw new AccessDenied(false);
 `
     : ""
 }    let row: typeof ${n.table}.$inferSelect;

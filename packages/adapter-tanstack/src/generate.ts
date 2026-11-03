@@ -145,7 +145,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
   // A generated server module imports what its owner's kind may need (support-portal-path.md §2)
   // and keeps what its body names, so the app's type-check stays clean.
   for (const file of files)
-    if (file.zone === "generated" && file.path.endsWith(".server.ts"))
+    if (file.zone === "generated" && /\.tsx?$/.test(file.path))
       file.content = dropUnused(file.content, ["personOf", "addressOf", "addressOwner", "fits"]);
   if (content?.languages?.length) translatedApp(files, ctx);
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));

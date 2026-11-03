@@ -15,6 +15,7 @@ import {
 import { actionNames } from "./actions.js";
 import { hasSignIn } from "./auth.js";
 import {
+  addressFrom,
   addressOwned,
   dataKey,
   HEADER,
@@ -237,7 +238,12 @@ export function mergeActionServer(
   // Their words are their models' own (words-once.md): read from each model's ui.
   const counted = `[${others.map((m) => `{ model: ${JSON.stringify(m.name)}, label: ${names(m, t).ui}.label, plural: ${names(m, t).ui}.pluralLabel }`).join(", ")}]`;
   const readers = others.map((m) => names(m, t));
-  const numbered = sequenceEntries(model, auth, n.table, ownerExpr(model, n, "values"))
+  const numbered = sequenceEntries(
+    model,
+    auth,
+    n.table,
+    ownerExpr(model, n, "values", addressFrom(model, "raw[0]")),
+  )
     .map((e) => `, ${e}`)
     .join("");
   const combine = into === "new";
@@ -416,7 +422,7 @@ function chosenCode(
   const a = actionNames(action);
   return `
 /** Which stay and which go: write on them all; each other goes to the trash where the viewer may delete it. */
-function rights(viewer: Viewer | null, rows: { id: number${signedIn ? `; ${ownerKey(model)}: ${model.ownerKind === "through" ? "number" : "string"} | null` : ""} }[]) {
+function rights(viewer: Viewer | null, rows: { id: number${signedIn ? `; ${ownerKey(model)}: string | null` : ""} }[]) {
   const others = rows.slice(1);
   // A merge changes each of them: write on all.
   if (!rows.every((row) => allows(${n.access}.write, viewer${owner(model, "row")}))) throw new AccessDenied(true);
@@ -610,7 +616,7 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
         }
       // Made as any new record is (A 153): its rules, its numbers counting up; theirs who ran it.
       const values = ${n.data}.checkCreate(tx, viewer, valuesOf(raw, chosen, remove) as never);
-      const created = tx.insert(${n.table}).values({ ...values${signedIn ? ownerInsert(model, n, "values") : ""}${numbered} } as never).returning().get() as Raw;
+      const created = tx.insert(${n.table}).values({ ...values${signedIn ? ownerInsert(model, n, "values", addressFrom(model, "raw[0]")) : ""}${numbered} } as never).returning().get() as Raw;
       audit(tx, viewer, { action: ${JSON.stringify(action.name)}, model: ${JSON.stringify(model.name)}, record: created.id, details: { from: raw.map((r) => r.id), removed: remove } });
       return created;
     });

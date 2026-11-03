@@ -180,6 +180,74 @@ pages:
     );
   });
 
+  test("an empty list is the key as good as absent; only the literal none carries the marker", () => {
+    const empty = load(portal, authText.replace("    actions: none\n", "    actions: []\n"));
+    const customer = empty.auth.roles.find((r) => r.name === "customer");
+    expect(customer?.grants).toEqual({
+      pages: ["cases", "knowledge"],
+      create: ["SupportCase", "Message"],
+      actions: [],
+    });
+    expect(customer?.actionsNone).toBeUndefined();
+    expect(actionAccess(empty.ir.actions[0] as typeof close, empty.auth, empty.ir.models)).toEqual({
+      public: false,
+      roles: ["admin", "agent"],
+      owner: true,
+    });
+    expect(auth.roles.find((r) => r.name === "customer")?.actionsNone).toBe(true);
+  });
+
+  test("none wins over a write grant, with a warning naming the role", () => {
+    const text = authText.replace(
+      "    create: [SupportCase, Message]\n    actions: none",
+      "    create: [SupportCase, Message]\n    write: [SupportCase]\n    actions: none",
+    );
+    const roles = validateAuth({ path: "smithable.auth.yml", text }).auth?.roles.map((r) => r.name);
+    const checkedIr = validateSpec({ path: "smithable.yml", text: portal }, { roles }).ir as SpecIR;
+    const checked = validateAuth({ path: "smithable.auth.yml", text }, checkedIr);
+    expect(checked.diagnostics.map((d) => `${d.severity} ${d.code}: ${d.message}`)).toContain(
+      "warning actions-none-with-write: customer may change records (write) but runs no action (actions: none): none wins, so customers run no standard action on them either.",
+    );
+    const allowed = actionAccess(close, checked.auth as AuthIR, checkedIr.models);
+    expect(allowed.roles).toEqual(["admin", "agent"]);
+    const why = explainAccess(
+      checkedIr,
+      checked.auth as AuthIR,
+      { as: "customer", record: "own" },
+      { kind: "action", action: "close" },
+      "run",
+    );
+    expect(why.verdict).toBe("denied");
+    expect(why.reasons.at(-1)?.text).toBe(
+      "customer's actions grant is none: customers run no action, not on their own support cases either, whatever their write grant says.",
+    );
+  });
+
+  test("a form that can still write what a barred action sets is warned about", () => {
+    const { ir, auth } = load(portal);
+    const warnings = validateAuth({ path: "smithable.auth.yml", text: authText }, ir)
+      .diagnostics.filter((d) => d.code === "actions-none-form-writes")
+      .map((d) => d.message);
+    expect(warnings).toContain(
+      "customers cannot run close, but a form can still write status: lock it or let them run it.",
+    );
+    expect(warnings).toContain(
+      "customers cannot run reopen, but a form can still write status: lock it or let them run it.",
+    );
+    const locked = load(
+      portal.replace(
+        "      status: open | closed\n",
+        "      status: { type: open | closed, locked: true }\n",
+      ),
+    );
+    expect(
+      validateAuth({ path: "smithable.auth.yml", text: authText }, locked.ir).diagnostics.filter(
+        (d) => d.code === "actions-none-form-writes",
+      ),
+    ).toEqual([]);
+    expect(auth.roles.find((r) => r.name === "customer")?.actionsNone).toBe(true);
+  });
+
   test("the owner rule stands for every role but one with actions none", () => {
     const allowed = actionAccess(close, auth, ir.models);
     expect(allowed).toEqual({

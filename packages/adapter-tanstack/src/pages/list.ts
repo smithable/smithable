@@ -115,7 +115,7 @@ export function filterCode(
   // A page of only the viewer's own records (mine: true): always, so no Mine toggle there.
   if (ownOnly) {
     // An address owner, and records read through another: the model's own condition.
-    if (addressOwned(model) || model.ownerKind === "through") {
+    if (addressOwned(model)) {
       own = true;
       conditions.push(`viewer ? ${ownCondition(model, n)} : sql\`false\``);
     } else {
