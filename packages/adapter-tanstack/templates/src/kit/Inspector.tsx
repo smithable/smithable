@@ -9,7 +9,7 @@ import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { AppLink } from "./AppLink";
 import type { Answer, Step } from "./assistant.server";
-import { hourCycle } from "./time-text";
+import { hourCycle, shownZone } from "./time-text";
 import { w } from "./words";
 
 interface Asked {
@@ -403,7 +403,7 @@ function cell(value: unknown, timeZone?: string): string {
       dateStyle: "medium",
       timeStyle: "short",
       hourCycle: hourCycle(),
-      timeZone,
+      timeZone: shownZone(timeZone),
     }).format(new Date(value));
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
     return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(

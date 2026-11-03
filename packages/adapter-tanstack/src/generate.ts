@@ -148,6 +148,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     if (file.zone === "generated" && /\.tsx?$/.test(file.path))
       file.content = dropUnused(file.content, ["personOf", "addressOf", "addressOwner", "fits"]);
   if (content?.languages?.length) translatedApp(files, ctx);
+  if (files.some((f) => f.path === "src/lib/auth.ts")) personTime(files);
   return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
@@ -179,6 +180,72 @@ const importsTx = (content: string) =>
         .split(",")
         .some((name) => name.trim() === "tx"),
   );
+
+/**
+ * A person's own time zone and clock (A 220): the save, checked against the runtime's zones and
+ * the two clocks, and each page rendered as the person's browser will show it.
+ */
+function personTime(files: { path: string; content: string; zone: string }[]): void {
+  files.push({
+    path: "src/generated/my-time.ts",
+    content: `${HEADER}import { createServerFn } from "@tanstack/react-start";
+import { eq } from "drizzle-orm";
+import { db } from "#/db";
+import { user } from "#/db/schema";
+import type { Person } from "#/kit/time-text";
+import { currentViewer } from "#/lib/viewer.server";
+
+function knownZone(zone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Keeps a signed-in person's own time zone and clock; nothing else reads them for records. */
+export const saveMyTime = createServerFn({ method: "POST" })
+  .validator((data: Person) => data)
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    if (!viewer || viewer.id.startsWith("key:")) return;
+    if (data.zone && !knownZone(data.zone)) throw new Error("Unknown time zone.");
+    if (data.clock && data.clock !== "12h" && data.clock !== "24h") throw new Error("Unknown clock.");
+    db.update(user)
+      .set({ timezone: data.zone ?? null, clock: data.clock ?? null })
+      .where(eq(user.id, viewer.id))
+      .run();
+  });
+`,
+    zone: "generated",
+  });
+  const start = files.find((f) => f.path === "src/start.ts");
+  if (!start) return;
+  const middleware = `/** Each page as the person who asks reads it: their own time zone and clock (A 220). */
+const personTime = createMiddleware().server(({ request, next }) =>
+  inPersonTime(request, async () => (await next()).response, async () => {
+    const person = (await auth.api.getSession({ headers: request.headers }))?.user;
+    return person
+      ? {
+          ...(person.timezone ? { zone: person.timezone } : {}),
+          ...(person.clock === "12h" || person.clock === "24h" ? { clock: person.clock } : {}),
+        }
+      : undefined;
+  }),
+);
+
+/**
+ * Server functions are what`;
+  start.content = start.content
+    .split("/**\n * Server functions are what")
+    .join(middleware)
+    .split("requestMiddleware: [trace,")
+    .join("requestMiddleware: [trace, personTime,")
+    .split('import { traced } from "#/kit/trace.server";')
+    .join(`import { inPersonTime } from "#/kit/person-time.server";
+${start.content.includes('from "#/lib/auth"') ? "" : 'import { auth } from "#/lib/auth";\n'}import { traced } from "#/kit/trace.server";`);
+}
 
 /**
  * An app in several languages (languages.md §3): which they are and the public pages' addresses
@@ -706,7 +773,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
   {
     // Sign-in (smithable.auth.yml): its kit and files only when the app has sign-in.
     key: "auth",
-    kit: [{ files: SIGN_IN_KIT, used: ({ auth }) => hasSignIn(auth) }],
+    kit: [
+      {
+        files: [...SIGN_IN_KIT, "src/kit/person-time.server.ts"],
+        used: ({ auth }) => hasSignIn(auth),
+      },
+    ],
     files: ({ ir, auth, t, ux, options }) => {
       if (!hasSignIn(auth)) return [];
       const onboarding = ir.pages.find((p) => p.pattern.kind === "onboarding");

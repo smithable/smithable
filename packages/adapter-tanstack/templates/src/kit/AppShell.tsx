@@ -9,9 +9,11 @@ import { Input, Label } from "#/components/ui/input";
 import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
+import { Combobox } from "./Combobox";
 import { ConsentSettings } from "./Consent";
 import { formatValue } from "./format";
 import { type AppUi, textMarker } from "./model";
+import { type Person, personNow } from "./time-text";
 import { tx, w } from "./words";
 
 export interface MenuUi {
@@ -33,6 +35,8 @@ interface ShellProps {
   onSignOut?: () => Promise<void>;
   /** Sets the signed-in person's own name, the one others see (an invited person has none yet). */
   onRename?: (name: string) => Promise<void>;
+  /** Keeps the person's own time zone and clock. */
+  onTime?: (time: Person) => Promise<void>;
   /** A number beside a menu entry, by its route: the files waiting on the review page. */
   counts?: Record<string, number>;
   /**
@@ -258,6 +262,7 @@ function Navigation({
   viewer,
   onSignOut,
   onRename,
+  onTime,
   counts,
   onNavigate,
   active,
@@ -319,7 +324,12 @@ function Navigation({
           {viewer ? (
             <>
               {onRename ? (
-                <YourName name={viewer.name} email={viewer.email} onRename={onRename} />
+                <YourName
+                  name={viewer.name}
+                  email={viewer.email}
+                  onRename={onRename}
+                  onTime={onTime}
+                />
               ) : (
                 <p className="truncate font-semibold" title={viewer.email}>
                   {viewer.name}
@@ -352,17 +362,23 @@ function YourName({
   name,
   email,
   onRename,
+  onTime,
 }: {
   name: string;
   email: string;
   onRename: (name: string) => Promise<void>;
+  /** Keeps the person's own time zone and clock. */
+  onTime?: (time: Person) => Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   // Drawn twice, in the sidebar and in the phone's menu: each its own id.
   const inputId = useId();
   const [value, setValue] = useState(name);
+  const [time, setTime] = useState<Person>({});
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
+  const zoneId = useId();
+  const clockId = useId();
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!value.trim()) return;
@@ -370,6 +386,8 @@ function YourName({
     setFailure(undefined);
     try {
       await onRename(value.trim());
+      const before = personNow();
+      if (onTime && (time.zone !== before.zone || time.clock !== before.clock)) await onTime(time);
       dialog.current?.close();
     } catch {
       setFailure(w.tryAgain);
@@ -383,6 +401,7 @@ function YourName({
         title={email}
         onClick={() => {
           setValue(name);
+          setTime(personNow());
           dialog.current?.showModal();
         }}
         className="block min-h-6 max-w-full truncate rounded-sm text-left font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-sidebar-foreground"
@@ -415,6 +434,40 @@ function YourName({
               />
               <p className="text-sm text-muted-foreground">{w.yourNameHelp}</p>
             </div>
+            {onTime && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor={zoneId}>{w.yourTimeZone}</Label>
+                  <Combobox
+                    id={zoneId}
+                    value={time.zone ?? ""}
+                    options={Intl.supportedValuesOf("timeZone").map((z) => ({
+                      value: z,
+                      label: z,
+                    }))}
+                    onChange={(zone) => setTime((t) => ({ ...t, zone: zone || undefined }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={clockId}>{w.yourClock}</Label>
+                  <select
+                    id={clockId}
+                    className="h-control w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={time.clock ?? ""}
+                    onChange={(e) =>
+                      setTime((t) => ({
+                        ...t,
+                        clock: (e.target.value || undefined) as Person["clock"],
+                      }))
+                    }
+                  >
+                    <option value="">{w.asTheApp}</option>
+                    <option value="12h">{w.clock12}</option>
+                    <option value="24h">{w.clock24}</option>
+                  </select>
+                </div>
+              </>
+            )}
             {failure && (
               <p role="alert" className="text-sm text-destructive">
                 {failure}

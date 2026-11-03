@@ -233,8 +233,7 @@ ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}im
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 ${hasAppearance(modes) ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}\nimport { ${workspace.length ? "allows, " : ""}isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
-import { clockFrom } from "#/kit/time-text";
-${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
+${signIn ? 'import { clockFrom, type Person, rememberPerson } from "#/kit/time-text";\nimport { saveMyTime } from "#/generated/my-time";\n' : 'import { clockFrom } from "#/kit/time-text";\n'}${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
 
@@ -349,13 +348,20 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
   signIn
     ? `  const router = useRouter();
   const signOut = async () => {
-    await authClient.signOut();${asking ? "\n    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.\n    forgetAsked();" : ""}
+    await authClient.signOut();
+    rememberPerson();${asking ? "\n    // Ask's conversation is the person's: gone with them, also where visitors have no Ask.\n    forgetAsked();" : ""}
     await router.invalidate();
   };
   const rename = async (name: string) => {
     const { error } = await authClient.updateUser({ name });
     if (error) throw new Error(error.message);
     await router.invalidate();
+  };
+  // A person's own zone and clock: every page shows them, so the whole page loads again.
+  const saveTime = async (time: Person) => {
+    await saveMyTime({ data: time });
+    rememberPerson(time);
+    location.reload();
   };
 `
     : ""
@@ -412,11 +418,11 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
         ) : `
                   : ""
               }(
-          <AppShell appName={app.name}${t.logo}${home}${layout}${active} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+          <AppShell appName={app.name}${t.logo}${home}${layout}${active} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename} onTime={saveTime}" : ""}${reviews.length ? " counts={counts}" : ""}>
             {children}
           </AppShell>
         )}`
-            : `<AppShell appName={app.name}${t.logo}${home}${layout}${active} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename}" : ""}${reviews.length ? " counts={counts}" : ""}>
+            : `<AppShell appName={app.name}${t.logo}${home}${layout}${active} menus={menus} viewer={viewer}${signIn ? " onSignOut={signOut} onRename={rename} onTime={saveTime}" : ""}${reviews.length ? " counts={counts}" : ""}>
           {children}
         </AppShell>`
         }

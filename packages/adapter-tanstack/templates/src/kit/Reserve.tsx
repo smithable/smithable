@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "#/components/ui/button";
 import { AppLink } from "./AppLink";
 import { textMarker } from "./model";
-import { timeParts } from "./time-text";
+import { shownZone, timeParts } from "./time-text";
 import { w } from "./words";
 
 export interface Places {
@@ -23,7 +23,8 @@ export interface Places {
 }
 
 /** A deadline in the app's time zone: its time alone today, its day and time otherwise. */
-function deadline(iso: string, timeZone: string | undefined): string {
+function deadline(iso: string, appZone: string | undefined): string {
+  const timeZone = shownZone(appZone);
   const at = new Date(iso);
   const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone });
   return new Intl.DateTimeFormat(undefined, {

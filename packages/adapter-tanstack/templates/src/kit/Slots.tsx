@@ -8,9 +8,9 @@ import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import type { FieldControlProps } from "./model";
 import { addDays } from "./slots";
-import { timeParts } from "./time-text";
+import { shownZone, timeParts } from "./time-text";
 import { language, w } from "./words";
-import { wallTime } from "./zoned";
+import { instantOf, wallTime } from "./zoned";
 
 interface Times {
   date: string;
@@ -73,9 +73,9 @@ function Slots({
   /** A wall time in the app's zone ("2026-10-21T10:15") as the language writes a clock. */
   const clock = (wall: string) =>
     new Intl.DateTimeFormat(language(), {
-      timeZone: "UTC",
+      timeZone: shownZone(timeZone),
       ...timeParts(),
-    }).format(new Date(`${wall}:00Z`));
+    }).format(instantOf(wall, timeZone));
   const dayName = (date: string) =>
     new Intl.DateTimeFormat(language(), {
       timeZone: "UTC",
