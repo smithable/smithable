@@ -19,7 +19,7 @@ import {
 const port = Number(process.env.STUDIO_LOOK_PORT ?? 18510);
 checkPorts("Studio look", [port, port + 1]);
 const owned = !process.env.STUDIO_LOOK_APP;
-const dir = process.env.STUDIO_LOOK_APP ?? newApp("crm", "codex-ui-ux-studio-look");
+const dir = process.env.STUDIO_LOOK_APP ?? newApp("crm", "studio-look");
 const model = await startFakeModel();
 const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
   cwd: dir,

@@ -1,15 +1,30 @@
 // Real project history for the bounded extensions, only in the caller's owned disposable app.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { projectRevision } from "../packages/cli/dist/project-revision.js";
 import { cli, op, run } from "./dev-app.mjs";
-export function checkVisualHistory(dir) {
-  assert(/^\/tmp\/smithable-codex-ui-ux-visual-[^/]+\/app$/u.test(dir));
-  assert.equal(
-    JSON.parse(readFileSync(join(dir, "visual-fixture.json"), "utf8")).owner,
-    "codex-ui-ux",
+export const FIXTURE_OWNER = "visual-fixture";
+/**
+ * The visual fixture is this run's own disposable app under the temp folder (scripts/dev-app.mjs
+ * newApp with the label "visual"), never a project someone works in: the checks write its
+ * sources, seed its database and make commits in it. With `marker`, the file the runner wrote
+ * on making it must say so too.
+ */
+export function assertVisualFixture(dir, marker = true) {
+  assert(
+    dir.startsWith(`${realpathSync(tmpdir())}/smithable-visual-`) && dir.endsWith("/app"),
+    `The visual fixture must be this run's own disposable app under ${tmpdir()}, not ${dir}`,
   );
+  if (marker)
+    assert.equal(
+      JSON.parse(readFileSync(join(dir, "visual-fixture.json"), "utf8")).owner,
+      FIXTURE_OWNER,
+    );
+}
+export function checkVisualHistory(dir) {
+  assertVisualFixture(dir);
   run(["git", "init"], dir);
   // Checkpoint this synthetic setup so subsequent source edits have a stable history parent.
   run(["git", "add", "-A"], dir);

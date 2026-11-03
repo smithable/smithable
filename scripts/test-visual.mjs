@@ -10,26 +10,37 @@ import { pairwise, VISUAL_DIMENSIONS } from "../packages/adapter-tanstack/dist/t
 import { BUILT_IN_THEMES, YamlEditor } from "../packages/core/dist/index.js";
 import { themeText } from "../packages/look-editor/dist/theme-text.js";
 import { cli, newApp, run } from "./dev-app.mjs";
+import { P } from "./patience.mjs";
+import { checkPorts } from "./ports.mjs";
 import { checkLoadedFont } from "./theme-lab-checks.mjs";
-import { checkVisualHistory } from "./visual-history-checks.mjs";
+import {
+  assertVisualFixture,
+  checkVisualHistory,
+  FIXTURE_OWNER,
+} from "./visual-history-checks.mjs";
 import { checkVisualStates } from "./visual-state-checks.mjs";
 
-const port = Number(process.env.VISUAL_PORT ?? Number(process.env.TEST_STUDIO_PORT ?? 18526) + 4),
-  base = `http://localhost:${port}`;
-const owned = !process.env.VISUAL_APP;
-const dir = process.env.VISUAL_APP
-  ? realpathSync(process.env.VISUAL_APP)
-  : newApp("booking", "codex-ui-ux-visual");
-assert(
-  /^\/tmp\/smithable-codex-ui-ux-visual-[^/]+\/app$/u.test(dir),
-  "Visual fixture must be this session's own disposable app",
+// The fixture's app serves on the fifth port of Studio's check (TEST_STUDIO_PORT + 4, which
+// scripts/test-studio.mjs reserves), or VISUAL_PORT on its own.
+const port = Number(
+  process.env.VISUAL_PORT ??
+    (process.env.TEST_STUDIO_PORT ? Number(process.env.TEST_STUDIO_PORT) + 4 : Number.NaN),
 );
-const marker = join(dir, "visual-fixture.json");
-if (!owned) assert.equal(JSON.parse(readFileSync(marker, "utf8")).owner, "codex-ui-ux");
-else
+if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+  console.error(
+    "The visual check needs a port: set TEST_STUDIO_PORT (it uses that + 4, as the gate does) or VISUAL_PORT.",
+  );
+  process.exit(1);
+}
+checkPorts("The visual check (VISUAL_PORT or TEST_STUDIO_PORT + 4)", [port]);
+const base = `http://localhost:${port}`;
+const owned = !process.env.VISUAL_APP;
+const dir = realpathSync(process.env.VISUAL_APP ?? newApp("booking", "visual"));
+assertVisualFixture(dir, !owned);
+if (owned)
   writeFileSync(
-    marker,
-    JSON.stringify({ owner: "codex-ui-ux", purpose: "visual-regression" }) + "\n",
+    join(dir, "visual-fixture.json"),
+    JSON.stringify({ owner: FIXTURE_OWNER, purpose: "visual-regression" }) + "\n",
   );
 const output = resolve(process.env.VISUAL_OUTPUT ?? join(dirname(dir), "visual-evidence"));
 mkdirSync(output, { recursive: true });
@@ -317,7 +328,7 @@ async function serve() {
       } catch {}
     }
   };
-  for (let attempt = 0; attempt < 240; attempt++) {
+  for (let attempt = 0; attempt < 240 * P; attempt++) {
     try {
       if ((await fetch(`${base}/health`, { signal: AbortSignal.timeout(2000) })).ok) return stop;
     } catch {}
@@ -382,9 +393,9 @@ try {
       new URL(route.request().url()).origin === base ? route.continue() : route.abort(),
     );
     await page.goto(`${base}/sign-in`, { waitUntil: "domcontentloaded" });
-    await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 });
+    await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 * P });
     await page.getByRole("button", { name: "Sign in as admin", exact: true }).click();
-    await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15000 });
+    await page.waitForURL((url) => url.pathname !== "/sign-in", { timeout: 15000 * P });
     let release = () => {};
     const gate = new Promise((resolve) => (release = resolve));
     const isPicture = (url) =>
@@ -405,7 +416,7 @@ try {
           ? "/visual-queue"
           : "/visual-items";
     await page.goto(base + path, { waitUntil: "domcontentloaded" });
-    await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 });
+    await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 * P });
     if (row.composition === "record-inline-summary") {
       const link = page
         .locator('button[data-part="record-open"]:visible')
@@ -444,7 +455,7 @@ try {
             .filter((image) => /visual-fixture|\/files\/visual-item/.test(image.currentSrc))
             .every((image) => image.complete && image.naturalWidth > 0),
         {},
-        { timeout: 30000 },
+        { timeout: 30000 * P },
       );
     if (box) {
       const after = await media.boundingBox();

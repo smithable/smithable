@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { projectRevision } from "../packages/cli/dist/project-revision.js";
+import { P } from "./patience.mjs";
 
 export async function checkStudioLook(page, dir) {
   const baseline = projectRevision(dir);
@@ -50,10 +51,10 @@ export async function checkStudioLook(page, dir) {
       context.frames.find((f) => f.id === context.open).label,
     );
     const iframe = dialog.locator("iframe[data-frame]").first();
-    await iframe.waitFor({ timeout: 90000 });
+    await iframe.waitFor({ timeout: 90000 * P });
     assert.equal(new URL(await iframe.getAttribute("src")).origin, new URL(context.preview).origin);
     const frame = await (await iframe.elementHandle()).contentFrame();
-    await frame.waitForSelector("body[data-hydrated=true]", { timeout: 90000 });
+    await frame.waitForSelector("body[data-hydrated=true]", { timeout: 90000 * P });
     await dialog.getByLabel("radius", { exact: true }).fill("21px");
     await frame.waitForFunction(() =>
       document.getElementById("sm-theme")?.textContent.includes("--radius: 21px"),
@@ -115,7 +116,7 @@ export async function checkStudioLookApply(page, dir) {
     dialog
       .getByRole("status")
       .filter({ hasText: "Draft preview ready" })
-      .waitFor({ timeout: 45000 });
+      .waitFor({ timeout: 45000 * P });
   await ready();
   await dialog
     .getByLabel("Name", { exact: true })
@@ -162,7 +163,7 @@ export async function checkStudioLookApply(page, dir) {
   await dialog
     .getByRole("status")
     .filter({ hasText: /^Applied:/ })
-    .waitFor({ timeout: 45000 });
+    .waitFor({ timeout: 45000 * P });
   assert.notEqual(projectRevision(dir), revision);
   frame = await (await iframe.elementHandle()).contentFrame();
   assert.equal(
@@ -213,8 +214,8 @@ export async function checkStudioViewer(page, dir) {
     const frame = await (
       await dialog.locator("iframe[data-frame]").first().elementHandle()
     ).contentFrame();
-    await frame.locator('body[data-hydrated="true"]').waitFor({ timeout: 45000 });
-    await frame.locator('[data-dev-role="sales"]').waitFor({ timeout: 45000 });
+    await frame.locator('body[data-hydrated="true"]').waitFor({ timeout: 45000 * P });
+    await frame.locator('[data-dev-role="sales"]').waitFor({ timeout: 45000 * P });
     return frame;
   };
   try {
@@ -230,7 +231,7 @@ export async function checkStudioViewer(page, dir) {
     frame = await (
       await dialog.locator("iframe[data-frame]").first().elementHandle()
     ).contentFrame();
-    await frame.locator('[data-kit="denied"]').waitFor({ timeout: 45000 });
+    await frame.locator('[data-kit="denied"]').waitFor({ timeout: 45000 * P });
     await dialog
       .getByRole("status")
       .filter({ hasText: "unavailable to the current viewer" })
@@ -303,7 +304,7 @@ export async function checkStudioLookTimeout(page, dir) {
     await dialog
       .getByRole("status")
       .filter({ hasText: "The preview did not connect" })
-      .waitFor({ timeout: 30000 });
+      .waitFor({ timeout: 30000 * P });
     assert.equal(
       await dialog.locator("textarea").inputValue(),
       draft,
@@ -315,7 +316,7 @@ export async function checkStudioLookTimeout(page, dir) {
     await dialog
       .getByRole("status")
       .filter({ hasText: "Draft preview ready" })
-      .waitFor({ timeout: 45000 });
+      .waitFor({ timeout: 45000 * P });
     const frame = await (
       await dialog.locator("iframe[data-frame]").first().elementHandle()
     ).contentFrame();
@@ -376,7 +377,7 @@ export async function checkStudioLookGallery(page, dir) {
     const iframe = dialog.locator("iframe[data-frame]").first();
     await iframe.waitFor();
     const frame = await (await iframe.elementHandle()).contentFrame();
-    await frame.waitForSelector("#sm-theme", { state: "attached", timeout: 90000 });
+    await frame.waitForSelector("#sm-theme", { state: "attached", timeout: 90000 * P });
     const coldMs = Date.now() - cold;
     await dialog.getByRole("button", { name: "Look gallery", exact: true }).click();
     assert.equal(
@@ -450,7 +451,7 @@ export async function checkStudioDefaultsApply(page, dir) {
   await dialog
     .getByRole("status")
     .filter({ hasText: "Draft preview ready" })
-    .waitFor({ timeout: 45000 });
+    .waitFor({ timeout: 45000 * P });
   await dialog
     .getByLabel("Name", { exact: true })
     .fill(`default-browser-${crypto.randomUUID().slice(0, 8)}`);
@@ -469,14 +470,14 @@ export async function checkStudioDefaultsApply(page, dir) {
   await dialog
     .getByRole("status")
     .filter({ hasText: /^Applied:/ })
-    .waitFor({ timeout: 60000 });
+    .waitFor({ timeout: 60000 * P });
   await dialog
     .getByText("Structural preview unavailable.", { exact: true })
     .waitFor({ state: "hidden" });
   const frame = await (
     await dialog.locator("iframe[data-frame]").first().elementHandle()
   ).contentFrame();
-  await frame.locator('[data-navigation="topbar"]').waitFor({ timeout: 45000 });
+  await frame.locator('[data-navigation="topbar"]').waitFor({ timeout: 45000 * P });
   assert.equal(await frame.locator("#sm-theme").count(), 0);
   const committed = projectRevision(dir, false);
   assert.notEqual(committed, baseline);
@@ -511,12 +512,12 @@ export async function checkStudioDefaultsApply(page, dir) {
   await page
     .frameLocator('iframe[title="App preview"]')
     .locator('[data-navigation="sidebar"]')
-    .waitFor({ state: "attached", timeout: 45000 });
+    .waitFor({ state: "attached", timeout: 45000 * P });
   await history("Redo", committed);
   await page
     .frameLocator('iframe[title="App preview"]')
     .locator('[data-navigation="topbar"]')
-    .waitFor({ timeout: 45000 });
+    .waitFor({ timeout: 45000 * P });
   await history("Undo", baseline);
   console.log(
     "  ✓ structural defaults are unavailable before Apply; atomic Apply generates actual top navigation, clears transient CSS, and one-step Undo/Redo restores source and markup",

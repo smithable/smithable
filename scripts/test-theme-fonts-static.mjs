@@ -13,7 +13,7 @@ import { checkLoadedFont } from "./theme-lab-checks.mjs";
 const app = resolve(process.argv[2] ?? "");
 if (!process.argv[2] || !existsSync(join(app, "smithable.yml")))
   throw new Error("Pass this session's disposable app fixture.");
-const out = join(app, "data", `codex-ui-ux-static-font-check-${Date.now()}`);
+const out = join(app, "data", `static-font-check-${Date.now()}`);
 if (existsSync(out)) throw new Error(`Refusing to overwrite ${out}`);
 let server;
 let browser;

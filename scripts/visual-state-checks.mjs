@@ -1,6 +1,7 @@
 // Mandatory visual risks outside the pairwise happy-path matrix. Uses the caller's owned fixture.
 import assert from "node:assert/strict";
 import { join } from "node:path";
+import { P } from "./patience.mjs";
 
 export async function checkVisualStates({ browser, base, output, fixed, baseline, domain }) {
   const results = [];
@@ -20,7 +21,7 @@ export async function checkVisualStates({ browser, base, output, fixed, baseline
       page.on("pageerror", (error) => errors.push(String(error)));
       const open = async (path) => {
         await page.goto(base + path, { waitUntil: "domcontentloaded" });
-        await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 });
+        await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 * P });
         await page.evaluate(() => document.fonts.ready);
       };
       const geometry = async () => {
@@ -152,7 +153,7 @@ export async function checkVisualStates({ browser, base, output, fixed, baseline
   try {
     const page = await denied.newPage();
     await page.goto(base + "/sign-in");
-    await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 });
+    await page.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 * P });
     await page.getByRole("button", { name: "Sign in as member", exact: true }).click();
     await page.waitForURL((url) => url.pathname !== "/sign-in");
     await page.goto(base + "/visual-items");

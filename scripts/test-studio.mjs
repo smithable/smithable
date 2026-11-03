@@ -22,6 +22,7 @@ import { chromium } from "playwright";
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
+import { P } from "./patience.mjs";
 import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
@@ -33,11 +34,6 @@ import {
 } from "./studio-look-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
-
-// How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
-// a check that waits a minute on a quiet machine waits three under load, so a slow answer is
-// not read as a failure.
-const P = Math.max(1, Number(process.env.TEST_PATIENCE) || 1);
 
 // A request on a kept-alive connection the server closed as idle at the same moment is reset
 // (ECONNRESET) before it is read: under load the client's own idle timer fires late, so it
@@ -56,7 +52,9 @@ const root = mkdtempSync(join(tmpdir(), "smithable-studio-"));
 const dir = join(root, "crm");
 // Another checkout testing at the same time sets its own (TEST_APPS_PORT does the same for test-apps).
 const port = Number(process.env.TEST_STUDIO_PORT ?? 4900);
-checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1, port + 2, port + 3]);
+// Studio, its preview, the fake model and the MCP check; +4 is the visual matrix's own app
+// (scripts/test-visual.mjs), which the gate runs after this check.
+checkPorts("Studio's test (TEST_STUDIO_PORT)", [port, port + 1, port + 2, port + 3, port + 4]);
 const base = `http://localhost:${port}`;
 let failed = false;
 

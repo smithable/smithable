@@ -10,16 +10,20 @@ import {
   validateUx,
 } from "../packages/core/dist/index.js";
 import { checkLookResponsive } from "./look-responsive-checks.mjs";
+import { P } from "./patience.mjs";
 
 export async function checkThemeLab(page, context) {
   const start = context ?? (await page.evaluate(() => fetch("/api/start").then((r) => r.json())));
   const select = page.getByLabel("Start from theme", { exact: true });
   const source = page.locator("textarea");
-  await page.locator("iframe[data-frame]").first().waitFor({ timeout: 90000 });
+  await page
+    .locator("iframe[data-frame]")
+    .first()
+    .waitFor({ timeout: 90000 * P });
   const frame = await (
     await page.locator("iframe[data-frame]").first().elementHandle()
   ).contentFrame();
-  await frame.waitForSelector("body[data-hydrated=true]", { timeout: 90000 });
+  await frame.waitForSelector("body[data-hydrated=true]", { timeout: 90000 * P });
   await checkLookResponsive(page);
   for (const name of ["modern", "corporate", "brass"]) {
     const theme = BUILT_IN_THEMES.find((t) => t.name === name);
@@ -179,6 +183,6 @@ export async function checkLoadedFont(frame, asset) {
       weights: asset.weights,
       italic: asset.variants.some((v) => v.file.includes("italic")),
     },
-    { timeout: 20000 },
+    { timeout: 20000 * P },
   );
 }

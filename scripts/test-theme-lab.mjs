@@ -20,7 +20,7 @@ for (const candidate of [port, port + 1]) {
   await new Promise((done) => check.close(done));
 }
 const owned = !process.env.THEME_LAB_APP;
-const dir = process.env.THEME_LAB_APP ?? newApp("crm", "codex-ui-ux-fidelity");
+const dir = process.env.THEME_LAB_APP ?? newApp("crm", "theme-fidelity");
 if (process.env.CHECK_DISCOVERY === "1") {
   if (!owned) throw new Error("Controlled discovery requires this runner's fresh owned fixture");
   const db = new DatabaseSync(join(dir, "data/db/app.db"));

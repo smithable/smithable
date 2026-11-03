@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { git, ownRepository } from "../packages/cli/dist/git.js";
 import { projectRevision } from "../packages/cli/dist/project-revision.js";
 import { parseTheme, sameLookTheme, TOKEN_NAMES } from "../packages/core/dist/index.js";
+import { P } from "./patience.mjs";
 
 export async function checkProjectLookApply(page, dir) {
   await page.getByRole("button", { name: "Discard draft and open this page’s saved look" }).click();
@@ -72,11 +73,14 @@ export async function checkProjectLookApply(page, dir) {
   );
   assert(await page.getByRole("button", { name: "Apply look", exact: true }).isDisabled());
   const start = await page.evaluate(() => fetch("/api/start").then((r) => r.json()));
-  await page.locator("iframe[data-frame]").first().waitFor({ timeout: 90000 });
+  await page
+    .locator("iframe[data-frame]")
+    .first()
+    .waitFor({ timeout: 90000 * P });
   const frame = await (
     await page.locator("iframe[data-frame]").first().elementHandle()
   ).contentFrame();
-  await frame.waitForSelector("body[data-hydrated=true]", { timeout: 90000 });
+  await frame.waitForSelector("body[data-hydrated=true]", { timeout: 90000 * P });
   const direct = await page.context().newPage();
   const colors = (tokens) => {
     const parent = document.querySelector("[data-page]") ?? document.body;
@@ -100,7 +104,7 @@ export async function checkProjectLookApply(page, dir) {
   try {
     await direct.emulateMedia({ colorScheme: "light" });
     await direct.goto(`${start.preview}${start.frames[0].path}`);
-    await direct.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 });
+    await direct.locator("body[data-hydrated=true]").waitFor({ timeout: 90000 * P });
     assert.equal(
       await direct.locator("#sm-theme").count(),
       0,

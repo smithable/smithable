@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { projectRevision } from "../packages/cli/dist/project-revision.js";
+import { P } from "./patience.mjs";
 
 /** Uses only the test's existing authorized rows; never creates a preview record. */
 export async function checkPreviewPages(page, dir) {
@@ -24,7 +25,7 @@ export async function checkPreviewPages(page, dir) {
   try {
     await tabs.getByRole("button", { name: list.label, exact: true }).click();
     const listFrame = page.frameLocator(`iframe[data-frame="${list.label}-light"]`);
-    await listFrame.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 });
+    await listFrame.locator("body[data-hydrated=true]").waitFor({ timeout: 60000 * P });
     const id = await listFrame
       .locator('[data-part="record-open"]')
       .first()
@@ -32,7 +33,7 @@ export async function checkPreviewPages(page, dir) {
     assert(id);
     await tabs.getByRole("button", { name: record.label, exact: true }).click();
     const shown = page.locator(`iframe[data-frame="${record.label}-light"]`);
-    await shown.waitFor({ timeout: 60000 });
+    await shown.waitFor({ timeout: 60000 * P });
     assert.equal(
       new URL(await shown.getAttribute("src")).pathname,
       `${record.discoverFrom}/${encodeURIComponent(id)}`,
@@ -40,7 +41,7 @@ export async function checkPreviewPages(page, dir) {
     await page
       .frameLocator(`iframe[data-frame="${record.label}-light"]`)
       .locator("body[data-hydrated=true]")
-      .waitFor({ timeout: 60000 });
+      .waitFor({ timeout: 60000 * P });
     assert.equal(projectRevision(dir), source, "discovery wrote source");
     assert.equal(rows(), before, "discovery wrote domain data");
     if (process.env.CHECK_DISCOVERY === "1") {
@@ -50,7 +51,7 @@ export async function checkPreviewPages(page, dir) {
       await page
         .getByRole("status")
         .filter({ hasText: "No readable record is shown" })
-        .waitFor({ timeout: 30000 });
+        .waitFor({ timeout: 30000 * P });
       assert.equal(rows(), before, "empty discovery populated data");
       assert.equal(await page.locator(`iframe[data-frame="${empty.label}-light"]`).count(), 0);
     }
@@ -90,7 +91,7 @@ export async function checkPreviewTimeout(page) {
     await unready
       .getByRole("alert")
       .filter({ hasText: "Preview sign-in has not completed" })
-      .waitFor({ timeout: 30000 });
+      .waitFor({ timeout: 30000 * P });
     assert.equal(
       await unready.locator("iframe[data-frame]").count(),
       0,

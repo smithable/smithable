@@ -5,10 +5,15 @@ import { createServer } from "node:http";
 import { extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
+import { P } from "./patience.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
 
 export async function checkPublicLook(browser) {
   const root = resolve("site");
+  if (!existsSync(resolve(root, "theme-lab/index.html")))
+    throw new Error(
+      `The site is not built (no ${root}/theme-lab/): run "pnpm site" first. The public look check serves the theme lab's public mode from it.`,
+    );
   const server = createServer((req, res) => {
     const path = new URL(req.url, "http://local").pathname;
     const file = resolve(root, `.${path.endsWith("/") ? `${path}index.html` : path}`);
@@ -31,6 +36,7 @@ export async function checkPublicLook(browser) {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  page.setDefaultTimeout(30000 * P);
   try {
     page.on("pageerror", (error) => console.error("Public editor error:", String(error)));
     let mutations = 0;
