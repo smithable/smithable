@@ -8,7 +8,8 @@ export function projectRevision(dir: string, includeHead = true): string {
   const hash = createHash("sha256").update(
     includeHead && ownRepository(dir) ? git(dir, ["rev-parse", "HEAD"]).out : "no-head",
   );
-  for (const [name, digest] of Object.entries(sourceDigests(dir))) hash.update(name).update(digest);
+  for (const [name, digest] of Object.entries(sourceDigests(dir)))
+    hash.update(JSON.stringify(name)).update(":").update(digest).update("\n");
   return hash.digest("hex");
 }
 

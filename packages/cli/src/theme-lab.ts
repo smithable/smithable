@@ -340,10 +340,10 @@ export async function themeLab(
             "Apply needs the previewed app as its project destination. Use --app and --project for the same app.",
         });
       // The editor's precondition and request id go beside the operation, not in its arguments.
-      const { expectedRevision, requestId, ...args } = (await bodyJson(req)) as Record<
-        string,
-        unknown
-      >;
+      const given = await bodyJson(req);
+      const { expectedRevision, requestId, ...args } = (
+        given && typeof given === "object" && !Array.isArray(given) ? given : {}
+      ) as Record<string, unknown>;
       const said: string[] = [];
       try {
         const code = await runOperation(

@@ -282,6 +282,14 @@ async function applyAndCheckpoint(
     io.err("applyTheme is already atomic; run it as a single operation.\n");
     return 2;
   }
+  if (
+    name === "applyTheme" &&
+    ((flags.requestId !== undefined && !/^[A-Za-z0-9_-]{8,80}$/.test(flags.requestId)) ||
+      (flags.expectedRevision !== undefined && !/^[a-f0-9]{64}$/.test(flags.expectedRevision)))
+  ) {
+    io.err("The Apply request's id or source revision is malformed; reopen the look editor.\n");
+    return 2;
+  }
   if (name === "applyTheme" && flags.requestId) {
     // The same request again (its first answer was lost): done already, when the last commit is
     // its Apply of the same draft. Before the revision check, since that Apply moved the revision.
