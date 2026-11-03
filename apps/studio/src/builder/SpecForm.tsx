@@ -398,6 +398,9 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
           label={label}
           value={value}
           placeholder={Array.isArray(schema.examples) ? String(schema.examples[0]) : undefined}
+          suggestions={
+            schema["x-suggest"] === "time-zones" ? Intl.supportedValuesOf("timeZone") : undefined
+          }
           numeric={control.kind === "number"}
           onCommit={(next) => write(path, next)}
         />
@@ -517,11 +520,14 @@ function TextBox({
   value,
   numeric,
   placeholder,
+  suggestions,
   onCommit,
 }: {
   label: string;
   value: unknown;
   numeric: boolean;
+  /** Values offered as it is typed in (the browser filters them). */
+  suggestions?: string[];
   /** An example from the schema, else "Not set". */
   placeholder?: string;
   onCommit: (value: unknown) => Promise<boolean>;
@@ -542,19 +548,30 @@ function TextBox({
       if (!ok) setText(shown);
     });
   };
+  const listId = useId();
   return (
-    <input
-      aria-label={label}
-      className={box}
-      value={text}
-      placeholder={placeholder ?? "Not set"}
-      inputMode={numeric ? "numeric" : undefined}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-      }}
-    />
+    <>
+      <input
+        aria-label={label}
+        className={box}
+        value={text}
+        placeholder={placeholder ?? "Not set"}
+        inputMode={numeric ? "numeric" : undefined}
+        list={suggestions ? listId : undefined}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+        }}
+      />
+      {suggestions && (
+        <datalist id={listId}>
+          {suggestions.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
+      )}
+    </>
   );
 }
 

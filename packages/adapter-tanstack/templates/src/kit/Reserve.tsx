@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "#/components/ui/button";
 import { AppLink } from "./AppLink";
 import { textMarker } from "./model";
+import { timeParts } from "./time-text";
 import { w } from "./words";
 
 export interface Places {
@@ -27,9 +28,7 @@ function deadline(iso: string, timeZone: string | undefined): string {
   const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone });
   return new Intl.DateTimeFormat(undefined, {
     ...(day(at) === day(new Date()) ? {} : { weekday: "short", day: "numeric", month: "short" }),
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
+    ...timeParts(),
     timeZone,
   }).format(at);
 }

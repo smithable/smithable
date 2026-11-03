@@ -202,7 +202,17 @@
         "timezone": {
           "type": "string",
           "title": "Time zone",
-          "description": "The time zone dates and times are shown in, as its IANA name, e.g. Europe/Mariehamn."
+          "description": "The time zone dates and times are shown in, as its IANA name, e.g. Europe/Mariehamn.",
+          "x-suggest": "time-zones"
+        },
+        "clock": {
+          "type": "string",
+          "enum": [
+            "12h",
+            "24h"
+          ],
+          "title": "Clock",
+          "description": "How times are written: 12h or 24h, the default."
         },
         "description": {
           "type": "string",

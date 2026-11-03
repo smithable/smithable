@@ -17,10 +17,11 @@ const setApp: Operation<{
   description?: string;
   currency?: string;
   timezone?: string;
+  clock?: string;
 }> = {
   name: "setApp",
   summary:
-    'Set what the app is: its name, a one-sentence description, its currency (ISO 4217) or time zone ("none" removes the currency or time zone).',
+    'Set what the app is: its name, a one-sentence description, its currency (ISO 4217), time zone or clock ("none" removes any of the last three).',
   schema: {
     type: "object",
     additionalProperties: false,
@@ -32,6 +33,7 @@ const setApp: Operation<{
         type: "string",
         description: 'IANA time zone, e.g. Europe/Mariehamn, or "none".',
       },
+      clock: { type: "string", description: 'How times are written: 12h, 24h, or "none".' },
     },
   },
   positional: [],
@@ -42,9 +44,9 @@ const setApp: Operation<{
   destructive: () => false,
   apply({ spec }, args) {
     if (Object.keys(args).length === 0)
-      throw new OperationError("Say what to set: name, description, currency or timezone.");
+      throw new OperationError("Say what to set: name, description, currency, timezone or clock.");
     // One line each: a line break in a name or description would not fit the file.
-    for (const key of ["name", "description", "currency", "timezone"] as const)
+    for (const key of ["name", "description", "currency", "timezone", "clock"] as const)
       put(spec, key, args[key]?.replace(/\s+/g, " ").trim());
     return [];
   },
