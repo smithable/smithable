@@ -1917,11 +1917,11 @@ function PictureDialog({
       {current && (
         <figure className="relative">
           {/* As wide as the picture, so the mark sits on its corner. */}
-          <AiMarked generated={current.image.generated} full className="mx-auto w-full">
+          <AiMarked generated={current.image.generated} full className="mx-auto w-fit">
             <img
               src={current.image.src}
               alt={current.image.alt}
-              className="mx-auto block h-[70vh] w-full rounded-lg object-contain"
+              className="mx-auto block max-h-[80vh] max-w-full rounded-lg object-contain"
             />
           </AiMarked>
           {current.caption && (

@@ -224,8 +224,9 @@
   h2,
   h3 {
     font-family: var(--font-heading, inherit);
-    /* Long compounds must wrap inside their own column, including huge uppercase titles. */
-    overflow-wrap: anywhere;
+    /* A long compound breaks inside its column (huge uppercase titles too); break-word, not
+       anywhere, so the heading's min-content width is unchanged. */
+    overflow-wrap: break-word;
   }
   [data-kit="model-table"] td {
     font-variant-numeric: var(--table-numbers, normal);

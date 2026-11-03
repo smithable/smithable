@@ -667,11 +667,14 @@ ${loaded ? "  const data = Route.useLoaderData();\n" : ""}${needsViewer(parts) ?
   // The header's look from smithable.ux.yml (HEADER_LOOKS), e.g. kept at the top as the page scrolls.
   // Over the hero, the bar stands on the hero's own wash: its overlay, else brand on a cover and
   // dark on a photo (as the hero draws it).
-  const headerLook = Object.entries(ux.pages[page.id]?.header ?? {}).map(([key, value]) =>
-    key === "over"
-      ? [key, heroLook?.overlay ?? (heroLook?.layout === "cover" ? "brand" : "dark")]
-      : [key, value],
-  );
+  // "over: none" is the file's explicit choice (it masks a theme's over: hero) and draws nothing.
+  const headerLook = Object.entries(ux.pages[page.id]?.header ?? {})
+    .filter(([key, value]) => !(key === "over" && value === "none"))
+    .map(([key, value]) =>
+      key === "over"
+        ? [key, heroLook?.overlay ?? (heroLook?.layout === "cover" ? "brand" : "dark")]
+        : [key, value],
+    );
   const headerProp = headerLook.length
     ? ` header={{ ${headerLook.map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join(", ")} }}`
     : "";
