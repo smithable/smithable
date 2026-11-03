@@ -1495,20 +1495,48 @@ async function supportFlow(dir, base) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   try {
     let before = mails().length;
-    const made = await post({
+    // The mail brings a text file: an attachment is stored through the server's own path, with
+    // the upload checks, and no browser receipt.
+    const notes = "The access point's lights:\nred, red, off.\n";
+    const first = {
       from: "Lena Berg <lena@archipelago.example>",
       subject: "Wifi down in the meeting room",
       text: "Since this morning nobody gets on the wifi in the big meeting room.",
       messageId: "<lena-1@archipelago.example>",
-    });
+      attachments: [
+        { name: "lights.txt", type: "text/plain", data: Buffer.from(notes).toString("base64") },
+      ],
+    };
+    const made = await post(first);
     if (made.status !== 201)
       throw new Error(`the mail answers ${made.status}: ${await made.text()}`);
     const { id } = await made.json();
     const ack = await to("lena@archipelago.example", before);
     if (!header(ack, "Subject").endsWith(`#${id}]`))
       throw new Error(`the acknowledgement: ${header(ack, "Subject")}`);
+    // The same delivery again (a mailbox read twice) is a repeat: no second case, no second mail.
+    const again = await post(first);
+    if (again.status !== 200 || (await again.json()).repeat !== true)
+      throw new Error(`the mail delivered again answers ${again.status}`);
+    // Two deliveries of one mail at the same moment make one case.
+    const twin = {
+      from: "Omar Lind <omar@archipelago.example>",
+      subject: "Projector remote missing",
+      text: "The remote of the projector in room 2 is gone.",
+      messageId: "<omar-1@archipelago.example>",
+    };
+    const statuses = (await Promise.all([post(twin), post(twin)])).map((a) => a.status).sort();
+    if (statuses.join() !== "200,201")
+      throw new Error(`two deliveries at once answer ${statuses.join(" and ")}`);
+    // Nobody signed in reads the attachment.
+    const fileUrl = `${base}/files/support-case/${id}/attachments/0`;
+    const anonymous = await fetch(fileUrl);
+    if (anonymous.status === 200) throw new Error("the attachment is readable without signing in");
     // An agent answers from the case's conversation.
     await signInAs(page, base, "admin");
+    const read = await page.request.get(fileUrl);
+    if (read.status() !== 200 || (await read.text()) !== notes)
+      throw new Error(`the attachment for an agent: ${read.status()}`);
     await open(page, `${base}/cases/${id}`);
     const thread = page.locator('[data-kit="thread"]');
     await thread
@@ -1539,21 +1567,27 @@ async function supportFlow(dir, base) {
     )
       throw new Error("the answer is not the reply alone");
     // The customer answers it.
-    const replied = await post({
+    const reply = {
       from: "lena@archipelago.example",
       subject: `Re: ${header(answer, "Subject")}`,
       text: "It works again, thank you!",
       messageId: "<lena-2@archipelago.example>",
       inReplyTo: header(answer, "Message-ID"),
-    });
+    };
+    const replied = await post(reply);
     if ((await replied.json()).thread !== id)
       throw new Error("the customer's reply did not join the case");
+    // The reply delivered again joins nothing twice.
+    const repeated = await post(reply);
+    if (repeated.status !== 200 || (await repeated.json()).repeat !== true)
+      throw new Error(`the reply delivered again answers ${repeated.status}`);
     await page.reload();
-    await thread
-      .locator('[data-part="message"]', { hasText: "It works again" })
-      .waitFor({ timeout: 10000 * P });
+    const works = thread.locator('[data-part="message"]', { hasText: "It works again" });
+    await works.first().waitFor({ timeout: 10000 * P });
+    if ((await works.count()) !== 1)
+      throw new Error(`the reply is in the conversation ${await works.count()} times`);
     console.log(
-      "  ✓ support: a mail becomes a case and is acknowledged with its number; an agent's reply from the conversation, which the case page leads with, reaches the customer alone, in the thread; the customer's answer joins the case",
+      "  ✓ support: a mail becomes a case and is acknowledged with its number, its attachment read by an agent alone; a delivery again, or two at once, makes one case; an agent's reply from the conversation, which the case page leads with, reaches the customer alone, in the thread; the customer's answer joins the case, once",
     );
   } catch (error) {
     console.log(
