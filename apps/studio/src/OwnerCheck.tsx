@@ -1,23 +1,21 @@
 // The guide's one question about who the app is for (reports.md §3): the owner's address goes into
 // `admins`, beside or instead of the builder's. Asked once per project in this browser.
 import { useId, useState } from "react";
+import { parse } from "yaml";
 import { ownerAskedKey } from "./guide";
 
 /** The administrators an auth file names, without a starter's sample addresses. */
 export function adminsOf(auth: string | undefined): string[] {
-  const lines = (auth ?? "").split(/\r?\n/);
-  const start = lines.findIndex((l) => /^admins:/.test(l));
-  if (start < 0) return [];
-  const clean = (text: string) => text.replace(/#.*$/, "").replace(/["'\s]/g, "");
-  const inline = /^admins:\s*\[(.*)\]/.exec(lines[start] ?? "")?.[1];
-  const named =
-    inline !== undefined
-      ? inline.split(",").map(clean)
-      : lines
-          .slice(start + 1)
-          .filter((_, i, rest) => rest.slice(0, i + 1).every((l) => /^\s*-\s/.test(l)))
-          .map((l) => clean(l.replace(/^\s*-\s/, "")));
-  return named.filter((a) => a && !a.endsWith(".example"));
+  let read: unknown;
+  try {
+    read = parse(auth ?? "");
+  } catch {
+    return [];
+  }
+  const admins = (read as { admins?: unknown } | null)?.admins;
+  return Array.isArray(admins)
+    ? admins.filter((a): a is string => typeof a === "string" && !a.endsWith(".example"))
+    : [];
 }
 
 const asked = (app: string) => {
@@ -66,7 +64,9 @@ export function OwnerCheck({
           onSubmit={(event) => {
             event.preventDefault();
             const address = owner.trim();
-            const admins = [address, ...(alongside ? mine.filter((a) => a !== address) : [])];
+            if (!address) return;
+            const same = (a: string) => a.toLowerCase() === address.toLowerCase();
+            const admins = [address, ...(alongside ? mine.filter((a) => !same(a)) : [])];
             void onSet(admins).then((written) => written && answered());
           }}
         >

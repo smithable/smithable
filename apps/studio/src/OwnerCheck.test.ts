@@ -10,7 +10,12 @@ test("the administrators an auth file names, in either form, without sample addr
     "me@shop.se",
     "you@shop.se",
   ]);
+  expect(adminsOf("admins:\n  - me@shop.se\n  # and\n\n  - you@shop.se\n")).toEqual([
+    "me@shop.se",
+    "you@shop.se",
+  ]);
   expect(adminsOf("admins: [owner@stillwater.example]\n")).toEqual([]);
+  expect(adminsOf(": not yaml: [")).toEqual([]);
   expect(adminsOf("roles: {}\n")).toEqual([]);
   expect(adminsOf(undefined)).toEqual([]);
 });
