@@ -3,8 +3,7 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Who can see the status page?",
-    "How is the API broken down on the page?",
-    "Can visitors subscribe to updates about incidents and maintenance?"
+    "Who should be able to see the status page without signing in?",
+    "Who posts incidents and maintenance updates?"
   ]
 }

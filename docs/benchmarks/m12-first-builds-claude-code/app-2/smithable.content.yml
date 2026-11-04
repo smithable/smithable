@@ -1,4 +1,20 @@
 smithableContent: 0.1
+models:
+  FollowUp:
+    label: Follow-up
+    pluralLabel: Follow-ups
+  Company:
+    fields:
+      followUps:
+        label: Follow-ups
+  Contact:
+    fields:
+      followUps:
+        label: Follow-ups
+  Deal:
+    fields:
+      followUps:
+        label: Follow-ups
 logo:
   src: images/logo.webp
   alt: Two interlinked rings

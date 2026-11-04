@@ -1,7 +1,18 @@
 smithableUx: 0.1
 pages:
-  catalog:
+  tools:
     table:
       view: cards
+  borrowing:
+    table:
+      columns: [tool, neededFrom, returnBy, status]
+  lending:
+    table:
+      columns: [tool, borrower, neededFrom, returnBy, status]
+tones:
+  Loan.status:
+    requested: warning
+    lent: success
+    declined: danger
 theme:
   preset: workbench

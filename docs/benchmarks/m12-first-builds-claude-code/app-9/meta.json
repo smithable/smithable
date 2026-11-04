@@ -3,8 +3,8 @@
   "starter": "support",
   "wordStarter": "booking",
   "questions": [
-    "Who opens tickets?",
-    "Can the people who report a problem follow their ticket and reply to it?",
-    "What should a ticket hold besides its priority and who handles it?"
+    "Who opens the tickets?",
+    "Can people who open a ticket follow its progress?",
+    "What should a ticket hold besides its priority and assignee?"
   ]
 }

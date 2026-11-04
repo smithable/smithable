@@ -3,7 +3,7 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Who on the team can see companies, contacts and deals?",
-    "What should a deal track?"
+    "Can everyone on the team see and edit all companies and deals, or does each salesperson work only on their own?",
+    "What should a deal hold beyond its company and contact?"
   ]
 }

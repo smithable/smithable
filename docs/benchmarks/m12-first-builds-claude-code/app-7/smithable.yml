@@ -1,30 +1,29 @@
 smithable: 0.1
 app:
-  name: Riverside FC
-  description: The club's site with its teams, players, fixtures and results.
-  timezone: Europe/London
+  name: Football Club
+  description: The club's public site with its teams, players, matches and results.
+  timezone: Europe/Helsinki
 models:
   Team:
     fields:
       name: string!
-      ageGroup: string
-      division: string
+      category: men | women | youth
       coach: string
-      picture: picture
       about: text
+      picture: picture
       players: Player[]
       matches: Match[]
   Player:
     fields:
       name: string!
       team: Team!
-      position: goalkeeper | defender | midfielder | forward
       number:
         type: int
         min: 1
         max: 99
+      position: goalkeeper | defender | midfielder | forward
       photo: picture
-      bio: text
+      about: text
   Match:
     fields:
       team: Team!
@@ -32,47 +31,50 @@ models:
       kickoff: datetime!
       venue: home | away
       ground: string
-      competition: string
       status: scheduled | played | postponed | canceled
       goalsFor:
         type: int
         min: 0
+        required:
+          status: played
       goalsAgainst:
         type: int
         min: 0
+        required:
+          status: played
       report: text
     namedBy: [team, opponent]
 pages:
-  matches:
-    crud: Match
-    filters: [team, status, venue, kickoff]
-    search: [opponent, competition]
-    actions: [recordResult, postpone]
-  teams:
-    crud: Team
-  players:
-    crud: Player
-    filters: [team, position]
-    search: [name]
   home:
     route: /
     landing:
       hero:
         button: matches
         secondButton: teams
-      upcoming:
+      fixtures:
         records: Match
-        view: table
         where:
           status: scheduled
       results:
         records: Match
-        view: table
         where:
           status: played
-      ourTeams:
+      squads:
         records: Team
       footer:
+  teams:
+    crud: Team
+    search: [name, coach]
+    filters: [category]
+  players:
+    crud: Player
+    search: [name]
+    filters: [team, position]
+  matches:
+    crud: Match
+    actions: [recordResult]
+    search: [opponent, ground]
+    filters: [team, status, venue]
   privacy:
     route: /privacy
     legal: privacy
@@ -86,11 +88,3 @@ actions:
       goalsFor:
       goalsAgainst:
     intent: Enter the final score once a match has been played.
-  postpone:
-    on: Match
-    when:
-      status: scheduled
-    set:
-      status: postponed
-    intent: Mark a scheduled match as postponed.
-navigation: [matches, teams, players]

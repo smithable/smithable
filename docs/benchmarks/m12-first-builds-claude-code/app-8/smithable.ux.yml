@@ -1,7 +1,17 @@
 smithableUx: 0.1
 pages:
+  schedule:
+    calendar:
+      capacity:
+        left: placesLeft
+        of: capacity
+        look: bar
+  my-registrations:
+    table:
+      columns: [talk]
   talks:
     table:
+      columns: [title, speaker, startsAt, room, capacity, placesLeft]
       sort: startsAt
 theme:
   preset: modern

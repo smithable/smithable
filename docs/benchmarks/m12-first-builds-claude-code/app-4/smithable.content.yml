@@ -2,16 +2,37 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: Borrow instead of buying, text: Need a drill for one afternoon? Find one a few doors away and save the money and the shelf space. }, { title: Share what sits in your shed, text: "List your ladder, mower or saw with a photo, and let neighbors put it to good use." }, { title: Arrange it directly, text: Send the owner a message from the tool's page and agree on when to pick it up and bring it back. }, { title: See what is free right now, text: "Owners mark tools as lent or returned, so you only ask for what is on hand." }]
+      items: [{ title: List what sits in your shed, text: "Add a photo, a short description and your part of the neighborhood. Your drill can earn its keep." }, { title: Ask for what you need, text: "Find the tool, say which days you need it and send a request to its owner." }, { title: Owners stay in charge, text: "You decide whether to lend, and mark the tool as returned when it comes home." }]
+      title: How it works
+    faq:
+      items: [{ question: Does borrowing cost anything?, answer: No. Neighbors lend their tools to each other for free. }, { question: Do I need an account to look around?, answer: No. Anyone can browse the tools. You sign in to ask for one or to list your own. }, { question: Can a tool be requested by several people at once?, answer: "A tool takes one request at a time. Once it is declined or the tool is returned, the next neighbor can ask." }, { question: How do we arrange the handover?, answer: Use the contact form on the tool's page to agree on a time and place with its owner. }]
+      title: Good to know
     hero:
-      title: Your neighborhood's tool shed
-      subtitle: Borrow the tools you need from people nearby, and lend out the ones you rarely use.
+      title: Borrow the tool. Skip the store.
+      subtitle: The ladder, drill or hedge trimmer you need for a weekend is probably a few doors away.
       button: Browse tools
       secondButton: Lend a tool
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
+    latest:
+      title: Ready to borrow
+  tools:
+    title: Tools
+  myTools:
+    title: My tools
+  borrowing:
+    title: Borrowing
+  lending:
+    title: Lending
+actions:
+  lend:
+    label: Lend
+  decline:
+    label: Decline
+  markReturned:
+    label: Mark returned
 logo:
   src: images/logo.webp
   alt: A toolbox

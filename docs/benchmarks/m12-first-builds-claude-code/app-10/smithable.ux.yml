@@ -3,6 +3,18 @@ pages:
   recipes:
     table:
       view: cards
+    record:
+      subtitle: category
+      detail: [totalMinutes, servings]
+      pictures: aside
+      lists:
+        ingredients: inline
+    icon: book
+  shoppingLists:
+    record:
+      lists:
+        items: inline
+    icon: cart
 tones:
   ShoppingList.status:
     done: success

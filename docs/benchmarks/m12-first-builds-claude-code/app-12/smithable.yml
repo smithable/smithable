@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is the shop working? The state of our services, outages and their updates, live.
+  description: Is the web shop working? The live state of its services, its outages and their updates.
+  timezone: Etc/UTC
 models:
   Component:
     fields:
@@ -25,14 +26,6 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
 pages:
-  incidents:
-    crud: Incident
-    filters: [status, component]
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
   home:
     route: /
     landing:
@@ -51,6 +44,14 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
+  incidents:
+    crud: Incident
+    actions: [identified, monitoring, resolve]
+    filters: [status]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
   overview:
     dashboard:
       open:
@@ -76,8 +77,8 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: The cause is found and a fix is being worked on.
-    intent: The cause is found; the incident moves to identified, with an update saying so.
+        message: We have found the cause and are working on a fix.
+    intent: The cause is known; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
     when:
@@ -88,7 +89,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is out. We are watching before we close this.
+        message: A fix has been released and we are keeping an eye on it.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -101,6 +102,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved.
-    intent: The outage is over, with an update saying so.
+        message: This outage is over and everything is back to normal.
+    intent: The incident is over, with an update saying so. The service's state stays what the team sets.
 navigation: [overview, incidents, updates, components, team]

@@ -1,55 +1,57 @@
 smithable: 0.1
 app:
-  name: Family Cookbook
-  description: A family's shared recipe collection, with each recipe's ingredients and the shopping lists for the week.
-  timezone: Europe/Stockholm
+  name: Family Recipes
+  description: A family's shared recipe collection, with each recipe's ingredients and shopping lists for the trips to the store.
+  timezone: Europe/Helsinki
 models:
   Recipe:
     fields:
       name: string!
       summary: text
-      category: main | starter | dessert | baking | breakfast | side | drink
-      servings: int = 4
-      minutes: int
       picture: picture
+      category: dinner | breakfast | lunch | dessert | baking | snack | drink
+      servings: int = 4
+      totalMinutes: int
       instructions: markdown
-      favorite: bool
+      link: url
       ingredients: Ingredient[]
   Ingredient:
     fields:
-      recipe: Recipe!
       name: string!
-      quantity: string
+      amount: string
+      recipe: Recipe!
   ShoppingList:
     fields:
       name: string!
-      forDate: date
-      status: open | done
+      neededBy: date
+      status: active | done
       items: ShoppingItem[]
   ShoppingItem:
     fields:
-      list: ShoppingList!
       name: string!
       quantity: string
-      bought: bool
+      bought: bool = false
+      shoppingList: ShoppingList!
 pages:
   recipes:
     crud: Recipe
     search: [name, summary]
-    filters: [category, favorite]
+    filters: [category]
+    favorites: true
   shoppingLists:
+    route: /shopping-lists
     crud: ShoppingList
-    filters: [status, forDate]
+    filters: [status]
     defaultFilter:
-      status: open
-    actions: [markDone]
-  family:
+      status: active
+    actions: [finish]
+  team:
     users: manage
 actions:
-  markDone:
+  finish:
     on: ShoppingList
     when:
-      status: open
+      status: active
     set:
       status: done
-    intent: Close a shopping list once everything on it is bought.
+    intent: Mark a shopping list as done after the shopping trip.
