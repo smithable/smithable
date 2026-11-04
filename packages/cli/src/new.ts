@@ -17,6 +17,7 @@ import {
   readDescription,
   readEdit,
   STARTER_TEXTS,
+  type Usage,
 } from "@smithable/ai";
 import {
   fitSamples,
@@ -81,6 +82,7 @@ export async function create(
     answers?: string;
     yes?: boolean;
     sampleData?: boolean;
+    pictureData?: boolean;
     from?: string;
     withPictures?: boolean;
     /** The app's name as someone typed it (the hosted form): it wins over a draft's own. */
@@ -91,8 +93,14 @@ export async function create(
     timezone?: string;
     /** The packages are in place (a link to another project's): nothing is installed. */
     installed?: boolean;
-    /** Told the drafted app's files as soon as the model has answered, before anything is built. */
-    /** The draft's files, and the choices it made where the description left the shape open. */
+    unattended?: boolean;
+    onStage?: (stage: "preparing" | "drafting" | "building") => void;
+    onAssumptions?: (assumptions: Assumption[]) => void;
+    onUsage?: (usage: Usage) => void;
+    onDiagnostic?: (message: string) => void;
+    /** Stops further calls at this measured budget; a provider response may exceed it. */
+    maxTokens?: number;
+    /** Told the draft before the compiler/build tools run. */
     onDraft?: (files: Record<string, string>, assumptions?: Assumption[]) => void;
   } = {},
 ): Promise<number> {
@@ -178,13 +186,48 @@ export async function create(
     return 2;
   }
   let description = options.describe;
-  const providers = description ? providersFor() : [];
+  let tokens = 0;
+  const available = description ? providersFor() : [];
+  const providers =
+    !options.onUsage && !options.maxTokens
+      ? available
+      : available.map((provider) => ({
+          ...provider,
+          async complete(request: Parameters<typeof provider.complete>[0]) {
+            const estimate = Math.ceil(
+              (request.system.length +
+                request.user.length +
+                JSON.stringify(request.schema).length) /
+                3,
+            );
+            if (options.maxTokens && tokens + estimate > options.maxTokens)
+              throw new Error("The model token limit for this app was reached.");
+            const completion = await provider.complete(request);
+            tokens += completion.inputTokens + completion.outputTokens;
+            options.onUsage?.({
+              provider: provider.name,
+              model: completion.model,
+              tier: provider.tier,
+              inputTokens: completion.inputTokens,
+              outputTokens: completion.outputTokens,
+              cost:
+                completion.cost?.amount ??
+                (completion.inputTokens * provider.price.input +
+                  completion.outputTokens * provider.price.output) /
+                  1_000_000,
+              currency: completion.cost?.currency ?? provider.currency ?? "EUR",
+              ...(completion.cached ? { cached: true } : {}),
+            });
+            return completion;
+          },
+        }));
+  options.onStage?.("preparing");
   // Before the draft: the model may ask up to three questions and picks the starter to adapt
   // (docs/design/first-build.md). --yes asks nothing; --answers answers in order, unasked. Either
   // way the model still picks the starter when none was named: skipping the questions is not
   // skipping the choice (the word match knows only English).
-  const asking = !options.yes && !options.answers;
-  if (description && (asking || starter === undefined)) {
+  const asking = !options.unattended && !options.yes && !options.answers;
+  if (description && (asking || starter === undefined || options.unattended)) {
     const asked = await clarifyProject({
       description,
       starters: starterSummaries(),
@@ -193,6 +236,14 @@ export async function create(
     });
     if (asked.starter && starter === undefined) name = asked.starter;
     const questions = withLanguage(asked.questions, description);
+    if (options.unattended && questions.length) {
+      const assumptions = defaultAssumptions(name, questions);
+      options.onAssumptions?.(assumptions);
+      description = describedWith(
+        description,
+        assumptions.map((a) => ({ question: a.question, answer: a.chosen })),
+      );
+    }
     if (asking && questions.length) {
       const answers = await askQuestions(io, questions);
       if (answers === undefined) return 1;
@@ -218,6 +269,7 @@ export async function create(
     io.out(`Starting from the ${name} starter.\n`);
     // Drafting as operations (an empty app, one checked operation at a time; the default, see
     // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
+    options.onStage?.("drafting");
     const draft =
       process.env.SMITHABLE_DRAFT === "files"
         ? await draftProject({ description, starter: files, providers })
@@ -247,7 +299,10 @@ export async function create(
     const site = siteNameOf(description);
     if (site && !options.name?.trim()) files = named(files, site);
     options.onDraft?.(files, draft.assumptions);
+    if (draft.assumptions?.length) options.onAssumptions?.(draft.assumptions);
     // An action the model could not get right is left out and said, rather than failing the draft.
+    for (const dropped of draft.dropped ?? [])
+      options.onDiagnostic?.(`Left out because it could not be made valid: ${dropped}`);
     if (draft.dropped?.length)
       io.out(
         `Left out, since it could not be made valid:\n${draft.dropped.map((d) => `  ${d}\n`).join("")}`,
@@ -289,7 +344,12 @@ export async function create(
       draftedSamples = drafted.samples;
     }
     // Pictures from the Smithable image library, unless the page's own came with --with-pictures.
-    if (ir && !fromPage && process.env.SMITHABLE_NO_PICTURES !== "1")
+    if (
+      ir &&
+      options.pictureData !== false &&
+      !fromPage &&
+      process.env.SMITHABLE_NO_PICTURES !== "1"
+    )
       pictures = await addLibraryPictures({
         description,
         ir,
@@ -360,10 +420,11 @@ export async function create(
   // (samples/<n>.webp, and hero.webp): the hero picked for this app replaces the starter's.
   placePictures(
     dir,
-    STARTER_ASSETS[name] ?? {},
+    options.pictureData === false ? {} : (STARTER_ASSETS[name] ?? {}),
     pictures.map((p) => (fromPage ? { ...p, file: `samples/${p.file}` } : p)),
   );
   if (options.describe) dropMissingPictures(dir, io);
+  options.onStage?.("building");
   const code = await generate(dir, io, {
     tools: true,
     force: false,
@@ -646,4 +707,17 @@ export function withoutSampleDomains(
     ...(closed.content !== undefined ? { "smithable.content.yml": closed.content } : {}),
     ...(closed.ux !== undefined ? { "smithable.ux.yml": closed.ux } : {}),
   };
+}
+
+/** Unknown choices keep the starter's behavior until the owner changes them. */
+export function defaultAssumptions(
+  starter: string,
+  questions: { question: string; options: string[] }[],
+): Assumption[] {
+  return questions.map((question) => ({
+    part: "app",
+    question: question.question,
+    chosen: `Keep the ${starter} starter's default where the supplied facts do not answer this. This choice is unconfirmed.`,
+    options: question.options,
+  }));
 }

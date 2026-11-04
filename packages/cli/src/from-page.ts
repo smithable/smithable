@@ -10,6 +10,7 @@ import { request as httpsRequest } from "node:https";
 import { languageQuestion, PAGE_START, textLanguage } from "@smithable/ai";
 import { parse } from "node-html-parser";
 import type { Io } from "./io.js";
+import { siteFactsResult } from "./site-facts.js";
 import { VERSION } from "./version.js";
 
 export const USER_AGENT = `Smithable/${VERSION} (+https://smithable.ai)`;
@@ -572,6 +573,7 @@ export async function readPageCommand(
   io: Io,
   /** Only a test's own server on this machine (see get). */
   local = false,
+  facts = false,
 ): Promise<number> {
   if (!url) {
     io.err("read-page needs the page's address: smithable read-page [page.html] --url https://…\n");
@@ -594,6 +596,10 @@ export async function readPageCommand(
       io.err(`${error.message}\n`);
       return 1;
     }
+  }
+  if (facts) {
+    io.out(`${JSON.stringify(siteFactsResult(html, address))}\n`);
+    return 0;
   }
   const reading = readPage(html, address);
   if (tooLittle(reading)) {

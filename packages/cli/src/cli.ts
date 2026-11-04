@@ -184,7 +184,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
     case "read-page":
-      return readPageCommand(args[0], values.url, io);
+      return readPageCommand(args[0], values.url, io, false, values.facts === true);
     case "new":
       if (args[0] === undefined) {
         io.err(`new needs a directory, like: smithable new my-app\n`);
@@ -370,6 +370,7 @@ const CONFIG = {
     check: { type: "boolean" },
     dir: { type: "string" },
     json: { type: "boolean" },
+    facts: { type: "boolean" },
     explain: { type: "boolean" },
     write: { type: "boolean" },
     implementation: { type: "boolean" },
