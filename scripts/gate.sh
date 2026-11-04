@@ -212,7 +212,7 @@ if [ $# -eq 0 ]; then
       none) true ;;
       *) node scripts/test-apps-parallel.mjs $apps ;;
     esac &&
-    { [ "$studio" = no ] || pnpm test:studio; } &&
+    { [ "$studio" = no ] || { pnpm test:studio && pnpm test:release-review; }; } &&
     { [ "$visual" = no ] || pnpm test:visual; }
 else
   pnpm check "$@"

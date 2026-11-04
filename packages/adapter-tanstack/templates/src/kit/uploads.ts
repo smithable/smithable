@@ -3,18 +3,20 @@
 // else, so a shared file store later replaces this one module. Nothing from the browser is
 // trusted: a picture is WebP by its header, its size is read from the file, and it is at most
 // PICTURE_MAX_BYTES; the file name is made here from the content.
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { Worker } from "node:worker_threads";
+import { log } from "./log.server";
 import { dataDir, ownDataDir } from "./visitor";
 import { w } from "./words";
 
@@ -33,7 +35,7 @@ export const PICTURE_MAX_BYTES = 1_000_000;
 export const PICTURE_MAX_SIDE = 1600;
 
 /** Where files are written: the app's uploads, or in a demo the visitor's own (src/kit/visitor.ts). */
-const uploadsDir = () => join(ownDataDir(), "uploads");
+export const uploadsDir = () => join(ownDataDir(), "uploads");
 /** Where a stored file is: the visitor's own in a demo, else the app's (the seed's pictures). */
 const storedPath = (file: string) => {
   const own = join(uploadsDir(), file);
@@ -43,6 +45,10 @@ const storedPath = (file: string) => {
 /** A stored picture's and document's name under uploads/: nothing that leads out of it. */
 const PICTURE_FILE = /^[a-z0-9-]+\/[a-f0-9]{24}\.webp$/;
 const STORED_FILE = /^[a-z0-9-]+\/[a-f0-9]{24}\.[a-z0-9]{2,4}$/;
+
+/** Whether bytes still exist before issuing an attachable receipt. */
+export const hasUpload = (file: string): boolean =>
+  STORED_FILE.test(file) && existsSync(join(uploadsDir(), file));
 
 /** Refused pictures say why in words the form shows. */
 export class BadPicture extends Error {}
@@ -73,7 +79,13 @@ export function webpSize(bytes: Uint8Array): { width: number; height: number } |
  * same on either side (a small file can still decode to a huge image). The app's own
  * sample pictures (`ours`) are not sent by anyone.
  */
-export function savePicture(model: string, bytes: Uint8Array, alt: string, ours = false): Picture {
+export function savePicture(
+  model: string,
+  bytes: Uint8Array,
+  alt: string,
+  ours = false,
+  held?: UploadReservation,
+): Picture {
   if (bytes.length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
   const size = webpSize(bytes);
   if (!size || size.width < 1 || size.height < 1) throw new BadPicture(w.pictureKinds);
@@ -83,7 +95,7 @@ export function savePicture(model: string, bytes: Uint8Array, alt: string, ours 
   const file = `${model}/${hash}.webp`;
   mkdirSync(join(uploadsDir(), model), { recursive: true });
   const path = join(uploadsDir(), file);
-  if (!existsSync(path)) writeFileSync(path, bytes);
+  store(path, bytes, held);
   return { file, alt, ...size };
 }
 
@@ -96,10 +108,8 @@ export function readPicture(picture: Picture): Buffer | undefined {
 
 /** Removes a picture's file, unless `stillUsed` says another record keeps it. */
 export function deletePicture(picture: Picture | null | undefined, stillUsed: boolean): void {
-  // Only a file of the app's (or the visitor's) own: a demo never deletes the seed's.
   if (!picture || stillUsed || !PICTURE_FILE.test(picture.file)) return;
-  if (!existsSync(join(uploadsDir(), picture.file))) return;
-  unlinkSync(join(uploadsDir(), picture.file));
+  removeStored(join(uploadsDir(), picture.file));
 }
 
 /** The ETag of a stored picture: its file name carries the content's hash. */
@@ -140,8 +150,6 @@ export function samplePicture(
   if (!existsSync(source)) return null;
   const bytes = readFileSync(source);
   const picture = savePicture(model, bytes, alt, true);
-  const path = join(uploadsDir(), picture.file);
-  if (!existsSync(path)) copyFileSync(source, path);
   return generated ? { ...picture, generated: true } : picture;
 }
 
@@ -236,9 +244,10 @@ export function fileKind(
 
 /** All stored pictures and documents together, in bytes: counted at most once a minute. */
 const counted = new Map<string, { bytes: number; at: number }>();
-function storedBytes(): number {
+function storedBytes(cachedOnly = false): number {
   const kept = counted.get(uploadsDir());
-  if (kept && Date.now() - kept.at < 60_000) return kept.bytes;
+  if (kept && (cachedOnly || Date.now() - kept.at < 60_000)) return kept.bytes;
+  if (cachedOnly) throw new BadFile(w.storageFull);
   let bytes = 0;
   const walk = (dir: string) => {
     if (!existsSync(dir)) return;
@@ -251,32 +260,200 @@ function storedBytes(): number {
   return bytes;
 }
 
-/**
- * Whether `bytes` more fit the app's storage: UPLOADS_MAX_BYTES, when set (the hosted service sets
- * it by plan), is the most all stored files together may take; unset, there is no limit. Counted
- * before anything is stored, and held for the upload, so two at once cannot both take the last
- * room; an upload refused or failed gives it back (release).
- */
-export function roomFor(bytes: number): boolean {
-  const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
-  if (!max) return true;
-  // A length that is not one (a header made up) holds nothing and is refused.
-  if (!Number.isFinite(bytes) || bytes < 0) return false;
-  if (storedBytes() + bytes > max) return false;
-  const kept = counted.get(uploadsDir());
-  if (kept) kept.bytes += bytes;
-  return true;
+// Filesystem scans run outside the event loop; quota admission waits, other requests can run.
+const revisions = new Map<string, number>();
+const scanning = new Map<string, Promise<void>>();
+function changed(dir: string): void {
+  revisions.set(dir, (revisions.get(dir) ?? 0) + 1);
+}
+// One bounded scanner per process, shared by all visitor directories.
+let scanTail: Promise<unknown> = Promise.resolve();
+let scanDisturbedSaid = false;
+function scanBytes(dir: string): Promise<number> {
+  const pending = scanTail.then(
+    () =>
+      new Promise<number>((resolve, reject) => {
+        const worker = new Worker(
+          `
+      const { parentPort, workerData } = require("node:worker_threads");
+      const { readdirSync, statSync } = require("node:fs");
+      const { join } = require("node:path");
+      function walk(dir) {
+        let entries;
+        try { entries = readdirSync(dir, { withFileTypes: true }); }
+        catch (error) { if (error.code === "ENOENT") return 0; throw error; }
+        let bytes = 0;
+        for (const entry of entries) {
+          const path = join(dir, entry.name);
+          try { bytes += entry.isDirectory() ? walk(path) : statSync(path).size; }
+          catch (error) { if (error.code !== "ENOENT") throw error; }
+        }
+        return bytes;
+      }
+      parentPort.postMessage(walk(workerData));
+    `,
+          {
+            eval: true,
+            workerData: dir,
+            resourceLimits: { maxOldGenerationSizeMb: 64, stackSizeMb: 4 },
+          },
+        );
+        let result: unknown;
+        let failure: Error | undefined;
+        let timedOut = false;
+        const timer = setTimeout(() => {
+          timedOut = true;
+          void worker.terminate();
+        }, 30000);
+        worker.once("message", (bytes: unknown) => {
+          result = bytes;
+        });
+        worker.once("error", (error) => {
+          failure = error;
+        });
+        worker.once("exit", (code) => {
+          clearTimeout(timer);
+          if (
+            failure ||
+            timedOut ||
+            code !== 0 ||
+            typeof result !== "number" ||
+            !Number.isSafeInteger(result) ||
+            result < 0
+          ) {
+            reject(new Error("Upload quota scan did not finish safely."));
+          } else resolve(result);
+        });
+      }),
+  );
+  scanTail = pending.catch(() => undefined);
+  return pending;
+}
+/** Request admission: share asynchronous refreshes, retry if a writer changed the tree. */
+export async function reserveUpload(bytes: number): Promise<UploadReservation | undefined> {
+  if (!Number.isFinite(bytes) || bytes < 0) return undefined;
+  const dir = uploadsDir();
+  const kept = counted.get(dir);
+  if (Number(process.env.UPLOADS_MAX_BYTES ?? "") && (!kept || Date.now() - kept.at >= 60_000)) {
+    let pending = scanning.get(dir);
+    if (!pending) {
+      pending = (async () => {
+        let last: number | undefined;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const revision = revisions.get(dir);
+          last = await scanBytes(dir);
+          if (revisions.get(dir) !== revision) continue;
+          counted.set(dir, { bytes: last, at: Date.now() });
+          return;
+        }
+        // Three scans in a row disturbed by writes: the estimate is the last total, or what is
+        // accounted already when that is more (the writes committed during the scans counted
+        // themselves on it, and must not vanish); the reservations held are added by roomFor.
+        // Said once; not a minute of refusing every upload.
+        if (!scanDisturbedSaid) {
+          scanDisturbedSaid = true;
+          log.warn(
+            "The upload quota scan was disturbed by writes three times; counting on its last total",
+            { bytes: last },
+          );
+        }
+        counted.set(dir, {
+          bytes: Math.max(last ?? 0, counted.get(dir)?.bytes ?? kept?.bytes ?? 0),
+          at: Date.now(),
+        });
+      })().finally(() => {
+        scanning.delete(dir);
+      });
+      scanning.set(dir, pending);
+    }
+    try {
+      await pending;
+    } catch {
+      throw new BadFile(w.fileNotAdded);
+    }
+  }
+  try {
+    return roomFor(bytes, true);
+  } catch (error) {
+    if (error instanceof BadFile) return undefined;
+    throw error;
+  }
 }
 
-/** Gives back what roomFor held for an upload that was refused or failed. */
-export function release(bytes: number): void {
-  if (!Number.isFinite(bytes) || bytes <= 0) return;
-  const kept = counted.get(uploadsDir());
-  if (kept) kept.bytes = Math.max(0, kept.bytes - bytes);
+/** A request's in-flight bytes, separate from files already committed to disk. */
+export interface UploadReservation {
+  readonly dir: string;
+  readonly bytes: number;
+  active: boolean;
+}
+const heldBytes = new Map<string, number>();
+
+/** Holds capacity until the upload is stored or released. */
+export function roomFor(bytes: number, cachedOnly = false): UploadReservation | undefined {
+  if (!Number.isFinite(bytes) || bytes < 0) return undefined;
+  const dir = uploadsDir();
+  const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
+  const held = heldBytes.get(dir) ?? 0;
+  if (max && storedBytes(cachedOnly) + held + bytes > max) return undefined;
+  heldBytes.set(dir, held + bytes);
+  return { dir, bytes, active: true };
+}
+
+/** Settles exactly once, including when called again by a caller's finally block. */
+export function release(held: UploadReservation | undefined): void {
+  if (!held?.active) return;
+  held.active = false;
+  heldBytes.set(held.dir, Math.max(0, (heldBytes.get(held.dir) ?? 0) - held.bytes));
+}
+
+function removeStaging(path: string): void {
+  try {
+    unlinkSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
+/** Recheck actual new bytes synchronously with writing; duplicates commit zero bytes. */
+function store(path: string, bytes: Uint8Array, reservation?: UploadReservation): void {
+  const held = reservation ?? roomFor(0);
+  if (!held?.active || held.dir !== uploadsDir()) throw new BadFile(w.storageFull);
+  try {
+    const added = existsSync(path) ? 0 : bytes.length;
+    const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
+    if (
+      max &&
+      storedBytes(Boolean(reservation)) + (heldBytes.get(held.dir) ?? 0) - held.bytes + added > max
+    )
+      throw new BadFile(w.storageFull);
+    if (!added && !readFileSync(path).equals(Buffer.from(bytes))) throw new BadFile(w.fileNotAdded);
+    if (added) {
+      // The staging file is outside uploads/: neither readers nor quota scans see partial bytes.
+      const stagingDir = join(ownDataDir(), "upload-staging");
+      mkdirSync(stagingDir, { recursive: true });
+      const staging = join(stagingDir, randomUUID());
+      try {
+        writeFileSync(staging, bytes, { flag: "wx", mode: 0o600 });
+        renameSync(staging, path);
+        changed(held.dir);
+        const kept = counted.get(held.dir);
+        if (kept) kept.bytes += added;
+      } finally {
+        removeStaging(staging);
+      }
+    }
+  } finally {
+    release(held);
+  }
 }
 
 /** Stores a document sent by a browser under `model/`, and returns what the record keeps of it. */
-export function saveFile(model: string, bytes: Uint8Array, name: string): StoredFile {
+export function saveFile(
+  model: string,
+  bytes: Uint8Array,
+  name: string,
+  held?: UploadReservation,
+): StoredFile {
   if (bytes.length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
   const kind = fileKind(bytes, name);
   if (!kind || bytes.length === 0) throw new BadFile(w.fileKinds);
@@ -284,7 +461,7 @@ export function saveFile(model: string, bytes: Uint8Array, name: string): Stored
   const file = `${model}/${hash}.${kind.ext}`;
   mkdirSync(join(uploadsDir(), model), { recursive: true });
   const path = join(uploadsDir(), file);
-  if (!existsSync(path)) writeFileSync(path, bytes);
+  store(path, bytes, held);
   // The name as the person knew it, without a path, at most 200 characters.
   const shown = (name.split(/[\\/]/).at(-1) ?? "").slice(-200) || `document.${kind.ext}`;
   return { file, name: shown, type: kind.type, size: bytes.length };
@@ -318,8 +495,21 @@ export function readFile(stored: StoredFile): Buffer | undefined {
 /** Removes a document's file, unless `stillUsed` says another record keeps it. */
 export function deleteFile(stored: StoredFile | null | undefined, stillUsed: boolean): void {
   if (!stored || stillUsed || !STORED_FILE.test(stored.file)) return;
-  if (!existsSync(join(uploadsDir(), stored.file))) return;
-  unlinkSync(join(uploadsDir(), stored.file));
+  removeStored(join(uploadsDir(), stored.file));
+}
+
+function removeStored(path: string): void {
+  let bytes: number;
+  try {
+    bytes = statSync(path).size;
+    unlinkSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  changed(uploadsDir());
+  const kept = counted.get(uploadsDir());
+  if (kept) kept.bytes = Math.max(0, kept.bytes - bytes);
 }
 
 /** The ETag of a stored document: its file name carries the content's hash. */

@@ -166,7 +166,7 @@ pages:
   expect(counted.list).toContain(
     "search: options.roomSearch ? (text: string) => pickRoom({ data: { text } }) : undefined",
   );
-  // Said: always a search, or always the list as before.
+  // Said: always a search, or always the list as before (core's ux.ts: "every related record").
   expect(route("search").list).toContain("const pickRoomMany = true;");
   const listed = route("list").list;
   expect(listed).not.toContain("pickRoom");

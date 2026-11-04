@@ -6,6 +6,7 @@
 import { ZodError } from "zod";
 import { keyViewer } from "#/generated/keys.server";
 import { AccessDenied, Conflict, type Viewer } from "./access";
+import { BodyLimit, boundedBody } from "./bounded-body";
 import { address, count, TooMany, writeAllowed } from "./limit";
 import { BadInput, conflict, Gone, inUseFacts, NotFound } from "./refusal";
 import { traceWho } from "./trace.server";
@@ -14,8 +15,8 @@ export { BadInput, Gone, NotFound };
 
 const MAX_BODY = 1_000_000;
 
-/** A body over the limit: a 413, refused by its declared size before it is read. */
-class TooLarge extends Error {}
+/** A body over the limit: a 413, refused by its declared size before it is read, or while it is. */
+export class TooLarge extends Error {}
 
 export function problem(
   status: number,
@@ -45,9 +46,13 @@ export function keyOf(request: Request): Viewer | null {
 
 /** A call's JSON body: refused by its declared size before it is read, at most 1 MB. */
 export async function bodyOf(request: Request): Promise<unknown> {
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) throw new TooLarge();
-  const text = await request.text();
-  if (text.length > MAX_BODY) throw new TooLarge();
+  let text: string;
+  try {
+    text = new TextDecoder().decode(await boundedBody(request, MAX_BODY));
+  } catch (error) {
+    if (error instanceof BodyLimit) throw new TooLarge();
+    throw error;
+  }
   try {
     return text ? JSON.parse(text) : {};
   } catch {
@@ -60,7 +65,8 @@ export function refusalOf(
   error: unknown,
 ): { status: number; title: string; more?: Record<string, unknown> } | undefined {
   if (error instanceof TooMany) return { status: 429, title: error.message };
-  if (error instanceof TooLarge) return { status: 413, title: "The body is larger than 1 MB." };
+  if (error instanceof TooLarge)
+    return { status: 413, title: error.message || "The body is larger than 1 MB." };
   if (error instanceof AccessDenied) return { status: 403, title: error.message };
   if (error instanceof NotFound) return { status: 404, title: error.message };
   if (error instanceof Gone) return { status: 410, title: error.message, more: error.more };
@@ -129,10 +135,12 @@ export function fileCall(
 /** A file sent as the body, at most `max` bytes. */
 export async function bytesOf(request: Request, max: number): Promise<Uint8Array> {
   const tooLarge = `The file is larger than ${max / 1_000_000} MB.`;
-  if (Number(request.headers.get("content-length") ?? 0) > max) throw new BadInput(tooLarge);
-  const bytes = new Uint8Array(await request.arrayBuffer());
-  if (bytes.length > max) throw new BadInput(tooLarge);
-  return bytes;
+  try {
+    return await boundedBody(request, max);
+  } catch (error) {
+    if (error instanceof BodyLimit) throw new TooLarge(tooLarge);
+    throw error;
+  }
 }
 
 async function call(

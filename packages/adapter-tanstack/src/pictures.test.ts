@@ -420,3 +420,50 @@ test("a required picture's sample rows are inserted only with their picture", ()
   expect(seed).toContain('(Omit<Row, "photo"> & { photo: Picture | null })[]');
   expect(seed).toContain('import { type Picture, samplePicture } from "#/kit/uploads";');
 });
+
+test("uses(): one answer over every file field of the model, so a refused upload's cleanup never unlinks a file another field of a committed record keeps (the review, 2026-11-04)", () => {
+  const two = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Studio }
+models:
+  Contract:
+    fields:
+      name: string!
+      scan: picture
+      signed: file
+pages:
+  contracts: { crud: Contract }
+`,
+  }).ir as SpecIR;
+  const twoAuth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n",
+    },
+    two,
+  ).auth as AuthIR;
+  const made = generateApp(two, {
+    smithableVersion: "0.0.0",
+    auth: twoAuth,
+    content: emptyContent(),
+  });
+  const at = (path: string) => made.find((f) => f.path === path)?.content ?? "";
+  const data = at("src/generated/contract.server.ts");
+  const start = data.indexOf("uses(file: string): boolean {");
+  expect(start).toBeGreaterThan(0);
+  const uses = data.slice(start, data.indexOf("\n  },", start));
+  // Both columns in the one query, after the receipts still pending.
+  expect(uses).toContain("keepsUpload(file) ||");
+  expect(uses).toContain("${schema.contracts.scan} like");
+  expect(uses).toContain("${schema.contracts.signed} like");
+  // The kit's cleanup is handed the model's answer, never a field's: the browser's upload route
+  // and the uploads map the sweep reads (the API's route and incoming mail: their own tests).
+  expect(at("src/routes/files/$model.$field.ts")).toContain("entry.data.uses");
+  expect(at("src/generated/uploads.ts")).toContain(
+    '"scan": { kind: "picture", data: contractData, access: contractAccess, key: "scan" },',
+  );
+  expect(at("src/generated/uploads.ts")).toContain(
+    '"signed": { kind: "file", data: contractData, access: contractAccess, key: "signed" },',
+  );
+});

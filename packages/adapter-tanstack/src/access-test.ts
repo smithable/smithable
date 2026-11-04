@@ -102,7 +102,7 @@ function testValue(field: FieldIR, model: ModelIR, ir: SpecIR, owner = "owner"):
       // A stored document's record: the file need not exist for the access rules.
       return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`, name: "test.pdf", type: "application/pdf", size: 4, ...receipt(by, "${kebab(model.name)}", "${field.name}", \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.pdf\`) }`;
     case "picture":
-      // A stored picture's record: the file need not exist for the access rules.
+      // A stored picture's record: the receipt helper puts its bytes in test storage.
       return `{ file: \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`, alt: "A test picture", width: 4, height: 3, ...receipt(by, "${kebab(model.name)}", "${field.name}", \`${kebab(model.name)}/\${String(n).padStart(24, "0")}.webp\`) }`;
     case "pictures":
       // Several, at least one when required: one stored picture's record (a mutable list, as the column takes).
@@ -608,7 +608,7 @@ ${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import 
 import { db } from "#/db";
 ${signedIn || audited ? `import { ${[...(signedIn ? ["user"] : []), ...(audited ? ["auditLog"] : [])].sort().join(", ")} } from "#/db/schema";\n` : ""}import * as schema from "#/db/schema";
 import { AccessDenied${signedIn ? ", type Viewer" : ""} } from "#/kit/access";
-${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${occupiers.length ? 'import { instantOf } from "#/kit/zoned";\nimport { app } from "./app";\n' : ""}${ir.models.some(sendsFiles) ? 'import { receiptFor } from "#/kit/receipts.server";\n' : ""}${imports.join("\n")}
+${audited ? 'import { forgetInLog, pruneAudit } from "#/kit/audit.server";\n' : ""}${occupiers.length ? 'import { instantOf } from "#/kit/zoned";\nimport { app } from "./app";\n' : ""}${ir.models.some(sendsFiles) ? 'import { mkdirSync, writeFileSync } from "node:fs";\nimport { join } from "node:path";\nimport { dataDir } from "#/kit/visitor";\nimport { receiptFor } from "#/kit/receipts.server";\n' : ""}${imports.join("\n")}
 
 let counter = 0;
 const next = () => ++counter;
@@ -640,6 +640,8 @@ ${
   ir.models.some(sendsFiles)
     ? `/** A test file's receipt, as its upload gives one to \`by\`; none for a record put in directly. */
 function receipt(by: string | null | undefined, model: string, field: string, file: string) {
+  mkdirSync(join(dataDir, "uploads", model), { recursive: true });
+  writeFileSync(join(dataDir, "uploads", file), "test");
   return by === undefined ? {} : { receipt: receiptFor(by, model, field, file) };
 }
 

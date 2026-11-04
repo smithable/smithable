@@ -257,21 +257,90 @@ export async function refusedAddress(url: string): Promise<string | undefined> {
  * The outbox's state, one per process: in development a regeneration evaluates this module again,
  * and two instances must not drain it side by side (each would send the same mail).
  */
-type Outbox = { sending: boolean; timers: ReturnType<typeof setTimeout>[] };
+type Outbox = {
+  sending: boolean; // Retained while a pre-upgrade module may still be draining.
+  mailSending?: boolean;
+  callSending?: boolean;
+  soon?: ReturnType<typeof setTimeout>;
+  timers: ReturnType<typeof setTimeout>[];
+  /**
+   * Rows ("mail:<id>", "call:<id>") whose transport succeeded but whose result RECORD_TRIES writes
+   * could not record: this process does not send them again. A restart forgets this, so such a
+   * row may go once more then; the receiver's Idempotency-Key tells it a repeat.
+   */
+  unrecorded?: Set<string>;
+};
 const everyInstance = globalThis as { smithableOutbox?: Outbox };
 everyInstance.smithableOutbox ??= { sending: false, timers: [] };
 const outbox = everyInstance.smithableOutbox;
 
-/** Sends the mails and calls that are due; one round at a time. */
+/** Sends a bounded batch of each transport; each has its own process-wide guard. */
 export async function sendDue(now = Date.now()): Promise<number> {
-  if (outbox.sending) return 0;
-  outbox.sending = true;
+  const results = await Promise.allSettled([sendMails(now), drainCalls(now)]);
+  const failure = results.find((r) => r.status === "rejected");
+  if (failure?.status === "rejected") throw failure.reason;
+  return results.reduce((n, r) => n + (r.status === "fulfilled" ? r.value : 0), 0);
+}
+
+async function drainCalls(now: number): Promise<number> {
+  if (outbox.sending || outbox.callSending) return 0;
+  outbox.callSending = true;
+  try {
+    const result = await sendCalls(now);
+    if (result.more) sendSoon();
+    return result.done;
+  } finally {
+    outbox.callSending = false;
+  }
+}
+
+/** How often a result's write is tried before the row is given up: ten, about three minutes. */
+const RECORD_TRIES = 10;
+
+/**
+ * A known transport result must be recorded before its lane can send again. A database pause
+ * retries only this write, never the already completed external side effect; and never forever.
+ * After RECORD_TRIES: a success that could not be recorded is given up through `failed` (the row
+ * marked failed with the reason, in Activity, and remembered so it is not sent again); without
+ * `failed` (a failure or a wait that could not be recorded) the row stays due, and the next drain
+ * tries the transport again. Either way the lane goes on with the rest.
+ */
+async function recordDelivery(write: () => void, failed?: (why: string) => void): Promise<void> {
+  let delay = 1000;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      write();
+      return;
+    } catch (error) {
+      if (attempt === 1)
+        log.error("An outbox result is waiting for database write access", { error });
+      if (attempt >= RECORD_TRIES) {
+        const why = `The result was not recorded: ${error instanceof Error ? error.message : String(error)}`;
+        if (!failed) {
+          log.error("An outbox result could not be recorded; the row stays due", { error });
+          return;
+        }
+        try {
+          failed(why);
+        } catch (again) {
+          log.error("An outbox result could not be recorded", { error: again });
+        }
+        return;
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, delay).unref?.());
+      delay = Math.min(30_000, delay * 2);
+    }
+  }
+}
+
+async function sendMails(now: number): Promise<number> {
+  if (outbox.sending || outbox.mailSending) return 0;
+  outbox.mailSending = true;
   let done = 0;
   // More due than one batch: the rest goes at once after this one, not at the next tick.
   let more = false;
   try {
-    // Mail first (a booking's confirmation), then the calls, a bounded batch of each, oldest due
-    // first, so one slow webhook never holds a person's mail (the review, 2026-10-30).
+    // Oldest due first, bounded independently of the webhook transport.
     const due = db
       .select()
       .from(outgoingMail)
@@ -287,7 +356,25 @@ export async function sendDue(now = Date.now()): Promise<number> {
       .all();
     more = due.length === BATCH;
     for (const mail of due) {
+      if (outbox.unrecorded?.has(`mail:${mail.id}`)) continue;
       const about = { model: mail.model ?? undefined, record: mail.recordId ?? undefined };
+      // A mail sent whose result cannot be recorded: not sent again by this process, and failed
+      // with the reason in Activity.
+      const giveUp = (why: string) => {
+        outbox.unrecorded ??= new Set();
+        outbox.unrecorded.add(`mail:${mail.id}`);
+        db.transaction((tx) => {
+          tx.update(outgoingMail)
+            .set({ failedAt: new Date(), error: why })
+            .where(eq(outgoingMail.id, mail.id))
+            .run();
+          audit(tx, null, {
+            action: "mail not sent",
+            ...about,
+            details: { outgoing: mail.entry, email: mail.to, mail: mail.id, error: why },
+          });
+        });
+      };
       try {
         await sendMail({
           to: mail.to,
@@ -298,51 +385,54 @@ export async function sendDue(now = Date.now()): Promise<number> {
           ...(mail.references ? { references: mail.references } : {}),
           ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
         });
-        db.transaction((tx) => {
-          tx.update(outgoingMail)
-            .set({ sentAt: new Date(), tries: mail.tries + 1 })
-            .where(eq(outgoingMail.id, mail.id))
-            .run();
-          audit(tx, null, {
-            // The preview, like an app without mail settings, keeps its mail in the outbox.
-            action: mailConfigured()
-              ? "mailed"
-              : import.meta.env.DEV
-                ? "kept in the preview"
-                : "kept in the outbox",
-            ...about,
-            details: { outgoing: mail.entry, email: mail.to },
-          });
-        });
+        await recordDelivery(
+          () =>
+            db.transaction((tx) => {
+              tx.update(outgoingMail)
+                .set({ sentAt: new Date(), tries: mail.tries + 1 })
+                .where(eq(outgoingMail.id, mail.id))
+                .run();
+              audit(tx, null, {
+                // The preview, like an app without mail settings, keeps its mail in the outbox.
+                action: mailConfigured()
+                  ? "mailed"
+                  : import.meta.env.DEV
+                    ? "kept in the preview"
+                    : "kept in the outbox",
+                ...about,
+                details: { outgoing: mail.entry, email: mail.to },
+              });
+            }),
+          giveUp,
+        );
         done++;
       } catch (error) {
         const tries = mail.tries + 1;
         const why = error instanceof Error ? error.message : String(error);
         const late = now - mail.createdAt.getTime() >= DAY;
-        db.transaction((tx) => {
-          tx.update(outgoingMail)
-            .set(
-              late
-                ? { tries, error: why, failedAt: new Date() }
-                : { tries, error: why, nextAt: new Date(now + pauseAfter(tries)) },
-            )
-            .where(eq(outgoingMail.id, mail.id))
-            .run();
-          if (late)
-            audit(tx, null, {
-              action: "mail not sent",
-              ...about,
-              details: { outgoing: mail.entry, email: mail.to, mail: mail.id, error: why },
-            });
-        });
+        await recordDelivery(() =>
+          db.transaction((tx) => {
+            tx.update(outgoingMail)
+              .set(
+                late
+                  ? { tries, error: why, failedAt: new Date() }
+                  : { tries, error: why, nextAt: new Date(now + pauseAfter(tries)) },
+              )
+              .where(eq(outgoingMail.id, mail.id))
+              .run();
+            if (late)
+              audit(tx, null, {
+                action: "mail not sent",
+                ...about,
+                details: { outgoing: mail.entry, email: mail.to, mail: mail.id, error: why },
+              });
+          }),
+        );
         log.warn("A mail could not be sent", { mail: mail.id, tries, error: why });
       }
     }
-    const calls = await sendCalls(now);
-    done += calls.done;
-    more ||= calls.more;
   } finally {
-    outbox.sending = false;
+    outbox.mailSending = false;
   }
   if (more) sendSoon();
   return done;
@@ -353,7 +443,9 @@ const BATCH = 50;
 
 /** Sends what is due once the change that queued it is done, outside its request. */
 function sendSoon() {
-  setTimeout(() => {
+  if (outbox.soon) return;
+  outbox.soon = setTimeout(() => {
+    outbox.soon = undefined;
     outsideTrace(() => {
       sendDue().catch((error) => log.error("The outbox could not be sent", { error }));
     });
@@ -377,32 +469,54 @@ async function sendCalls(now: number): Promise<{ done: number; more: boolean }> 
     .limit(BATCH)
     .all();
   for (const call of due) {
+    if (outbox.unrecorded?.has(`call:${call.id}`)) continue;
     const settings = targetSettings(call.target);
     const url = process.env[settings.url];
     const secret = process.env[settings.secret];
     const about = { model: call.model ?? undefined, record: call.recordId ?? undefined };
+    // A call made whose result cannot be recorded: not made again by this process, and failed
+    // with the reason in Activity.
+    const giveUp = (why: string) => {
+      outbox.unrecorded ??= new Set();
+      outbox.unrecorded.add(`call:${call.id}`);
+      db.transaction((tx) => {
+        tx.update(outgoingCall)
+          .set({ failedAt: new Date(), error: why })
+          .where(eq(outgoingCall.id, call.id))
+          .run();
+        audit(tx, null, {
+          action: "call not made",
+          ...about,
+          details: { outgoing: call.entry, target: call.target, call: call.id, error: why },
+        });
+      });
+    };
     if (!url || !secret) {
       // The preview has no addresses for its connections (and no internet): the call is
       // skipped, once, and Activity says so. A published app waits for the settings instead.
       if (import.meta.env.DEV)
-        db.transaction((tx) => {
-          tx.update(outgoingCall)
-            .set({ failedAt: new Date(), error: "skipped in the preview" })
-            .where(eq(outgoingCall.id, call.id))
-            .run();
-          audit(tx, null, {
-            action: "skipped in the preview",
-            ...about,
-            details: { outgoing: call.entry, target: call.target },
-          });
-        });
-      // A published app looks again in ten minutes: a call waiting for its settings neither fills
-      // the next batch nor turns the outbox round and round (the review, 2026-10-30).
+        await recordDelivery(() =>
+          db.transaction((tx) => {
+            tx.update(outgoingCall)
+              .set({ failedAt: new Date(), error: "skipped in the preview" })
+              .where(eq(outgoingCall.id, call.id))
+              .run();
+            audit(tx, null, {
+              action: "skipped in the preview",
+              ...about,
+              details: { outgoing: call.entry, target: call.target },
+            });
+          }),
+        );
+      // Wait for configuration without repeatedly filling the due batch.
       else
-        db.update(outgoingCall)
-          .set({ nextAt: new Date(now + 10 * MINUTE) })
-          .where(eq(outgoingCall.id, call.id))
-          .run();
+        await recordDelivery(() =>
+          db
+            .update(outgoingCall)
+            .set({ nextAt: new Date(now + 10 * MINUTE) })
+            .where(eq(outgoingCall.id, call.id))
+            .run(),
+        );
       continue;
     }
     let status: number | undefined;
@@ -422,17 +536,21 @@ async function sendCalls(now: number): Promise<{ done: number; more: boolean }> 
         call.body,
       );
       if (status < 200 || status >= 300) throw new Error(`${call.target} answered ${status}.`);
-      db.transaction((tx) => {
-        tx.update(outgoingCall)
-          .set({ sentAt: new Date(), tries: call.tries + 1, status })
-          .where(eq(outgoingCall.id, call.id))
-          .run();
-        audit(tx, null, {
-          action: "called",
-          ...about,
-          details: { outgoing: call.entry, target: call.target, status },
-        });
-      });
+      await recordDelivery(
+        () =>
+          db.transaction((tx) => {
+            tx.update(outgoingCall)
+              .set({ sentAt: new Date(), tries: call.tries + 1, status })
+              .where(eq(outgoingCall.id, call.id))
+              .run();
+            audit(tx, null, {
+              action: "called",
+              ...about,
+              details: { outgoing: call.entry, target: call.target, status },
+            });
+          }),
+        giveUp,
+      );
       done++;
     } catch (error) {
       const tries = call.tries + 1;
@@ -452,22 +570,24 @@ async function sendCalls(now: number): Promise<{ done: number; more: boolean }> 
                 : String(error);
       const pause = refused === 407 ? MINUTE : refused === 429 ? 10 * MINUTE : pauseAfter(tries);
       const late = now - call.createdAt.getTime() >= DAY;
-      db.transaction((tx) => {
-        tx.update(outgoingCall)
-          .set(
-            late
-              ? { tries, status, error: why, failedAt: new Date() }
-              : { tries, status, error: why, nextAt: new Date(now + pause) },
-          )
-          .where(eq(outgoingCall.id, call.id))
-          .run();
-        if (late)
-          audit(tx, null, {
-            action: "call not made",
-            ...about,
-            details: { outgoing: call.entry, target: call.target, call: call.id, error: why },
-          });
-      });
+      await recordDelivery(() =>
+        db.transaction((tx) => {
+          tx.update(outgoingCall)
+            .set(
+              late
+                ? { tries, status, error: why, failedAt: new Date() }
+                : { tries, status, error: why, nextAt: new Date(now + pause) },
+            )
+            .where(eq(outgoingCall.id, call.id))
+            .run();
+          if (late)
+            audit(tx, null, {
+              action: "call not made",
+              ...about,
+              details: { outgoing: call.entry, target: call.target, call: call.id, error: why },
+            });
+        }),
+      );
       log.warn("A call could not be made", {
         call: call.id,
         target: call.target,
@@ -511,6 +631,8 @@ export function sendAgain(viewer: Viewer | null, again: { mail: number } | { cal
 // module evaluated again replaces the timers of the one before, never adds to them.
 if (import.meta.env.SSR) {
   for (const timer of outbox.timers) clearTimeout(timer);
+  if (outbox.soon) clearTimeout(outbox.soon);
+  outbox.soon = undefined;
   outbox.timers = [setTimeout(sendSoon, 5_000), setInterval(sendSoon, MINUTE)];
   for (const timer of outbox.timers) timer.unref?.();
 }

@@ -3,6 +3,7 @@
 // build is checked for page access and the absence of the development sign-in; the
 // development server is used in a real browser, signed in as the examples' roles.
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
+
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
 import {
@@ -28,6 +29,7 @@ import { chromium } from "playwright";
 import { seeded, validateSpec, walk } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
+import { upgradeFlow } from "./upgrade-flow.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
 // a check that waits a minute on a quiet machine waits three under load, so a slow answer is
@@ -2086,6 +2088,8 @@ async function mailThreadFlow(dir, base) {
  */
 async function incomingMailFlow(dir, base) {
   try {
+    const field = smithable(dir, "op", "addField", "Message", "attachments", "files");
+    if (field.code !== 0) throw new Error(field.out);
     const added = smithable(
       dir,
       "op",
@@ -2100,6 +2104,8 @@ async function incomingMailFlow(dir, base) {
       "subject=name",
       "--fields",
       "body=message",
+      "--fields",
+      "attachments=attachments",
     );
     if (added.code !== 0) throw new Error(added.out);
     let answer;
@@ -2112,7 +2118,12 @@ async function incomingMailFlow(dir, base) {
           to: "hello@studio.example",
           subject: "A question about Tuesdays",
           text: "Is there a class on Tuesday evenings?",
-          attachments: [],
+          attachments: [
+            {
+              name: "evidence.txt",
+              data: Buffer.from("Literal gate attachment\n").toString("base64"),
+            },
+          ],
         }),
       });
       if (answer.status !== 404) break;
@@ -2121,13 +2132,24 @@ async function incomingMailFlow(dir, base) {
     if (answer.status !== 201)
       throw new Error(`the mail answers ${answer.status}: ${await answer.text()}`);
     const { id } = await answer.json();
-    const [row] = query(dir, `select name, email, message from messages where id = ${Number(id)}`);
+    const [row] = query(
+      dir,
+      `select name, email, message, attachments from messages where id = ${Number(id)}`,
+    );
     if (
       row?.email !== "ada@example.org" ||
       row?.name !== "A question about Tuesdays" ||
       row?.message !== "Is there a class on Tuesday evenings?"
     )
       throw new Error(`the message: ${JSON.stringify(row)}`);
+    const [stored] = JSON.parse(row.attachments);
+    if (
+      stored.name !== "evidence.txt" ||
+      stored.receipt !== undefined ||
+      readFileSync(join(dir, "data", "uploads", stored.file), "utf8") !==
+        "Literal gate attachment\n"
+    )
+      throw new Error("The incoming attachment did not persist exactly");
     console.log(
       "  ✓ incoming mail: a mail passed on becomes a message, its sender's address, subject and text in their fields",
     );
@@ -2136,6 +2158,7 @@ async function incomingMailFlow(dir, base) {
     failures.push("incoming mail");
   } finally {
     smithable(dir, "op", "removeIncoming", "support");
+    smithable(dir, "op", "removeField", "Message", "attachments");
   }
 }
 
@@ -5197,7 +5220,8 @@ async function documentFlow(dir, base) {
       headers: { "x-file-name": "big.pdf", "x-smithable": "1", "sec-fetch-site": "same-origin" },
       data: Buffer.concat([pdf, Buffer.alloc(10_000_001)]),
     });
-    if (large.status() !== 400) throw new Error(`a file over 10 MB gets ${large.status()}`);
+    if (large.status() !== 413)
+      throw new Error(`a file over 10 MB gets ${large.status()}, expected 413`);
     // Removed and saved: the stored file goes too.
     if (!existsSync(join(dir, "data", "uploads", stored)))
       throw new Error("the contract was not stored");
@@ -8519,7 +8543,7 @@ test("the session cookie's name and attributes", async () => {
       await mcpFlow(dir);
       await askFlow(dir);
       operationsFlow(dir);
-      upgradeFlow(dir);
+      upgradeFlow(dir, { cli, run, step, smithable });
       await detachFlow(dir, port);
     }
   } catch (error) {
@@ -8636,77 +8660,6 @@ async function analyticsFlow(dir, port) {
 }
 
 /** Upgrading across a stack profile (ARCHITECTURE §14): checked, reported, undoable. */
-function upgradeFlow(dir) {
-  const git = (...args) =>
-    run("git", ["-c", "user.name=Test", "-c", "user.email=t@example.com", ...args], dir);
-  const lockPath = join(dir, "smithable.lock");
-  const current = JSON.parse(readFileSync(lockPath, "utf8")).stackProfile;
-  step("an app from an older stack profile: generate refuses and points to upgrade", () => {
-    // As if made by an earlier Smithable: another profile, and an older clsx.
-    writeFileSync(lockPath, readFileSync(lockPath, "utf8").replace(current, "2026-08"));
-    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-    pkg.dependencies.clsx = "2.1.0";
-    writeFileSync(join(dir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
-    run("pnpm", ["install", "--silent"], dir);
-    // Smithable's record says it wrote these files so, as the older Smithable would have.
-    const recordPath = join(dir, ".smithable/files.json");
-    const record = JSON.parse(readFileSync(recordPath, "utf8"));
-    for (const entry of record.files)
-      if (["package.json", "smithable.lock"].includes(entry.path))
-        entry.sha256 = createHash("sha256")
-          .update(readFileSync(join(dir, entry.path)))
-          .digest("hex");
-    writeFileSync(recordPath, `${JSON.stringify(record, null, 2)}\n`);
-    git("add", "-A");
-    git("commit", "-qm", "An app from stack profile 2026-08");
-    const result = spawnSync("node", [cli, "generate", dir], { encoding: "utf8" });
-    if (result.status === 0 || !result.stderr.includes("smithable upgrade"))
-      throw new Error(result.stderr);
-  });
-  step(
-    "upgrade: custom code that no longer fits is reported, not fixed, and nothing changes",
-    () => {
-      writeFileSync(
-        join(dir, "src/custom/legacy.ts"),
-        'import { formatMoney } from "#/kit/format";\n\nexport const total = (cents: number) => formatMoney(cents);\n',
-      );
-      git("add", "-A");
-      git("commit", "-qm", "Custom code using the old kit");
-      const result = smithable(dir, "upgrade");
-      if (
-        result.code === 0 ||
-        !result.out.includes("src/custom/legacy.ts") ||
-        !result.out.includes("formatMoney")
-      )
-        throw new Error(result.out);
-      if (run("git", ["status", "--porcelain"], dir).trim())
-        throw new Error("the failed upgrade left changes");
-      if (!readFileSync(lockPath, "utf8").includes("2026-08"))
-        throw new Error("the profile changed anyway");
-    },
-  );
-  step(
-    "upgrade: with the custom code updated, the app moves to the new profile and its tests pass",
-    () => {
-      rmSync(join(dir, "src/custom/legacy.ts"));
-      git("add", "-A");
-      git("commit", "-qm", "Custom code updated for the new kit");
-      const result = smithable(dir, "upgrade");
-      if (result.code !== 0 || !result.out.includes(`to ${current}`)) throw new Error(result.out);
-      if (!readFileSync(lockPath, "utf8").includes(current))
-        throw new Error("the lock was not updated");
-      if (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).dependencies.clsx === "2.1.0")
-        throw new Error("clsx was not upgraded");
-      if (
-        !run("git", ["log", "-1", "--format=%s"], dir).includes(
-          `Upgrade to stack profile ${current}`,
-        )
-      )
-        throw new Error("no upgrade commit");
-    },
-  );
-}
-
 /** Teach Smithable (ARCHITECTURE §5.1): an unknown section gets a project plugin, once. */
 async function teachFlow(dir) {
   const specPath = join(dir, "smithable.yml");

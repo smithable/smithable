@@ -8,8 +8,8 @@ const kit = (await import(path)) as {
   fileKind(bytes: Uint8Array, name: string): { ext: string; type: string } | undefined;
   fileHeaders(stored: { file: string; name: string; type: string }): Record<string, string>;
   savePicture(model: string, bytes: Uint8Array, alt: string, ours?: boolean): unknown;
-  roomFor(bytes: number): boolean;
-  release(bytes: number): void;
+  roomFor(bytes: number): unknown;
+  release(held: unknown): void;
 };
 
 /** A ZIP archive of stored entries (no compression), with its central directory and end record. */
@@ -192,13 +192,15 @@ test("room held for an upload stops a second one, and an upload refused gives it
   const before = process.env.UPLOADS_MAX_BYTES;
   process.env.UPLOADS_MAX_BYTES = "100";
   try {
-    expect(kit.roomFor(60)).toBe(true);
+    const first = kit.roomFor(60);
+    expect(first).toBeTruthy();
     // Two at once: the second does not fit beside what the first holds.
-    expect(kit.roomFor(60)).toBe(false);
+    expect(kit.roomFor(60)).toBeUndefined();
     // The first was refused (a wrong kind, a scan): its room comes back.
-    kit.release(60);
-    expect(kit.roomFor(60)).toBe(true);
-    kit.release(60);
+    kit.release(first);
+    const second = kit.roomFor(60);
+    expect(second).toBeTruthy();
+    kit.release(second);
   } finally {
     if (before === undefined) delete process.env.UPLOADS_MAX_BYTES;
     else process.env.UPLOADS_MAX_BYTES = before;

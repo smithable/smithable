@@ -14,6 +14,7 @@ import { generate } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import { hostedLevel, levelLine } from "./hosted-level.js";
 import type { Io } from "./io.js";
+import { beginChecks, projectRevision, recordChecks } from "./release-review.js";
 import { loadSpec } from "./validate.js";
 
 /**
@@ -561,7 +562,13 @@ export function report(io: Io, level: Level, results: Result[]): number {
  * scanned.
  */
 export async function security(dir: string, io: Io, level: Level): Promise<number> {
-  if (level !== "release") return report(io, level, await checks(dir, level));
+  const revision = projectRevision(dir);
+  const run = beginChecks(dir, level, revision);
+  if (level !== "release") {
+    const results = await checks(dir, level);
+    recordChecks(dir, level, results, revision, run);
+    return report(io, level, results);
+  }
   const name = appName(dir);
   const docker = (args: string[]) => spawnSync("docker", args, { cwd: dir, encoding: "utf8" });
   if (!has("docker")) {
@@ -606,11 +613,11 @@ export async function security(dir: string, io: Io, level: Level): Promise<numbe
       } catch {}
       await new Promise((r) => setTimeout(r, 500));
     }
-    return report(
-      io,
-      level,
-      await checks(dir, level, { image: name, url }, (what) => io.out(`  ${what}…\n`)),
+    const results = await checks(dir, level, { image: name, url }, (what) =>
+      io.out(`  ${what}…\n`),
     );
+    recordChecks(dir, level, results, revision, run);
+    return report(io, level, results);
   } finally {
     docker(["rm", "-f", container]);
   }

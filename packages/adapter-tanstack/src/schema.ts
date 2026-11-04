@@ -300,6 +300,8 @@ const UPLOADS_TABLE = `export const uploads = sqliteTable(
     /** Who uploaded it; nothing for a visitor. */
     uploader: text(),
     receipt: text().notNull(),
+    /** A successful attachment keeps permission reusable; only pending claims hold orphan bytes. */
+    attached: integer({ mode: "boolean" }).notNull().default(false),
     at: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },
   (t) => [index("uploads_receipt").on(t.receipt), index("uploads_at").on(t.at)],

@@ -272,6 +272,8 @@ export function filterCode(
       const all = `(await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)}${picture ? `, picture: r.${dataKey(picture)} ? \`/files/${kebab(target.name)}/\${r.id}/${picture.name}\` : undefined` : ""} }))`;
       const how = pick?.[name];
       if (how === "list" || titleField(target) === "id") {
+        // Said to be a list (the ux file's filters.pick), or titled by number: every related
+        // record the viewer may read, as chips.
         conditions.push(`${value} ? inArray(${column}, ${ids}) : undefined`);
         options.push(`${name}: ${all}`);
         controls.push({
