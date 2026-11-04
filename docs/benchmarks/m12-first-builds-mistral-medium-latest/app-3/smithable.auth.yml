@@ -4,11 +4,7 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member:
-    description: A freelancer using Invoicely.
-    pages: all
-    create: all
-public:
-  pages: [home]
-defaultRole: member
+  member: { pages: all, create: all }
+assistant:
+  for: signed-in
 admins: [johan@smithable.ai]

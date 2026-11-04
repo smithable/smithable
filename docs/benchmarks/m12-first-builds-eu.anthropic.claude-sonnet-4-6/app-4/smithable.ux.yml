@@ -1,14 +1,27 @@
 smithableUx: 0.1
-theme:
-  preset: woodland
 tones:
+  Loan.status:
+    requested: warning
+    approved: success
+    active: success
+    declined: danger
   Tool.condition:
     likeNew: success
     worn: warning
+theme:
+  preset: woodland
+  brand:
+    font: Nunito Sans
 pages:
+  loans:
+    icon: clipboard
+    table:
+      columns: [tool, startDate, endDate, status]
   catalog:
-    icon: layers
-  my-tools:
+    record:
+      pictures: aside
+    table:
+      columns: [photos, name, category, condition, location, available]
+    icon: tag
+  myTools:
     icon: package
-  saved:
-    icon: star

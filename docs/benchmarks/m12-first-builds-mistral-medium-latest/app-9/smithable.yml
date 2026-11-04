@@ -2,50 +2,85 @@ smithable: 0.1
 app:
   name: IT Help Desk
   description: A help desk for an IT team to manage tickets, priorities and assignments.
+  timezone: Europe/Helsinki
 models:
   Ticket:
     fields:
-      title: string!
-      description: text
-      priority: low | normal | high | urgent
-      status: open | inProgress | resolved | closed
+      subject: string!
+      requesterEmail: email!
+      status: open | inProgress | resolved | reopened
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
       assignee: User
+      description: text
+      attachments: files
+      messages: Message[]
+  Message:
+    fields:
+      content: text!
+      sender: agent | requester
+      agent:
+        type: User
+        by: app
+        default: ME()
+      fromEmail: email
+      attachments: files
+      ticket: Ticket!
 pages:
   tickets:
     crud: Ticket
-    search: [title, description]
-    sortable: [priority, status, createdAt]
-    actions: [resolve, close, reopen, startWork]
-    filters: [priority, status]
+    search: [subject, requesterEmail]
+    filters: [status, priority, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, resolve, reopen]
   team:
     users: manage
 actions:
-  resolve:
+  assignToMe:
     on: Ticket
     when:
-      status: inProgress
+      assignee: not ME()
     set:
-      status: resolved
-    intent: Mark the ticket as resolved.
-  close:
+      assignee: ME()
+    intent: "Take the ticket: you become its assignee."
+  assignTo:
     on: Ticket
-    when:
-      status: resolved
     set:
-      status: closed
-    intent: Close the ticket.
-  reopen:
-    on: Ticket
-    when:
-      status: [closed, resolved]
-    set:
-      status: open
-    intent: Reopen the ticket.
+      assignee:
+    intent: Give the ticket to an agent, chosen from the team.
   startWork:
     on: Ticket
     when:
-      status: open
+      status: [open, reopened]
     set:
       status: inProgress
-      assignee: ME()
-    intent: Start working on the ticket.
+    intent: Start working on the ticket; it needs an assignee.
+  resolve:
+    on: Ticket
+    when:
+      status: [open, inProgress, reopened]
+    set:
+      status: resolved
+    intent: The requester has their answer.
+  reopen:
+    on: Ticket
+    when:
+      status: resolved
+    set:
+      status: reopened
+    intent: The ticket needs more work after all.
+navigation: [tickets, team]
+outgoing:
+  ticketReceived:
+    when: Ticket created
+    to: mail
+    recipient: requesterEmail
+  replySent:
+    when: Message created
+    where:
+      sender: agent
+    to: mail
+    recipient: ticket.requesterEmail

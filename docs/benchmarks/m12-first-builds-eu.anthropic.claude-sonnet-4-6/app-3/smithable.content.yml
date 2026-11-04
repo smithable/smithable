@@ -1,18 +1,19 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Invoice with ease
+    title: Get Paid Faster
     hero:
       title: Invoicing made simple for freelancers
-      subtitle: Create professional invoices, track payments and manage your clients — all in one place.
+      button: Go to dashboard
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-  overview:
-    title: Overview
-  invoices:
-    title: Invoices
-  clients:
-    title: Clients
-  payments:
-    title: Payments
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+    features:
+      items: [{ title: Professional invoices in seconds, text: "Create itemised invoices with your business details, VAT number and custom footer. Download or send them straight to your client." }, { title: Track every payment, text: "See at a glance what is outstanding, overdue or paid. Mark invoices sent and paid with one click." }, { title: Automatic overdue reminders, text: "Invoicely watches your due dates and marks invoices overdue automatically, so nothing slips through the cracks." }, { title: "Your clients, organised", text: "Keep all your client details — name, email, address and VAT number — in one place, linked to their invoices." }, { title: Dashboard at a glance, text: "Your outstanding, overdue and paid totals are always visible, with a chart of invoiced amounts over time." }, { title: Private by design, text: Each freelancer sees only their own data. Your clients and invoices are never shared with other users. }]
+    faq:
+      items: [{ question: Is my data private?, answer: Yes. Each account sees only its own clients and invoices. No other user can access your data. }, { question: Can I add my VAT number and bank details?, answer: "Yes. Set up your business profile once and your VAT number, IBAN and invoice footer appear on every invoice you create." }, { question: How does overdue tracking work?, answer: "Seven days after an invoice's due date, Invoicely marks it overdue automatically. You can also mark it overdue yourself at any time." }, { question: Can I attach a contract to an invoice?, answer: Yes. Each invoice has a file field where you can attach the agreement or contract it relates to. }, { question: How are invoice numbers assigned?, answer: "Invoice numbers are sequential per account, in the format 2026-001, 2026-002, and so on." }]
+logo:
+  src: images/logo.webp
+  alt: A receipt with a torn edge and a coin
+  generated: true

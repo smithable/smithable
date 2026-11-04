@@ -1,1 +1,21 @@
 smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: All your recipes in one place, text: "Keep every family recipe organised and easy to find, from weeknight dinners to holiday treats." }, { title: Ingredients at a glance, text: "Each recipe lists its ingredients with quantities and units, so you always know what you need." }, { title: Build shopping lists in seconds, text: Create a shopping list for the week and tick off items as you go around the shop. }, { title: Save your favourites, text: Mark the recipes the family loves most so they are always quick to find when inspiration runs low. }]
+    hero:
+      title: The Family Recipe Book
+      subtitle: All your favourite family recipes, ingredients and shopping lists — in one place.
+      button: Browse Recipes
+      image:
+        src: images/hero.webp
+        alt: A home kitchen with a wooden table, open shelves and herbs on the windowsill
+        generated: true
+    callToAction:
+      title: Ready to cook something delicious?
+      text: Browse the full collection and find your next family favourite.
+      button: See All Recipes
+logo:
+  src: images/logo.webp
+  alt: Three stacked cards
+  generated: true

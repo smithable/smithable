@@ -3,4 +3,12 @@ signIn:
   providers: [email]
   selfSignUp: false
 defaultAccess: shared
+roles:
+  admin: all
+  member: { pages: all, create: all }
+assistant:
+  for: signed-in
+public:
+  pages: [home, recipes]
+  read: [Recipe]
 admins: [johan@smithable.ai]

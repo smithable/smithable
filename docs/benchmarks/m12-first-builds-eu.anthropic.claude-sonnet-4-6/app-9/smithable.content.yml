@@ -1,14 +1,5 @@
 smithableContent: 0.1
-models:
-  Ticket:
-    fields:
-      status:
-        values:
-          inProgress: In Progress
-          onHold: On Hold
-  TicketUpdate:
-    fields:
-      status:
-        values:
-          inProgress: In Progress
-          onHold: On Hold
+logo:
+  src: images/logo.webp
+  alt: A speech bubble
+  generated: true

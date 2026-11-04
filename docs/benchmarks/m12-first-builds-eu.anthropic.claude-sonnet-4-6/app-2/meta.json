@@ -3,7 +3,8 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Beyond companies and contacts, what are the main deal records?",
-    "Who can access the CRM?"
+    "What are the main records the team tracks?",
+    "Who can access the CRM?",
+    "What does a deal record hold?"
   ]
 }

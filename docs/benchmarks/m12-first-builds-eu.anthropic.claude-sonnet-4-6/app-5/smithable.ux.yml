@@ -1,17 +1,23 @@
 smithableUx: 0.1
 pages:
+  ingredients:
+    table:
+      columns: [name, category, unit, unitCost, supplier, reorderPoint]
+    icon: list
   suppliers:
-    icon: truck
     table:
       columns: [name, contactName, email, phone]
-  ingredients:
-    icon: tag
-    table:
-      columns: [name, category, unit, reorderLevel, supplier]
+    icon: truck
   stock:
-    icon: layers
     table:
-      sort: -date
-      columns: [ingredient, quantity, date, notes]
+      sort: -entryDate
+      columns: [entryDate, ingredient, entryType, quantity, unitCost, supplier]
+    icon: package
+tones:
+  StockEntry.entryType:
+    delivery: success
+    usage: warning
 theme:
   preset: craft
+  brand:
+    font: Nunito Sans

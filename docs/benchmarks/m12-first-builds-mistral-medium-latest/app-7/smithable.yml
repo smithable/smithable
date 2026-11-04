@@ -2,28 +2,30 @@ smithable: 0.1
 app:
   name: Football Club
   description: A football club's site with teams, players, matches and results.
+  timezone: Europe/Helsinki
 models:
   Team:
     fields:
       name: string!
       description: text
+      sport: football | futsal | beach
       founded: int
-      logo: file
+      logo: picture
   Player:
     fields:
       name: string!
       position: goalkeeper | defender | midfielder | forward
-      team: Team!
       number: int
-      bio: text
-      photo: file
+      team: Team!
+      birthDate: date
+      photo: picture
   Match:
     fields:
       homeTeam: Team!
       awayTeam: Team!
-      date: datetime!
-      venue: string
-      status: scheduled | played | canceled
+      startsAt: datetime!
+      location: string
+      status: scheduled | inProgress | completed | canceled
       homeScore: int
       awayScore: int
 pages:
@@ -37,13 +39,13 @@ pages:
     route: /
     landing:
       hero:
-      footer:
       teams:
         records: Team
       matches:
         records: Match
         where:
-          status: [scheduled, played]
+          status: [scheduled, inProgress]
+      footer:
   privacy:
     route: /privacy
     legal: privacy

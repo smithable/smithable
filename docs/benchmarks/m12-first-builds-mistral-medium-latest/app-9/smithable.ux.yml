@@ -1,8 +1,1 @@
 smithableUx: 0.1
-tones:
-  Ticket.priority:
-    urgent: danger
-    high: warning
-  Ticket.status:
-    open: warning
-    resolved: success

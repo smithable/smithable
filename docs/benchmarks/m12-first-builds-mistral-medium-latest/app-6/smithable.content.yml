@@ -1,11 +1,67 @@
 smithableContent: 0.1
 pages:
   home:
+    title: Union Job Board
+    subtitle: Find and apply for local union jobs
     hero:
+      title: Find Your Next Union Job
+      button: Browse Jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
+  jobs:
+    title: Job Postings
+  applications:
+    title: My Applications
+models:
+  JobPost:
+    label: Job Post
+    pluralLabel: Job Posts
+    fields:
+      title:
+        label: Job Title
+      description:
+        label: Job Description
+      company:
+        label: Company
+      location:
+        label: Location
+      salary:
+        label: Salary
+      type:
+        label: Job Type
+        values:
+          fullTime: Full Time
+          partTime: Part Time
+          contract: Contract
+          temporary: Temporary
+      status:
+        label: Status
+        values:
+          open: Open
+          closed: Closed
+  Application:
+    label: Application
+    pluralLabel: Applications
+    fields:
+      jobPost:
+        label: Job Post
+      applicantName:
+        label: Your Name
+      applicantEmail:
+        label: Your Email
+      resume:
+        label: Resume
+      coverLetter:
+        label: Cover Letter
+      status:
+        label: Status
+        values:
+          submitted: Submitted
+          reviewed: Reviewed
+          rejected: Rejected
+          hired: Hired
 logo:
   src: images/logo.webp
   alt: A map pin

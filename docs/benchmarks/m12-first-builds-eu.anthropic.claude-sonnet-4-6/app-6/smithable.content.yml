@@ -4,14 +4,16 @@ pages:
     title: Union Job Board
     hero:
       title: Find Your Next Union Job
-      subtitle: Browse open positions posted by your local union and apply with confidence.
       button: Browse Jobs
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-  jobs:
-    title: Job Posts
-  myApplications:
-    title: My Applications
-  applications:
-    title: All Applications
+        alt: A shared workspace with people working at long tables, seen from a distance
+        generated: true
+    features:
+      items: [{ title: Members-Only Listings, text: "All job posts are vetted and posted specifically for union members, ensuring fair wages and working conditions." }, { title: Easy Applications, text: "Submit your cover letter and resume directly through the board. No third-party sites, no extra accounts." }, { title: Track Your Progress, text: "See the status of every application you have submitted, from review through to a hiring decision." }, { title: Wide Range of Trades, text: "Positions span construction, manufacturing, transportation, healthcare, education and more." }]
+    faq:
+      items: [{ question: Who can apply for jobs on this board?, answer: Any signed-in union member can browse all open postings and submit applications. }, { question: How do I submit an application?, answer: "Open a job post, click Apply, fill in your details and upload your resume. You will receive a confirmation by email." }, { question: Can I see the status of my application?, answer: "Yes. Go to My Applications to see whether your application is under review, shortlisted, or a decision has been made." }, { question: Who posts the jobs?, answer: Job posts are created and managed by union administrators. Contact the union office if you would like to list a position. }]
+logo:
+  src: images/logo.webp
+  alt: A map pin
+  generated: true

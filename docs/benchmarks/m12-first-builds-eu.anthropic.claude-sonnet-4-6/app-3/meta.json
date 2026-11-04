@@ -2,5 +2,7 @@
   "description": "Invoicing for freelancers, with clients, invoices and payments.",
   "starter": "invoicing",
   "wordStarter": "invoicing",
-  "questions": []
+  "questions": [
+    "What payment information do you want to track on an invoice?"
+  ]
 }

@@ -1,50 +1,55 @@
 smithable: 0.1
 app:
   name: Union Job Board
-  description: A job board for local union members to post and apply for jobs.
+  description: A job board for local union members to browse job postings and submit applications.
+  timezone: Europe/Helsinki
 models:
   JobPost:
     fields:
       title: string!
+      employer: string!
+      location: string!
       description: text!
-      location: string
+      category: construction | manufacturing | transportation | healthcare | education | other
       type: fullTime | partTime | temporary | apprenticeship
-      trade: string
       wage: money
       closingDate: date
       status: open | closed
-    access:
-      create: [admin]
-      delete: [admin]
   Application:
     fields:
       jobPost: JobPost!
-      coverLetter: text
-      resumeUrl: url
-      status: submitted | reviewing | accepted | rejected
+      fullName: string!
+      email: email!
+      phone: phone
+      coverLetter: text!
+      resume: file
+      status: submitted | reviewing | shortlisted | rejected | hired
 pages:
   jobs:
     route: /
     crud: JobPost
-    search: [title, trade, location]
-    sortable: [closingDate, wage, createdAt]
+    search: [title, employer, location, description]
+    filters: [category, type, status]
+    defaultFilter:
+      status: open
+    sortable: [closingDate, createdAt, wage]
     actions: [closeJob, reopenJob]
   applications:
     crud: Application
-    access: [admin]
-    filters: [status, jobPost]
-  myApplications:
-    crud: Application
-    mine: true
-    filters: [status, jobPost]
+    search: [fullName, email]
+    filters: [jobPost, status]
+    actions: [shortlist, reject, hire]
   home:
-    route: /home
+    route: /welcome
     landing:
       hero:
-      footer:
-      features:
-      callToAction:
         button: jobs
+      features:
+      faq:
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
   team:
     users: manage
 actions:
@@ -54,7 +59,6 @@ actions:
       status: open
     set:
       status: closed
-    allow: [admin]
     intent: Close a job post so no more applications are accepted.
   reopenJob:
     on: JobPost
@@ -62,30 +66,38 @@ actions:
       status: closed
     set:
       status: open
-    allow: [admin]
     intent: Reopen a closed job post to accept applications again.
-  acceptApplication:
+  shortlist:
     on: Application
     when:
       status: [submitted, reviewing]
     set:
-      status: accepted
-    allow: [admin]
-    intent: Accept an application.
-  rejectApplication:
+      status: shortlisted
+    intent: Move an application to the shortlist.
+  reject:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, reviewing, shortlisted]
     set:
       status: rejected
-    allow: [admin]
     intent: Reject an application.
-  markReviewing:
+  hire:
     on: Application
     when:
-      status: submitted
+      status: shortlisted
     set:
-      status: reviewing
-    allow: [admin]
-    intent: Mark an application as under review.
-navigation: [jobs, myApplications, applications, team]
+      status: hired
+    intent: Mark an applicant as hired.
+outgoing:
+  applicationSubmitted:
+    when: Application created
+    to: mail
+    recipient: email
+    show: [jobPost, fullName, status]
+  applicationStatusChanged:
+    when: Application changed
+    fields: [status]
+    to: mail
+    recipient: email
+    show: [jobPost, fullName, status]
+navigation: [jobs, applications, team, privacy]

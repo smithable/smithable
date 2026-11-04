@@ -5,103 +5,117 @@ app:
   currency: USD
   timezone: America/New_York
 models:
-  Contact:
-    fields:
-      firstName: string!
-      lastName: string!
-      title: string
-      email: email
-      phone: phone
-      notes: text
-      company: Company
-    access:
-      delete: [admin]
-  Deal:
-    fields:
-      title: string!
-      contact: Contact
-      value: money
-      status: prospecting | qualified | proposal | negotiation | won | lost
-      expectedCloseDate: date
-      assignedTo: User
-      notes: text
-      company: Company
-    access:
-      delete: [admin]
-  FollowUp:
-    fields:
-      deal: Deal!
-      contact: Contact
-      dueDate: date!
-      type: call | email | meeting | demo | other
-      notes: text
-      status: pending | done | skipped
-      assignedTo: User
-    access:
-      delete: [admin]
   Company:
     fields:
       name: string!
-      website: url
+      email: email unique
       phone: phone
-      email: email
-      industry: string
-      size: micro | small | medium | large | enterprise
+      website: url
+      segment: smb | enterprise | government
       notes: text
       accountManager: User
-    access:
-      delete: [admin]
+      contacts: Contact[]
+      deals: Deal[]
+      followUps: FollowUp[]
+    ownedBy: accountManager
+    trash: true
+  Contact:
+    fields:
+      name: string!
+      email: email
+      phone: phone
+      company: Company!
+      role: string
+      notes: text
+    trash: true
+  Deal:
+    fields:
+      title: string!
+      company: Company!
+      contact: Contact
+      status: prospecting | qualified | proposal | negotiation | won | lost
+      value: money
+      expectedCloseOn: date
+      notes: text
+    trash: true
+  FollowUp:
+    fields:
+      company: Company!
+      contact: Contact
+      dueOn: date! = TODAY()
+      done: bool
+      note: text
+    trash: true
 pages:
-  contacts:
-    crud: Contact
-    search: [firstName, lastName, email, phone]
-    sortable: [firstName, lastName]
-    filters: [company]
-  deals:
-    crud: Deal
-    search: [title]
-    sortable: [title, value, expectedCloseDate]
-    actions: [markWon, markLost]
-    filters: [status, company, expectedCloseDate]
-  follow-ups:
-    crud: FollowUp
-    search: [notes]
-    sortable: [dueDate]
-    actions: [complete, skip]
-    filters: [status, type, dueDate, deal]
-  team:
-    users: manage
+  start:
+    dashboard:
+      companies:
+        count: Company
+      openDeals:
+        count: Deal
+        where:
+          status: [prospecting, qualified, proposal, negotiation]
+      wonDeals:
+        sum: Deal.value
+        where:
+          status: won
+      followUpsDue:
+        list: FollowUp
+        where:
+          done: false
+        limit: 10
   companies:
     crud: Company
     search: [name, email]
-    sortable: [name]
+    filters: [segment, accountManager]
+    sortable: [name, createdAt]
+    actions: [mergeCompanies]
+  contacts:
+    crud: Contact
+    search: [name, email]
+    filters: [company]
+    sortable: [name, createdAt]
+  deals:
+    crud: Deal
+    search: [title]
+    filters: [status, company, contact, expectedCloseOn]
+    sortable: [expectedCloseOn, value, createdAt]
+    defaultFilter:
+      status: [prospecting, qualified, proposal, negotiation]
+    actions: [wonDeal, lostDeal]
+  followUps:
+    crud: FollowUp
+    search: [note]
+    filters: [done, company, contact, dueOn]
+    sortable: [dueOn, createdAt]
+    defaultFilter:
+      done: false
+    actions: [completeFollowUp]
+  team:
+    users: manage
 actions:
-  markWon:
+  wonDeal:
     on: Deal
     when:
       status: [prospecting, qualified, proposal, negotiation]
     set:
       status: won
     intent: Mark a deal as won.
-  markLost:
+  lostDeal:
     on: Deal
     when:
       status: [prospecting, qualified, proposal, negotiation]
     set:
       status: lost
     intent: Mark a deal as lost.
-  complete:
+  completeFollowUp:
     on: FollowUp
     when:
-      status: pending
+      done: false
     set:
-      status: done
+      done: true
     intent: Mark a follow-up as done.
-  skip:
-    on: FollowUp
-    when:
-      status: pending
-    set:
-      status: skipped
-    intent: Mark a follow-up as skipped.
-navigation: [companies, contacts, deals, follow-ups, team]
+  mergeCompanies:
+    merge: Company
+    intent: Merge two duplicate company records into one, moving all contacts, deals and follow-ups to the kept record.
+navigation: [start, companies, contacts, deals, followUps, team]

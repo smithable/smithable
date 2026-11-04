@@ -2,38 +2,36 @@ smithable: 0.1
 app:
   name: Conference Registration
   description: Event registration for a conference with talks, speakers and attendees.
+  timezone: Europe/Helsinki
 models:
   Talk:
     fields:
       title: string!
       summary: text
       startsAt: datetime!
-      endsAt: datetime!
-      room: string
-      capacity: int! = 50
+      durationMinutes: int! = 45
+      capacity: int! = 100
       speaker: Speaker!
-      registrations: Registration[]
   Speaker:
     fields:
       name: string!
-      bio: text
-      photo: picture
-      email: email
-      company: string
+      bio: markdown
+      portrait: picture
   Attendee:
     fields:
       name: string!
       email: email! unique
-      company: string
-      phone: phone
   Registration:
     fields:
       talk: Talk! unique
-      attendee: Attendee!
-      registeredAt: datetime! = NOW()
+      attendee: User
+      status: registered | cancelled
+    ownedBy: attendee
     capacity:
       per: talk
       max: talk.capacity
+      closes: talk.startsAt
+      cancelUntil: talk.startsAt
 pages:
   talks:
     crud: Talk
@@ -47,14 +45,14 @@ pages:
     route: /
     landing:
       hero:
-      footer:
       talks:
         records: Talk
       speakers:
         records: Speaker
-      contact:
+      faq:
+        text:
+      footer:
   privacy:
     route: /privacy
     legal: privacy
-  team:
-    users: manage
+navigation: [home, talks, speakers, registrations]

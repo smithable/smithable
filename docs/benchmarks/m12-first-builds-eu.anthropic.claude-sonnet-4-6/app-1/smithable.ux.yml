@@ -1,22 +1,35 @@
 smithableUx: 0.1
+pages:
+  schedule:
+    calendar:
+      filters: [timeOfDay]
+      colorBy: classType
+    icon: calendar
+  posts:
+    table:
+      sort: -publishedOn
+  instructors:
+    record:
+      pictures: aside
+    icon: users
+  my-bookings:
+    icon: star
+  messages:
+    icon: mail
+  blog:
+    icon: book
+  sessions:
+    table:
+      columns: [classType, instructor, startsAt, capacity, placesLeft]
+  class-types:
+    icon: layers
 tones:
   Post.status:
     published: success
-pages:
-  sessions:
-    table:
-      sort: -startsAt
-  schedule:
-    icon: calendar
-  my-bookings:
-    icon: star
-  class-types:
-    icon: layers
-  instructors:
-    icon: users
-  blog:
-    icon: book
+  ClassType.level:
+    beginner: success
+    advanced: warning
 theme:
-  preset: woodland
+  preset: stillwater
   brand:
-    font: Nunito Sans
+    font: Fraunces

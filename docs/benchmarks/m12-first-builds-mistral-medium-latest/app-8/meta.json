@@ -4,6 +4,7 @@
   "wordStarter": "records",
   "questions": [
     "Who can register for the conference?",
-    "What can visitors see without signing in?"
+    "What can visitors see without signing in?",
+    "What details are recorded for each attendee?"
   ]
 }

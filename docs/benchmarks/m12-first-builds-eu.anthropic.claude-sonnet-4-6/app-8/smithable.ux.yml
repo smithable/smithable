@@ -3,12 +3,34 @@ pages:
   talks:
     table:
       sort: startsAt
-    icon: layers
+    record:
+      subtitle: speaker.name
+      detail: [track, room, startsAt]
+    icon: calendar
+  registrations:
+    table:
+      columns: [talk, attendee]
+    icon: clipboard
   schedule:
+    calendar:
+      view: week
+      filters: [timeOfDay]
+      colorBy: track
     icon: calendar
   my-registrations:
-    icon: clipboard
+    table:
+      columns: [talk]
+    icon: star
   speakers:
-    icon: user
+    record:
+      subtitle: title
+      detail: [company]
+    icon: users
+  tracks:
+    icon: layers
+  messages:
+    icon: mail
 theme:
   preset: corporate
+  brand:
+    font: Instrument Sans

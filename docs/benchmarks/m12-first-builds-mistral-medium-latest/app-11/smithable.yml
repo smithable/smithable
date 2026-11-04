@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: API Status
-  description: Live status of our API services, incidents, and planned maintenance.
+  description: A status page for our API, with incidents and planned maintenance.
+  timezone: Europe/Helsinki
 models:
   Component:
     fields:
@@ -9,6 +10,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -74,28 +76,27 @@ pages:
     route: /
     landing:
       hero:
-      footer:
       services:
         records: Component
       open:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
+      footer:
   incidents:
     crud: Incident
-    filters: [status, component]
-    search: [title, summary]
+    filters: [status]
   updates:
     crud: IncidentUpdate
-    filters: [status, incident]
   components:
     crud: Component
-    filters: [status]
   maintenance:
     crud: Maintenance
-    filters: [component]
   overview:
     crud: Incident
   team:
     users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
 navigation: [overview, incidents, updates, maintenance, components, team]

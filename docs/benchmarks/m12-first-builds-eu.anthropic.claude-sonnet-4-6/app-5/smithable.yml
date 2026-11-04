@@ -2,6 +2,8 @@ smithable: 0.1
 app:
   name: Bakery Inventory
   description: Track ingredients, suppliers and stock levels for a small bakery.
+  currency: USD
+  timezone: America/New_York
 models:
   Supplier:
     fields:
@@ -9,30 +11,46 @@ models:
       contactName: string
       email: email
       phone: phone
+      website: url
       notes: text
   Ingredient:
     fields:
       name: string!
-      category: string
+      category: flour | sugar | dairy | eggs | fat | leavening | flavoring | other
       unit: string!
-      reorderLevel: decimal
+      reorderPoint:
+        type: decimal
+        min: 0
+      reorderQuantity:
+        type: decimal
+        min: 0
+      unitCost: money
       supplier: Supplier
+      notes: text
   StockEntry:
     fields:
       ingredient: Ingredient!
-      quantity: decimal!
-      date: date! = TODAY()
+      quantity:
+        type: decimal
+        min: 0
+      entryType: delivery | adjustment | usage
+      entryDate: date! = TODAY()
+      supplier: Supplier
+      unitCost: money
       notes: text
 pages:
+  ingredients:
+    crud: Ingredient
+    search: [name, notes]
+    filters: [category, supplier]
+    sortable: [name, category, unitCost]
   suppliers:
     crud: Supplier
     search: [name, contactName, email]
     sortable: [name]
-  ingredients:
-    crud: Ingredient
-    search: [name, category, unit]
-    filters: [supplier]
-    sortable: [name, category, unit]
   stock:
     crud: StockEntry
-    filters: [ingredient, date]
+    filters: [ingredient, entryType, entryDate, supplier]
+    sortable: [entryDate, quantity, unitCost]
+  team:
+    users: manage

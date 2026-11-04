@@ -1,11 +1,16 @@
 smithableContent: 0.1
-models:
-  Company:
-    fields:
-      size:
-        values:
-          micro: 1–10
-          small: 11–50
-          medium: 51–200
-          large: 201–1000
-          enterprise: 1000+
+pages:
+  start:
+    title: Dashboard
+  companies:
+    title: Companies
+  contacts:
+    title: Contacts
+  deals:
+    title: Deals
+  followUps:
+    title: Follow-ups
+logo:
+  src: images/logo.webp
+  alt: Two interlinked rings
+  generated: true
