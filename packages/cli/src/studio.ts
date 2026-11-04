@@ -53,6 +53,7 @@ import {
   writePreviewConfig as writeConfig,
 } from "./preview-editor.js";
 import { redo, redoTarget } from "./redo.js";
+import { releaseReview } from "./release-review.js";
 import {
   type AskingStage,
   type MakingStage,
@@ -959,6 +960,8 @@ export async function studio(
         notice = undefined;
         return json(answer);
       }
+      if (url.pathname === "/api/release-review" && req.method === "GET")
+        return json(releaseReview(dir));
       if (url.pathname === "/api/logs") return json(logs);
       // What the preview kept instead of sending: invitations, sign-in codes, notifications.
       if (url.pathname === "/api/outbox") return json(readOutbox(dir));

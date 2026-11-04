@@ -5,6 +5,12 @@ import { join } from "node:path";
 import { validateAuth, validateSpec } from "@smithable/core";
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
+import {
+  beginDeployment,
+  deploymentSnapshot,
+  projectRevision,
+  recordDeployment,
+} from "./release-review.js";
 import { security } from "./security.js";
 
 /** Sign-in provider keys and mail settings passed to the app from the environment when set; never stored. */
@@ -53,6 +59,7 @@ export async function deploy(
   }
   const host = remote ? new URL(options.target).hostname : "localhost";
   const url = options.url ?? `http://${host}:${options.port}`;
+  const snapshot = deploymentSnapshot(dir);
   io.out("Release checks first:\n");
   if ((await security(dir, io, "release")) !== 0) {
     io.err("Not deployed: the Release checks failed.\n");
@@ -77,6 +84,13 @@ export async function deploy(
     io.err(`${built.stderr}\nThe image did not build.\n`);
     return 1;
   }
+  if (snapshot.revision && snapshot.revision !== projectRevision(dir)) {
+    io.err(
+      "Not deployed: project files changed during the release checks or image build. Run Release checks again.\n",
+    );
+    return 1;
+  }
+  const deploymentRun = beginDeployment(dir);
   // The running version steps aside (renamed and stopped, which frees its port) and comes
   // back if the new one does not start or answer.
   const previous = `${name}-previous`;
@@ -124,6 +138,13 @@ export async function deploy(
     try {
       if ((await fetch(`${url}/health`)).ok) {
         docker(["rm", "-f", previous]);
+        try {
+          recordDeployment(dir, snapshot, deploymentRun);
+        } catch {
+          io.err(
+            "Deployed, but its local release baseline could not be recorded. Review evidence is unavailable.\n",
+          );
+        }
         io.out(`Deployed: ${url} (data in the Docker volume ${name}-data).\n`);
         return 0;
       }

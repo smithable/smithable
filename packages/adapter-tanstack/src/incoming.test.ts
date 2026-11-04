@@ -111,9 +111,9 @@ test("a mail's id is its Message-ID, or without one a digest of the mail: delive
   // The mail's id and date are read whether or not the entry takes replies.
   expect(route).toContain("date?: unknown;");
   expect(route).toContain("messageId?: unknown");
-  // Files saved for a call refused or failed after all are removed and their room given back.
-  expect(route).toContain("unsaved(files, requestData.uses);");
-  expect(route).toContain("release(files.reduce((n, f) => n + f.size, 0));");
+  // Files saved for a call refused or failed after all are removed with their receipts (their
+  // bytes are counted on disk, so no room is held for them once stored).
+  expect(route).toContain("discardUploads(files, requestData.uses);");
   // The call's own id wins where the entry names one.
   expect(file("src/routes/incoming/monitorDown.ts")?.content).toContain(
     'const key = request.headers.get("idempotency-key") ?? fill("{event.id}", body);',
@@ -167,18 +167,20 @@ test("a mail becomes a record: sender, subject and text to their fields, attachm
   expect(route).toContain(
     'const files = await saved(mail, "request", "attachments", requestData.uses);',
   );
-  expect(route).toContain('const stored = saveFile(model, bytes, text(name) || "attachment");');
-  // The receipt the record's create demands of any upload (receipts.server.ts), given to the
-  // call itself: the trusted path keeps the checks and the quota, and needs no browser.
+  // Each attachment is stored with the receipt the record's create demands of any upload
+  // (receipts.server.ts), given to the call itself: the trusted path keeps the checks and the
+  // quota, and needs no browser. Its room is reserved by its actual bytes first.
+  expect(route).toContain("files.push(storeUpload(caller.id, model, field, uses,");
+  expect(route).toContain('import { discardUploads, storeUpload } from "#/kit/receipts.server";');
   expect(route).toContain(
-    "files.push({ ...stored, receipt: receiptFor(caller.id, model, field, stored.file) });",
+    "held = bytes.byteLength <= FILE_MAX_BYTES ? await reserveUpload(bytes.byteLength) : undefined;",
   );
-  expect(route).toContain('import { receiptFor } from "#/kit/receipts.server";');
-  expect(route).toContain("if (bytes.byteLength > FILE_MAX_BYTES || !roomFor(bytes.byteLength))");
-  // A refused attachment gives back the room held for the ones before it.
-  expect(route).toContain("held += bytes.byteLength;");
+  // A refused attachment gives back the room held for it and drops the ones before it.
   expect(route).toContain("release(held);");
-  expect(route).toContain("if (error instanceof BadFile) return refused(422, error.message);");
+  expect(route).toContain("discardUploads(files, uses);");
+  expect(route).toContain(
+    "if (error instanceof BadFile) return answer(422, { error: error.message });",
+  );
   expect(route).toContain("if (parts.length > 10)");
   expect(route).toContain(
     'replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, " ").replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, " ")',

@@ -22,6 +22,7 @@ import {
   type SpecIR,
   type StandardActionIR,
   storesFiles,
+  USER_MODEL,
   type Voice,
 } from "@smithable/core";
 import { actionNames, askedFields, askedKeys } from "./actions.js";
@@ -93,7 +94,7 @@ export function readCode(f: FieldIR): string {
 /** A value as the data functions take it, from the API's (code on `v`), or a refusal. */
 function writeCode(f: FieldIR): string {
   if (f.type.kind === "relation")
-    return `values.${f.name}Id = v === null ? null : whole(v, "${f.name}");`;
+    return `values.${f.name}Id = v === null ? null : ${f.type.model === USER_MODEL ? "userId" : "whole"}(v, "${f.name}");`;
   switch (kind(f)) {
     case "money":
       return `values.${f.name} = v === null ? null : Math.round(amount(v, "${f.name}") * 100);`;
@@ -107,7 +108,10 @@ function writeCode(f: FieldIR): string {
 /** An OpenAPI schema for a field's value. */
 function fieldSchema(f: FieldIR): Record<string, unknown> {
   if (f.type.kind === "relation")
-    return { type: "integer", description: `The id of a ${f.type.model}` };
+    return {
+      type: f.type.model === USER_MODEL ? "string" : "integer",
+      description: `The id of a ${f.type.model}`,
+    };
   if (f.type.kind === "choice") return { type: "string", enum: f.type.values };
   switch (kind(f)) {
     case "int":
@@ -443,10 +447,22 @@ function conversionsCode(models: { model: ModelIR; n: ReturnType<typeof names> }
   return `${models.map(({ n }) => `import { ${n.schema} } from "${n.module}.schema";`).join("\n")}
 
 ${
-  uses("relation")
+  models.some(({ model }) =>
+    entered(model).some((f) => f.type.kind === "relation" && f.type.model !== USER_MODEL),
+  )
     ? `const whole = (v: unknown, field: string) => {
   if (Number.isInteger(v)) return v as number;
   throw new BadInput(\`"\${field}" must be a record's id, a whole number.\`);
+};
+`
+    : ""
+}${
+  models.some(({ model }) =>
+    entered(model).some((f) => f.type.kind === "relation" && f.type.model === USER_MODEL),
+  )
+    ? `const userId = (v: unknown, field: string) => {
+  if (typeof v === "string" && v.length > 0) return v;
+  throw new BadInput(\`"\${field}" must be a user's id, a nonempty text.\`);
 };
 `
     : ""
@@ -718,7 +734,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
 import { createFileRoute } from "@tanstack/react-router";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { BadInput, bytesOf, fileCall, NotFound } from "#/kit/api.server";
-import { receiptFor } from "#/kit/receipts.server";
+import { bodySize, BodyLimit } from "#/kit/bounded-body";
+import { storeUpload } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
@@ -728,7 +745,7 @@ import {
   PICTURE_MAX_BYTES,
   type Picture,
   release,
-  roomFor,
+  reserveUpload,
   type StoredFile,
   saveFile,
   savePicture,
@@ -763,8 +780,17 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           // The app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
-          const held = Number(request.headers.get("content-length") ?? 0);
-          if (!roomFor(held)) throw new BadInput("There is no room left for files in this app.");
+          let size: number;
+          try { size = bodySize(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES); }
+          catch (error) {
+            if (error instanceof BodyLimit) throw new BadInput("The file body exceeds its limit or its length is invalid.");
+            throw error;
+          }
+          const held = await reserveUpload(size).catch((error) => {
+            if (error instanceof BadFile) throw new BadInput(error.message);
+            throw error;
+          });
+          if (!held) throw new BadInput("There is no room left for files in this app.");
           let stored: unknown;
           // The room held is given back when the file is refused or cannot be stored.
           try {
@@ -777,16 +803,16 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
             }
             const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
             try {
-              stored = field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name")) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"));
+              stored = storeUpload(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, ${n.data}.uses,
+                () => field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name"), held) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"), false, held));
             } catch (error) {
               if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
               throw error;
             }
-          } catch (error) {
+          } finally {
             release(held);
-            throw error;
           }
-          const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, (stored as { file: string }).file) };
+          const sent = stored as { file: string; receipt: string };
           try {
             await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
           } catch (error) {

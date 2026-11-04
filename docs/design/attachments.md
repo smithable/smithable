@@ -53,7 +53,7 @@ A stored file is named by its content (a hash), and a file is as private as the 
   - the record already had it in that field (a form saved again unchanged), or
   - it comes with a receipt that the same person got for that model and field within the last day.
 
-  Otherwise the write is refused: "This file was not uploaded here, or too long ago: choose it again." The receipt is never kept in the record.
+  Otherwise the write is refused: "This file was not uploaded here, or too long ago: choose it again." The receipt is never kept in the record. A successful save marks its receipt as attached in the same transaction; permission remains reusable within the day while the file exists. Only unsaved upload claims retain unreferenced bytes. A failed save restores the pending claim for retry. Another upload of the same bytes has its own pending receipt and remains protected until it is saved or expires. Existing receipts migrate as pending and become attached on their next save; otherwise they expire normally.
 - **There is no reuse of a file another record has**, even one the person may read: nothing needs it. A copy (actions.md §8) reads the original on the server, and sample data is put in directly.
 - **Storing and permission are separate.** Two uploads of the same bytes are still one file in storage. Each upload gets its own receipt, and that receipt is what grants putting the file on a record.
 

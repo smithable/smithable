@@ -61,6 +61,8 @@ export interface SectionGenerator {
 export interface GenerateOptions {
   /** The Smithable version recorded in smithable.lock. */
   smithableVersion: string;
+  /** Template inventory fingerprint supplied by the host; absent in older generated projects. */
+  kitRevision?: string;
   /** Visible text from smithable.content.yml; anything missing is derived from names. */
   content?: ContentIR;
   auth: AuthIR;

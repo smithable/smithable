@@ -6,6 +6,7 @@
 import { ZodError } from "zod";
 import { keyViewer } from "#/generated/keys.server";
 import { AccessDenied, Conflict, type Viewer } from "./access";
+import { BodyLimit, boundedBody } from "./bounded-body";
 import { address, count, TooMany, writeAllowed } from "./limit";
 import { BadInput, conflict, Gone, inUseFacts, NotFound } from "./refusal";
 import { traceWho } from "./trace.server";
@@ -45,9 +46,13 @@ export function keyOf(request: Request): Viewer | null {
 
 /** A call's JSON body: refused by its declared size before it is read, at most 1 MB. */
 export async function bodyOf(request: Request): Promise<unknown> {
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) throw new TooLarge();
-  const text = await request.text();
-  if (text.length > MAX_BODY) throw new TooLarge();
+  let text: string;
+  try {
+    text = new TextDecoder().decode(await boundedBody(request, MAX_BODY));
+  } catch (error) {
+    if (error instanceof BodyLimit) throw new TooLarge();
+    throw error;
+  }
   try {
     return text ? JSON.parse(text) : {};
   } catch {
@@ -129,10 +134,12 @@ export function fileCall(
 /** A file sent as the body, at most `max` bytes. */
 export async function bytesOf(request: Request, max: number): Promise<Uint8Array> {
   const tooLarge = `The file is larger than ${max / 1_000_000} MB.`;
-  if (Number(request.headers.get("content-length") ?? 0) > max) throw new BadInput(tooLarge);
-  const bytes = new Uint8Array(await request.arrayBuffer());
-  if (bytes.length > max) throw new BadInput(tooLarge);
-  return bytes;
+  try {
+    return await boundedBody(request, max);
+  } catch (error) {
+    if (error instanceof BodyLimit) throw new BadInput(tooLarge);
+    throw error;
+  }
 }
 
 async function call(

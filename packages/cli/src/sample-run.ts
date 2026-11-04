@@ -21,6 +21,21 @@ import {
   variantsOf,
 } from "@smithable/core";
 
+import {
+  canonical,
+  compatibleScenario,
+  type SampleScenario,
+  type ScenarioContext,
+  type ScenarioStep,
+  validateScenario,
+} from "./sample-scenario.js";
+export interface ScenarioControls {
+  current: () => ScenarioContext;
+  reset: (snapshot: ScenarioContext["snapshot"]) => Promise<ScenarioContext["snapshot"]>;
+  clock: (at: string) => Promise<void>;
+  observe: (step: ScenarioStep) => Promise<Record<string, unknown>>;
+}
+
 export interface SamplePerson {
   /** The door's id: `sample-<slug>`, or `visitor`. */
   id: string;
@@ -59,6 +74,9 @@ export type RunMode = "sensible" | "everything";
  */
 export interface LogEntry {
   turn: number;
+  seed?: number;
+  clock?: string;
+  actorRole?: string;
   /** The person's door id. */
   id: string;
   /** The moves open to them when the turn began. */
@@ -169,6 +187,26 @@ export function sampleRunner(options: {
   const known = new Set<string>();
   /** Turns to perform as logged, instead of drawing (a replay). */
   let replaying: LogEntry[] = [];
+  let scenario: { plan: SampleScenario; controls: ScenarioControls; index: number } | undefined;
+  let scenarioPreparing = false;
+  let scenarioAttempted = false;
+  let resetTask: Promise<ScenarioContext["snapshot"]> | undefined;
+  let scenarioResult:
+    | { status: "running" | "passed" | "failed"; id: string; checked: number; message?: string }
+    | undefined;
+  const scenarioContext = () => {
+    if (!scenario) return;
+    compatibleScenario(scenario.plan, scenario.controls.current());
+    const people = options.load().people;
+    if (people.length > PEOPLE_MAX)
+      throw new Error("Scenario actor roster exceeds runner capacity.");
+    const actual = people
+      .map(({ id, role }) => ({ id, role }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    const expected = [...scenario.plan.context.actors].sort((a, b) => a.id.localeCompare(b.id));
+    if (canonical(actual) !== canonical(expected))
+      throw new Error("Sample scenario actors or roles are incompatible.");
+  };
   let timer: ReturnType<typeof setTimeout> | undefined;
   /** The turn under way: moves are serialized among themselves. */
   let chain: Promise<void> = Promise.resolve();
@@ -222,6 +260,9 @@ export function sampleRunner(options: {
     log = [
       ...log,
       {
+        seed: seed + logged.turn,
+        clock: new Date(now()).toISOString(),
+        actorRole: person.role,
         ...logged,
         id: person.id,
         outcome: entry.outcome,
@@ -268,11 +309,38 @@ export function sampleRunner(options: {
 
   /** One turn of one person: the moves open now, one picked, performed; the answer in the feed. */
   async function turn(person: SamplePerson, begun: number): Promise<void> {
+    const wasScenario = !!scenario;
+    const initialScenario = scenario;
+    if (scenario) {
+      if (scenarioResult?.status !== "running") return;
+      try {
+        scenarioContext();
+        const step = scenario.plan.steps[scenario.index];
+        if (!step) {
+          scenarioResult = { ...scenarioResult, status: "passed" };
+          stop("Scenario replay complete.");
+          return;
+        }
+        await scenario.controls.clock(step.action.clock as string);
+      } catch (error) {
+        if (scenario !== initialScenario || begun !== era) return;
+        scenarioResult = {
+          id: scenario.plan.id,
+          status: "failed",
+          checked: scenario.index,
+          message: String(error),
+        };
+        stop(String(error));
+        return;
+      }
+    }
+    if (begun !== era) return;
     const n = turns++;
     const turnSeed = seed + n;
     const open = await options
       .door(`moves?user=${encodeURIComponent(person.id)}`)
       .catch(() => undefined);
+    if (begun !== era) return;
     if (!open?.ok) {
       stop(
         open?.status === 404
@@ -285,9 +353,20 @@ export function sampleRunner(options: {
       now: string;
       moves: OpenMove[];
     };
+    if (begun !== era) return;
     // A page opened changes nothing anyone sees: the moves are the ones that do.
     const moves = all.filter((m) => m.kind !== "open");
     const at = new Date(appNow);
+    if (scenario && appNow !== scenario.plan.steps[scenario.index]?.action.clock) {
+      scenarioResult = {
+        id: scenario.plan.id,
+        status: "failed",
+        checked: scenario.index,
+        message: "Replay clock did not match the recorded clock.",
+      };
+      stop(scenarioResult.message);
+      return;
+    }
     const listed = moves.map((m) => m.id);
     const actor: Actor = person.id === "visitor" ? "visitor" : { role: person.role };
     const everything = state.mode === "everything";
@@ -302,7 +381,12 @@ export function sampleRunner(options: {
     /** The model was asked this turn: its answer has counted against the hour already. */
     let asked = false;
     // A replay's turn is its own person's; the entry is taken once the move is made.
-    const replay = replaying[0]?.id === person.id ? replaying[0] : undefined;
+    const action = scenario ? scenario.plan.steps[scenario.index]?.action : replaying[0];
+    const replay = action?.id === person.id ? action : undefined;
+    if (scenario && !replay) {
+      stop("Scenario actor or action order is incompatible.");
+      return;
+    }
     if (replay) {
       // A replay performs the logged move, not a new draw (§3a).
       ({ move: id, values = {}, variant } = replay);
@@ -317,6 +401,7 @@ export function sampleRunner(options: {
           },
           { turn: n, listed },
         );
+        if (scenario) stop(`Scenario move ${id} is no longer available.`);
         return;
       }
     } else if (everything) {
@@ -385,6 +470,25 @@ export function sampleRunner(options: {
       } else if (!variant && slot.required && (filled[slot.field] ?? null) === null)
         filled[slot.field] = valueFor(slot, rnd, at);
     }
+    if (scenario) {
+      try {
+        scenarioContext();
+      } catch (error) {
+        stop(String(error));
+        return;
+      }
+      if (
+        (move.kind === "change" ||
+          move.kind === "delete" ||
+          move.kind === "merge" ||
+          move.kind === "split" ||
+          !!move.records?.length) &&
+        !replay?.target
+      ) {
+        stop("Scenario record target is missing.");
+        return;
+      }
+    }
     const target = replay?.target
       ? replay.target
       : move.records?.length
@@ -395,11 +499,15 @@ export function sampleRunner(options: {
     const answer = await options
       .door("act", { user: person.id, move: move.id, values: filled, ...target })
       .catch(() => undefined);
+    if (wasScenario && begun !== era) return;
     state.moves++;
     if (!asked) hour.push(now());
     const text = moveWords(move, labels);
     const logged = {
       turn: n,
+      seed: turnSeed,
+      clock: appNow,
+      actorRole: person.role,
       listed,
       move: move.id,
       kind: move.kind,
@@ -419,14 +527,48 @@ export function sampleRunner(options: {
         : "finding";
     // A variant is judged by what the app had to do with it: a valid one refused, or a forbidden
     // one taken, is a finding; a crash always is (§3a).
-    const judged =
-      variant && outcome !== "finding" && outcome !== variant.expect ? "finding" : outcome;
-    const message =
+    let judged =
+      !scenario && variant && outcome !== "finding" && outcome !== variant.expect
+        ? "finding"
+        : outcome;
+    let message =
       judged === "finding" && outcome !== "finding" && variant
         ? `${outcome === "done" ? "Taken" : "Refused"}, but it should have been ${variant.expect === "done" ? "taken" : "refused"}: ${variant.why}.${said?.message ? ` ${said.message}` : ""}`
         : outcome === "done"
           ? undefined
           : (said?.message ?? (answer ? `The app answered ${answer.status}.` : "No answer."));
+    if (scenario) {
+      const activeScenario = scenario;
+      const step = activeScenario.plan.steps[activeScenario.index] as ScenarioStep;
+      try {
+        if (begun !== era || scenarioResult?.status !== "running")
+          throw new Error("Scenario was cancelled before verification.");
+        scenarioContext();
+        if (outcome !== step.expectedOutcome)
+          throw new Error(`Expected ${step.expectedOutcome}; observed ${outcome}.`);
+        const observed = await activeScenario.controls.observe(structuredClone(step));
+        if (scenario !== activeScenario || begun !== era) return;
+        for (const [name, expected] of Object.entries(step.checks))
+          if (!Object.hasOwn(observed, name) || canonical(observed[name]) !== canonical(expected))
+            throw new Error(`Independent scenario check failed: ${name}.`);
+        scenario.index++;
+        scenarioResult = {
+          id: scenario.plan.id,
+          status: scenario.index === scenario.plan.steps.length ? "passed" : "running",
+          checked: scenario.index,
+        };
+      } catch (error) {
+        if (scenario !== activeScenario || begun !== era) return;
+        judged = "finding";
+        message = String(error);
+        scenarioResult = {
+          id: scenario.plan.id,
+          status: "failed",
+          checked: scenario.index,
+          message,
+        };
+      }
+    }
     line(
       person,
       {
@@ -439,15 +581,26 @@ export function sampleRunner(options: {
       },
       logged,
     );
+    if (scenarioResult?.status === "failed") stop(scenarioResult.message);
+    else if (scenarioResult?.status === "passed") stop("Scenario replay complete.");
   }
 
   /** Serialized: a turn starts when the one before it ended. */
   const queued = (person: SamplePerson) => {
     const begun = era;
     chain = chain
-      .then(() => turn(person, begun))
+      .then(() => {
+        if (begun !== era) return;
+        const actor = scenario
+          ? state.people.find((p) => p.id === scenario?.plan.steps[scenario.index]?.action.id)
+          : person;
+        if (!actor) return stop("Scenario actor is unavailable.");
+        return turn(actor, begun);
+      })
       // A turn that broke (an answer that was not JSON) is a finding; the next turn goes on.
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
+        if (begun !== era) return;
+        if (scenario) stop((error as Error)?.message ?? String(error));
         line(
           person,
           {
@@ -456,8 +609,8 @@ export function sampleRunner(options: {
             message: (error as Error)?.message ?? String(error),
           },
           { turn: turns - 1, listed: [] },
-        ),
-      )
+        );
+      })
       .finally(changed);
     return chain;
   };
@@ -495,6 +648,12 @@ export function sampleRunner(options: {
   }
 
   function stop(why?: string) {
+    if (scenario && scenarioResult?.status === "running")
+      scenarioResult = {
+        ...scenarioResult,
+        status: "failed",
+        message: why ?? "Scenario stopped before completion.",
+      };
     clearTimeout(timer);
     era++;
     state.running = false;
@@ -518,6 +677,9 @@ export function sampleRunner(options: {
      * trying everything (the coverage walk, fast and without a model).
      */
     start(fast = false, mode: RunMode = "sensible") {
+      if (scenarioPreparing) throw new Error("Scenario reset is still in progress.");
+      if (scenarioAttempted)
+        throw new Error("Versioned scenarios require a fresh runner for other work.");
       touched = now();
       delete state.stopped;
       if (!load()) return stop("No sample users yet: add one, or ask Smith to add some.");
@@ -538,16 +700,23 @@ export function sampleRunner(options: {
     },
     /** One move now, by whoever is due next (a replay's next person first), in the mode given. */
     async step(mode?: RunMode) {
+      if (scenarioAttempted && !scenario)
+        throw new Error("Failed scenario preparation requires a fresh runner.");
+      if (scenarioPreparing) throw new Error("Scenario reset is still in progress.");
+      if (scenario && scenarioResult?.status !== "running") return;
       touched = now();
       if (mode && !state.running) state.mode = mode;
       if (!state.people.length && !load())
         return stop("No sample users yet: add one, or ask Smith to add some.");
       // A logged person no longer among the sample users: their moves are passed over.
-      while (replaying[0] && !state.people.some((p) => p.id === replaying[0]?.id))
+      while (!scenario && replaying[0] && !state.people.some((p) => p.id === replaying[0]?.id))
         replaying.shift();
       const why = capped();
       if (why) return stop(why);
-      const due = (state.people.find((p) => p.id === replaying[0]?.id) ??
+      const actorId = scenario ? scenario.plan.steps[scenario.index]?.action.id : replaying[0]?.id;
+      if (scenario && !state.people.some((p) => p.id === actorId))
+        return stop("Scenario actor is unavailable.");
+      const due = (state.people.find((p) => p.id === actorId) ??
         [...state.people].sort(
           (a, b) => (next.get(a.id) ?? 0) - (next.get(b.id) ?? 0),
         )[0]) as SamplePerson;
@@ -561,16 +730,61 @@ export function sampleRunner(options: {
     },
     /** The next turns perform these logged moves in order, by their people, instead of drawing. */
     replay(entries: LogEntry[]) {
+      if (scenarioAttempted)
+        throw new Error("Create a fresh runner before replacing a versioned scenario.");
       replaying = entries.filter((e) => e.move);
+    },
+    async replayScenario(input: unknown, controls: ScenarioControls) {
+      if (turns !== 0 || state.running || scenarioAttempted || scenarioPreparing)
+        throw new Error("A versioned scenario requires a fresh stopped runner.");
+      scenarioAttempted = true;
+      const plan = validateScenario(input);
+      compatibleScenario(plan, controls.current());
+      if (!load()) throw new Error("Scenario actors are unavailable.");
+      const replayEra = ++era;
+      scenario = { plan, controls, index: 0 };
+      scenarioPreparing = true;
+      scenarioResult = { id: plan.id, status: "running", checked: 0 };
+      try {
+        scenarioContext();
+        resetTask = controls.reset({ ...plan.context.snapshot });
+        const restored = await resetTask;
+        if (canonical(restored) !== canonical(plan.context.snapshot))
+          throw new Error("Scenario reset did not verify the snapshot identity.");
+        scenarioContext();
+        if (era !== replayEra) throw new Error("Scenario reset was cancelled.");
+      } catch (error) {
+        if (scenario?.plan === plan && era === replayEra)
+          scenarioResult = { id: plan.id, status: "failed", checked: 0, message: String(error) };
+        throw error;
+      } finally {
+        scenarioPreparing = false;
+        resetTask = undefined;
+      }
+      seed = plan.context.seed;
+      state.fast = true;
+      replaying = plan.steps.map((step) => step.action);
+      scenarioResult = { id: plan.id, status: "running", checked: 0 };
+    },
+    scenarioResult() {
+      return scenarioResult ? { ...scenarioResult } : undefined;
+    },
+    /** Stop and wait for the current action/reset before reusing disposable data. */
+    async drain() {
+      stop();
+      await Promise.allSettled([chain, resetTask ?? Promise.resolve()]);
     },
     /** Forgets the feed, the log and the counts, as "Remove sample data" forgets what they did. */
     clear() {
+      if (scenario) stop("Scenario cleared.");
       state.feed = [];
       state.moves = 0;
       state.cost = 0;
       log = [];
       known.clear();
       replaying = [];
+      scenario = undefined;
+      scenarioResult = undefined;
       for (const p of state.people) delete p.last;
       changed();
     },

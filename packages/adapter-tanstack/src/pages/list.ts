@@ -271,18 +271,7 @@ export function filterCode(
       const picture = look === "chips" ? scalarField(target, "picture") : undefined;
       const all = `(await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)}${picture ? `, picture: r.${dataKey(picture)} ? \`/files/${kebab(target.name)}/\${r.id}/${picture.name}\` : undefined` : ""} }))`;
       const how = pick?.[name];
-      if (how === "list" || titleField(target) === "id") {
-        conditions.push(`${value} ? inArray(${column}, ${ids}) : undefined`);
-        options.push(`${name}: ${all}`);
-        controls.push({
-          name,
-          label,
-          kind: "chips",
-          ...chips,
-          options: code(`options.${name}`),
-          ...fold(name),
-        });
-      } else {
+      {
         // Many related records (A 208): counted, not listed, and found as the person types; the
         // chosen ones named, each one the viewer may read (an id that is not one clears itself).
         const v = `pick${pascal(name)}`;

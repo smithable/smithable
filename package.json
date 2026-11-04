@@ -23,7 +23,10 @@
     "test:fresh": "scripts/test-fresh.sh",
     "test:deploy": "node scripts/test-deploy.mjs",
     "test:apps:one": "node scripts/test-apps.mjs",
-    "site": "tsc -b packages/core packages/adapter-tanstack packages/cli && node scripts/build-docs.mjs"
+    "site": "tsc -b packages/core packages/adapter-tanstack packages/cli && node scripts/build-docs.mjs",
+    "test:booking": "node scripts/test-booking-assurance.mjs --calibrate && node --test scripts/incoming-attachment-http.test.mjs",
+    "test:ci-result": "node --test scripts/ci-result.test.mjs",
+    "test:release-review": "node --test scripts/release-review-browser.test.mjs scripts/scenario-clock-http.test.mjs"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.9",

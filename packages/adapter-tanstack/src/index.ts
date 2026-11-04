@@ -18,4 +18,5 @@ export {
 } from "./migrations.js";
 export { dataKey, pageTitle, tableNames, titleField } from "./shared.js";
 export { STACK_PROFILE } from "./stack.js";
+export { TEMPLATES as kitSources } from "./templates.gen.js";
 export { themeCss } from "./themes.js";
