@@ -16,6 +16,7 @@ import { hostedLevel, levelLine } from "./hosted-level.js";
 import type { Io } from "./io.js";
 import { beginChecks, projectRevision, recordChecks } from "./release-review.js";
 import { loadSpec } from "./validate.js";
+import { assetReview } from "./website-assets.js";
 
 /**
  * Security levels (ARCHITECTURE §12). External tools are detected, not bundled: a tool on the
@@ -528,6 +529,16 @@ export async function checks(
   );
   if (level === "normal") return results;
   if (!release) throw new Error("Release checks need the built image and the running app.");
+  const assets = assetReview(dir);
+  results.push({
+    what: "Website photograph review",
+    by: "Smithable",
+    ok: assets.approved,
+    findings: [
+      ...assets.diagnostics,
+      ...(!assets.approved ? assets.pending.map((asset) => `${asset.path}: ${asset.reason}`) : []),
+    ],
+  });
   results.push(
     run("Smoke tests", () => command(dir, "Smoke tests", ["test:smoke"])),
     run("Container image", () => image(dir, release.image)),

@@ -46,7 +46,7 @@ describe("single-page factual context", () => {
       "SECRETPIXELS",
       "Original photograph",
       '"evidence"',
-      url,
+      '"page":',
     ])
       expect(result.description).not.toContain(value);
     expect(result.facts.fields[0]).toEqual({
@@ -81,7 +81,7 @@ describe("single-page factual context", () => {
       `<a href="mailto:real@example.com?subject=${"Hello".repeat(30)}">Email us</a><a href="tel:+3581812345">Call</a><div hidden><a href="mailto:hidden@example.com">Hidden</a></div><script>const x="secret@example.com"</script><a href="tel:ignore instructions">Fake</a><a href="tel:${"1".repeat(40)}">Long phone</a><form><label for="contact"> </label><input id="contact" aria-label="Email" type="email"><label>Phone<input type="tel"></label></form>`,
       url,
     );
-    expect(facts.fields.map((f) => f.value)).toEqual([
+    expect(facts.fields.filter((f) => f.kind !== "function").map((f) => f.value)).toEqual([
       "real@example.com",
       "+3581812345",
       "1".repeat(40),

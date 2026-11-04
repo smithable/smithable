@@ -29,6 +29,7 @@ import { lostFields } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import type { Level, Result } from "./security.js";
 import { loadSpec } from "./validate.js";
+import { assetReview } from "./website-assets.js";
 
 const STATE = "data/.smithable/release-review";
 type Files = { spec: string; auth?: string };
@@ -430,6 +431,7 @@ export function releaseReview(dir: string) {
   const baselineChanged =
     latestDeployment?.run !== baseline?.run || latestDeployment?.at !== baseline?.at;
   return {
+    assets: assetReview(dir),
     baseline: baseline?.at,
     maintenance: maintenanceInfo(dir),
     comparison:

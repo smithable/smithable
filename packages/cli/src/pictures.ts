@@ -79,6 +79,7 @@ export interface PlacedPicture {
   credit?: PictureCredit;
   /** The model whose sample records name it (samples/<model>-<n>.webp). */
   model?: string;
+  sourceUrl?: string;
 }
 
 /** Whether an index entry was made by an image model: an index from before photographs says nothing. */
@@ -105,6 +106,8 @@ export async function addLibraryPictures(options: {
   fetchFn?: Fetch;
   index?: PictureEntry[];
   cacheDir?: string;
+  /** A business import uses library illustrations without replacing its identity. */
+  website?: boolean;
 }): Promise<PlacedPicture[]> {
   const fetchFn = options.fetchFn ?? fetch;
   const index = options.index ?? (await libraryIndex(fetchFn, options.cacheDir));
@@ -117,9 +120,14 @@ export async function addLibraryPictures(options: {
     ir: options.ir,
     ...(options.content ? { content: options.content } : {}),
   });
+  if (options.website) {
+    picked.logo = undefined;
+    picked.models = {};
+  }
   const written: PlacedPicture[] = [];
   const meta = (entry: PictureEntry) => ({
     generated: madeByAi(entry),
+    sourceUrl: entry.url,
     ...(entry.credit ? { credit: entry.credit } : {}),
   });
   // Sample pictures are for records' picture fields; an app without any gets none (picked has
