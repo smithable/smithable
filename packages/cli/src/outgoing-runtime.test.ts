@@ -186,6 +186,27 @@ test("a failed webhook releases its guard for later calls and keeps retry timing
 });
 
 for (const kind of ["mail", "call"] as const) {
+  test(`a ${kind} whose result cannot be recorded in ten tries is marked failed, and its lane goes on`, async () => {
+    const f = fixture();
+    f.rows[kind].push(f.row(1));
+    f.post.mockResolvedValue(200);
+    // Ten writes fail; the eleventh, the row's failure mark, goes through.
+    f.storage.failures = 10;
+    const sending = f.load().sendDue();
+    // The backoff: 1, 2, 4, 8, 16 s, then 30 s a time.
+    await vi.advanceTimersByTimeAsync(200_000);
+    // The transport did its part (counted as sent), but the row says failed, with the reason.
+    expect(await sending).toBe(1);
+    expect(f.rows[kind][0]?.sentAt).toBeUndefined();
+    expect(f.rows[kind][0]?.failedAt).toBeInstanceOf(Date);
+    expect(f.rows[kind][0]?.error).toContain("The result was not recorded");
+    expect(kind === "mail" ? f.sendMail : f.post).toHaveBeenCalledTimes(1);
+    // The lane is free: the next row sends, nothing is sent again.
+    f.rows[kind].push(f.row(2));
+    expect(await f.load().sendDue()).toBe(1);
+    expect(kind === "mail" ? f.sendMail : f.post).toHaveBeenCalledTimes(2);
+  });
+
   test(`a successful ${kind} retries its busy database acknowledgement without resending`, async () => {
     const f = fixture();
     f.rows[kind].push(f.row(1));

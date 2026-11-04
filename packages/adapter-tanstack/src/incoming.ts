@@ -190,7 +190,17 @@ import { ${n.schema} } from "#/generated/${kebab(model.name)}.schema";`
 }${reply?.imports ?? ""}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${saves ? '\nimport { discardUploads, storeUpload } from "#/kit/receipts.server";\nimport { BadFile, FILE_MAX_BYTES, release, reserveUpload, saveFile, scanned, type StoredFile } from "#/kit/uploads";' : ""}
 
 const NAME = ${JSON.stringify(incoming.name)};
-const DAY = 86_400_000;
+const DAY = 86_400_000;${
+    saves
+      ? `
+/** At most this many attachments on one mail. */
+const ATTACHMENTS_MAX = 10;
+/** The body's bound while it is read: the attachments at FILE_MAX_BYTES each in base64 (four characters for three bytes, 3% for line wrapping) and a megabyte for the rest. */
+const BODY_MAX = ATTACHMENTS_MAX * Math.ceil((FILE_MAX_BYTES / 3) * 4 * 1.03) + 1_000_000;`
+      : `
+/** The body's bound while it is read: a megabyte. */
+const BODY_MAX = 1_000_000;`
+  }
 /** The call acts as this role; nothing it adds is anyone's own (a "key:" id owns nothing, as a key's). */
 const caller: Viewer = { id: "key:incoming-${incoming.name}", name: NAME, email: "", role: ${JSON.stringify(incoming.as)} };
 
@@ -247,10 +257,11 @@ const bodyOf = (mail: Mail) =>
 async function saved(mail: Mail, model: string, field: string, uses: (file: string) => boolean): Promise<(StoredFile & { receipt: string })[] | Response> {
   const files: (StoredFile & { receipt: string })[] = [];
   const parts = Array.isArray(mail.attachments) ? mail.attachments : [];
-  if (parts.length > 10) return answer(413, { error: "Too many attachments (over 10)." });
+  if (parts.length > ATTACHMENTS_MAX) return answer(413, { error: \`Too many attachments (over \${ATTACHMENTS_MAX}).\` });
   for (const one of parts) {
     const { name, data } = (one && typeof one === "object" ? one : {}) as { name?: unknown; data?: unknown };
-    const encoded = text(data);
+    // The base64 without its line wrapping (MIME wraps at 76), measured before it is decoded.
+    const encoded = text(data).replace(/\\s+/g, "");
     if (encoded.length > Math.ceil(FILE_MAX_BYTES / 3) * 4 + 4) {
       discardUploads(files, uses);
       return answer(413, { error: "An attachment is too large." });
@@ -315,9 +326,9 @@ ${
         if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
 `
     : ""
-}        // The body, bounded while it is read: a mail's ten attachments of 10 MB in base64, else 1 MB.
+}        // The body, bounded while it is read (BODY_MAX).
         let raw: string;
-        try { raw = new TextDecoder().decode(await boundedBody(request, ${saves ? 135_000_000 : 1_000_000})); }
+        try { raw = new TextDecoder().decode(await boundedBody(request, BODY_MAX)); }
         catch (error) {
           if (error instanceof BodyLimit) return answer(413, { error: "The incoming body is too large or could not be read in time." });
           throw error;

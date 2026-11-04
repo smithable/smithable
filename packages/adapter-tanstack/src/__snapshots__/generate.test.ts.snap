@@ -10318,7 +10318,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "3e6537d2 kit",
+  "src/kit/uploads.ts": "a4fe10cd kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -17045,7 +17045,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "df4911b4 kit",
+  "src/kit/outgoing.server.ts": "5f579587 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -17058,7 +17058,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "3e6537d2 kit",
+  "src/kit/uploads.ts": "a4fe10cd kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "85e79385 kit",
@@ -30694,7 +30694,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "df4911b4 kit",
+  "src/kit/outgoing.server.ts": "5f579587 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -30707,7 +30707,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "3e6537d2 kit",
+  "src/kit/uploads.ts": "a4fe10cd kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -48194,7 +48194,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "df4911b4 kit",
+  "src/kit/outgoing.server.ts": "5f579587 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -48207,7 +48207,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "3e6537d2 kit",
+  "src/kit/uploads.ts": "a4fe10cd kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -56339,7 +56339,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "df4911b4 kit",
+  "src/kit/outgoing.server.ts": "5f579587 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -56352,7 +56352,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "3e6537d2 kit",
+  "src/kit/uploads.ts": "a4fe10cd kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "85e79385 kit",
@@ -61383,7 +61383,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "3e6537d2 kit",
+  "src/kit/uploads.ts": "a4fe10cd kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -75194,6 +75194,8 @@ import { F } from "#/kit/formula";
 
 const NAME = "chatCommand";
 const DAY = 86_400_000;
+/** The body's bound while it is read: a megabyte. */
+const BODY_MAX = 1_000_000;
 /** The call acts as this role; nothing it adds is anyone's own (a "key:" id owns nothing, as a key's). */
 const caller: Viewer = { id: "key:incoming-chatCommand", name: NAME, email: "", role: "staff" };
 
@@ -75229,9 +75231,9 @@ export const Route = createFileRoute("/incoming/chatCommand")({
         // A header alone: checked before the body is read.
         const sent = /^\\d{10}$|^\\d{13}$/.test(stamp) ? Number(stamp) * (stamp.length === 10 ? 1000 : 1) : Number.NaN;
         if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
-        // The body, bounded while it is read: a mail's ten attachments of 10 MB in base64, else 1 MB.
+        // The body, bounded while it is read (BODY_MAX).
         let raw: string;
-        try { raw = new TextDecoder().decode(await boundedBody(request, 1000000)); }
+        try { raw = new TextDecoder().decode(await boundedBody(request, BODY_MAX)); }
         catch (error) {
           if (error instanceof BodyLimit) return answer(413, { error: "The incoming body is too large or could not be read in time." });
           throw error;
@@ -77075,7 +77077,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "6b3b7246 generated",
   "src/routes/incidents/index.tsx": "5decea31 generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
-  "src/routes/incoming/chatCommand.ts": "09de2209 generated",
+  "src/routes/incoming/chatCommand.ts": "9b12c3b5 generated",
   "src/routes/index.tsx": "a2933aa8 generated",
   "src/routes/maintenance/$id.tsx": "0ad33c2b generated",
   "src/routes/maintenance/index.tsx": "4e95ec4a generated",
@@ -83205,6 +83207,10 @@ import { BadFile, FILE_MAX_BYTES, release, reserveUpload, saveFile, scanned, typ
 
 const NAME = "support";
 const DAY = 86_400_000;
+/** At most this many attachments on one mail. */
+const ATTACHMENTS_MAX = 10;
+/** The body's bound while it is read: the attachments at FILE_MAX_BYTES each in base64 (four characters for three bytes, 3% for line wrapping) and a megabyte for the rest. */
+const BODY_MAX = ATTACHMENTS_MAX * Math.ceil((FILE_MAX_BYTES / 3) * 4 * 1.03) + 1_000_000;
 /** The call acts as this role; nothing it adds is anyone's own (a "key:" id owns nothing, as a key's). */
 const caller: Viewer = { id: "key:incoming-support", name: NAME, email: "", role: "admin" };
 
@@ -83233,10 +83239,11 @@ const bodyOf = (mail: Mail) =>
 async function saved(mail: Mail, model: string, field: string, uses: (file: string) => boolean): Promise<(StoredFile & { receipt: string })[] | Response> {
   const files: (StoredFile & { receipt: string })[] = [];
   const parts = Array.isArray(mail.attachments) ? mail.attachments : [];
-  if (parts.length > 10) return answer(413, { error: "Too many attachments (over 10)." });
+  if (parts.length > ATTACHMENTS_MAX) return answer(413, { error: \`Too many attachments (over \${ATTACHMENTS_MAX}).\` });
   for (const one of parts) {
     const { name, data } = (one && typeof one === "object" ? one : {}) as { name?: unknown; data?: unknown };
-    const encoded = text(data);
+    // The base64 without its line wrapping (MIME wraps at 76), measured before it is decoded.
+    const encoded = text(data).replace(/\\s+/g, "");
     if (encoded.length > Math.ceil(FILE_MAX_BYTES / 3) * 4 + 4) {
       discardUploads(files, uses);
       return answer(413, { error: "An attachment is too large." });
@@ -83285,9 +83292,9 @@ export const Route = createFileRoute("/incoming/support")({
         if (!given) return answer(401, { error: "Wrong secret or signature." });
         const expected = \`Bearer \${secret}\`;
         if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });
-        // The body, bounded while it is read: a mail's ten attachments of 10 MB in base64, else 1 MB.
+        // The body, bounded while it is read (BODY_MAX).
         let raw: string;
-        try { raw = new TextDecoder().decode(await boundedBody(request, 135000000)); }
+        try { raw = new TextDecoder().decode(await boundedBody(request, BODY_MAX)); }
         catch (error) {
           if (error instanceof BodyLimit) return answer(413, { error: "The incoming body is too large or could not be read in time." });
           throw error;
@@ -84337,7 +84344,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "df4911b4 kit",
+  "src/kit/outgoing.server.ts": "5f579587 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -84350,7 +84357,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "3e6537d2 kit",
+  "src/kit/uploads.ts": "a4fe10cd kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -84374,7 +84381,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "4a7c063e generated",
+  "src/routes/incoming/support.ts": "4054e00f generated",
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e52e206e generated",

@@ -33,6 +33,7 @@ function fixture(failWrite: boolean | "partial" = false, Scanner: unknown = Work
     "ownDataDir",
     "dataDir",
     "w",
+    "log",
     `${source};return {roomFor, reserveUpload, release, saveFile, deleteFile, scanned, savePicture};`,
   )(
     ...Object.entries(fs)
@@ -56,6 +57,7 @@ function fixture(failWrite: boolean | "partial" = false, Scanner: unknown = Work
     () => dir,
     dir,
     { storageFull: "storage full", fileNotAdded: "file could not be added" },
+    { warn: vi.fn(), error: vi.fn() },
   ) as {
     roomFor(n: number): unknown;
     reserveUpload(n: number): Promise<unknown>;
@@ -236,7 +238,7 @@ test("scanner deadline terminates the worker and releases the shared scanner que
   expect(terminated).toBe(2);
 });
 
-test("continuous writes exhaust exactly three scan attempts and refuse admission", async () => {
+test("continuous writes exhaust exactly three scan attempts, then admission counts on the last total", async () => {
   let attempts = 0;
   let kit: ReturnType<typeof fixture>["kit"];
   class ChangingScanner extends EventEmitter {
@@ -251,10 +253,15 @@ test("continuous writes exhaust exactly three scan attempts and refuse admission
     }
   }
   ({ kit } = fixture(false, ChangingScanner));
-  await expect(kit.reserveUpload(1)).rejects.toThrow("file could not be added");
+  // The last scan said 0 bytes (the churn files are not counted by this scanner): admitted on it.
+  const held = await kit.reserveUpload(1);
+  expect(held).toBeTruthy();
   expect(attempts).toBe(3);
-  const spare = kit.roomFor(94);
+  kit.release(held);
+  // Not refused for a minute afterwards either: the estimate stands until the next refresh.
+  const spare = await kit.reserveUpload(94);
   expect(spare).toBeTruthy();
+  expect(attempts).toBe(3);
   kit.release(spare);
 });
 

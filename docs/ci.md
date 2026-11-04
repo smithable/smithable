@@ -87,7 +87,7 @@ sudo -u smithable-ci -H bash -c "cd ~/runner && ./config.sh remove --token '$tok
 
 ## Further checks, run by hand
 
-These scripts came with the 2026-11 remediation. They are not part of `pnpm check` or the gate (whether they join it is undecided); run them when working on what they cover.
+These scripts came with the 2026-11 remediation. They are not part of `pnpm check` or the gate: run them when working on what they cover. `test:booking` stays by hand for now (a candidate for main's scheduled full run later, not for every gate).
 
 `pnpm test:booking`: an independent published booking fixture with ordinary synthetic email-code login, direct browser/API/MCP authorization and file checks, final-place contention, cancellation/rebooking, complete versus scoped export, revoked keys and mobile navigation. The same oracle runs on clean generated code and three narrow fault-injected fixture builds (permission, count, persistence); a defect must fail its intended check. Fixture code lives in disposable directories, with no external mail or model calls. Only JSON evidence under `test-results/booking-*.json` is intended for sharing; retained failed fixture directories can contain synthetic credentials and raw browser diagnostics. It also runs the disposable incoming-attachment HTTP fixture: it typechecks a fresh support app, creates mail and a threaded reply, and checks literal persisted fields and attachment bytes. Stream overflow/deadline/cancellation and concurrent failed-mail cleanup have focused runtime regressions in the CLI units.
 

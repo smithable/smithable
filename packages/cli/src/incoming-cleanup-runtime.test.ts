@@ -52,6 +52,7 @@ test("mail attachment admission failure cleans earlier stored attachments", asyn
     "text",
     "reserveUpload",
     "FILE_MAX_BYTES",
+    "ATTACHMENTS_MAX",
     "discardUploads",
     "storeUpload",
     "caller",
@@ -69,6 +70,7 @@ test("mail attachment admission failure cleans earlier stored attachments", asyn
       return { active: true };
     },
     100,
+    10,
     (files: { file: string }[]) => {
       for (const file of files) removed.push(file.file);
     },
@@ -256,6 +258,7 @@ test("failed incoming mail releases only its own claim while another deduplicate
     "text",
     "reserveUpload",
     "FILE_MAX_BYTES",
+    "ATTACHMENTS_MAX",
     "discardUploads",
     "storeUpload",
     "caller",
@@ -277,6 +280,7 @@ test("failed incoming mail releases only its own claim while another deduplicate
       return {};
     },
     100,
+    10,
     kit.discardUploads,
     kit.storeUpload,
     { id: "key:incoming-support" },

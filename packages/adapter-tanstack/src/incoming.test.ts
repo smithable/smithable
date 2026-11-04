@@ -175,13 +175,26 @@ test("a mail becomes a record: sender, subject and text to their fields, attachm
   expect(route).toContain(
     "held = bytes.byteLength <= FILE_MAX_BYTES ? await reserveUpload(bytes.byteLength) : undefined;",
   );
+  // The body's bound and the attachments' are one derivation, not literals; line wrapping is
+  // stripped before an attachment's base64 is measured.
+  expect(route).toContain("const ATTACHMENTS_MAX = 10;");
+  expect(route).toContain(
+    "const BODY_MAX = ATTACHMENTS_MAX * Math.ceil((FILE_MAX_BYTES / 3) * 4 * 1.03) + 1_000_000;",
+  );
+  expect(route).toContain("await boundedBody(request, BODY_MAX)");
+  expect(route).toContain('const encoded = text(data).replace(/\\s+/g, "");');
+  expect(route).toContain("if (parts.length > ATTACHMENTS_MAX)");
+  expect(route).not.toContain("135_000_000");
+  // An entry that saves nothing reads a megabyte at most.
+  expect(file("src/routes/incoming/monitorDown.ts")?.content).toContain(
+    "const BODY_MAX = 1_000_000;",
+  );
   // A refused attachment gives back the room held for it and drops the ones before it.
   expect(route).toContain("release(held);");
   expect(route).toContain("discardUploads(files, uses);");
   expect(route).toContain(
     "if (error instanceof BadFile) return answer(422, { error: error.message });",
   );
-  expect(route).toContain("if (parts.length > 10)");
   expect(route).toContain(
     'replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, " ").replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, " ")',
   );

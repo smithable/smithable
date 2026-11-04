@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
+import { log } from "./log.server";
 import { dataDir, ownDataDir } from "./visitor";
 import { w } from "./words";
 
@@ -267,6 +268,7 @@ function changed(dir: string): void {
 }
 // One bounded scanner per process, shared by all visitor directories.
 let scanTail: Promise<unknown> = Promise.resolve();
+let scanDisturbedSaid = false;
 function scanBytes(dir: string): Promise<number> {
   const pending = scanTail.then(
     () =>
@@ -336,14 +338,25 @@ export async function reserveUpload(bytes: number): Promise<UploadReservation | 
     let pending = scanning.get(dir);
     if (!pending) {
       pending = (async () => {
+        let last: number | undefined;
         for (let attempt = 0; attempt < 3; attempt++) {
           const revision = revisions.get(dir);
-          const bytes = await scanBytes(dir);
+          last = await scanBytes(dir);
           if (revisions.get(dir) !== revision) continue;
-          counted.set(dir, { bytes, at: Date.now() });
+          counted.set(dir, { bytes: last, at: Date.now() });
           return;
         }
-        throw new Error("Upload quota changed during every scan; retry admission.");
+        // Three scans in a row disturbed by writes: the last total is the estimate (the writes
+        // from here count on it as they happen, and the reservations held are added by roomFor),
+        // said once; not a minute of refusing every upload.
+        if (!scanDisturbedSaid) {
+          scanDisturbedSaid = true;
+          log.warn(
+            "The upload quota scan was disturbed by writes three times; counting on its last total",
+            { bytes: last },
+          );
+        }
+        counted.set(dir, { bytes: last ?? kept?.bytes ?? 0, at: Date.now() });
       })().finally(() => {
         scanning.delete(dir);
       });
