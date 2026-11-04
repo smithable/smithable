@@ -24,7 +24,7 @@ See it live: coming soon. Its page on smithable.ai: [smithable.ai/starters/crm](
 ![The landing page of the booking starter, Stillwater Yoga](starters/booking-1.webp)
 ![The class schedule a visitor sees](starters/booking-2.webp)
 
-For a studio, a teacher or anyone who sells places in classes or sessions. Stillwater Yoga has a landing page with a cover picture, a gallery, a calculator ("would a monthly pass pay off?") and a contact form; a weekly class schedule that visitors can read; bookings with a capacity, so a full class takes no more; instructors with portraits; and a blog in Markdown.
+For a studio, a teacher or anyone who sells places in classes or sessions. Stillwater Yoga has a landing page with a cover picture, a gallery, a calculator ("would a monthly pass pay off?") and a contact form; a weekly class schedule that visitors can read; bookings with a capacity, so a full class takes no more; instructors with portraits; and a blog in Markdown. Reception signs in as `staff` and runs the day: the sessions, who comes to them and the messages. The owner, the administrator, also has the team, the settings and the website, and gets a mail each morning listing who comes today.
 
 ```sh
 smithable new my-studio --starter booking

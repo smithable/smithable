@@ -50,6 +50,21 @@ What the mail lists under its text is yours too, on the entry in `smithable.yml`
 
 From the command line: `smithable op addOutgoing bookingMade "Booking created" --to mail --recipient owner`.
 
+### A list by the clock
+
+A mail can tell about a list of records instead of one record. Name a timer that runs by the clock, and give the entry a `list`. The booking starter's morning mail, to the owner:
+
+```yaml
+outgoing:
+  todaysBookings:
+    when: morning                    # a timer with every or cron, and no on
+    to: mail
+    recipient: admin
+    list: { model: Booking, when: session.startsAt, within: today, columns: [session, attendee] }
+```
+
+The list takes the same keys as a dashboard's list. `within` is `today`, `tomorrow`, or a number of days or weeks, in the app's time zone. The [spec reference](../spec/v0.1.md) has the rest.
+
 ## 2. Call another system
 
 ```yaml
