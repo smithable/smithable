@@ -64,6 +64,22 @@ export function dashboardParts(
     const n = names(modelNamed(ir, name), t);
     route.add(`#/generated/${kebab(name)}.server`, n.data);
   }
+  // A period (reports.md §2.4): the rows inside it beside all of them; what is due and whether
+  // there is anything at all look at all of them.
+  const period = page.period;
+  const within = (model: string) => (period?.[model] ? `${rowsOf(model)}Within` : rowsOf(model));
+  if (period)
+    route
+      .add("#/db/schema", "* as schema")
+      .add("#/generated/app", "app")
+      .add("#/kit/filter", "inRange")
+      .add("#/kit/params", "optional", "text", "type Search")
+      .add("#/kit/person-time.server", "personZone");
+  if (period)
+    view
+      .add("#/kit/Filters", "Filters")
+      .add("#/kit/words", "w")
+      .add("@tanstack/react-router", "useNavigate");
   const values: string[] = [];
   const tiles = items.map((item) => {
     if (item.kind === "activity") {
@@ -88,7 +104,7 @@ export function dashboardParts(
     }
     const model = modelNamed(ir, item.model);
     const field = model.fields.find((f) => f.name === item.field);
-    const rows = rowsOf(item.model);
+    const rows = item.kind === "list" && item.when ? rowsOf(item.model) : within(item.model);
     const conditions = Object.entries(item.where ?? {}).map(([key, value]) =>
       Array.isArray(value)
         ? `${JSON.stringify(value)}.includes(row.${key})`
@@ -194,13 +210,13 @@ export function dashboardParts(
       }
       // By a date: a bar per period, in the app's time zone.
       route.add("#/kit/aggregate", "byPeriod");
-      const period = item.period ?? "month";
+      const span = item.period ?? "month";
       values.push(
-        `${item.name}: byPeriod(${filtered}, (row) => row.${item.by}, ${amount}, ${JSON.stringify(period)}, ${JSON.stringify(ir.app.timezone ?? "UTC")})`,
+        `${item.name}: byPeriod(${filtered}, (row) => row.${item.by}, ${amount}, ${JSON.stringify(span)}, ${JSON.stringify(ir.app.timezone ?? "UTC")}${period?.[item.model] ? ", Boolean(data.period)" : ""})`,
       );
       return {
         block: "chart",
-        code: `<BarChart label=${attr(label)} kind="${kind}" app={app} bars={data.${item.name}} period="${period}" />`,
+        code: `<BarChart label=${attr(label)} kind="${kind}" app={app} bars={data.${item.name}} period="${span}" />`,
       };
     }
     view.add("#/kit/Dashboard", "StatCard", "formatNumber");
@@ -228,17 +244,40 @@ export function dashboardParts(
       ? `<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">\n        ${g.codes.join("\n        ")}\n      </div>`
       : (g.codes[0] as string),
   );
-  const navigate = tiles.some((tile) => tile.block === "list");
-  const serverFn = `const ${fn} = createServerFn().handler(async () => {
+  const navigate = Boolean(period) || tiles.some((tile) => tile.block === "list");
+  const dateKind = (model: string, field: string) => {
+    const type = modelNamed(ir, model).fields.find((f) => f.name === field)?.type;
+    return type?.kind === "scalar" && type.name === "date" ? "date" : "instant";
+  };
+  const serverFn = `const ${fn} = createServerFn()${
+    period
+      ? `
+  .validator((data: { period?: unknown }) => ({ period: typeof data?.period === "string" && data.period ? data.period.slice(0, 40) : undefined }))
+  .handler(async ({ data }) => {`
+      : ".handler(async () => {"
+  }
   const viewer = await currentViewer();
-${models.map((name) => `  const ${rowsOf(name)} = await ${names(modelNamed(ir, name), t).data}.list(viewer);`).join("\n")}
+${models.map((name) => `  const ${rowsOf(name)} = await ${names(modelNamed(ir, name), t).data}.list(viewer);`).join("\n")}${models
+  .filter((name) => period?.[name])
+  .map((name) => {
+    const n = names(modelNamed(ir, name), t);
+    const field = period?.[name] as string;
+    return `\n  const ${within(name)} = data.period ? await ${n.data}.list(viewer, inRange(${n.table}.${field}, data.period, "${dateKind(name, field)}", 1, personZone(app.timeZone))) : ${rowsOf(name)};`;
+  })
+  .join("")}
   return {
 ${values.map((v) => `    ${v},`).join("\n")}${models.length ? `\n    empty: ${models.map((name) => `${rowsOf(name)}.length === 0`).join(" && ")},` : ""}
   };
 });`;
 
   const routeDef = `export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () => ${fn}(),
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${
+  period
+    ? `  validateSearch: (s: Search) => optional({ period: text(s.period) }),
+  loaderDeps: ({ search }) => ({ period: search.period }),
+  loader: ({ deps }) => ${fn}({ data: { period: deps.period } }),`
+    : `  loader: () => ${fn}(),`
+}
   component: ${component},
 });`;
 
@@ -248,10 +287,19 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () =>
   );
   if (models.length && first) view.add("#/kit/Dashboard", "QuietDashboard");
   const body = `function ${component}() {
-  const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}
+  const data = Route.useLoaderData();${navigate ? "\n  const navigate = useNavigate();" : ""}${period ? "\n  const { period } = Route.useSearch();" : ""}
   return (
     <>
       <PageHeader page=${attr(page.id)} ${t.pageHeader(page.id)} />${
+        period
+          ? `
+      <Filters
+        filters={[{ name: "period", label: w.period, kind: "range", input: "date", relative: ["thisWeek", "thisMonth", "lastMonth", "thisYear"] }]}
+        values={{ period }}
+        onChange={(next) => navigate({ to: ${JSON.stringify(page.route)}, search: { period: next.period } })}
+      />`
+          : ""
+      }${
         models.length && first
           ? `
       {data.empty ? (

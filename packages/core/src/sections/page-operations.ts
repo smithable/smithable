@@ -406,6 +406,58 @@ function addToMainMenu(spec: YamlEditor, page: string): void {
   }
 }
 
+const setPeriod: Operation<{
+  page: string;
+  field?: string;
+  byModel?: Record<string, string>;
+}> = {
+  name: "setPeriod",
+  summary:
+    "Give a dashboard a period: the date field its tiles are scoped by, with chips on the page (none takes it away).",
+  schema: {
+    type: "object",
+    required: ["page"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Page" }),
+      field: { type: "string", description: "A date field every tile's model has, or none." },
+      byModel: {
+        type: "object",
+        additionalProperties: { type: "string" },
+        description:
+          "A date field per model, when they differ: { Invoice: issuedOn, Payment: paidOn }.",
+      },
+    },
+  },
+  positional: ["page", "field"],
+  describe: ({ page, field, byModel }) =>
+    field === "none"
+      ? `Take the period from ${page}`
+      : `Scope ${page} by ${
+          byModel
+            ? Object.entries(byModel)
+                .map(([m, f]) => `${m}.${f}`)
+                .join(", ")
+            : field
+        }`,
+  destructive: () => false,
+  apply({ spec }, { page, field, byModel }, ir) {
+    const p = ir.pages.find((x) => x.id === page);
+    if (!p) throw new OperationError(`There is no page named "${page}".`);
+    if (p.pattern.kind !== "dashboard") throw new OperationError(`${page} is not a dashboard.`);
+    const path = ["pages", page, "period"];
+    if (field === "none") {
+      if (spec.has(path)) spec.remove(path);
+      return [];
+    }
+    const written: YamlValue | undefined = byModel ?? field;
+    if (written === undefined) throw new OperationError("Say a date field, or one per model.");
+    if (spec.has(path)) spec.set(path, written);
+    else spec.add(["pages", page], "period", written);
+    return [];
+  },
+};
+
 const addTile: Operation<{
   page: string;
   tile: string;
@@ -1359,7 +1411,7 @@ export const landingOperations: AnyOperation[] = [
   setHeroButtons,
 ];
 /** Operations of the dashboard pattern. */
-export const dashboardOperations: AnyOperation[] = [addTile];
+export const dashboardOperations: AnyOperation[] = [addTile, setPeriod];
 /** Operations of the calendar pattern. */
 export const calendarOperations: AnyOperation[] = [addCalendarPage];
 export const articlesOperations: AnyOperation[] = [addArticlesPage];

@@ -21,7 +21,12 @@ import { capitalize, kebab } from "../naming.js";
 import { PAGE_PATTERNS, PATTERN_KINDS, patternInfo, readSections } from "../patterns.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
-import { checkDefaultFilter, checkFilterFields, checkSortableFields } from "./list-keys.js";
+import {
+  checkDefaultFilter,
+  checkFilterFields,
+  checkSortableFields,
+  readDashboardPeriod,
+} from "./list-keys.js";
 import { NAME_PATTERN, nameRule } from "./names.js";
 import { pageOperations } from "./page-operations.js";
 import { readSemanticText, TEXT_KEYS } from "./text.js";
@@ -131,6 +136,11 @@ export const pagesSection: SpecSection<"pages"> = {
           description:
             "The page lists only the viewer's own records (my items, my orders); it needs sign-in.",
         },
+        period: {
+          oneOf: [{ type: "string" }, { type: "object", additionalProperties: { type: "string" } }],
+          description:
+            "A dashboard's clock: a date field every tile's model has, or a field per model. The page then has period chips, and its counts, sums, lists and charts are scoped to the chosen period.",
+        },
         favorites: {
           oneOf: [{ type: "boolean" }, { const: "only" }],
           description:
@@ -238,6 +248,7 @@ function readPage(
       "sortable",
       "favorites",
       "export",
+      "period",
       "contact",
       "mine",
       ...TEXT_KEYS,
@@ -259,6 +270,7 @@ function readPage(
   let sortable: { name: string; at: At }[] | undefined;
   let favorites: PageIR["favorites"] | undefined;
   let noExport = false;
+  let periodNode: ParsedNode | undefined;
   let mine = false;
   let contact: { to: string; keep?: string; toAt: At; keepAt?: At } | undefined;
   for (const { key, value } of known) {
@@ -323,6 +335,8 @@ function readPage(
           "invalid-value",
           `"favorites" in ${where} must be true (a heart and a Saved view) or only (the viewer's saved records).`,
         );
+    } else if (key === "period") {
+      periodNode = value ?? undefined;
     } else if (key === "export") {
       if (isScalar(value) && value.value === false) noExport = true;
       else
@@ -489,6 +503,15 @@ function readPage(
     sections,
     ...(model && actions?.length ? { actions } : {}),
     ...(model && search?.length ? { search: checkSearch(ctx, search, model, parsed, where) } : {}),
+    ...(() => {
+      if (!periodNode) return {};
+      if (pattern?.kind !== "dashboard") {
+        ctx.error(periodNode, "invalid-key", `"period" belongs to a dashboard.`);
+        return {};
+      }
+      const period = readDashboardPeriod(ctx, periodNode, pattern.items, parsed, where);
+      return period ? { period } : {};
+    })(),
     ...(checkedFilters ? { filters: checkedFilters } : {}),
     ...(model && defaultFilter?.length
       ? (() => {

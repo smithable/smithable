@@ -220,3 +220,15 @@ pages:
   expect(plain).not.toContain("chips: true");
   expect(plain).not.toContain("/files/instructor/");
 });
+
+test("last month and this year, across a year's turn", () => {
+  const january = new Date("2027-01-15T12:00:00Z");
+  expect(zoned.relativeDays("lastMonth", january, "UTC")).toEqual({
+    from: "2026-12-01",
+    to: "2027-01-01",
+  });
+  expect(zoned.relativeDays("thisYear", january, "UTC")).toEqual({
+    from: "2027-01-01",
+    to: "2028-01-01",
+  });
+});
