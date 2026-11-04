@@ -19,9 +19,10 @@ export const COMMANDS: Command[] = [
     usage: "read-page [file.html] --url <address>",
     text: [
       "Print the description new --from would draft from: the page fetched, or one saved elsewhere;",
-      "fails when the page shows too little without JavaScript",
+      "fails when the page shows too little without JavaScript; --facts prints structured facts",
+      "and a facts-only description as JSON, including a tooLittle result for pages needing input",
     ],
-    options: ["url"],
+    options: ["url", "facts"],
   },
   {
     name: "new",

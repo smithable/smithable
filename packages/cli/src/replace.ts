@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
-import type { Assumption } from "@smithable/ai";
+import type { Assumption, Usage } from "@smithable/ai";
 import { generate } from "./generate.js";
 import type { Io } from "./io.js";
 import {
@@ -187,6 +187,14 @@ export async function replaceProject(
   io: Io,
   to: Replacement,
   progress: Progress = () => {},
+  control?: {
+    stage?: (stage: "preparing" | "drafting" | "building") => void;
+    assumptions?: (assumptions: Assumption[]) => void;
+    usage?: (usage: Usage) => void;
+    diagnostic?: (message: string) => void;
+    maxTokens?: number;
+    beforeArrival: () => void;
+  },
 ): Promise<number> {
   if (to.timezone && !knownZone(to.timezone)) {
     io.err(`Unknown time zone "${to.timezone}". Use a name like Europe/Mariehamn.\n`);
@@ -208,6 +216,7 @@ export async function replaceProject(
       );
       return 1;
     }
+    control?.beforeArrival();
     progress("arriving");
     // Only what differs is written, and nothing that is the same is touched: the preview's dev
     // server keeps running and keeps what it has compiled of the files every app shares (the
@@ -215,7 +224,7 @@ export async function replaceProject(
     // against 3 to 4 s with the server started again; on a hosted workspace, where a start is
     // 15 s, the difference is the point (docs/design/fast-start.md).
     sync(from, dir);
-    rmSync(join(dir, ".git"), { recursive: true, force: true });
+    if (!control) rmSync(join(dir, ".git"), { recursive: true, force: true });
     // The person's name for the app and their own way in, as `smithable new` writes them; the
     // files that follow from the spec are generated again (no tool runs: the tables are the same).
     if (to.name?.trim() || to.admin?.trim() || to.timezone) {
@@ -272,8 +281,26 @@ export async function replaceProject(
       ...options,
       describe: to.describe,
       answers: to.answers,
-      onDraft: (files, assumptions) => progress("building", files, assumptions),
+      ...(control
+        ? {
+            unattended: true,
+            sampleData: false,
+            pictureData: false,
+            maxTokens: control.maxTokens ?? 150_000,
+            onStage: control.stage,
+            onAssumptions: control.assumptions,
+            onUsage: control.usage,
+            onDiagnostic: control.diagnostic,
+          }
+        : {}),
+      onDraft: (files, assumptions) => {
+        if (!control) progress("building", files, assumptions);
+      },
     });
+    if (made !== 0 && control) {
+      io.err(said);
+      return made;
+    }
     if (made !== 0) {
       io.err(said);
       fresh();
@@ -293,9 +320,10 @@ export async function replaceProject(
         `The description could not be used this time: ${why}. This is the ${starter} starter; describe changes to it below.\n`,
       );
     }
+    control?.beforeArrival();
     progress("arriving");
     sync(beside, dir);
-    rmSync(join(dir, ".git"), { recursive: true, force: true });
+    if (!control) rmSync(join(dir, ".git"), { recursive: true, force: true });
     reopenDatabase(dir);
     return 0;
   } finally {
