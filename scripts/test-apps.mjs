@@ -7685,7 +7685,7 @@ for (const [index, example] of examples.entries()) {
           const lists = () =>
             query(dir, "select subject, text from outgoing_mail where entry = 'todaysBookings'");
           timer("morning", "2030-01-02T05:00:00Z");
-          timer("morning", "2030-01-02T05:30:00Z");
+          timer("morning", "2030-01-02T05:00:00Z");
           const sent = lists();
           if (!sent.length) throw new Error("no list mail for the day's bookings");
           const people = query(

@@ -10213,7 +10213,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
@@ -16811,7 +16811,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "a4c04dbb kit",
+  "src/kit/outgoing.server.ts": "e0a2adf0 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -16827,7 +16827,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
@@ -23262,7 +23262,7 @@ export function listMail(tx: Tx, name: string, rows: Row[], day: string): void {
     .flatMap((r) => SHOWN[list.model]?.(tx, r) ?? []);
   const fill = (text: string, oneLine = false) =>
     fillText(text, { count: String(fitting.length), date: dayWords(day) }, oneLine);
-  const table = listText(shown, list.columns);
+  const table = listText(shown, list.columns, fitting.length);
   queueMail(
     tx,
     null,
@@ -24861,7 +24861,9 @@ const morningTimer: ClockTimer = {
     await attempt({ timer: "morning", record: 0, due }, undefined, async () => {
       const todaysBookingsAt = new Map(db.select({ id: schema.sessions.id, at: schema.sessions.startsAt }).from(schema.sessions).where(inRange(schema.sessions.startsAt, withinRange(due.slice(0, 10), "today"), "instant", 1, app.timeZone)).all().map((r) => [r.id, r.at]));
       const todaysBookings = (await bookingData.list(as("morning"), inArray(schema.bookings.sessionId, [...todaysBookingsAt.keys()]))).sort((a, b) => earlier(todaysBookingsAt.get(a.sessionId as number), todaysBookingsAt.get(b.sessionId as number)));
-      db.transaction((tx) => listMail(tx, "todaysBookings", todaysBookings, due.slice(0, 10)));
+      db.transaction((tx) => {
+        listMail(tx, "todaysBookings", todaysBookings, due.slice(0, 10));
+      });
       return "done";
     });
   },
@@ -30263,7 +30265,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "68e27918 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "229c0b9e generated",
+  "src/generated/outgoing.server.ts": "875a6cd5 generated",
   "src/generated/pages.ts": "236d20f6 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "e0b587d4 generated",
@@ -30275,7 +30277,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.server.ts": "c3bb053c generated",
   "src/generated/session.ts": "e2a3ab62 generated",
   "src/generated/site.ts": "994514da generated",
-  "src/generated/timers.server.ts": "c41b447e generated",
+  "src/generated/timers.server.ts": "9e37548f generated",
   "src/generated/uploads.ts": "11494e99 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
   "src/generated/users.ts": "91c319ce generated",
@@ -30333,7 +30335,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "a4c04dbb kit",
+  "src/kit/outgoing.server.ts": "e0a2adf0 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -30350,7 +30352,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
@@ -39162,7 +39164,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
@@ -47614,7 +47616,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "a4c04dbb kit",
+  "src/kit/outgoing.server.ts": "e0a2adf0 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -47631,7 +47633,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
@@ -55630,7 +55632,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "a4c04dbb kit",
+  "src/kit/outgoing.server.ts": "e0a2adf0 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -55646,7 +55648,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
@@ -60617,7 +60619,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
@@ -64290,7 +64292,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
@@ -76094,7 +76096,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
@@ -83303,7 +83305,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "3df386d0 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "a4c04dbb kit",
+  "src/kit/outgoing.server.ts": "e0a2adf0 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -83320,7 +83322,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "ec123b3b kit",
+  "src/kit/words/en.ts": "3f554ec6 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",

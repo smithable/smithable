@@ -521,7 +521,7 @@ export function listMail(tx: Tx, name: string, rows: Row[], day: string): void {
     .flatMap((r) => SHOWN[list.model]?.(tx, r) ?? []);
   const fill = (text: string, oneLine = false) =>
     fillText(text, { count: String(fitting.length), date: dayWords(day) }, oneLine);
-  const table = listText(shown, list.columns);
+  const table = listText(shown, list.columns, fitting.length);
   queueMail(
     tx,
     null,

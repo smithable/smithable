@@ -70,7 +70,17 @@ export function timersModule(ir: SpecIR, t: Texts): string {
       (o) => "timer" in o.when && o.when.timer === timer.name && o.list,
     );
     if (lists.length) use("./outgoing.server", "listMail");
-    const listRuns = lists.map((o) => listRun(o, timer.name, ir, t, use, drizzle)).join("");
+    // All of a clock's list mails in one transaction: a run tried again never queues one twice.
+    const listRuns = lists.length
+      ? `${lists.map((o) => listRun(o, timer.name, ir, t, use, drizzle)).join("")}
+      db.transaction((tx) => {${lists
+        .map(
+          (o) => `
+        listMail(tx, ${JSON.stringify(o.name)}, ${camel(o.name)}, due.slice(0, 10));`,
+        )
+        .join("")}
+      });`
+      : "";
     const forRecord = model ? recordRun(timer, model, run, told, t, use) : "";
     if (timer.schedule.kind === "record") {
       const m = model as ModelIR;
@@ -441,7 +451,7 @@ ${steps.join("\n")}
 
 /**
  * One list mail's run inside its timer's attempt: the records of the entry's `list`, read as the app,
- * then the mail queued in a transaction, so a failed run queues nothing and is tried again.
+ * for the transaction that queues the mail.
  */
 function listRun(
   o: OutgoingIR,
@@ -453,19 +463,17 @@ function listRun(
 ): string {
   const list = o.list as OutgoingListIR;
   const name = camel(o.name);
-  const send = `
-      db.transaction((tx) => listMail(tx, ${JSON.stringify(o.name)}, ${name}, due.slice(0, 10)));`;
   if (list.query) {
     use(`#/custom/queries/${kebab(list.query)}`, list.query);
     return `
-      const ${name} = await ${list.query}(as(${JSON.stringify(timer)}));${send}`;
+      const ${name} = await ${list.query}(as(${JSON.stringify(timer)}));`;
   }
   const model = modelNamed(ir, list.model);
   const n = names(model, t);
   use(n.module.replace("#/generated/", "./").concat(".server"), n.data);
   if (!list.when)
     return `
-      const ${name} = await ${n.data}.list(as(${JSON.stringify(timer)}));${send}`;
+      const ${name} = await ${n.data}.list(as(${JSON.stringify(timer)}));`;
   const [first = "", second] = list.when.path;
   const within = JSON.stringify(list.within ?? DUE_WITHIN);
   const inside = (target: ModelIR, field: string) => {
@@ -478,7 +486,7 @@ function listRun(
   use("#/kit/zoned", "earlier");
   if (!second)
     return `
-      const ${name} = (await ${n.data}.list(as(${JSON.stringify(timer)}), ${inside(model, first)})).sort((a, b) => earlier(a.${first}, b.${first}));${send}`;
+      const ${name} = (await ${n.data}.list(as(${JSON.stringify(timer)}), ${inside(model, first)})).sort((a, b) => earlier(a.${first}, b.${first}));`;
   // One reference away: the records it names that fall inside, none in the trash, in their order.
   const ref = model.fields.find((f) => f.name === first) as FieldIR;
   const target = modelNamed(ir, (ref.type as { model: string }).model);
@@ -488,5 +496,5 @@ function listRun(
   const at = `${name}At`;
   return `
       const ${at} = new Map(db.select({ id: ${far}.id, at: ${far}.${second} }).from(${far}).where(${target.trash ? `and(${inside(target, second)}, isNull(${far}.deletedAt))` : inside(target, second)}).all().map((r) => [r.id, r.at]));
-      const ${name} = (await ${n.data}.list(as(${JSON.stringify(timer)}), inArray(${tableRef(model)}.${key}, [...${at}.keys()]))).sort((a, b) => earlier(${at}.get(a.${key} as number), ${at}.get(b.${key} as number)));${send}`;
+      const ${name} = (await ${n.data}.list(as(${JSON.stringify(timer)}), inArray(${tableRef(model)}.${key}, [...${at}.keys()]))).sort((a, b) => earlier(${at}.get(a.${key} as number), ${at}.get(b.${key} as number)));`;
 }
