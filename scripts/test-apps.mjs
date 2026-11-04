@@ -563,7 +563,7 @@ async function devDoorFlow(dir, base) {
         `Ask as a sample user: ${asked.status} ${JSON.stringify(answer).slice(0, 200)}`,
       );
     const byRole = (
-      await call("ask", { user: "role:admin", question: "How many sessions are there?" })
+      await call("ask", { user: "role:staff", question: "How many sessions are there?" })
     ).status;
     if (byRole !== 403) throw new Error(`Ask as a role a sample user has: ${byRole}`);
     const people = ["sample-maja-lindqvist", "sample-tomas-berg", "sample-reception"];

@@ -1,6 +1,6 @@
 // The guide's one question about time (A 220): the app's zone beside the browser's, asked once per
 // project in this browser and remembered, since a zone written at `new` is only a guess.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zoneAskedKey } from "./guide";
 
 /** The app's time zone as its spec says it. */
@@ -42,6 +42,7 @@ export function TimeZoneCheck({
   spec,
   onUse,
   onChange,
+  onAnswered,
 }: {
   app: string;
   spec: string | undefined;
@@ -49,8 +50,13 @@ export function TimeZoneCheck({
   onUse: (zone: string) => Promise<boolean>;
   /** Opens where the app's settings are changed. */
   onChange: () => void;
+  /** Once the question is answered, now or before: what comes after it may ask. */
+  onAnswered: () => void;
 }) {
   const [done, setDone] = useState(() => asked(app));
+  useEffect(() => {
+    if (done) onAnswered();
+  }, [done, onAnswered]);
   if (done) return null;
   const browser = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const zone = zoneOf(spec);
