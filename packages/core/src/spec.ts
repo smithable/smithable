@@ -24,10 +24,10 @@ export const SECTIONS: readonly SpecSection[] = [
   appSection,
   modelsSection,
   actionsSection,
+  queriesSection,
   timersSection,
   outgoingSection,
   incomingSection,
-  queriesSection,
   pagesSection,
   navigationSection,
 ];

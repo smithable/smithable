@@ -1121,6 +1121,82 @@
         }
       }
     },
+    "queries": {
+      "type": "object",
+      "description": "Records chosen or ordered by code in src/custom/queries/.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "custom",
+          "returns"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "custom": {
+            "const": true,
+            "description": "Implemented in src/custom/queries/."
+          },
+          "returns": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Za-z0-9]*\\[\\]$",
+            "description": "The records it returns, e.g. \"Customer[]\"."
+          },
+          "description": {
+            "type": "string",
+            "title": "What it is for",
+            "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
+          },
+          "intent": {
+            "type": "string",
+            "title": "What it should achieve",
+            "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
+          },
+          "rules": {
+            "type": "array",
+            "title": "Rules",
+            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
+            "examples": [
+              [
+                "An order over 1000 needs a manager's approval before it ships."
+              ]
+            ],
+            "x-semantic": true,
+            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "rule"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "A short name to refer to the rule by."
+                    },
+                    "rule": {
+                      "type": "string",
+                      "description": "The rule, in plain language."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
     "timers": {
       "type": "object",
       "description": "What the app does on a clock: an event raised at a time, on a schedule or relative to a date of a record, running an action over the records it is due for; outgoing may listen to it.",
@@ -1242,7 +1318,73 @@
           "recipient": {
             "type": "string",
             "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)?$",
-            "description": "For mail: owner, a role, an email field or a field that refers to User, one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner)."
+            "description": "For mail: owner, a role, an email field or a field that refers to User, one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner). For a list mail, a role that reads every record of the model."
+          },
+          "list": {
+            "type": "object",
+            "required": [
+              "columns"
+            ],
+            "additionalProperties": false,
+            "description": "When \"when\" names a clock timer (every or cron, no on): the records the mail shows as a table, with a dashboard list tile's keys, e.g. { model: Booking, when: session.startsAt, within: today, columns: [session, attendee, status] }.",
+            "properties": {
+              "model": {
+                "type": "string",
+                "description": "The model whose records the mail shows."
+              },
+              "query": {
+                "type": "string",
+                "description": "A query whose records the mail shows, instead of a model's."
+              },
+              "where": {
+                "type": "object",
+                "propertyNames": {
+                  "pattern": "^[a-z][A-Za-z0-9]*$"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "boolean",
+                    "array"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "description": "Only for records with these values, e.g. { status: confirmed }; a change counts when the record comes to fit them."
+              },
+              "when": {
+                "type": "string",
+                "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)?$",
+                "description": "A stored date or date-time field of the model, or one reference away (session.startsAt): the records whose date falls within the span."
+              },
+              "within": {
+                "type": "string",
+                "pattern": "^(today|tomorrow|[1-9][0-9]* (day|days|week|weeks))$",
+                "description": "With \"when\": how far the list reaches from the timer's time, in the app's time zone: today (the day that starts when the timer fires), tomorrow, \"7 days\" or \"2 weeks\" (7 days unsaid)."
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "At most this many records."
+              },
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][A-Za-z0-9]*$"
+                },
+                "minItems": 1,
+                "description": "The fields the mail's table shows, in this order; each one the record page could show (no files, nothing sensitive, no lists, no worked-out fields)."
+              }
+            }
+          },
+          "empty": {
+            "enum": [
+              "skip",
+              "send"
+            ],
+            "description": "A list mail with nothing to show: skip (no mail; unsaid) or send (a mail that says so)."
           }
         }
       }
@@ -1407,82 +1549,6 @@
                   ]
                 }
               }
-            }
-          }
-        }
-      }
-    },
-    "queries": {
-      "type": "object",
-      "description": "Records chosen or ordered by code in src/custom/queries/.",
-      "propertyNames": {
-        "pattern": "^[a-z][A-Za-z0-9]*$"
-      },
-      "additionalProperties": {
-        "type": "object",
-        "required": [
-          "custom",
-          "returns"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "custom": {
-            "const": true,
-            "description": "Implemented in src/custom/queries/."
-          },
-          "returns": {
-            "type": "string",
-            "pattern": "^[A-Z][A-Za-z0-9]*\\[\\]$",
-            "description": "The records it returns, e.g. \"Customer[]\"."
-          },
-          "description": {
-            "type": "string",
-            "title": "What it is for",
-            "description": "What this is, in a sentence. Read by the models that draft and change the app and by its assistants, and the app's own description is the landing page's and the API's; not shown to visitors otherwise.",
-            "x-semantic": true,
-            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
-          },
-          "intent": {
-            "type": "string",
-            "title": "What it should achieve",
-            "description": "The outcome or experience this should achieve, in a sentence: it guides the models that change the app, and it is the summary's sentence for this part.",
-            "x-semantic": true,
-            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text"
-          },
-          "rules": {
-            "type": "array",
-            "title": "Rules",
-            "description": "Domain rules in plain language. A rule does nothing by itself until something implements it: the models read them when drafting and changing the app, and the advice notes point at them.",
-            "examples": [
-              [
-                "An order over 1000 needs a manager's approval before it ships."
-              ]
-            ],
-            "x-semantic": true,
-            "x-docs": "https://docs.smithable.ai/spec.html#semantic-text",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object",
-                  "required": [
-                    "rule"
-                  ],
-                  "additionalProperties": false,
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "description": "A short name to refer to the rule by."
-                    },
-                    "rule": {
-                      "type": "string",
-                      "description": "The rule, in plain language."
-                    }
-                  }
-                }
-              ]
             }
           }
         }

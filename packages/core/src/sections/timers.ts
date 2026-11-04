@@ -46,11 +46,16 @@ const CRON_RANGES: [string, number, number][] = [
 const isDate = (f: ModelIR["fields"][number]) =>
   f.type.kind === "scalar" && (f.type.name === "date" || f.type.name === "datetime");
 
-/** The field a record timer's path names, or why it cannot: a stored date of `on`, or one reference away. */
-function resolvePath(
+/**
+ * The field a date path names, or why it cannot: a stored date or date-time of `model`, or one
+ * reference away (`session.startsAt`). For a record timer's `at` and a list mail's `when`;
+ * `what` names the asker in the message ("a timer").
+ */
+export function resolveDatePath(
   path: string[],
   model: ModelIR,
   models: ModelIR[],
+  what = "a timer",
 ): { ok: true } | { ok: false; problem: string; hint?: string } {
   const [first = "", second] = path;
   const field = model.fields.find((f) => f.name === first);
@@ -69,7 +74,7 @@ function resolvePath(
     if (field.formula)
       return {
         ok: false,
-        problem: `${model.name}.${first} is computed; a timer needs a stored date.`,
+        problem: `${model.name}.${first} is computed; ${what} needs a stored date.`,
       };
     return { ok: true };
   }
@@ -237,7 +242,7 @@ function readTimer(
     }
     const [, amount, unit, direction, pathText = ""] = m;
     const path = pathText.split(".");
-    const resolved = resolvePath(path, model, models);
+    const resolved = resolveDatePath(path, model, models);
     if (!resolved.ok) {
       ctx.error(
         at("at"),
@@ -347,14 +352,9 @@ function readTimer(
       return undefined;
     }
     timer.run = run;
-  } else if (!model) {
-    ctx.error(
-      keyNode,
-      "invalid-timer",
-      `${capitalize(where)} does nothing: give it "on" (records whose event it raises, for outgoing) or "run" (an action).`,
-    );
-    return undefined;
   }
+  // With neither "on" nor "run", the timer only raises its event: on a clock, for a list mail
+  // (docs/design/reports.md §2.2); at a record's date, for an outgoing entry.
   return timer;
 }
 
@@ -441,6 +441,11 @@ const EVERY_WORDS: Record<TimerEvery, string> = {
 const article = (word: string) =>
   `${/^[aeiou]/i.test(word) && !/^u(ni|s[eu])/i.test(word) ? "an" : "a"} ${word}`;
 
+/** A clock schedule in words, lowercase: "every day at 06:30", "at 06:00 on the 25th of every month". */
+export function clockText(s: Exclude<TimerScheduleIR, { kind: "record" }>): string {
+  return s.kind === "every" ? `${EVERY_WORDS[s.every]} at ${s.at}` : cronText(s.cron);
+}
+
 export function timerText(t: TimerIR, label?: (model: string) => string): string {
   const one = (label ?? ((m: string) => humanize(m).toLowerCase()))(t.on ?? "");
   const many = t.on ? plural(one) : "";
@@ -454,11 +459,7 @@ export function timerText(t: TimerIR, label?: (model: string) => string): string
       const n = amount === 1 ? (unit === "hour" ? "An" : "A") : String(amount);
       when = `${n} ${unit}${amount === 1 ? "" : "s"} ${direction} ${article(one)}'s ${field}`;
     }
-  } else if (s.kind === "every") {
-    when = `${capitalize(EVERY_WORDS[s.every])} at ${s.at}${t.on ? `, for every ${one}` : ""}`;
-  } else {
-    when = `${capitalize(cronText(s.cron))}${t.on ? `, for every ${one}` : ""}`;
-  }
+  } else when = `${capitalize(clockText(s))}${t.on ? `, for every ${one}` : ""}`;
   const only = t.where ? `, where ${conditionText(t.where)}` : "";
   const does = t.run
     ? `runs “${humanize(t.run)}”${t.on && s.kind !== "record" ? ` on each of the ${many}` : ""}`

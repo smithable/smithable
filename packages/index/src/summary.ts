@@ -546,10 +546,14 @@ export function summarize(
       concept: `outgoing:${o.name}`,
       title: humanize(o.name),
       sentences: [
-        outgoingText(o, (name) => {
-          const model = modelNamed(name);
-          return model ? one(model) : humanize(name).toLowerCase();
-        }),
+        outgoingText(
+          o,
+          (name) => {
+            const model = modelNamed(name);
+            return model ? one(model) : humanize(name).toLowerCase();
+          },
+          ir.timers,
+        ),
         ...(subject ? [`The mail's subject is “${subject}”.`] : []),
       ],
     });

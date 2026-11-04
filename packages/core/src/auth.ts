@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
-import { modelAccess, uniqueScope } from "./access.js";
+import { listReaderProblem, modelAccess, uniqueScope } from "./access.js";
 import { readCondition } from "./condition.js";
 import {
   type At,
@@ -1108,6 +1108,18 @@ function checkAgainstSpec(
     const on = o.when.model;
     const model = ir.models.find((m) => m.name === on);
     if (!model) continue;
+    // A list mail is everyone's records (reports.md §2.2): its role reads every one of them.
+    if (o.list) {
+      const problem = r.kind === "role" ? listReaderProblem(r.role, model, auth) : undefined;
+      if (problem)
+        ctx.error(
+          accessAt,
+          "recipient-cannot-read",
+          `"${o.name}" under outgoing: ${problem.message}`,
+          problem.hint,
+        );
+      continue;
+    }
     // The address is typed on the record itself, or on each record of a list of them.
     const typed =
       r.kind === "field" && r.via === "email" && r.path.length === 1

@@ -917,8 +917,8 @@ function checkOutgoingTexts(
     if (!isScalar(value) || typeof value.value !== "string") continue;
     const where = `"${key}" of outgoing "${name}"`;
     for (const path of new Set(placeholdersOf(value.value))) {
-      // A link or a name reveals nothing of the record; the rest does.
-      if (path !== "link" && path !== "by") any = true;
+      // A link or a name reveals nothing of the record, nor do a list's count and day; the rest does.
+      if (!["link", "by", "count", "date"].includes(path)) any = true;
       const problem = placeholderProblem(path, entry, ir, auth);
       if (!problem) continue;
       if (problem.warning)
@@ -967,6 +967,13 @@ export function placeholderProblem(
     return bad(
       `a custom action's mail shows its input and output and takes no placeholders; "{${path}}" cannot be filled.`,
     );
+  // A list mail has no record: how many it shows and the day it is for (reports.md §2.2).
+  if (entry.list)
+    return path === "count" || path === "date"
+      ? undefined
+      : bad(
+          `a list mail has no record, so "{${path}}" cannot be filled; its placeholders are {count} (how many records) and {date} (the day).`,
+        );
   const model = ir.models.find((m) => "model" in entry.when && m.name === entry.when.model);
   if (!model) return undefined;
   const changed = "event" in entry.when && entry.when.event === "changed";
