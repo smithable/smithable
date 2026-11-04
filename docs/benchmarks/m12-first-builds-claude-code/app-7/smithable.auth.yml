@@ -4,10 +4,13 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member:
+    description: Looks at the site; only administrators add to it.
+    pages: all
 assistant:
   for: signed-in
 public:
-  pages: [home, matches, teams, players, privacy]
+  pages: [home, teams, players, matches, privacy]
   read: [Team, Player, Match]
+defaultRole: member
 admins: [johan@smithable.ai]

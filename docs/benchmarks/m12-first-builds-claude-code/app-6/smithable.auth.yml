@@ -4,17 +4,20 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member:
-    description: A union member who browses jobs and applies.
-    pages: [jobs, applications]
-    create: [Application]
   staff:
-    description: Union staff who post jobs and handle applications.
-    pages: all
-    create: all
+    description: Union staff who post jobs and handle the applications.
+    pages: [home, jobs, applications, privacy]
+    create: [Job]
     read: [Job, Application]
     write: [Job, Application]
     delete: [Job]
+    actions: [markFilled, closePost, shortlist, hire, decline]
+  member:
+    description: Looks for work and applies for jobs.
+    pages: [home, jobs, myApplications, privacy]
+    create: [Application]
+    read: [Job]
+    actions: [withdraw]
 assistant:
   for: signed-in
 public:

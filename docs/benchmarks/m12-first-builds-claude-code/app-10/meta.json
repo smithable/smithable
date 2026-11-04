@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "records",
   "questions": [
-    "Who uses the app?",
-    "Can people who aren't signed in see the recipes?",
+    "Who can add and edit recipes?",
+    "What can people see without signing in?",
     "How should shopping lists work?"
   ]
 }

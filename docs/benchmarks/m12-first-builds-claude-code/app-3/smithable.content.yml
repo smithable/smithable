@@ -2,19 +2,19 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: Clients in one place, text: "Keep each client's contact details, address and VAT number ready for the next invoice." }, { title: Invoices that add up, text: Add lines with quantity and price; totals are worked out for you. }, { title: Payments tracked, text: Record each payment against its invoice and see at once what is still owed. }, { title: Nothing slips, text: Unpaid invoices are flagged as overdue a week after their due date. }]
+      items: [{ title: Clients at hand, text: Keep each client's contact details and VAT number together with every invoice you have written them. }, { title: Invoices that add up, text: "Enter the lines, quantities and prices; the total works itself out." }, { title: Payments on record, text: Log each payment against its invoice and see at a glance what is still owed. }, { title: Late invoices flagged, text: A sent invoice that stays unpaid a week past its due date turns overdue without you lifting a finger. }]
     faq:
-      items: [{ question: Who sees my clients and invoices?, answer: Only you. Every freelancer's records are private to their own account. }, { question: Can I record partial payments?, answer: Yes. Add as many payments to an invoice as you receive; the balance shows what is left. }, { question: How do I sign in?, answer: "With your email address: we send you a code, no password to remember." }]
+      items: [{ question: Can a client pay in instalments?, answer: "Yes. Record as many payments as you receive on an invoice, and its balance goes down with each one." }, { question: Who can see my clients and invoices?, answer: Only you. Every freelancer works in their own private records. }, { question: When does an invoice count as overdue?, answer: "Seven days after its due date, if it has been sent and not yet marked as paid." }]
     hero:
-      title: Invoicing that gets you paid
-      subtitle: Clients, invoices and payments for freelancers, in one tidy place.
-      button: Start invoicing
+      title: Know who owes you what
+      subtitle: Duly keeps a freelancer's clients, invoices and payments together, so getting paid takes less chasing.
+      button: Get started
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
     callToAction:
-      title: Send your next invoice in minutes
+      title: Write your next invoice in Duly
       button: Get started
 logo:
   src: images/logo.webp

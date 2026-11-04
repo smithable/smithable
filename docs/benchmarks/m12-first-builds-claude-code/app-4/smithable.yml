@@ -1,59 +1,99 @@
 smithable: 0.1
 app:
-  name: Shed Share
+  name: Neighborhood Tool Library
   description: Neighbors list the tools they own and lend them to each other.
-  currency: EUR
+  timezone: Europe/Helsinki
 models:
   Tool:
     fields:
-      title: string!
+      name: string!
       photos: pictures!
       description: text!
       category: powerTools | handTools | garden | ladders | cleaning | other
       condition: likeNew | good | worn
-      place: string
+      area: string
       available: bool = true
     review: [photos]
+  Loan:
+    fields:
+      tool: Tool!
+      borrower:
+        type: User
+        by: app
+        default: ME()
+      neededFrom: date!
+      returnBy: date!
+      note: text
+      status:
+        type: requested | lent | returned | declined
+        by: app
+    namedBy: tool
+    capacity:
+      per: tool
+      max: 1
+      where:
+        status: [requested, lent]
 pages:
-  catalog:
+  tools:
     route: /
     crud: Tool
-    search: [title, description, place]
+    search: [name, description, area]
     filters: [category, condition, available]
-    sortable: [title, createdAt]
-    favorites: true
+    defaultFilter:
+      available: true
     contact: owner
   myTools:
     crud: Tool
     mine: true
-  saved:
-    crud: Tool
-    favorites: only
+  borrowing:
+    crud: Loan
+    filters: [borrower, status]
+    defaultFilter:
+      borrower: me
+  lending:
+    crud: Loan
+    mine: true
+    filters: [status]
+    defaultFilter:
+      status: [requested, lent]
   review:
     review: all
   home:
     route: /welcome
     landing:
       hero:
-        button: catalog
+        button: tools
         secondButton: myTools
+      latest:
+        records: Tool
+        where:
+          available: true
       features:
+      faq:
       footer:
   privacy:
     route: /privacy
     legal: privacy
 actions:
-  markLent:
-    on: Tool
+  lend:
+    on: Loan
     when:
-      available: true
+      status: requested
     set:
-      available: false
-    intent: The owner marks a tool as lent out, so neighbors see it is away.
+      status: lent
+    intent: The tool's owner agrees to the request and hands the tool over.
+  decline:
+    on: Loan
+    when:
+      status: requested
+    set:
+      status: declined
+    intent: The tool's owner turns the request down, which frees the tool for others.
   markReturned:
-    on: Tool
+    on: Loan
     when:
-      available: false
+      status: lent
     set:
-      available: true
-    intent: The owner marks a tool as back and ready to borrow again.
+      status: returned
+    intent: The tool's owner has the tool back, so others can ask for it.
+navigation: [tools, myTools, borrowing, lending, review]

@@ -1,33 +1,24 @@
 smithableContent: 0.1
+actions:
+  recordResult:
+    label: Record result
 pages:
   home:
     hero:
-      title: One club, every team, every match
-      subtitle: Fixtures, results and squads from the first team to the juniors, all in one place.
-      button: Fixtures & results
-      secondButton: Our teams
+      title: One club, every matchday
+      subtitle: Follow our teams, get to know the players and see when we play next and how the last match ended.
+      button: See the matches
+      secondButton: Meet the teams
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    upcoming:
+    fixtures:
       title: Upcoming matches
     results:
       title: Latest results
-    ourTeams:
+    squads:
       title: Our teams
-  matches:
-    title: Fixtures & results
-models:
-  Match:
-    fields:
-      goalsFor:
-        label: Our goals
-      goalsAgainst:
-        label: Their goals
-actions:
-  recordResult:
-    label: Record result
 logo:
   src: images/logo.webp
   alt: A football

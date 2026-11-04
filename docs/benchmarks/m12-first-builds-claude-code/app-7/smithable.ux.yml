@@ -1,30 +1,37 @@
 smithableUx: 0.1
 pages:
+  teams:
+    table:
+      view: cards
+    icon: users
+  players:
+    table:
+      columns: [number, name, position, team]
+      sort: number
+      view: cards
+    record:
+      subtitle: team
+      detail: [position, number]
+      pictures: aside
+    icon: user
   matches:
     table:
       columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
       sort: -kickoff
-  players:
-    table:
-      columns: [number, name, team, position]
-      view: cards
-      mark: picture
-    record:
-      subtitle: team
-      detail: [position, number]
-  teams:
-    table:
-      view: cards
-    record:
-      subtitle: division
-      detail: [ageGroup, coach]
+    icon: calendar
+  home:
+    sections:
+      fixtures:
+        layout: list
+      results:
+        layout: list
 tones:
   Match.status:
     played: success
     postponed: warning
     canceled: danger
 theme:
-  preset: modern
+  preset: navy
   brand:
-    primary: "#15803d"
-    font: Outfit
+    font: Oswald
+navigation: topbar

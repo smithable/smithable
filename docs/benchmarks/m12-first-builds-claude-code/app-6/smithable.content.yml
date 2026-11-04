@@ -1,15 +1,25 @@
 smithableContent: 0.1
 pages:
   home:
-    features:
-      items: [{ title: Union-vetted jobs, text: "Every post comes through the local, so you know the work meets our standards." }, { title: Apply in minutes, text: "Sign in, write a few lines about yourself, attach your CV and send it." }, { title: Follow your applications, text: "See at a glance whether each application is submitted, shortlisted or settled." }]
-    faq:
-      items: [{ question: Who can apply?, answer: Members of the local. Create an account with your email to send applications. }, { question: Do I need an account to look at jobs?, answer: No. Anyone can browse the open jobs; you only sign in to apply. }, { question: Who sees my application?, answer: Only you and the union staff who handle the job. }, { question: How do I know if I got the job?, answer: Your application's status changes as staff review it; check it under Applications. }]
     hero:
+      title: Good jobs, posted by your local union
+      subtitle: Browse open positions with local employers and send your application in a few minutes.
+      button: See open jobs
+      secondButton: My applications
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
+    features:
+      items: [{ title: Every post checked by the union, text: "Union staff put each job on the board, so you know who it comes from." }, { title: Look before you sign up, text: "Open jobs are there for anyone to read, with the employer, place and pay." }, { title: Apply from the job itself, text: "Add your details, a short letter and your resume, then send it to the union." }, { title: Always know where you stand, text: "Follow each application from submitted to shortlisted and beyond, or withdraw it." }]
+    faq:
+      items: [{ question: Do I need an account to see the jobs?, answer: No. You only need to sign in when you want to apply. }, { question: Who can see my application?, answer: You and the union's staff. It never appears on the public board. }, { question: Can I apply to more than one job?, answer: "Yes, one application per job, as many jobs as you like." }]
+  jobs:
+    title: Jobs
+  myApplications:
+    title: My applications
+  applications:
+    title: Applications
 logo:
   src: images/logo.webp
   alt: A map pin
