@@ -2,21 +2,17 @@ smithable: 0.1
 app:
   name: Yoga Studio Booking
   description: Class schedule and online booking for a yoga studio.
+  currency: EUR
+  timezone: Europe/Helsinki
 models:
-  ClassType:
-    fields:
-      name: string!
-      summary: text
-      level: beginner | allLevels | advanced
-      durationMinutes: int! = 60
   Instructor:
     fields:
       name: string!
       bio: markdown
       portrait: picture
+      sessions: Session[]
   Session:
     fields:
-      classType: ClassType!
       instructor: Instructor!
       startsAt: datetime!
       capacity: int! = 12
@@ -24,12 +20,19 @@ models:
       placesLeft:
         type: int
         formula: capacity - COUNT(bookings)
+      classType: ClassType!
+    namedBy: [classType, startsAt]
   Booking:
     fields:
       session: Session! unique
+      attendee: User
+    namedBy: session
+    ownedBy: attendee
     capacity:
       per: session
       max: session.capacity
+      closes: session.startsAt
+      cancelUntil: session.startsAt
   Post:
     fields:
       title: string!
@@ -44,43 +47,105 @@ models:
       name: string!
       email: email!
       message: text!
+  ClassType:
+    fields:
+      name: string!
+      summary: text
+      level: beginner | allLevels | advanced
+      durationMinutes: int! = 60
+actions:
+  publish:
+    on: Post
+    when:
+      status: draft
+    set:
+      status: published
+    intent: The post is out for everyone to read.
+timers:
+  morning:
+    every: day
+    at: 06:30
+  remind:
+    on: Booking
+    at: 1 day before session.startsAt
+  publish:
+    on: Post
+    at: publishedOn
+    where:
+      status: draft
+    run: publish
+outgoing:
+  reminder:
+    when: remind
+    to: mail
+    recipient: owner
+  bookingMade:
+    when: Booking created
+    to: mail
+    recipient: owner
+  bookingChanged:
+    when: Booking changed
+    to: mail
+    recipient: owner
+  bookingCancelled:
+    when: Booking deleted
+    to: mail
+    recipient: owner
+  todaysBookings:
+    when: morning
+    to: mail
+    recipient: admin
+    list:
+      model: Booking
+      when: session.startsAt
+      within: today
+      columns: [session, attendee]
+  sessionMoved:
+    when: Session changed
+    fields: [startsAt]
+    to: mail
+    recipient: bookings.owner
+    show: [classType, startsAt, instructor]
+    previous: true
 pages:
-  sessions:
-    crud: Session
-  class-types:
-    crud: ClassType
-  instructors:
-    crud: Instructor
-  messages:
-    crud: Message
-  posts:
-    crud: Post
-  my-bookings:
-    crud: Booking
   home:
     route: /
     landing:
       hero:
-      footer:
-      classes:
-        records: ClassType
+      estimate:
+        custom: EstimateCalculator
       gallery:
       faq:
       news:
         records: Post
       contact:
         form: Message
-      estimate:
-        custom: EstimateCalculator
+      classes:
+        records: ClassType
+      callToAction:
+        button: schedule
+      footer:
   estimate:
     calculator:
       fields:
-        classesPerMonth: int = 8
-        dropIn: money = 16
-        pass: money = 99
+        classesPerMonth:
+          type: int
+          min: 0
+          max: 31
+          default: 8
+        dropIn:
+          type: money
+          min: 0
+          default: 16
+        pass:
+          type: money
+          min: 0
+          default: 99
         withoutPass:
           type: money
           formula: classesPerMonth * dropIn
         saved:
           type: money
           formula: classesPerMonth * dropIn - pass
+  schedule:
+    crud: Session

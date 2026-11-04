@@ -1,6 +1,8 @@
 smithableContent: 0.1
 pages:
   home:
+    features:
+      items: [{ title: Organize Recipes, text: "Keep all your family recipes in one place, categorized and easy to find." }, { title: Shopping Lists, text: Create shopping lists directly from your recipes to make grocery shopping a breeze. }, { title: Share with Family, text: Share your favorite recipes and shopping lists with the whole family. }]
     hero:
       image:
         src: images/hero.webp

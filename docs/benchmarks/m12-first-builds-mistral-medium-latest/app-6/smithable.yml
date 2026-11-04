@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Union Job Board
-  description: A local union job board for posting and applying to jobs.
+  description: A job board for a local union to post jobs and receive applications.
+  timezone: Europe/Helsinki
 models:
   JobPost:
     fields:
@@ -12,7 +13,8 @@ models:
       salary: money
       type: fullTime | partTime | contract | temporary
       status: open | closed
-      postedBy: User!
+      postedBy: User
+    ownedBy: postedBy
   Application:
     fields:
       jobPost: JobPost!
@@ -21,22 +23,13 @@ models:
       resume: file
       coverLetter: text
       status: submitted | reviewed | rejected | hired
-      appliedBy: User!
+      appliedAt: datetime = NOW()
 pages:
   jobs:
     crud: JobPost
-    search: [title, description, company, location]
-    filters: [type, status]
-    sortable: [salary, createdAt]
-    contact: owner
+    search: [title, description, company]
   applications:
     crud: Application
-  myJobs:
-    crud: JobPost
-    mine: true
-  myApplications:
-    crud: Application
-    mine: true
   home:
     route: /
     landing:
@@ -45,4 +38,4 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [jobs, myJobs, myApplications]
+navigation: [jobs, applications]

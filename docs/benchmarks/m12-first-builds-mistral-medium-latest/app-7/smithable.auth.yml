@@ -10,6 +10,8 @@ roles:
     pages: [home, teams, players, matches]
     create: all
     read: [Team, Player, Match]
+assistant:
+  for: signed-in
 public:
   pages: [home, teams, players, matches]
   read: [Team, Player, Match]

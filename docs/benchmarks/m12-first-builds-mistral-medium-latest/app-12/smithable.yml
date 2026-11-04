@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: The state of our web shop services, live.
+  description: "A public uptime page for a web shop: which services work, outages and their updates."
+  timezone: Europe/Helsinki
 models:
   Component:
     fields:
@@ -9,6 +10,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -74,28 +76,42 @@ pages:
     route: /
     landing:
       hero:
-      footer:
       services:
         records: Component
       open:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
+      footer:
   incidents:
     crud: Incident
-    filters: [status, component]
-    search: [title]
+    filters: [status]
   updates:
     crud: IncidentUpdate
   components:
     crud: Component
   maintenance:
     crud: Maintenance
-  overview:
-    crud: Incident
   team:
     users: manage
+  overview:
+    data: all
   privacy:
     route: /privacy
     legal: privacy
 navigation: [overview, incidents, updates, maintenance, components, team]
+incoming:
+  chatCommand:
+    create: Incident
+    set:
+      title: "{text}"
+      status: investigating
+      detectedAt: NOW()
+    signed:
+      sha256: v0:{timestamp}:{body}
+      prefix: v0=
+      timestamp: X-Slack-Request-Timestamp
+    header: X-Slack-Signature
+    body: form
+    challenge: challenge
+    as: staff

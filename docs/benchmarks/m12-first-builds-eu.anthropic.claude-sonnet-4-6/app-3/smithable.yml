@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
-  name: FreelanceInvoice
-  description: Simple invoicing for freelancers, with clients, invoices and payments.
+  name: Invoicely
+  description: Simple invoicing for freelancers. Each user manages their own clients and invoices.
   currency: EUR
+  timezone: Europe/Helsinki
 models:
   BusinessProfile:
     fields:
@@ -11,6 +12,7 @@ models:
       iban: string
       paymentTermDays: int! = 30
       invoiceFooter: text
+    description: The freelancer's own business details, printed on their invoices.
   Client:
     fields:
       name: string!
@@ -18,6 +20,15 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
+  InvoiceLine:
+    fields:
+      description: string!
+      quantity: decimal! = 1
+      unitPrice: money!
+      amount:
+        type: money
+        formula: quantity * unitPrice
+      invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
@@ -25,25 +36,54 @@ models:
       issuedOn: date! = TODAY()
       dueOn: date!
       status: draft | sent | paid | overdue
+      contract: file
       lines: InvoiceLine[]
       total:
         type: money
         formula: SUM(lines.amount)
-  InvoiceLine:
-    fields:
-      invoice: Invoice!
-      description: string!
-      quantity: decimal! = 1
-      unitPrice: money!
-      amount:
-        type: money
-        formula: quantity * unitPrice
-  Payment:
-    fields:
-      invoice: Invoice!
-      paidOn: date! = TODAY()
-      amount: money!
-      notes: text
+    description: Invoice numbers are sequential per user, like 2026-001, 2026-002. A sent or paid invoice can no longer be edited, only credited.
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      features:
+      pricing:
+      faq:
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
+  clients:
+    crud: Client
+    search: [name, email]
+    sortable: [name, createdAt]
+  invoices:
+    crud: Invoice
+    search: [number]
+    filters: [client, status]
+    sortable: [issuedOn, dueOn, number]
+  overview:
+    dashboard:
+      latest:
+        list: Invoice
+        limit: 5
+      outstanding:
+        sum: Invoice.total
+        where:
+          status: sent
+      overdue:
+        sum: Invoice.total
+        where:
+          status: overdue
+      paid:
+        sum: Invoice.total
+        where:
+          status: paid
+      invoiced:
+        sum: Invoice.total
+        by: issuedOn
+    period: issuedOn
 actions:
   markSent:
     on: Invoice
@@ -65,36 +105,17 @@ actions:
       status: sent
     set:
       status: overdue
-    intent: Mark the invoice as overdue when the due date has passed.
-pages:
-  invoices:
-    crud: Invoice
-    search: [number, status]
-    filters: [status, client, issuedOn, dueOn]
-  clients:
-    crud: Client
-    search: [name, email]
-    sortable: [name]
-  payments:
-    crud: Payment
-    filters: [invoice, paidOn]
-  invoice-lines:
-    crud: InvoiceLine
-  overview:
-    dashboard:
-      latest:
-        list: Invoice
-        limit: 5
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      features:
-      pricing:
-      faq:
-      callToAction:
-        button: invoices
-  team:
-    users: manage
-navigation: [overview, invoices, clients, payments, team]
+    intent: The invoice is late.
+timers:
+  autoMarkOverdue:
+    on: Invoice
+    at: 7 days after dueOn
+    where:
+      status: sent
+    run: markOverdue
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email
+navigation: [overview, invoices, clients]

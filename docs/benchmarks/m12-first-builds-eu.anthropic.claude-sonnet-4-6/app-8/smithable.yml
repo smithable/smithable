@@ -1,84 +1,119 @@
 smithable: 0.1
 app:
   name: ConferenceHub
-  description: "Event registration for a conference: browse talks and speakers, and register your place."
+  description: "Event registration for a conference: browse talks and speakers, and register for sessions."
+  currency: USD
+  timezone: America/New_York
 models:
+  Track:
+    fields:
+      name: string!
+      description: text
   Speaker:
     fields:
       name: string!
-      bio: text
+      bio: markdown
       photo: picture
-      email: email
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
+      company: string
+      title: string
+      talks: Talk[]
   Talk:
     fields:
       title: string!
-      summary: text
       speaker: Speaker!
-      startsAt: datetime!
-      durationMinutes: int! = 45
+      track: Track
       room: string
-      capacity: int! = 100
+      startsAt: datetime!
+      durationMinutes:
+        type: int!
+        min: 5
+        max: 480
+        default: 45
+      capacity:
+        type: int!
+        min: 1
+        default: 100
+      summary: text
       registrations: Registration[]
       placesLeft:
         type: int
         formula: capacity - COUNT(registrations)
-    access:
-      create: [admin]
-      write: [admin]
-      delete: [admin]
+    namedBy: [title, startsAt]
   Registration:
     fields:
-      talk: Talk!
+      talk:
+        type: Talk!
+        unique: owner
+      attendee: User
+    namedBy: talk
+    ownedBy: attendee
     capacity:
       per: talk
       max: talk.capacity
-  Message:
+      closes: talk.startsAt
+      cancelUntil: talk.startsAt
+  ContactMessage:
     fields:
       name: string!
       email: email!
       message: text!
-    access:
-      read: [admin]
-      write: [admin]
-      delete: [admin]
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      features:
-      talks:
-        records: Talk
-      speakers:
-        records: Speaker
-      faq:
-      contact:
-        form: Message
+  talks:
+    crud: Talk
+    search: [title, room]
+    filters: [track, speaker, startsAt]
+    defaultFilter:
+      startsAt: upcoming
+    sortable: [startsAt, title]
+  speakers:
+    crud: Speaker
+    search: [name, company, title]
+  tracks:
+    crud: Track
+  registrations:
+    crud: Registration
+    filters: [talk]
+  messages:
+    crud: ContactMessage
   schedule:
     calendar:
       model: Talk
       starts: startsAt
-  my-registrations:
-    crud: Registration
-  talks:
-    crud: Talk
-    access: [admin]
-    search: [title, room]
-    filters: [speaker, startsAt]
-  speakers:
-    crud: Speaker
-    access: [admin]
-    search: [name]
-  messages:
-    crud: Message
-    access: [admin]
+  home:
+    route: /
+    landing:
+      hero:
+      features:
+      speakers:
+        records: Speaker
+      faq:
+      callToAction:
+        button: schedule
+      contact:
+        form: ContactMessage
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
   team:
     users: manage
-  admin:
-    data: all
-navigation: [home, schedule, my-registrations, talks, speakers, messages, team, admin]
+  my-registrations:
+    crud: Registration
+    mine: true
+    filters: [talk]
+actions:
+  cancelRegistration:
+    on: Registration
+    set:
+      talk:
+    intent: Attendee cancels their registration for a talk.
+outgoing:
+  registrationMade:
+    when: Registration created
+    to: mail
+    recipient: owner
+  registrationCancelled:
+    when: Registration deleted
+    to: mail
+    recipient: owner
+navigation: [home, schedule, talks, speakers, tracks, my-registrations, registrations, messages, team, privacy]

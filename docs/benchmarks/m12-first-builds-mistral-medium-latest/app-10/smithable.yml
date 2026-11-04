@@ -2,6 +2,7 @@ smithable: 0.1
 app:
   name: Family Recipes
   description: A place to keep and share family recipes with ingredients and shopping lists.
+  timezone: Europe/Helsinki
 models:
   Recipe:
     fields:
@@ -10,39 +11,46 @@ models:
       servings: int! = 4
       prepTime: int
       cookTime: int
-      instructions: text!
+      instructions: markdown!
       category: breakfast | lunch | dinner | dessert | snack | drink
       difficulty: easy | medium | hard
-      image: file
+      favorite: bool = false
   Ingredient:
     fields:
       name: string!
-      quantity: string!
+      amount: decimal
       unit: string
       recipe: Recipe!
   ShoppingList:
     fields:
       name: string!
-      date: date! = TODAY()
+      recipe: Recipe
       completed: bool = false
+  ShoppingItem:
+    fields:
+      name: string!
+      amount: decimal
+      unit: string
+      purchased: bool = false
+      shoppingList: ShoppingList!
 pages:
   recipes:
     crud: Recipe
-    search: [name, description, category, difficulty]
-    filters: [category, difficulty]
-    sortable: [name, servings, prepTime, cookTime]
+    search: [name, description, instructions]
+    filters: [category, difficulty, favorite]
   shopping-lists:
     crud: ShoppingList
-    search: [name]
-    filters: [completed]
-    sortable: [name, date]
   home:
     route: /
     landing:
       hero:
-      footer:
       recipes:
         records: Recipe
+        where:
+          favorite: true
+      features:
+        features:
+      footer:
   privacy:
     route: /privacy
     legal: privacy

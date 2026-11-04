@@ -2,36 +2,95 @@ smithable: 0.1
 app:
   name: ToolShare
   description: A neighborhood tool library where people lend and borrow tools from each other.
+  currency: USD
+  timezone: Europe/Helsinki
+models:
+  Loan:
+    fields:
+      borrowerNote: text
+      startDate: date!
+      endDate: date!
+      status: requested | approved | active | returned | declined
+      tool: Tool!
+    namedBy: [tool, startDate]
+  Tool:
+    fields:
+      name: string!
+      photos: pictures
+      description: text!
+      category: handTools | powerTools | garden | measuring | ladders | plumbing | other
+      condition: likeNew | good | worn
+      location: string
+      available: bool = true
+    review: [photos]
+    namedBy: name
 pages:
+  loans:
+    crud: Loan
+    actions: [approve, decline, markActive, markReturned]
+    filters: [status, tool]
+  review:
+    review: all
   home:
     route: /welcome
     landing:
       hero:
+        button: catalog
+      features:
+      faq:
+      callToAction:
+        button: catalog
       footer:
-      latest:
-        records: Tool
+  privacy:
+    route: /privacy
+    legal: privacy
   catalog:
     route: /
     crud: Tool
-    search: [title, location]
+    search: [name, description, location]
     filters: [category, condition, available]
-    sortable: [title, createdAt]
+    sortable: [name, createdAt]
     favorites: true
     contact: owner
-  my-tools:
+  myTools:
     crud: Tool
     mine: true
-  saved:
-    crud: Tool
-    favorites: only
-models:
-  Tool:
-    fields:
-      title: string!
-      photos: pictures
-      description: text!
-      category: handTools | powerTools | garden | plumbing | electrical | measuring | other
-      condition: likeNew | good | worn
-      location: string
-      available: bool = true
-navigation: [catalog, my-tools, saved]
+actions:
+  approve:
+    on: Loan
+    when:
+      status: requested
+    set:
+      status: approved
+  decline:
+    on: Loan
+    when:
+      status: requested
+    set:
+      status: declined
+  markActive:
+    on: Loan
+    when:
+      status: approved
+    set:
+      status: active
+  markReturned:
+    on: Loan
+    when:
+      status: active
+    set:
+      status: returned
+outgoing:
+  loanRequested:
+    when: Loan created
+    to: mail
+    recipient: owner
+  loanApproved:
+    when: approve
+    to: mail
+    recipient: owner
+  loanDeclined:
+    when: decline
+    to: mail
+    recipient: owner
+navigation: [catalog, myTools, loans, review]

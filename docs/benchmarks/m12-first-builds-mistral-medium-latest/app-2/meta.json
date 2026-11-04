@@ -1,6 +1,7 @@
 {
   "description": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
-  "starter": "?",
+  "starter": "crm",
   "wordStarter": "crm",
-  "questions": []
+  "questions": [],
+  "dropped": "mergeCompanies"
 }

@@ -3,8 +3,7 @@
   "starter": "records",
   "wordStarter": "api",
   "questions": [
-    "Who can view the inventory data?",
-    "What details should each ingredient record include?",
-    "Should stock levels be updated automatically or manually?"
+    "Who can see the inventory data?",
+    "What details are tracked for each ingredient?"
   ]
 }

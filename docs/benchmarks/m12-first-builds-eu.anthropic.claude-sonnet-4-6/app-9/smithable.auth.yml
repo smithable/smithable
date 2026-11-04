@@ -4,9 +4,14 @@ signIn:
   selfSignUp: false
 defaultAccess: shared
 roles:
-  admin:
-    description: Manages the help desk, team members and all tickets.
+  admin: all
   agent:
-    description: Handles and resolves support tickets.
+    description: Handles tickets, takes them and passes them on.
+    pages: [tickets]
+    create: all
+    write: all
+    actions: all
+assistant:
+  for: signed-in
 defaultRole: agent
 admins: [johan@smithable.ai]

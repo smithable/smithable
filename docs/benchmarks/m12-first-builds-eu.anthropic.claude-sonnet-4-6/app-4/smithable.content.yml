@@ -1,15 +1,24 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Borrow the tools you need from your neighbors
-    subtitle: ToolShare is a neighborhood library of tools. List what you have, borrow what you need.
+    features:
+      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? Borrow it from a neighbor instead of buying one you'll use twice. }, { title: Lend what you have, text: Put your idle tools to good use. List them in minutes and let neighbors know they're available. }, { title: Keep it local, text: Every loan is between real neighbors. Arrange pick-up and drop-off at a time that suits you both. }, { title: Track your loans, text: "See at a glance which tools you've lent out, what's been requested, and what's been returned." }]
+    faq:
+      items: [{ question: Is it free to join?, answer: Yes. ToolShare is free for all neighbors. Sign up with your email and start lending or borrowing straight away. }, { question: How do I request a tool?, answer: "Find the tool in the catalog, open its page and send the owner a message or submit a loan request with your dates." }, { question: What if a tool is damaged?, answer: We encourage borrowers and lenders to agree on the tool's condition before and after the loan. Disputes are handled between neighbors directly. }, { question: Can I list any tool?, answer: "Yes, as long as it is safe to use and legal to own. Each listing is reviewed before it goes live in the catalog." }, { question: How do I know a listing is genuine?, answer: "Every tool photo is reviewed by our team before the listing appears publicly, so you always see what you're getting." }]
     hero:
+      title: Borrow the tools you need from neighbors
+      subtitle: ToolShare is a free neighborhood library of tools. Lend what you have, borrow what you need.
+      button: Browse tools
+      secondButton: List a tool
       image:
         src: images/hero.webp
-        alt: A green garden with vegetable beds, a greenhouse and fruit trees
-  catalog:
-    title: Browse Tools
-  my-tools:
-    title: My Tools
-  saved:
-    title: Saved Tools
+        alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
+        generated: true
+    callToAction:
+      title: Ready to share?
+      text: Join your neighbors on ToolShare. List a tool in minutes or find one you need right now.
+      button: Browse the catalog
+logo:
+  src: images/logo.webp
+  alt: A toolbox
+  generated: true

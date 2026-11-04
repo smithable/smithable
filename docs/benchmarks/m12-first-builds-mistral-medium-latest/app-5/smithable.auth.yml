@@ -1,8 +1,12 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-defaultAccess: private
+  selfSignUp: false
+defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  baker: all
+assistant:
+  for: signed-in
+defaultRole: baker
 admins: [johan@smithable.ai]

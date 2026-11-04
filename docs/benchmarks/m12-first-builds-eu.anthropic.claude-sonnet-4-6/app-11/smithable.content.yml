@@ -3,12 +3,12 @@ pages:
   home:
     title: API Status
     hero:
-      title: Is our API up?
-      subtitle: Live status of our API services, incidents, and planned maintenance.
+      title: API Status
       button: Incident History
       image:
         src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
     services:
       title: Services
     open:
@@ -17,3 +17,7 @@ pages:
       title: Recently Resolved
     planned:
       title: Planned Maintenance
+logo:
+  src: images/logo.webp
+  alt: A wrench
+  generated: true

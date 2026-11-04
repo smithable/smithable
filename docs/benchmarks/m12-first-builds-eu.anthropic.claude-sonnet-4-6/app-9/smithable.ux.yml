@@ -1,23 +1,16 @@
 smithableUx: 0.1
-theme:
-  preset: corporate
+pages:
+  tickets:
+    table:
+      columns: [subject, requesterEmail, status, priority, assignee]
+    icon: clipboard
+  team:
+    icon: users
 tones:
   Ticket.status:
     open: warning
     inProgress: warning
     resolved: success
-  Ticket.priority:
-    critical: danger
-    high: warning
-pages:
-  tickets:
-    form:
-      control:
-        description: textarea
-    icon: clipboard
-  updates:
-    form:
-      control:
-        message: textarea
-  overview:
-    icon: chart
+    reopened: danger
+theme:
+  preset: helpdesk

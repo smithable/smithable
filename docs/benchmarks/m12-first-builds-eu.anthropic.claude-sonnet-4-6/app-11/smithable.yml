@@ -2,6 +2,7 @@ smithable: 0.1
 app:
   name: API Status
   description: The state of our API services, live — incidents and planned maintenance.
+  timezone: UTC
 models:
   Component:
     fields:
@@ -9,6 +10,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -18,8 +20,6 @@ models:
       resolvedAt: datetime
       summary: markdown
       updates: IncidentUpdate[]
-    access:
-      write: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -33,54 +33,6 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
-pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      recent:
-        records: Incident
-        where:
-          status: resolved
-      planned:
-        records: Maintenance
-  incidents:
-    crud: Incident
-    search: [title, status]
-    filters: [status, component, detectedAt]
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  maintenance:
-    crud: Maintenance
-    filters: [component, startsAt]
-  components:
-    crud: Component
-    access: [admin]
-    search: [name]
-    filters: [status]
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
-  team:
-    users: manage
-navigation: [overview, incidents, updates, maintenance, components, team]
 actions:
   identified:
     on: Incident
@@ -93,7 +45,6 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -106,7 +57,6 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
-    allow: [admin, staff]
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -120,5 +70,70 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    allow: [admin, staff]
-    intent: The incident is over, with an update saying so.
+    intent: The incident is over, with an update saying so. The component's status stays what the team sets.
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      recent:
+        records: Incident
+        where:
+          status: resolved
+      planned:
+        records: Maintenance
+      footer:
+  incidents:
+    crud: Incident
+    filters: [status, component]
+    search: [title]
+  updates:
+    crud: IncidentUpdate
+    filters: [status, incident]
+  components:
+    crud: Component
+    search: [name]
+    filters: [status]
+  maintenance:
+    crud: Maintenance
+    filters: [component]
+  privacy:
+    route: /privacy
+    legal: privacy
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+        period: month
+      latest:
+        list: Incident
+        limit: 5
+  team:
+    users: manage
+navigation: [overview, incidents, updates, maintenance, components, team]
+incoming:
+  chatCommand:
+    create: Incident
+    set:
+      title: "{text}"
+      status: investigating
+      detectedAt: NOW()
+    signed:
+      sha256: v0:{timestamp}:{body}
+      prefix: v0=
+      timestamp: X-Slack-Request-Timestamp
+    header: X-Slack-Signature
+    body: form
+    challenge: challenge
+    as: staff

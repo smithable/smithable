@@ -1,8 +1,7 @@
 smithable: 0.1
 app:
-  name: Invoicely
-  description: Simple invoicing for freelancers. Each user manages their own clients and invoices.
-  currency: EUR
+  name: Freelance Invoicing
+  description: Invoicing for freelancers, with clients, invoices and payments.
 models:
   BusinessProfile:
     fields:
@@ -18,73 +17,24 @@ models:
       address: text
       vatNumber: string
       invoices: Invoice[]
-  Invoice:
-    fields:
-      number: string! unique
-      client: Client!
-      issuedOn: date! = TODAY()
-      dueOn: date!
-      status: draft | sent | paid | overdue
-      contract: file
-      lines: InvoiceLine[]
-      total:
-        type: money
-        formula: SUM(lines.amount)
   InvoiceLine:
     fields:
-      invoice: Invoice!
       description: string!
       quantity: decimal! = 1
       unitPrice: money!
       amount:
         type: money
         formula: quantity * unitPrice
-pages:
-  overview:
-    crud: Invoice
-  invoices:
-    crud: Invoice
-    filters: [client, status]
-    search: [number]
-  clients:
-    crud: Client
-    sortable: [name]
-    search: [name, email]
-  invoice-lines:
-    crud: InvoiceLine
-    search: [description]
-  settings:
-    crud: BusinessProfile
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      features:
-      pricing:
-      faq:
-      callToAction:
-        button: overview
-  privacy:
-    route: /privacy
-    legal: privacy
-actions:
-  markSent:
-    on: Invoice
-    when:
-      status: draft
-    set:
-      status: sent
-    intent: The invoice went to the client.
-  markPaid:
-    on: Invoice
-    when:
-      status: [sent, overdue]
-    set:
-      status: paid
-    intent: The client paid the invoice.
-outgoing:
-  invoiceSent:
-    when: markSent
-    to: mail
-    recipient: client.email
+      invoice: Invoice!
+  Invoice:
+    fields:
+      number: string! unique
+      client: Client!
+      issuedOn: date! = TODAY()
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      status: draft | sent | paid | overdue
+      contract: file
+      lines: InvoiceLine[]
+      total:
+        type: money
+        formula: SUM(lines.amount)

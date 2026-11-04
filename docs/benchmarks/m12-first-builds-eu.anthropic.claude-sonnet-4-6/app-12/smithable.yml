@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is it working? The state of our web shop services, live.
+  description: Live status of our web shop's services, with outages and their updates.
+  timezone: UTC
 models:
   Component:
     fields:
@@ -9,6 +10,7 @@ models:
       status: operational | degraded | down | maintenance
       description: text
       incidents: Incident[]
+      maintenances: Maintenance[]
   Incident:
     fields:
       title: string!
@@ -18,8 +20,6 @@ models:
       resolvedAt: datetime
       summary: markdown
       updates: IncidentUpdate[]
-    access:
-      write: [admin, staff]
   IncidentUpdate:
     fields:
       incident: Incident!
@@ -33,16 +33,64 @@ models:
       startsAt: datetime!
       endsAt: datetime!
       description: text
+actions:
+  identified:
+    on: Incident
+    when:
+      status: investigating
+    set:
+      status: identified
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: identified
+        message: The cause is found and a fix is being worked on.
+    intent: The cause is found; the incident moves to identified, with an update saying so.
+  monitoring:
+    on: Incident
+    when:
+      status: [investigating, identified]
+    set:
+      status: monitoring
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: monitoring
+        message: A fix is out. We are watching before we close this.
+    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
+  resolve:
+    on: Incident
+    when:
+      status: [investigating, identified, monitoring]
+    set:
+      status: resolved
+      resolvedAt: NOW()
+    add:
+      IncidentUpdate:
+        at: NOW()
+        status: resolved
+        message: This incident is resolved.
+    intent: The incident is over, with an update saying so. The component's status stays what the team sets.
 pages:
+  incidents:
+    crud: Incident
+    filters: [status, component]
+    search: [title]
+  updates:
+    crud: IncidentUpdate
+  components:
+    crud: Component
+    search: [name]
+    filters: [status]
+  maintenance:
+    crud: Maintenance
+    filters: [component, startsAt]
   home:
     route: /
     landing:
       hero:
-      footer:
       services:
         records: Component
-      uptime:
-        custom: Uptime
       open:
         records: Incident
         where:
@@ -53,16 +101,10 @@ pages:
           status: resolved
       planned:
         records: Maintenance
-  incidents:
-    crud: Incident
-    actions: [identified, monitoring, resolve]
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
-    access: [admin]
-  maintenance:
-    crud: Maintenance
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
   overview:
     dashboard:
       open:
@@ -78,44 +120,18 @@ pages:
   team:
     users: manage
 navigation: [overview, incidents, updates, maintenance, components, team]
-actions:
-  identified:
-    on: Incident
-    when:
+incoming:
+  chatCommand:
+    create: Incident
+    set:
+      title: "{text}"
       status: investigating
-    set:
-      status: identified
-    add:
-      IncidentUpdate:
-        at: NOW()
-        status: identified
-        message: The cause is found and a fix is being worked on.
-    allow: [admin, staff]
-    intent: The cause is found; the incident moves to identified, with an update saying so.
-  monitoring:
-    on: Incident
-    when:
-      status: [investigating, identified]
-    set:
-      status: monitoring
-    add:
-      IncidentUpdate:
-        at: NOW()
-        status: monitoring
-        message: A fix is out. We are watching before we close this.
-    allow: [admin, staff]
-    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
-  resolve:
-    on: Incident
-    when:
-      status: [investigating, identified, monitoring]
-    set:
-      status: resolved
-      resolvedAt: NOW()
-    add:
-      IncidentUpdate:
-        at: NOW()
-        status: resolved
-        message: This incident is resolved.
-    allow: [admin, staff]
-    intent: The incident is over, with an update saying so.
+      detectedAt: NOW()
+    signed:
+      sha256: v0:{timestamp}:{body}
+      prefix: v0=
+      timestamp: X-Slack-Request-Timestamp
+    header: X-Slack-Signature
+    body: form
+    challenge: challenge
+    as: staff

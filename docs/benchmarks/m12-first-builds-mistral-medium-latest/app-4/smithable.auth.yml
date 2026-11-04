@@ -8,8 +8,10 @@ roles:
     description: Lends and borrows tools.
     pages: [tools, myTools, home]
     create: [Tool]
+assistant:
+  for: signed-in
 public:
-  pages: [home, tools]
+  pages: [home, tools, privacy]
   read: [Tool]
 defaultRole: member
 admins: [johan@smithable.ai]

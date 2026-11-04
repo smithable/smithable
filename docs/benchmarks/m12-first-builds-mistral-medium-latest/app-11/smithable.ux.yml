@@ -3,12 +3,48 @@ pages:
   incidents:
     table:
       sort: -detectedAt
+    record:
+      first: form
+      subtitle: component.name
+      detail: [status]
+    frame: app
+  home:
+    icon: home
+    frame: site
+  overview:
+    icon: chart
+    frame: app
+  team:
+    icon: users
+    frame: app
   updates:
-    table:
-      sort: -at
+    frame: app
+    record:
+      subtitle: incident.title
+      detail: [status, at]
   components:
-    table:
-      sort: name
+    frame: app
+    record:
+      subtitle: status
   maintenance:
-    table:
-      sort: startsAt
+    frame: app
+    record:
+      subtitle: component.name
+      detail: [startsAt, endsAt]
+theme:
+  preset: helpdesk
+tones:
+  Component.status:
+    operational: success
+    degraded: warning
+    down: danger
+  Incident.status:
+    investigating: danger
+    identified: warning
+    monitoring: warning
+    resolved: success
+  IncidentUpdate.status:
+    investigating: danger
+    identified: warning
+    monitoring: warning
+    resolved: success

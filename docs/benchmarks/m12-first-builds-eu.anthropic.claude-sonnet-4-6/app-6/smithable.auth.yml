@@ -2,13 +2,17 @@ smithableAuth: 0.1
 signIn:
   providers: [email]
 defaultAccess: private
+roles:
+  admin: all
+  member:
+    description: A union member who can browse job posts and submit applications.
+    pages: [jobs, applications]
+    create: [Application]
+    read: [JobPost]
+assistant:
+  for: signed-in
 public:
   pages: [home, jobs]
   read: [{ JobPost: { where: { status: open } } }]
-roles:
-  admin:
-    description: Manages job posts and oversees applications.
-  member:
-    description: Browses job posts and submits applications.
 defaultRole: member
 admins: [johan@smithable.ai]

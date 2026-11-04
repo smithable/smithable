@@ -3,12 +3,3 @@ pages:
   incidents:
     table:
       sort: -detectedAt
-  updates:
-    table:
-      sort: -at
-  components:
-    table:
-      sort: name
-  maintenance:
-    table:
-      sort: startsAt

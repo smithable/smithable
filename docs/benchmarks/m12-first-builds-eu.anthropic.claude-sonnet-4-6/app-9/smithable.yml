@@ -1,104 +1,128 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: A help desk for an IT team to manage support tickets, priorities and assignments.
-pages:
-  team:
-    users: manage
-  tickets:
-    crud: Ticket
-    actions: [assign, putOnHold, resolve, close]
-    search: [title, category]
-    sortable: [priority, status, createdAt, resolvedAt]
-  updates:
-    crud: TicketUpdate
-  overview:
-    dashboard:
-      open:
-        count: Ticket
-        where:
-          status: open
-      inProgress:
-        count: Ticket
-        where:
-          status: inProgress
-      critical:
-        count: Ticket
-        where:
-          priority: critical
-      latest:
-        list: Ticket
-        limit: 5
+  description: "Tickets for the IT team: track issues, priorities and who handles them."
+  timezone: Europe/Helsinki
 models:
   Ticket:
     fields:
-      title: string!
-      status: open | inProgress | onHold | resolved | closed
-      priority: low | medium | high | critical
-      category: hardware | software | network | access | other
-      description: text!
-      assignee: User
-      resolvedAt: datetime
-      updates: TicketUpdate[]
-  TicketUpdate:
+      subject: string!
+      requesterEmail:
+        type: email!
+        locked: true
+      status:
+        type: open | inProgress | resolved | closed | reopened
+        description: "open: just received, not yet picked up; inProgress: someone is working on it; resolved: the fix is done; closed: confirmed done and archived; reopened: needs more work after being closed or resolved."
+      priority:
+        type: int!
+        min: 1
+        max: 5
+        default: 3
+        description: 1 is the highest priority (critical), 5 is the lowest (minor). Default is 3 (normal).
+      assignee:
+        type: User
+        required:
+          status: [inProgress, resolved]
+      body: text
+      attachments: files
+      messages: TicketMessage[]
+    namedBy: subject
+  TicketMessage:
     fields:
+      content: text!
+      sender: agent | requester
+      agent:
+        type: User
+        by: app
+        default: ME()
+      fromEmail: email
+      attachments: files
       ticket: Ticket!
-      at: datetime!
-      status: open | inProgress | onHold | resolved | closed
-      message: text!
+    thread:
+      body: content
+      author: agent
+      side:
+        field: sender
+        ours: agent
+    namedBy: content
+pages:
+  tickets:
+    crud: Ticket
+    search: [subject, requesterEmail]
+    filters: [status, priority, assignee]
+    sortable: [priority, createdAt]
+    actions: [assignToMe, assignTo, startWork, resolve, close, reopen]
+    defaultFilter:
+      status: [open, inProgress, reopened]
+  team:
+    users: manage
 actions:
-  assign:
+  assignToMe:
+    on: Ticket
+    set:
+      assignee: ME()
+    intent: "Take the ticket: you become its assignee."
+  assignTo:
+    on: Ticket
+    set:
+      assignee:
+    intent: Give the ticket to a team member, chosen from the list.
+  startWork:
     on: Ticket
     when:
-      status: open
+      status: [open, reopened]
     set:
       status: inProgress
-      assignee: ME()
-    add:
-      TicketUpdate:
-        at: NOW()
-        status: inProgress
-        message: Ticket picked up and is now being worked on.
-    allow: [admin, agent]
-    intent: An agent takes the ticket; it moves to in-progress and is assigned to them.
-  putOnHold:
-    on: Ticket
-    when:
-      status: [open, inProgress]
-    set:
-      status: onHold
-    add:
-      TicketUpdate:
-        at: NOW()
-        status: onHold
-        message:
-    allow: [admin, agent]
-    intent: The ticket is waiting on something; it moves to on-hold with a note.
+    intent: Mark the ticket as in progress; it needs an assignee.
   resolve:
     on: Ticket
     when:
-      status: [open, inProgress, onHold]
+      status: [open, inProgress, reopened]
     set:
       status: resolved
-      resolvedAt: NOW()
-    add:
-      TicketUpdate:
-        at: NOW()
-        status: resolved
-        message:
-    allow: [admin, agent]
-    intent: The issue is fixed; the ticket moves to resolved with a resolution note.
+    intent: The issue has been fixed and the requester has their answer.
   close:
     on: Ticket
     when:
       status: resolved
     set:
       status: closed
-    add:
-      TicketUpdate:
-        at: NOW()
-        status: closed
-        message: Ticket closed.
-    allow: [admin, agent]
-    intent: The resolved ticket is confirmed closed.
-navigation: [overview, tickets, updates, team]
+    intent: Close the ticket after it has been resolved.
+  reopen:
+    on: Ticket
+    when:
+      status: [closed, resolved]
+    set:
+      status: reopened
+    intent: The ticket needs more work after all.
+incoming:
+  support:
+    mail: true
+    create: Ticket
+    set:
+      status: open
+    fields:
+      from: requesterEmail
+      subject: subject
+      body: body
+      attachments: attachments
+    reply:
+      create: TicketMessage
+      fields:
+        from: fromEmail
+        body: content
+        attachments: attachments
+      set:
+        sender: requester
+outgoing:
+  ticketReceived:
+    when: Ticket created
+    to: mail
+    recipient: requesterEmail
+  replySent:
+    when: TicketMessage created
+    where:
+      sender: agent
+    to: mail
+    recipient: ticket.requesterEmail
+navigation: [tickets, team]

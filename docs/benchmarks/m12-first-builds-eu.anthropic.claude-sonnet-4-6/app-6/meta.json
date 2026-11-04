@@ -3,8 +3,8 @@
   "starter": "marketplace",
   "wordStarter": "marketplace",
   "questions": [
-    "Who can post job listings?",
-    "Who can apply to jobs?",
-    "What does a job post include?"
+    "Who can post a job opening?",
+    "What can visitors see without signing in?",
+    "What does a job application hold?"
   ]
 }

@@ -4,6 +4,6 @@
   "wordStarter": "status",
   "questions": [
     "Who can view the status page?",
-    "What are the main API components you want to track?"
+    "What are the main components you want to track?"
   ]
 }

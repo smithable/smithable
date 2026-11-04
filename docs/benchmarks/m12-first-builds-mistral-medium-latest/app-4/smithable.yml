@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Tool Library
-  description: A neighborhood tool library where neighbors lend each other tools.
+  description: A tool library where neighbors lend each other tools.
+  timezone: Europe/Helsinki
 models:
   Tool:
     fields:
@@ -10,11 +11,12 @@ models:
       category: garden | power | hand | measuring | other
       condition: likeNew | good | worn
       available: bool = true
+      photo: picture
 pages:
   tools:
     route: /
     crud: Tool
-    search: [name, description]
+    search: [name, description, category]
     filters: [category, condition, available]
     sortable: [name, createdAt]
     favorites: true
@@ -26,6 +28,10 @@ pages:
     route: /welcome
     landing:
       hero:
+        button: tools
+      story:
+        button: tools
+        mediaText:
       footer:
   privacy:
     route: /privacy
