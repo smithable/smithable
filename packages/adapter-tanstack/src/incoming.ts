@@ -306,6 +306,16 @@ ${
         if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });`
     : ""
 }
+${
+  incoming.signed && stamp
+    ? `        const stamp = request.headers.get(${JSON.stringify(stamp.toLowerCase())}) ?? "";
+        // The call's time, seconds since 1970 (ten digits) or milliseconds (thirteen): over five minutes off is a replay or a wrong clock.
+        // A header alone: checked before the body is read.
+        const sent = /^\\d{10}$|^\\d{13}$/.test(stamp) ? Number(stamp) * (stamp.length === 10 ? 1000 : 1) : Number.NaN;
+        if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
+`
+    : ""
+}        // The body, bounded while it is read: a mail's ten attachments of 10 MB in base64, else 1 MB.
         let raw: string;
         try { raw = new TextDecoder().decode(await boundedBody(request, ${saves ? 135_000_000 : 1_000_000})); }
         catch (error) {
@@ -314,18 +324,10 @@ ${
         }
 ${
   incoming.signed
-    ? `${
-        stamp
-          ? `const stamp = request.headers.get(${JSON.stringify(stamp.toLowerCase())}) ?? "";
-        // The call's time, seconds since 1970 (ten digits) or milliseconds (thirteen): over five minutes off is a replay or a wrong clock.
-        const sent = /^\\d{10}$|^\\d{13}$/.test(stamp) ? Number(stamp) * (stamp.length === 10 ? 1000 : 1) : Number.NaN;
-        if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
-        `
-          : ""
-      }const expected = \`${literal(incoming.signed.prefix)}\${createHmac("sha256", secret).update(${signedCode(incoming.signed.text)}).digest("hex")}\`;`
+    ? `        const expected = \`${literal(incoming.signed.prefix)}\${createHmac("sha256", secret).update(${signedCode(incoming.signed.text)}).digest("hex")}\`;
+        if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });`
     : ""
 }
-${incoming.signed ? '        if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });' : ""}
 ${
   incoming.body === "form"
     ? `        let body: unknown;

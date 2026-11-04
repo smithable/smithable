@@ -75224,16 +75224,18 @@ export const Route = createFileRoute("/incoming/chatCommand")({
         const given = request.headers.get("x-slack-signature") ?? "";
         if (!given) return answer(401, { error: "Wrong secret or signature." });
 
+        const stamp = request.headers.get("x-slack-request-timestamp") ?? "";
+        // The call's time, seconds since 1970 (ten digits) or milliseconds (thirteen): over five minutes off is a replay or a wrong clock.
+        // A header alone: checked before the body is read.
+        const sent = /^\\d{10}$|^\\d{13}$/.test(stamp) ? Number(stamp) * (stamp.length === 10 ? 1000 : 1) : Number.NaN;
+        if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
+        // The body, bounded while it is read: a mail's ten attachments of 10 MB in base64, else 1 MB.
         let raw: string;
         try { raw = new TextDecoder().decode(await boundedBody(request, 1000000)); }
         catch (error) {
           if (error instanceof BodyLimit) return answer(413, { error: "The incoming body is too large or could not be read in time." });
           throw error;
         }
-const stamp = request.headers.get("x-slack-request-timestamp") ?? "";
-        // The call's time, seconds since 1970 (ten digits) or milliseconds (thirteen): over five minutes off is a replay or a wrong clock.
-        const sent = /^\\d{10}$|^\\d{13}$/.test(stamp) ? Number(stamp) * (stamp.length === 10 ? 1000 : 1) : Number.NaN;
-        if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
         const expected = \`v0=\${createHmac("sha256", secret).update(\`v0:\${stamp}:\${raw}\`).digest("hex")}\`;
         if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });
         let body: unknown;
@@ -77073,7 +77075,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/incidents/$id.tsx": "6b3b7246 generated",
   "src/routes/incidents/index.tsx": "5decea31 generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
-  "src/routes/incoming/chatCommand.ts": "bd58ca16 generated",
+  "src/routes/incoming/chatCommand.ts": "09de2209 generated",
   "src/routes/index.tsx": "a2933aa8 generated",
   "src/routes/maintenance/$id.tsx": "0ad33c2b generated",
   "src/routes/maintenance/index.tsx": "4e95ec4a generated",
@@ -83283,13 +83285,13 @@ export const Route = createFileRoute("/incoming/support")({
         if (!given) return answer(401, { error: "Wrong secret or signature." });
         const expected = \`Bearer \${secret}\`;
         if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });
+        // The body, bounded while it is read: a mail's ten attachments of 10 MB in base64, else 1 MB.
         let raw: string;
         try { raw = new TextDecoder().decode(await boundedBody(request, 135000000)); }
         catch (error) {
           if (error instanceof BodyLimit) return answer(413, { error: "The incoming body is too large or could not be read in time." });
           throw error;
         }
-
 
         let body: unknown;
         try {
@@ -84372,7 +84374,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "db74b261 generated",
+  "src/routes/incoming/support.ts": "4a7c063e generated",
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e52e206e generated",
