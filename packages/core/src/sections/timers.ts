@@ -698,7 +698,10 @@ export const timersSection: SpecSection<"timers"> = {
         continue;
       }
       const timer = readTimer(ctx, key, keyNode, value, models, actions);
-      if (timer) timers.push(timer);
+      if (timer) {
+        timers.push(timer);
+        ctx.mark(`timer:${key}`, keyNode);
+      }
     }
     return timers;
   },

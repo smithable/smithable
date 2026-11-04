@@ -37,7 +37,7 @@ timers:
   remind: { on: Booking, at: 1 day before session.startsAt }
 `;
 
-const ROLES = ["admin", "staff", "member"];
+const ROLES = ["admin", "staff", "member", "notes"];
 const read = (outgoing: string) =>
   validateSpec({ path: "smithable.yml", text: `${SPEC}outgoing:\n${outgoing}` }, { roles: ROLES });
 const errors = (outgoing: string) =>
@@ -113,6 +113,20 @@ test("the reports.md §2.2 example: a clock timer's entry carries a list and rea
   // A record timer's entry is as before: per record, no clock.
   const record = read("  reminder: { when: remind, to: mail, recipient: owner }\n");
   expect(record.ir?.outgoing[0]?.when).toEqual({ model: "Booking", timer: "remind" });
+  // A role named like a field is a role all the same, when the roles are known.
+  const named = read(
+    "  x: { when: morning, to: mail, recipient: notes, list: { model: Booking, columns: [session] } }\n",
+  );
+  expect(named.ir?.outgoing[0]?.recipient).toEqual({ kind: "role", role: "notes" });
+  // The clock timer nobody names is warned about; the one an entry names is not.
+  const idle = read(TODAYS).diagnostics.filter((d) => d.code === "timer-does-nothing");
+  expect(idle.map((d) => [d.severity, d.line, d.message])).toEqual([
+    [
+      "warning",
+      27,
+      'Timer "monthly" does nothing: it is on a clock with no records, runs no action, and no outgoing entry names it.',
+    ],
+  ]);
 });
 
 test("a list mail says itself in one sentence, with the timer's clock", () => {
@@ -182,18 +196,18 @@ test("what a list mail refuses, each with its reason", () => {
     ],
     [
       list("{ model: Booking, columns: [session] }", "    to: mail\n    recipient: owner\n"),
-      'Outgoing "x": a list mail has no record: name a role that reads every Booking, not owner.',
+      'Outgoing "x": a list mail has no record: name a role that reads every Booking; owner is not a role.',
     ],
     [
       list("{ model: Booking, columns: [session] }", "    to: mail\n    recipient: attendee\n"),
-      'Outgoing "x": a list mail has no record: name a role that reads every Booking, not "attendee".',
+      'Outgoing "x": a list mail has no record: name a role that reads every Booking; "attendee", a field of Booking is not a role.',
     ],
     [
       list(
         "{ model: Booking, columns: [session] }",
         "    to: mail\n    recipient: session.title\n",
       ),
-      'Outgoing "x": a list mail has no record: name a role that reads every Booking, not "session.title".',
+      'Outgoing "x": a list mail has no record: name a role that reads every Booking; "session.title" is not a role.',
     ],
     [
       list("{ model: Booking }"),
@@ -430,6 +444,17 @@ test("addOutgoing on a clock timer writes a list mail; setOutgoingList replaces 
   expect(query.files.spec).toContain(
     "    list:\n      query: churnRisk\n      columns: [session, attendee, status]\n",
   );
+  // A query list changed in another key keeps its query alone.
+  const limited = ok(
+    applyOperation(query.files, "setOutgoingList", {
+      outgoing: "todaysBookings",
+      limit: 5,
+      empty: "send",
+    }),
+  );
+  expect(limited.files.spec).toContain(
+    "    list:\n      query: churnRisk\n      limit: 5\n      columns: [session, attendee, status]\n    empty: send\n",
+  );
   const model = ok(
     applyOperation(query.files, "setOutgoingList", { outgoing: "todaysBookings", list: "Booking" }),
   );
@@ -475,7 +500,7 @@ test("what the operations refuse", () => {
     "A list mail needs a recipient: --recipient a role that reads every Booking (admin).",
   );
   expect(add({ recipient: "owner" })).toBe(
-    "A list mail has no record: name a role that reads every Booking, not owner.",
+    "A list mail has no record: name a role that reads every Booking; owner is not a role.",
   );
   // The auth file says staff reads only its own bookings.
   expect(add({ recipient: "staff" })).toBe(
@@ -579,6 +604,18 @@ test("a list mail follows renamed fields and models and refuses the removal of w
     ),
   ).toBe(
     '"weekAhead" under outgoing wants a value Booking.status no longer has in its list; change or remove it first.',
+  );
+  // The date's type changing is refused, as the reference it goes through would be.
+  expect(
+    refused(
+      applyOperation(added.files, "changeField", {
+        model: "Session",
+        field: "endsAt",
+        type: "date",
+      }),
+    ),
+  ).toBe(
+    '"weekAhead" under outgoing lists Booking records by session.endsAt, whose type is changing; change or remove it first.',
   );
   const renamedValue = ok(
     applyOperation(added.files, "changeField", {

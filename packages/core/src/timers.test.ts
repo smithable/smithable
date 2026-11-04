@@ -144,13 +144,16 @@ test("a timer with two forms, no records, a wrong date, a wrong action or a wron
   expect(one('cron: "0 6 25 * *"', 'cron: "0 25 25 * *"')).toContainEqual(
     expect.stringContaining('the hour field "25" is outside 0–23'),
   );
-  // A clock timer with neither "on" nor "run" only raises its event, for a list mail (reports.md §2.2).
+  // A clock timer with neither "on" nor "run" only raises its event, for a list mail (reports.md
+  // §2.2); one no entry names is warned about, so a mistyped "run" is still caught.
   expect(
     one(
       '    every: monday\n    at: "08:00"\n    run: sendDigest\n',
       '    every: monday\n    at: "08:00"\n',
     ),
-  ).toEqual([]);
+  ).toEqual([
+    'timer-does-nothing: Timer "weeklyDigest" does nothing: it is on a clock with no records, runs no action, and no outgoing entry names it.',
+  ]);
   // A timer may be named like the action it runs; outgoing's when then cannot tell them apart.
   expect(one("    when: remind\n", "    when: publish\n")).toContainEqual(
     expect.stringContaining('is both an action and a timer, so "when" cannot tell which'),

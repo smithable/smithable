@@ -234,6 +234,8 @@ export function listReaderProblem(
   model: ModelIR,
   auth: AuthIR,
 ): { message: string; hint: string } | undefined {
+  // A role's read grant names models (GrantNames), never a condition: a role in `roles` reads
+  // every record. Only the public's read carries a `where`, so it counts only without one.
   const read = modelAccess(model, auth).read;
   if ((read.public && !read.where) || read.roles.includes(role)) return undefined;
   return {

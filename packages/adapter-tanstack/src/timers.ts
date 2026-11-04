@@ -61,7 +61,7 @@ export function timersModule(ir: SpecIR, t: Texts): string {
     const run = action(timer.run);
     // An outgoing entry listens: the tick tells it, for each record.
     const told = ir.outgoing.some((o) => "timer" in o.when && o.when.timer === timer.name);
-    if (told) events = true;
+    if (told && model) events = true;
     const forRecord = model ? recordRun(timer, model, run, told, t, use) : "";
     if (timer.schedule.kind === "record") {
       const m = model as ModelIR;
@@ -118,6 +118,19 @@ const ${camel(timer.name)}Timer: ClockTimer = {
 };
 ${forRecord}`;
     }
+    if (!run)
+      // Neither records nor an action: the timer only raises its event, for a list mail
+      // (docs/design/reports.md §2.2), whose sending is not built yet. The tick takes the run
+      // and does nothing else.
+      return `
+/** ${timer.name}: on its clock, raises its event; nothing to run. */
+const ${camel(timer.name)}Timer: ClockTimer = {
+  clock: ${JSON.stringify(clock)},
+  async run(due) {
+    await attempt({ timer: ${JSON.stringify(timer.name)}, record: 0, due }, undefined, async () => "done");
+  },
+};
+`;
     // A custom action, run once.
     const a = run as ActionIR;
     const names_ = actionNames(a);

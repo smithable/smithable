@@ -1,6 +1,6 @@
 import { isScalar, isSeq, type ParsedNode } from "yaml";
 import { listReaderProblem } from "../access.js";
-import { validateAuth } from "../auth.js";
+import { type AuthIR, validateAuth } from "../auth.js";
 import {
   conditionArgs,
   conditionText,
@@ -346,13 +346,14 @@ function readList(
         queries.map((q) => q.name),
       ),
     };
-  const model = models.find((m) => m.name === (query ? query.returns : modelName));
+  const wanted = query ? query.returns : (modelName as string);
+  const model = models.find((m) => m.name === wanted);
   if (!model)
     return {
-      key: "model",
-      problem: `There is no model named "${modelName}".`,
+      key: query ? "query" : "model",
+      problem: `There is no model named "${wanted}".`,
       hint: didYouMean(
-        modelName ?? "",
+        wanted,
         models.map((m) => m.name),
       ),
     };
@@ -430,13 +431,26 @@ const withinText = (w: NonNullable<OutgoingListIR["within"]>) =>
 
 /**
  * A list mail's recipient: a role (admin), since there is no record whose owner or address could
- * be meant. Whether the role reads every record is the auth file's check (listReaderProblem).
+ * be meant. `roles` are the auth file's when known: a role named like a field is still a role.
+ * Whether the role reads every record is the auth file's check (listReaderProblem).
  */
-function readListRecipient(text: string, model: ModelIR): { role: string } | { problem: string } {
-  const role = /^[a-z][A-Za-z0-9]*$/.test(text) && text !== "owner";
-  if (role && !model.fields.some((f) => f.name === text)) return { role: text };
+function readListRecipient(
+  text: string,
+  model: ModelIR,
+  roles?: ReadonlySet<string> | string[],
+): { role: string } | { problem: string } {
+  const known = roles ? [...roles].includes(text) : undefined;
+  const shaped = /^[a-z][A-Za-z0-9]*$/.test(text) && text !== "owner";
+  if (known || (known === undefined && shaped && !model.fields.some((f) => f.name === text)))
+    return { role: text };
+  const what =
+    text === "owner"
+      ? "owner"
+      : shaped && model.fields.some((f) => f.name === text)
+        ? `"${text}", a field of ${model.name}`
+        : `"${text}"`;
   return {
-    problem: `a list mail has no record: name a role that reads every ${model.name}, not ${text === "owner" ? "owner" : `"${text}"`}.`,
+    problem: `a list mail has no record: name a role that reads every ${model.name}; ${what} is not a role.`,
   };
 }
 
@@ -653,12 +667,10 @@ function listFromArgs(
 ): { list: OutgoingListIR; empty?: "send" } {
   const none = (v: string | undefined) => (v === "none" ? undefined : v);
   const input: ListInput = {
-    // A model given replaces a query and the other way round; both given is said by readList.
-    model: args.list ?? (args.query !== undefined ? undefined : base?.model),
-    query:
-      args.query === "none"
-        ? undefined
-        : (args.query ?? (args.list !== undefined ? undefined : base?.query)),
+    // A model given replaces a query and the other way round (both given is said by readList);
+    // a query list keeps only its query, since its model is the query's.
+    model: args.list ?? (args.query !== undefined || base?.query ? undefined : base?.model),
+    query: args.query ?? (args.list !== undefined ? undefined : base?.query),
     where:
       args.where !== undefined
         ? Object.keys(args.where).length
@@ -696,11 +708,11 @@ function listFromArgs(
  * The recipient of a list mail must read every record of its model (reports.md §2.2): checked
  * against the auth file when the project has one, as the auth file's own check does.
  */
-function checkListReader(auth: YamlEditor | undefined, role: string, model: ModelIR): void {
-  const parsed = auth
-    ? validateAuth({ path: "smithable.auth.yml", text: auth.text }).auth
-    : undefined;
-  const problem = parsed ? listReaderProblem(role, model, parsed) : undefined;
+const authOf = (auth: YamlEditor | undefined) =>
+  auth ? validateAuth({ path: "smithable.auth.yml", text: auth.text }).auth : undefined;
+
+function checkListReader(auth: AuthIR | undefined, role: string, model: ModelIR): void {
+  const problem = auth ? listReaderProblem(role, model, auth) : undefined;
   if (problem) throw new OperationError(`${capital(problem.message)} ${problem.hint}`);
 }
 
@@ -777,9 +789,14 @@ const addOutgoing: Operation<
         throw new OperationError(
           `A list mail needs a recipient: --recipient a role that reads every ${model.name} (admin).`,
         );
-      const r = readListRecipient(recipient, model);
+      const known = authOf(auth);
+      const r = readListRecipient(
+        recipient,
+        model,
+        known?.roles.map((x) => x.name),
+      );
       if ("problem" in r) throw new OperationError(capital(r.problem));
-      checkListReader(auth, r.role, model);
+      checkListReader(known, r.role, model);
       value.to = "mail";
       value.recipient = recipient;
       value.list = listValue(list);
@@ -832,7 +849,7 @@ const addOutgoing: Operation<
 const setOutgoingList: Operation<{ outgoing: string } & ListArgs> = {
   name: "setOutgoingList",
   summary:
-    "Change what a list mail shows: its records (--list Model or --query), their condition, the date and how far it reaches, the columns, how many, and whether a quiet day is mailed. A given key replaces the old; none takes where, date, within or limit away.",
+    "Change what a list mail shows: its records (--list Model replaces a query, --query a model; a query list takes no where, date or within), their condition, the date and how far it reaches, the columns, how many, and whether a quiet day is mailed. A given key replaces the old; {} takes where away, none the date, within or limit.",
   schema: {
     type: "object",
     required: ["outgoing"],
@@ -860,7 +877,7 @@ const setOutgoingList: Operation<{ outgoing: string } & ListArgs> = {
     const { list, empty } = listFromArgs(args, ir, o.list);
     const model = ir.models.find((m) => m.name === list.model) as ModelIR;
     if (o.recipient?.kind === "role" && list.model !== o.list.model)
-      checkListReader(auth, o.recipient.role, model);
+      checkListReader(authOf(auth), o.recipient.role, model);
     const at = ["outgoing", outgoing];
     spec.set([...at, "list"], listValue(list));
     if (args.empty !== undefined) {
@@ -1030,10 +1047,13 @@ export const outgoingSection: SpecSection<"outgoing"> = {
     },
   },
   parse(ctx, node, parsed) {
-    if (node === undefined) return [];
+    const out: OutgoingIR[] = [];
+    if (node === undefined) {
+      idleClockTimers(ctx, parsed.timers ?? [], out);
+      return out;
+    }
     const models = parsed.models ?? [];
     const actions = parsed.actions ?? [];
-    const out: OutgoingIR[] = [];
     for (const { key, keyNode, value } of mapEntries(ctx, node, `"outgoing"`) ?? []) {
       if (!FIELD_NAME_PATTERN.test(key)) {
         ctx.error(keyNode, "invalid-name", nameRule("outgoing", key));
@@ -1224,6 +1244,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       }
       out.push(entry);
     }
+    idleClockTimers(ctx, parsed.timers ?? [], out);
     return out;
   },
   follow(spec, effect, ir) {
@@ -1333,6 +1354,23 @@ export const outgoingSection: SpecSection<"outgoing"> = {
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
+ * A clock timer with neither "on" nor "run" is for a list mail; one no entry names does nothing,
+ * which is said (a mistyped "run" would otherwise go quiet).
+ */
+function idleClockTimers(ctx: ParseContext, timers: TimerIR[], out: OutgoingIR[]): void {
+  for (const t of timers) {
+    if (t.on || t.run || t.schedule.kind === "record") continue;
+    if (out.some((o) => "timer" in o.when && o.when.timer === t.name)) continue;
+    ctx.warning(
+      ctx.at(`timer:${t.name}`),
+      "timer-does-nothing",
+      `Timer "${t.name}" does nothing: it is on a clock with no records, runs no action, and no outgoing entry names it.`,
+      `Give it "run" (an action), "on" (records whose event it raises), or an outgoing entry with "list" that names it (a list mail).`,
+    );
+  }
+}
+
+/**
  * An entry on a clock timer: a list mail (reports.md §2.2). It carries `list` and may carry
  * `empty`; the record's keys say nothing; it goes by mail to a role.
  */
@@ -1427,7 +1465,7 @@ function readListMail(
   }
   const recipientText = readString(ctx, recipientEntry.value, `"recipient" of ${where}`);
   if (recipientText === undefined) return undefined;
-  const r = readListRecipient(recipientText, model as ModelIR);
+  const r = readListRecipient(recipientText, model as ModelIR, ctx.defined("role"));
   if ("problem" in r) {
     ctx.error(recipientEntry.value, "invalid-outgoing", `${capital(where)}: ${r.problem}`);
     return undefined;
@@ -1482,11 +1520,26 @@ function followList(
       );
     if (own && list.where?.[effect.from] !== undefined)
       spec.renameKey([...at, "where", effect.from], effect.to);
-    if (own && first === effect.from)
-      spec.set([...at, "when"], [effect.to, ...(second ? [second] : [])].join("."));
-    else if (second !== undefined && refModel === effect.model && second === effect.from)
-      spec.set([...at, "when"], `${first}.${effect.to}`);
+    // Both names may be the renamed field (a reference to the model itself, parent.parent).
+    const newFirst = own && first === effect.from ? effect.to : first;
+    const newSecond =
+      second !== undefined && refModel === effect.model && second === effect.from
+        ? effect.to
+        : second;
+    if (first !== undefined && (newFirst !== first || newSecond !== second))
+      spec.set([...at, "when"], [newFirst, ...(newSecond ? [newSecond] : [])].join("."));
   }
+  // The date's type changed, or the reference it goes through: the list's "when" may no longer
+  // hold, so it is changed first.
+  if (
+    effect.kind === "change-field" &&
+    first !== undefined &&
+    ((list.model === effect.model && first === effect.field) ||
+      (second !== undefined && refModel === effect.model && second === effect.field))
+  )
+    return {
+      refusal: `"${o.name}" under outgoing lists ${list.model} records by ${list.when?.path.join(".")}, whose type is changing; change or remove it first.`,
+    };
   if (effect.kind === "remove-field") {
     if (list.model === effect.model) {
       if (list.columns.includes(effect.field) || list.where?.[effect.field] !== undefined)

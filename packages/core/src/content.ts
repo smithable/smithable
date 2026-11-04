@@ -917,8 +917,9 @@ function checkOutgoingTexts(
     if (!isScalar(value) || typeof value.value !== "string") continue;
     const where = `"${key}" of outgoing "${name}"`;
     for (const path of new Set(placeholdersOf(value.value))) {
-      // A link or a name reveals nothing of the record, nor do a list's count and day; the rest does.
-      if (!["link", "by", "count", "date"].includes(path)) any = true;
+      // A link or a name reveals nothing of the record, nor do a list mail's count and day; the rest does.
+      const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by"];
+      if (!quiet.includes(path)) any = true;
       const problem = placeholderProblem(path, entry, ir, auth);
       if (!problem) continue;
       if (problem.warning)
