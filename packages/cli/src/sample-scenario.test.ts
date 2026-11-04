@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { PEOPLE_MAX } from "@smithable/core";
 import { expect, test } from "vitest";
 import { git } from "./git.js";
 import { type ScenarioControls, sampleRunner } from "./sample-run.js";
@@ -10,6 +11,7 @@ import {
   projectScenarioContext,
   readScenario,
   type ScenarioContext,
+  validateScenario,
   writeScenario,
 } from "./sample-scenario.js";
 import { tempDir } from "./test-dir.js";
@@ -34,9 +36,11 @@ async function fixture() {
   db.exec(`VACUUM INTO '${snapshot}'`);
   const digest = hash(readFileSync(snapshot));
   let acts = 0,
+    moveReads = 0,
     available = true;
   const door = async (path: string, body?: unknown) => {
-    if (path.startsWith("moves?"))
+    if (path.startsWith("moves?")) {
+      moveReads++;
       return Response.json({
         now: clock,
         moves: available
@@ -50,6 +54,7 @@ async function fixture() {
             ]
           : [],
       });
+    }
     acts++;
     const act = body as { user: string; values: { places: number } };
     if (!Number.isInteger(act.values.places) || act.values.places < 1 || act.values.places > 4)
@@ -70,10 +75,10 @@ async function fixture() {
       dependencies: { node: process.versions.node },
     },
   });
-  const runner = (seed = 7) =>
+  const runner = (seed = 7, loadPeople = () => PEOPLE) =>
     sampleRunner({
       door,
-      load: () => ({ people: PEOPLE, summary: "" }),
+      load: () => ({ people: loadPeople(), summary: "" }),
       providers: () => [],
       changed: () => {},
       seed,
@@ -152,6 +157,7 @@ async function fixture() {
     close: () => db.close(),
     resets: () => resets,
     acts: () => acts,
+    moveReads: () => moveReads,
     setClock: (value: string) => {
       clock = value;
     },
@@ -399,4 +405,165 @@ test("project scenario identity is refreshed from source while reset data stays 
   expect(custom.specRevision).toBe(before.specRevision);
   writeFileSync(join(dir, "smithable.yml"), "schema v2");
   expect(projectScenarioContext(dir, settings).specRevision).not.toBe(before.specRevision);
+});
+
+test("record targets reject empty, ambiguous and empty-list identities", async () => {
+  const f = await fixture();
+  try {
+    for (const target of [{}, { record: 1, records: [2] }, { records: [] }]) {
+      const bad = structuredClone(f.plan);
+      const first = bad.steps[0];
+      if (!first) throw new Error("Missing fixture step");
+      first.action.target = target;
+      expect(() => validateScenario(bad)).toThrow("target ids");
+    }
+  } finally {
+    f.close();
+  }
+});
+test("clearing an admitted scenario never permits random work on its runner", async () => {
+  const f = await fixture();
+  try {
+    const next = f.runner();
+    await next.replayScenario(f.plan, f.controls);
+    next.clear();
+    expect(() => next.start(true)).toThrow("fresh runner");
+    await expect(next.step()).rejects.toThrow("fresh runner");
+  } finally {
+    f.close();
+  }
+});
+
+test("a removed replay actor is refused without skipping to another action", async () => {
+  const f = await fixture();
+  try {
+    let people = PEOPLE;
+    const next = f.runner(7, () => people);
+    await next.replayScenario(f.plan, f.controls);
+    people = PEOPLE.slice(1);
+    next.state();
+    const acts = f.acts();
+    await next.step();
+    expect(next.scenarioResult()).toMatchObject({ status: "failed", checked: 0 });
+    expect(f.acts()).toBe(acts);
+  } finally {
+    f.close();
+  }
+});
+test("scenario actor rosters beyond the runner capacity fail before resetting data", async () => {
+  const f = await fixture();
+  try {
+    const first = PEOPLE[0];
+    if (!first) throw new Error("Missing actor fixture");
+    const people = Array.from({ length: PEOPLE_MAX + 1 }, (_, i) => ({
+      ...first,
+      id: `sample-${i}`,
+    }));
+    const plan = structuredClone(f.plan);
+    plan.context.actors = people.map(({ id, role }) => ({ id, role }));
+    for (const step of plan.steps) step.action.id = "sample-0";
+    const next = f.runner(7, () => people);
+    await expect(
+      next.replayScenario(plan, { ...f.controls, current: () => plan.context }),
+    ).rejects.toThrow("capacity");
+    expect(f.resets()).toBe(0);
+  } finally {
+    f.close();
+  }
+});
+
+test("pause during clock preparation performs no further door requests", async () => {
+  const f = await fixture();
+  try {
+    let release!: () => void, entered!: () => void;
+    const gate = new Promise<void>((done) => {
+      release = done;
+    });
+    const began = new Promise<void>((done) => {
+      entered = done;
+    });
+    const next = f.runner();
+    await next.replayScenario(f.plan, {
+      ...f.controls,
+      clock: async () => {
+        entered();
+        await gate;
+      },
+    });
+    const reads = f.moveReads();
+    const pending = next.step();
+    await began;
+    next.pause();
+    release();
+    await pending;
+    expect(f.moveReads()).toBe(reads);
+    expect(next.scenarioResult()?.status).toBe("failed");
+  } finally {
+    f.close();
+  }
+});
+
+test("clear fences late clock errors and pending reset results", async () => {
+  const f = await fixture();
+  try {
+    let reject!: (error: Error) => void, entered!: () => void;
+    const gate = new Promise<void>((_, fail) => {
+      reject = fail;
+    });
+    const began = new Promise<void>((done) => {
+      entered = done;
+    });
+    const next = f.runner();
+    await next.replayScenario(f.plan, {
+      ...f.controls,
+      clock: async () => {
+        entered();
+        await gate;
+      },
+    });
+    const pending = next.step();
+    await began;
+    next.clear();
+    reject(new Error("late clock failure"));
+    await pending;
+    expect(next.log()).toEqual([]);
+    expect(next.scenarioResult()).toBeUndefined();
+    let release!: () => void;
+    const resetGate = new Promise<void>((done) => {
+      release = done;
+    });
+    const another = f.runner();
+    const preparing = another.replayScenario(f.plan, {
+      ...f.controls,
+      reset: async (snapshot) => {
+        await resetGate;
+        return f.controls.reset(snapshot);
+      },
+    });
+    const cancelled = expect(preparing).rejects.toThrow("cancelled");
+    another.clear();
+    release();
+    await cancelled;
+    expect(another.scenarioResult()).toBeUndefined();
+  } finally {
+    f.close();
+  }
+});
+test("concurrent step requests preserve scenario actor order", async () => {
+  const f = await fixture();
+  try {
+    const next = f.runner();
+    await next.replayScenario(f.plan, f.controls);
+    await Promise.all([next.step(), next.step()]);
+    expect(next.scenarioResult()).toMatchObject({ status: "running", checked: 2 });
+    expect(f.rows()).toEqual([
+      { actor: "sample-alice", places: 2 },
+      { actor: "sample-bob", places: 3 },
+    ]);
+    const bad = structuredClone(f.plan);
+    if (bad.steps[0]) bad.steps[0].action.kind = "delete";
+    expect(() => validateScenario(bad)).toThrow("record action target");
+  } finally {
+    f.close();
+  }
 });

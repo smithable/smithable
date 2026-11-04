@@ -58,7 +58,7 @@ jobs:
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'full-ci') }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          engine='^(packages/|apps/|examples/|scripts/(test-[^/]*|booking-assurance-calibration|release-review-browser\.test|scenario-clock-http\.test|upgrade-flow|staged-upgrade\.test)\.mjs$|scripts/ci-result(\.test\.mjs|\.sh)$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
+          engine='^(packages/|apps/|examples/|scripts/(test-[^/]*|booking-assurance-calibration|release-review-browser\.test|scenario-clock-http\.test|incoming-attachment-http\.test|upgrade-flow|staged-upgrade\.test)\.mjs$|scripts/ci-result(\.test\.mjs|\.sh)$|scripts/embed\.mjs$|package\.json$|pnpm-lock\.yaml$|\.github/workflows/|\.github/actions/)'
           if [ "$GITHUB_EVENT_NAME" = schedule ]; then
             # The scheduled run before this one (this one is listed first, still running).
             last=$(gh run list --workflow ci.yml --event schedule --limit 2 --json headSha,conclusion \

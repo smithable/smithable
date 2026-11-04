@@ -1,7 +1,7 @@
-import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { expect, test } from "vitest";
 import { backup, restore } from "./backup.js";
 import { tempDir } from "./test-dir.js";

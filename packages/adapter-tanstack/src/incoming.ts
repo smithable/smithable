@@ -177,12 +177,13 @@ import { and, ${reply ? "desc, " : ""}eq, gt${reply ? ", inArray" : ""} } from "
 import { db } from "#/db";
 import { incomingSeen${reply ? ", mailThreads" : ""} } from "#/db/schema";
 import { AccessDenied, type Viewer } from "#/kit/access";
+import { boundedBody, BodyLimit } from "#/kit/bounded-body";
 ${
   n && model
     ? `import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${n.schema} } from "#/generated/${kebab(model.name)}.schema";`
     : `import { handle } from "#/custom/incoming/${kebab(incoming.name)}";`
-}${reply?.imports ?? ""}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${saves ? '\nimport { BadFile, deleteFile, FILE_MAX_BYTES, release, reserveUpload, saveFile, scanned, type StoredFile } from "#/kit/uploads";' : ""}
+}${reply?.imports ?? ""}${usesF ? '\nimport { F } from "#/kit/formula";' : ""}${saves ? '\nimport { BadFile, FILE_MAX_BYTES, release, reserveUpload, saveFile, scanned, type StoredFile } from "#/kit/uploads";\nimport { discardUploads, storeUpload } from "#/kit/receipts.server";' : ""}
 
 const NAME = ${JSON.stringify(incoming.name)};
 const DAY = 86_400_000;
@@ -232,25 +233,31 @@ const bodyOf = (mail: Mail) =>
         saves
           ? `
 /** Each attachment checked and kept as an upload is; one too large or refused is the answer instead. */
-async function saved(mail: Mail, model: string, uses: (file: string) => boolean): Promise<StoredFile[] | Response> {
-  const files: StoredFile[] = [];
+async function saved(mail: Mail, model: string, field: string, uses: (file: string) => boolean): Promise<(StoredFile & { receipt: string })[] | Response> {
+  const files: (StoredFile & { receipt: string })[] = [];
   const parts = Array.isArray(mail.attachments) ? mail.attachments : [];
   if (parts.length > 10) return answer(413, { error: "Too many attachments (over 10)." });
   for (const one of parts) {
-    const { name, data } = one as { name?: unknown; data?: unknown };
-    const bytes = Buffer.from(text(data), "base64");
+    const { name, data } = (one && typeof one === "object" ? one : {}) as { name?: unknown; data?: unknown };
+    const encoded = text(data);
+    if (encoded.length > Math.ceil(FILE_MAX_BYTES / 3) * 4 + 4) {
+      discardUploads(files, uses);
+      return answer(413, { error: "An attachment is too large." });
+    }
+    const bytes = Buffer.from(encoded, "base64");
     if (bytes.byteLength === 0) continue;
     let held: Awaited<ReturnType<typeof reserveUpload>>;
     try {
       held = bytes.byteLength <= FILE_MAX_BYTES ? await reserveUpload(bytes.byteLength) : undefined;
       if (!held) {
-        for (const f of files) deleteFile(f, uses(f.file));
+        discardUploads(files, uses);
         return answer(413, { error: \`\${text(name) || "An attachment"} is too large or storage is full.\` });
       }
       await scanned(bytes);
-      files.push(saveFile(model, bytes, text(name) || "attachment", held));
+      files.push(storeUpload(caller.id, model, field, uses,
+        () => saveFile(model, bytes, text(name) || "attachment", held)));
     } catch (error) {
-      for (const f of files) deleteFile(f, uses(f.file));
+      discardUploads(files, uses);
       if (error instanceof BadFile) return answer(422, { error: error.message });
       throw error;
     } finally {
@@ -280,22 +287,34 @@ export const Route = createFileRoute("/incoming/${incoming.name}")({
           console.error("Incoming call failed: ${incomingSecret(incoming)} is not set.");
           return answer(401, { error: "Wrong secret or signature." });
         }
-        const raw = await request.text();
         const given = request.headers.get(${JSON.stringify(header)}) ?? "";
-        ${
-          incoming.signed
-            ? `${
-                stamp
-                  ? `const stamp = request.headers.get(${JSON.stringify(stamp.toLowerCase())}) ?? "";
+        if (!given) return answer(401, { error: "Wrong secret or signature." });
+${
+  !incoming.signed
+    ? `        const expected = ${header === "authorization" ? "`Bearer ${secret}`" : "secret"};
+        if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });`
+    : ""
+}
+        let raw: string;
+        try { raw = new TextDecoder().decode(await boundedBody(request, ${saves ? 135_000_000 : 1_000_000})); }
+        catch (error) {
+          if (error instanceof BodyLimit) return answer(413, { error: "The incoming body is too large or could not be read in time." });
+          throw error;
+        }
+${
+  incoming.signed
+    ? `${
+        stamp
+          ? `const stamp = request.headers.get(${JSON.stringify(stamp.toLowerCase())}) ?? "";
         // The call's time, seconds since 1970 (ten digits) or milliseconds (thirteen): over five minutes off is a replay or a wrong clock.
         const sent = /^\\d{10}$|^\\d{13}$/.test(stamp) ? Number(stamp) * (stamp.length === 10 ? 1000 : 1) : Number.NaN;
         if (Number.isNaN(sent) || Math.abs(Date.now() - sent) > 300_000) return answer(401, { error: "Wrong secret or signature." });
         `
-                  : ""
-              }const expected = \`${literal(incoming.signed.prefix)}\${createHmac("sha256", secret).update(${signedCode(incoming.signed.text)}).digest("hex")}\`;`
-            : `const expected = ${header === "authorization" ? "`Bearer ${secret}`" : "secret"};`
-        }
-        if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });
+          : ""
+      }const expected = \`${literal(incoming.signed.prefix)}\${createHmac("sha256", secret).update(${signedCode(incoming.signed.text)}).digest("hex")}\`;`
+    : ""
+}
+${incoming.signed ? '        if (!same(given, expected)) return answer(401, { error: "Wrong secret or signature." });' : ""}
 ${
   incoming.body === "form"
     ? `        let body: unknown;
@@ -355,7 +374,7 @@ ${
           ? `const mail = body as Mail;
 ${reply?.block ?? ""}${
   attachmentsField
-    ? `        const files = await saved(mail, ${JSON.stringify(kebab(model?.name ?? ""))}, ${n.data}.uses);
+    ? `        const files = await saved(mail, ${JSON.stringify(kebab(model?.name ?? ""))}, ${JSON.stringify(attachmentsField.name)}, ${n.data}.uses);
         if (files instanceof Response) return files;
 `
     : ""
@@ -365,7 +384,7 @@ ${reply?.block ?? ""}${
       ${lines.map((l) => `          ${l}`).join("\n")}
       });
       if (!parsed.success) {
-      ${attachmentsField ? `          for (const f of files) deleteFile(f, ${n.data}.uses(f.file));\n` : ""}          return answer(422, { error: parsed.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
+      ${attachmentsField ? `          discardUploads(files, ${n.data}.uses);\n` : ""}          return answer(422, { error: parsed.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
       }
       try {
         const made = ${
@@ -377,7 +396,7 @@ ${reply?.block ?? ""}${
         done();
         return answer(201, { id: made.id });
       } catch (error) {
-      ${attachmentsField ? `          for (const f of files) deleteFile(f, ${n.data}.uses(f.file));\n` : ""}          if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
+      ${attachmentsField ? `          discardUploads(files, ${n.data}.uses);\n` : ""}          if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
         console.error("Incoming call failed:", error);
         return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
       }`
@@ -438,7 +457,7 @@ function replyParts(incoming: IncomingIR, owner: ModelIR, ir: SpecIR, t: Texts) 
         if (thread !== undefined) {
 ${
   files
-    ? `          const files = await saved(mail, ${JSON.stringify(kebab(model.name))}, ${rn.data}.uses);
+    ? `          const files = await saved(mail, ${JSON.stringify(kebab(model.name))}, ${JSON.stringify(files.name)}, ${rn.data}.uses);
           if (files instanceof Response) return files;
 `
     : ""
@@ -446,7 +465,7 @@ ${
 ${lines.map((l) => `            ${l}`).join("\n")}
           });
           if (!joining.success) {
-${files ? `            for (const f of files) deleteFile(f, ${rn.data}.uses(f.file));\n` : ""}            return answer(422, { error: joining.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
+${files ? `            discardUploads(files, ${rn.data}.uses);\n` : ""}            return answer(422, { error: joining.error.issues.map((i) => \`\${i.path.join(".")}: \${i.message}\`).join("; ") });
           }
           const to = thread;
           try {
@@ -469,7 +488,7 @@ ${update.map((l) => `                  ${l}`).join("\n")}
             done();
             return answer(201, { id: made.id, thread: to });
           } catch (error) {
-${files ? `            for (const f of files) deleteFile(f, ${rn.data}.uses(f.file));\n` : ""}            if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
+${files ? `            discardUploads(files, ${rn.data}.uses);\n` : ""}            if (error instanceof AccessDenied) return answer(403, { error: "This call's role may not add one." });
             console.error("Incoming call failed:", error);
             return answer(422, { error: error instanceof Error && !/SQLITE_|Drizzle|Failed query/i.test(error.message) ? error.message : "The call was refused." });
           }

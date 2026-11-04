@@ -80,7 +80,10 @@ test("generated development clock freezes exact replay time and refuses unauthen
     assert.equal(moves.status, 200);
     assert.equal((await moves.json()).now, at);
     assert.equal((await post(null)).status, 400);
-    assert.equal((await post({ at: "1970-01-01T00:00:00.000Z" })).status, 400);
+    const historical = await post({ at: "1970-01-01T00:00:00.000Z" });
+    assert.equal(historical.status, 200);
+    assert.equal((await historical.json()).now, "1970-01-01T00:00:00.000Z");
+    assert.equal((await post({ at: "Oct 29, 2026" })).status, 400);
     const resumed = await post({ offset: 0 });
     assert.equal(resumed.status, 200);
     assert.ok(Date.parse((await resumed.json()).now) > Date.parse(at) + 1800000);

@@ -103,3 +103,6 @@ The Studio phase also runs `pnpm test:release-review`: a disposable project and 
 
 
 `test:release-review` also exercises the generated development clock over authenticated HTTP. Versioned scenario/reset/clock/maintenance tests run with the CLI units. The CRM app gate reuses `scripts/upgrade-flow.mjs`; `node --test scripts/staged-upgrade.test.mjs` provides the same staged-upgrade check in isolation when working on maintenance. It does not add a second upgrade run to the gate.
+
+
+The booking assurance command also runs the disposable incoming-attachment HTTP fixture: it typechecks a fresh support app, creates mail and a threaded reply, and checks literal persisted fields and attachment bytes. The booking app flow likewise verifies a saved incoming attachment. Stream overflow/deadline/cancellation and concurrent failed-mail cleanup have focused runtime regressions.

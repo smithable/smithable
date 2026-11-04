@@ -732,7 +732,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
 import { createFileRoute } from "@tanstack/react-router";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { BadInput, bytesOf, fileCall, NotFound } from "#/kit/api.server";
-import { receiptFor } from "#/kit/receipts.server";
+import { bodySize, BodyLimit } from "#/kit/bounded-body";
+import { storeUpload } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
@@ -777,7 +778,13 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           // The app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
-          const held = await reserveUpload(Number(request.headers.get("content-length") ?? 0)).catch((error) => {
+          let size: number;
+          try { size = bodySize(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES); }
+          catch (error) {
+            if (error instanceof BodyLimit) throw new BadInput("The file body exceeds its limit or its length is invalid.");
+            throw error;
+          }
+          const held = await reserveUpload(size).catch((error) => {
             if (error instanceof BadFile) throw new BadInput(error.message);
             throw error;
           });
@@ -794,7 +801,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
             }
             const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
             try {
-              stored = field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name"), held) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"), false, held);
+              stored = storeUpload(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, ${n.data}.uses,
+                () => field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name"), held) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"), false, held));
             } catch (error) {
               if (error instanceof BadFile || error instanceof BadPicture) throw new BadInput(error.message);
               throw error;
@@ -802,7 +810,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           } finally {
             release(held);
           }
-          const sent = { ...(stored as { file: string }), receipt: receiptFor(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, (stored as { file: string }).file) };
+          const sent = stored as { file: string; receipt: string };
           try {
             await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
           } catch (error) {

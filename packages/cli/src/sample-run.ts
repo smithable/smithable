@@ -197,9 +197,11 @@ export function sampleRunner(options: {
   const scenarioContext = () => {
     if (!scenario) return;
     compatibleScenario(scenario.plan, scenario.controls.current());
-    const actual = options
-      .load()
-      .people.map(({ id, role }) => ({ id, role }))
+    const people = options.load().people;
+    if (people.length > PEOPLE_MAX)
+      throw new Error("Scenario actor roster exceeds runner capacity.");
+    const actual = people
+      .map(({ id, role }) => ({ id, role }))
       .sort((a, b) => a.id.localeCompare(b.id));
     const expected = [...scenario.plan.context.actors].sort((a, b) => a.id.localeCompare(b.id));
     if (canonical(actual) !== canonical(expected))
@@ -308,6 +310,7 @@ export function sampleRunner(options: {
   /** One turn of one person: the moves open now, one picked, performed; the answer in the feed. */
   async function turn(person: SamplePerson, begun: number): Promise<void> {
     const wasScenario = !!scenario;
+    const initialScenario = scenario;
     if (scenario) {
       if (scenarioResult?.status !== "running") return;
       try {
@@ -320,6 +323,7 @@ export function sampleRunner(options: {
         }
         await scenario.controls.clock(step.action.clock as string);
       } catch (error) {
+        if (scenario !== initialScenario || begun !== era) return;
         scenarioResult = {
           id: scenario.plan.id,
           status: "failed",
@@ -330,11 +334,13 @@ export function sampleRunner(options: {
         return;
       }
     }
+    if (begun !== era) return;
     const n = turns++;
     const turnSeed = seed + n;
     const open = await options
       .door(`moves?user=${encodeURIComponent(person.id)}`)
       .catch(() => undefined);
+    if (begun !== era) return;
     if (!open?.ok) {
       stop(
         open?.status === 404
@@ -347,6 +353,7 @@ export function sampleRunner(options: {
       now: string;
       moves: OpenMove[];
     };
+    if (begun !== era) return;
     // A page opened changes nothing anyone sees: the moves are the ones that do.
     const moves = all.filter((m) => m.kind !== "open");
     const at = new Date(appNow);
@@ -374,7 +381,8 @@ export function sampleRunner(options: {
     /** The model was asked this turn: its answer has counted against the hour already. */
     let asked = false;
     // A replay's turn is its own person's; the entry is taken once the move is made.
-    const replay = replaying[0]?.id === person.id ? replaying[0] : undefined;
+    const action = scenario ? scenario.plan.steps[scenario.index]?.action : replaying[0];
+    const replay = action?.id === person.id ? action : undefined;
     if (scenario && !replay) {
       stop("Scenario actor or action order is incompatible.");
       return;
@@ -474,7 +482,7 @@ export function sampleRunner(options: {
           move.kind === "delete" ||
           move.kind === "merge" ||
           move.kind === "split" ||
-          "records" in move) &&
+          !!move.records?.length) &&
         !replay?.target
       ) {
         stop("Scenario record target is missing.");
@@ -581,9 +589,17 @@ export function sampleRunner(options: {
   const queued = (person: SamplePerson) => {
     const begun = era;
     chain = chain
-      .then(() => turn(person, begun))
+      .then(() => {
+        if (begun !== era) return;
+        const actor = scenario
+          ? state.people.find((p) => p.id === scenario?.plan.steps[scenario.index]?.action.id)
+          : person;
+        if (!actor) return stop("Scenario actor is unavailable.");
+        return turn(actor, begun);
+      })
       // A turn that broke (an answer that was not JSON) is a finding; the next turn goes on.
       .catch((error: unknown) => {
+        if (begun !== era) return;
         if (scenario) stop((error as Error)?.message ?? String(error));
         line(
           person,
@@ -693,11 +709,14 @@ export function sampleRunner(options: {
       if (!state.people.length && !load())
         return stop("No sample users yet: add one, or ask Smith to add some.");
       // A logged person no longer among the sample users: their moves are passed over.
-      while (replaying[0] && !state.people.some((p) => p.id === replaying[0]?.id))
+      while (!scenario && replaying[0] && !state.people.some((p) => p.id === replaying[0]?.id))
         replaying.shift();
       const why = capped();
       if (why) return stop(why);
-      const due = (state.people.find((p) => p.id === replaying[0]?.id) ??
+      const actorId = scenario ? scenario.plan.steps[scenario.index]?.action.id : replaying[0]?.id;
+      if (scenario && !state.people.some((p) => p.id === actorId))
+        return stop("Scenario actor is unavailable.");
+      const due = (state.people.find((p) => p.id === actorId) ??
         [...state.people].sort(
           (a, b) => (next.get(a.id) ?? 0) - (next.get(b.id) ?? 0),
         )[0]) as SamplePerson;
@@ -735,7 +754,8 @@ export function sampleRunner(options: {
         scenarioContext();
         if (era !== replayEra) throw new Error("Scenario reset was cancelled.");
       } catch (error) {
-        scenarioResult = { id: plan.id, status: "failed", checked: 0, message: String(error) };
+        if (scenario?.plan === plan && era === replayEra)
+          scenarioResult = { id: plan.id, status: "failed", checked: 0, message: String(error) };
         throw error;
       } finally {
         scenarioPreparing = false;
@@ -764,7 +784,6 @@ export function sampleRunner(options: {
       known.clear();
       replaying = [];
       scenario = undefined;
-      scenarioAttempted = false;
       scenarioResult = undefined;
       for (const p of state.people) delete p.last;
       changed();

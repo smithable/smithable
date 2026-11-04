@@ -257,3 +257,15 @@ test("continuous writes exhaust exactly three scan attempts and refuse admission
   expect(spare).toBeTruthy();
   kit.release(spare);
 });
+
+test("identical upload bytes remain isolated by model, including deletion", () => {
+  const { dir, kit, bytes } = fixture();
+  const first = kit.saveFile("alpha", bytes, "a.txt", kit.roomFor(bytes.length));
+  const second = kit.saveFile("beta", bytes, "b.txt", kit.roomFor(bytes.length));
+  expect(first.file).not.toBe(second.file);
+  expect(fs.readFileSync(join(dir, "uploads", first.file))).toEqual(Buffer.from(bytes));
+  expect(fs.readFileSync(join(dir, "uploads", second.file))).toEqual(Buffer.from(bytes));
+  kit.deleteFile(first, false);
+  expect(fs.existsSync(join(dir, "uploads", first.file))).toBe(false);
+  expect(fs.readFileSync(join(dir, "uploads", second.file))).toEqual(Buffer.from(bytes));
+});

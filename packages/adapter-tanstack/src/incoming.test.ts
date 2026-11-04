@@ -107,8 +107,10 @@ test("a mail becomes a record: sender, subject and text to their fields, attachm
   expect(route).toContain("title: text(mail.subject),");
   expect(route).toContain("body: bodyOf(mail),");
   expect(route).toContain("attachments: files,");
-  expect(route).toContain('const files = await saved(mail, "request", requestData.uses);');
-  expect(route).toContain('files.push(saveFile(model, bytes, text(name) || "attachment", held));');
+  expect(route).toContain(
+    'const files = await saved(mail, "request", "attachments", requestData.uses);',
+  );
+  expect(route).toContain("files.push(storeUpload(caller.id, model, field, uses,");
   expect(route).toContain(
     "held = bytes.byteLength <= FILE_MAX_BYTES ? await reserveUpload(bytes.byteLength) : undefined;",
   );

@@ -152,14 +152,18 @@ export function validateScenario(value: unknown): SampleScenario {
       c.actors.some((actor) => actor.id === a.id && actor.role === a.actorRole),
       "actor is incompatible",
     );
+    if (["change", "delete", "merge", "split"].includes(String(a.kind)))
+      assert(a.target !== undefined, "record action target is required");
     if (a.target !== undefined)
       assert(
         object(a.target) &&
+          Object.keys(a.target).length === 1 &&
           Object.entries(a.target).every(([key, v]) =>
             key === "record"
               ? Number.isSafeInteger(v) && Number(v) > 0
               : key === "records" &&
                 Array.isArray(v) &&
+                v.length > 0 &&
                 v.length <= 1000 &&
                 v.every((id) => Number.isSafeInteger(id) && id > 0),
           ),

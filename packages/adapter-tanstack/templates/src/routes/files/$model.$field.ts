@@ -5,9 +5,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { UPLOADS } from "#/generated/uploads";
 import { allows } from "#/kit/access";
+import { BodyLimit, bodySize, boundedBody } from "#/kit/bounded-body";
 import { writeAllowed } from "#/kit/limit";
 import { log } from "#/kit/log.server";
-import { receiptFor } from "#/kit/receipts.server";
+import { storeUpload } from "#/kit/receipts.server";
 import {
   BadFile,
   BadPicture,
@@ -42,33 +43,34 @@ export const Route = createFileRoute("/files/$model/$field")({
         let held: UploadReservation | undefined;
         try {
           writeAllowed(viewer, request.headers);
-          const length = Number(request.headers.get("content-length") ?? 0);
+          const maximum = entry.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES;
+          const length = bodySize(request, maximum);
           // The app's storage is full (UPLOADS_MAX_BYTES): told before anything is read.
           held = await reserveUpload(length);
           if (!held) return new Response(w.storageFull, { status: 507 });
           if (entry.kind === "file") {
-            if (length > FILE_MAX_BYTES) throw new BadFile(w.fileTooLarge);
-            const bytes = new Uint8Array(await request.arrayBuffer());
+            const bytes = await boundedBody(request, maximum);
             await scanned(bytes);
             const name = decodeURIComponent(request.headers.get("x-file-name") ?? "");
-            const stored = saveFile(params.model, bytes, name, held);
-            // The receipt that lets this person put it on a record of this field.
-            return Response.json({
-              ...stored,
-              receipt: receiptFor(viewer?.id ?? null, params.model, params.field, stored.file),
-            });
+            return Response.json(
+              storeUpload(viewer?.id ?? null, params.model, params.field, entry.data.uses, () =>
+                saveFile(params.model, bytes, name, held),
+              ),
+            );
           }
-          if (length > PICTURE_MAX_BYTES) throw new BadPicture(w.pictureTooLarge);
-          const bytes = new Uint8Array(await request.arrayBuffer());
+          const bytes = await boundedBody(request, maximum);
           await scanned(bytes);
-          const { file, width, height } = savePicture(params.model, bytes, "", false, held);
-          return Response.json({
-            file,
-            width,
-            height,
-            receipt: receiptFor(viewer?.id ?? null, params.model, params.field, file),
-          });
+          return Response.json(
+            storeUpload(viewer?.id ?? null, params.model, params.field, entry.data.uses, () =>
+              savePicture(params.model, bytes, "", false, held),
+            ),
+          );
         } catch (error) {
+          if (error instanceof BodyLimit)
+            return new Response(entry.kind === "file" ? w.fileTooLarge : w.pictureTooLarge, {
+              status: 413,
+            });
+          if (error instanceof URIError) return new Response(w.fileNotAdded, { status: 400 });
           const known =
             error instanceof BadPicture ||
             error instanceof BadFile ||

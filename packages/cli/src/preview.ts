@@ -80,9 +80,15 @@ export async function preview(
   };
   // The server is in a process group of its own: Ctrl+C stops it from here, whenever it comes.
   let interrupted = () => {};
-  process.once("SIGINT", () => {
+  const interrupt = () => {
     stopServer();
     interrupted();
+  };
+  process.once("SIGINT", interrupt);
+  process.once("SIGTERM", interrupt);
+  void exited.then(() => {
+    process.removeListener("SIGINT", interrupt);
+    process.removeListener("SIGTERM", interrupt);
   });
   let gone = false;
   void exited.then(() => {

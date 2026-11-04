@@ -399,23 +399,28 @@ async function sendCalls(now: number): Promise<{ done: number; more: boolean }> 
       // The preview has no addresses for its connections (and no internet): the call is
       // skipped, once, and Activity says so. A published app waits for the settings instead.
       if (import.meta.env.DEV)
-        await recordDelivery(() => db.transaction((tx) => {
-          tx.update(outgoingCall)
-            .set({ failedAt: new Date(), error: "skipped in the preview" })
-            .where(eq(outgoingCall.id, call.id))
-            .run();
-          audit(tx, null, {
-            action: "skipped in the preview",
-            ...about,
-            details: { outgoing: call.entry, target: call.target },
-          });
-        }));
+        await recordDelivery(() =>
+          db.transaction((tx) => {
+            tx.update(outgoingCall)
+              .set({ failedAt: new Date(), error: "skipped in the preview" })
+              .where(eq(outgoingCall.id, call.id))
+              .run();
+            audit(tx, null, {
+              action: "skipped in the preview",
+              ...about,
+              details: { outgoing: call.entry, target: call.target },
+            });
+          }),
+        );
       // Wait for configuration without repeatedly filling the due batch.
       else
-        await recordDelivery(() => db.update(outgoingCall)
-          .set({ nextAt: new Date(now + 10 * MINUTE) })
-          .where(eq(outgoingCall.id, call.id))
-          .run());
+        await recordDelivery(() =>
+          db
+            .update(outgoingCall)
+            .set({ nextAt: new Date(now + 10 * MINUTE) })
+            .where(eq(outgoingCall.id, call.id))
+            .run(),
+        );
       continue;
     }
     let status: number | undefined;

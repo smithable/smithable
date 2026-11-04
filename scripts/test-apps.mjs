@@ -3,7 +3,7 @@
 // build is checked for page access and the absence of the development sign-in; the
 // development server is used in a real browser, signed in as the examples' roles.
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
-import { upgradeFlow } from "./upgrade-flow.mjs";
+
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";
 import {
@@ -29,6 +29,7 @@ import { chromium } from "playwright";
 import { seeded, validateSpec, walk } from "../packages/core/dist/index.js";
 import { startFakeModel } from "./fake-model.mjs";
 import { checkPorts } from "./ports.mjs";
+import { upgradeFlow } from "./upgrade-flow.mjs";
 
 // How long the waits are, times TEST_PATIENCE (the gate sets it from the machine's load, 1 to 3):
 // a check that waits a minute on a quiet machine waits three under load, so a slow answer is
@@ -1834,6 +1835,8 @@ async function mailThreadFlow(dir, base) {
  */
 async function incomingMailFlow(dir, base) {
   try {
+    const field = smithable(dir, "op", "addField", "Message", "attachments", "files");
+    if (field.code !== 0) throw new Error(field.out);
     const added = smithable(
       dir,
       "op",
@@ -1848,6 +1851,8 @@ async function incomingMailFlow(dir, base) {
       "subject=name",
       "--fields",
       "body=message",
+      "--fields",
+      "attachments=attachments",
     );
     if (added.code !== 0) throw new Error(added.out);
     let answer;
@@ -1860,7 +1865,12 @@ async function incomingMailFlow(dir, base) {
           to: "hello@studio.example",
           subject: "A question about Tuesdays",
           text: "Is there a class on Tuesday evenings?",
-          attachments: [],
+          attachments: [
+            {
+              name: "evidence.txt",
+              data: Buffer.from("Literal gate attachment\n").toString("base64"),
+            },
+          ],
         }),
       });
       if (answer.status !== 404) break;
@@ -1869,13 +1879,24 @@ async function incomingMailFlow(dir, base) {
     if (answer.status !== 201)
       throw new Error(`the mail answers ${answer.status}: ${await answer.text()}`);
     const { id } = await answer.json();
-    const [row] = query(dir, `select name, email, message from messages where id = ${Number(id)}`);
+    const [row] = query(
+      dir,
+      `select name, email, message, attachments from messages where id = ${Number(id)}`,
+    );
     if (
       row?.email !== "ada@example.org" ||
       row?.name !== "A question about Tuesdays" ||
       row?.message !== "Is there a class on Tuesday evenings?"
     )
       throw new Error(`the message: ${JSON.stringify(row)}`);
+    const [stored] = JSON.parse(row.attachments);
+    if (
+      stored.name !== "evidence.txt" ||
+      stored.receipt !== undefined ||
+      readFileSync(join(dir, "data", "uploads", stored.file), "utf8") !==
+        "Literal gate attachment\n"
+    )
+      throw new Error("The incoming attachment did not persist exactly");
     console.log(
       "  ✓ incoming mail: a mail passed on becomes a message, its sender's address, subject and text in their fields",
     );
@@ -1884,6 +1905,7 @@ async function incomingMailFlow(dir, base) {
     failures.push("incoming mail");
   } finally {
     smithable(dir, "op", "removeIncoming", "support");
+    smithable(dir, "op", "removeField", "Message", "attachments");
   }
 }
 
@@ -4943,7 +4965,8 @@ async function documentFlow(dir, base) {
       headers: { "x-file-name": "big.pdf", "x-smithable": "1", "sec-fetch-site": "same-origin" },
       data: Buffer.concat([pdf, Buffer.alloc(10_000_001)]),
     });
-    if (large.status() !== 400) throw new Error(`a file over 10 MB gets ${large.status()}`);
+    if (large.status() !== 413)
+      throw new Error(`a file over 10 MB gets ${large.status()}, expected 413`);
     // Removed and saved: the stored file goes too.
     if (!existsSync(join(dir, "data", "uploads", stored)))
       throw new Error("the contract was not stored");
