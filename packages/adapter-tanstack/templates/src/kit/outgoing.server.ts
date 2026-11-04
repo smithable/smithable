@@ -117,6 +117,39 @@ export function shownFields(
   });
 }
 
+/** One record in a list mail (docs/design/reports.md §2.2): as a record's own mail shows it. */
+export interface ListRow {
+  title: string;
+  labels: [string, string][];
+  values: Record<string, string>;
+  link?: string;
+}
+
+/**
+ * A list mail's table in plain text: each record's title, its columns on a line, and a link to it.
+ * A column that only repeats the title is left out; with no records, a line that says so.
+ */
+export function listText(rows: ListRow[], columns: string[], total: number, at = base()): string {
+  if (!rows.length) return w.nothingListed;
+  const table = rows
+    .map((row) => {
+      const cells = shownFields(row.labels, row.values, undefined, columns)
+        .filter(([, value]) => value && value !== row.title)
+        .map(([label, value]) => `${label}: ${value}`);
+      return [row.title, cells.join(" · "), linkTo(row.link, at)].filter(Boolean).join("\n");
+    })
+    .join("\n\n");
+  // Past the entry's limit the mail says how many it left out, never a silent cut.
+  return total > rows.length ? `${table}\n\n${w.listedSome(rows.length, total)}` : table;
+}
+
+/** A day ("2026-11-04") as a list mail's {date} writes it. */
+export function dayWords(day: string): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
+    new Date(`${day}T00:00:00Z`),
+  );
+}
+
 /**
  * Queues the mail to each recipient with an address, in the change's transaction. The person
  * whose change it is is not told about their own change; a confirmation of what they created is

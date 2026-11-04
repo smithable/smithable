@@ -336,6 +336,11 @@ function readList(
       key: "list",
       problem: `"list" needs "model" (the records the mail shows) or "query" (a query's records).`,
     };
+  if (queryName !== undefined && input.when !== undefined)
+    return {
+      key: "when",
+      problem: `"when" goes with "model": a query chooses its own records, its days too.`,
+    };
   const query = queryName === undefined ? undefined : queries.find((q) => q.name === queryName);
   if (queryName !== undefined && !query)
     return {
