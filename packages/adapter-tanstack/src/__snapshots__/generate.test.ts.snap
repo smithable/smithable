@@ -9530,7 +9530,11 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  { value: "admin", label: ROLE_LABELS["admin"] },
+  {
+    value: "admin",
+    label: ROLE_LABELS["admin"],
+    description: "The owner. Runs the team and the settings, and sees everything the team does.",
+  },
   {
     value: "member",
     label: ROLE_LABELS["member"],
@@ -10209,8 +10213,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -10255,7 +10259,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "a86f791d generated",
   "src/routes/team/activity.tsx": "a8e492c5 generated",
-  "src/routes/team/index.tsx": "904e3f61 generated",
+  "src/routes/team/index.tsx": "1f7fedb9 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",
@@ -10293,7 +10297,7 @@ docker run -p 3000:3000 -v harbour-cuts-data:/data harbour-cuts
 
 ## Signing in
 
-Harbour Cuts signs users in with a code by email, through [Better Auth](https://www.better-auth.com). In development, the sign-in page also lets you sign in as any role (admin, member) without a provider; production builds leave that out.
+Harbour Cuts signs users in with a code by email, through [Better Auth](https://www.better-auth.com). In development, the sign-in page also lets you sign in as any role (admin, staff, member) without a provider; production builds leave that out.
 
 In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \`openssl rand -base64 32\`) and \`BETTER_AUTH_URL\` (the app's public address) as well.
 
@@ -10872,6 +10876,29 @@ describe("Service", () => {
     });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertService(stranger.id);
+    const own = insertService(viewer.id);
+    expect({
+      readOthers: await reads(serviceData, viewer, others.id),
+      readOwn: await reads(serviceData, viewer, own.id),
+      create: await can(() => serviceData.create(viewer, serviceValues(viewer.id))),
+      changeOthers: await can(() => serviceData.update(viewer, others.id, serviceValues(stranger.id))),
+      changeOwn: await can(() => serviceData.update(viewer, own.id, serviceValues(viewer.id))),
+      deleteOthers: await can(() => serviceData.remove(viewer, others.id)),
+      deleteOwn: await can(() => serviceData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: false,
+      changeOthers: false,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertService(stranger.id);
@@ -10942,6 +10969,29 @@ describe("Barber", () => {
     });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertBarber(stranger.id);
+    const own = insertBarber(viewer.id);
+    expect({
+      readOthers: await reads(barberData, viewer, others.id),
+      readOwn: await reads(barberData, viewer, own.id),
+      create: await can(() => barberData.create(viewer, barberValues(viewer.id))),
+      changeOthers: await can(() => barberData.update(viewer, others.id, barberValues(stranger.id))),
+      changeOwn: await can(() => barberData.update(viewer, own.id, barberValues(viewer.id))),
+      deleteOthers: await can(() => barberData.remove(viewer, others.id)),
+      deleteOwn: await can(() => barberData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: false,
+      changeOthers: false,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertBarber(stranger.id);
@@ -10991,6 +11041,29 @@ describe("Barber", () => {
 describe("TimeOff", () => {
   test("admin", async () => {
     const viewer = signedIn("admin");
+    const others = insertTimeOff(stranger.id);
+    const own = insertTimeOff(viewer.id);
+    expect({
+      readOthers: await reads(timeOffData, viewer, others.id),
+      readOwn: await reads(timeOffData, viewer, own.id),
+      create: await can(() => timeOffData.create(viewer, timeOffValues(viewer.id))),
+      changeOthers: await can(() => timeOffData.update(viewer, others.id, timeOffValues(stranger.id))),
+      changeOwn: await can(() => timeOffData.update(viewer, own.id, timeOffValues(viewer.id))),
+      deleteOthers: await can(() => timeOffData.remove(viewer, others.id)),
+      deleteOwn: await can(() => timeOffData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: true,
+      changeOthers: true,
+      changeOwn: true,
+      deleteOthers: true,
+      deleteOwn: true,
+    });
+  });
+
+  test("staff", async () => {
+    const viewer = signedIn("staff");
     const others = insertTimeOff(stranger.id);
     const own = insertTimeOff(viewer.id);
     expect({
@@ -11082,6 +11155,29 @@ describe("Appointment", () => {
     });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertAppointment(stranger.id);
+    const own = insertAppointment(viewer.id);
+    expect({
+      readOthers: await reads(appointmentData, viewer, others.id),
+      readOwn: await reads(appointmentData, viewer, own.id),
+      create: await can(() => appointmentData.create(viewer, appointmentValues(viewer.id))),
+      changeOthers: await can(() => appointmentData.update(viewer, others.id, appointmentValues(stranger.id))),
+      changeOwn: await can(() => appointmentData.update(viewer, own.id, appointmentValues(viewer.id))),
+      deleteOthers: await can(() => appointmentData.remove(viewer, others.id)),
+      deleteOwn: await can(() => appointmentData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: true,
+      changeOthers: true,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertAppointment(stranger.id);
@@ -11139,6 +11235,16 @@ describe("the confirm action", () => {
     }).toEqual({ others: true, own: true });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertAppointment(stranger.id, {"status":"requested"});
+    const own = insertAppointment(viewer.id, {"status":"requested"});
+    expect({
+      others: await can(() => runConfirm(viewer, others.id)),
+      own: await can(() => runConfirm(viewer, own.id)),
+    }).toEqual({ others: true, own: true });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertAppointment(stranger.id, {"status":"requested"});
@@ -11185,6 +11291,16 @@ describe("the confirm action", () => {
 describe("the cancel action", () => {
   test("admin", async () => {
     const viewer = signedIn("admin");
+    const others = insertAppointment(stranger.id, {"status":"requested"});
+    const own = insertAppointment(viewer.id, {"status":"requested"});
+    expect({
+      others: await can(() => runCancel(viewer, others.id)),
+      own: await can(() => runCancel(viewer, own.id)),
+    }).toEqual({ others: true, own: true });
+  });
+
+  test("staff", async () => {
+    const viewer = signedIn("staff");
     const others = insertAppointment(stranger.id, {"status":"requested"});
     const own = insertAppointment(viewer.id, {"status":"requested"});
     expect({
@@ -11258,7 +11374,7 @@ describe("the audit log", () => {
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
 
     // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
-    expect(() => forgetInLog(signedIn("member"), { model: "Service", record: made.id })).toThrow(AccessDenied);
+    expect(() => forgetInLog(signedIn("staff"), { model: "Service", record: made.id })).toThrow(AccessDenied);
     forgetInLog(signedIn("admin"), { model: "Service", record: made.id });
     const after = db.select().from(auditLog).where(and(eq(auditLog.model, "Service"), eq(auditLog.recordId, made.id))).all();
     expect(after.map((l) => l.title)).toEqual([null, null, null]);
@@ -11384,7 +11500,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { runCancel, runCancelMany } from "./cancel.server";
 
 /** Who may run the "cancel" action: whoever may edit the appointment. */
-export const cancelAccess: Rule = { public: false, roles: ["admin"], owner: true };
+export const cancelAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "cancel" action fits the appointment: it is offered and allowed only then. */
 export function cancelFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
@@ -11497,7 +11613,7 @@ import { currentViewer } from "#/lib/viewer.server";
 import { runConfirm, runConfirmMany } from "./confirm.server";
 
 /** Who may run the "confirm" action: whoever may edit the appointment. */
-export const confirmAccess: Rule = { public: false, roles: ["admin"], owner: true };
+export const confirmAccess: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 /** Whether the "confirm" action fits the appointment: it is offered and allowed only then. */
 export function confirmFits(row: { status?: unknown }, _viewer: { id: string } | null): boolean {
@@ -11740,9 +11856,9 @@ function checkTime(tx: Tx, row: Record<string, unknown>, except?: number) {
 
 /** Who may read, create, change and delete appointments. */
 export const appointmentAccess: ModelAccess = {
-  read: { public: false, roles: ["admin"], owner: true },
-  create: { public: false, roles: ["admin", "member"], owner: false },
-  write: { public: false, roles: ["admin"], owner: true },
+  read: { public: false, roles: ["admin", "staff"], owner: true },
+  create: { public: false, roles: ["admin", "staff", "member"], owner: false },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
@@ -12762,6 +12878,84 @@ const MOVES: Record<string, DoorMove[]> = {
       slots: [],
     },
   ],
+  staff: [
+    { id: "open:home", kind: "open", page: "home", route: "/" },
+    {
+      id: "open:appointments",
+      kind: "open",
+      page: "appointments",
+      route: "/appointments",
+    },
+    { id: "open:day", kind: "open", page: "day", route: "/day" },
+    { id: "open:time-off", kind: "open", page: "time-off", route: "/time-off" },
+    { id: "open:privacy", kind: "open", page: "privacy", route: "/privacy" },
+    {
+      id: "add:TimeOff",
+      kind: "add",
+      model: "TimeOff",
+      slots: [
+        { field: "barber", required: true, kind: "reference", model: "Barber" },
+        { field: "from", required: true, kind: "datetime" },
+        { field: "until", required: true, kind: "datetime" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    {
+      id: "change:TimeOff",
+      kind: "change",
+      model: "TimeOff",
+      slots: [
+        { field: "barber", required: true, kind: "reference", model: "Barber" },
+        { field: "from", required: true, kind: "datetime" },
+        { field: "until", required: true, kind: "datetime" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    { id: "delete:TimeOff", kind: "delete", model: "TimeOff" },
+    {
+      id: "add:Appointment",
+      kind: "add",
+      model: "Appointment",
+      slots: [
+        { field: "service", required: true, kind: "reference", model: "Service" },
+        { field: "barber", required: true, kind: "reference", model: "Barber" },
+        { field: "startsAt", required: true, kind: "datetime" },
+        { field: "name", required: true, kind: "text" },
+        { field: "phone", required: false, kind: "phone" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    {
+      id: "change:Appointment",
+      kind: "change",
+      model: "Appointment",
+      slots: [
+        { field: "service", required: true, kind: "reference", model: "Service" },
+        { field: "barber", required: true, kind: "reference", model: "Barber" },
+        { field: "startsAt", required: true, kind: "datetime" },
+        { field: "name", required: true, kind: "text" },
+        { field: "phone", required: false, kind: "phone" },
+        { field: "note", required: false, kind: "text" },
+      ],
+    },
+    { id: "delete:Appointment", kind: "delete", model: "Appointment" },
+    {
+      id: "run:confirm",
+      kind: "run",
+      action: "confirm",
+      model: "Appointment",
+      when: { status: "requested" },
+      slots: [],
+    },
+    {
+      id: "run:cancel",
+      kind: "run",
+      action: "cancel",
+      model: "Appointment",
+      when: { status: ["requested", "confirmed"] },
+      slots: [],
+    },
+  ],
   member: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
     {
@@ -13277,13 +13471,13 @@ import { app } from "#/generated/app";
 
 /** Who may open each page. */
 export const pageAccess = {
-  home: { public: true, roles: ["admin", "member"], owner: false },
-  appointments: { public: false, roles: ["admin", "member"], owner: false },
-  day: { public: false, roles: ["admin"], owner: false },
+  home: { public: true, roles: ["admin", "staff", "member"], owner: false },
+  appointments: { public: false, roles: ["admin", "staff", "member"], owner: false },
+  day: { public: false, roles: ["admin", "staff"], owner: false },
   services: { public: false, roles: ["admin"], owner: false },
   barbers: { public: false, roles: ["admin"], owner: false },
-  "time-off": { public: false, roles: ["admin"], owner: false },
-  privacy: { public: true, roles: ["admin", "member"], owner: false },
+  "time-off": { public: false, roles: ["admin", "staff"], owner: false },
+  privacy: { public: true, roles: ["admin", "staff", "member"], owner: false },
 } satisfies Record<string, Rule>;
 
 interface PageUi {
@@ -13318,7 +13512,7 @@ export function pageHead(page: keyof typeof pageUi, lead?: string) {
 exports[`../../../examples/barbers/smithable.yml > file list and generated code > src/generated/roles.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 /** Each role as the app names it. */
-export const ROLE_LABELS: Record<string, string> = { admin: "Admin", member: "Member" };
+export const ROLE_LABELS: Record<string, string> = { admin: "Admin", staff: "Staff", member: "Member" };
 "
 `;
 
@@ -13772,10 +13966,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** Who may read, create, change and delete time offs. */
 export const timeOffAccess: ModelAccess = {
-  read: { public: false, roles: ["admin"], owner: true },
-  create: { public: false, roles: ["admin"], owner: false },
-  write: { public: false, roles: ["admin"], owner: true },
-  delete: { public: false, roles: ["admin"], owner: true },
+  read: { public: false, roles: ["admin", "staff"], owner: true },
+  create: { public: false, roles: ["admin", "staff"], owner: false },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
+  delete: { public: false, roles: ["admin", "staff"], owner: true },
 };
 
 /** A record as the viewer gets it: who owns it only for its owner and roles that read every record. */
@@ -14066,7 +14260,7 @@ export const timeOffUi: RecordUi<TimeOffRow> = {
 };
 
 /** Who may delete time offs: a list's selection offers Delete by it (the server checks again). */
-export const timeOffDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
+export const timeOffDeleteRule: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 
 export const listTimeOffs = createServerFn().handler(async () => {
@@ -15389,7 +15583,13 @@ const facts: LegalFacts = {
   app: app.name,
   purpose: "Appointments with a small barbershop's barbers, booked online by their time.",
   signIn: { email: true, google: false, invitedOnly: false },
-  records: [{ label: appointmentUi.pluralLabel, fields: ["phone"], readers: ["admin"] }],
+  records: [
+    {
+      label: appointmentUi.pluralLabel,
+      fields: ["phone"],
+      readers: ["admin", "staff"],
+    },
+  ],
   uploads: true,
   mailAbout: ["appointments"],
 };
@@ -15667,7 +15867,7 @@ import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
-const ROLES = ["admin","member"] as const;
+const ROLES = ["admin","staff","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
@@ -16296,6 +16496,22 @@ test.describe("signed in as admin", () => {
   });
 });
 
+test.describe("signed in as staff", () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page, "staff");
+  });
+
+  test("Appointments opens", async ({ page }) => {
+    await visit(page, "/appointments");
+  });
+  test("Day opens", async ({ page }) => {
+    await visit(page, "/day");
+  });
+  test("Time off opens", async ({ page }) => {
+    await visit(page, "/time-off");
+  });
+});
+
 test.describe("signed in as member", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page, "member");
@@ -16506,7 +16722,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "cc07fb29 generated",
+  "README.md": "2c5fce83 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "f2b19b0a generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -16524,33 +16740,33 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "9693435b generated",
   "src/db/seed.ts": "aeda6345 generated",
-  "src/generated/access.test.ts": "d33dc677 generated",
+  "src/generated/access.test.ts": "4c54980a generated",
   "src/generated/actions/cancel.server.ts": "2de134e2 generated",
-  "src/generated/actions/cancel.ts": "1bae0072 generated",
+  "src/generated/actions/cancel.ts": "7e52ebc8 generated",
   "src/generated/actions/confirm.server.ts": "af0013e0 generated",
-  "src/generated/actions/confirm.ts": "f4df37ea generated",
+  "src/generated/actions/confirm.ts": "a55f9024 generated",
   "src/generated/activity.server.ts": "09cee943 generated",
   "src/generated/app.ts": "97916622 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "ceb04ff9 generated",
+  "src/generated/appointment.server.ts": "f02df4cb generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
   "src/generated/barber.server.ts": "0cdaec9b generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "e9b5540a generated",
+  "src/generated/dev-door.server.ts": "b10bad00 generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "fac1c733 generated",
-  "src/generated/pages.ts": "9166a1c4 generated",
-  "src/generated/roles.ts": "d284ad2a generated",
+  "src/generated/pages.ts": "7d56e104 generated",
+  "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
   "src/generated/service.server.ts": "1cfd3766 generated",
   "src/generated/service.ts": "dd2b9287 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "766baa05 generated",
-  "src/generated/time-off.ts": "b2f38bf7 generated",
+  "src/generated/time-off.server.ts": "c9bee937 generated",
+  "src/generated/time-off.ts": "94851289 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "cc50334d kit",
@@ -16563,7 +16779,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "a2f7d274 kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/LegalPage.tsx": "566b69f4 kit",
@@ -16611,8 +16827,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -16635,12 +16851,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "28261328 generated",
-  "src/routes/privacy/index.tsx": "e98a1cc0 generated",
+  "src/routes/privacy/index.tsx": "016616e0 generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "bddd0cd6 generated",
   "src/routes/services/index.tsx": "5982b707 generated",
   "src/routes/services/new.tsx": "5d1280e4 generated",
-  "src/routes/sign-in.tsx": "3f9e1f3e generated",
+  "src/routes/sign-in.tsx": "6c39db74 generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
   "src/routes/time-off/$id.tsx": "e91b5ca4 generated",
   "src/routes/time-off/index.tsx": "00ec507b generated",
@@ -16648,7 +16864,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",
-  "tests/smoke.spec.ts": "b34f3cc9 generated",
+  "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -16682,7 +16898,7 @@ docker run -p 3000:3000 -v stillwater-yoga-data:/data stillwater-yoga
 
 ## Signing in
 
-Stillwater Yoga signs users in with a code by email, through [Better Auth](https://www.better-auth.com). In development, the sign-in page also lets you sign in as any role (admin, member) without a provider; production builds leave that out.
+Stillwater Yoga signs users in with a code by email, through [Better Auth](https://www.better-auth.com). In development, the sign-in page also lets you sign in as any role (admin, staff, member) without a provider; production builds leave that out.
 
 In production, set \`BETTER_AUTH_SECRET\` (at least 32 random characters, e.g. \`openssl rand -base64 32\`) and \`BETTER_AUTH_URL\` (the app's public address) as well.
 
@@ -17400,6 +17616,29 @@ describe("ClassType", () => {
     });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertClassType(stranger.id);
+    const own = insertClassType(viewer.id);
+    expect({
+      readOthers: await reads(classTypeData, viewer, others.id),
+      readOwn: await reads(classTypeData, viewer, own.id),
+      create: await can(() => classTypeData.create(viewer, classTypeValues(viewer.id))),
+      changeOthers: await can(() => classTypeData.update(viewer, others.id, classTypeValues(stranger.id))),
+      changeOwn: await can(() => classTypeData.update(viewer, own.id, classTypeValues(viewer.id))),
+      deleteOthers: await can(() => classTypeData.remove(viewer, others.id)),
+      deleteOwn: await can(() => classTypeData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: false,
+      changeOthers: false,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertClassType(stranger.id);
@@ -17474,6 +17713,29 @@ describe("Instructor", () => {
       changeOthers: true,
       changeOwn: true,
       deleteOthers: true,
+      deleteOwn: true,
+    });
+  });
+
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertInstructor(stranger.id);
+    const own = insertInstructor(viewer.id);
+    expect({
+      readOthers: await reads(instructorData, viewer, others.id),
+      readOwn: await reads(instructorData, viewer, own.id),
+      create: await can(() => instructorData.create(viewer, instructorValues(viewer.id))),
+      changeOthers: await can(() => instructorData.update(viewer, others.id, instructorValues(stranger.id))),
+      changeOwn: await can(() => instructorData.update(viewer, own.id, instructorValues(viewer.id))),
+      deleteOthers: await can(() => instructorData.remove(viewer, others.id)),
+      deleteOwn: await can(() => instructorData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: false,
+      changeOthers: false,
+      changeOwn: true,
+      deleteOthers: false,
       deleteOwn: true,
     });
   });
@@ -17556,6 +17818,29 @@ describe("Session", () => {
     });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertSession(stranger.id);
+    const own = insertSession(viewer.id);
+    expect({
+      readOthers: await reads(sessionData, viewer, others.id),
+      readOwn: await reads(sessionData, viewer, own.id),
+      create: await can(() => sessionData.create(viewer, sessionValues(viewer.id))),
+      changeOthers: await can(() => sessionData.update(viewer, others.id, sessionValues(stranger.id))),
+      changeOwn: await can(() => sessionData.update(viewer, own.id, sessionValues(viewer.id))),
+      deleteOthers: await can(() => sessionData.remove(viewer, others.id)),
+      deleteOwn: await can(() => sessionData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: true,
+      changeOthers: true,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertSession(stranger.id);
@@ -17611,6 +17896,29 @@ describe("Session", () => {
 describe("Booking", () => {
   test("admin", async () => {
     const viewer = signedIn("admin");
+    const others = insertBooking(stranger.id);
+    const own = insertBooking(viewer.id);
+    expect({
+      readOthers: await reads(bookingData, viewer, others.id),
+      readOwn: await reads(bookingData, viewer, own.id),
+      create: await can(() => bookingData.create(viewer, bookingValues(viewer.id))),
+      changeOthers: await can(() => bookingData.update(viewer, others.id, bookingValues(stranger.id))),
+      changeOwn: await can(() => bookingData.update(viewer, own.id, bookingValues(viewer.id))),
+      deleteOthers: await can(() => bookingData.remove(viewer, others.id)),
+      deleteOwn: await can(() => bookingData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: true,
+      changeOthers: true,
+      changeOwn: true,
+      deleteOthers: true,
+      deleteOwn: true,
+    });
+  });
+
+  test("staff", async () => {
+    const viewer = signedIn("staff");
     const others = insertBooking(stranger.id);
     const own = insertBooking(viewer.id);
     expect({
@@ -17713,6 +18021,29 @@ describe("Post", () => {
     });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertPost(stranger.id, {"status":"published"});
+    const own = insertPost(viewer.id, {"status":"published"});
+    expect({
+      readOthers: await reads(postData, viewer, others.id),
+      readOwn: await reads(postData, viewer, own.id),
+      create: await can(() => postData.create(viewer, postValues(viewer.id))),
+      changeOthers: await can(() => postData.update(viewer, others.id, postValues(stranger.id))),
+      changeOwn: await can(() => postData.update(viewer, own.id, postValues(viewer.id))),
+      deleteOthers: await can(() => postData.remove(viewer, others.id)),
+      deleteOwn: await can(() => postData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: false,
+      changeOthers: false,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertPost(stranger.id, {"status":"published"});
@@ -17792,6 +18123,29 @@ describe("Message", () => {
     });
   });
 
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertMessage(stranger.id);
+    const own = insertMessage(viewer.id);
+    expect({
+      readOthers: await reads(messageData, viewer, others.id),
+      readOwn: await reads(messageData, viewer, own.id),
+      create: await can(() => messageData.create(viewer, messageValues(viewer.id))),
+      changeOthers: await can(() => messageData.update(viewer, others.id, messageValues(stranger.id))),
+      changeOwn: await can(() => messageData.update(viewer, own.id, messageValues(viewer.id))),
+      deleteOthers: await can(() => messageData.remove(viewer, others.id)),
+      deleteOwn: await can(() => messageData.remove(viewer, own.id)),
+    }).toEqual({
+      readOthers: true,
+      readOwn: true,
+      create: true,
+      changeOthers: false,
+      changeOwn: true,
+      deleteOthers: false,
+      deleteOwn: true,
+    });
+  });
+
   test("member", async () => {
     const viewer = signedIn("member");
     const others = insertMessage(stranger.id);
@@ -17847,6 +18201,18 @@ describe("the publish action", () => {
       others: await can(() => runPublish(viewer, others.id)),
       own: await can(() => runPublish(viewer, own.id)),
     }).toEqual({ others: true, own: true });
+  });
+
+  test("staff", async () => {
+    const viewer = signedIn("staff");
+    const others = insertPost(stranger.id, {"status":"draft"});
+    const othersBefore = JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, others.id)).get());
+    const own = insertPost(viewer.id, {"status":"draft"});
+    expect({
+      others: await can(() => runPublish(viewer, others.id)),
+      own: await can(() => runPublish(viewer, own.id)),
+    }).toEqual({ others: false, own: true });
+    expect(JSON.stringify(db.select().from(schema.posts).where(eq(schema.posts.id, others.id)).get())).toBe(othersBefore);
   });
 
   test("member", async () => {
@@ -17914,7 +18280,7 @@ describe("the audit log", () => {
     expect(JSON.stringify(lines[1]?.fields ?? [])).not.toContain(":");
 
     // Forget in the log: administrators only; it blanks the deleted record's name and is logged by id.
-    expect(() => forgetInLog(signedIn("member"), { model: "ClassType", record: made.id })).toThrow(AccessDenied);
+    expect(() => forgetInLog(signedIn("staff"), { model: "ClassType", record: made.id })).toThrow(AccessDenied);
     forgetInLog(signedIn("admin"), { model: "ClassType", record: made.id });
     const after = db.select().from(auditLog).where(and(eq(auditLog.model, "ClassType"), eq(auditLog.recordId, made.id))).all();
     expect(after.map((l) => l.title)).toEqual([null, null, null]);
@@ -18634,6 +19000,175 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
       "Message": "Message: A question a visitor sends from the contact form on the home page.\\nFields:\\n- name*: Name.\\n- email*: Email.\\n- message*: Message."
     }
   },
+  "staff": {
+    "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role staff.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
+    "tools": [
+      {
+        "name": "find",
+        "description": "Records of one kind the caller may read, last added first (sort by a date for the newest by it), as {columns, rows, total}. Ask only for the fields needed; id and title always come.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ClassType",
+                "Instructor",
+                "Session",
+                "Booking",
+                "Post",
+                "Message"
+              ]
+            },
+            "where": {
+              "type": "object",
+              "description": "Field values to match, e.g. {\\"status\\":\\"open\\"}; a list means any of them; a number or date takes {\\"from\\":…,\\"to\\":…}; a reference takes an id or the record's title (\\"me\\" for a user); {\\"mine\\":true} is the caller's own records."
+            },
+            "search": {
+              "type": "string",
+              "description": "Words to look for in the records' texts."
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sort": {
+              "type": "string",
+              "description": "A field; \\"-field\\" for the largest first."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false
+        }
+      },
+      {
+        "name": "measure",
+        "description": "A number worked out by the app, never by reading rows: how many records, or the sum, average, min or max of a number field, optionally per value of a field or per month of a date. A min or max names the record that holds it; per reference, each group carries its title, the largest first.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ClassType",
+                "Instructor",
+                "Session",
+                "Booking",
+                "Post",
+                "Message"
+              ]
+            },
+            "of": {
+              "type": "string",
+              "description": "count (the default), or \\"sum total\\", \\"average total\\", \\"min …\\", \\"max …\\"."
+            },
+            "where": {
+              "type": "object",
+              "description": "Field values to match, e.g. {\\"status\\":\\"open\\"}; a list means any of them; a number or date takes {\\"from\\":…,\\"to\\":…}; a reference takes an id or the record's title (\\"me\\" for a user); {\\"mine\\":true} is the caller's own records."
+            },
+            "search": {
+              "type": "string",
+              "description": "Words to look for in the records' texts."
+            },
+            "by": {
+              "type": "string",
+              "description": "A choice, yes/no, reference or date field."
+            }
+          }
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false
+        }
+      },
+      {
+        "name": "read",
+        "description": "One record with all its fields.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ClassType",
+                "Instructor",
+                "Session",
+                "Booking",
+                "Post",
+                "Message"
+              ]
+            },
+            "id": {
+              "type": "integer"
+            }
+          }
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false
+        }
+      },
+      {
+        "name": "describe",
+        "description": "What a kind of record means: its fields, rules and actions in full. Only when the summary is not enough.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ClassType",
+                "Instructor",
+                "Session",
+                "Booking",
+                "Post",
+                "Message"
+              ]
+            }
+          }
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false
+        }
+      }
+    ],
+    "describe": {
+      "ClassType": "ClassType: A kind of class the studio offers, such as Vinyasa, Yin, Hatha or Foundations.\\nFields:\\n- name*: Name.\\n- summary: Summary.\\n- level* (beginner | allLevels | advanced): Level. Starts as allLevels.\\n- durationMinutes* (number): Duration minutes. Starts as 60.",
+      "Instructor": "Instructor\\nFields:\\n- name*: Name.\\n- bio: Bio.\\n- portrait (picture): Portrait.",
+      "Session": "Session: One scheduled occurrence of a class.\\nFields:\\n- classType* -> ClassType: Class type.\\n- instructor* -> Instructor: Instructor.\\n- startsAt* (datetime): Starts at.\\n- capacity* (number): Capacity. Starts as 12.\\n- placesLeft (number, computed): Places left.",
+      "Booking": "Booking: A member's place in a session.\\nFields:\\n- session* -> Session: Session. Unique.\\n- attendee -> User: Attendee.\\nA record belongs to its attendee.",
+      "Post": "Post: News and articles on the studio's blog.\\nFields:\\n- title*: Title.\\n- address: Address. Unique.\\n- summary: Summary.\\n- cover (picture): Cover.\\n- body*: Body.\\n- publishedOn (date): Published on.\\n- status* (draft | published): Status. Starts as draft.",
+      "Message": "Message: A question a visitor sends from the contact form on the home page.\\nFields:\\n- name*: Name.\\n- email*: Email.\\n- message*: Message."
+    }
+  },
   "member": {
     "summary": "Stillwater Yoga: Class schedule and online booking for a small yoga studio.\\nClassType (class types): name*, summary, level* (beginner | allLevels | advanced), durationMinutes* (number). Title: name.\\nInstructor (instructors): name*, bio, portrait (picture). Title: name.\\nSession (sessions): classType* -> ClassType, instructor* -> Instructor, startsAt* (datetime), capacity* (number), placesLeft (number, computed). Title: id.\\nBooking (bookings): session* -> Session, attendee -> User. Title: id.\\nPost (posts): title*, address, summary, cover (picture), body*, publishedOn (date), status* (draft | published). Title: title.\\nMessage (messages): name*, email*, message*. Title: name.\\n* required. You act as someone with the role member.\\nAnswer with what a tool returned; a number, a name or \\"none\\" you did not get from a tool is not an answer.",
     "tools": [
@@ -19005,7 +19540,7 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 }
 
 /** How each caller is answered: the rules, then the host's model; a visitor by the rules only. */
-const ASKS: Record<string, string> = {"admin":"model","member":"model"};
+const ASKS: Record<string, string> = {"admin":"model","staff":"model","member":"model"};
 
 /** A kind's words for the wording rules, read from its module: the fields the caller reads. */
 function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers: string[], by: string[], path?: string): AskKind {
@@ -19029,6 +19564,14 @@ function kindWords(ui: ModelUi, fields: string[], filters: AskFilter[], numbers:
 /** Each caller's kinds of record in the words people use, for the wording rules (read when asked, in the language then). */
 const WORDS: Record<string, () => AskKind[]> = {
   "admin": () => [
+    kindWords(classTypeUi, ["name","summary","level","durationMinutes"], [{"field":"name","by":"text"},{"field":"level","by":"value","values":["beginner","allLevels","advanced"]},{"field":"durationMinutes","by":"number"}], ["durationMinutes"], ["level"], "/class-types"),
+    kindWords(instructorUi, ["name","bio","portrait"], [{"field":"name","by":"text"}], [], [], "/instructors"),
+    kindWords(sessionUi, ["classType","instructor","startsAt","capacity"], [{"field":"classType","by":"reference","model":"ClassType"},{"field":"instructor","by":"reference","model":"Instructor"},{"field":"startsAt","by":"date"},{"field":"capacity","by":"number"}], ["capacity"], ["classType","instructor","startsAt"], "/sessions"),
+    kindWords(bookingUi, ["session","attendee"], [{"field":"session","by":"reference","model":"Session"},{"field":"attendee","by":"reference","model":"User"}], [], ["session","attendee"], "/my-bookings"),
+    kindWords(postUi, ["title","address","summary","cover","body","publishedOn","status"], [{"field":"title","by":"text"},{"field":"address","by":"text"},{"field":"publishedOn","by":"date"},{"field":"status","by":"value","values":["draft","published"]}], [], ["publishedOn","status"], "/posts"),
+    kindWords(messageUi, ["name","email","message"], [{"field":"name","by":"text"},{"field":"email","by":"text"}], [], [], "/messages"),
+  ],
+  "staff": () => [
     kindWords(classTypeUi, ["name","summary","level","durationMinutes"], [{"field":"name","by":"text"},{"field":"level","by":"value","values":["beginner","allLevels","advanced"]},{"field":"durationMinutes","by":"number"}], ["durationMinutes"], ["level"], "/class-types"),
     kindWords(instructorUi, ["name","bio","portrait"], [{"field":"name","by":"text"}], [], [], "/instructors"),
     kindWords(sessionUi, ["classType","instructor","startsAt","capacity"], [{"field":"classType","by":"reference","model":"ClassType"},{"field":"instructor","by":"reference","model":"Instructor"},{"field":"startsAt","by":"date"},{"field":"capacity","by":"number"}], ["capacity"], ["classType","instructor","startsAt"], "/sessions"),
@@ -19134,10 +19677,10 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** Who may read, create, change and delete bookings. */
 export const bookingAccess: ModelAccess = {
-  read: { public: false, roles: ["admin"], owner: true },
-  create: { public: false, roles: ["admin", "member"], owner: false },
-  write: { public: false, roles: ["admin"], owner: true },
-  delete: { public: false, roles: ["admin"], owner: true },
+  read: { public: false, roles: ["admin", "staff"], owner: true },
+  create: { public: false, roles: ["admin", "staff", "member"], owner: false },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
+  delete: { public: false, roles: ["admin", "staff"], owner: true },
 };
 
 
@@ -19679,7 +20222,7 @@ export const bookingUi: RecordUi<BookingRow> = {
 };
 
 /** Who may delete bookings: a list's selection offers Delete by it (the server checks again). */
-export const bookingDeleteRule: Rule = { public: false, roles: ["admin"], owner: true };
+export const bookingDeleteRule: Rule = { public: false, roles: ["admin", "staff"], owner: true };
 
 
 export const listBookings = createServerFn().handler(async () => {
@@ -20660,6 +21203,73 @@ const MOVES: Record<string, DoorMove[]> = {
       when: { status: "draft" },
       slots: [],
     },
+  ],
+  staff: [
+    { id: "open:home", kind: "open", page: "home", route: "/" },
+    { id: "open:schedule", kind: "open", page: "schedule", route: "/schedule" },
+    { id: "open:sessions", kind: "open", page: "sessions", route: "/sessions" },
+    { id: "open:messages", kind: "open", page: "messages", route: "/messages" },
+    { id: "open:blog", kind: "open", page: "blog", route: "/blog" },
+    { id: "open:about", kind: "open", page: "about", route: "/about" },
+    { id: "open:privacy", kind: "open", page: "privacy", route: "/privacy" },
+    { id: "open:bookings", kind: "open", page: "bookings", route: "/bookings" },
+    {
+      id: "add:Session",
+      kind: "add",
+      model: "Session",
+      slots: [
+        { field: "classType", required: true, kind: "reference", model: "ClassType" },
+        { field: "instructor", required: true, kind: "reference", model: "Instructor" },
+        { field: "startsAt", required: true, kind: "datetime" },
+        { field: "capacity", required: true, kind: "number" },
+      ],
+    },
+    {
+      id: "change:Session",
+      kind: "change",
+      model: "Session",
+      slots: [
+        { field: "classType", required: true, kind: "reference", model: "ClassType" },
+        { field: "instructor", required: true, kind: "reference", model: "Instructor" },
+        { field: "startsAt", required: true, kind: "datetime" },
+        { field: "capacity", required: true, kind: "number" },
+      ],
+    },
+    { id: "delete:Session", kind: "delete", model: "Session" },
+    {
+      id: "add:Booking",
+      kind: "add",
+      model: "Booking",
+      slots: [{ field: "session", required: true, kind: "reference", model: "Session" }],
+    },
+    {
+      id: "change:Booking",
+      kind: "change",
+      model: "Booking",
+      slots: [{ field: "session", required: true, kind: "reference", model: "Session" }],
+    },
+    { id: "delete:Booking", kind: "delete", model: "Booking" },
+    {
+      id: "add:Message",
+      kind: "add",
+      model: "Message",
+      slots: [
+        { field: "name", required: true, kind: "text" },
+        { field: "email", required: true, kind: "email" },
+        { field: "message", required: true, kind: "text" },
+      ],
+    },
+    {
+      id: "change:Message",
+      kind: "change",
+      model: "Message",
+      slots: [
+        { field: "name", required: true, kind: "text" },
+        { field: "email", required: true, kind: "email" },
+        { field: "message", required: true, kind: "text" },
+      ],
+    },
+    { id: "delete:Message", kind: "delete", model: "Message" },
   ],
   member: [
     { id: "open:home", kind: "open", page: "home", route: "/" },
@@ -21902,7 +22512,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
-  read: { public: false, roles: ["admin"], owner: true },
+  read: { public: false, roles: ["admin", "staff"], owner: true },
   create: { public: true, roles: ["admin"], owner: false },
   write: { public: false, roles: ["admin"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
@@ -22659,18 +23269,18 @@ import { app } from "#/generated/app";
 
 /** Who may open each page. */
 export const pageAccess = {
-  home: { public: true, roles: ["admin", "member"], owner: false },
-  schedule: { public: true, roles: ["admin", "member"], owner: false },
-  sessions: { public: false, roles: ["admin"], owner: false },
+  home: { public: true, roles: ["admin", "staff", "member"], owner: false },
+  schedule: { public: true, roles: ["admin", "staff", "member"], owner: false },
+  sessions: { public: false, roles: ["admin", "staff"], owner: false },
   "class-types": { public: false, roles: ["admin"], owner: false },
   instructors: { public: false, roles: ["admin"], owner: false },
-  messages: { public: false, roles: ["admin"], owner: false },
-  blog: { public: true, roles: ["admin", "member"], owner: false },
-  about: { public: true, roles: ["admin", "member"], owner: false },
-  privacy: { public: true, roles: ["admin", "member"], owner: false },
+  messages: { public: false, roles: ["admin", "staff"], owner: false },
+  blog: { public: true, roles: ["admin", "staff", "member"], owner: false },
+  about: { public: true, roles: ["admin", "staff", "member"], owner: false },
+  privacy: { public: true, roles: ["admin", "staff", "member"], owner: false },
   posts: { public: false, roles: ["admin"], owner: false },
   "my-bookings": { public: false, roles: ["admin", "member"], owner: false },
-  bookings: { public: false, roles: ["admin"], owner: false },
+  bookings: { public: false, roles: ["admin", "staff"], owner: false },
   admin: { public: false, roles: ["admin"], owner: false },
 } satisfies Record<string, Rule>;
 
@@ -23349,7 +23959,7 @@ export const deletePosts = createServerFn({ method: "POST" })
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/roles.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 /** Each role as the app names it. */
-export const ROLE_LABELS: Record<string, string> = { admin: "Admin", member: "Member" };
+export const ROLE_LABELS: Record<string, string> = { admin: "Admin", staff: "Staff", member: "Member" };
 "
 `;
 
@@ -23459,9 +24069,9 @@ function usedBy(tx: Tx, id: number, title: string) {
 
 /** Who may read, create, change and delete sessions. */
 export const sessionAccess: ModelAccess = {
-  read: { public: true, roles: ["admin"], owner: true },
-  create: { public: false, roles: ["admin"], owner: false },
-  write: { public: false, roles: ["admin"], owner: true },
+  read: { public: true, roles: ["admin", "staff"], owner: true },
+  create: { public: false, roles: ["admin", "staff"], owner: false },
+  write: { public: false, roles: ["admin", "staff"], owner: true },
   delete: { public: false, roles: ["admin"], owner: true },
 };
 
@@ -24621,7 +25231,7 @@ import type { Viewer } from "#/kit/access";
 import { doorShut, refused } from "#/kit/dev-door.server";
 
 /** The roles no sample user has: Ask answers as one of those by a session made for the call. */
-const ROLES: string[] = ["admin", "member"];
+const ROLES: string[] = ["admin", "staff", "member"];
 
 export const Route = createFileRoute("/_dev/ask")({
   server: {
@@ -28310,8 +28920,12 @@ const facts: LegalFacts = {
   purpose: "Class schedule and online booking for a small yoga studio.",
   signIn: { email: true, google: false, invitedOnly: false },
   records: [
-    { label: bookingUi.pluralLabel, fields: ["attendee"], readers: ["admin"] },
-    { label: messageUi.pluralLabel, fields: ["email"], readers: ["admin"] },
+    {
+      label: bookingUi.pluralLabel,
+      fields: ["attendee"],
+      readers: ["admin", "staff"],
+    },
+    { label: messageUi.pluralLabel, fields: ["email"], readers: ["admin", "staff"] },
   ],
   uploads: true,
   mailAbout: ["bookings", "sessions"],
@@ -28841,7 +29455,7 @@ import { w } from "#/kit/words";
 import { auth, codesReachPeople, configuredProviders, demoSignIn, mailKept, PROVIDERS } from "#/lib/auth";
 import { authClient } from "#/lib/auth-client";
 
-const ROLES = ["admin","member"] as const;
+const ROLES = ["admin","staff","member"] as const;
 
 const signInOptions = createServerFn().handler(() => {
   const providers = configuredProviders();
@@ -29258,6 +29872,22 @@ test.describe("signed in as admin", () => {
   });
 });
 
+test.describe("signed in as staff", () => {
+  test.beforeEach(async ({ page }) => {
+    await signIn(page, "staff");
+  });
+
+  test("Sessions opens", async ({ page }) => {
+    await visit(page, "/sessions");
+  });
+  test("Messages opens", async ({ page }) => {
+    await visit(page, "/messages");
+  });
+  test("Bookings opens", async ({ page }) => {
+    await visit(page, "/bookings");
+  });
+});
+
 test.describe("signed in as member", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page, "member");
@@ -29528,7 +30158,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "c949523d generated",
+  "README.md": "d340ff4f generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "5259e0bd generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -29546,21 +30176,21 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "85b24518 generated",
   "src/db/seed.ts": "64b9d0a4 generated",
-  "src/generated/access.test.ts": "ff2d7f3c generated",
+  "src/generated/access.test.ts": "5a6ddbc6 generated",
   "src/generated/actions/publish.server.ts": "ecb9a2f6 generated",
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "e3dd87a3 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "c63659a8 generated",
+  "src/generated/ask.server.ts": "e847ac75 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "4871720a generated",
-  "src/generated/booking.ts": "40202f54 generated",
+  "src/generated/booking.server.ts": "f52a5884 generated",
+  "src/generated/booking.ts": "fc39a336 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
   "src/generated/class-type.server.ts": "a221d86c generated",
   "src/generated/class-type.ts": "ada91c5e generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/dev-door.server.ts": "b9d5689d generated",
+  "src/generated/dev-door.server.ts": "e217c7a2 generated",
   "src/generated/home-estimate-calculator.formulas.test.ts": "485eaa86 generated",
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
@@ -29569,19 +30199,19 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.server.ts": "2e767d80 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "87ba6eb0 generated",
+  "src/generated/message.server.ts": "68e27918 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "f981b018 generated",
-  "src/generated/pages.ts": "63d95492 generated",
+  "src/generated/pages.ts": "236d20f6 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "e0b587d4 generated",
   "src/generated/post.ts": "3b8935b4 generated",
-  "src/generated/roles.ts": "d284ad2a generated",
+  "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "079a1524 generated",
+  "src/generated/session.server.ts": "c3bb053c generated",
   "src/generated/session.ts": "e2a3ab62 generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "5236c791 generated",
@@ -29602,7 +30232,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "a2f7d274 kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "19aae925 kit",
   "src/kit/Landing.tsx": "0595da82 kit",
@@ -29659,15 +30289,15 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
+  "src/routes/[_dev]/ask.ts": "65b1f83a generated",
   "src/routes/[_dev]/clock.ts": "c45367e8 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "6d502cd6 generated",
@@ -29719,18 +30349,18 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/$id.tsx": "f83087d3 generated",
   "src/routes/posts/index.tsx": "17f23836 generated",
   "src/routes/posts/new.tsx": "7be9f470 generated",
-  "src/routes/privacy/index.tsx": "05f75ae3 generated",
+  "src/routes/privacy/index.tsx": "c7ef14eb generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "79cdbac7 generated",
   "src/routes/sessions/$id.tsx": "651b876b generated",
   "src/routes/sessions/index.tsx": "31819502 generated",
   "src/routes/sessions/new.tsx": "55613a12 generated",
-  "src/routes/sign-in.tsx": "3f9e1f3e generated",
+  "src/routes/sign-in.tsx": "6c39db74 generated",
   "src/routes/sitemap[.]xml.ts": "018df36b generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",
-  "tests/smoke.spec.ts": "5c945fe6 generated",
+  "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
   "vite.config.ts": "508bc581 kit",
@@ -37725,7 +38355,11 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  { value: "admin", label: ROLE_LABELS["admin"] },
+  {
+    value: "admin",
+    label: ROLE_LABELS["admin"],
+    description: "The owner. Runs the team and the settings, and sees everything sales does.",
+  },
   {
     value: "sales",
     label: ROLE_LABELS["sales"],
@@ -38418,7 +39052,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "6e06c8b2 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "19aae925 kit",
   "src/kit/Landing.tsx": "0595da82 kit",
@@ -38436,7 +39070,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "d6c77292 kit",
+  "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -38467,8 +39101,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -38499,7 +39133,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "8c938050 generated",
   "src/routes/team/activity.tsx": "a8e492c5 generated",
-  "src/routes/team/index.tsx": "b3b170a2 generated",
+  "src/routes/team/index.tsx": "d125d34a generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
@@ -45895,22 +46529,31 @@ import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/page-guard";
 import { currentViewer } from "#/lib/viewer.server";
 import { invoiceData } from "#/generated/invoice.server";
-import { sum, byPeriod, latest } from "#/kit/aggregate";
+import * as schema from "#/db/schema";
 import { app } from "#/generated/app";
+import { inRange } from "#/kit/filter";
+import { optional, text, type Search } from "#/kit/params";
+import { personZone } from "#/kit/person-time.server";
+import { sum, byPeriod, latest } from "#/kit/aggregate";
 import { PageHeader } from "#/kit/AppShell";
+import { Filters } from "#/kit/Filters";
+import { w } from "#/kit/words";
 import { StatCard, formatNumber, BarChart, QuietDashboard } from "#/kit/Dashboard";
 import { invoiceUi } from "#/generated/invoice";
 import { ModelTable } from "#/kit/ModelTable";
 
-const getOverview = createServerFn().handler(async () => {
+const getOverview = createServerFn()
+  .validator((data: { period?: unknown }) => ({ period: typeof data?.period === "string" && data.period ? data.period.slice(0, 40) : undefined }))
+  .handler(async ({ data }) => {
   const viewer = await currentViewer();
   const invoices = await invoiceData.list(viewer);
+  const invoicesWithin = data.period ? await invoiceData.list(viewer, inRange(schema.invoices.issuedOn, data.period, "date", 1, personZone(app.timeZone))) : invoices;
   return {
-    outstanding: sum(invoices.filter((row) => row.status === "sent"), (row) => row.total),
-    overdue: sum(invoices.filter((row) => row.status === "overdue"), (row) => row.total),
-    paid: sum(invoices.filter((row) => row.status === "paid"), (row) => row.total),
-    invoiced: byPeriod(invoices, (row) => row.issuedOn, (row) => Number(row.total) || 0, "month", "UTC"),
-    latest: latest(invoices, 5),
+    outstanding: sum(invoicesWithin.filter((row) => row.status === "sent"), (row) => row.total),
+    overdue: sum(invoicesWithin.filter((row) => row.status === "overdue"), (row) => row.total),
+    paid: sum(invoicesWithin.filter((row) => row.status === "paid"), (row) => row.total),
+    invoiced: byPeriod(invoicesWithin, (row) => row.issuedOn, (row) => Number(row.total) || 0, "month", "UTC", Boolean(data.period)),
+    latest: latest(invoicesWithin, 5),
     empty: invoices.length === 0,
   };
 });
@@ -45918,16 +46561,24 @@ const getOverview = createServerFn().handler(async () => {
 export const Route = createFileRoute("/overview/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["overview"], context.viewer, location.href),
   head: () => pageHead("overview"),
-  loader: () => getOverview(),
+  validateSearch: (s: Search) => optional({ period: text(s.period) }),
+  loaderDeps: ({ search }) => ({ period: search.period }),
+  loader: ({ deps }) => getOverview({ data: { period: deps.period } }),
   component: OverviewPage,
 });
 
 function OverviewPage() {
   const data = Route.useLoaderData();
   const navigate = useNavigate();
+  const { period } = Route.useSearch();
   return (
     <>
       <PageHeader page="overview" title={pageUi["overview"].title} />
+      <Filters
+        filters={[{ name: "period", label: w.period, kind: "range", input: "date", relative: ["thisWeek", "thisMonth", "lastMonth", "thisYear"] }]}
+        values={{ period }}
+        onChange={(next) => navigate({ to: "/overview", search: { period: next.period } })}
+      />
       {data.empty ? (
         <QuietDashboard href="/invoices" label={pageUi["invoices"]?.title ?? "Invoices"} />
       ) : (
@@ -46863,7 +47514,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Dashboard.tsx": "6e06c8b2 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "a2f7d274 kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "19aae925 kit",
   "src/kit/Landing.tsx": "0595da82 kit",
@@ -46881,7 +47532,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "d6c77292 kit",
+  "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -46919,8 +47570,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -46943,7 +47594,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoices/$id.tsx": "99070619 generated",
   "src/routes/invoices/index.tsx": "1e0cec38 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
-  "src/routes/overview/index.tsx": "4d3a90ef generated",
+  "src/routes/overview/index.tsx": "e7b45adf generated",
   "src/routes/privacy/index.tsx": "a2c437ac generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/settings/index.tsx": "dd4e71b0 generated",
@@ -54215,7 +54866,11 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  { value: "admin", label: ROLE_LABELS["admin"] },
+  {
+    value: "admin",
+    label: ROLE_LABELS["admin"],
+    description: "The owner. Runs the team and the settings, and sees everything the staff does.",
+  },
   {
     value: "staff",
     label: ROLE_LABELS["staff"],
@@ -54881,7 +55536,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "a2f7d274 kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Landing.tsx": "0595da82 kit",
   "src/kit/ModelForm.tsx": "1096056e kit",
@@ -54930,8 +55585,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "10300804 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -54960,7 +55615,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/index.tsx": "f2c986e8 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "201476a9 generated",
-  "src/routes/team/index.tsx": "283a8e3a generated",
+  "src/routes/team/index.tsx": "968fd9c5 generated",
   "src/routes/where/index.tsx": "a3c07c1f generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
@@ -59851,7 +60506,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ContactOwner.tsx": "bcbc5076 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "a2f7d274 kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "19aae925 kit",
   "src/kit/Landing.tsx": "0595da82 kit",
@@ -59901,8 +60556,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -63529,7 +64184,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/Combobox.tsx": "c3a18c75 kit",
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "19aae925 kit",
   "src/kit/Landing.tsx": "0595da82 kit",
@@ -63574,8 +64229,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -74397,7 +75052,11 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  { value: "admin", label: ROLE_LABELS["admin"] },
+  {
+    value: "admin",
+    label: ROLE_LABELS["admin"],
+    description: "The owner. Runs the team and the settings, and keeps the components.",
+  },
   {
     value: "staff",
     label: ROLE_LABELS["staff"],
@@ -75322,7 +75981,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/Dashboard.tsx": "6e06c8b2 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "19aae925 kit",
   "src/kit/Keys.tsx": "aa99e677 kit",
@@ -75341,7 +76000,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/aggregate.ts": "d6c77292 kit",
+  "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/api.server.ts": "0f0e73ff kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -75374,8 +76033,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -75415,7 +76074,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sign-in.tsx": "7572bbad generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
   "src/routes/team/activity.tsx": "a8e492c5 generated",
-  "src/routes/team/index.tsx": "ebf79135 generated",
+  "src/routes/team/index.tsx": "985b893e generated",
   "src/routes/updates/$id.tsx": "68a6081c generated",
   "src/routes/updates/index.tsx": "736bc41e generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
@@ -81967,7 +82626,11 @@ import { Users } from "#/kit/Users";
 import { currentViewer } from "#/lib/viewer.server";
 
 const ROLE_OPTIONS = [
-  { value: "admin", label: ROLE_LABELS["admin"] },
+  {
+    value: "admin",
+    label: ROLE_LABELS["admin"],
+    description: "The owner. Runs the team and the settings, and sees everything the agents do.",
+  },
   {
     value: "agent",
     label: ROLE_LABELS["agent"],
@@ -82544,7 +83207,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Consent.tsx": "c5ee7e50 kit",
   "src/kit/FieldInput.tsx": "28f4534c kit",
   "src/kit/FileInput.tsx": "a2f7d274 kit",
-  "src/kit/Filters.tsx": "196a0352 kit",
+  "src/kit/Filters.tsx": "bd099e9b kit",
   "src/kit/InlineRows.tsx": "bc07b3db kit",
   "src/kit/Inspector.tsx": "19aae925 kit",
   "src/kit/ModelForm.tsx": "1096056e kit",
@@ -82596,8 +83259,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "797b080f kit",
-  "src/kit/zoned.ts": "b294277d kit",
+  "src/kit/words/en.ts": "85e79385 kit",
+  "src/kit/zoned.ts": "78af5658 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
@@ -82621,7 +83284,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "f15377e4 generated",
   "src/routes/team/activity.tsx": "e69c7cd8 generated",
-  "src/routes/team/index.tsx": "078d3b0b generated",
+  "src/routes/team/index.tsx": "a945c0f8 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",

@@ -99,6 +99,7 @@ pages:
       callToAction: { button: overview }
       footer:                           # who is behind it and how to write to them; the privacy page beside
   overview:
+    period: issuedOn                    # the numbers of a month, a year, or all time
     dashboard:
       outstanding: { sum: Invoice.total, where: { status: sent } }
       overdue: { sum: Invoice.total, where: { status: overdue } }

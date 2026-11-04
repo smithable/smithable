@@ -20,6 +20,8 @@ const relativeWord = (value: Relative) =>
     today: w.today,
     thisWeek: w.thisWeek,
     thisMonth: w.thisMonth,
+    lastMonth: w.lastMonth,
+    thisYear: w.thisYear,
   })[value];
 const isRelative = (value: string | undefined): value is Relative =>
   (RELATIVE as readonly string[]).includes(value ?? "");
@@ -46,6 +48,8 @@ export interface FilterUi {
   search?: (text: string) => Promise<{ value: string; label: string }[]>;
   /** A range's inputs: numbers, amounts (in the currency's units) or dates. */
   input?: "number" | "date";
+  /** A date range's chips, where not every relative value fits (a dashboard's period). */
+  relative?: readonly Relative[];
   /** Folded behind "More filters" when the list is first reached (the ux file's shown). */
   folded?: boolean;
 }
@@ -434,7 +438,7 @@ function Range({
       <legend className="text-sm font-semibold">{filter.label}</legend>
       {filter.input === "date" && (
         <div className="flex flex-wrap gap-2">
-          {RELATIVE.map((r) => (
+          {(filter.relative ?? RELATIVE).map((r) => (
             <button
               key={r}
               type="button"

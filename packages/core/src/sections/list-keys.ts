@@ -1,8 +1,9 @@
 // The keys a list offers its viewer besides search: filters and a sort choice (marketplace.md
 // §2.2). Shared by crud pages and a landing page's records section.
 
+import { isMap, isScalar, type ParsedNode } from "yaml";
 import type { At, ParseContext } from "../context.js";
-import type { FieldIR, ModelIR, SpecIR } from "../ir.js";
+import type { DashboardItem, FieldIR, ModelIR, SpecIR } from "../ir.js";
 import { isUpload } from "../ir.js";
 import { didYouMean } from "../suggest.js";
 
@@ -34,10 +35,91 @@ export const sortableBy = (field: FieldIR): boolean =>
       !isUpload(field)));
 
 /** A date filter's relative values, resolved when the query runs, in the app's time zone. */
-export const RELATIVE_DATES = ["upcoming", "past", "today", "thisWeek", "thisMonth"] as const;
+export const RELATIVE_DATES = [
+  "upcoming",
+  "past",
+  "today",
+  "thisWeek",
+  "thisMonth",
+  "lastMonth",
+  "thisYear",
+] as const;
 
 const DATE_RANGE = /^(?:\d{4}-\d{2}-\d{2})?\.\.(?:\d{4}-\d{2}-\d{2})?$/;
 const NUMBER_RANGE = /^(?:-?\d+(?:[.,]\d+)?)?\.\.(?:-?\d+(?:[.,]\d+)?)?$/;
+
+/**
+ * A dashboard's clock (reports.md §2.4): a date field every tile that counts records has, or a
+ * field per model. The fields by model, or nothing when it is refused.
+ */
+export function readDashboardPeriod(
+  ctx: ParseContext,
+  value: ParsedNode,
+  items: readonly DashboardItem[],
+  parsed: Partial<SpecIR>,
+  where: string,
+): Record<string, string> | undefined {
+  // A list of what is due, the latest changes and a custom query are not in a period.
+  const scoped = [
+    ...new Set(
+      items
+        .filter((i) => i.kind !== "activity" && !i.query && !(i.kind === "list" && i.when))
+        .map((i) => i.model),
+    ),
+  ];
+  const written = isScalar(value) && typeof value.value === "string" ? value.value : undefined;
+  const period: Record<string, string> = {};
+  if (written !== undefined) for (const model of scoped) period[model] = written;
+  else if (isMap(value))
+    for (const pair of value.items) {
+      const key = isScalar(pair.key) ? String(pair.key.value) : "";
+      if (isScalar(pair.value) && typeof pair.value.value === "string")
+        period[key] = pair.value.value;
+    }
+  else {
+    ctx.error(
+      value,
+      "invalid-value",
+      `"period" in ${where} names a date field, or a date field per model.`,
+    );
+    return undefined;
+  }
+  let fine = true;
+  for (const [name, fieldName] of Object.entries(period)) {
+    const model = parsed.models?.find((m) => m.name === name);
+    if (!model) {
+      ctx.error(
+        value,
+        "invalid-value",
+        `"period" in ${where} names "${name}", which is not a model.`,
+      );
+      fine = false;
+      continue;
+    }
+    const field = model.fields.find((f) => f.name === fieldName);
+    if (
+      field?.type.kind !== "scalar" ||
+      (field.type.name !== "date" && field.type.name !== "datetime")
+    ) {
+      ctx.error(
+        value,
+        "invalid-value",
+        `"period" in ${where}: ${name} has no date field named "${fieldName}".`,
+      );
+      fine = false;
+    }
+  }
+  for (const model of scoped)
+    if (!period[model]) {
+      ctx.error(
+        value,
+        "invalid-value",
+        `"period" in ${where} says no date field for ${model}, which a tile counts.`,
+      );
+      fine = false;
+    }
+  return fine ? period : undefined;
+}
 
 /**
  * A filter one reference away (reports.md §2.1), `session.startsAt`: the reference, and the field

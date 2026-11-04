@@ -381,6 +381,9 @@ export const w = {
   past: "Past",
   thisWeek: "This week",
   thisMonth: "This month",
+  lastMonth: "Last month",
+  thisYear: "This year",
+  period: "Period",
   /** The filters folded away when a list is first reached, and folding them again. */
   moreFilters: "More filters",
   fewerFilters: "Fewer filters",

@@ -32,6 +32,7 @@ import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
+import { OwnerCheck } from "./OwnerCheck";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
@@ -671,6 +672,9 @@ export function App() {
   const [guiding, setGuiding] = useState(false);
   const tour = manual === "code" && slotOf("code") !== undefined && !narrow ? "code" : "nocode";
   const firstVisit = project && !project.making && !guideOff() && !seenGuide(project.name);
+  // Who runs the app is asked after the time zone is answered, one card at a time.
+  const [zoneDoneFor, setZoneDoneFor] = useState<string>();
+  const zoneAnswered = useCallback(() => setZoneDoneFor(project?.name), [project?.name]);
   // The first tour waits for the preview's page (its second stop points at the running app),
   // or twenty seconds when the preview is slow to start.
   const [previewUp, setPreviewUp] = useState(false);
@@ -1156,12 +1160,27 @@ export function App() {
               key={project.name}
               app={project.name}
               spec={project.files.spec}
+              onAnswered={zoneAnswered}
               onUse={async (zone) => (await run("setApp", { timezone: zone })) !== false}
               onChange={() => {
                 nocodePlace({ sub: "behavior" });
                 if (narrow) showWindow("nocode");
                 else workIn("nocode");
               }}
+            />
+          )}
+        {!project.making &&
+          !guideOff() &&
+          !overlaid &&
+          !guiding &&
+          !firstVisit &&
+          project.name === zoneDoneFor &&
+          project.files.auth && (
+            <OwnerCheck
+              key={project.name}
+              app={project.name}
+              auth={project.files.auth}
+              onSet={async (admins) => (await run("setAdmins", { admins })) !== false}
             />
           )}
         {(message || pending) && (

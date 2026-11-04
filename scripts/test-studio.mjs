@@ -540,10 +540,17 @@ try {
         const zone = fresh.locator('[data-part="time-zone-check"]');
         await zone.getByRole("button", { name: /^(Keep|Not now)/ }).click();
         await zone.waitFor({ state: "detached", timeout: 5000 * P });
+        // Then who runs the app: the owner's address goes to the administrators.
+        const owner = fresh.locator('[data-part="owner-check"]');
+        await owner.getByRole("button", { name: "Someone else" }).click();
+        await owner.getByLabel("The owner's email address").fill("owner@shop.se");
+        await owner.getByRole("button", { name: "Make them the administrator" }).click();
+        await owner.waitFor({ state: "detached", timeout: 15000 * P });
         await fresh.reload();
         await fresh.locator("header").getByRole("button", { name: "Guide" }).waitFor();
         await fresh.waitForTimeout(1000);
         if (await zone.count()) throw new Error("the time zone was asked about again");
+        if (await owner.count()) throw new Error("who runs the app was asked about again");
         // Present the app again: in Smith's thread, without the overlay (smith-first.md §12.6).
         await fresh.locator("header").getByRole("button", { name: "Guide" }).click();
         await fresh.getByRole("menuitem", { name: "Present the app again" }).click();

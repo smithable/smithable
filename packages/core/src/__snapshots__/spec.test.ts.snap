@@ -2929,6 +2929,9 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
         ],
         "kind": "dashboard",
       },
+      "period": {
+        "Invoice": "issuedOn",
+      },
       "route": "/overview",
       "sections": [
         {
