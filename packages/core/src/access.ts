@@ -223,3 +223,23 @@ export function uniqueScope(
   if (unique === true) return uniquePerOwner(model, auth) ? "owner" : "app";
   return auth.signIn === "none" ? "app" : unique;
 }
+
+/**
+ * Why a role cannot get a list mail of a model's records (docs/design/reports.md §2.2): the
+ * list is everyone's, since a timer runs as the app, so the role must read every record, not
+ * only its own. Nothing when it may.
+ */
+export function listReaderProblem(
+  role: string,
+  model: ModelIR,
+  auth: AuthIR,
+): { message: string; hint: string } | undefined {
+  // A role's read grant names models (GrantNames), never a condition: a role in `roles` reads
+  // every record. Only the public's read carries a `where`, so it counts only without one.
+  const read = modelAccess(model, auth).read;
+  if ((read.public && !read.where) || read.roles.includes(role)) return undefined;
+  return {
+    message: `every ${role} would get a list of ${model.name} records, which ${role} may not read${read.owner ? " beyond their own" : ""}: the mail would show them records they cannot open.`,
+    hint: `Let ${role} read every ${model.name} (read: [${model.name}] under roles.${role} in smithable.auth.yml), or mail another role.`,
+  };
+}

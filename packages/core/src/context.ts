@@ -88,6 +88,11 @@ export class ParseContext {
     names.add(name);
   }
 
+  /** The names defined of a kind; undefined when none is, so the kind goes unchecked. */
+  defined(kind: SymbolKind): ReadonlySet<string> | undefined {
+    return this.symbols.get(kind);
+  }
+
   /** Records a reference, checked by `checkReferences` once every section is parsed. */
   reference(kind: SymbolKind, name: string, at: At): void {
     this.references.push({ kind, name, at });

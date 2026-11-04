@@ -796,7 +796,7 @@ export type TimerScheduleIR =
  */
 export interface TimerIR {
   name: string;
-  /** The records it runs for; a clock timer running a custom action has none. */
+  /** The records it runs for; a clock timer running a custom action, or feeding a list mail, has none. */
   on?: string;
   /** Only the records that fit. */
   where?: Condition;
@@ -811,11 +811,13 @@ export interface OutgoingIR {
    * A record of `model` created, changed or deleted; the standard action `action` (on `model`) ran;
    * the timer `timer` (whose records are `model`'s) came for a record; or the custom action
    * `custom` returned without an error (no record: the call carries its input and output).
+   * With `clock`, the timer is on a clock with no records (`every` or `cron`, no `on`) and the
+   * entry is a list mail: `model` is the model of its `list` (docs/design/reports.md §2.2).
    */
   when:
     | { model: string; event: "created" | "changed" | "deleted" }
     | { model: string; action: string }
-    | { model: string; timer: string }
+    | { model: string; timer: string; clock?: true }
     | { custom: string };
   /**
    * Only for records that fit: a creation or deletion when the record fits, a change when the
@@ -836,6 +838,39 @@ export interface OutgoingIR {
   show?: string[] | "none";
   /** For `<Model> changed`: what the changed fields among the sent ones were, before the change. */
   previous?: boolean;
+  /**
+   * A list mail (docs/design/reports.md §2.2): on a clock timer, the mail shows a table of records
+   * instead of telling about one. Its recipient is a role that reads every record of the model.
+   */
+  list?: OutgoingListIR;
+  /** A list mail with nothing to show: no mail (skip, unsaid) or a mail that says so (send). */
+  empty?: "skip" | "send";
+}
+
+/**
+ * The records a list mail shows: a dashboard list tile's keys (`model` or `query`, `where`,
+ * `when` with `within`, `limit`) and the columns of its table.
+ */
+export interface OutgoingListIR {
+  /** The model of the records; a query's `returns` when `query` is given. */
+  model: string;
+  /** A custom query whose records the mail shows, instead of the model's. */
+  query?: string;
+  where?: Condition;
+  /**
+   * A stored date or date-time field of the model, or a reference then its field
+   * (`session.startsAt`): the list is the records whose date falls in `within`.
+   */
+  when?: { path: string[] };
+  /**
+   * How far the list reaches from the moment the timer fires, in the app's time zone: that day
+   * (`today`), the next (`tomorrow`), or up to the end of `<n> days` or `<n> weeks` as a
+   * dashboard's due list has it; unsaid with `when`, DUE_WITHIN (7 days).
+   */
+  within?: { amount: number; unit: "day" | "week" } | "today" | "tomorrow";
+  limit?: number;
+  /** The fields the mail's table shows, in this order, each one the record page could show. */
+  columns: string[];
 }
 
 export type RecipientIR =

@@ -24,10 +24,10 @@ export const SECTIONS: readonly SpecSection[] = [
   appSection,
   modelsSection,
   actionsSection,
+  queriesSection,
   timersSection,
   outgoingSection,
   incomingSection,
-  queriesSection,
   pagesSection,
   navigationSection,
 ];
@@ -118,6 +118,7 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
   );
   const extensions = applyPlugins(ctx, doc, byKey, plugins);
   const parsed: Partial<SpecIR> = {};
+  for (const role of options.roles ?? []) ctx.define("role", role);
   for (const section of SECTIONS) {
     const entry = byKey.get(section.key);
     if (!entry && section.required) {
@@ -129,7 +130,6 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
   }
   unfilled(ctx, parsed);
   triggersReachable(ctx, parsed);
-  for (const role of options.roles ?? []) ctx.define("role", role);
   ctx.checkReferences(options.roles ? [] : ["role"]);
 
   if (hasErrors(ctx.diagnostics)) return done();
