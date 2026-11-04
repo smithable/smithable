@@ -61,7 +61,15 @@ export function instantOf(wall: string, timeZone?: string): Date {
 }
 
 /** A date filter's relative values: resolved when the query runs, in the app's time zone. */
-export const RELATIVE = ["upcoming", "past", "today", "thisWeek", "thisMonth"] as const;
+export const RELATIVE = [
+  "upcoming",
+  "past",
+  "today",
+  "thisWeek",
+  "thisMonth",
+  "lastMonth",
+  "thisYear",
+] as const;
 export type Relative = (typeof RELATIVE)[number];
 
 /** The day `days` after a date ("2026-10-05"), as a date. */
@@ -86,7 +94,15 @@ export function relativeDays(
     const monday = shifted(today, -weekday);
     return { from: monday, to: shifted(monday, 7) };
   }
+  if (value === "thisYear") {
+    const year = Number(today.slice(0, 4));
+    return { from: `${year}-01-01`, to: `${year + 1}-01-01` };
+  }
   const first = `${today.slice(0, 7)}-01`;
+  if (value === "lastMonth") {
+    const before = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 2, 1));
+    return { from: before.toISOString().slice(0, 10), to: first };
+  }
   const next = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 1));
   return { from: first, to: next.toISOString().slice(0, 10) };
 }

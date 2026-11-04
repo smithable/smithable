@@ -2418,6 +2418,20 @@
             "type": "boolean",
             "description": "The page lists only the viewer's own records (my items, my orders); it needs sign-in."
           },
+          "period": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "A dashboard's clock: a date field every tile's model has, or a field per model. The page then has period chips, and its counts, sums, lists and charts are scoped to the chosen period."
+          },
           "favorites": {
             "oneOf": [
               {
