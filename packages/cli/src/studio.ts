@@ -37,6 +37,13 @@ import {
 import { BETA, readBeta } from "./beta.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
+import {
+  generationId,
+  generationReceipt,
+  generationRunning,
+  hasGenerationReceipt,
+  startGeneration,
+} from "./generation-job.js";
 import { git, ownRepository, trailer } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
@@ -1026,8 +1033,7 @@ export async function studio(
       // While a described app is being made, the project here is not the person's yet:
       // nothing else changes it (what they type waits on the page until it is in place).
       if (
-        making &&
-        making.stage !== "failed" &&
+        ((making && making.stage !== "failed") || generationRunning(dir)) &&
         !["GET", "HEAD"].includes(req.method ?? "GET") &&
         ![
           "/api/project/replace",
@@ -1285,11 +1291,50 @@ export async function studio(
       // it in as it takes in any change (only what differs is written): a finished project
       // as it is, an app from a description once it has been made beside the project. What
       // Studio remembered of the old app (its log, a proposal, a notice) goes with it.
+      if (req.method === "GET" && url.pathname === "/api/making/job") {
+        const id = url.searchParams.get("id");
+        if (!generationId(id)) return json({ error: "The generation id is invalid." }, 400);
+        const receipt = generationReceipt(dir, id);
+        return json(receipt ?? { error: "No generation with that id." }, receipt ? 200 : 404);
+      }
       if (req.method === "POST" && url.pathname === "/api/project/replace") {
-        if (!replaceable)
+        const request = await body();
+        if (request.generation !== undefined) {
+          const generation = request.generation as { id?: unknown; retry?: unknown };
+          if (!generation || !generationId(generation.id))
+            return json({ error: "The generation id is invalid." }, 400);
+          const to: Replacement = {
+            describe: typeof request.describe === "string" ? request.describe : undefined,
+            starter: typeof request.starter === "string" ? request.starter : undefined,
+            name: typeof request.name === "string" ? request.name.slice(0, 200) : undefined,
+            admin: typeof request.admin === "string" ? request.admin.slice(0, 320) : undefined,
+            timezone:
+              typeof request.timezone === "string" ? request.timezone.slice(0, 100) : undefined,
+          };
+          try {
+            const receipt = startGeneration(
+              dir,
+              generation.id,
+              to,
+              replaceable,
+              { out: log, err: log },
+              generation.retry === true,
+              () => {
+                replacedAt = Date.now();
+                writePreviewConfig();
+                send("changed", {});
+              },
+            );
+            replaceable = false;
+            return json(receipt, receipt.status === "running" ? 202 : 200);
+          } catch (error) {
+            return json({ error: error instanceof Error ? error.message : String(error) }, 409);
+          }
+        }
+        if (hasGenerationReceipt(dir) || !replaceable)
           return json({ ok: false, output: "This project is not one that can be replaced." }, 403);
         replaceable = false;
-        const to = (await body()) as Asked;
+        const to = request as Asked;
         // A described app whose person is let in at once: the answer says only that it was
         // taken on; where it is, and that it is in place or failed, Studio's pages are told.
         if (to.wait === false && typeof to.describe === "string" && to.describe.trim()) {
