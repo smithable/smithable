@@ -52,27 +52,6 @@ export function inRange(
   );
 }
 
-/** Which of two dates or times comes first, for a sort: empty ones last. */
-export function earlier(a: unknown, b: unknown): number {
-  const at = (v: unknown) => (v instanceof Date ? v.toISOString() : v ? String(v) : "\uffff");
-  return at(a) < at(b) ? -1 : at(a) > at(b) ? 1 : 0;
-}
-
-/**
- * The days a list mail reaches from the day its timer fires (docs/design/reports.md §2.2), as a
- * range for inRange: that day, the next, or everything up to the end of a span, as a due list has it.
- */
-export function withinRange(
-  day: string,
-  within: "today" | "tomorrow" | { amount: number; unit: "day" | "week" },
-): string {
-  const after = (days: number) =>
-    new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
-  if (within === "today") return `${day}..${day}`;
-  if (within === "tomorrow") return `${after(1)}..${after(1)}`;
-  return `..${after(within.amount * (within.unit === "week" ? 7 : 1) - 1)}`;
-}
-
 /**
  * The list's order from the address, "price" from low and "-price" from high, among the columns
  * the page lets its viewer sort by; anything else leaves the newest first.

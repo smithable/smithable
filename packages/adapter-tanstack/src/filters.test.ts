@@ -234,7 +234,7 @@ test("last month and this year, across a year's turn", () => {
 });
 
 test("what a list mail's day reaches, and the order of dates", async () => {
-  const path: string = "../templates/src/kit/filter.ts";
+  const path: string = "../templates/src/kit/zoned.ts";
   const { earlier, withinRange } = (await import(path)) as {
     earlier(a: unknown, b: unknown): number;
     withinRange(day: string, within: unknown): string;

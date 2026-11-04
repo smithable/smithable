@@ -471,10 +471,11 @@ function listRun(
   const inside = (target: ModelIR, field: string) => {
     const type = target.fields.find((f) => f.name === field)?.type;
     const kind = type?.kind === "scalar" && type.name === "date" ? "date" : "instant";
-    use("#/kit/filter", "inRange", "withinRange");
+    use("#/kit/filter", "inRange");
+    use("#/kit/zoned", "withinRange");
     return `inRange(${tableRef(target)}.${field}, withinRange(due.slice(0, 10), ${within}), "${kind}", 1, app.timeZone)`;
   };
-  use("#/kit/filter", "earlier");
+  use("#/kit/zoned", "earlier");
   if (!second)
     return `
       const ${name} = (await ${n.data}.list(as(${JSON.stringify(timer)}), ${inside(model, first)})).sort((a, b) => earlier(a.${first}, b.${first}));${send}`;
