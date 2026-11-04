@@ -1,0 +1,11 @@
+# Sample users: people of the sample data who use the app by themselves in Studio's preview
+# (docs/design/sample-users.md §5). Each has a role, a persona in a sentence, and a pace in minutes
+# between moves. They act only in a development or demo build, never in a published app.
+- name: Nils Ek
+  role: member
+  persona: A regular who books a beard trim with Omar every few weeks and sometimes cancels the day before.
+  pace: 2
+- name: The chair
+  role: staff
+  persona: A barber between customers, who confirms the morning's requests and enters a day off.
+  pace: 3

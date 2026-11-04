@@ -32,8 +32,7 @@ test("change without see under private access, and a role that opens no page", (
   const { ir, auth } = read("booking", (t) =>
     t
       .replace("pages: [my-bookings]", "write: [Booking]")
-      .replace(/(admin:\n.*\n)/, "$1  teacher:\n    description: Teaches.\n")
-      .replace("admins:", "defaultRole: member\nadmins:"),
+      .replace(/(admin:\n.*\n)/, "$1  teacher:\n    description: Teaches.\n"),
   );
   expect(gridWarnings(ir, auth)).toEqual([
     { kind: "role-opens-nothing", role: "teacher" },

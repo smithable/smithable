@@ -95,6 +95,9 @@ export const presentedKey = (app: string) => `presented:${app}`;
 /** That the app's time zone was confirmed in this browser. */
 export const zoneAskedKey = (app: string) => `zoneAsked:${app}`;
 
+/** That who runs the app was asked in this browser (reports.md §3). */
+export const ownerAskedKey = (app: string) => `ownerAsked:${app}`;
+
 /** Whether the address turns the tour off (the screenshot scripts and most of the tests). */
 export const guideOff = () =>
   typeof location !== "undefined" && new URLSearchParams(location.search).get("guide") === "off";
