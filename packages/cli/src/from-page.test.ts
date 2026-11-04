@@ -136,7 +136,9 @@ beforeAll(async () => {
     }
     if (req.url === "/img/hero.jpg") {
       res.writeHead(200, { "content-type": "image/jpeg" });
-      return res.end(Buffer.alloc(1000, 1));
+      const picture = Buffer.alloc(1000, 1);
+      picture.set([255, 216, 255]);
+      return res.end(picture);
     }
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(PAGE);
@@ -233,4 +235,20 @@ test("describePage fences scraped text in <untrusted_page_content> and strips cl
   const inner = described.slice(start, end);
   expect(inner).not.toContain("</untrusted_page_content>");
   expect(inner).not.toContain("<untrusted_page_content>");
+});
+
+test("cached duplicate picture URLs never produce duplicate saved files", async () => {
+  const reading = readPage(PAGE, `${base}/`);
+  reading.pictures = Array.from({ length: 100 }, () => ({
+    src: `${base}/img/hero.jpg`,
+    alt: "Picture",
+  }));
+  const files: string[] = [];
+  const saved = await downloadPictures(reading, (file) => files.push(file), true);
+  expect(saved).toHaveLength(1);
+  expect(files).toEqual(["page-1.jpg"]);
+});
+
+test("ordinary public hostname errors retain their actual port diagnostic", async () => {
+  await expect(fetchPage("http://public.invalid:8080/")).rejects.toThrow("usual ports");
 });

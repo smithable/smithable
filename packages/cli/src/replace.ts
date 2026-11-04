@@ -28,12 +28,15 @@ import {
   withoutSampleDomains,
   withTimeZone,
 } from "./new.js";
+import type { WebsiteGenerationInput, WebsiteGenerationOptions } from "./website-input.js";
 
 export interface Replacement {
   /** A finished project on this machine's disk, as `smithable new` made it (no node_modules needed). */
   from?: string;
   /** Or a description: the app is made as `smithable new --describe` makes it. */
   describe?: string;
+  website?: WebsiteGenerationOptions;
+  instructions?: string;
   starter?: string;
   answers?: string;
   /** The app's name as the person typed it, and their address as its administrator. */
@@ -193,6 +196,18 @@ export async function replaceProject(
     usage?: (usage: Usage) => void;
     diagnostic?: (message: string) => void;
     maxTokens?: number;
+    websiteInput?: WebsiteGenerationInput;
+    websiteSummary?: (summary: {
+      inputDigest?: string;
+      assetManifestDigest?: string;
+      images?: {
+        id: string;
+        role: string;
+        subject: string[];
+        basis: string;
+        needsVisualCheck: boolean;
+      }[];
+    }) => void;
     beforeArrival: () => void;
   },
 ): Promise<number> {
@@ -244,7 +259,14 @@ export async function replaceProject(
     reopenDatabase(dir);
     return 0;
   }
-  if (!to.describe?.trim()) {
+  if (
+    to.website &&
+    (!control?.websiteInput || to.describe !== undefined || to.from !== undefined)
+  ) {
+    io.err("A website generation needs its validated input, without describe or from.\n");
+    return 2;
+  }
+  if (!to.describe?.trim() && !control?.websiteInput) {
     io.err('Say what comes in: "from" (a finished project) or "describe".\n');
     return 2;
   }
@@ -281,11 +303,16 @@ export async function replaceProject(
       ...options,
       describe: to.describe,
       answers: to.answers,
+      instructions: to.instructions,
       ...(control
         ? {
             unattended: true,
+            websiteInput: control.websiteInput,
+            interpretSiteImages: to.website?.interpretText === true,
+            websiteOwnerDescription: to.website?.ownerDescription === true,
+            onWebsite: control.websiteSummary,
             sampleData: false,
-            pictureData: false,
+            pictureData: Boolean(control.websiteInput),
             maxTokens: control.maxTokens ?? 150_000,
             onStage: control.stage,
             onAssumptions: control.assumptions,

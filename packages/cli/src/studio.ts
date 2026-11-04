@@ -1,14 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  watchFile,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -17,7 +9,6 @@ import {
   BUILT_IN_THEMES,
   EDITABLE_FILES,
   editAsOperations,
-  editAsRename,
   findOperation,
   type OperationArgs,
   sameContent,
@@ -1306,8 +1297,18 @@ export async function studio(
           const generation = request.generation as { id?: unknown; retry?: unknown };
           if (!generation || !generationId(generation.id))
             return json({ error: "The generation id is invalid." }, 400);
+          if (
+            request.website !== undefined &&
+            (request.describe !== undefined || request.from !== undefined)
+          )
+            return json({ error: "Website input cannot be combined with describe or from." }, 400);
           const to: Replacement = {
             describe: typeof request.describe === "string" ? request.describe : undefined,
+            ...(request.website === undefined
+              ? {}
+              : { website: request.website as Replacement["website"] }),
+            instructions:
+              typeof request.instructions === "string" ? request.instructions : undefined,
             starter: typeof request.starter === "string" ? request.starter : undefined,
             name: typeof request.name === "string" ? request.name.slice(0, 200) : undefined,
             admin: typeof request.admin === "string" ? request.admin.slice(0, 320) : undefined,

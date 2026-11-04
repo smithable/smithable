@@ -663,6 +663,8 @@ This is the one step that needs a **capable model**: it requires world knowledge
 
 It uses the strongest model the AI policy allows, typically a mid-size Smithable model or a frontier model. Which one gives the best first builds per euro is measured in M12, not assumed. Everyday changes afterwards use the normal routing (§9.2).
 
+Website first builds use the same generator with a versioned facts bundle. Source prose and original image bytes remain private input, separate from the facts-only model description. A host installs a bounded, digest-addressed input through the CLI; the generation receipt binds that digest and the CLI consumes the input before project tools run. Visible output receives a source-overlap check before compilation. Imported and library images have a project provenance manifest, and factual-image release review binds both asset bytes and presentation. The host independently enforces its own approval record. See [first-build §2.8](design/first-build.md#28-a-website-as-the-starting-point).
+
 ## 10. Product surfaces
 
 ### 10.1 One app, two modes

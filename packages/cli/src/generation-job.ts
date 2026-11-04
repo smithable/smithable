@@ -7,6 +7,7 @@ import type { Assumption, Usage } from "@smithable/ai";
 import { ensureRepository, git, uncommitted } from "./git.js";
 import type { Io } from "./io.js";
 import { type Replacement, replaceProject } from "./replace.js";
+import { consumeWebsiteInput, parseWebsiteGenerationOptions } from "./website-input.js";
 
 export type GenerationStage = "preparing" | "drafting" | "building" | "arriving" | "committing";
 export interface GenerationReceipt {
@@ -20,6 +21,17 @@ export interface GenerationReceipt {
   error?: string;
   code?: string;
   retryable?: boolean;
+  website?: {
+    inputDigest?: string;
+    assetManifestDigest?: string;
+    images?: {
+      id: string;
+      role: string;
+      subject: string[];
+      basis: string;
+      needsVisualCheck: boolean;
+    }[];
+  };
 }
 interface Stored extends GenerationReceipt {
   fingerprint: string;
@@ -123,13 +135,25 @@ export function startGeneration(
   make: typeof replaceProject = replaceProject,
 ): GenerationReceipt {
   if (!generationId(id)) throw new Error("The generation id is invalid.");
-  if (
+  if (replacement.website) {
+    replacement = { ...replacement, website: parseWebsiteGenerationOptions(replacement.website) };
+    if (replacement.describe !== undefined || replacement.from !== undefined)
+      throw new Error("Website input cannot be combined with describe or from.");
+  } else if (
     typeof replacement.describe !== "string" ||
     !replacement.describe.trim() ||
     replacement.describe.length > 64_000 ||
     replacement.from
-  )
+  ) {
     throw new Error("A generation needs a description of at most 64000 characters.");
+  }
+  if (
+    replacement.instructions !== undefined &&
+    (typeof replacement.instructions !== "string" || replacement.instructions.length > 2000)
+  )
+    throw new Error("Owner instructions must be at most 2000 characters.");
+  if (replacement.website?.ownerDescription && !replacement.instructions?.trim())
+    throw new Error("An owner description is required for this website fallback.");
   const key = resolve(dir);
   const fingerprint = createHash("sha256").update(JSON.stringify(replacement)).digest("hex");
   const previous = load(dir);
@@ -183,6 +207,13 @@ export function startGeneration(
   };
   void (async () => {
     try {
+      const websiteInput = replacement.website
+        ? consumeWebsiteInput(dir, id, replacement.website.input)
+        : undefined;
+      if (replacement.website) {
+        receipt.website = { inputDigest: replacement.website.input.sha256 };
+        save(dir, receipt);
+      }
       const code = await make(
         dir,
         kept,
@@ -193,6 +224,11 @@ export function startGeneration(
         {
           stage,
           assumptions,
+          websiteInput,
+          websiteSummary: (summary) => {
+            receipt.website = { ...receipt.website, ...summary };
+            save(dir, receipt);
+          },
           diagnostic: (message) => {
             if (receipt.diagnostics.length < 50) receipt.diagnostics.push(message.slice(0, 1000));
             save(dir, receipt);

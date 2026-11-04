@@ -31,21 +31,21 @@ import {
 } from "@smithable/core";
 import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
-import {
-  askIn,
-  describePage,
-  downloadPictures,
-  fetchPage,
-  languageAsked,
-  PageError,
-  readPage,
-  siteNameOf,
-  tooLittle,
-} from "./from-page.js";
+import { askIn, languageAsked, PageError, siteNameOf } from "./from-page.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
 import { addLibraryPictures, dropMissingPictures, placePictures } from "./pictures.js";
+import { describeSiteFacts } from "./site-facts.js";
+import { readSite } from "./site-fetch.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
+import { assetReview, type WebsiteAsset, writeAssetManifest } from "./website-assets.js";
+import { repairWebsiteCopy } from "./website-copy.js";
+import {
+  prepareWebsiteContext,
+  type WebsiteContext,
+  websitePictures,
+} from "./website-generation.js";
+import { digest, parseWebsiteInput, type WebsiteGenerationInput } from "./website-input.js";
 
 /**
  * The starter a description is, or is a small edit of, where that can be read without a model
@@ -85,6 +85,21 @@ export async function create(
     pictureData?: boolean;
     from?: string;
     withPictures?: boolean;
+    websiteInput?: WebsiteGenerationInput;
+    instructions?: string;
+    interpretSiteImages?: boolean;
+    websiteOwnerDescription?: boolean;
+    onWebsite?: (summary: {
+      inputDigest?: string;
+      assetManifestDigest?: string;
+      images?: {
+        id: string;
+        role: string;
+        subject: string[];
+        basis: string;
+        needsVisualCheck: boolean;
+      }[];
+    }) => void;
     /** The app's name as someone typed it (the hosted form): it wins over a draft's own. */
     name?: string;
     /** The administrator's address; without it, the Git user's (email-sign-in.md §3). */
@@ -104,6 +119,14 @@ export async function create(
     onDraft?: (files: Record<string, string>, assumptions?: Assumption[]) => void;
   } = {},
 ): Promise<number> {
+  if ((options.from || options.websiteInput) && options.describe) {
+    io.err("Choose a website input or a description, not both.\n");
+    return 1;
+  }
+  if (options.instructions !== undefined && options.instructions.length > 2000) {
+    io.err("Owner instructions must be at most 2000 characters.\n");
+    return 1;
+  }
   if (options.timezone && !knownZone(options.timezone)) {
     io.err(`Unknown time zone "${options.timezone}". Use a name like Europe/Mariehamn.\n`);
     return 1;
@@ -122,27 +145,50 @@ export async function create(
       if (consent !== true) return consent;
     }
     try {
-      const page = await fetchPage(options.from);
-      const reading = readPage(page.html, page.url);
-      if (tooLittle(reading))
+      const site = await readSite(options.from, { allowAssets: options.withPictures === true });
+      if (site.reading.tooLittle)
         throw new PageError(
-          `${page.url} shows almost nothing without JavaScript, so there is too little to go on. Describe the app instead: smithable new ${dir} --describe "…"`,
+          "The site gave too little factual information. Describe what the app should do.",
         );
-      if (options.withPictures) {
-        const bytes = new Map<string, Uint8Array>();
-        const saved = await downloadPictures(reading, (file, data) => bytes.set(file, data));
-        pictures = saved.map((p) => ({ ...p, bytes: bytes.get(p.file) as Uint8Array }));
-        fromPage = pictures.length > 0;
-      }
-      io.out(
-        `Read ${page.url}: ${reading.headings.length} headings, ${reading.navigation.length} menu links, ${reading.forms.length} forms${options.withPictures ? `, ${pictures.length} pictures` : ""}.\n`,
-      );
-      options = { ...options, describe: describePage(reading, pictures) };
+      const authorizationId = "local-explicit-consent";
+      const input = parseWebsiteInput({
+        version: 1,
+        facts: site.reading.facts,
+        sourceCorpus: site.reading.sourceCorpus,
+        images: site.reading.images,
+        authorization: {
+          id: authorizationId,
+          site: options.from,
+          images: options.withPictures === true,
+        },
+        originals: site.originals.map((original) => ({
+          id: original.id,
+          mediaType: original.mediaType,
+          sha256: digest(original.bytes),
+          base64: Buffer.from(original.bytes).toString("base64"),
+          authorizationId,
+        })),
+      });
+      options = { ...options, websiteInput: input };
+      io.out(`Read ${site.bundle.pages.length} pages from the site.\n`);
     } catch (error) {
       if (!(error instanceof PageError)) throw error;
       io.err(`${error.message}\n`);
       return 1;
     }
+  }
+  let website: WebsiteContext | undefined;
+  let websiteAssets: WebsiteAsset[] = [];
+  let websiteAssumptions: Assumption[] | undefined;
+  if (options.websiteInput) {
+    options = {
+      ...options,
+      websiteInput: parseWebsiteInput(options.websiteInput),
+      describe: options.websiteOwnerDescription
+        ? options.instructions
+        : describeSiteFacts(options.websiteInput.facts),
+      sampleData: false,
+    };
   }
   // A starter's own description, or a small edit of it, needs no model: it is the starter, with
   // the edit's operations applied. From here on it is treated as that starter.
@@ -222,6 +268,28 @@ export async function create(
           },
         }));
   options.onStage?.("preparing");
+  if (options.websiteInput) {
+    website = await prepareWebsiteContext(
+      options.websiteInput,
+      options.interpretSiteImages === true,
+      providers,
+      (message) => options.onDiagnostic?.(message),
+      options.instructions,
+      options.websiteOwnerDescription === true,
+    );
+    description = website.description;
+    options.onWebsite?.({
+      images: website.images.map((image) => ({
+        id: image.id,
+        role: image.role,
+        subject: image.subject,
+        basis: image.basis,
+        needsVisualCheck:
+          website?.interpretations.find((item) => item.imageId === image.id)?.needsVisualCheck ??
+          image.role === "unknown",
+      })),
+    });
+  }
   // Before the draft: the model may ask up to three questions and picks the starter to adapt
   // (docs/design/first-build.md). --yes asks nothing; --answers answers in order, unasked. Either
   // way the model still picks the starter when none was named: skipping the questions is not
@@ -296,9 +364,13 @@ export async function create(
     files = draft.files;
     // From a page: the site's own name, not the draft's reading of the page's title (which is
     // often a sentence); a name someone typed still wins below.
-    const site = siteNameOf(description);
+    const site =
+      (!options.websiteOwnerDescription
+        ? website?.input.facts.fields.find((fact) => fact.kind === "name")?.value
+        : undefined) ?? siteNameOf(description);
     if (site && !options.name?.trim()) files = named(files, site);
-    options.onDraft?.(files, draft.assumptions);
+    if (!website) options.onDraft?.(files, draft.assumptions);
+    websiteAssumptions = draft.assumptions;
     if (draft.assumptions?.length) options.onAssumptions?.(draft.assumptions);
     // An action the model could not get right is left out and said, rather than failing the draft.
     for (const dropped of draft.dropped ?? [])
@@ -346,6 +418,7 @@ export async function create(
     // Pictures from the Smithable image library, unless the page's own came with --with-pictures.
     if (
       ir &&
+      !website &&
       options.pictureData !== false &&
       !fromPage &&
       process.env.SMITHABLE_NO_PICTURES !== "1"
@@ -379,6 +452,23 @@ export async function create(
       "No administrator was set (no --admin and no Git user.email): the starter's sample address is still in smithable.auth.yml. Set yours with: smithable op setAdmins you@your-domain\n",
     );
   files = withTimeZone(files, options.timezone);
+  if (website) {
+    const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
+    if (!ir) {
+      io.err("The website app specification could not be checked.\n");
+      return 1;
+    }
+    const placed = await websitePictures({
+      context: website,
+      files,
+      ir,
+      io,
+      allowLibrary: options.pictureData !== false,
+    });
+    pictures = placed.pictures;
+    websiteAssets = placed.assets;
+    fromPage = false;
+  }
   mkdirSync(dir, { recursive: true });
   for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, file), text);
   // The plain starter comes with its own custom code (e.g. the CRM's customer merge); an app
@@ -420,10 +510,39 @@ export async function create(
   // (samples/<n>.webp, and hero.webp): the hero picked for this app replaces the starter's.
   placePictures(
     dir,
-    options.pictureData === false ? {} : (STARTER_ASSETS[name] ?? {}),
+    website || options.pictureData === false ? {} : (STARTER_ASSETS[name] ?? {}),
     pictures.map((p) => (fromPage ? { ...p, file: `samples/${p.file}` } : p)),
   );
-  if (options.describe) dropMissingPictures(dir, io);
+  if (website) {
+    const copyFiles = {
+      ...files,
+      ...(sampleData
+        ? Object.fromEntries(samples.map((sample) => [sample.path, sample.text]))
+        : {}),
+    };
+    const repaired = await repairWebsiteCopy(
+      copyFiles,
+      website.input.sourceCorpus,
+      website.description,
+      providers,
+      (message) => options.onDiagnostic?.(message),
+    );
+    for (const [file, text] of Object.entries(repaired)) {
+      if (file.startsWith("samples/") && !sampleData) continue;
+      writeFileSync(join(dir, file), text);
+    }
+    writeAssetManifest(dir, websiteAssets);
+    const review = assetReview(dir);
+    if (review.diagnostics.length) {
+      io.err(`${review.diagnostics.join("\n")}\n`);
+      return 1;
+    }
+    options.onDraft?.(
+      Object.fromEntries(Object.entries(repaired).filter(([file]) => !file.startsWith("samples/"))),
+      websiteAssumptions,
+    );
+  }
+  if (options.describe && !website) dropMissingPictures(dir, io);
   options.onStage?.("building");
   const code = await generate(dir, io, {
     tools: true,
@@ -431,6 +550,14 @@ export async function create(
     ...(options.installed ? { installed: true } : {}),
   });
   if (code !== 0) return code;
+  if (website) {
+    const review = assetReview(dir);
+    if (review.diagnostics.length) {
+      io.err(`${review.diagnostics.join("\n")}\n`);
+      return 1;
+    }
+    options.onWebsite?.({ assetManifestDigest: review.manifestDigest });
+  }
   if (sampleData && exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
     io.err("Could not add sample data; the app works without it.\n");
   io.out(

@@ -38,6 +38,8 @@ import { undo, undoChange } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
 import { VERSION } from "./version.js";
+import { approveAssetReviewCommand, readWebsiteAssetReviewCommand } from "./website-assets.js";
+import { installWebsiteInputCommand } from "./website-input.js";
 
 export { type ScenarioControls, sampleRunner } from "./sample-run.js";
 export {
@@ -184,7 +186,20 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
     case "read-page":
-      return readPageCommand(args[0], values.url, io, false, values.facts === true);
+      return readPageCommand(
+        args[0],
+        values.url,
+        io,
+        false,
+        values.facts === true,
+        values.bundle === true,
+      );
+    case "website-input":
+      return installWebsiteInputCommand(dir, values.generation ?? "", values.sha256 ?? "", io);
+    case "review-assets":
+      return values.approve
+        ? approveAssetReviewCommand(dir, values.approve, io)
+        : readWebsiteAssetReviewCommand(dir, io);
     case "new":
       if (args[0] === undefined) {
         io.err(`new needs a directory, like: smithable new my-app\n`);
@@ -198,6 +213,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values.admin ? { admin: values.admin } : {}),
         ...(values.timezone ? { timezone: values.timezone } : {}),
         withPictures: values["with-pictures"] === true,
+        interpretSiteImages: values["interpret-site-images"] === true,
         yes: values.yes === true,
         sampleData: values["no-sample-data"] !== true,
       });
@@ -371,6 +387,11 @@ const CONFIG = {
     dir: { type: "string" },
     json: { type: "boolean" },
     facts: { type: "boolean" },
+    bundle: { type: "boolean" },
+    generation: { type: "string" },
+    sha256: { type: "string" },
+    approve: { type: "string" },
+    "interpret-site-images": { type: "boolean" },
     explain: { type: "boolean" },
     write: { type: "boolean" },
     implementation: { type: "boolean" },
