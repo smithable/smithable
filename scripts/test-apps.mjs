@@ -964,6 +964,14 @@ async function bookingsListFlow(dir, base) {
       .catch(() => {
         throw new Error("the staff do not open the bookings");
       });
+    // A signed-in person can leave from the front page too, and it says what the app is.
+    await open(staff, `${base}/`);
+    await staff
+      .getByRole("button", { name: "Sign out" })
+      .first()
+      .waitFor({ timeout: 10000 * P });
+    if (!(await staff.locator('meta[name="description"]').count()))
+      throw new Error("the front page has no description");
     const owners = await staff.goto(`${base}/class-types`);
     if (owners?.status() !== 403)
       throw new Error(`the staff open the owner's class types: ${owners?.status()}`);

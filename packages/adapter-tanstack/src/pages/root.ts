@@ -30,7 +30,17 @@ import { publicArticles } from "./articles.js";
 /** Who may open each page. */
 export function pagesModule(ir: SpecIR, t: Texts, auth: AuthIR): string {
   const entries = Object.fromEntries(ir.pages.map((p) => [p.id, pageAccess(p, auth)]));
-  const words = Object.fromEntries(ir.pages.map((p) => [p.id, t.page(p.id)]));
+  // The front page's description for search engines, unsaid, is the app's own.
+  const words = Object.fromEntries(
+    ir.pages.map((p) => {
+      const own = t.page(p.id);
+      const fallback =
+        p.route === "/" && !own.description && ir.app.description
+          ? { description: ir.app.description }
+          : {};
+      return [p.id, { ...own, ...fallback }];
+    }),
+  );
   // The page at / has the app's name alone as its tab's title.
   const home = ir.pages.filter((p) => p.route === "/").map((p) => p.id);
   const read = (text: string) => (t.translated ? `tx(${text})` : text);
