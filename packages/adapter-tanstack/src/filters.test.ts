@@ -232,3 +232,17 @@ test("last month and this year, across a year's turn", () => {
     to: "2028-01-01",
   });
 });
+
+test("what a list mail's day reaches, and the order of dates", async () => {
+  const path: string = "../templates/src/kit/zoned.ts";
+  const { earlier, withinRange } = (await import(path)) as {
+    earlier(a: unknown, b: unknown): number;
+    withinRange(day: string, within: unknown): string;
+  };
+  expect(withinRange("2026-12-31", "today")).toBe("2026-12-31..2026-12-31");
+  expect(withinRange("2026-12-31", "tomorrow")).toBe("2027-01-01..2027-01-01");
+  expect(withinRange("2026-12-31", { amount: 2, unit: "week" })).toBe("..2027-01-13");
+  expect(earlier("2026-01-01", "2026-01-02")).toBe(-1);
+  expect(earlier(new Date("2026-01-02T00:00:00Z"), new Date("2026-01-01T00:00:00Z"))).toBe(1);
+  expect(earlier(undefined, "2026-01-01")).toBe(1);
+});

@@ -648,3 +648,14 @@ test("setOutgoingList with both a model and a query says so", () => {
     ),
   ).toBe('"list" takes "model" or "query", not both.');
 });
+
+test("a query chooses its own records: a list with a query takes no date", () => {
+  expect(
+    errors(`  atRisk:
+    when: morning
+    to: mail
+    recipient: staff
+    list: { query: churnRisk, when: session.startsAt, within: today, columns: [session] }
+`).join(" "),
+  ).toMatch(/a query chooses its own records/);
+});

@@ -1258,6 +1258,34 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
         "model": "Session",
       },
     },
+    {
+      "empty": "skip",
+      "list": {
+        "columns": [
+          "session",
+          "attendee",
+        ],
+        "model": "Booking",
+        "when": {
+          "path": [
+            "session",
+            "startsAt",
+          ],
+        },
+        "within": "today",
+      },
+      "name": "todaysBookings",
+      "recipient": {
+        "kind": "role",
+        "role": "admin",
+      },
+      "to": "mail",
+      "when": {
+        "clock": true,
+        "model": "Booking",
+        "timer": "morning",
+      },
+    },
   ],
   "pages": [
     {
@@ -1807,6 +1835,14 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   "queries": [],
   "specVersion": "0.1",
   "timers": [
+    {
+      "name": "morning",
+      "schedule": {
+        "at": "06:30",
+        "every": "day",
+        "kind": "every",
+      },
+    },
     {
       "name": "remind",
       "on": "Booking",

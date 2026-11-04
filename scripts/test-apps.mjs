@@ -7630,7 +7630,7 @@ for (const [index, example] of examples.entries()) {
     if (example === "booking" || example === "invoicing")
       step(
         example === "booking"
-          ? "timers run: a reminder for each booking a day before its class, once; a draft post goes out on its date"
+          ? "timers run: a reminder for each booking a day before its class, once; the morning's list to the administrators, once, none on a quiet day; a draft post goes out on its date"
           : "timers run: a sent invoice a week past its due date is overdue, by the timer",
         () => {
           const timer = (name, at) => {
@@ -7684,6 +7684,30 @@ for (const [index, example] of examples.entries()) {
             throw new Error(`${reminders() - before} reminders for ${booked} bookings`);
           timer("remind", "2030-01-01T10:45:00Z");
           if (reminders() !== before + booked) throw new Error("a booking was reminded twice");
+          // The morning's list (reports.md §2.2): the day's bookings to the administrators, once;
+          // a day with none sends nothing.
+          write(
+            dir,
+            `insert or ignore into user (id, name, email, role, created_at, updated_at) values ('timer-admin', 'Timer Admin', 'timer-admin@example.com', 'admin', ${now}, ${now})`,
+          );
+          const lists = () =>
+            query(dir, "select subject, text from outgoing_mail where entry = 'todaysBookings'");
+          timer("morning", "2030-01-02T05:00:00Z");
+          timer("morning", "2030-01-02T05:00:00Z");
+          const sent = lists();
+          if (!sent.length) throw new Error("no list mail for the day's bookings");
+          const people = query(
+            dir,
+            "select count(*) as n from user where role = 'admin' and email is not null",
+          )[0].n;
+          if (sent.length !== people)
+            throw new Error(`${sent.length} list mails for ${people} administrators`);
+          if (!new RegExp(`^Today's bookings: ${booked} on `).test(sent[0].subject))
+            throw new Error(`the list mail's subject: ${sent[0].subject}`);
+          if (!sent[0].text.includes("Timer Member"))
+            throw new Error(`the list mail's table: ${sent[0].text.slice(0, 200)}`);
+          timer("morning", "2030-01-05T05:00:00Z");
+          if (lists().length !== people) throw new Error("a morning with no bookings sent a mail");
           const [post] = query(dir, "select id from posts order by id limit 1");
           write(
             dir,
@@ -7697,9 +7721,9 @@ for (const [index, example] of examples.entries()) {
           write(
             dir,
             `update sessions set starts_at = ${startsAt} where id = ${booking.session};
-            delete from outgoing_mail where entry = 'reminder';
+            delete from outgoing_mail where entry in ('reminder', 'todaysBookings');
             delete from bookings where attendee_id = 'timer-member';
-            delete from user where id = 'timer-member'`,
+            delete from user where id in ('timer-member', 'timer-admin')`,
           );
         },
       );

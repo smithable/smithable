@@ -381,6 +381,8 @@ export const w = {
   past: "Past",
   thisWeek: "This week",
   thisMonth: "This month",
+  nothingListed: "Nothing to list.",
+  listedSome: (shown: number, total: number) => `The first ${shown} of ${total}.`,
   lastMonth: "Last month",
   thisYear: "This year",
   period: "Period",

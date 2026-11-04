@@ -357,6 +357,8 @@ export const w = {
   past: "Tidigare",
   thisWeek: "Denna vecka",
   thisMonth: "Denna månad",
+  nothingListed: "Inget att lista.",
+  listedSome: (shown: number, total: number) => `De första ${shown} av ${total}.`,
   lastMonth: "Förra månaden",
   thisYear: "I år",
   period: "Period",

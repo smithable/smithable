@@ -138,7 +138,7 @@ timers:
   expect(timers).toContain(".innerJoin(referenced, eq(schema.tasks.parentId, referenced.id))");
 });
 
-test("a clock timer with neither records nor an action takes its run and does nothing else (reports.md §2.2)", () => {
+test("a clock timer with a list mail sends it, one with nothing to do takes its run (reports.md §2.2)", () => {
   const ir = validateSpec({
     path: "smithable.yml",
     text: `smithable: 0.1
@@ -168,12 +168,12 @@ outgoing:
   ).auth as AuthIR;
   const files = generateApp(ir, { smithableVersion: "0.0.0", auth });
   const timers = files.find((f) => f.path === "src/generated/timers.server.ts")?.content ?? "";
-  // The list mail's sending is not built yet: the tick takes the run and does nothing else, named
-  // or not, and no outgoing import is left dangling.
-  for (const name of ["morning", "quiet"])
-    expect(timers).toContain(
-      `await attempt({ timer: "${name}", record: 0, due }, undefined, async () => "done");`,
-    );
+  // The clock with a list mail reads its records as the app and queues the mail; one with nothing
+  // to do still takes its run.
+  expect(timers).toContain('listMail(tx, "todaysBookings"');
+  expect(timers).toContain("withinRange(due.slice(0, 10)");
+  expect(timers).toContain(
+    'await attempt({ timer: "quiet", record: 0, due }, undefined, async () => {\n      return "done";',
+  );
   expect(timers).toContain('clock: {"every":"day","at":"06:30"}');
-  expect(timers).not.toContain("outgoing.server");
 });

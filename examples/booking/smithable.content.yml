@@ -10,6 +10,8 @@ models:
     reserve: { book: Book a mat, cancel: Cancel booking, full: No mats left }
 
 outgoing:
+  todaysBookings:
+    subject: "Today's bookings: {count} on {date}"
   bookingMade:
     subject: "Your booking: {session}"
     text: Thank you for booking. We look forward to seeing you. Please come ten minutes early to settle in; mats, blocks and blankets are by the door. If you cannot come after all, cancel the booking before the class starts so the mat goes to someone else.
