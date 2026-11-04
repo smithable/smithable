@@ -524,6 +524,7 @@ const devSignIn = createServerFn({ method: "POST" })
   });
 
 export const Route = createFileRoute("/sign-in")({
+  head: () => ({ meta: [{ title: \`\${w.signIn} · \${app.name}\` }] }),
   // Only paths within the app, so the page cannot send anyone elsewhere: no "//host", nor "/\\host",
   // which a browser reads as "//host"; and no control character, which no address header takes.
   validateSearch: (s: Search) => optional({

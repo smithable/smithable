@@ -82,6 +82,13 @@ export function landingRoute(
       .add("@tanstack/react-router", "createFileRoute")
       .add("#/generated/pages", "pageAccess")
       .add("#/kit/page-guard", "guardPage");
+  if (framed === true && hasSignIn(auth)) {
+    imports
+      .add("@tanstack/react-router", "useRouter")
+      .add("#/lib/auth-client", "authClient")
+      .add("#/kit/time-text", "rememberPerson");
+    if (auth.assistant) imports.add("#/kit/Ask", "forgetAsked");
+  }
   if (framed === true)
     imports
       .add("#/kit/Landing", "LandingLayout")
@@ -686,8 +693,19 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${loader}  comp
 });
 
 function ${component}() {
-${loaded ? "  const data = Route.useLoaderData();\n" : ""}${hasSignIn(auth) ? "  const { viewer } = Route.useRouteContext();\n" : ""}  return (
-    <LandingLayout appName={app.name}${t.logo} link={${header}}${headerProp}${widthProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer}" : ""}>
+${loaded ? "  const data = Route.useLoaderData();\n" : ""}${
+  hasSignIn(auth)
+    ? `  const { viewer } = Route.useRouteContext();
+  const router = useRouter();
+  const signOut = async () => {
+    await authClient.signOut();
+    rememberPerson();${auth.assistant ? "\n    forgetAsked();" : ""}
+    await router.invalidate();
+  };
+`
+    : ""
+}  return (
+    <LandingLayout appName={app.name}${t.logo} link={${header}}${headerProp}${widthProp}${footer} site={site}${hasSignIn(auth) ? " viewer={viewer} onSignOut={viewer ? signOut : undefined}" : ""}>
       ${parts.join("\n      ")}
     </LandingLayout>
   );
