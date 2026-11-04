@@ -733,7 +733,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
 // X-Alt); a field of several gets it added.
 import { createFileRoute } from "@tanstack/react-router";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
-import { BadInput, bytesOf, fileCall, NotFound } from "#/kit/api.server";
+import { BadInput, bytesOf, fileCall, NotFound, TooLarge } from "#/kit/api.server";
 import { bodySize, BodyLimit } from "#/kit/bounded-body";
 import { storeUpload } from "#/kit/receipts.server";
 import {
@@ -779,11 +779,13 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           const { field, row, value } = await target(viewer, params.id, params.field);
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
-          // The app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
+          const max = field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES;
+          // Over the limit by its declared length (413, as the browser's route answers), or the
+          // app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
           let size: number;
-          try { size = bodySize(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES); }
+          try { size = bodySize(request, max); }
           catch (error) {
-            if (error instanceof BodyLimit) throw new BadInput("The file body exceeds its limit or its length is invalid.");
+            if (error instanceof BodyLimit) throw new TooLarge(\`The file is larger than \${max / 1_000_000} MB, or its length is not a number.\`);
             throw error;
           }
           const held = await reserveUpload(size).catch((error) => {
@@ -794,7 +796,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           let stored: unknown;
           // The room held is given back when the file is refused or cannot be stored.
           try {
-            const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
+            const bytes = await bytesOf(request, max);
             try {
               await scanned(bytes);
             } catch (error) {

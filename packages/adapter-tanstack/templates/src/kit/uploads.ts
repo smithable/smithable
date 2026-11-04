@@ -35,7 +35,7 @@ export const PICTURE_MAX_BYTES = 1_000_000;
 export const PICTURE_MAX_SIDE = 1600;
 
 /** Where files are written: the app's uploads, or in a demo the visitor's own (src/kit/visitor.ts). */
-const uploadsDir = () => join(ownDataDir(), "uploads");
+export const uploadsDir = () => join(ownDataDir(), "uploads");
 /** Where a stored file is: the visitor's own in a demo, else the app's (the seed's pictures). */
 const storedPath = (file: string) => {
   const own = join(uploadsDir(), file);
@@ -346,9 +346,10 @@ export async function reserveUpload(bytes: number): Promise<UploadReservation | 
           counted.set(dir, { bytes: last, at: Date.now() });
           return;
         }
-        // Three scans in a row disturbed by writes: the last total is the estimate (the writes
-        // from here count on it as they happen, and the reservations held are added by roomFor),
-        // said once; not a minute of refusing every upload.
+        // Three scans in a row disturbed by writes: the estimate is the last total, or what is
+        // accounted already when that is more (the writes committed during the scans counted
+        // themselves on it, and must not vanish); the reservations held are added by roomFor.
+        // Said once; not a minute of refusing every upload.
         if (!scanDisturbedSaid) {
           scanDisturbedSaid = true;
           log.warn(
@@ -356,7 +357,10 @@ export async function reserveUpload(bytes: number): Promise<UploadReservation | 
             { bytes: last },
           );
         }
-        counted.set(dir, { bytes: last ?? kept?.bytes ?? 0, at: Date.now() });
+        counted.set(dir, {
+          bytes: Math.max(last ?? 0, counted.get(dir)?.bytes ?? kept?.bytes ?? 0),
+          at: Date.now(),
+        });
       })().finally(() => {
         scanning.delete(dir);
       });

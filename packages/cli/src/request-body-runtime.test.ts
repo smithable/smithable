@@ -117,7 +117,7 @@ test("the generated API reader rejects overflow before draining the request", as
   const bytesOf = new Function(
     "boundedBody",
     "BodyLimit",
-    "BadInput",
+    "TooLarge",
     `${stripTypeScriptTypes((method ?? "").replace("export ", ""))};return bytesOf;`,
   )(boundedBody, BodyLimit, Error);
   let reads = 0;

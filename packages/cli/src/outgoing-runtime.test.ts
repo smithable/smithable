@@ -207,6 +207,43 @@ for (const kind of ["mail", "call"] as const) {
     expect(kind === "mail" ? f.sendMail : f.post).toHaveBeenCalledTimes(2);
   });
 
+  test(`a ${kind} sent whose result and failure mark both cannot be recorded is still not sent again by this process`, async () => {
+    const f = fixture();
+    f.rows[kind].push(f.row(1));
+    f.post.mockResolvedValue(200);
+    // Ten writes and the failure mark all fail: the row stays as it was, due.
+    f.storage.failures = 11;
+    const sending = f.load().sendDue();
+    await vi.advanceTimersByTimeAsync(200_000);
+    expect(await sending).toBe(1);
+    expect(f.rows[kind][0]?.sentAt).toBeUndefined();
+    expect(f.rows[kind][0]?.failedAt).toBeUndefined();
+    // Due still, but remembered: the next drain in this process leaves it, and sends the rest.
+    f.rows[kind].push(f.row(2));
+    expect(await f.load().sendDue()).toBe(1);
+    expect(kind === "mail" ? f.sendMail : f.post).toHaveBeenCalledTimes(2);
+  });
+
+  test(`a ${kind} that failed to send, whose failure cannot be recorded, stays due and is tried again`, async () => {
+    const f = fixture();
+    f.rows[kind].push(f.row(1));
+    if (kind === "mail") f.sendMail.mockRejectedValueOnce(new Error("offline"));
+    else f.post.mockRejectedValueOnce(new Error("offline"));
+    f.post.mockResolvedValue(200);
+    f.storage.failures = 10;
+    const sending = f.load().sendDue();
+    await vi.advanceTimersByTimeAsync(200_000);
+    expect(await sending).toBe(0);
+    // Not marked failed, no retry pause written: due as it was.
+    expect(f.rows[kind][0]?.failedAt).toBeUndefined();
+    expect(f.rows[kind][0]?.error).toBeUndefined();
+    expect(f.rows[kind][0]?.nextAt.getTime()).toBeLessThanOrEqual(Date.now());
+    // The next drain tries the transport again, and this time records it.
+    expect(await f.load().sendDue()).toBe(1);
+    expect(f.rows[kind][0]?.sentAt).toBeInstanceOf(Date);
+    expect(kind === "mail" ? f.sendMail : f.post).toHaveBeenCalledTimes(2);
+  });
+
   test(`a successful ${kind} retries its busy database acknowledgement without resending`, async () => {
     const f = fixture();
     f.rows[kind].push(f.row(1));

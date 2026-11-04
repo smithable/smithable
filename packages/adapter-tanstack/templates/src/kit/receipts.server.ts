@@ -2,13 +2,15 @@
 // upload gave (docs/design/attachments.md §6). A file's name in storage is never enough to put it
 // on a record: only the person who uploaded it, for that field, within a day.
 import { randomBytes } from "node:crypto";
+import { readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { and, eq, gt, lte } from "drizzle-orm";
 import { db } from "#/db";
 import { uploads } from "#/db/schema";
 import type { Viewer } from "./access";
 import { log } from "./log.server";
 import { BadInput } from "./refusal";
-import { deleteFile, hasUpload } from "./uploads";
+import { deleteFile, hasUpload, uploadsDir } from "./uploads";
 import { w } from "./words";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -203,6 +205,42 @@ export async function sweepUploads(now = Date.now()): Promise<number> {
       },
       { behavior: "immediate" },
     );
+  }
+  // Files no receipt names: a store whose receipt never committed (the process gone between the
+  // write and the row), or a receipt swept before. After the same grace, one that no record of
+  // its model has goes too, under the same writer hold.
+  for (const model of Object.keys(UPLOADS)) {
+    let names: string[];
+    try {
+      names = readdirSync(join(uploadsDir(), model));
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      const file = `${model}/${name}`;
+      let written: number;
+      try {
+        written = statSync(join(uploadsDir(), file)).mtimeMs;
+      } catch {
+        continue;
+      }
+      if (written > now - DAY) continue;
+      db.transaction(
+        () => {
+          const named = db
+            .select({ id: uploads.id })
+            .from(uploads)
+            .where(eq(uploads.file, file))
+            .get();
+          const used = Object.values(UPLOADS[model] ?? {}).some((f) => f.data.uses(file));
+          if (!named && !used) {
+            deleteFile({ file, name: "", type: "", size: 0 }, false);
+            gone++;
+          }
+        },
+        { behavior: "immediate" },
+      );
+    }
   }
   return gone;
 }

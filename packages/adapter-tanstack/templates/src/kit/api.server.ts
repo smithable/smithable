@@ -15,8 +15,8 @@ export { BadInput, Gone, NotFound };
 
 const MAX_BODY = 1_000_000;
 
-/** A body over the limit: a 413, refused by its declared size before it is read. */
-class TooLarge extends Error {}
+/** A body over the limit: a 413, refused by its declared size before it is read, or while it is. */
+export class TooLarge extends Error {}
 
 export function problem(
   status: number,
@@ -65,7 +65,8 @@ export function refusalOf(
   error: unknown,
 ): { status: number; title: string; more?: Record<string, unknown> } | undefined {
   if (error instanceof TooMany) return { status: 429, title: error.message };
-  if (error instanceof TooLarge) return { status: 413, title: "The body is larger than 1 MB." };
+  if (error instanceof TooLarge)
+    return { status: 413, title: error.message || "The body is larger than 1 MB." };
   if (error instanceof AccessDenied) return { status: 403, title: error.message };
   if (error instanceof NotFound) return { status: 404, title: error.message };
   if (error instanceof Gone) return { status: 410, title: error.message, more: error.more };
@@ -137,7 +138,7 @@ export async function bytesOf(request: Request, max: number): Promise<Uint8Array
   try {
     return await boundedBody(request, max);
   } catch (error) {
-    if (error instanceof BodyLimit) throw new BadInput(tooLarge);
+    if (error instanceof BodyLimit) throw new TooLarge(tooLarge);
     throw error;
   }
 }

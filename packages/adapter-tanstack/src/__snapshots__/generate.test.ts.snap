@@ -8790,7 +8790,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // X-Alt); a field of several gets it added.
 import { createFileRoute } from "@tanstack/react-router";
 import { noteData } from "#/generated/note.server";
-import { BadInput, bytesOf, fileCall, NotFound } from "#/kit/api.server";
+import { BadInput, bytesOf, fileCall, NotFound, TooLarge } from "#/kit/api.server";
 import { bodySize, BodyLimit } from "#/kit/bounded-body";
 import { storeUpload } from "#/kit/receipts.server";
 import {
@@ -8836,11 +8836,13 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
           const { field, row, value } = await target(viewer, params.id, params.field);
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
-          // The app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
+          const max = field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES;
+          // Over the limit by its declared length (413, as the browser's route answers), or the
+          // app's storage is full (UPLOADS_MAX_BYTES): refused before the body is read.
           let size: number;
-          try { size = bodySize(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES); }
+          try { size = bodySize(request, max); }
           catch (error) {
-            if (error instanceof BodyLimit) throw new BadInput("The file body exceeds its limit or its length is invalid.");
+            if (error instanceof BodyLimit) throw new TooLarge(\`The file is larger than \${max / 1_000_000} MB, or its length is not a number.\`);
             throw error;
           }
           const held = await reserveUpload(size).catch((error) => {
@@ -8851,7 +8853,7 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
           let stored: unknown;
           // The room held is given back when the file is refused or cannot be stored.
           try {
-            const bytes = await bytesOf(request, field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES);
+            const bytes = await bytesOf(request, max);
             try {
               await scanned(bytes);
             } catch (error) {
@@ -10288,7 +10290,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Users.tsx": "dfe24e88 kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/api.server.ts": "702788ff kit",
+  "src/kit/api.server.ts": "6a5eaded kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -10311,14 +10313,14 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "6184d491 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4fe10cd kit",
+  "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -10347,7 +10349,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "050d96d7 generated",
   "src/routes/admin/tasks/new.tsx": "0937d919 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "43bef629 generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "3d2d4148 generated",
   "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
   "src/routes/api/v1/notes/index.ts": "10a9607d generated",
   "src/routes/api/v1/notes[.]csv.ts": "78146a92 generated",
@@ -17045,12 +17047,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "f6333cc2 kit",
+  "src/kit/outgoing.server.ts": "82b17607 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "6184d491 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -17058,7 +17060,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4fe10cd kit",
+  "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "3f554ec6 kit",
@@ -30757,12 +30759,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "f6333cc2 kit",
+  "src/kit/outgoing.server.ts": "82b17607 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "6184d491 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -30770,7 +30772,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4fe10cd kit",
+  "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -48257,12 +48259,12 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "f6333cc2 kit",
+  "src/kit/outgoing.server.ts": "82b17607 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "6184d491 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -48270,7 +48272,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4fe10cd kit",
+  "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -56402,12 +56404,12 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "f6333cc2 kit",
+  "src/kit/outgoing.server.ts": "82b17607 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "6184d491 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -56415,7 +56417,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4fe10cd kit",
+  "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
   "src/kit/words/en.ts": "3f554ec6 kit",
@@ -61438,7 +61440,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "6184d491 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -61446,7 +61448,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4fe10cd kit",
+  "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -77077,7 +77079,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "531e264f kit",
-  "src/kit/api.server.ts": "702788ff kit",
+  "src/kit/api.server.ts": "6a5eaded kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -84407,12 +84409,12 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/model.ts": "5f8f4f30 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "f6333cc2 kit",
+  "src/kit/outgoing.server.ts": "82b17607 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
-  "src/kit/receipts.server.ts": "6184d491 kit",
+  "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -84420,7 +84422,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "d15c7ea5 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "a4fe10cd kit",
+  "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",

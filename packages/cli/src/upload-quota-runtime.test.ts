@@ -263,6 +263,9 @@ test("continuous writes exhaust exactly three scan attempts, then admission coun
   expect(spare).toBeTruthy();
   expect(attempts).toBe(3);
   kit.release(spare);
+  // The churn's own bytes (1 + 2 + 3), written during the scans, stayed accounted: the estimate
+  // is never below what was counted already, so 95 more do not fit in 100.
+  expect(kit.roomFor(95)).toBeUndefined();
 });
 
 test("identical upload bytes remain isolated by model, including deletion", () => {

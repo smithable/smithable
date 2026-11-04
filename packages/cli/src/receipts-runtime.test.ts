@@ -1,4 +1,13 @@
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -68,6 +77,19 @@ test("expired upload cleanup cannot unlink while another connection holds the wr
       .replace('await import("#/generated/uploads")', "{UPLOADS: injectedUploads}")
       .replace(/import\.meta\.env\.SSR/g, "false"),
   );
+  // The orphan pass reads uploads/<model>/: one file old and unnamed by any receipt (gone with
+  // the sweep), one old but kept by a record (stays), one too new to judge (stays).
+  const uploadsRoot = join(root, "uploads");
+  mkdirSync(join(uploadsRoot, "Document"), { recursive: true });
+  for (const [name, day] of [
+    ["orphan.txt", 0.5],
+    ["kept.txt", 0.5],
+    ["fresh.txt", 1.5],
+  ] as const) {
+    writeFileSync(join(uploadsRoot, "Document", name), name);
+    const at = new Date(day * 86400000);
+    utimesSync(join(uploadsRoot, "Document", name), at, at);
+  }
   const sweep = new Function(
     "db",
     "uploads",
@@ -77,6 +99,10 @@ test("expired upload cleanup cannot unlink while another connection holds the wr
     "and",
     "deleteFile",
     "injectedUploads",
+    "readdirSync",
+    "statSync",
+    "join",
+    "uploadsDir",
     `${source}; return sweepUploads;`,
   )(
     db,
@@ -85,19 +111,24 @@ test("expired upload cleanup cannot unlink while another connection holds the wr
     compare(">"),
     compare("<="),
     and,
-    () => unlinkSync(blob),
+    (stored: { file: string }) =>
+      unlinkSync(stored.file === "upload.txt" ? blob : join(uploadsRoot, stored.file)),
     {
       Document: {
         file: {
           data: {
-            uses: () => {
+            uses: (file: string) => {
               expect(() => blocker.exec("BEGIN IMMEDIATE")).toThrow(/locked/);
-              return false;
+              return file === "Document/kept.txt";
             },
           },
         },
       },
     },
+    readdirSync,
+    statSync,
+    join,
+    () => uploadsRoot,
   ) as (now: number) => Promise<number>;
   try {
     blocker.exec("BEGIN IMMEDIATE");
@@ -105,8 +136,12 @@ test("expired upload cleanup cannot unlink while another connection holds the wr
     expect(existsSync(blob)).toBe(true);
     expect(raw.prepare("SELECT count(*) AS n FROM uploads").get()?.n).toBe(1);
     blocker.exec("ROLLBACK");
-    expect(await sweep(2 * 86400000)).toBe(1);
+    // The expired receipt's file, and the old orphan; the kept and the fresh file stay.
+    expect(await sweep(2 * 86400000)).toBe(2);
     expect(existsSync(blob)).toBe(false);
+    expect(existsSync(join(uploadsRoot, "Document", "orphan.txt"))).toBe(false);
+    expect(existsSync(join(uploadsRoot, "Document", "kept.txt"))).toBe(true);
+    expect(existsSync(join(uploadsRoot, "Document", "fresh.txt"))).toBe(true);
     expect(raw.prepare("SELECT count(*) AS n FROM uploads").get()?.n).toBe(0);
   } finally {
     if (blocker.isTransaction) blocker.exec("ROLLBACK");
