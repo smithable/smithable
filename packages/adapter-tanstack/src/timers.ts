@@ -3,9 +3,12 @@ import {
   type ActionIR,
   type Condition,
   camel,
+  DUE_WITHIN,
   type FieldIR,
   kebab,
   type ModelIR,
+  type OutgoingIR,
+  type OutgoingListIR,
   type SpecIR,
   type TimerIR,
 } from "@smithable/core";
@@ -62,6 +65,12 @@ export function timersModule(ir: SpecIR, t: Texts): string {
     // An outgoing entry listens: the tick tells it, for each record.
     const told = ir.outgoing.some((o) => "timer" in o.when && o.when.timer === timer.name);
     if (told && model) events = true;
+    // A list mail on this clock: its records, read as the app, for the day the timer fired.
+    const lists = ir.outgoing.filter(
+      (o) => "timer" in o.when && o.when.timer === timer.name && o.list,
+    );
+    if (lists.length) use("./outgoing.server", "listMail");
+    const listRuns = lists.map((o) => listRun(o, timer.name, ir, t, use, drizzle)).join("");
     const forRecord = model ? recordRun(timer, model, run, told, t, use) : "";
     if (timer.schedule.kind === "record") {
       const m = model as ModelIR;
@@ -119,15 +128,16 @@ const ${camel(timer.name)}Timer: ClockTimer = {
 ${forRecord}`;
     }
     if (!run)
-      // Neither records nor an action: the timer only raises its event, for a list mail
-      // (docs/design/reports.md §2.2), whose sending is not built yet. The tick takes the run
-      // and does nothing else.
+      // Neither records nor an action: the timer raises its event, its list mails go out
+      // (docs/design/reports.md §2.2), and the tick takes the run.
       return `
-/** ${timer.name}: on its clock, raises its event; nothing to run. */
+/** ${timer.name}: on its clock, raises its event${lists.length ? ", its list mails going out" : "; nothing to run"}. */
 const ${camel(timer.name)}Timer: ClockTimer = {
   clock: ${JSON.stringify(clock)},
   async run(due) {
-    await attempt({ timer: ${JSON.stringify(timer.name)}, record: 0, due }, undefined, async () => "done");
+    await attempt({ timer: ${JSON.stringify(timer.name)}, record: 0, due }, undefined, async () => {${listRuns}
+      return "done";
+    });
   },
 };
 `;
@@ -142,7 +152,7 @@ const ${camel(timer.name)}Timer: ClockTimer = {
   clock: ${JSON.stringify(clock)},
   async run(due) {
     await attempt({ timer: ${JSON.stringify(timer.name)}, record: 0, due }, undefined, async () => {
-      await ${a.name}({} as ${names_.inputType}, as(${JSON.stringify(timer.name)}));
+      await ${a.name}({} as ${names_.inputType}, as(${JSON.stringify(timer.name)}));${listRuns}
       return "done";
     });
   },
@@ -427,4 +437,55 @@ ${steps.join("\n")}
   return "done";
 }
 `;
+}
+
+/**
+ * One list mail's run inside its timer's attempt: the records of the entry's `list`, read as the app,
+ * then the mail queued in a transaction, so a failed run queues nothing and is tried again.
+ */
+function listRun(
+  o: OutgoingIR,
+  timer: string,
+  ir: SpecIR,
+  t: Texts,
+  use: (module: string, ...what: string[]) => void,
+  drizzle: Set<string>,
+): string {
+  const list = o.list as OutgoingListIR;
+  const name = camel(o.name);
+  const send = `
+      db.transaction((tx) => listMail(tx, ${JSON.stringify(o.name)}, ${name}, due.slice(0, 10)));`;
+  if (list.query) {
+    use(`#/custom/queries/${kebab(list.query)}`, list.query);
+    return `
+      const ${name} = await ${list.query}(as(${JSON.stringify(timer)}));${send}`;
+  }
+  const model = modelNamed(ir, list.model);
+  const n = names(model, t);
+  use(n.module.replace("#/generated/", "./").concat(".server"), n.data);
+  if (!list.when)
+    return `
+      const ${name} = await ${n.data}.list(as(${JSON.stringify(timer)}));${send}`;
+  const [first = "", second] = list.when.path;
+  const within = JSON.stringify(list.within ?? DUE_WITHIN);
+  const inside = (target: ModelIR, field: string) => {
+    const type = target.fields.find((f) => f.name === field)?.type;
+    const kind = type?.kind === "scalar" && type.name === "date" ? "date" : "instant";
+    use("#/kit/filter", "inRange", "withinRange");
+    return `inRange(${tableRef(target)}.${field}, withinRange(due.slice(0, 10), ${within}), "${kind}", 1, app.timeZone)`;
+  };
+  use("#/kit/filter", "earlier");
+  if (!second)
+    return `
+      const ${name} = (await ${n.data}.list(as(${JSON.stringify(timer)}), ${inside(model, first)})).sort((a, b) => earlier(a.${first}, b.${first}));${send}`;
+  // One reference away: the records it names that fall inside, none in the trash, in their order.
+  const ref = model.fields.find((f) => f.name === first) as FieldIR;
+  const target = modelNamed(ir, (ref.type as { model: string }).model);
+  const far = tableRef(target);
+  for (const name of ["inArray", ...(target.trash ? ["and", "isNull"] : [])]) drizzle.add(name);
+  const key = dataKey(ref);
+  const at = `${name}At`;
+  return `
+      const ${at} = new Map(db.select({ id: ${far}.id, at: ${far}.${second} }).from(${far}).where(${target.trash ? `and(${inside(target, second)}, isNull(${far}.deletedAt))` : inside(target, second)}).all().map((r) => [r.id, r.at]));
+      const ${name} = (await ${n.data}.list(as(${JSON.stringify(timer)}), inArray(${tableRef(model)}.${key}, [...${at}.keys()]))).sort((a, b) => earlier(${at}.get(a.${key} as number), ${at}.get(b.${key} as number)));${send}`;
 }

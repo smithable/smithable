@@ -381,6 +381,7 @@ export const w = {
   past: "Past",
   thisWeek: "This week",
   thisMonth: "This month",
+  nothingListed: "Nothing to list.",
   lastMonth: "Last month",
   thisYear: "This year",
   period: "Period",

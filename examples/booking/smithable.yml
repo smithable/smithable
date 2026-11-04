@@ -77,6 +77,7 @@ actions:
 
 # What the app does on a clock: a reminder the day before, and a post out on its date.
 timers:
+  morning: { every: day, at: "06:30" }  # raises its event; the day's bookings below mail it
   remind:
     on: Booking
     at: 1 day before session.startsAt   # raises its event; the reminder below mails it
@@ -110,6 +111,11 @@ outgoing:
     previous: true                    # and says what the time was
     to: mail
     recipient: bookings.owner        # one mail per booking, to the member who booked
+  todaysBookings:
+    when: morning
+    to: mail
+    recipient: admin                 # the owner sees who comes today
+    list: { model: Booking, when: session.startsAt, within: today, columns: [session, attendee] }
 
 pages:
   home:

@@ -336,6 +336,15 @@ ${apiFields(model)
     }
   },`;
   });
+  // A list mail's own part: its columns and how it goes (docs/design/reports.md §2.2).
+  const listed = mails.flatMap((o) => {
+    if (!o.list) return [];
+    const words = names(modelNamed(ir, o.list.model), t);
+    const fits = o.list.where ? conditions({ ...o, where: o.list.where }) : undefined;
+    return [
+      `  ${JSON.stringify(o.name)}: { model: ${JSON.stringify(o.list.model)}, columns: ${literal(o.list.columns)}, send: ${o.empty === "send"}${o.list.limit ? `, limit: ${o.list.limit}` : ""}, subject: ${JSON.stringify(`${words.pluralLabel}: {date}`)}${fits ? `, fits: ${fits}` : ""} },`,
+    ];
+  });
   const body = [...showers, ...senders, ...list, ...afterList].join("\n");
   const ones = body.includes("one(tx,");
   const trashOne = body.includes(".deletedAt)");
@@ -350,7 +359,7 @@ ${apiFields(model)
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}
 
 type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
@@ -490,7 +499,47 @@ const ENTRIES: {
 ${list.join("\n")}
 ];
 
+${
+  listed.length
+    ? `/** The list mails (docs/design/reports.md §2.2): what each shows, by entry. */
+const LISTS: Record<string, { model: string; columns: string[]; send: boolean; limit?: number; subject: string; fits?: (r: Row) => boolean }> = {
+${listed.join("\n")}
+};
+
 /**
+ * Queues a list mail, in its timer's transaction: the rows are the records the app read for the
+ * day the timer fired; with none, nothing unless the entry says to send.
+ */
+export function listMail(tx: Tx, name: string, rows: Row[], day: string): void {
+  const list = LISTS[name];
+  const entry = ENTRIES.find((e) => e.name === name);
+  if (!list || !entry?.to) return;
+  const fitting = list.fits ? rows.filter(list.fits) : rows;
+  if (!fitting.length && !list.send) return;
+  const shown = fitting
+    .slice(0, list.limit)
+    .flatMap((r) => SHOWN[list.model]?.(tx, r) ?? []);
+  const fill = (text: string, oneLine = false) =>
+    fillText(text, { count: String(fitting.length), date: dayWords(day) }, oneLine);
+  const table = listText(shown, list.columns);
+  queueMail(
+    tx,
+    null,
+    {
+      entry: name,
+      model: list.model,
+      record: null,
+      subject: fill(entry.subject ?? list.subject, true),
+      text: entry.text ? \`\${fill(entry.text)}\n\n\${table}\` : table,
+      fields: [],
+    },
+    entry.to(tx, {}),
+  );
+}
+
+`
+    : ""
+}/**
  * Queues what a change asks for, in its transaction: \`what\` is created, changed, deleted or the
  * action's name; \`record\` the record after (a deleted one as it was), \`before\` before a change.
  */
