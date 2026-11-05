@@ -46,11 +46,15 @@ export const appSection: SpecSection<"app"> = {
         enum: ["12h", "24h"],
         title: "Clock",
         description: "How times are written: 12h or 24h, the default.",
+        "x-examples": { "24h": "09:00 · 21:00", "12h": "9:00 AM · 9:00 PM" },
+        "x-unset": "24h, the default",
       },
       date: {
         type: "string",
         enum: ["day-month", "month-day"],
         title: "Date order",
+        "x-examples": { "day-month": "Thu 5 Nov 2026", "month-day": "Thu, Nov 5, 2026" },
+        "x-unset": "day-month, the default",
         description:
           "How dates are written: day-month (5 Nov 2026), the default, or month-day (Nov 5, 2026).",
       },
@@ -58,12 +62,19 @@ export const appSection: SpecSection<"app"> = {
         type: "string",
         enum: ["monday", "sunday"],
         title: "First day of the week",
+        "x-examples": {
+          monday: "Mon Tue Wed … (week 45)",
+          sunday: "Sun Mon Tue … (no week numbers)",
+        },
+        "x-unset": "monday, the default",
         description: "The day a calendar's week starts on: monday, the default, or sunday.",
       },
       numbers: {
         type: "string",
         enum: ["point", "comma"],
         title: "Numbers",
+        "x-examples": { point: "1,234.56 · €9.90", comma: "1 234,56 · 9,90 €" },
+        "x-unset": "the language's: point for English, comma for Swedish",
         description:
           "How numbers and amounts are written: point (1,234.56 and €9.90) or comma (1 234,56 and 9,90 €); unsaid, the language's.",
       },
