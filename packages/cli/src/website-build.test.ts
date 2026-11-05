@@ -14,7 +14,7 @@ import { tempDir } from "./test-dir.js";
 import { assetReview } from "./website-assets.js";
 import { digest, installWebsiteInputCommand, parseWebsiteInput } from "./website-input.js";
 
-const state = vi.hoisted(() => ({ descriptions: [] as string[], artifact: "" }));
+const state = vi.hoisted(() => ({ descriptions: [] as string[], artifact: "", personalEmail: "" }));
 vi.mock("@smithable/ai", async (original) => ({
   ...(await original<object>()),
   clarifyProject: async (options: { description: string }) => {
@@ -30,6 +30,16 @@ vi.mock("@smithable/ai", async (original) => ({
       "These ten very familiar words are copied from our website.",
     );
     files["smithable.content.yml"] = content.text;
+    if (state.personalEmail) {
+      const spec = new YamlEditor(files["smithable.yml"] ?? "");
+      const description = `Contact ${state.personalEmail}. These ten very familiar words are copied from our website.`;
+      if (spec.has(["app", "description"])) spec.set(["app", "description"], description);
+      else spec.add(["app"], "description", description);
+      files["smithable.yml"] = spec.text;
+      const auth = new YamlEditor(files["smithable.auth.yml"] ?? "");
+      auth.set(["roles", "admin", "description"], `Contact ${state.personalEmail}.`);
+      files["smithable.auth.yml"] = auth.text;
+    }
     return { kind: "draft", files, assumptions: [], usage: [] };
   },
 }));
@@ -289,6 +299,57 @@ test("explicit full-content input carries source prose and retains requested cop
       "People and contact details are samples",
     );
   } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
+test("actual copy-repair branch retains earlier spec/auth sample fields and YAML shape", async () => {
+  const text = "These ten very familiar words are copied from our website.";
+  const source = parseWebsiteInput({
+    version: 1,
+    facts: extractSiteFacts(
+      '<meta property="og:site_name" content="Harbour"><a href="tel:+3581812345">Call</a><a href="mailto:a@example.test">Email</a>',
+      "https://business.example/",
+    ),
+    images: [],
+    originals: [],
+    sourceCorpus: { version: 1, pages: [{ id: "p1", text, sha256: digest(text) }] },
+    authorization: { id: "owner", site: "https://business.example/", images: false },
+  });
+  const dir = join(tempDir("website-copy-sidecar-"), "app");
+  vi.stubEnv("SMITHABLE_DRAFT", "files");
+  vi.stubEnv("SMITHABLE_NO_PICTURES", "1");
+  state.personalEmail = "a@example.test";
+  try {
+    expect(
+      await create(dir, quiet, "barbers", {
+        websiteInput: source,
+        yes: true,
+        unattended: true,
+        admin: "owner@example.test",
+        installed: true,
+      }),
+    ).toBe(0);
+    const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+    const auth = readFileSync(join(dir, "smithable.auth.yml"), "utf8");
+    const content = readFileSync(join(dir, "smithable.content.yml"), "utf8");
+    expect(spec).not.toContain(text);
+    expect(content).not.toContain(text);
+    expect(spec.trimStart()).not.toMatch(/^[{]/);
+    expect(auth.trimStart()).not.toMatch(/^[{]/);
+    expect(content.trimStart()).not.toMatch(/^[{]/);
+    expect(content).toContain("# What people read.");
+    const sidecar = JSON.parse(readFileSync(join(dir, "smithable.website.json"), "utf8"));
+    expect(sidecar.sampleFields).toContainEqual({
+      file: "smithable.yml",
+      path: ["app", "description"],
+    });
+    expect(sidecar.sampleFields).toContainEqual({
+      file: "smithable.auth.yml",
+      path: ["roles", "admin", "description"],
+    });
+  } finally {
+    state.personalEmail = "";
     vi.unstubAllEnvs();
   }
 });

@@ -2,6 +2,7 @@ import type { Provider } from "@smithable/ai";
 import { YamlEditor } from "@smithable/core";
 import { expect, test } from "vitest";
 import { extractSiteFacts } from "./site-facts.js";
+import { projectSitePersonal } from "./site-personal.js";
 import {
   NEUTRAL_WEBSITE_TEXT,
   repairWebsiteCopy,
@@ -145,17 +146,28 @@ test("a source sentence split over three reordered presentation fields is refuse
 });
 
 test("the real copy-repair request and returned text stay inside the personal-data boundary", async () => {
-  const input = parseWebsiteInput({
-    version: 1,
+  const value = {
+    version: 1 as const,
     facts: extractSiteFacts(
-      '<meta property="og:site_name" content="Jane Doe"><a href="tel:+3581812345">Call</a><a href="mailto:a@example.test">Email</a>',
+      '<meta property="og:site_name" content="Jane Doe"><script type="application/ld+json">{"@type":"LocalBusiness","name":"Jane Doe","url":"https://business.example/","telephone":"+3581812345","email":"a@example.test"}</script><a href="tel:+3581812345">Call</a><a href="mailto:a@example.test">Email</a>',
       "https://business.example/",
     ),
     images: [],
     originals: [],
     sourceCorpus: corpus,
     authorization: { id: "auth", site: "https://business.example/", images: false },
-  });
+  };
+  const personalMap = projectSitePersonal({
+    ...value,
+    pages: [
+      {
+        id: "p1",
+        url: "https://business.example/",
+        html: '<meta property="og:site_name" content="Jane Doe"><script type="application/ld+json">{"@type":"LocalBusiness","name":"Jane Doe","url":"https://business.example/","telephone":"+3581812345","email":"a@example.test"}</script><a href="tel:+3581812345">Call</a><a href="mailto:a@example.test">Email</a>',
+      },
+    ],
+  }).personalMap;
+  const input = parseWebsiteInput({ ...value, personalMap });
   const context = await prepareWebsiteContext(input, false, [], () => {});
   let prompt = "";
   const provider: Provider = {
@@ -184,4 +196,28 @@ test("the real copy-repair request and returned text stay inside the personal-da
   expect(prompt).not.toContain(source);
   expect(output["smithable.content.yml"]).not.toContain("a@example.test");
   expect(output["smithable.content.yml"]).not.toContain("Contact Jane Doe");
+});
+
+test("copy repair changes only matched YAML leaves and preserves comments and untouched formatting", async () => {
+  const original = `# Owner's content\npages:\n  home:\n    hero:\n      subtitle: ${source} # keep the note\n      title: "A useful title"\n`;
+  const output = await repairWebsiteCopy(
+    { "smithable.content.yml": original },
+    corpus,
+    "Facts",
+    [],
+  );
+  const repaired = output["smithable.content.yml"] ?? "";
+  expect(repaired).toContain("# Owner's content\npages:\n  home:\n    hero:\n");
+  expect(repaired).toContain("# keep the note");
+  expect(repaired).toContain('title: "A useful title"');
+  expect(repaired).not.toContain(source);
+  const clean = '# Keep this comment\npages:\n  home: {title: "Fresh words"}\n';
+  expect(
+    (await repairWebsiteCopy({ "smithable.content.yml": clean }, corpus, "Facts", []))[
+      "smithable.content.yml"
+    ],
+  ).toBe(clean);
+  expect((await repairWebsiteCopy(output, corpus, "Facts", []))["smithable.content.yml"]).toBe(
+    repaired,
+  );
 });

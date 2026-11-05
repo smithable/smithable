@@ -6,6 +6,7 @@ import {
   isSeq,
   type Pair,
   type ParsedNode,
+  Parser,
   parseDocument,
   stringify,
   type YAMLMap,
@@ -42,6 +43,31 @@ export class YamlEditor {
 
   get text(): string {
     return this.source;
+  }
+
+  /** Exact comment spans, excluding # inside quoted or block scalar values. */
+  commentRanges(): { start: number; end: number }[] {
+    const ranges: { start: number; end: number }[] = [];
+    const tokens: unknown[] = [...new Parser().parse(this.source)];
+    while (tokens.length) {
+      const token = tokens.pop();
+      if (!token || typeof token !== "object") continue;
+      const part = token as { type?: unknown; offset?: unknown; source?: unknown };
+      if (
+        part.type === "comment" &&
+        typeof part.offset === "number" &&
+        typeof part.source === "string"
+      ) {
+        ranges.push({ start: part.offset, end: part.offset + part.source.length });
+        continue;
+      }
+      for (const value of Object.values(token)) {
+        if (Array.isArray(value)) {
+          for (const child of value) tokens.push(child);
+        } else if (value && typeof value === "object") tokens.push(value);
+      }
+    }
+    return ranges.sort((a, b) => a.start - b.start);
   }
 
   /** Replaces the whole text, e.g. with what someone wrote in an editor. */

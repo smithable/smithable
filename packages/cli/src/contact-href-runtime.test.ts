@@ -1,7 +1,10 @@
+import { createHash } from "node:crypto";
 import { stripTypeScriptTypes } from "node:module";
 import { parse } from "@babel/parser";
 import { kitSources } from "@smithable/adapter-tanstack";
 import { expect, test } from "vitest";
+import { extractSiteFacts } from "./site-facts.js";
+import { projectSitePersonal } from "./site-personal.js";
 
 const source = kitSources["src/kit/contact-href.ts"] ?? "";
 const contactHref = new Function(
@@ -58,10 +61,75 @@ test("reserved sample contacts stay inert through URL and entity encodings", () 
   expect(contactHref("tel:2999000001", "%2B999000001")).toBeUndefined();
 });
 
+test("collision mailboxes and every contact protocol keep reserved stand-ins inert", () => {
+  for (const href of [
+    "mailto:sample-3-preview@example.com",
+    "mailto:?to=sample-3-preview%40example.com",
+    "mailto:?TO=sample-1@example.com",
+    "mailto:?to=owner@real.example&to=sample-1@example.com",
+    "mailto:?CC=owner%40real.example&cc=sample-1-preview%40example.com",
+    "sms:?TO=999000000001",
+    "whatsapp://send?phone=3581812345&PHONE=999000000001",
+    "mailto:owner@real.example?cc=Name%20%3Csample-1%40example.com%3E",
+    "mailto:owner@real.example?bcc=owner%40real.example%3Bsample-1-preview%40example.com",
+    "mailto:Name <sample-1@example.com>",
+    "mailto:owner@real.example,Name <sample-1-preview@example.com>",
+    "sms:+999000000001",
+    "sms://+999000000001",
+    "callto:+999000000001",
+    "callto:00999000000001",
+    "tel://+999000000001",
+    "tel:999000000001",
+    "tel:999001000001",
+    "custom:+999000000001",
+    "custom:00999000000001",
+    "/map?destination=%2B999000000001",
+    "/map?destination=Call%20%2B999000000001",
+    "custom:Call (+999) 000 000001",
+    "https://example.test/call?recipient=%2B999000000001",
+    "/map?destination=00999000000001",
+    "custom:call?target=00999000000001",
+    "sms:999000000001",
+    "tel:00999000000001",
+    "whatsapp://send?phone=999000000001",
+    "https://wa.me/999000000001",
+    "https://maps.google.com/?q=Sample+Street+1",
+    "https://maps.apple.com/?address=Sample%20Street%201",
+    "https://bing.com/maps?where=Sample%20Street%201",
+    "geo:Sample Street 1",
+    "geo:0,0?q=Sample+Street+1",
+    "/map?q=Sample+Street+1",
+    "map?address=Sample%20Street%201",
+    "custom:map?where=1+Sample+Street",
+  ])
+    expect(contactHref(href), href).toBeUndefined();
+});
+
 test("real owner contacts and ordinary links remain byte-for-byte unchanged", () => {
   for (const href of [
     "tel:+3581812345",
     "mailto:hello@business.example",
+    "mailto:sample-team@example.com",
+    "mailto:owner-sample-3-preview@example.com",
+    "mailto:Name <hello@business.example>",
+    "mailto:?to=hello%40business.example&cc=team%40business.example",
+    "sms:+3581812345",
+    "callto:5552345678",
+    "tel://+3581812345",
+    "tel:9991234567",
+    "https://wa.me/3581812345",
+    "https://maps.google.com/?q=Real+Road+3",
+    "/map?q=Real+Road+3",
+    "/orders?number=999000123456",
+    "/orders?number=999001123456",
+    "/orders/00999000123456",
+    "https://maps.google.com/?q=Real+Road+1,+99990+Nuorgam",
+    "mailto:owner@real.example?subject=Order:+999123",
+    "mailto:hello_+999123@business.example",
+    "mailto:hello+999123@business.example",
+    "locations/sample-street-1",
+    "/locations/sample-street-1",
+    "locations/sample-street-1?view=map",
     "mailto:hello+999@business.example",
     "mailto:owner-sample-1@example.com",
     "https://business.example/source.invalid/page",
@@ -118,4 +186,29 @@ test("embedded landing and legal contact expressions do not turn samples into li
   const destination = new Function("contactHref", "href", `${guard};return href;`);
   expect(destination(contactHref, "mailto:sample-1@example.com")).toBeUndefined();
   expect(destination(contactHref, "/appointments")).toBe("/appointments");
+});
+
+test("reachable seven-digit allocator fallback remains inert after its plus is removed", () => {
+  const text = Array.from(
+    { length: 500 },
+    (_, offset) => `+999 000 ${String(1 + offset * 2000).padStart(6, "0")}`,
+  ).join("\n");
+  const url = "https://business.example/";
+  const projected = projectSitePersonal({
+    facts: extractSiteFacts('<meta property="og:site_name" content="Harbour Workshop">', url),
+    images: [],
+    sourceCorpus: {
+      version: 1,
+      pages: [{ id: "p1", text, sha256: createHash("sha256").update(text).digest("hex") }],
+    },
+  });
+  const fallback = projected.personalMap.entries.find(
+    (entry) => entry.kind === "phone" && entry.replacement.replace(/\D/g, "").length === 13,
+  );
+  if (!fallback) throw new Error("Fixture must reach a seven-digit phone collision slot");
+  const bare = fallback.replacement.replace(/\D/g, "");
+  expect(contactHref(`tel:${bare}`)).toBeUndefined();
+  expect(contactHref(`/orders?number=${bare}`)).toBe(`/orders?number=${bare}`);
+  expect(contactHref("tel:9990004004001")).toBe("tel:9990004004001");
+  expect(contactHref("tel:9990000100001")).toBe("tel:9990000100001");
 });

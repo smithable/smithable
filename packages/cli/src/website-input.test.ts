@@ -348,3 +348,64 @@ test("malformed private JSON never copies source snippets into command diagnosti
     "The installed website authority is not valid JSON.",
   );
 });
+
+test("corrected sample projection survives serialized installation and consumption", async () => {
+  const html = `<meta property="og:site_name" content="Harbour Workshop">
+<script type="application/ld+json">{"@type":"LocalBusiness","name":"Harbour Workshop","employee":[{"@type":"Person","name":"Anna Page"},{"@type":"Person","name":"Emma Lindqvist"}]}</script>
+<nav><a href="/services">Services</a><a href="/workshops">Workshops</a></nav>
+<h1>Harbour Workshop</h1><p>Our team repairs furniture and offers practical workshops for the town. Read this page to see what we will make together.</p>
+<p>Find us at Storgatan 12. Call (555) 234-5678. Open 0900-1700. Our lunch uses 100%beef.</p>
+<img src="/room.jpg?contact=anna%40example.test" alt="Workshop room">`;
+  const bytes = Buffer.byteLength(html);
+  const reading = siteBundleResult({
+    version: 1,
+    startUrl: url,
+    pages: [{ id: "p1", url, html, fetchedAt: new Date(0).toISOString(), bytes, depth: 0 }],
+    crawl: { pages: 1, bytes, elapsedMs: 1, diagnostics: [] },
+  });
+  expect(reading.tooLittle).toBe(false);
+  expect(reading.personalMap.entries).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        kind: "address",
+        original: expect.stringContaining("Storgatan 12"),
+      }),
+      expect.objectContaining({ kind: "phone", original: expect.stringContaining("234-5678") }),
+      expect.objectContaining({ kind: "name", original: "Anna Page" }),
+      expect.objectContaining({ kind: "name", original: "Emma Lindqvist" }),
+    ]),
+  );
+  expect(reading.personalMap.entries.some((entry) => entry.original === "0900-1700")).toBe(false);
+  const modelText = JSON.stringify(reading.model);
+  for (const original of [
+    "Storgatan 12",
+    "234-5678",
+    "Anna Page",
+    "Emma Lindqvist",
+    "anna@example.test",
+  ])
+    expect(modelText).not.toContain(original);
+  const value = {
+    version: 1,
+    options: { contentMode: "sample" },
+    facts: reading.facts,
+    images: reading.images,
+    sourceCorpus: reading.sourceCorpus,
+    personalMap: reading.personalMap,
+    model: reading.model,
+    originals: [],
+    authorization: { id: "auth-roundtrip", site: url, images: false },
+  };
+  const raw = JSON.stringify(value),
+    sha256 = digest(raw);
+  const project = join(tempDir("website-corrected-roundtrip-"), "project");
+  mkdirSync(project);
+  expect(
+    await installWebsiteInputCommand(project, "job", sha256, quiet, Readable.from([raw])),
+  ).toBe(0);
+  const consumed = consumeWebsiteInput(project, "job", { version: 1, sha256 });
+  expect(consumed.options?.contentMode).toBe("sample");
+  expect(consumed.model).toEqual(reading.model);
+  expect(consumed.personalMap).toEqual(reading.personalMap);
+  expect(parseWebsiteInput(JSON.parse(JSON.stringify(consumed))).model).toEqual(reading.model);
+});

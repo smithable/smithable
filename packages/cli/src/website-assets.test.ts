@@ -6,7 +6,9 @@ import { tempDir } from "./test-dir.js";
 import {
   approveAssetReviewCommand,
   assetReview,
+  parseAssetManifest,
   WEBSITE_ASSETS,
+  WEBSITE_PLACEHOLDER,
   writeAssetManifest,
 } from "./website-assets.js";
 import { digest } from "./website-input.js";
@@ -92,4 +94,72 @@ test("special asset files fail without blocking", () => {
   rmSync(join(dir, "public", path));
   execFileSync("mkfifo", [join(dir, "public", path)]);
   expect(assetReview(dir).diagnostics.join(" ")).toContain("missing or unsafe");
+});
+
+test("legacy exact SVG and current PNG placeholders remain reviewable without accepting other placeholder SVGs", () => {
+  const dir = tempDir("website-legacy-placeholder-");
+  mkdirSync(join(dir, "public/images/library"), { recursive: true });
+  const legacy = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#e5e7eb"/><path d="M0 800 400 400 650 650 850 450 1200 800" fill="#cbd5e1"/></svg>',
+  );
+  expect(digest(legacy)).toBe("fbb13c3598e6338c49d6815deb0580cbb0f7de7946a83dd71084c7fea24db4af");
+  const assets = (
+    [
+      [legacy, "svg"],
+      [WEBSITE_PLACEHOLDER, "png"],
+    ] as const
+  ).map(([value, extension]) => {
+    const bytes = value,
+      sha256 = digest(bytes),
+      path = `images/library/${sha256}.${extension}`;
+    writeFileSync(join(dir, "public", path), bytes);
+    return {
+      path,
+      sha256,
+      source: { kind: "placeholder" as const },
+      role: "hero",
+      concept: false,
+      factualPhotoReview: false,
+    };
+  });
+  writeAssetManifest(dir, assets);
+  expect(assetReview(dir)).toMatchObject({ approved: true, pending: [], diagnostics: [] });
+  expect(WEBSITE_PLACEHOLDER.subarray(0, 8)).toEqual(
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  );
+  const other = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg"><script>not the placeholder</script></svg>',
+  );
+  expect(() =>
+    parseAssetManifest({
+      version: 1,
+      assets: [
+        { ...assets[0], path: `images/library/${digest(other)}.svg`, sha256: digest(other) },
+      ],
+    }),
+  ).toThrow("classification");
+  const old = assets[0];
+  if (!old) throw new Error("Fixture");
+  writeFileSync(join(dir, "public", old.path), other);
+  expect(assetReview(dir).approved).toBe(false);
+  expect(assetReview(dir).diagnostics.some((message) => message.includes("changed"))).toBe(true);
+});
+
+test("opaque sample and full raw original provenance retain the same factual review requirement", () => {
+  for (const url of [
+    "https://source.invalid/ref/123",
+    "https://business.example/Alice-Example.jpg?person=Alice#portrait",
+  ]) {
+    const { dir, path } = project();
+    const value = JSON.parse(readFileSync(join(dir, WEBSITE_ASSETS), "utf8"));
+    value.assets[0].source.url = url;
+    const parsed = parseAssetManifest(value);
+    expect(parsed.assets[0]?.source.url).toBe(url);
+    writeAssetManifest(dir, parsed.assets);
+    const review = assetReview(dir);
+    expect(review.diagnostics).toEqual([]);
+    expect(review.pending).toHaveLength(1);
+    expect(review.approved).toBe(false);
+    expect(readFileSync(join(dir, "public", path))).toEqual(Buffer.from([255, 216, 255, 0]));
+  }
 });

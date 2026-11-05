@@ -362,6 +362,8 @@ export async function create(
       given.map((answer, i) => ({ question: `(${i + 1})`, answer })),
     );
   }
+  if (website?.contentMode === "sample" && description)
+    description = replaceSitePersonalText(description, website.personalMap, { context: "text" });
   let files = prepared ?? (STARTERS[name] as Record<string, string>);
   // Prepared dependencies (node_modules, possibly a link, and the lockfile they were installed
   // from, as hosted workspaces provide) do not count: the install then has little to do.

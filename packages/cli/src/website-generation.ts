@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { generateApp } from "@smithable/adapter-tanstack";
 import { completeJson, type Provider } from "@smithable/ai";
-import { type SpecIR, YamlEditor } from "@smithable/core";
+import { type SpecIR, YamlEditor, type YamlValue } from "@smithable/core";
 import {
   IMAGE_INFERENCE_SCHEMA,
   type SiteImageContext,
@@ -13,6 +13,7 @@ import type { Io } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
 import { addLibraryPictures, type PlacedPicture } from "./pictures.js";
 import {
+  isSitePersonNameShape,
   projectSitePersonal,
   replaceSitePersonalText,
   type SitePersonalMap,
@@ -20,6 +21,7 @@ import {
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 import { WEBSITE_PLACEHOLDER, type WebsiteAsset } from "./website-assets.js";
+import { writeWebsiteValues } from "./website-copy.js";
 import { digest, rasterType, type WebsiteGenerationInput } from "./website-input.js";
 
 export interface WebsiteContext {
@@ -48,12 +50,19 @@ export function websitePrivateProviders(
     ...map.entries.map((entry) => entry.id),
     ...map.handles.map((handle) => handle.id),
   ].join(":");
-  const safeText = (text: string) => replaceSitePersonalText(text, map);
+  const safeText = (text: string) => replaceSitePersonalText(text, map, { context: "code" });
   const safe = (value: unknown): unknown => {
     if (typeof value === "string") return safeText(value);
+    if (typeof value === "number") {
+      const text = String(value),
+        replaced = safeText(text);
+      return replaced === text ? value : replaced;
+    }
     if (Array.isArray(value)) return value.map(safe);
     if (!value || typeof value !== "object") return value;
-    const result: Record<string, unknown> = Object.create(null);
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) return value;
+    const result: Record<string, unknown> = Object.create(prototype);
     for (const [key, child] of Object.entries(value)) {
       const target = safeText(key);
       if (
@@ -82,9 +91,23 @@ export function websitePrivateProviders(
           }
           const text = json ? JSON.stringify(safe(parsed)) : safeText(answer.text);
           return { ...answer, text };
-        } catch {
-          // Provider errors can contain source-derived requests or generated repair fragments.
-          throw new Error("The website model request could not finish.");
+        } catch (error) {
+          const clean = new Error("The website model request could not finish.");
+          const detail =
+            error && typeof error === "object" ? (error as { name?: unknown; code?: unknown }) : {};
+          if (detail.name === "AbortError" || detail.name === "TimeoutError")
+            clean.name = detail.name;
+          if (
+            (typeof detail.code === "string" &&
+              /^[a-z0-9_-]{1,80}$/i.test(detail.code) &&
+              replaceSitePersonalText(detail.code, map, { context: "text" }) === detail.code) ||
+            (typeof detail.code === "number" &&
+              Number.isSafeInteger(detail.code) &&
+              detail.code >= 0 &&
+              detail.code <= 999)
+          )
+            Object.assign(clean, { code: detail.code });
+          throw clean;
         }
       },
     };
@@ -103,6 +126,31 @@ const inertSampleContactText = (text: string) =>
       /(?<![\p{L}\p{N}_])https?:\/\/(?:[^/\s<>"']*\.)?(?:maps\.google\.[^/\s<>"']+|google\.[^/\s<>"']+\/maps|maps\.apple\.com|openstreetmap\.org|waze\.com|bing\.com\/maps)(?:[/?#][^\s<>"'\])}]*)?/giu,
       "#",
     );
+
+const fileMatchContext = (file: string): "text" | "code" =>
+  /\.(?:md|html|txt|csv)$/i.test(file) ? "text" : "code";
+const visibleKeys = new Set([
+  "description",
+  "label",
+  "title",
+  "help",
+  "placeholder",
+  "empty",
+  "intent",
+  "text",
+  "body",
+  "subject",
+]);
+
+function replaceYamlComments(source: string, map: SitePersonalMap): string {
+  let output = source;
+  for (const { start, end } of new YamlEditor(source).commentRanges().reverse())
+    output =
+      output.slice(0, start) +
+      replaceSitePersonalText(output.slice(start, end), map, { context: "code" }) +
+      output.slice(end);
+  return output;
+}
 
 /** Local-only known-set pass; only the typed specification name may retain business identity. */
 export function replaceWebsitePersonalFiles(
@@ -148,9 +196,11 @@ export function replaceWebsitePersonalFiles(
       )
         continue;
       sampleFields.push({
-        file: replaceSitePersonalText(field.file, context.personalMap),
+        file: replaceSitePersonalText(field.file, context.personalMap, { context: "key" }),
         path: field.path.map((part) =>
-          typeof part === "string" ? replaceSitePersonalText(part, context.personalMap) : part,
+          typeof part === "string"
+            ? replaceSitePersonalText(part, context.personalMap, { context: "key" })
+            : part,
         ),
       });
     }
@@ -166,8 +216,11 @@ export function replaceWebsitePersonalFiles(
       /^smithable\.content(?:\.[a-zA-Z0-9-]+)?\.ya?ml$/.test(file) ||
       /^samples\/.*\.(?:ya?ml|json)$/.test(file)
     ) {
+      const edits: { path: (string | number)[]; value: string }[] = [];
+      const renames: { path: (string | number)[]; key: string }[] = [];
       const clean = (value: unknown, path: (string | number)[] = []): unknown => {
-        if (typeof value === "string") {
+        if (typeof value === "string" || typeof value === "number") {
+          const original = String(value);
           if (
             file === "smithable.yml" &&
             path.length === 2 &&
@@ -182,24 +235,44 @@ export function replaceWebsitePersonalFiles(
             path[0] === "admins" &&
             typeof path[1] === "number" &&
             context.authoritativeAdmin &&
-            value.toLowerCase() === context.authoritativeAdmin
+            original.toLowerCase() === context.authoritativeAdmin
           )
             return value;
-          const replaced = inertSampleContactText(
-            replaceSitePersonalText(value, context.personalMap),
-          );
+          const human =
+            file.startsWith("smithable.content") ||
+            file.startsWith("samples/") ||
+            visibleKeys.has(String(path.at(-1))) ||
+            (path.length === 2 && path[0] === "app" && path[1] === "name");
+          const templated =
+            file.startsWith("smithable.content") &&
+            path[0] === "outgoing" &&
+            ["subject", "text"].includes(String(path.at(-1)));
+          const scrubbed = templated
+            ? original
+                .split(/(\{[^{}]+\})/g)
+                .map((part, index) =>
+                  replaceSitePersonalText(part, context.personalMap, {
+                    context: index % 2 ? "code" : "text",
+                  }),
+                )
+                .join("")
+            : replaceSitePersonalText(original, context.personalMap, {
+                context: human ? "text" : "code",
+              });
+          const replaced = inertSampleContactText(scrubbed);
           const containsSample = context.personalMap.entries.some((entry) =>
-            value
+            original
               .normalize("NFKC")
               .toLocaleLowerCase()
               .includes(entry.replacement.normalize("NFKC").toLocaleLowerCase()),
           );
-          if (replaced !== value || containsSample) {
+          if (replaced !== original) edits.push({ path, value: replaced });
+          if (replaced !== original || containsSample) {
             const field = {
               file,
               path: path.map((part) =>
                 typeof part === "string"
-                  ? replaceSitePersonalText(part, context.personalMap)
+                  ? replaceSitePersonalText(part, context.personalMap, { context: "key" })
                   : part,
               ),
             };
@@ -211,33 +284,44 @@ export function replaceWebsitePersonalFiles(
               sampleFields.push(field);
             }
           }
-          return replaced;
+          return replaced === original ? value : replaced;
         }
         if (Array.isArray(value)) return value.map((child, i) => clean(child, [...path, i]));
         if (!value || typeof value !== "object") return value;
         const result: Record<string, unknown> = Object.create(null);
         for (const [key, child] of Object.entries(value)) {
-          const target = replaceSitePersonalText(key, context.personalMap);
+          const target = replaceSitePersonalText(key, context.personalMap, { context: "key" });
           if (
             ["__proto__", "prototype", "constructor"].includes(target) ||
             Object.hasOwn(result, target)
           )
             throw new Error("The sanitized website has conflicting content keys.");
+          if (target !== key) renames.push({ path: [...path, key], key: target });
           result[target] = clean(child, [...path, key]);
         }
         return result;
       };
       try {
-        text = `${JSON.stringify(clean(new YamlEditor(source).get([])), null, 2)}\n`;
+        const parsed = file.endsWith(".json") ? JSON.parse(source) : new YamlEditor(source).get([]);
+        const cleaned = clean(parsed);
+        if (file.endsWith(".json"))
+          text =
+            edits.length || renames.length
+              ? `${JSON.stringify(cleaned, null, 2)}${source.endsWith("\n") ? "\n" : ""}`
+              : source;
+        else {
+          const editor = new YamlEditor(writeWebsiteValues(source, edits));
+          for (const rename of renames.sort((a, b) => b.path.length - a.path.length))
+            editor.renameKey(rename.path.map(String), JSON.stringify(rename.key));
+          text = replaceYamlComments(editor.text, context.personalMap);
+        }
       } catch {
         throw new Error("Generated website content could not be checked.");
       }
-    } else text = replaceSitePersonalText(source, context.personalMap);
-    if (
-      (file.startsWith("smithable.content") || /^samples\/.*\.ya?ml$/.test(file)) &&
-      !text.startsWith("# Sample records drafted")
-    )
-      text = `# Sample records drafted with the app; change or remove them freely.\n${text}`;
+    } else
+      text = replaceSitePersonalText(source, context.personalMap, {
+        context: fileMatchContext(file),
+      });
     output[file] = text;
   }
   if (sampleFields.length || Object.values(context.personal.counts).some((count) => count > 0))
@@ -376,8 +460,11 @@ export function replaceWebsitePersonalArtifacts(
         } else if (!["smithable.assets.json", "smithable.website.json"].includes(name)) {
           const expected = compiler.get(name);
           const checkedSource = expected?.actual === source ? expected.neutral : source;
+          const matchContext = expected?.actual !== source ? fileMatchContext(name) : "code";
           if (
-            replaceSitePersonalText(checkedSource, context.personalMap) !== checkedSource ||
+            replaceSitePersonalText(checkedSource, context.personalMap, {
+              context: matchContext,
+            }) !== checkedSource ||
             (expected?.actual !== source && inertSampleContactText(checkedSource) !== checkedSource)
           )
             throw new Error(
@@ -501,6 +588,37 @@ export async function prepareWebsiteContext(
     ...(businessName ? { businessName } : {}),
   };
 }
+/** Apply image selection through the same YAML operation layer as owner edits. */
+function writeWebsiteContent(source: string, value: unknown): string {
+  const editor = new YamlEditor(source);
+  const original = editor.get([]);
+  const wanted: unknown = JSON.parse(JSON.stringify(value ?? {}));
+  if (JSON.stringify(original ?? {}) === JSON.stringify(wanted)) return source;
+  if (original == null) editor.replaceAll(`${source}${source.endsWith("\n") ? "" : "\n"}{}\n`);
+  const object = (item: unknown): item is Record<string, unknown> =>
+    Boolean(item) && typeof item === "object" && !Array.isArray(item);
+  const change = (before: unknown, after: unknown, path: (string | number)[]) => {
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    if (Array.isArray(before) && Array.isArray(after) && before.length === after.length) {
+      for (let i = 0; i < after.length; i++) change(before[i], after[i], [...path, i]);
+    } else if (object(before) && object(after)) {
+      for (const key of Object.keys(before))
+        if (!Object.hasOwn(after, key)) editor.remove([...path, key].map(String));
+      for (const [key, child] of Object.entries(after)) {
+        if (!Object.hasOwn(before, key)) editor.add(path.map(String), key, child as YamlValue);
+        else change(before[key], child, [...path, key]);
+      }
+    } else {
+      const key = path.at(-1);
+      if (typeof key === "number")
+        editor.setItem(path.slice(0, -1).map(String), key, after as YamlValue);
+      else editor.set(path.map(String), after as YamlValue);
+    }
+  };
+  change(original ?? {}, wanted, []);
+  return editor.text;
+}
+
 const extension = (type: string) =>
   type === "image/jpeg" ? "jpg" : type === "image/png" ? "png" : "webp";
 /** Purely selected illustrations, authorized originals, or a placeholder; never a new image backend. */
@@ -511,10 +629,9 @@ export async function websitePictures(options: {
   io: Io;
   allowLibrary?: boolean;
 }): Promise<{ pictures: PlacedPicture[]; assets: WebsiteAsset[] }> {
-  const editor = new YamlEditor(
-    options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
-  );
-  const content = editor.get([]) as Record<string, unknown>;
+  const originalContent = options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n";
+  const editor = new YamlEditor(originalContent);
+  const content = (editor.get([]) ?? { smithableContent: 0.1 }) as Record<string, unknown>;
   if (
     options.context.contentMode === "sample" &&
     Object.values(options.context.personal.counts).some((count) => count > 0)
@@ -539,9 +656,9 @@ export async function websitePictures(options: {
       continue;
     const translated = new YamlEditor(source).get([]);
     strip(translated);
-    options.files[name] = `${JSON.stringify(translated ?? {}, null, 2)}\n`;
+    options.files[name] = writeWebsiteContent(source, translated);
   }
-  options.files["smithable.content.yml"] = JSON.stringify(content, null, 2);
+  options.files["smithable.content.yml"] = writeWebsiteContent(originalContent, content);
   const pictures: PlacedPicture[] = [],
     assets: WebsiteAsset[] = [];
   for (const original of options.context.input.originals) {
@@ -554,26 +671,49 @@ export async function websitePictures(options: {
           rawContext.caption,
           ...rawContext.subject,
           rawContext.filename,
-          new URL(rawContext.src).pathname,
+          rawContext.src,
           ...(interpretedContext?.subject ?? []),
         ].join(" ")
       : "";
+    const personalMap = {
+      ...options.context.personalMap,
+      handles: [],
+      entries: options.context.personalMap.entries.filter((entry) => entry.kind !== "identity"),
+    };
+    const personalUrl =
+      rawContext &&
+      replaceSitePersonalText(rawContext.src, personalMap, { context: "text" }) !== rawContext.src;
+    const personalMetadata =
+      replaceSitePersonalText(metadata, personalMap, { context: "text" }) !== metadata;
+    const identityMap = {
+      ...personalMap,
+      entries: options.context.personalMap.entries.filter(
+        (entry) => entry.kind === "identity" && isSitePersonNameShape(entry.original),
+      ),
+    };
+    const address = rawContext ? new URL(rawContext.src) : undefined;
+    const explicitIdentityText = rawContext
+      ? [
+          rawContext.alt,
+          rawContext.title,
+          rawContext.caption,
+          rawContext.filename,
+          address?.pathname,
+          address?.search,
+          address?.hash,
+        ].join(" ")
+      : "";
+    const personIdentity =
+      replaceSitePersonalText(explicitIdentityText, identityMap, { context: "text" }) !==
+      explicitIdentityText;
     if (
       options.context.contentMode === "sample" &&
-      (/(?:^|[^\p{L}\p{N}])(?:portrait|staff|team|personnel|medarbetare|personalbild|henkilökunta)(?=$|[^\p{L}\p{N}])/iu.test(
-        metadata,
-      ) ||
-        (!["logo", "icon"].includes(rawContext?.role ?? "unknown") &&
-          replaceSitePersonalText(metadata, {
-            ...options.context.personalMap,
-            handles: [],
-            entries: options.context.personalMap.entries.filter(
-              (entry) =>
-                entry.kind === "name" ||
-                (entry.kind === "identity" &&
-                  /^[\p{Lu}][\p{L}.’'-]+\s+[\p{Lu}]/u.test(entry.original)),
-            ),
-          }) !== metadata))
+      (personalUrl ||
+        personalMetadata ||
+        personIdentity ||
+        /(?:^|[^\p{L}\p{N}])(?:portrait|staff|team|personnel|medarbetare|personalbild|henkilökunta)(?=$|[^\p{L}\p{N}])/iu.test(
+          metadata,
+        ))
     )
       continue;
     const context = options.context.images.find((image) => image.id === original.id);
@@ -593,8 +733,7 @@ export async function websitePictures(options: {
       source: {
         kind: "original",
         url:
-          options.context.input.images.find((image) => image.id === original.id)?.src ??
-          context.src,
+          options.context.contentMode === "sample" ? context.src : (rawContext?.src ?? context.src),
         authorizationId: original.authorizationId,
       },
       role: context.role,
@@ -761,6 +900,6 @@ export async function websitePictures(options: {
     if (!picture) throw new Error("The logo has no placed asset.");
     text.logo = { src: logo.path, alt: picture.alt };
   }
-  options.files["smithable.content.yml"] = `${JSON.stringify(text, null, 2)}\n`;
+  options.files["smithable.content.yml"] = writeWebsiteContent(originalContent, text);
   return { pictures, assets };
 }
