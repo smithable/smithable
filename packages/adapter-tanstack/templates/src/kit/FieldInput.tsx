@@ -75,7 +75,10 @@ export function FieldInput({
     // On a touch screen the box is small to aim at: a frame around it is the target, 44 by 44,
     // giving back on its right what it adds there, so the field's words stay where they were.
     return (
-      <label className="inline-flex shrink-0 items-center pointer-coarse:-mr-6 pointer-coarse:size-11">
+      <label
+        htmlFor={id}
+        className="inline-flex shrink-0 items-center pointer-coarse:-mr-6 pointer-coarse:size-11"
+      >
         <Checkbox
           {...common}
           role={field.control === "switch" ? "switch" : undefined}
