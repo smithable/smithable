@@ -50,6 +50,8 @@ function shared(page: ArticlesPage, ctx: GenContext) {
     .add("#/lib/viewer.server", "currentViewer");
   const crud = ir.pages.find((x) => pageModel(x) === model.name);
   if (crud) imports.add("#/generated/pages", "pageAccess");
+  if (dateField) imports.add("#/kit/format", dated ? "dayText" : "instantText");
+  if (dateField && !dated) imports.add("#/generated/app", "app");
   const picture = p.picture
     ? `row.${p.picture} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${p.picture}\`, alt: row.${p.picture}.alt, width: row.${p.picture}.width, height: row.${p.picture}.height, generated: row.${p.picture}.generated } : undefined`
     : "undefined";
@@ -67,7 +69,7 @@ const when = (row: Row) => ${
 const dateText = (row: Row) =>
   ${
     p.date
-      ? `row.${p.date} ? new Intl.DateTimeFormat("en", { dateStyle: "long"${dated ? `, timeZone: "UTC"` : ""} }).format(new Date(${dated ? `\`\${row.${p.date}}T00:00:00Z\`` : `row.${p.date}`})) : undefined`
+      ? `row.${p.date} ? ${dated ? `dayText(String(row.${p.date}), { month: "long", year: true })` : `instantText(row.${p.date}, app.timeZone, { month: "long", year: true })`} : undefined`
       : "undefined"
   };
 /** An article's address under the page: its ${p.address ?? "id"}. */

@@ -119,6 +119,7 @@ export type {
 export { explainAccess } from "./explain-access.js";
 export { writeExplicit } from "./explicit.js";
 export { formatSpec, sameContent } from "./format.js";
+export { type Chosen, FORMAT_KEYS, FORMATS, formatsOf, numbersOf } from "./formats.js";
 export type { Expr } from "./formula.js";
 export { fieldsUsed, formatFormula, parseFormula } from "./formula.js";
 export {

@@ -374,12 +374,19 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
           onChange={(e) => void write(path, e.target.value === "" ? undefined : e.target.value)}
           className={box}
         >
-          <option value="">Not set</option>
-          {control.values.map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
+          {/* A choice with examples (the app's formats) shows each value as it reads, and what
+              unset means: the default and why (formats.md §4). */}
+          <option value="">
+            {typeof schema["x-unset"] === "string" ? `Not set: ${schema["x-unset"]}` : "Not set"}
+          </option>
+          {control.values.map((v) => {
+            const example = (schema["x-examples"] as Record<string, string> | undefined)?.[v];
+            return (
+              <option key={v} value={v}>
+                {example ? `${v} · ${example}` : v}
+              </option>
+            );
+          })}
         </select>
       );
     case "check":

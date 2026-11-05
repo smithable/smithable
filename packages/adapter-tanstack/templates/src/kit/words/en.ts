@@ -5,11 +5,38 @@
 // same keys (`satisfies Words` keeps them complete). The maker's own texts (labels, titles,
 // help) are not here: they live in the content file.
 
+import { numberText } from "../formats";
+
 export const w = {
   accept: "Accept",
   addFiles: "Add files",
   addOne: (label: string) => `Add ${label}`,
   afternoon: "Afternoon",
+  /** A 12-hour clock's halves of the day, after the time: "9:00 AM". */
+  am: "AM",
+  pm: "PM",
+  /** A chart's large numbers, short: "12K", "1.2M", "3B". */
+  thousandShort: "K",
+  millionShort: "M",
+  billionShort: "B",
+  /** Month and weekday names, as dates write them (formats.md §2); weekdays from Monday. */
+  months: [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ],
+  monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+  weekdaysShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   agenda: "Agenda",
   anyTime: "Any time",
   days: "Days",
@@ -143,7 +170,7 @@ export const w = {
   everyone: "Everyone",
   exportCsv: "Export CSV",
   exportedSome: (shown: number, total: number) =>
-    `Exported ${shown.toLocaleString("en")} of ${total.toLocaleString("en")} matching records`,
+    `Exported ${numberText(shown)} of ${numberText(total)} matching records`,
   fieldsMarked: "Fields marked",
   fileKinds: "Choose a PDF, a document, a spreadsheet, a text or a picture.",
   fileNotAdded: "The file could not be added.",
@@ -414,7 +441,7 @@ export const w = {
   byTimer: (name: string) => `the timer ${name}`,
   aRemovedUser: (id: string) => `a removed user (#${id})`,
   atLeastCharacters: (n: number) => `At least ${n} characters`,
-  atMostCharacters: (n: number) => `At most ${n.toLocaleString("en")} characters`,
+  atMostCharacters: (n: number) => `At most ${numberText(n)} characters`,
   /** The sign-in mail. */
   codeSubject: (app: string) => `Your code for ${app}`,
   codeText: (app: string, code: string) =>

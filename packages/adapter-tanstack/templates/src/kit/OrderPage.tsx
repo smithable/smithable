@@ -7,9 +7,10 @@ import { useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
 import { PageHeader } from "./AppShell";
+import { moneyText } from "./format";
 import { ModelForm } from "./ModelForm";
 import type { AppUi, ModelUi } from "./model";
-import { shownZone, timeParts } from "./time-text";
+import { clockText, whenAt } from "./time-text";
 import { w } from "./words";
 
 /** One thing to choose, as the menu gives it. */
@@ -54,8 +55,7 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
   const [step, setStep] = useState<"choose" | "details">("choose");
   const [placed, setPlaced] = useState<{ number: string; lines: [Choice, number][] }>();
   const [problem, setProblem] = useState<string>();
-  const money = (n: number) =>
-    new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(n / 100);
+  const money = (n: number) => moneyText(n, app.currency);
   const lines = menu.choices.flatMap((c): [Choice, number][] =>
     chosen[c.id] ? [[c, chosen[c.id] as number]] : [],
   );
@@ -68,11 +68,9 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
       return next ? { ...rest, [id]: next } : rest;
     });
   const opens = menu.opens
-    ? new Intl.DateTimeFormat(undefined, {
-        weekday: "long",
-        ...timeParts(),
-        timeZone: shownZone(app.timeZone),
-      }).format(new Date(menu.opens))
+    ? (({ weekday, hour, minute }) => `${w.weekdays[weekday]} ${clockText(hour, minute)}`)(
+        whenAt(menu.opens, app.timeZone),
+      )
     : undefined;
 
   if (placed)

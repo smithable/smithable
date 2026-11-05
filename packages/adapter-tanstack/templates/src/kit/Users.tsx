@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "#/components/ui/table";
+import { instantText } from "./format";
 import { w } from "./words";
 
 export interface RoleOption {
@@ -59,8 +60,7 @@ interface UsersProps {
   onWithdraw: (invitationId: string) => Promise<unknown>;
 }
 
-const date = (value: Date | string) =>
-  new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+const date = (value: Date | string) => instantText(value, undefined, { year: true });
 
 /** What names a person: records of one kind by one column (users.server.ts). */
 interface UserUse {

@@ -26,6 +26,7 @@ import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
 import { contactHref } from "./contact-href";
+import { dayText, numberText } from "./format";
 import { ModelTable, PicturePlaceholder } from "./ModelTable";
 import { type AppUi, type RecordUi, type Row, textMarker } from "./model";
 import { tx, w } from "./words";
@@ -525,13 +526,7 @@ function TextSectionView({
 }
 
 /** A day (YYYY-MM-DD) as a heading: "Monday 12 October", in the language's own words. */
-const longDate = (day: string) =>
-  new Intl.DateTimeFormat(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(`${day}T00:00:00Z`));
+const longDate = (day: string) => dayText(day, { weekday: "long", month: "long" });
 
 /** A picture from public/, e.g. { src: "/images/hero.webp", alt: "A yoga class" }. */
 export interface LandingImage {
@@ -702,7 +697,9 @@ function HeroView({
             <div key={fact.label} className="flex flex-col-reverse">
               <dt className="text-sm label-text opacity-80">{fact.label}</dt>
               <dd className="text-3xl font-(--heading-weight) tabular-nums">
-                {new Intl.NumberFormat(undefined, { minimumIntegerDigits: 2 }).format(fact.value)}
+                {fact.value >= 0 && fact.value < 10
+                  ? `0${numberText(fact.value)}`
+                  : numberText(fact.value)}
               </dd>
             </div>
           ))}

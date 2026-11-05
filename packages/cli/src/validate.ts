@@ -9,6 +9,7 @@ import {
   type Diagnostic,
   DUE_WITHIN,
   formatDiagnostic,
+  formatsOf,
   hasErrors,
   LANGUAGES,
   PEOPLE_FILE,
@@ -290,7 +291,7 @@ export function validate(
     return ir ? 0 : 1;
   }
   const found: Diagnostic[] = [];
-  const { ir, path, auth, ux } = loadSpec(target, io, extraPlugins, found);
+  const { ir, path, auth, ux, content } = loadSpec(target, io, extraPlugins, found);
   if (!ir) return 1;
   io.out(
     `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
@@ -308,7 +309,8 @@ export function validate(
       if (again.ir) shown = { ir: again.ir, auth: again.auth, ux: again.ux };
     } else io.out("\nNothing was left to the rules; the spec says it all.\n");
   }
-  if (explain && shown.auth) io.out(`\n${explainSpec(shown.ir, shown.auth, shown.ux)}`);
+  if (explain && shown.auth)
+    io.out(`\n${explainSpec(shown.ir, shown.auth, shown.ux, content?.language)}`);
   // Advice, after the verdict: what the app would gain, each with the operation that does it.
   const notes = found.filter((d) => d.severity === "note");
   if (notes.length) {
@@ -335,7 +337,7 @@ function count(n: number, noun: string): string {
  * field, where its unique values are unique, what a conversation reads from it, and who may run
  * each action. The same functions the generated app is built from, so this is what it does.
  */
-export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
+export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR, language?: string): string {
   const lines: string[] = [];
   for (const fact of ux?.inherited?.used ?? [])
     lines.push(`${fact.path.join(".")}: ${fact.value} (theme ${fact.theme} default)`);
@@ -347,7 +349,9 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR): string {
     lines.push(
       `${fact.path.join(".")}: theme ${fact.theme} default ${fact.value} skipped: ${fact.reason}`,
     );
-  lines.push(ir.app.clock ? `clock: ${ir.app.clock} (clock)` : "clock: 24h (unsaid)");
+  // How the app writes times, dates, weeks and numbers (docs/design/formats.md §3).
+  for (const [key, chosen] of Object.entries(formatsOf(ir.app, language)))
+    lines.push(`${key}: ${chosen.value} (${chosen.reason || key})`);
   const scope = (s: UniqueScope | undefined) => (s === "owner" ? "per owner" : "in the whole app");
   for (const model of ir.models) {
     lines.push(

@@ -3,6 +3,8 @@
 // have two genders and a definite form the label does not give, so a phrase around a label
 // avoids both: "Lägg till kund", "den här posten", not "Ny/Nytt …" or "den här kund". Correct
 // what reads wrong here, never in the app's code.
+
+import { numberText } from "../formats";
 import type { Words } from "./en";
 
 export const w = {
@@ -10,6 +12,41 @@ export const w = {
   addFiles: "Lägg till filer",
   addOne: (label: string) => `Lägg till ${label}`,
   afternoon: "Eftermiddag",
+  am: "fm",
+  pm: "em",
+  thousandShort: "\u00a0tn",
+  millionShort: "\u00a0mn",
+  billionShort: "\u00a0md",
+  months: [
+    "januari",
+    "februari",
+    "mars",
+    "april",
+    "maj",
+    "juni",
+    "juli",
+    "augusti",
+    "september",
+    "oktober",
+    "november",
+    "december",
+  ],
+  monthsShort: [
+    "jan",
+    "feb",
+    "mars",
+    "apr",
+    "maj",
+    "juni",
+    "juli",
+    "aug",
+    "sep",
+    "okt",
+    "nov",
+    "dec",
+  ],
+  weekdays: ["måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag", "söndag"],
+  weekdaysShort: ["mån", "tis", "ons", "tors", "fre", "lör", "sön"],
   agenda: "Agenda",
   anyTime: "När som helst",
   days: "Dagar",
@@ -141,7 +178,7 @@ export const w = {
   everyone: "Alla",
   exportCsv: "Exportera CSV",
   exportedSome: (shown: number, total: number) =>
-    `Exporterade ${shown.toLocaleString("sv")} av ${total.toLocaleString("sv")} poster som passar`,
+    `Exporterade ${numberText(shown)} av ${numberText(total)} poster som passar`,
   fieldsMarked: "Fält märkta med",
   fileKinds: "Välj en PDF, ett dokument, ett kalkylark, en text eller en bild.",
   fileNotAdded: "Filen kunde inte läggas till.",
@@ -387,7 +424,7 @@ export const w = {
   byTimer: (name: string) => `timern ${name}`,
   aRemovedUser: (id: string) => `en borttagen användare (#${id})`,
   atLeastCharacters: (n: number) => `Minst ${n} tecken`,
-  atMostCharacters: (n: number) => `Högst ${n.toLocaleString("sv")} tecken`,
+  atMostCharacters: (n: number) => `Högst ${numberText(n)} tecken`,
   codeSubject: (app: string) => `Din kod till ${app}`,
   codeText: (app: string, code: string) =>
     `Din kod till ${app} är ${code}. Den gäller i tio minuter. Om du inte bad om den kan du bortse från det här mejlet.`,

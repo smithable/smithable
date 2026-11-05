@@ -12,6 +12,7 @@ import { outgoingCall, outgoingMail } from "#/db/schema";
 import { AccessDenied, type Viewer } from "./access";
 import { audit } from "./audit.server";
 import { post, proxied, proxyRefusal } from "./call.server";
+import { dayText } from "./format";
 import { log } from "./log.server";
 import { mailConfigured, sendMail } from "./mail";
 import { pauseAfter, privateAddress, targetSettings } from "./outgoing";
@@ -145,9 +146,7 @@ export function listText(rows: ListRow[], columns: string[], total: number, at =
 
 /** A day ("2026-11-04") as a list mail's {date} writes it. */
 export function dayWords(day: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
-    new Date(`${day}T00:00:00Z`),
-  );
+  return dayText(day);
 }
 
 /**

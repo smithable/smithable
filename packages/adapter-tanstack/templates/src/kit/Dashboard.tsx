@@ -2,8 +2,9 @@
 // To change one, copy this file into src/custom/components/ and edit the copy.
 import { Card } from "#/components/ui/card";
 import { AppLink } from "./AppLink";
+import { compactText, dayText, instantText, moneyText, numberText } from "./format";
 import type { AppUi } from "./model";
-import { hourCycle, shownZone } from "./time-text";
+import { dateText, whenOf } from "./time-text";
 import { w } from "./words";
 
 type Kind = "money" | "int" | "decimal";
@@ -16,17 +17,9 @@ export function formatNumber(
   compact = false,
 ): string {
   if (value === null) return "—";
-  const options: Intl.NumberFormatOptions = compact ? { notation: "compact" } : {};
-  if (kind === "money")
-    return new Intl.NumberFormat(undefined, {
-      ...options,
-      style: "currency",
-      currency: app.currency,
-    }).format(value / 100);
-  return new Intl.NumberFormat(undefined, {
-    ...options,
-    maximumFractionDigits: kind === "int" ? 0 : 2,
-  }).format(value);
+  if (kind === "money") return moneyText(value, app.currency, compact);
+  if (compact && Math.abs(value) >= 1e4) return compactText(value);
+  return numberText(value, { max: kind === "int" ? 0 : 2 });
 }
 
 export function StatCard({ label, value }: { label: string; value: string }) {
@@ -58,18 +51,12 @@ export function BarChart({
   labels?: Record<string, string>;
 }) {
   const max = Math.max(...bars.map((b) => b.value), 1);
-  const month = new Intl.DateTimeFormat(undefined, { month: "short", timeZone: "UTC" });
-  const day = new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
   // A bar's name: its week's Monday, its month, its quarter or year, or the choice's value.
   const named = (key: string) =>
     period === "week"
-      ? day.format(new Date(`${key}T00:00:00Z`))
+      ? dateText(whenOf(key))
       : period === "month"
-        ? month.format(new Date(`${key}-01T00:00:00Z`))
+        ? w.monthsShort[Number(key.slice(5, 7)) - 1]
         : period === "quarter"
           ? w.quarterOf(Number(key.slice(6)), key.slice(0, 4))
           : period === "year"
@@ -103,12 +90,6 @@ export function BarChart({
     </Card>
   );
 }
-
-/** A day ("YYYY-MM-DD") as the visitor's locale writes it, read as that day wherever they are. */
-const dayText = (day: string) =>
-  new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
-    new Date(`${day}T00:00:00Z`),
-  );
 
 /**
  * What is due (look-gap §4): the records in their date's order, the overdue first and marked, each
@@ -200,12 +181,7 @@ export function RecentChanges({
                 dateTime={new Date(line.at).toISOString()}
                 className="shrink-0 text-muted-foreground tabular-nums"
               >
-                {new Intl.DateTimeFormat(undefined, {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                  hourCycle: hourCycle(),
-                  timeZone: shownZone(),
-                }).format(new Date(line.at))}
+                {instantText(line.at, undefined, { time: true })}
               </time>
             </li>
           ))}

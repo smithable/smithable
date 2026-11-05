@@ -193,7 +193,7 @@ const isNew = (value: unknown) =>
 /**
  * The specific operation that sets a key, when there is one (what-it-does.md §2): a text of the
  * content file through setText (empty restores the default), the app's name, description,
- * currency and time zone through setApp. Undefined leaves it to editSpec with the key's path.
+ * currency, time zone and formats through setApp. Undefined leaves it to editSpec with the key's path.
  */
 export function operationFor(
   file: string,
@@ -213,7 +213,9 @@ export function operationFor(
     path.length === 2 &&
     first === "app" &&
     typeof key === "string" &&
-    ["name", "description", "currency", "timezone", "clock"].includes(key) &&
+    ["name", "description", "currency", "timezone", "clock", "date", "week", "numbers"].includes(
+      key,
+    ) &&
     typeof value === "string"
   )
     return ["setApp", { [key]: value }];

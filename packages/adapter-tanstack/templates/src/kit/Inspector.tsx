@@ -9,7 +9,7 @@ import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { AppLink } from "./AppLink";
 import type { Answer, Step } from "./assistant.server";
-import { hourCycle, shownZone } from "./time-text";
+import { dayText, instantText } from "./format";
 import { w } from "./words";
 
 interface Asked {
@@ -399,16 +399,8 @@ function Table({
 function cell(value: unknown, timeZone?: string): string {
   if (value === null || value === undefined || value === "") return "–";
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z$/.test(value))
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-      hourCycle: hourCycle(),
-      timeZone: shownZone(timeZone),
-    }).format(new Date(value));
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
-    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
-      new Date(`${value}T00:00:00Z`),
-    );
+    return instantText(value, timeZone);
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return dayText(value);
   if (typeof value === "object" && "title" in (value as object))
     return String((value as { title: unknown }).title);
   return typeof value === "object" ? JSON.stringify(value) : String(value);

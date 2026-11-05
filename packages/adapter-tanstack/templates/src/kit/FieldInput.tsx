@@ -2,6 +2,7 @@
 import { Button } from "#/components/ui/button";
 import { Checkbox, Input, NativeSelect, Textarea } from "#/components/ui/input";
 import { Combobox } from "./Combobox";
+import { readNumber } from "./format";
 import type { FieldUi, Options } from "./model";
 import { w } from "./words";
 
@@ -117,7 +118,7 @@ export function FieldInput({
           min={field.min}
           max={field.max}
           step={step}
-          value={text === "" ? field.min : Number(text)}
+          value={text === "" || Number.isNaN(readNumber(text)) ? field.min : readNumber(text)}
           onChange={(e) => onChange(e.target.value)}
           className="h-2 grow accent-primary"
         />
@@ -128,7 +129,9 @@ export function FieldInput({
     );
   }
   if (field.control === "stepper") {
-    const n = text === "" ? undefined : Number(text);
+    // Read by the app's decimal mark (formats.md §4); a number input takes a point.
+    const read = readNumber(text);
+    const n = text === "" || Number.isNaN(read) ? undefined : read;
     const step = (by: number) => {
       const next = (n ?? field.min ?? 0) + by;
       if (field.min !== undefined && next < field.min) return;
@@ -152,7 +155,7 @@ export function FieldInput({
           inputMode="numeric"
           min={field.min}
           max={field.max}
-          value={text}
+          value={n === undefined ? "" : String(n)}
           onChange={(e) => onChange(e.target.value)}
           className="w-24 text-center"
         />

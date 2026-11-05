@@ -25,7 +25,7 @@ import {
 import { cn } from "#/lib/utils";
 import { AiMarked } from "./AiMark";
 import { csvName, csvOf, download } from "./csv";
-import { displayValue, formatValue } from "./format";
+import { displayValue, formatValue, numberText } from "./format";
 import { MoreOnScroll } from "./MoreOnScroll";
 import { type AppUi, editorMarker, type RecordFieldUi, type RecordUi, type Row } from "./model";
 import { w } from "./words";
@@ -98,7 +98,7 @@ interface ModelTableProps<R extends Row> {
 export function Pager({ page, size, total, to }: NonNullable<ModelTableProps<Row>["paging"]>) {
   if (total <= size) return null;
   const last = Math.max(1, Math.ceil(total / size));
-  const number = (n: number) => new Intl.NumberFormat().format(n);
+  const number = (n: number) => numberText(n);
   return (
     <nav
       aria-label={w.pages}

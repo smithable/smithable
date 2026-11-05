@@ -2,6 +2,7 @@ import {
   type AuthIR,
   emptyContent,
   emptyUx,
+  formatsOf,
   isUpload,
   kebab,
   partSections,
@@ -122,7 +123,7 @@ export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile
     })
     .map(([path, content]) => ({
       path,
-      content,
+      content: path === FORMATS_FILE ? formatsFile(ir, ctx.options.content?.language) : content,
       zone: SCAFFOLD.has(path) ? "scaffold" : "kit",
     }));
   const content = ctx.options.content;
@@ -420,6 +421,17 @@ const language = createMiddleware().server(({ request, next }) =>
     ],
     ["requestMiddleware: [trace, ownPages]", "requestMiddleware: [trace, language, ownPages]"],
   ]);
+}
+
+const FORMATS_FILE = "src/kit/formats.ts";
+
+/** src/kit/formats.ts with the app's own date order, first day and numbers (formats.md §4). */
+function formatsFile(ir: SpecIR, language = "en"): string {
+  const { date, week, numbers } = formatsOf(ir.app, language);
+  return (TEMPLATES[FORMATS_FILE] as string).replace(
+    '} = { date: "day-month", week: "monday", numbers: "point" };',
+    `} = { date: "${date.value}", week: "${week.value}", numbers: "${numbers.value}" };`,
+  );
 }
 
 /**

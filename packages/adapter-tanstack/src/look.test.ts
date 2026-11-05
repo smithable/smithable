@@ -272,9 +272,7 @@ pages:
     "smithableUx: 0.1\npages: { home: { sections: { rooms: { layout: ledger } } } }\n",
   );
   expect(ledger).toContain('layout="ledger"');
-  expect(ledger).toContain(
-    "amount: row.seats == null ? undefined : new Intl.NumberFormat().format(row.seats),",
-  );
+  expect(ledger).toContain("amount: row.seats == null ? undefined : numberText(row.seats),");
   expect(home("smithableUx: 0.1\n")).not.toContain("amount:");
 });
 
