@@ -1,7 +1,15 @@
 // Pictures for a drafted app from the Smithable image library (docs.smithable.ai/images): the
 // index is fetched and cached for a day, the chosen files are written into the project, and the
 // landing page's hero gets its picture. Offline or refused, the app starts without pictures.
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { type PictureCredit, type PictureEntry, pickPictures } from "@smithable/ai";
@@ -86,6 +94,24 @@ export interface PlacedPicture {
 const madeByAi = (entry: PictureEntry) => entry.generated ?? true;
 
 /**
+ * For a bench that wants to know what the library lacks: with SMITHABLE_PICTURE_MISSES set to a
+ * file, a line for each app something had no picture for. Nothing is written otherwise.
+ */
+function logMisses(
+  description: string,
+  ir: SpecIR,
+  misses: ReturnType<typeof pickPictures>["misses"],
+): void {
+  const file = process.env.SMITHABLE_PICTURE_MISSES;
+  if (!file || !(misses.hero || misses.logo || misses.models.length)) return;
+  try {
+    appendFileSync(file, `${JSON.stringify({ description, app: ir.app.name, ...misses })}\n`);
+  } catch {
+    /* A log of what is missing never stops a build. */
+  }
+}
+
+/**
  * The pictures a drafted app gets, each marked as the library says (`generated`: true when an
  * image model made it, false for a photograph): the hero into public/images/hero.webp (and the content file's
  * hero image, when the landing page's hero has none), its mark into public/images/logo.webp (and
@@ -123,7 +149,9 @@ export async function addLibraryPictures(options: {
   if (options.website) {
     picked.logo = undefined;
     picked.models = {};
+    picked.misses = { ...picked.misses, logo: false, models: [] };
   }
+  logMisses(options.description, options.ir, picked.misses);
   const written: PlacedPicture[] = [];
   const meta = (entry: PictureEntry) => ({
     generated: madeByAi(entry),
