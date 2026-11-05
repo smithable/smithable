@@ -42,6 +42,8 @@ export interface PickedPictures {
    * model nothing in the library fits has none (no picture is better than a bicycle for a dish).
    */
   models: Record<string, PictureEntry[]>;
+  /** What no picture fitted: the hero or mark that is a fallback, the models that have none. */
+  misses: { hero: boolean; logo: boolean; models: string[] };
 }
 
 /** Tags that say little about the subject; they only break ties. */
@@ -247,5 +249,14 @@ export function pickPictures(
       .sort((a, b) => rank(b) - rank(a) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
       .slice(0, count);
   }
-  return { ...(hero ? { hero } : {}), ...(logo ? { logo } : {}), models };
+  return {
+    ...(hero ? { hero } : {}),
+    ...(logo ? { logo } : {}),
+    models,
+    misses: {
+      hero: !heroes.chosen,
+      logo: !marks.chosen,
+      models: Object.keys(models).filter((name) => !models[name]?.length),
+    },
+  };
 }

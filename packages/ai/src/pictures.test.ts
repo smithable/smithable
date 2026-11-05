@@ -80,6 +80,7 @@ test("nothing fits: the calm abstract hero and no samples, deterministically", (
   const b = pickPictures(index, { description: "Quarterly compliance filings", ir });
   expect(a.hero?.id).toBe("hero-abstract-calm");
   expect(a.models).toEqual({ Filing: [] });
+  expect(a.misses.models).toEqual(["Filing"]);
   expect(a).toEqual(b);
 });
 
@@ -271,4 +272,18 @@ test("the same input the same mark; two cafés can get two marks, independent of
     return `${p.hero?.id === "hero-cafe"}/${p.logo?.id === "logo-cup"}`;
   });
   expect(new Set(pairs).size).toBe(4);
+});
+
+test("says what no picture fitted", () => {
+  const library: PictureEntry[] = [
+    { id: "hero-abstract-calm", kind: "hero", url: "h", alt: "", tags: ["abstract"] },
+    { id: "hero-yoga", kind: "hero", url: "y", alt: "", tags: ["yoga"] },
+    { id: "mark-yoga", kind: "logo", url: "m", alt: "", tags: ["yoga"] },
+    { id: "mark-abstract", kind: "logo", url: "a", alt: "", tags: ["abstract"] },
+  ];
+  const fits = pickPictures(library, { description: "A yoga studio's yoga classes" });
+  expect(fits.misses).toEqual({ hero: false, logo: false, models: [] });
+  const none = pickPictures(library, { description: "Quarterly compliance filings" });
+  expect(none.misses).toMatchObject({ hero: true, logo: true });
+  expect(none.hero?.id).toBe("hero-abstract-calm");
 });
