@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STARTER_TEXTS } from "@smithable/ai";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { run } from "./cli.js";
 import { administered } from "./new.js";
 import { tempDir } from "./test-dir.js";
@@ -215,4 +215,28 @@ pages:
   out.length = 0;
   expect(await run(["validate", dir, "--explain"], io)).toBe(0);
   expect(out.join("")).toContain("Ticket: named by title (namedBy)");
+});
+
+test("content mode is explicit and only accepted with local new from a website", async () => {
+  for (const args of [
+    ["new", "x", "--content", "full"],
+    ["new", "x", "--from", "https://example.test", "--content", "raw"],
+  ]) {
+    const io = captureIo();
+    expect(await run(args, io)).toBe(2);
+    expect(io.stderr).toContain("--content needs sample or full and --from");
+  }
+});
+
+test("local full-content command refuses the existing hosted environment marker", async () => {
+  vi.stubEnv("SMITHABLE_HOSTED_LEVEL", "normal");
+  try {
+    const io = captureIo();
+    expect(await run(["new", "x", "--from", "https://example.test", "--content", "full"], io)).toBe(
+      2,
+    );
+    expect(io.stderr).toContain("recorded instruction");
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });

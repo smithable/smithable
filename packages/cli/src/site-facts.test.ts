@@ -31,14 +31,7 @@ describe("single-page factual context", () => {
     const result = siteFactsResult(html, url);
     expect(result.tooLittle).toBe(false);
     expect(result.facts.version).toBe(1);
-    for (const value of [
-      "Harbour Salon",
-      "+358 18 12345",
-      "hello@salon.example",
-      "Harbour Road 2",
-      "Haircut: 35 EUR",
-      "Mo-Fr 09:00-17:00",
-    ])
+    for (const value of ["Harbour Salon", "Haircut: 35 EUR", "Mo-Fr 09:00-17:00"])
       expect(result.description).toContain(value);
     for (const value of [
       "marketing sentences",
@@ -49,7 +42,7 @@ describe("single-page factual context", () => {
       '"page":',
     ])
       expect(result.description).not.toContain(value);
-    expect(result.facts.fields[0]).toEqual({
+    expect(extractSiteFacts(html, url).fields[0]).toEqual({
       kind: "name",
       value: "Harbour Salon",
       basis: "observed",
@@ -169,7 +162,7 @@ test("selects only the business matching the page, never a listed business or pa
   const result = siteFactsResult(html, url);
   expect(result.tooLittle).toBe(false);
   expect(result.description).toContain("Harbour Workshop");
-  expect(result.description).toContain("own@example.com");
+  expect(result.description).toMatch(/sample-\d+@example.com/);
   for (const other of [
     "Parent Company",
     "+3581822222",
@@ -178,7 +171,7 @@ test("selects only the business matching the page, never a listed business or pa
     "listed@example.com",
   ])
     expect(result.description).not.toContain(other);
-  expect(result.facts.fields[0]?.evidence.element).toContain(".@graph[0].name");
+  expect(extractSiteFacts(html, url).fields[0]?.evidence.element).toContain(".@graph[0].name");
 });
 test("ambiguous businesses force input rather than merging identities", () => {
   for (const withUrls of [false, true]) {

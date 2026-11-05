@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import { parse } from "node-html-parser";
 import { extractImageContexts, type SiteImageContext } from "./image-context.js";
+import { extractSiteFacts, parseSiteFacts, type SiteFacts } from "./site-facts.js";
 import {
-  describeSiteFacts,
-  extractSiteFacts,
-  parseSiteFacts,
-  type SiteFacts,
-} from "./site-facts.js";
+  projectSitePersonal,
+  type SiteContentMode,
+  type SiteModelProjection,
+  type SitePersonalMap,
+} from "./site-personal.js";
 import { inlineHidden, integer, list, record, string, webAddress } from "./site-validation.js";
 
 export interface SiteReadPage {
@@ -42,6 +43,8 @@ export interface SiteBundleResult {
   images: SiteImageContext[];
   sourceCorpus: SiteSourceCorpus;
   diagnostics: string[];
+  model: SiteModelProjection;
+  personalMap: SitePersonalMap;
 }
 const MAX_BYTES = 8 * 1024 * 1024;
 const siteHost = (url: URL) => url.hostname.toLowerCase().replace(/^www\./, "");
@@ -161,7 +164,14 @@ export function visibleSourceText(html: string): string {
     throw new Error("Source corpus exceeds its bound.");
   return text;
 }
-export function siteBundleResult(input: SiteReadBundle): SiteBundleResult {
+export function siteBundleResult(
+  input: SiteReadBundle,
+  options: {
+    contentMode?: SiteContentMode;
+    personalMap?: SitePersonalMap;
+    personalKey?: string;
+  } = {},
+): SiteBundleResult {
   const bundle = parseSiteReadBundle(input);
   const diagnostics = [...bundle.crawl.diagnostics];
   const firstPage = bundle.pages[0];
@@ -257,18 +267,24 @@ export function siteBundleResult(input: SiteReadBundle): SiteBundleResult {
     }
     images.push(...extractImageContexts(page.html, page.url, page.id, 60 - images.length));
   }
-  const useful =
-    facts.fields.filter((f) => f.kind !== "name").length +
-    facts.navigation.length +
-    facts.forms.length;
   parseSiteFacts(facts);
-  const description = describeSiteFacts(facts);
+  const { model, personalMap } = projectSitePersonal(
+    { facts, images, sourceCorpus: corpus, pages: bundle.pages },
+    options,
+  );
+  const description = model.description;
+  const useful =
+    model.facts.fields.filter((fact) => fact.kind !== "name").length +
+    model.facts.navigation.length +
+    model.facts.forms.length;
   if (description.length > 64_000 || diagnostics.length > 100)
     throw new Error("Extracted site context exceeds its bound.");
   return {
     facts,
+    model,
+    personalMap,
     description,
-    tooLittle: ambiguous || useful < 2,
+    tooLittle: model.facts.ambiguous === true || useful < 2,
     links,
     images,
     sourceCorpus: corpus,

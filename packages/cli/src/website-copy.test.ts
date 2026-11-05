@@ -1,13 +1,15 @@
 import type { Provider } from "@smithable/ai";
 import { YamlEditor } from "@smithable/core";
 import { expect, test } from "vitest";
+import { extractSiteFacts } from "./site-facts.js";
 import {
   NEUTRAL_WEBSITE_TEXT,
   repairWebsiteCopy,
   repeatsWebsiteWords,
   sourcePhrases,
 } from "./website-copy.js";
-import { digest } from "./website-input.js";
+import { prepareWebsiteContext, websitePrivateProviders } from "./website-generation.js";
+import { digest, parseWebsiteInput } from "./website-input.js";
 
 const source = "These ten very familiar words are copied from our website.";
 const corpus = { version: 1 as const, pages: [{ id: "p1", text: source, sha256: digest(source) }] };
@@ -140,4 +142,46 @@ test("a source sentence split over three reordered presentation fields is refuse
   };
   const repaired = await repairWebsiteCopy(files, corpus, "Facts", []);
   expect(repaired["smithable.content.yml"]).not.toContain("These ten very familiar");
+});
+
+test("the real copy-repair request and returned text stay inside the personal-data boundary", async () => {
+  const input = parseWebsiteInput({
+    version: 1,
+    facts: extractSiteFacts(
+      '<meta property="og:site_name" content="Jane Doe"><a href="tel:+3581812345">Call</a><a href="mailto:a@example.test">Email</a>',
+      "https://business.example/",
+    ),
+    images: [],
+    originals: [],
+    sourceCorpus: corpus,
+    authorization: { id: "auth", site: "https://business.example/", images: false },
+  });
+  const context = await prepareWebsiteContext(input, false, [], () => {});
+  let prompt = "";
+  const provider: Provider = {
+    name: "fixture",
+    tier: "local",
+    location: "local",
+    price: { input: 0, output: 0 },
+    complete: async (request) => {
+      prompt = JSON.stringify(request);
+      return {
+        text: JSON.stringify({ "0": "Contact Jane Doe at a@example.test." }),
+        model: "fixture",
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    },
+  };
+  const output = await repairWebsiteCopy(
+    { "smithable.content.yml": JSON.stringify({ pages: { "Jane Doe": { body: source } } }) },
+    corpus,
+    "Call Jane Doe at a@example.test.",
+    websitePrivateProviders([provider], context.personalMap),
+  );
+  expect(prompt).not.toContain("Jane Doe");
+  expect(prompt).not.toContain("a@example.test");
+  expect(prompt).not.toContain(source);
+  expect(output["smithable.content.yml"]).not.toContain("a@example.test");
+  expect(output["smithable.content.yml"]).not.toContain("Contact Jane Doe");
 });

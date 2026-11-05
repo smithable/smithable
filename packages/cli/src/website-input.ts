@@ -17,6 +17,13 @@ import { dirname, join, resolve } from "node:path";
 import { parseSiteImageContexts, type SiteImageContext } from "./image-context.js";
 import type { Io } from "./io.js";
 import { parseSiteFacts, type SiteFacts } from "./site-facts.js";
+import {
+  parseSitePersonalMap,
+  projectSitePersonal,
+  type SiteContentMode,
+  type SiteModelProjection,
+  type SitePersonalMap,
+} from "./site-personal.js";
 
 export const MAX_WEBSITE_INPUT = 64 * 1024 * 1024;
 export const digest = (value: string | Uint8Array): string =>
@@ -25,10 +32,12 @@ export interface WebsiteInputRef {
   version: 1;
   sha256: string;
 }
+export type WebsiteContentMode = SiteContentMode;
 export interface WebsiteGenerationOptions {
   input: WebsiteInputRef;
   interpretText?: boolean;
   ownerDescription?: boolean;
+  contentMode?: WebsiteContentMode;
 }
 export interface SourceCorpus {
   version: 1;
@@ -44,6 +53,9 @@ export interface OriginalAsset {
 }
 export interface WebsiteGenerationInput {
   version: 1;
+  options?: { contentMode: WebsiteContentMode };
+  model?: SiteModelProjection;
+  personalMap?: SitePersonalMap;
   facts: SiteFacts;
   sourceCorpus: SourceCorpus;
   images: SiteImageContext[];
@@ -95,17 +107,22 @@ export function rasterType(bytes: Uint8Array): OriginalType | undefined {
   return undefined;
 }
 export function parseWebsiteGenerationOptions(value: unknown): WebsiteGenerationOptions {
-  const options = object(value, ["input", "interpretText", "ownerDescription"]);
+  const options = object(value, ["input", "interpretText", "ownerDescription", "contentMode"]);
   const input = object(options.input, ["version", "sha256"]);
   if (
     input.version !== 1 ||
     !hash(input.sha256) ||
     (options.interpretText !== undefined && typeof options.interpretText !== "boolean") ||
-    (options.ownerDescription !== undefined && typeof options.ownerDescription !== "boolean")
+    (options.ownerDescription !== undefined && typeof options.ownerDescription !== "boolean") ||
+    (options.contentMode !== undefined &&
+      !["sample", "full"].includes(options.contentMode as string))
   )
     throw new Error("The website input reference is invalid.");
   return {
     input: { version: 1, sha256: input.sha256 },
+    ...(options.contentMode === undefined
+      ? {}
+      : { contentMode: options.contentMode as WebsiteContentMode }),
     ...(options.ownerDescription === undefined
       ? {}
       : { ownerDescription: options.ownerDescription }),
@@ -121,8 +138,16 @@ export function parseWebsiteInput(value: unknown): WebsiteGenerationInput {
     "images",
     "originals",
     "authorization",
+    "options",
+    "model",
+    "personalMap",
   ]);
   if (v.version !== 1) throw new Error("The website input version is unsupported.");
+  const modeOptions = v.options === undefined ? {} : object(v.options, ["contentMode"]);
+  const contentMode = modeOptions.contentMode ?? "sample";
+  if (contentMode !== "sample" && contentMode !== "full")
+    throw new Error("The website content mode is invalid.");
+  const personalMap = v.personalMap === undefined ? undefined : parseSitePersonalMap(v.personalMap);
   const facts = parseSiteFacts(v.facts),
     images = parseSiteImageContexts(v.images);
   if (Buffer.byteLength(JSON.stringify(facts)) > 1024 * 1024 || images.length > 60)
@@ -196,8 +221,20 @@ export function parseWebsiteInput(value: unknown): WebsiteGenerationInput {
       authorizationId: authorization.id as string,
     };
   });
+  const projection = projectSitePersonal(
+    { facts, images, sourceCorpus: { version: 1, pages } },
+    { contentMode, ...(personalMap ? { personalMap } : {}) },
+  );
+  if (
+    v.model !== undefined &&
+    (!personalMap || JSON.stringify(v.model) !== JSON.stringify(projection.model))
+  )
+    throw new Error("The website model projection does not match its private source and mapping.");
   return {
     version: 1,
+    options: { contentMode },
+    model: projection.model,
+    personalMap: projection.personalMap,
     facts,
     images,
     sourceCorpus: { version: 1, pages },
@@ -223,10 +260,37 @@ function directory(dir: string, generation: string, create: boolean): string {
   }
   return at;
 }
+function privateJson(bytes: Uint8Array, message: string): unknown {
+  try {
+    return JSON.parse(Buffer.from(bytes).toString("utf8"));
+  } catch {
+    throw new Error(message);
+  }
+}
+// This receipt is a host-installation boundary, not a cryptographic capability against a
+// same-UID workspace operator. The host must keep these control files out of generated mounts.
+function privateFile(path: string): Buffer {
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const info = fstatSync(fd);
+    if (
+      !info.isFile() ||
+      info.size > MAX_WEBSITE_INPUT ||
+      info.mode & 0o077 ||
+      (process.getuid && info.uid !== process.getuid())
+    )
+      throw new Error("The website authority file is invalid.");
+    return readFileSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
 export function consumeWebsiteInput(
   dir: string,
   generation: string,
   ref: WebsiteInputRef,
+  requestedMode: WebsiteContentMode = "sample",
+  diagnostic?: (message: string) => void,
 ): WebsiteGenerationInput {
   parseWebsiteGenerationOptions({ input: ref });
   const path = join(directory(dir, generation, false), `${ref.sha256}.json`);
@@ -243,11 +307,39 @@ export function consumeWebsiteInput(
       throw new Error("The website input file is invalid.");
     const bytes = readFileSync(fd);
     if (digest(bytes) !== ref.sha256) throw new Error("The website input digest changed.");
-    const input = parseWebsiteInput(JSON.parse(bytes.toString("utf8")));
+    const rawInput = privateJson(bytes, "The website input is not valid JSON.");
+    const input = parseWebsiteInput(rawInput);
+    if (
+      (input.options?.contentMode ?? "sample") === "sample" &&
+      !(rawInput as Record<string, unknown>).personalMap
+    )
+      diagnostic?.(
+        "This older website input was sanitized from its facts and corpus without the full HTML detection context. Some personal details may be missed.",
+      );
+    const mode = input.options?.contentMode ?? "sample";
+    if (mode !== requestedMode)
+      throw new Error("The website content mode does not match the generation request.");
+    const permitPath = `${path}.permit`;
+    if (lstatSync(permitPath, { throwIfNoEntry: false })) {
+      const permit = object(
+        privateJson(privateFile(permitPath), "The installed website authority is not valid JSON."),
+        ["version", "sha256", "project", "generation", "contentMode"],
+      );
+      if (
+        permit.version !== 1 ||
+        permit.sha256 !== ref.sha256 ||
+        permit.project !== digest(resolve(dir)) ||
+        permit.generation !== generation ||
+        permit.contentMode !== mode
+      )
+        throw new Error("The installed website content authority does not match.");
+    } else if (mode !== "sample")
+      throw new Error("Full website content has no trusted installer authority.");
     const now = lstatSync(path);
     if (now.ino !== info.ino || now.dev !== info.dev || now.isSymbolicLink())
       throw new Error("The website input changed while being read.");
     unlinkSync(path);
+    if (lstatSync(permitPath, { throwIfNoEntry: false })) unlinkSync(permitPath);
     return input;
   } finally {
     closeSync(fd);
@@ -259,6 +351,8 @@ export async function installWebsiteInputCommand(
   sha256: string | undefined,
   io: Io,
   input: AsyncIterable<Uint8Array | string> = process.stdin,
+  // Internal host expectation, never parsed from the payload or ordinary generation request.
+  expected: { contentMode: WebsiteContentMode } = { contentMode: "sample" },
 ): Promise<number> {
   let temporary: string | undefined;
   try {
@@ -274,11 +368,24 @@ export async function installWebsiteInputCommand(
     }
     const bytes = Buffer.concat(chunks);
     if (digest(bytes) !== sha256) throw new Error("The website input digest does not match.");
-    const parsed = parseWebsiteInput(JSON.parse(bytes.toString("utf8")));
+    const parsed = parseWebsiteInput(privateJson(bytes, "The website input is not valid JSON."));
+    if ((parsed.options?.contentMode ?? "sample") !== expected.contentMode)
+      throw new Error("The website content mode does not match the trusted installer expectation.");
     const root = directory(dir, generation, true);
     temporary = join(root, `${sha256}.${randomUUID()}.incoming`);
     writeFileSync(temporary, bytes, { mode: 0o600, flag: "wx" });
     renameSync(temporary, join(root, `${sha256}.json`));
+    temporary = undefined;
+    const permit = JSON.stringify({
+      version: 1,
+      sha256,
+      project: digest(resolve(dir)),
+      generation,
+      contentMode: expected.contentMode,
+    });
+    temporary = join(root, `${sha256}.${randomUUID()}.permit.incoming`);
+    writeFileSync(temporary, permit, { mode: 0o600, flag: "wx" });
+    renameSync(temporary, join(root, `${sha256}.json.permit`));
     temporary = undefined;
     io.out(
       `${JSON.stringify({ version: 1, sha256, pages: parsed.sourceCorpus.pages.length, originals: parsed.originals.length })}\n`,

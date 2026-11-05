@@ -2,15 +2,17 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
+import { YamlEditor } from "@smithable/core";
 import { expect, test, vi } from "vitest";
 import { generationReceipt, startGeneration } from "./generation-job.js";
 import { create } from "./new.js";
 import { replaceProject, sync } from "./replace.js";
+import { extractSiteFacts } from "./site-facts.js";
 import { readSite } from "./site-fetch.js";
 import { STARTERS } from "./starters.gen.js";
 import { tempDir } from "./test-dir.js";
 import { assetReview } from "./website-assets.js";
-import { digest, installWebsiteInputCommand } from "./website-input.js";
+import { digest, installWebsiteInputCommand, parseWebsiteInput } from "./website-input.js";
 
 const state = vi.hoisted(() => ({ descriptions: [] as string[], artifact: "" }));
 vi.mock("@smithable/ai", async (original) => ({
@@ -22,8 +24,12 @@ vi.mock("@smithable/ai", async (original) => ({
   draftProject: async (options: { description: string; starter: Record<string, string> }) => {
     state.descriptions.push(options.description);
     const files = { ...options.starter };
-    files["smithable.content.yml"] +=
-      "\nfixtureCopy: These ten very familiar words are copied from our website.\n";
+    const content = new YamlEditor(files["smithable.content.yml"] ?? "");
+    content.set(
+      ["pages", "home", "hero", "subtitle"],
+      "These ten very familiar words are copied from our website.",
+    );
+    files["smithable.content.yml"] = content.text;
     return { kind: "draft", files, assumptions: [], usage: [] };
   },
 }));
@@ -35,6 +41,11 @@ vi.mock("./generate.js", async (original) => ({
   ...(await original<object>()),
   generate: async (dir: string) => {
     expect(existsSync(state.artifact)).toBe(false);
+    const { loadSpec } = await import("./validate.js");
+    const messages: string[] = [];
+    const loaded = loadSpec(dir, { out: () => {}, err: (message) => messages.push(message) });
+    expect(loaded.ir, messages.join("\n")).toBeDefined();
+    expect(loaded.auth, messages.join("\n")).toBeDefined();
     writeFileSync(join(dir, "package.json"), '{"name":"fixture"}');
     return 0;
   },
@@ -230,5 +241,54 @@ test("the existing hosted replacement enables library selection only for website
     expect(seen).toEqual([true, false]);
   } finally {
     mock.mockRestore();
+  }
+});
+
+test("explicit full-content input carries source prose and retains requested copied text", async () => {
+  const text = "These ten very familiar words are copied from our website.";
+  const source = parseWebsiteInput({
+    version: 1,
+    options: { contentMode: "full" },
+    facts: extractSiteFacts(
+      '<meta property="og:site_name" content="Harbour"><a href="tel:+3581812345">Call</a><a href="mailto:hello@example.test">Email</a>',
+      "https://business.example/",
+    ),
+    images: [],
+    originals: [],
+    sourceCorpus: { version: 1, pages: [{ id: "p1", text, sha256: digest(text) }] },
+    authorization: { id: "local-owner", site: "https://business.example/", images: false },
+  });
+  const dir = join(tempDir("website-full-build-"), "app");
+  vi.stubEnv("SMITHABLE_DRAFT", "files");
+  vi.stubEnv("SMITHABLE_NO_PICTURES", "1");
+  try {
+    vi.stubEnv("SMITHABLE_HOSTED_LEVEL", "normal");
+    const calls = state.descriptions.length;
+    expect(
+      await create(dir, quiet, "barbers", {
+        websiteInput: source,
+        yes: true,
+        unattended: true,
+        installed: true,
+      }),
+    ).toBe(1);
+    expect(state.descriptions).toHaveLength(calls);
+    vi.stubEnv("SMITHABLE_HOSTED_LEVEL", "");
+    expect(
+      await create(dir, quiet, "barbers", {
+        websiteInput: source,
+        yes: true,
+        unattended: true,
+        admin: "owner@example.test",
+        installed: true,
+      }),
+    ).toBe(0);
+    expect(state.descriptions.at(-1)).toContain(text);
+    expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).toContain(text);
+    expect(readFileSync(join(dir, "smithable.content.yml"), "utf8")).not.toContain(
+      "People and contact details are samples",
+    );
+  } finally {
+    vi.unstubAllEnvs();
   }
 });

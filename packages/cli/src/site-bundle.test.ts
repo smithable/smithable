@@ -80,8 +80,6 @@ describe("bounded site bundle extraction", () => {
     expect(result.tooLittle).toBe(false);
     for (const text of [
       "Harbour Workshop",
-      "+358 18 12345",
-      "Harbour Road 2",
       "Repairs",
       "Spare parts",
       "35 EUR",
@@ -220,7 +218,7 @@ test("source destinations remain evidence while generated navigation is local an
   expect(result.facts.fields).toContainEqual(
     expect.objectContaining({ kind: "cta", url: "https://booking.example/live" }),
   );
-  expect(result.description).toContain('"path":"/services"');
+  expect(result.description).toMatch(/"path":"\/ref\/\d+"/);
   expect(result.description).not.toMatch(/booking.example|tracking=secret/);
 });
 test("foreign business and Person microdata never supply the selected business's contacts", () => {
@@ -239,8 +237,8 @@ test("single business microdata is scoped and staff identity is excluded", () =>
     ]),
   );
   expect(result.description).toMatch(/Harbour Workshop/);
-  expect(result.description).toContain("shop@example.com");
-  expect(result.description).toContain("Main Street 2");
+  expect(result.description).toMatch(/sample-\d+@example.com/);
+  expect(result.description).toContain("Sample Street");
   expect(result.description).not.toContain("staff@example.com");
 });
 test("seasonal, malformed and zero-length hours remain unknown rather than unconditional", () => {

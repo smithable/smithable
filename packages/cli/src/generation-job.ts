@@ -7,7 +7,11 @@ import type { Assumption, Usage } from "@smithable/ai";
 import { ensureRepository, git, uncommitted } from "./git.js";
 import type { Io } from "./io.js";
 import { type Replacement, replaceProject } from "./replace.js";
-import { consumeWebsiteInput, parseWebsiteGenerationOptions } from "./website-input.js";
+import {
+  consumeWebsiteInput,
+  parseWebsiteGenerationOptions,
+  type WebsiteContentMode,
+} from "./website-input.js";
 
 export type GenerationStage = "preparing" | "drafting" | "building" | "arriving" | "committing";
 export interface GenerationReceipt {
@@ -23,6 +27,8 @@ export interface GenerationReceipt {
   retryable?: boolean;
   website?: {
     inputDigest?: string;
+    contentMode?: WebsiteContentMode;
+    personal?: { version: 1; counts: Record<string, number> };
     assetManifestDigest?: string;
     images?: {
       id: string;
@@ -208,10 +214,22 @@ export function startGeneration(
   void (async () => {
     try {
       const websiteInput = replacement.website
-        ? consumeWebsiteInput(dir, id, replacement.website.input)
+        ? consumeWebsiteInput(
+            dir,
+            id,
+            replacement.website.input,
+            replacement.website.contentMode ?? "sample",
+            (message) => {
+              if (receipt.diagnostics.length < 50) receipt.diagnostics.push(message);
+            },
+          )
         : undefined;
       if (replacement.website) {
-        receipt.website = { inputDigest: replacement.website.input.sha256 };
+        receipt.website = {
+          inputDigest: replacement.website.input.sha256,
+          contentMode: websiteInput?.options?.contentMode ?? "sample",
+          ...(websiteInput?.model ? { personal: websiteInput.model.personal } : {}),
+        };
         save(dir, receipt);
       }
       const code = await make(

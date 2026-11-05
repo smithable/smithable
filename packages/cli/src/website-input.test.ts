@@ -1,15 +1,18 @@
 import { execFileSync } from "node:child_process";
+import { createHmac } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { expect, test } from "vitest";
 import { extractImageContexts } from "./image-context.js";
+import { siteBundleResult } from "./site-bundle.js";
 import { extractSiteFacts } from "./site-facts.js";
 import { tempDir } from "./test-dir.js";
 import {
   consumeWebsiteInput,
   digest,
   installWebsiteInputCommand,
+  parseWebsiteGenerationOptions,
   parseWebsiteInput,
 } from "./website-input.js";
 
@@ -156,4 +159,192 @@ test("a special input file is refused without blocking", async () => {
   unlinkSync(file);
   execFileSync("mkfifo", [file]);
   expect(() => consumeWebsiteInput(dir, "job", { version: 1, sha256 })).toThrow("regular file");
+});
+
+test("legacy inputs default to sample and model projection cannot be supplied as authority", () => {
+  const parsed = parseWebsiteInput(input());
+  expect(parsed.options?.contentMode).toBe("sample");
+  expect(parsed.model?.contentMode).toBe("sample");
+  expect(parsed.model?.description).not.toContain("+3581812345");
+  expect(parsed.model?.description).not.toContain("hello@example.test");
+  expect(JSON.stringify(parsed.facts)).toContain("+3581812345");
+  expect(() =>
+    parseWebsiteInput({
+      ...parsed,
+      model: { ...parsed.model, description: "Raw injected personal details" },
+    }),
+  ).toThrow("projection");
+  expect(() => parseWebsiteInput({ ...input(), options: { contentMode: "invalid" } })).toThrow(
+    "mode",
+  );
+  expect(() =>
+    parseWebsiteInput({ ...input(), options: { contentMode: "full", authorized: true } }),
+  ).toThrow("object");
+  expect(
+    parseWebsiteGenerationOptions({
+      input: { version: 1, sha256: "a".repeat(64) },
+      contentMode: "full",
+    }).contentMode,
+  ).toBe("full");
+  expect(() =>
+    parseWebsiteGenerationOptions({
+      input: { version: 1, sha256: "a".repeat(64) },
+      contentMode: "other",
+    }),
+  ).toThrow("reference");
+});
+
+test("hosted full input needs separate trusted installer expectation and matching generation mode", async () => {
+  const dir = join(tempDir("website-full-authority-"), "project");
+  mkdirSync(dir);
+  const raw = JSON.stringify({ ...input(), options: { contentMode: "full" } });
+  const sha256 = digest(raw),
+    ref = { version: 1 as const, sha256 };
+  expect(
+    await installWebsiteInputCommand(dir, "full-job", sha256, quiet, Readable.from([raw])),
+  ).toBe(1);
+  expect(
+    await installWebsiteInputCommand(dir, "full-job", sha256, quiet, Readable.from([raw]), {
+      contentMode: "full",
+    }),
+  ).toBe(0);
+  expect(() => consumeWebsiteInput(dir, "full-job", ref)).toThrow("mode");
+  const parsed = consumeWebsiteInput(dir, "full-job", ref, "full");
+  expect(parsed.options?.contentMode).toBe("full");
+  expect(parsed.model?.description).toContain("+3581812345");
+});
+
+test("generation parameters cannot elevate installed sample or legacy files to full", async () => {
+  const dir = join(tempDir("website-mode-binding-"), "project");
+  mkdirSync(dir);
+  const raw = JSON.stringify(input()),
+    sha256 = digest(raw),
+    ref = { version: 1 as const, sha256 };
+  expect(await installWebsiteInputCommand(dir, "job", sha256, quiet, Readable.from([raw]))).toBe(0);
+  expect(() => consumeWebsiteInput(dir, "job", ref, "full")).toThrow("mode");
+  expect(consumeWebsiteInput(dir, "job", ref).options?.contentMode).toBe("sample");
+  const full = JSON.stringify({ ...input(), options: { contentMode: "full" } }),
+    fullHash = digest(full);
+  expect(
+    await installWebsiteInputCommand(dir, "job", fullHash, quiet, Readable.from([full]), {
+      contentMode: "full",
+    }),
+  ).toBe(0);
+  const path = join(dirname(dir), ".smithable-site-inputs", digest(dir), "job", `${fullHash}.json`);
+  const { unlinkSync } = await import("node:fs");
+  unlinkSync(`${path}.permit`);
+  expect(() => consumeWebsiteInput(dir, "job", { version: 1, sha256: fullHash }, "full")).toThrow(
+    "trusted installer authority",
+  );
+});
+
+test("private permit binds exact project, generation and input digest", async () => {
+  const dir = join(tempDir("website-permit-binding-"), "project");
+  mkdirSync(dir);
+  const raw = JSON.stringify(input()),
+    sha256 = digest(raw),
+    ref = { version: 1 as const, sha256 };
+  expect(await installWebsiteInputCommand(dir, "job", sha256, quiet, Readable.from([raw]))).toBe(0);
+  const permit = join(
+    dirname(dir),
+    ".smithable-site-inputs",
+    digest(dir),
+    "job",
+    `${sha256}.json.permit`,
+  );
+  const value = JSON.parse(readFileSync(permit, "utf8"));
+  value.generation = "another-job";
+  writeFileSync(permit, JSON.stringify(value), { mode: 0o600 });
+  expect(() => consumeWebsiteInput(dir, "job", ref)).toThrow("authority");
+});
+
+test("fresh reader projection and structural private map survive the hosted input boundary", () => {
+  const html =
+    '<meta property="og:site_name" content="Harbour"><script type="application/ld+json">{"@type":"Person","name":"Maria Lindholm","email":"maria@harbour.example"}</script><p>Our therapist Maria Lindholm welcomes you.</p><a href="tel:+3581812345">Call</a>';
+  const bytes = Buffer.byteLength(html);
+  const reading = siteBundleResult({
+    version: 1,
+    startUrl: url,
+    pages: [{ id: "p1", url, html, fetchedAt: new Date(0).toISOString(), bytes, depth: 0 }],
+    crawl: { pages: 1, bytes, elapsedMs: 1, diagnostics: [] },
+  });
+  const value = {
+    ...input(),
+    facts: reading.facts,
+    images: reading.images,
+    sourceCorpus: reading.sourceCorpus,
+    options: { contentMode: "sample" },
+    model: reading.model,
+    personalMap: reading.personalMap,
+  };
+  const parsed = parseWebsiteInput(value);
+  expect(parsed.model).toEqual(reading.model);
+  expect(JSON.stringify(parsed.model)).not.toContain("Maria Lindholm");
+  expect(JSON.stringify(parsed.personalMap)).toContain("Maria Lindholm");
+  const forged = structuredClone(value);
+  const entry = forged.personalMap.entries[0];
+  if (!entry) throw new Error("Fixture must detect a personal value");
+  entry.replacement = "A forged value";
+  expect(() => parseWebsiteInput(forged)).toThrow();
+});
+
+test("wrong-kind private mappings cannot suppress a detected person at hosted installation", async () => {
+  const dir = join(tempDir("website-wrong-kind-"), "project");
+  mkdirSync(dir);
+  const key = "a".repeat(64),
+    original = "Maria Lindholm";
+  const id = createHmac("sha256", Buffer.from(key, "hex"))
+    .update(`phone\0${original.toLowerCase()}`)
+    .digest("hex");
+  const raw = JSON.stringify({
+    ...input(),
+    personalMap: {
+      version: 1,
+      key,
+      entries: [{ id, kind: "phone", ordinal: 0, original, replacement: "+999 000 000001" }],
+      handles: [],
+    },
+  });
+  expect(
+    await installWebsiteInputCommand(dir, "job", digest(raw), quiet, Readable.from([raw])),
+  ).toBe(1);
+});
+
+test("malformed private JSON never copies source snippets into command diagnostics", async () => {
+  const dir = join(tempDir("website-json-private-"), "project");
+  mkdirSync(dir);
+  const raw = '{"private":"Maria Lindholm maria@personal.example",BROKEN';
+  let error = "";
+  expect(
+    await installWebsiteInputCommand(
+      dir,
+      "job",
+      digest(raw),
+      {
+        out: () => {},
+        err: (text) => {
+          error += text;
+        },
+      },
+      Readable.from([raw]),
+    ),
+  ).toBe(1);
+  expect(error).toBe("The website input is not valid JSON.\n");
+  expect(error).not.toContain("Maria");
+  const good = JSON.stringify(input()),
+    sha256 = digest(good);
+  expect(await installWebsiteInputCommand(dir, "job", sha256, quiet, Readable.from([good]))).toBe(
+    0,
+  );
+  const path = join(
+    dirname(dir),
+    ".smithable-site-inputs",
+    digest(dir),
+    "job",
+    `${sha256}.json.permit`,
+  );
+  writeFileSync(path, raw, { mode: 0o600 });
+  expect(() => consumeWebsiteInput(dir, "job", { version: 1, sha256 })).toThrow(
+    "The installed website authority is not valid JSON.",
+  );
 });

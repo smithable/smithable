@@ -142,7 +142,9 @@ import { removeUser${other ? ", setRole" : ""} } from "./users.server";
 
 const admin = { id: "keys-test-admin", name: "Keys test admin", email: "keys-test-admin@example.com", role: "admin" };
 
-test("an administrator makes a key; it stands for its role until revoked or past its end", async () => {
+test("an administrator makes a key; it stands for its role until revoked or past its end", async ({ onTestFinished }) => {
+  db.insert(user).values(admin).run();
+  onTestFinished(() => { db.delete(user).where(eq(user.id, admin.id)).run(); });
   const key = makeKey(admin, "Billing sync", ${JSON.stringify(role)});
   expect(key).toMatch(/^smk_/);
   expect(keyViewer(\`Bearer \${key}\`)).toMatchObject({ id: expect.stringMatching(/^key:/), name: "Billing sync", role: ${JSON.stringify(role)} });
