@@ -2,22 +2,20 @@ smithableUx: 0.1
 pages:
   jobs:
     table:
-      view: cards
-    record:
-      subtitle: employer
-      detail: [location, jobType]
+      columns: [title, employer, location, jobType, hourlyWage, closesOn, status]
     icon: briefcase
+  applications:
+    table:
+      columns: [job, applicantName, memberNumber, email, phone, status]
+    icon: clipboard
   myApplications:
     icon: file
-  applications:
-    icon: clipboard
 tones:
   Job.status:
     open: success
-    filled: warning
   Application.status:
     shortlisted: warning
     hired: success
     declined: danger
 theme:
-  preset: workbench
+  preset: navy

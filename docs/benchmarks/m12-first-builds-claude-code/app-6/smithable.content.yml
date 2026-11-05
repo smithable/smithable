@@ -1,25 +1,24 @@
 smithableContent: 0.1
 pages:
   home:
+    features:
+      items: [{ title: Browse without an account, text: "Every open job is listed with its employer, location and hourly wage, so you can look before you sign in." }, { title: Apply in a few minutes, text: "Sign in, pick the job, add your member number and a short note, and attach your resume if you have one." }, { title: Follow your applications, text: "See each application you sent in one place, and whether it has been shortlisted, hired or declined." }]
+      title: How it works
     hero:
-      title: Good jobs, posted by your local union
-      subtitle: Browse open positions with local employers and send your application in a few minutes.
+      title: Union jobs, close to home
+      subtitle: Find work with local employers and apply directly through your union.
       button: See open jobs
       secondButton: My applications
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
-    features:
-      items: [{ title: Every post checked by the union, text: "Union staff put each job on the board, so you know who it comes from." }, { title: Look before you sign up, text: "Open jobs are there for anyone to read, with the employer, place and pay." }, { title: Apply from the job itself, text: "Add your details, a short letter and your resume, then send it to the union." }, { title: Always know where you stand, text: "Follow each application from submitted to shortlisted and beyond, or withdraw it." }]
-    faq:
-      items: [{ question: Do I need an account to see the jobs?, answer: No. You only need to sign in when you want to apply. }, { question: Who can see my application?, answer: You and the union's staff. It never appears on the public board. }, { question: Can I apply to more than one job?, answer: "Yes, one application per job, as many jobs as you like." }]
-  jobs:
-    title: Jobs
+    openJobs:
+      title: Open jobs
   myApplications:
     title: My applications
   applications:
-    title: Applications
+    title: All applications
 logo:
   src: images/logo.webp
   alt: A map pin

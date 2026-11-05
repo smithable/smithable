@@ -1,12 +1,18 @@
 smithableUx: 0.1
 pages:
+  overview:
+    icon: chart
+  clients:
+    icon: users
   payments:
+    icon: tag
     table:
       sort: -paidOn
-      columns: [invoice, paidOn, amount, method, note]
+      columns: [invoice, paidOn, amount, method]
   invoices:
+    icon: receipt
     table:
-      columns: [number, client, issuedOn, dueOn, status, total, balance]
+      columns: [number, client, issuedOn, dueOn, status, total, balanceDue]
       sort: -issuedOn
     record:
       lists:
@@ -17,4 +23,3 @@ tones:
   Invoice.status:
     paid: success
     overdue: danger
-    sent: warning

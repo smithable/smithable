@@ -1,21 +1,23 @@
 smithableContent: 0.1
 pages:
   home:
-    features:
-      items: [{ title: Clients at hand, text: Keep each client's contact details and VAT number together with every invoice you have written them. }, { title: Invoices that add up, text: "Enter the lines, quantities and prices; the total works itself out." }, { title: Payments on record, text: Log each payment against its invoice and see at a glance what is still owed. }, { title: Late invoices flagged, text: A sent invoice that stays unpaid a week past its due date turns overdue without you lifting a finger. }]
-    faq:
-      items: [{ question: Can a client pay in instalments?, answer: "Yes. Record as many payments as you receive on an invoice, and its balance goes down with each one." }, { question: Who can see my clients and invoices?, answer: Only you. Every freelancer works in their own private records. }, { question: When does an invoice count as overdue?, answer: "Seven days after its due date, if it has been sent and not yet marked as paid." }]
     hero:
-      title: Know who owes you what
-      subtitle: Duly keeps a freelancer's clients, invoices and payments together, so getting paid takes less chasing.
-      button: Get started
+      title: Send the invoice. See the money arrive.
+      subtitle: Duly keeps your clients, invoices and payments in one place, so you always know who still owes you what.
+      button: Start invoicing
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
+    features:
+      title: Everything a freelancer's invoicing needs
+      items: [{ title: Invoices line by line, text: Add hours or items to an invoice and the total works itself out. }, { title: Payments against invoices, text: "Record each payment, partial or full, and see the balance still due." }, { title: Late invoices flagged, text: A sent invoice left unpaid a week past its due date is marked overdue on its own. }, { title: Your numbers at a glance, text: "See what is outstanding, overdue and received for the month, the year or all time." }]
+    faq:
+      title: Questions
+      items: [{ question: Who can see my clients and invoices?, answer: "Only you. Every freelancer has their own records, and nobody else's show up in your account." }, { question: Can a client pay an invoice in parts?, answer: "Yes. Record as many payments as come in, and the invoice shows what is left to pay." }, { question: What happens when an invoice is late?, answer: "Seven days after the due date, an invoice you sent that is still unpaid turns overdue, and it counts under overdue on your overview." }]
     callToAction:
-      title: Write your next invoice in Duly
-      button: Get started
+      title: Get your next invoice out today
+      button: Start invoicing
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

@@ -1,9 +1,8 @@
 smithable: 0.1
 app:
-  name: Open Mat Yoga
+  name: Open Door Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
-  currency: EUR
-  timezone: Europe/Paris
+  timezone: Europe/Helsinki
 models:
   ClassType:
     fields:
@@ -61,6 +60,7 @@ pages:
     filters: [classType, instructor]
   my-bookings:
     crud: Booking
+    mine: true
   sessions:
     crud: Session
     filters: [classType, instructor, startsAt]
@@ -82,4 +82,3 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [schedule, my-bookings, sessions, bookings, class-types, instructors, team]

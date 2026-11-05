@@ -2,11 +2,13 @@ smithableUx: 0.1
 pages:
   ingredients:
     table:
-      columns: [name, category, inStock, unit, reorderLevel, aboveReorderLevel, supplier]
+      columns: [name, category, inStock, unit, reorderLevel, aboveReorder, supplier]
       sort: name
+    icon: package
   suppliers:
     table:
-      columns: [name, contactName, email, phone]
+      columns: [name, contactName, phone, email]
       sort: name
+    icon: truck
 theme:
   preset: cafe

@@ -6,8 +6,6 @@ pages:
   maintenance:
     table:
       sort: -startsAt
-theme:
-  preset: minimal
 tones:
   Component.status:
     operational: success
@@ -19,3 +17,5 @@ tones:
     identified: warning
     monitoring: warning
     resolved: success
+theme:
+  preset: minimal

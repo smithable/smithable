@@ -2,35 +2,27 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: List what sits in your shed, text: "Add a photo, a short description and your part of the neighborhood. Your drill can earn its keep." }, { title: Ask for what you need, text: "Find the tool, say which days you need it and send a request to its owner." }, { title: Owners stay in charge, text: "You decide whether to lend, and mark the tool as returned when it comes home." }]
-      title: How it works
+      items: [{ title: See what's nearby, text: "Browse the drills, ladders and hedge trimmers already sitting in sheds on your street." }, { title: Ask for the dates you need, text: "Pick a tool, say when you need it and when it will be back. The owner decides." }, { title: Always know where it is, text: "Every tool shows whether it's free, and lenders keep track of what's out and what has come home." }]
     faq:
-      items: [{ question: Does borrowing cost anything?, answer: No. Neighbors lend their tools to each other for free. }, { question: Do I need an account to look around?, answer: No. Anyone can browse the tools. You sign in to ask for one or to list your own. }, { question: Can a tool be requested by several people at once?, answer: "A tool takes one request at a time. Once it is declined or the tool is returned, the next neighbor can ask." }, { question: How do we arrange the handover?, answer: Use the contact form on the tool's page to agree on a time and place with its owner. }]
-      title: Good to know
+      items: [{ question: Who can borrow?, answer: "Neighbors who have been invited. Anyone can look through the tools, but borrowing and lending need a sign-in." }, { question: Does borrowing cost anything?, answer: No. Tools are lent between neighbors for free. }, { question: How do I get the tool?, answer: "Once the owner agrees, the two of you arrange the handover yourselves. A message from the tool's page reaches the owner." }]
     hero:
-      title: Borrow the tool. Skip the store.
-      subtitle: The ladder, drill or hedge trimmer you need for a weekend is probably a few doors away.
+      title: Borrow it from next door
+      subtitle: Why buy a drill for one shelf? Share the tools your neighbors already own, and lend out yours.
       button: Browse tools
       secondButton: Lend a tool
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-    latest:
-      title: Ready to borrow
-  tools:
+  catalog:
     title: Tools
   myTools:
     title: My tools
-  borrowing:
-    title: Borrowing
+  borrowed:
+    title: Borrowed
   lending:
     title: Lending
 actions:
-  lend:
-    label: Lend
-  decline:
-    label: Decline
   markReturned:
     label: Mark returned
 logo:

@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
-  name: Union Job Board
-  description: A job board where a local union posts jobs and people apply for them.
+  name: Local Union Job Board
+  description: A job board where the union posts jobs and its members apply for them.
+  currency: USD
   timezone: Europe/Helsinki
 models:
   Job:
@@ -9,57 +10,59 @@ models:
       title: string!
       employer: string!
       description: text!
-      category: construction | manufacturing | transport | healthcare | education | publicService | other
-      jobType: fullTime | partTime | temporary | apprenticeship
       location: string
-      pay: string
+      jobType: fullTime | partTime | temporary | apprenticeship
+      hourlyWage: money
       closesOn: date
       status: open | filled | closed
       applications: Application[]
   Application:
     fields:
-      job:
-        type: Job!
-        unique: owner
-      name: string!
+      job: Job! unique
+      applicantName: string!
       email: email!
       phone: phone
-      coverLetter: text!
+      memberNumber: string
+      coverNote: text
       resume: file
       status:
-        type: submitted | shortlisted | hired | declined | withdrawn
+        type: submitted | shortlisted | hired | declined
         by: app
-    namedBy: [name, job]
+    namedBy: [job, applicantName]
 pages:
   jobs:
+    route: /
     crud: Job
     search: [title, employer, location, description]
-    filters: [status, category, jobType]
+    filters: [jobType, status]
     defaultFilter:
       status: open
-    sortable: [closesOn, createdAt]
-    actions: [markFilled, closePost]
+    sortable: [hourlyWage, closesOn, createdAt]
+    actions: [markFilled, closeJob]
   myApplications:
     crud: Application
     mine: true
   applications:
     crud: Application
-    search: [name, email]
-    filters: [status, job]
-  team:
-    users: manage
+    search: [applicantName, email, memberNumber]
+    filters: [job, status]
   home:
-    route: /
+    route: /welcome
     landing:
       hero:
         button: jobs
         secondButton: myApplications
+      openJobs:
+        records: Job
+        where:
+          status: open
       features:
-      faq:
       footer:
   privacy:
     route: /privacy
     legal: privacy
+  team:
+    users: manage
 actions:
   markFilled:
     on: Job
@@ -67,7 +70,7 @@ actions:
       status: open
     set:
       status: filled
-  closePost:
+  closeJob:
     on: Job
     when:
       status: open
@@ -91,9 +94,4 @@ actions:
       status: [submitted, shortlisted]
     set:
       status: declined
-  withdraw:
-    on: Application
-    when:
-      status: [submitted, shortlisted]
-    set:
-      status: withdrawn
+navigation: [jobs, myApplications, applications, team]

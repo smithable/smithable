@@ -1,16 +1,16 @@
 smithable: 0.1
 app:
-  name: Football Club
-  description: The club's public site with its teams, players, matches and results.
+  name: Our Football Club
+  description: The club's public site with its teams, players, fixtures and results.
   timezone: Europe/Helsinki
 models:
   Team:
     fields:
       name: string!
-      category: men | women | youth
+      ageGroup: senior | youth | veterans
       coach: string
+      photo: picture
       about: text
-      picture: picture
       players: Player[]
       matches: Match[]
   Player:
@@ -31,7 +31,7 @@ models:
       kickoff: datetime!
       venue: home | away
       ground: string
-      status: scheduled | played | postponed | canceled
+      status: scheduled | played | postponed
       goalsFor:
         type: int
         min: 0
@@ -45,6 +45,19 @@ models:
       report: text
     namedBy: [team, opponent]
 pages:
+  teams:
+    crud: Team
+    search: [name, coach]
+    filters: [ageGroup]
+  players:
+    crud: Player
+    search: [name]
+    filters: [team, position]
+  matches:
+    crud: Match
+    search: [opponent, ground]
+    filters: [team, status, venue]
+    actions: [recordResult]
   home:
     route: /
     landing:
@@ -59,25 +72,14 @@ pages:
         records: Match
         where:
           status: played
-      squads:
+      ourTeams:
         records: Team
       footer:
-  teams:
-    crud: Team
-    search: [name, coach]
-    filters: [category]
-  players:
-    crud: Player
-    search: [name]
-    filters: [team, position]
-  matches:
-    crud: Match
-    actions: [recordResult]
-    search: [opponent, ground]
-    filters: [team, status, venue]
   privacy:
     route: /privacy
     legal: privacy
+  staff:
+    users: manage
 actions:
   recordResult:
     on: Match
@@ -87,4 +89,4 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score once a match has been played.
+    intent: Enter the final score of a match and mark it as played.

@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Conference Registration
-  description: The conference's talks and speakers, and registration for attendees to save a place in the talks they want to hear.
+  description: The programme of a conference, its speakers, and registration for its talks.
   timezone: Europe/Helsinki
 models:
   Speaker:
@@ -14,11 +14,11 @@ models:
   Talk:
     fields:
       title: string!
-      abstract: text
+      summary: text
       speaker: Speaker!
-      room: string
       startsAt: datetime!
       durationMinutes: int! = 45
+      room: string
       capacity: int! = 100
       registrations: Registration[]
       placesLeft:
@@ -41,6 +41,8 @@ pages:
     landing:
       hero:
         button: schedule
+        secondButton: speakers
+      features:
       speakers:
         records: Speaker
       faq:
@@ -58,11 +60,9 @@ pages:
   talks:
     crud: Talk
     filters: [speaker, startsAt]
-    search: [title, room]
   speakers:
     crud: Speaker
-    search: [name, company]
-  registrations:
+  attendees:
     crud: Registration
     filters: [talk]
   team:

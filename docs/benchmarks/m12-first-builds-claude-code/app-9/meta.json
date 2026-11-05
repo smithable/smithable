@@ -3,8 +3,7 @@
   "starter": "support",
   "wordStarter": "booking",
   "questions": [
-    "Who opens the tickets?",
-    "Can people who open a ticket follow its progress?",
+    "Who opens tickets?",
     "What should a ticket hold besides its priority and assignee?"
   ]
 }

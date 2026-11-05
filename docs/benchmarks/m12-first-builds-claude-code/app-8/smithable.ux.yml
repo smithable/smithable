@@ -5,13 +5,12 @@ pages:
       capacity:
         left: placesLeft
         of: capacity
-        look: bar
-  my-registrations:
-    table:
-      columns: [talk]
   talks:
     table:
-      columns: [title, speaker, startsAt, room, capacity, placesLeft]
+      columns: [title, speaker, startsAt, room, placesLeft]
       sort: startsAt
+  attendees:
+    table:
+      columns: [attendee, talk]
 theme:
   preset: modern

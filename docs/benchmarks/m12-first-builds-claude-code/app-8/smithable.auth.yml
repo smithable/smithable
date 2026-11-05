@@ -5,20 +5,20 @@ defaultAccess: private
 roles:
   admin: all
   staff:
-    description: An organizer. Runs the talks and the speakers, and sees who is registered for each talk.
-    pages: [talks, speakers, registrations]
+    description: The conference team. Runs the programme, the speakers and who attends.
+    pages: [schedule, talks, speakers, attendees]
     read: [Talk, Speaker, Registration]
     create: [Talk, Speaker, Registration]
     write: [Talk, Speaker, Registration]
     delete: [Registration]
-  attendee:
-    description: Someone coming to the conference, who registers for talks.
+  member:
+    description: An attendee who registers for talks.
     pages: [my-registrations]
     create: [Registration]
 assistant:
   for: signed-in
 public:
-  pages: [home, schedule, privacy]
+  pages: [home, schedule, speakers, privacy]
   read: [Talk, Speaker]
-defaultRole: attendee
+defaultRole: member
 admins: [johan@smithable.ai]

@@ -1,13 +1,28 @@
 smithableContent: 0.1
 pages:
+  my-registrations:
+    title: My registrations
+  attendees:
+    title: Attendees
   home:
-    faq:
-      items: [{ question: Do I need an account to see the schedule?, answer: No. Anyone can browse the talks and speakers. You only sign in when you want to save a place. }, { question: How do I register for a talk?, answer: "Open the talk on the schedule, sign in with your email address and press the button to book your place." }, { question: What happens when a talk is full?, answer: "Each room has a limited number of seats, so registration stops once they are taken. The schedule shows how many places are left." }, { question: Can I change my mind?, answer: "Yes. You can cancel a registration under My registrations at any time before the talk starts, which frees the place for someone else." }]
     hero:
+      title: Plan your conference, talk by talk
+      subtitle: See the full programme, meet the speakers and save your place in the talks you want to hear.
+      button: See the schedule
+      secondButton: Meet the speakers
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
+    speakers:
+      title: Speakers
+    callToAction:
+      title: Places are limited
+      button: Register for a talk
+    features:
+      items: [{ title: The whole programme, text: "Every talk in one schedule, with its time, its room and who is on stage." }, { title: Places you can count on, text: "Each talk shows how many places remain, and a registration holds yours." }, { title: Your own day, text: "The talks you signed up for are gathered in one list, ready when you arrive." }]
+    faq:
+      items: [{ question: Do I need an account to see the programme?, answer: No. The schedule and the speakers are open to everyone; you only sign in when you register for a talk. }, { question: How do I register for a talk?, answer: "Open the talk in the schedule, sign in with your email address and press the button to take a place." }, { question: Can I change my mind?, answer: Yes. You can cancel a registration from your own list at any time until the talk starts. }, { question: What if a talk is full?, answer: "Once every place is taken, no more registrations are accepted unless someone cancels and frees a place." }]
 logo:
   src: images/logo.webp
   alt: A ticket

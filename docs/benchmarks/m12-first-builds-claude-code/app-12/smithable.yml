@@ -1,8 +1,8 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is the web shop working? The live state of its services, its outages and their updates.
-  timezone: Etc/UTC
+  description: Is the web shop working? The state of its services, its outages and their updates, live.
+  timezone: Europe/Helsinki
 models:
   Component:
     fields:
@@ -41,13 +41,10 @@ pages:
         where:
           status: resolved
       footer:
-  privacy:
-    route: /privacy
-    legal: privacy
   incidents:
     crud: Incident
     actions: [identified, monitoring, resolve]
-    filters: [status]
+    filters: [status, component]
   updates:
     crud: IncidentUpdate
   components:
@@ -66,6 +63,9 @@ pages:
         limit: 5
   team:
     users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
 actions:
   identified:
     on: Incident
@@ -77,8 +77,8 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: We have found the cause and are working on a fix.
-    intent: The cause is known; the incident moves to identified, with an update saying so.
+        message: The cause is found and a fix is being worked on.
+    intent: The cause is found; the outage moves to identified, with an update saying so.
   monitoring:
     on: Incident
     when:
@@ -89,8 +89,8 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix has been released and we are keeping an eye on it.
-    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
+        message: A fix is out. We are watching before we close this.
+    intent: A fix is out; the outage is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
     when:
@@ -102,6 +102,6 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This outage is over and everything is back to normal.
-    intent: The incident is over, with an update saying so. The service's state stays what the team sets.
+        message: This outage is resolved.
+    intent: The outage is over, with an update saying so. The service's state stays what the team sets.
 navigation: [overview, incidents, updates, components, team]

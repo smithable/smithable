@@ -1,19 +1,18 @@
 smithable: 0.1
 app:
-  name: Neighborhood Tool Library
-  description: Neighbors list the tools they own and lend them to each other.
+  name: Neighbor Toolshed
+  description: A tool library where neighbors lend each other the tools they own.
   timezone: Europe/Helsinki
 models:
   Tool:
     fields:
       name: string!
-      photos: pictures!
-      description: text!
+      photos: pictures
+      description: text
       category: powerTools | handTools | garden | ladders | cleaning | other
       condition: likeNew | good | worn
       area: string
-      available: bool = true
-    review: [photos]
+      loans: Loan[]
   Loan:
     fields:
       tool: Tool!
@@ -21,31 +20,34 @@ models:
         type: User
         by: app
         default: ME()
-      neededFrom: date!
-      returnBy: date!
-      note: text
       status:
         type: requested | lent | returned | declined
         by: app
-    namedBy: tool
+      neededFrom: date!
+      returnBy: date!
+      note: text
+      returnedOn:
+        type: date
+        by: app
+    namedBy: [tool, neededFrom]
     capacity:
       per: tool
       max: 1
       where:
         status: [requested, lent]
 pages:
-  tools:
+  catalog:
     route: /
     crud: Tool
     search: [name, description, area]
-    filters: [category, condition, available]
-    defaultFilter:
-      available: true
+    filters: [category, condition]
+    sortable: [name, createdAt]
+    favorites: true
     contact: owner
   myTools:
     crud: Tool
     mine: true
-  borrowing:
+  borrowed:
     crud: Loan
     filters: [borrower, status]
     defaultFilter:
@@ -56,24 +58,20 @@ pages:
     filters: [status]
     defaultFilter:
       status: [requested, lent]
-  review:
-    review: all
   home:
     route: /welcome
     landing:
       hero:
-        button: tools
+        button: catalog
         secondButton: myTools
-      latest:
-        records: Tool
-        where:
-          available: true
       features:
       faq:
       footer:
   privacy:
     route: /privacy
     legal: privacy
+  team:
+    users: manage
 actions:
   lend:
     on: Loan
@@ -81,19 +79,19 @@ actions:
       status: requested
     set:
       status: lent
-    intent: The tool's owner agrees to the request and hands the tool over.
+    intent: The tool's owner agrees and hands the tool over.
   decline:
     on: Loan
     when:
       status: requested
     set:
       status: declined
-    intent: The tool's owner turns the request down, which frees the tool for others.
+    intent: The tool's owner cannot lend it this time, which frees the tool for others.
   markReturned:
     on: Loan
     when:
       status: lent
     set:
       status: returned
-    intent: The tool's owner has the tool back, so others can ask for it.
-navigation: [tools, myTools, borrowing, lending, review]
+      returnedOn: TODAY()
+    intent: The tool is back with its owner and can be borrowed again.

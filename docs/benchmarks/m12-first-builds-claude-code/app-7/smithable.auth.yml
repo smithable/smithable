@@ -1,16 +1,20 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
+  selfSignUp: false
 defaultAccess: private
 roles:
   admin: all
-  member:
-    description: Looks at the site; only administrators add to it.
-    pages: all
+  staff:
+    description: Keeps the club's teams, players, matches and results up to date.
+    pages: [home, teams, players, matches]
+    create: [Team, Player, Match]
+    write: [Team, Player, Match]
+    delete: [Team, Player, Match]
 assistant:
   for: signed-in
 public:
   pages: [home, teams, players, matches, privacy]
   read: [Team, Player, Match]
-defaultRole: member
+defaultRole: staff
 admins: [johan@smithable.ai]

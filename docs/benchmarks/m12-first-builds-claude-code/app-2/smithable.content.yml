@@ -7,14 +7,13 @@ models:
     fields:
       followUps:
         label: Follow-ups
-  Contact:
-    fields:
-      followUps:
-        label: Follow-ups
   Deal:
     fields:
       followUps:
         label: Follow-ups
+pages:
+  followUps:
+    title: Follow-ups
 logo:
   src: images/logo.webp
   alt: Two interlinked rings
