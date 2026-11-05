@@ -72,13 +72,20 @@ export function FieldInput({
     );
   }
   if (field.kind === "bool") {
+    // On a touch screen the box is small to aim at: a frame around it is the target, 44 by 44,
+    // giving back on its right what it adds there, so the field's words stay where they were.
     return (
-      <Checkbox
-        {...common}
-        role={field.control === "switch" ? "switch" : undefined}
-        checked={value === true}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+      <label
+        htmlFor={id}
+        className="inline-flex shrink-0 items-center pointer-coarse:-mr-6 pointer-coarse:size-11"
+      >
+        <Checkbox
+          {...common}
+          role={field.control === "switch" ? "switch" : undefined}
+          checked={value === true}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+      </label>
     );
   }
   const text = typeof value === "string" ? value : "";

@@ -130,7 +130,7 @@ function LandingLayoutView({
   );
   // With a mark, a row of the two; either way a long name ends in an ellipsis instead of
   // pushing the header wider.
-  const nameClass = `${logo ? "flex items-center gap-2" : "block truncate"} min-w-0 text-xl font-bold`;
+  const nameClass = `${logo ? "flex min-h-11 items-center gap-2" : "block truncate leading-11"} min-w-0 text-xl font-bold`;
   const name = site?.home ? (
     <Link to={site.home} className={nameClass}>
       {named}
@@ -144,7 +144,7 @@ function LandingLayoutView({
         <li key={l.link ?? i}>
           <AppLink
             href={l.link}
-            className="inline-flex min-h-11 items-center lg:min-h-0 underline-offset-4 hover:text-foreground hover:underline"
+            className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 underline-offset-4 hover:text-foreground hover:underline"
             {...mark(footer.texts, `items.${i}.label`)}
           >
             {l.label}
@@ -289,7 +289,7 @@ function LandingLayoutView({
                   <p>
                     <a
                       href={contactHref(`tel:${contact.phone.replace(/\s/g, "")}`, contact.phone)}
-                      className="hover:underline"
+                      className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 hover:underline"
                     >
                       {contact.phone}
                     </a>
@@ -299,7 +299,7 @@ function LandingLayoutView({
                   <p>
                     <a
                       href={contactHref(`mailto:${contact.email}`, contact.email)}
-                      className="hover:underline"
+                      className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 hover:underline"
                     >
                       {contact.email}
                     </a>
@@ -315,7 +315,7 @@ function LandingLayoutView({
                       <li key={String(m.to)}>
                         <Link
                           to={m.to}
-                          className="text-muted-foreground hover:text-foreground hover:underline"
+                          className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 text-muted-foreground hover:text-foreground hover:underline"
                         >
                           {m.label}
                         </Link>
@@ -336,7 +336,7 @@ function LandingLayoutView({
                 © {new Date().getFullYear()} {appName}
               </p>
               <LegalLinks links={site?.legal} />
-              <ConsentSettings className="inline-flex min-h-11 items-center lg:min-h-0 hover:underline" />
+              <ConsentSettings className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 hover:underline" />
               <AppearancePicker />
             </div>
           </div>
@@ -345,7 +345,7 @@ function LandingLayoutView({
             <p {...mark(footer?.texts, "text")}>{footer?.text ?? appName}</p>
             {footerLinks && <nav aria-label={w.footer}>{footerLinks}</nav>}
             <LegalLinks links={site?.legal} />
-            <ConsentSettings className="inline-flex min-h-11 items-center lg:min-h-0 text-left hover:underline" />
+            <ConsentSettings className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 text-left hover:underline" />
             <AppearancePicker />
           </div>
         )}
@@ -363,7 +363,7 @@ function LegalLinks({ links }: { links?: LandingLink[] }) {
         <Link
           key={String(l.to)}
           to={l.to}
-          className="inline-flex min-h-11 items-center lg:min-h-0 hover:underline"
+          className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 hover:underline"
         >
           {l.label}
         </Link>
@@ -1618,8 +1618,8 @@ function FaqView({
     <Section id="faq" texts={texts} band={band} eyebrow={eyebrow} title={title} layout="accordion">
       <div className={cn("max-w-3xl divide-y border-y", INLINE)}>
         {items.map((item, i) => (
-          <details key={item.question} className="group">
-            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <details key={item.question} className="group py-1">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-2 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
               <span {...mark(texts, `items.${i}.question`)}>{item.question}</span>
               <ChevronDown
                 aria-hidden
@@ -1739,7 +1739,7 @@ function ContactView({
                 `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`,
                 address,
               )}
-              className="text-sm text-primary underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0 text-sm text-primary underline-offset-4 hover:underline"
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -1757,6 +1757,7 @@ function ContactView({
           <dd>
             <a
               href={contactHref(`tel:${phone.replace(/[^+\d]/g, "")}`, phone)}
+              className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0"
               {...mark(texts, "phone")}
             >
               {phone}
@@ -1771,7 +1772,11 @@ function ContactView({
             <span className="sr-only">{w.email}</span>
           </dt>
           <dd>
-            <a href={contactHref(`mailto:${email}`, email)} {...mark(texts, "email")}>
+            <a
+              href={contactHref(`mailto:${email}`, email)}
+              className="inline-flex min-h-11 min-w-11 items-center lg:min-h-0 lg:min-w-0"
+              {...mark(texts, "email")}
+            >
               {email}
             </a>
           </dd>

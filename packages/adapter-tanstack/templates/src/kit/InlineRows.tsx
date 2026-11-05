@@ -196,7 +196,7 @@ function InlineRow({
         {fields.map((f) => (
           <TableCell
             key={f.name}
-            className={f.computed ? "text-right tabular-nums" : "py-1.5"}
+            className={f.computed ? "text-right tabular-nums" : "min-w-24 py-1.5"}
             data-field={f.name}
           >
             {f.computed ? (
@@ -239,6 +239,7 @@ function InlineRow({
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="pointer-coarse:min-w-11"
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);

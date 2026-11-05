@@ -271,8 +271,7 @@ export function doorModule(
 ${people.length ? 'import { eq } from "drizzle-orm";\nimport { db } from "#/db";\nimport { user } from "#/db/schema";\n' : ""}import { ${hasOpen ? "AccessDenied, " : ""}${uses("addressOwner") ? "addressOwner, " : ""}${uses("allows") ? "allows, " : ""}${words ? "Conflict, " : ""}type Viewer } from "#/kit/access";
 import { type DoorMove, type OpenMove${uses("stored") ? ", stored" : ""} } from "#/kit/dev-door.server";
 import { BadInput, NotFound } from "#/kit/refusal";
-${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}${words ? 'import { w } from "#/kit/words";\n' : ""}import { pageAccess } from "./pages";
-${people.length ? 'import { SAMPLE_PEOPLE } from "./people";\n' : ""}${modelImports.join("\n")}
+${writes ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}${words ? 'import { w } from "#/kit/words";\n' : ""}${hasOpen ? 'import { pageAccess } from "./pages";\n' : ""}${people.length ? 'import { SAMPLE_PEOPLE } from "./people";\n' : ""}${modelImports.join("\n")}
 ${Object.keys(taken)
   .map((model) => {
     const mn = names(modelNamed(ir, model), t);

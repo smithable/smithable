@@ -28,11 +28,11 @@ export function MarkdownEditor({
   const [preview, setPreview] = useState(false);
   const tab = (on: boolean) =>
     on
-      ? "rounded-md bg-muted px-3 py-1 text-sm font-medium"
-      : "rounded-md px-3 py-1 text-sm text-muted-foreground hover:text-foreground";
+      ? "rounded-md bg-muted px-3 py-1 text-sm font-medium pointer-coarse:min-h-11"
+      : "rounded-md px-3 py-1 text-sm text-muted-foreground hover:text-foreground pointer-coarse:min-h-11";
   return (
     <div className="space-y-2">
-      <div className="flex gap-1">
+      <div className="flex gap-1 pointer-coarse:gap-2">
         <button
           type="button"
           className={tab(!preview)}

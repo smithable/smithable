@@ -39,8 +39,8 @@ export function Overflow({
         <div
           className={
             inRow
-              ? "absolute right-full top-1/2 z-30 mr-1 flex -translate-y-1/2 gap-1 whitespace-nowrap rounded-md border bg-card p-1 text-card-foreground shadow-md"
-              : "absolute right-0 top-full z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 rounded-md border bg-card p-1 text-card-foreground shadow-md"
+              ? "absolute right-full top-1/2 z-30 mr-1 flex -translate-y-1/2 gap-1 pointer-coarse:gap-2 whitespace-nowrap rounded-md border bg-card p-1 text-card-foreground shadow-md"
+              : "absolute right-0 top-full z-30 mt-1 flex min-w-48 flex-col items-stretch gap-1 pointer-coarse:gap-2 rounded-md border bg-card p-1 text-card-foreground shadow-md"
           }
         >
           {items.slice(keep)}

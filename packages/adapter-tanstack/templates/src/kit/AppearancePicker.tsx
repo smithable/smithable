@@ -18,7 +18,10 @@ export function AppearancePicker({ className }: { className?: string }) {
     };
   }, []);
   return (
-    <label data-part="appearance" className={className}>
+    <label
+      data-part="appearance"
+      className={`inline-flex min-h-11 items-center lg:min-h-0 ${className ?? ""}`}
+    >
       <span>{w.appearance}</span>
       <select
         value={choice}

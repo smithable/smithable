@@ -130,11 +130,14 @@ export function DueList({
       {rows.length ? (
         <ul className="divide-y">
           {rows.map((row) => (
-            <li key={row.id} className="flex items-center justify-between gap-3 py-2">
+            <li
+              key={row.id}
+              className="relative flex items-center justify-between gap-3 py-2 pointer-coarse:min-h-11"
+            >
               {href ? (
                 <AppLink
                   href={href.replace("${id}", String(row.id))}
-                  className="min-w-0 truncate font-medium hover:underline"
+                  className="min-w-0 truncate font-medium after:absolute after:inset-0 hover:underline"
                 >
                   {row.title}
                 </AppLink>
@@ -177,7 +180,10 @@ export function RecentChanges({
     <Card data-kit="tile" data-part="recent" className="space-y-3 p-card">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
-        <AppLink href={all} className="text-sm font-medium text-primary hover:underline">
+        <AppLink
+          href={all}
+          className="text-sm font-medium text-primary hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+        >
           {w.activity}
         </AppLink>
       </div>

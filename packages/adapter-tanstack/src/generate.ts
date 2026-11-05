@@ -858,11 +858,16 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       {
         // A list's filters and sort control (marketplace.md §2.2), where a page has them,
         files: ["src/kit/Filters.tsx", "src/kit/filter.ts"],
-        // and the Saved view's tabs (§2.3).
+        // and the Saved view's tabs (§2.3); a dashboard's period (reports.md §2.4) and a list mail's
+        // dates (`when`) take their range from it too.
         used: ({ ir, auth }) =>
           ir.pages.some(
-            (p) => p.filters?.length || p.sortable?.length || (hasSignIn(auth) && p.favorites),
-          ),
+            (p) =>
+              p.filters?.length ||
+              p.sortable?.length ||
+              (hasSignIn(auth) && p.favorites) ||
+              p.period,
+          ) || ir.outgoing.some((o) => o.list?.when),
       },
       {
         // Numbers counting up (orders.md §4): the counter a record's number is taken from.
