@@ -8,7 +8,7 @@ You need Node 24. Then install the command line from npm:
 
 ```sh
 npm install -g smithable
-smithable --version       # smithable 0.1.0 (spec 0.1)
+smithable --version       # the version, and the spec it reads
 ```
 
 Or run any command once without installing, as `npx smithable@latest new my-crm`. `smithable --help` lists every command, and so does the [command reference](commands.md).
