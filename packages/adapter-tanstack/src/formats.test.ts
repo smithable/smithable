@@ -1,4 +1,12 @@
+import {
+  type AuthIR,
+  emptyContent,
+  type SpecIR,
+  validateAuth,
+  validateSpec,
+} from "@smithable/core";
 import { afterEach, expect, test } from "vitest";
+import { generateApp } from "./generate.js";
 import { TEMPLATES } from "./templates.gen.js";
 
 // How the kit writes dates, times, numbers and money (docs/design/formats.md, A 230), as the
@@ -27,6 +35,7 @@ const kit = (await import(formatPath)) as {
   moneyText(cents: number, currency?: string, compact?: boolean): string;
   readNumber(text: string): number;
   inputNumber(n: number, digits?: number): string;
+  compactText(n: number): string;
 };
 const time = (await import(timePath)) as {
   whenOf(text: string): When;
@@ -105,4 +114,42 @@ test("no template formats by an implicit locale (formats.md §4)", () => {
     .filter(([path, text]) => /\.tsx?$/.test(path) && implicit.test(text))
     .map(([path]) => path);
   expect(found).toEqual([]);
+});
+
+test("rounding is decimal, a chart's short number steps up a scale, typed text no number is refused", () => {
+  expect(kit.numberText(2.55, { max: 1 })).toBe("2.6");
+  expect(kit.numberText(1.005, { max: 2 })).toBe("1.01");
+  expect(kit.compactText(999_950)).toBe("1M");
+  expect(kit.compactText(12_345)).toBe("12.3K");
+  expect(kit.readNumber("1,2,3")).toBeNaN();
+  expect(kit.readNumber("1.2.3")).toBeNaN();
+  expect(kit.readNumber("1.")).toBe(1);
+  expect(kit.inputNumber(0.0000001)).toBe("0.0000001");
+  FORMATS.numbers = "comma";
+  expect(kit.readNumber("1.2.3")).toBeNaN();
+});
+
+test("the generator writes the app's own formats into the kit, the numbers from its language", () => {
+  const formats = (app: string, language = "en") => {
+    const ir = validateSpec({
+      path: "smithable.yml",
+      text: `smithable: 0.1\napp: { name: Notes${app} }\nmodels:\n  Note: { fields: { text: string! } }\npages:\n  notes: { crud: Note }\n`,
+    }).ir as SpecIR;
+    const auth = validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\n",
+      },
+      ir,
+    ).auth as AuthIR;
+    const content = { ...emptyContent(), language } as ReturnType<typeof emptyContent>;
+    return generateApp(ir, { smithableVersion: "0.0.0", auth, content }).find(
+      (f) => f.path === "src/kit/formats.ts",
+    )?.content;
+  };
+  expect(formats("")).toContain('= { date: "day-month", week: "monday", numbers: "point" };');
+  expect(formats(", date: month-day, week: sunday")).toContain(
+    '= { date: "month-day", week: "sunday", numbers: "point" };',
+  );
+  expect(formats("", "sv")).toContain('numbers: "comma" };');
 });

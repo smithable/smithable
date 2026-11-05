@@ -55,7 +55,7 @@ export function formatValue(field: FieldUi, value: unknown, app: AppUi): string 
     case "decimal":
       return numberText(Number(value));
     case "bool":
-      return value ? "Yes" : "No";
+      return value ? w.yes : w.no;
     case "picture":
       return typeof value === "object" && value && "alt" in value ? String(value.alt) : "Picture";
     case "pictures": {
@@ -142,13 +142,14 @@ export function percentText(n: number, maxDigits = 1): string {
 
 /** A large number short, for a chart's bar: "1.2K", "1,2 tn". */
 export function compactText(n: number): string {
-  const size = Math.abs(n);
+  // The scale by the number as rounded, so 999,950 is "1M", not "1,000K".
+  const shown = (scale: number) => Math.round((Math.abs(n) / scale) * 10) / 10;
   const [scale, word] =
-    size >= 1e9
+    shown(1e6) >= 1000
       ? [1e9, w.billionShort]
-      : size >= 1e6
+      : shown(1e3) >= 1000
         ? [1e6, w.millionShort]
-        : size >= 1e4
+        : Math.abs(n) >= 1e4
           ? [1e3, w.thousandShort]
           : [1, ""];
   return `${numberText(n / scale, { max: scale === 1 ? 2 : 1 })}${word}`;
@@ -216,15 +217,18 @@ export function readNumber(text: string): number {
     .trim()
     .replace(/[\s\u00a0\u202f']/g, "")
     .replace(/^[\u2212\u2013]/, "-");
-  if (comma) t = t.replace(/\.(?=\d{3}(\D|$))/g, "");
-  else t = t.replace(/,(?=\d{3}(\D|$))/g, "");
+  // Grouping is the other mark before each group of three; any other left is no number.
+  t = comma ? t.replace(/\.(?=\d{3}(\D|$))/g, "") : t.replace(/,(?=\d{3}(\D|$))/g, "");
   if (!t.includes(mark) && t.split(other).length === 2) t = t.replace(other, mark);
-  t = t.split(other).join("");
-  return t === "" || !/^-?\d*(\d|[.,]\d+)$/.test(t) ? Number.NaN : Number(t.replace(mark, "."));
+  return /^-?(\d+([.,]\d*)?|[.,]\d+)$/.test(t) && !t.includes(other)
+    ? Number(t.replace(mark, "."))
+    : Number.NaN;
 }
 
 /** A number as a form shows it, in the app's convention with no grouping: "1234,5". */
 export function inputNumber(n: number, digits?: number): string {
-  const text = digits === undefined ? String(n) : n.toFixed(digits);
+  // Never in exponent form ("1e-7"), which a person cannot type back.
+  const text =
+    digits === undefined ? n.toFixed(10).replace(/\.?0+$/, "") || "0" : n.toFixed(digits);
   return FORMATS.numbers === "comma" ? text.replace(".", ",") : text;
 }

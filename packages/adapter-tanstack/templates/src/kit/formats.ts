@@ -20,7 +20,10 @@ export function numberText(n: number, digits: { min?: number; max?: number } = {
   if (!Number.isFinite(n)) return String(n);
   const min = digits.min ?? 0;
   const max = Math.max(min, digits.max ?? 3);
-  const [whole = "0", decimals = ""] = Math.abs(n).toFixed(max).split(".");
+  // Rounded in decimal, not binary: 2.55 to one digit is 2.6, as a person rounds it.
+  const shifted = Number(`${Math.round(Number(`${Math.abs(n)}e${max}`))}e-${max}`);
+  const rounded = Number.isFinite(shifted) ? shifted : Math.abs(n);
+  const [whole = "0", decimals = ""] = rounded.toFixed(max).split(".");
   const fraction = decimals.replace(/0+$/, "").padEnd(min, "0");
   const comma = FORMATS.numbers === "comma";
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, comma ? "\u00a0" : ",");

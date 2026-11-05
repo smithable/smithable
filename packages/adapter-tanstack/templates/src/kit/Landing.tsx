@@ -697,7 +697,9 @@ function HeroView({
             <div key={fact.label} className="flex flex-col-reverse">
               <dt className="text-sm label-text opacity-80">{fact.label}</dt>
               <dd className="text-3xl font-(--heading-weight) tabular-nums">
-                {numberText(fact.value).padStart(2, "0")}
+                {fact.value >= 0 && fact.value < 10
+                  ? `0${numberText(fact.value)}`
+                  : numberText(fact.value)}
               </dd>
             </div>
           ))}

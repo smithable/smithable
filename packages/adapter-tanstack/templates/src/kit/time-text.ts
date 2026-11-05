@@ -146,6 +146,7 @@ export interface DateShown {
  * or "Thu, Nov 5, 2026" month first; with `time`, ", 14:30" after it. Never numeric (§2).
  */
 export function dateText(when: When, shown: DateShown = {}): string {
+  if (!Number.isFinite(when.weekday)) return "";
   const words = w;
   const month = (shown.month === "long" ? words.months : words.monthsShort)[when.month - 1];
   const weekday = shown.weekday

@@ -257,7 +257,13 @@ export function calendarRange(
         ? { week: weekOf(first) }
         : view === "month"
           ? { week: weekOf(first < today && today <= last ? today : (days[7] ?? first)) }
-          : { month: (days[3] as string).slice(0, 7) },
+          : // A week's month is its Thursday's (ISO 8601), which a Sunday-first week has fifth.
+            {
+              month: (days[view === "week" && FORMATS.week === "sunday" ? 4 : 3] as string).slice(
+                0,
+                7,
+              ),
+            },
     /** The page's own view, back from a month or a day. */
     own,
     /** The day view of a week: today when it is in it, else its Monday. */
