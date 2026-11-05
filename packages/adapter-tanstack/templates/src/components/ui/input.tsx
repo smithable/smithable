@@ -17,20 +17,16 @@ export function NativeSelect({ className, ...props }: React.ComponentProps<"sele
   return <select className={cn(fieldClassName, "h-control pr-8", className)} {...props} />;
 }
 
-// On a touch screen the box is small to aim at: the label around it is the target, 44 by 44, and
-// gives back on its right what it adds there, so the words beside it stay where they were.
 export function Checkbox({ className, ...props }: React.ComponentProps<"input">) {
   return (
-    <label className="inline-flex shrink-0 items-center pointer-coarse:-mr-6 pointer-coarse:size-11">
-      <input
-        type="checkbox"
-        className={cn(
-          "size-5 rounded-sm accent-primary outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          className,
-        )}
-        {...props}
-      />
-    </label>
+    <input
+      type="checkbox"
+      className={cn(
+        "size-5 rounded-sm accent-primary outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 

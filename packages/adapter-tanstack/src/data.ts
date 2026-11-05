@@ -1119,17 +1119,21 @@ export function dataModule(
       : `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`;
   // A required field the app fills with no default (`app-field-unfilled`, a warning): an action, an
   // incoming entry or the person's own code gives it; a create without it is refused by the
-  // database, so the values are the table's as the insert takes them.
-  const unfilled = storedFields(model).some(
-    (f) =>
-      f.byApp &&
-      f.required &&
-      !f.sequence &&
-      !f.defaultMe &&
-      !f.defaultFormula &&
-      f.default === undefined,
-  );
-  const createValues = unfilled ? `(${given} as typeof ${n.table}.$inferInsert)` : given;
+  // database, so only those keys are taken as given; the rest stay checked.
+  const unfilled = storedFields(model)
+    .filter(
+      (f) =>
+        f.byApp &&
+        f.required &&
+        !f.sequence &&
+        !f.defaultMe &&
+        !f.defaultFormula &&
+        f.default === undefined,
+    )
+    .map(dataKey);
+  const createValues = unfilled.length
+    ? `{ ...${given}, ${unfilled.map((k) => `${k}: values.${k} as NonNullable<typeof values.${k}>`).join(", ")} }`
+    : given;
   // A field's rules on the record (record-rules.md §2–3): a lock on a change made in a form, the
   // API or Ask (an action's set may change a locked field it names, which is how a case is
   // reopened; `frees` lists them), and
