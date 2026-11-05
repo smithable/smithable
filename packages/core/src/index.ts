@@ -69,6 +69,7 @@ export {
   type Suggestion,
 } from "./complete.js";
 export type { ConceptRules } from "./concepts.js";
+export { type Chosen, FORMAT_KEYS, FORMATS, formatsOf, numbersOf } from "./formats.js";
 export { conceptsWithRules, ruleId } from "./concepts.js";
 export { conditionArgs, conditionText, readCondition } from "./condition.js";
 export type {

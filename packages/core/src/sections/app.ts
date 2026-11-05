@@ -1,5 +1,6 @@
 import { checkKeys, mapEntries, readString } from "../context.js";
 import { CURRENCIES } from "../currencies.js";
+import { FORMAT_KEYS, FORMATS } from "../formats.js";
 import type { AppIR } from "../ir.js";
 import type { SpecSection } from "../section.js";
 import { didYouMean } from "../suggest.js";
@@ -15,7 +16,8 @@ export const appSection: SpecSection<"app"> = {
   schema: {
     type: "object",
     title: "The app",
-    description: "The app's name, what it is for, its currency and its time zone.",
+    description:
+      "The app's name, what it is for, its currency, its time zone and how it writes times, dates and numbers.",
     "x-docs": "https://docs.smithable.ai/spec.html#app",
     required: ["name"],
     additionalProperties: false,
@@ -45,6 +47,26 @@ export const appSection: SpecSection<"app"> = {
         title: "Clock",
         description: "How times are written: 12h or 24h, the default.",
       },
+      date: {
+        type: "string",
+        enum: ["day-month", "month-day"],
+        title: "Date order",
+        description:
+          "How dates are written: day-month (5 Nov 2026), the default, or month-day (Nov 5, 2026).",
+      },
+      week: {
+        type: "string",
+        enum: ["monday", "sunday"],
+        title: "First day of the week",
+        description: "The day a calendar's week starts on: monday, the default, or sunday.",
+      },
+      numbers: {
+        type: "string",
+        enum: ["point", "comma"],
+        title: "Numbers",
+        description:
+          "How numbers and amounts are written: point (1,234.56 and €9.90) or comma (1 234,56 and 9,90 €); unsaid, the language's.",
+      },
       ...textSchema,
     },
   },
@@ -53,7 +75,7 @@ export const appSection: SpecSection<"app"> = {
     const entries = mapEntries(ctx, node, `"app"`);
     if (!entries) return app;
     const known = checkKeys(ctx, entries, `"app"`, {
-      allowed: ["name", "currency", "timezone", "clock", ...TEXT_KEYS],
+      allowed: ["name", "currency", "timezone", "clock", ...FORMAT_KEYS, ...TEXT_KEYS],
       content: ["title", "tagline"],
     });
     Object.assign(app, readSemanticText(ctx, known));
@@ -89,6 +111,17 @@ export const appSection: SpecSection<"app"> = {
         if (clock === "12h" || clock === "24h") app.clock = clock;
         else if (clock !== undefined)
           ctx.error(value, "invalid-value", `"clock" under "app" is 12h or 24h.`);
+      } else if (key === "date" || key === "week" || key === "numbers") {
+        const said = readString(ctx, value, `"app.${key}"`);
+        const choices = FORMATS[key] as readonly string[];
+        if (said !== undefined && choices.includes(said)) Object.assign(app, { [key]: said });
+        else if (said !== undefined)
+          ctx.error(
+            value,
+            "invalid-value",
+            `"${key}" under "app" is ${choices.join(" or ")}.`,
+            didYouMean(said, [...choices]),
+          );
       }
     }
     if (!known.some((e) => e.key === "name")) {

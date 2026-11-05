@@ -54,6 +54,12 @@ export interface AppIR extends SemanticText {
   timezone?: string;
   /** How times are written; unsaid, 24-hour. */
   clock?: "12h" | "24h";
+  /** The order of a date's day and month (formats.md §2); unsaid, day first. */
+  date?: "day-month" | "month-day";
+  /** The first day of a calendar's week; unsaid, Monday. */
+  week?: "monday" | "sunday";
+  /** How numbers are written; unsaid, the language's convention (`numbersOf`). */
+  numbers?: "point" | "comma";
 }
 
 /** Where a unique value is unique: among one owner's records, or in the whole app. */
