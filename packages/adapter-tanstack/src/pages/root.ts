@@ -327,7 +327,8 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: app.name },
+      { title: app.name },${ir.app.description ? `
+      { name: "description", content: ${JSON.stringify(ir.app.description)} },` : ""}
     ],
     links: [
       { rel: "stylesheet", href: appCss },

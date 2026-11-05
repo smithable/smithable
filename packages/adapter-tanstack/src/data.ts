@@ -1110,13 +1110,26 @@ export function dataModule(
   const ownerValue = creatorOwned(model) ? "personOf(viewer)" : `ownerFor(viewer, values.${owner})`;
   const counted = sequenceEntries(model, auth, n.table, ownerValue);
   const set = [...byMe, ...counted].map((e) => `, ${e}`).join("");
-  const createValues = !signedIn
+  const given = !signedIn
     ? counted.length
       ? `{ ...values${set} }`
       : "values"
     : creatorOwned(model)
       ? `{ ...values, ownerId: personOf(viewer)${set} }`
       : `{ ...values, ${owner}: ownerFor(viewer, values.${owner})${set} }`;
+  // A required field the app fills with no default (`app-field-unfilled`, a warning): an action, an
+  // incoming entry or the person's own code gives it; a create without it is refused by the
+  // database, so the values are the table's as the insert takes them.
+  const unfilled = storedFields(model).some(
+    (f) =>
+      f.byApp &&
+      f.required &&
+      !f.sequence &&
+      !f.defaultMe &&
+      !f.defaultFormula &&
+      f.default === undefined,
+  );
+  const createValues = unfilled ? `(${given} as typeof ${n.table}.$inferInsert)` : given;
   // A field's rules on the record (record-rules.md §2–3): a lock on a change made in a form, the
   // API or Ask (an action's set may change a locked field it names, which is how a case is
   // reopened; `frees` lists them), and

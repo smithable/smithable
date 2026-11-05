@@ -184,7 +184,7 @@ export function Filters({
                 <button
                   type="button"
                   onClick={() => set(f.name, undefined)}
-                  className="cursor-pointer rounded-full px-2 py-0.5 font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                  className="cursor-pointer rounded-full px-2 py-0.5 font-semibold underline-offset-4 pointer-coarse:min-h-11 pointer-coarse:min-w-11 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {w.all}
                 </button>
@@ -194,7 +194,7 @@ export function Filters({
                   type="button"
                   aria-label={w.removeFilter(f.label)}
                   onClick={() => set(f.name, undefined)}
-                  className="cursor-pointer rounded-full p-0.5 outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex cursor-pointer items-center justify-center rounded-full p-0.5 outline-none pointer-coarse:size-11 hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <X aria-hidden className="size-4" />
                 </button>
