@@ -5,6 +5,6 @@
   "questions": [
     "Who will use the app?",
     "How should stock levels be tracked?",
-    "What should a supplier link to?"
+    "Should the app also record orders placed with suppliers?"
   ]
 }

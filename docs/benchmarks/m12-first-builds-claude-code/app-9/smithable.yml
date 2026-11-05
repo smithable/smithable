@@ -1,13 +1,15 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: Where the IT team logs tickets, sets their priorities and sees who handles each one.
+  description: Where an IT team tracks its tickets, their priorities and who handles them.
   timezone: Europe/Helsinki
 models:
   SupportCase:
     fields:
       subject: string!
-      customerEmail: email!
+      customerEmail:
+        type: email!
+        locked: true
       status: open | inProgress | closed | reopened
       priority:
         type: int!

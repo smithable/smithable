@@ -1,12 +1,9 @@
 smithableContent: 0.1
-actions:
-  recordResult:
-    label: Record result
 pages:
   home:
     hero:
-      title: One club, every matchday
-      subtitle: Follow our teams, get to know the players and see when we play next and how the last match ended.
+      title: Follow every team, every match
+      subtitle: Meet our squads, see when we play next and catch up on the latest scores.
       button: See the matches
       secondButton: Meet the teams
       image:
@@ -14,10 +11,10 @@ pages:
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
     fixtures:
-      title: Upcoming matches
+      title: Coming up
     results:
       title: Latest results
-    squads:
+    ourTeams:
       title: Our teams
 logo:
   src: images/logo.webp

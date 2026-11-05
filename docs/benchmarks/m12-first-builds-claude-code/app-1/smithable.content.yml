@@ -17,17 +17,26 @@ pages:
     title: Classes
   instructors:
     title: Teachers
-  my-bookings:
-    title: My bookings
   home:
     faq:
-      items: [{ question: How do I book a class?, answer: "Open the schedule, pick the class that suits you and press Book. You sign in with your email address, and the place is yours." }, { question: Can I change my mind?, answer: "Yes. Cancel from My bookings at any time before the class starts, and your place goes back to someone else." }, { question: What happens when a class is full?, answer: "Every class shows how many places are left. Once none remain it can no longer be booked, so look for another time on the schedule." }, { question: I'm new to yoga. Where should I start?, answer: Each class says what level it is for. Choose a beginner or all-levels class and tell your teacher it is your first time. }]
+      items: [{ question: Do I need an account to see the schedule?, answer: "No. The classes, the teachers and the schedule are open to everyone. You only sign in when you book a place." }, { question: How do I book a class?, answer: "Pick a class on the schedule, sign in with your email address and press Book. Your place then appears under My bookings." }, { question: Can I cancel a booking?, answer: Yes. You can cancel from My bookings at any time until the class starts. }, { question: What happens when a class is full?, answer: "The schedule shows how many places are left in each class. When none remain, the class can no longer be booked, so choose another time." }, { question: Which class should I choose as a beginner?, answer: Every class shows its level. Start with one marked Beginner or All levels. }]
+      title: Good to know
     hero:
+      title: Find your class and roll out your mat
+      subtitle: See this week's yoga classes, meet the teachers and book your place online in a minute.
+      button: See the schedule
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
         generated: true
+    classes:
+      title: Our classes
+    teachers:
+      title: Meet the teachers
+    callToAction:
+      title: There is a place waiting for you
+      button: Book a class
 logo:
   src: images/logo.webp
-  alt: A calendar page
+  alt: A lotus over a ripple
   generated: true

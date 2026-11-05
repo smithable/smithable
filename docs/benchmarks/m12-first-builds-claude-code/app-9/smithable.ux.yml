@@ -3,6 +3,7 @@ pages:
   cases:
     table:
       sort: priority
+      columns: [subject, status, priority, assignee, customerEmail]
     record:
       lists:
         messages: thread

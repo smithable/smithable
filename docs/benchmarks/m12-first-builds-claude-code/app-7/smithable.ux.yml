@@ -3,22 +3,17 @@ pages:
   teams:
     table:
       view: cards
-    icon: users
   players:
     table:
-      columns: [number, name, position, team]
-      sort: number
       view: cards
     record:
       subtitle: team
       detail: [position, number]
       pictures: aside
-    icon: user
   matches:
     table:
       columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
       sort: -kickoff
-    icon: calendar
   home:
     sections:
       fixtures:
@@ -29,9 +24,5 @@ tones:
   Match.status:
     played: success
     postponed: warning
-    canceled: danger
 theme:
   preset: navy
-  brand:
-    font: Oswald
-navigation: topbar

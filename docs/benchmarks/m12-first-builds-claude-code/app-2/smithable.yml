@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Sales CRM
-  description: A CRM where a small sales team keeps track of companies, contacts, deals and follow-ups.
+  description: A CRM where a small sales team keeps its companies, contacts, deals and follow-ups in one place.
   currency: EUR
   timezone: Europe/Helsinki
 models:
@@ -10,6 +10,7 @@ models:
       name: string!
       website: url
       phone: phone
+      industry: string
       notes: text
       accountManager: User
       contacts: Contact[]
@@ -22,70 +23,70 @@ models:
       name: string!
       company: Company!
       jobTitle: string
-      email: email
+      email: email unique
       phone: phone
       notes: text
       deals: Deal[]
-      followUps: FollowUp[]
     trash: true
   Deal:
     fields:
-      name: string!
+      title: string!
       company: Company!
       contact: Contact
-      stage: lead | qualified | proposal | won | lost
-      value: money
+      stage: lead | qualified | proposal | negotiation | won | lost
+      value: money!
       expectedClose: date
-      closedOn:
-        type: date
-        by: app
-      lostReason: text
+      closedOn: date
+      lostReason: string
       notes: text
+      salesperson: User
       followUps: FollowUp[]
+    ownedBy: salesperson
     trash: true
   FollowUp:
     fields:
-      note: text!
-      dueOn: date! = TODAY()
-      done: bool
       company: Company!
       contact: Contact
       deal: Deal
+      dueOn: date! = TODAY()
+      done: bool
+      note: text
     trash: true
 pages:
   start:
     dashboard:
-      followUpsDue:
+      openDeals:
+        count: Deal
+        where:
+          stage: [lead, qualified, proposal, negotiation]
+      pipelineValue:
+        sum: Deal.value
+        where:
+          stage: [lead, qualified, proposal, negotiation]
+      dealsByStage:
+        count: Deal
+        by: stage
+      openFollowUps:
         list: FollowUp
         where:
           done: false
         limit: 10
-      openDeals:
-        count: Deal
-        where:
-          stage: [lead, qualified, proposal]
-      openValue:
-        sum: Deal.value
-        where:
-          stage: [lead, qualified, proposal]
-      dealsByStage:
-        count: Deal
-        by: stage
   companies:
     crud: Company
-    search: [name, phone]
+    search: [name, industry]
+    filters: [accountManager]
     sortable: [name, createdAt]
   contacts:
     crud: Contact
-    search: [name, email, phone]
+    search: [name, email, jobTitle]
     filters: [company]
     sortable: [name, createdAt]
   deals:
     crud: Deal
-    search: [name]
-    filters: [stage, company]
-    sortable: [name, value, expectedClose]
-    actions: [winDeal, loseDeal]
+    search: [title]
+    filters: [stage, company, salesperson]
+    sortable: [expectedClose, value, title]
+    actions: [markWon, markLost]
   followUps:
     crud: FollowUp
     search: [note]
@@ -97,28 +98,24 @@ pages:
   team:
     users: manage
 actions:
-  winDeal:
+  markWon:
     on: Deal
     when:
-      stage: [lead, qualified, proposal]
+      stage: [lead, qualified, proposal, negotiation]
     set:
       stage: won
       closedOn: TODAY()
-    intent: Mark an open deal as won.
-  loseDeal:
+  markLost:
     on: Deal
     when:
-      stage: [lead, qualified, proposal]
+      stage: [lead, qualified, proposal, negotiation]
     set:
       stage: lost
       closedOn: TODAY()
       lostReason:
-    intent: Mark an open deal as lost and record why.
   markDone:
     on: FollowUp
     when:
       done: false
     set:
       done: true
-    intent: Tick off a follow-up that has been handled.
-navigation: [start, companies, contacts, deals, followUps, team]

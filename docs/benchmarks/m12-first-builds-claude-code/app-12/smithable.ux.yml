@@ -3,9 +3,6 @@ pages:
   incidents:
     table:
       sort: -detectedAt
-  updates:
-    table:
-      sort: -at
 tones:
   Component.status:
     operational: success
@@ -16,10 +13,5 @@ tones:
     identified: warning
     monitoring: warning
     resolved: success
-  IncidentUpdate.status:
-    investigating: danger
-    identified: warning
-    monitoring: warning
-    resolved: success
 theme:
-  preset: modern
+  preset: minimal
