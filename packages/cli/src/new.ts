@@ -33,17 +33,21 @@ import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
 import { askIn, languageAsked, PageError, siteNameOf } from "./from-page.js";
 import { generate } from "./generate.js";
+import { hostedLevel } from "./hosted-level.js";
 import { exec, type Io, tool } from "./io.js";
 import { addLibraryPictures, dropMissingPictures, placePictures } from "./pictures.js";
-import { describeSiteFacts } from "./site-facts.js";
 import { readSite } from "./site-fetch.js";
+import { projectSitePersonal, replaceSitePersonalText } from "./site-personal.js";
 import { STARTER_ASSETS, STARTER_CODE, STARTER_SAMPLES, STARTERS } from "./starters.gen.js";
 import { assetReview, type WebsiteAsset, writeAssetManifest } from "./website-assets.js";
 import { repairWebsiteCopy } from "./website-copy.js";
 import {
   prepareWebsiteContext,
+  replaceWebsitePersonalArtifacts,
+  replaceWebsitePersonalFiles,
   type WebsiteContext,
   websitePictures,
+  websitePrivateProviders,
 } from "./website-generation.js";
 import { digest, parseWebsiteInput, type WebsiteGenerationInput } from "./website-input.js";
 
@@ -86,11 +90,14 @@ export async function create(
     from?: string;
     withPictures?: boolean;
     websiteInput?: WebsiteGenerationInput;
+    contentMode?: "sample" | "full";
     instructions?: string;
     interpretSiteImages?: boolean;
     websiteOwnerDescription?: boolean;
     onWebsite?: (summary: {
       inputDigest?: string;
+      contentMode?: "sample" | "full";
+      personal?: { version: 1; counts: Record<string, number> };
       assetManifestDigest?: string;
       images?: {
         id: string;
@@ -131,6 +138,13 @@ export async function create(
     io.err(`Unknown time zone "${options.timezone}". Use a name like Europe/Mariehamn.\n`);
     return 1;
   }
+  if (
+    (options.contentMode === "full" || options.websiteInput?.options?.contentMode === "full") &&
+    hostedLevel()
+  ) {
+    io.err("Full website content requires the hosted owner's recorded instruction.\n");
+    return 1;
+  }
   // A page as the starting point: what it says is the description (first-build.md §2.8).
   let pictures: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
   let fromPage = false;
@@ -146,14 +160,16 @@ export async function create(
     }
     try {
       const site = await readSite(options.from, { allowAssets: options.withPictures === true });
-      if (site.reading.tooLittle)
+      if (site.reading.tooLittle && options.contentMode !== "full")
         throw new PageError(
           "The site gave too little factual information. Describe what the app should do.",
         );
-      const authorizationId = "local-explicit-consent";
+      const authorizationId = "local-owner-instruction";
       const input = parseWebsiteInput({
         version: 1,
+        options: { contentMode: options.contentMode ?? "sample" },
         facts: site.reading.facts,
+        personalMap: site.reading.personalMap,
         sourceCorpus: site.reading.sourceCorpus,
         images: site.reading.images,
         authorization: {
@@ -180,13 +196,25 @@ export async function create(
   let website: WebsiteContext | undefined;
   let websiteAssets: WebsiteAsset[] = [];
   let websiteAssumptions: Assumption[] | undefined;
+  if (options.contentMode === "full" && !options.from) {
+    io.err("Full website content requires the explicit local --from workflow.\n");
+    return 1;
+  }
+  let privacy: ReturnType<typeof projectSitePersonal> | undefined;
   if (options.websiteInput) {
+    const input = parseWebsiteInput(options.websiteInput);
+    privacy = projectSitePersonal(input, {
+      contentMode: input.options?.contentMode ?? "sample",
+      personalMap: input.personalMap,
+    });
     options = {
       ...options,
-      websiteInput: parseWebsiteInput(options.websiteInput),
+      websiteInput: { ...input, personalMap: privacy.personalMap, model: privacy.model },
       describe: options.websiteOwnerDescription
-        ? options.instructions
-        : describeSiteFacts(options.websiteInput.facts),
+        ? privacy.model.contentMode === "full"
+          ? options.instructions
+          : replaceSitePersonalText(options.instructions ?? "", privacy.personalMap)
+        : privacy.model.description,
       sampleData: false,
     };
   }
@@ -233,7 +261,14 @@ export async function create(
   }
   let description = options.describe;
   let tokens = 0;
-  const available = description ? providersFor() : [];
+  const rawAvailable = description ? providersFor() : [];
+  const available = privacy
+    ? websitePrivateProviders(
+        rawAvailable,
+        privacy.personalMap,
+        privacy.model.contentMode === "full",
+      )
+    : rawAvailable;
   const providers =
     !options.onUsage && !options.maxTokens
       ? available
@@ -279,6 +314,8 @@ export async function create(
     );
     description = website.description;
     options.onWebsite?.({
+      contentMode: website.contentMode,
+      personal: website.personal,
       images: website.images.map((image) => ({
         id: image.id,
         role: image.role,
@@ -325,6 +362,8 @@ export async function create(
       given.map((answer, i) => ({ question: `(${i + 1})`, answer })),
     );
   }
+  if (website?.contentMode === "sample" && description)
+    description = replaceSitePersonalText(description, website.personalMap, { context: "text" });
   let files = prepared ?? (STARTERS[name] as Record<string, string>);
   // Prepared dependencies (node_modules, possibly a link, and the lockfile they were installed
   // from, as hosted workspaces provide) do not count: the install then has little to do.
@@ -361,13 +400,25 @@ export async function create(
       );
       return 1;
     }
-    files = draft.files;
+    if (
+      website &&
+      Object.keys(draft.files).some(
+        (file) =>
+          ![
+            "smithable.yml",
+            "smithable.auth.yml",
+            "smithable.content.yml",
+            "smithable.ux.yml",
+          ].includes(file) && !/^smithable\.content\.[a-zA-Z0-9-]+\.ya?ml$/.test(file),
+      )
+    )
+      throw new Error("Website drafting returned an unexpected source file.");
+    files = website ? replaceWebsitePersonalFiles(draft.files, website) : draft.files;
     // From a page: the site's own name, not the draft's reading of the page's title (which is
     // often a sentence); a name someone typed still wins below.
     const site =
-      (!options.websiteOwnerDescription
-        ? website?.input.facts.fields.find((fact) => fact.kind === "name")?.value
-        : undefined) ?? siteNameOf(description);
+      (!options.websiteOwnerDescription ? website?.businessName : undefined) ??
+      siteNameOf(description);
     if (site && !options.name?.trim()) files = named(files, site);
     if (!website) options.onDraft?.(files, draft.assumptions);
     websiteAssumptions = draft.assumptions;
@@ -438,6 +489,15 @@ export async function create(
   const admin = options.admin?.trim() || gitEmail();
   if (admin) {
     files = administered(files, admin);
+    const actualAdmins = new YamlEditor(files["smithable.auth.yml"] ?? "").get(["admins"]);
+    if (
+      website &&
+      Array.isArray(actualAdmins) &&
+      actualAdmins.some(
+        (value) => typeof value === "string" && value.toLowerCase() === admin.toLowerCase(),
+      )
+    )
+      website.authoritativeAdmin = admin.toLowerCase();
     files = withoutSampleDomains(files, io);
     // What follows for the administrator and their colleagues, in the validator's words.
     const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" }).ir;
@@ -467,6 +527,7 @@ export async function create(
     });
     pictures = placed.pictures;
     websiteAssets = placed.assets;
+    files = replaceWebsitePersonalFiles(files, website);
     fromPage = false;
   }
   mkdirSync(dir, { recursive: true });
@@ -520,13 +581,19 @@ export async function create(
         ? Object.fromEntries(samples.map((sample) => [sample.path, sample.text]))
         : {}),
     };
-    const repaired = await repairWebsiteCopy(
-      copyFiles,
-      website.input.sourceCorpus,
-      website.description,
-      providers,
-      (message) => options.onDiagnostic?.(message),
-    );
+    const privacyFiles = replaceWebsitePersonalFiles(copyFiles, website);
+    const rewritten =
+      website.contentMode === "full"
+        ? privacyFiles
+        : await repairWebsiteCopy(
+            privacyFiles,
+            website.input.sourceCorpus,
+            website.description,
+            providers,
+            (message) =>
+              options.onDiagnostic?.(replaceSitePersonalText(message, website.personalMap)),
+          );
+    const repaired = replaceWebsitePersonalFiles(rewritten, website);
     for (const [file, text] of Object.entries(repaired)) {
       if (file.startsWith("samples/") && !sampleData) continue;
       writeFileSync(join(dir, file), text);
@@ -551,6 +618,7 @@ export async function create(
   });
   if (code !== 0) return code;
   if (website) {
+    replaceWebsitePersonalArtifacts(dir, website, true);
     const review = assetReview(dir);
     if (review.diagnostics.length) {
       io.err(`${review.diagnostics.join("\n")}\n`);

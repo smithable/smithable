@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { Readable } from "node:stream";
 import { expect, test } from "vitest";
 import {
   generationReceipt,
@@ -10,8 +11,10 @@ import {
 import { ensureRepository, git } from "./git.js";
 import { defaultAssumptions } from "./new.js";
 import { type replaceProject, sync } from "./replace.js";
+import { extractSiteFacts } from "./site-facts.js";
 import { tempDir } from "./test-dir.js";
 import { undoableChanges } from "./undo.js";
+import { digest, installWebsiteInputCommand } from "./website-input.js";
 
 const quiet = { out: () => {}, err: () => {} };
 const setup = () => {
@@ -294,4 +297,44 @@ test("real sync preserves the waiting history and generation is setup rather tha
   );
   expect((await settled(failed))?.status).toBe("failed");
   expect(completed).toBe(1);
+});
+
+test("hosted generation cannot turn an installed sample input into full content", async () => {
+  const dir = setup(),
+    url = "https://business.example/";
+  const text = "Our shop's phone is +3581812345.";
+  const input = {
+    version: 1,
+    facts: extractSiteFacts(
+      '<meta property="og:site_name" content="Harbour"><a href="tel:+3581812345">Call</a>',
+      url,
+    ),
+    sourceCorpus: { version: 1, pages: [{ id: "p1", text, sha256: digest(text) }] },
+    images: [],
+    originals: [],
+    authorization: { id: "auth", site: url, images: false },
+  };
+  const raw = JSON.stringify(input),
+    sha256 = digest(raw);
+  expect(
+    await installWebsiteInputCommand(dir, "mode-job", sha256, quiet, Readable.from([raw])),
+  ).toBe(0);
+  let called = false;
+  startGeneration(
+    dir,
+    "mode-job",
+    { website: { input: { version: 1, sha256 }, contentMode: "full" } },
+    true,
+    quiet,
+    false,
+    undefined,
+    async (...args) => {
+      called = true;
+      return make(...args);
+    },
+  );
+  const receipt = await settled(dir, "mode-job");
+  expect(receipt?.status).toBe("failed");
+  expect(receipt?.error).toContain("content mode");
+  expect(called).toBe(false);
 });

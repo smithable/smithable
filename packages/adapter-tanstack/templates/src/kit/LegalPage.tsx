@@ -1,6 +1,8 @@
 // Smithable app kit: the privacy page (docs/design/legal-page.md), written from facts the
 // generator takes from the app's own definition, so it stays true as the app changes. The
 // operator's details and any words of the maker's own come from the content file.
+
+import { contactHref } from "./contact-href";
 import { w } from "./words";
 
 export interface LegalFacts {
@@ -48,7 +50,7 @@ export function LegalPage({ facts, title }: { facts: LegalFacts; title: string }
               {o.email && (
                 <>
                   {o.address || o.country ? " · " : ""}
-                  <a href={`mailto:${o.email}`} className="underline">
+                  <a href={contactHref(`mailto:${o.email}`, o.email)} className="underline">
                     {o.email}
                   </a>
                 </>

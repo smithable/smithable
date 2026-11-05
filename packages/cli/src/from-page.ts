@@ -491,7 +491,7 @@ export async function readPageCommand(
     try {
       html = readFileSync(file, "utf8");
     } catch {
-      io.err(`Cannot read ${file}.\n`);
+      io.err("Cannot read the saved site input.\n");
       return 1;
     }
   } else {
@@ -499,7 +499,7 @@ export async function readPageCommand(
       ({ html, url: address } = await fetchPage(url, local));
     } catch (error) {
       if (!(error instanceof PageError)) throw error;
-      io.err(`${error.message}\n`);
+      io.err("The site could not be safely read.\n");
       return 1;
     }
   }
@@ -517,19 +517,22 @@ export async function readPageCommand(
       return 1;
     }
   }
-  if (facts) {
-    io.out(`${JSON.stringify(siteFactsResult(html, address))}\n`);
+  try {
+    const reading = siteFactsResult(html, address);
+    if (facts) {
+      io.out(`${JSON.stringify(reading)}\n`);
+      return 0;
+    }
+    if (reading.tooLittle) {
+      io.err("The site gave too little factual information. Describe the app instead.\n");
+      return 1;
+    }
+    io.out(`${reading.description}\n`);
     return 0;
-  }
-  const reading = readPage(html, address);
-  if (tooLittle(reading)) {
-    io.err(
-      `${address} shows almost nothing without JavaScript, so there is too little to go on. Describe the app instead.\n`,
-    );
+  } catch {
+    io.err("The site's metadata could not be safely prepared.\n");
     return 1;
   }
-  io.out(`${describePage(reading)}\n`);
-  return 0;
 }
 
 /**

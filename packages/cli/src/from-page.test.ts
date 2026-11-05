@@ -192,16 +192,17 @@ test("read-page prints the description of a saved page, and refuses one that sho
   const err: string[] = [];
   const io = { out: (s: string) => out.push(s), err: (s: string) => err.push(s) };
   expect(await readPageCommand(join(dir, "page.html"), "https://cafe.example/", io)).toBe(0);
-  expect(out.join("")).toBe(`${describePage(readPage(PAGE, "https://cafe.example/"))}\n`);
+  expect(out.join("")).toContain("untrusted factual data");
+  expect(out.join("")).not.toContain("We roast our own beans");
   expect(await readPageCommand(join(dir, "empty.html"), "https://spa.example/", io)).toBe(1);
-  expect(err.join("")).toContain("shows almost nothing without JavaScript");
+  expect(err.join("")).toContain("too little factual information");
   expect(await readPageCommand(join(dir, "page.html"), undefined, io)).toBe(2);
   // Without a file it fetches the page as new --from does, with the same refusals.
   out.length = 0;
   expect(await readPageCommand(undefined, `${base}/old`, io, true)).toBe(0);
-  expect(out.join("")).toBe(`${describePage(readPage(PAGE, `${base}/`))}\n`);
+  expect(out.join("")).toContain("untrusted factual data");
   expect(await readPageCommand(undefined, `${base}/secret`, io, true)).toBe(1);
-  expect(err.join("")).toContain("robots.txt asks not to read /secret");
+  expect(err.join("")).toContain("The site could not be safely read");
 });
 
 test("a page's description is asked about in English, a typed one in its own language", () => {

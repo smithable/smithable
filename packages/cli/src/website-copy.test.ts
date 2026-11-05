@@ -1,13 +1,16 @@
 import type { Provider } from "@smithable/ai";
 import { YamlEditor } from "@smithable/core";
 import { expect, test } from "vitest";
+import { extractSiteFacts } from "./site-facts.js";
+import { projectSitePersonal } from "./site-personal.js";
 import {
   NEUTRAL_WEBSITE_TEXT,
   repairWebsiteCopy,
   repeatsWebsiteWords,
   sourcePhrases,
 } from "./website-copy.js";
-import { digest } from "./website-input.js";
+import { prepareWebsiteContext, websitePrivateProviders } from "./website-generation.js";
+import { digest, parseWebsiteInput } from "./website-input.js";
 
 const source = "These ten very familiar words are copied from our website.";
 const corpus = { version: 1 as const, pages: [{ id: "p1", text: source, sha256: digest(source) }] };
@@ -140,4 +143,81 @@ test("a source sentence split over three reordered presentation fields is refuse
   };
   const repaired = await repairWebsiteCopy(files, corpus, "Facts", []);
   expect(repaired["smithable.content.yml"]).not.toContain("These ten very familiar");
+});
+
+test("the real copy-repair request and returned text stay inside the personal-data boundary", async () => {
+  const value = {
+    version: 1 as const,
+    facts: extractSiteFacts(
+      '<meta property="og:site_name" content="Jane Doe"><script type="application/ld+json">{"@type":"LocalBusiness","name":"Jane Doe","url":"https://business.example/","telephone":"+3581812345","email":"a@example.test"}</script><a href="tel:+3581812345">Call</a><a href="mailto:a@example.test">Email</a>',
+      "https://business.example/",
+    ),
+    images: [],
+    originals: [],
+    sourceCorpus: corpus,
+    authorization: { id: "auth", site: "https://business.example/", images: false },
+  };
+  const personalMap = projectSitePersonal({
+    ...value,
+    pages: [
+      {
+        id: "p1",
+        url: "https://business.example/",
+        html: '<meta property="og:site_name" content="Jane Doe"><script type="application/ld+json">{"@type":"LocalBusiness","name":"Jane Doe","url":"https://business.example/","telephone":"+3581812345","email":"a@example.test"}</script><a href="tel:+3581812345">Call</a><a href="mailto:a@example.test">Email</a>',
+      },
+    ],
+  }).personalMap;
+  const input = parseWebsiteInput({ ...value, personalMap });
+  const context = await prepareWebsiteContext(input, false, [], () => {});
+  let prompt = "";
+  const provider: Provider = {
+    name: "fixture",
+    tier: "local",
+    location: "local",
+    price: { input: 0, output: 0 },
+    complete: async (request) => {
+      prompt = JSON.stringify(request);
+      return {
+        text: JSON.stringify({ "0": "Contact Jane Doe at a@example.test." }),
+        model: "fixture",
+        inputTokens: 1,
+        outputTokens: 1,
+      };
+    },
+  };
+  const output = await repairWebsiteCopy(
+    { "smithable.content.yml": JSON.stringify({ pages: { "Jane Doe": { body: source } } }) },
+    corpus,
+    "Call Jane Doe at a@example.test.",
+    websitePrivateProviders([provider], context.personalMap),
+  );
+  expect(prompt).not.toContain("Jane Doe");
+  expect(prompt).not.toContain("a@example.test");
+  expect(prompt).not.toContain(source);
+  expect(output["smithable.content.yml"]).not.toContain("a@example.test");
+  expect(output["smithable.content.yml"]).not.toContain("Contact Jane Doe");
+});
+
+test("copy repair changes only matched YAML leaves and preserves comments and untouched formatting", async () => {
+  const original = `# Owner's content\npages:\n  home:\n    hero:\n      subtitle: ${source} # keep the note\n      title: "A useful title"\n`;
+  const output = await repairWebsiteCopy(
+    { "smithable.content.yml": original },
+    corpus,
+    "Facts",
+    [],
+  );
+  const repaired = output["smithable.content.yml"] ?? "";
+  expect(repaired).toContain("# Owner's content\npages:\n  home:\n    hero:\n");
+  expect(repaired).toContain("# keep the note");
+  expect(repaired).toContain('title: "A useful title"');
+  expect(repaired).not.toContain(source);
+  const clean = '# Keep this comment\npages:\n  home: {title: "Fresh words"}\n';
+  expect(
+    (await repairWebsiteCopy({ "smithable.content.yml": clean }, corpus, "Facts", []))[
+      "smithable.content.yml"
+    ],
+  ).toBe(clean);
+  expect((await repairWebsiteCopy(output, corpus, "Facts", []))["smithable.content.yml"]).toBe(
+    repaired,
+  );
 });

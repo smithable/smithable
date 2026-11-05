@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { describePage, readPage, readPageCommand } from "./from-page.js";
+import { type SiteBundleResult, siteBundleResult } from "./site-bundle.js";
 import { readSite } from "./site-fetch.js";
 import { allowedByRobots, createSiteFetch } from "./site-fetch-policy.js";
 
@@ -95,7 +96,21 @@ test("the saved-bundle command uses the same deterministic facts and rejects mal
     const file = join(dir, "site.json");
     writeFileSync(file, JSON.stringify(result.bundle));
     expect(await readPageCommand(file, base, io, false, true, true)).toBe(0);
-    expect(JSON.parse(out.join(""))).toEqual(result.reading);
+    const saved = JSON.parse(out.join("")) as SiteBundleResult;
+    // A fresh read gets a fresh private key; the persisted map makes its projection replayable.
+    expect(saved.personalMap.key).not.toBe(result.reading.personalMap.key);
+    for (const key of [
+      "facts",
+      "images",
+      "links",
+      "sourceCorpus",
+      "diagnostics",
+      "tooLittle",
+    ] as const)
+      expect(saved[key]).toEqual(result.reading[key]);
+    const replay = siteBundleResult(result.bundle, { personalMap: saved.personalMap });
+    expect(replay).toEqual(saved);
+    expect(saved.description).toBe(saved.model.description);
     writeFileSync(file, '{"version":1,"pages":[]}');
     expect(await readPageCommand(file, base, io, false, true, true)).toBe(1);
     expect(err.join("")).toContain("bundle is invalid");

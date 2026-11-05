@@ -14,6 +14,7 @@ import { runDev } from "./dev.js";
 import { readPageCommand } from "./from-page.js";
 import { generate } from "./generate.js";
 import { commandHelp, help, operationHelp } from "./help.js";
+import { hostedLevel } from "./hosted-level.js";
 import { inspect, test } from "./inspect.js";
 import { type Io, processIo } from "./io.js";
 import { mcp } from "./mcp.js";
@@ -201,6 +202,19 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ? approveAssetReviewCommand(dir, values.approve, io)
         : readWebsiteAssetReviewCommand(dir, io);
     case "new":
+      if (values.content === "full" && hostedLevel()) {
+        io.err(
+          "Full website content on the hosted service needs the owner's recorded instruction. Use the service form when available.\n",
+        );
+        return 2;
+      }
+      if (
+        values.content !== undefined &&
+        (!["sample", "full"].includes(values.content) || !values.from)
+      ) {
+        io.err("--content needs sample or full and --from <website>.\n");
+        return 2;
+      }
       if (args[0] === undefined) {
         io.err(`new needs a directory, like: smithable new my-app\n`);
         return 2;
@@ -209,6 +223,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
         ...(values.describe ? { describe: values.describe } : {}),
         ...(values.answers ? { answers: values.answers } : {}),
         ...(values.from ? { from: values.from } : {}),
+        ...(values.content ? { contentMode: values.content as "sample" | "full" } : {}),
         ...(values.name ? { name: values.name } : {}),
         ...(values.admin ? { admin: values.admin } : {}),
         ...(values.timezone ? { timezone: values.timezone } : {}),
@@ -372,6 +387,7 @@ const CONFIG = {
     target: { type: "string" },
     to: { type: "string" },
     from: { type: "string" },
+    content: { type: "string" },
     backup: { type: "string" },
     continuous: { type: "boolean" },
     at: { type: "string" },

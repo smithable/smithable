@@ -25,6 +25,7 @@ import { AppearancePicker } from "./AppearancePicker";
 import { AppLink } from "./AppLink";
 import { allows, type Rule, type Viewer } from "./access";
 import { ConsentSettings } from "./Consent";
+import { contactHref } from "./contact-href";
 import { ModelTable, PicturePlaceholder } from "./ModelTable";
 import { type AppUi, type RecordUi, type Row, textMarker } from "./model";
 import { tx, w } from "./words";
@@ -286,14 +287,20 @@ function LandingLayoutView({
                 {contact?.address && <p className="text-muted-foreground">{contact.address}</p>}
                 {contact?.phone && (
                   <p>
-                    <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="hover:underline">
+                    <a
+                      href={contactHref(`tel:${contact.phone.replace(/\s/g, "")}`, contact.phone)}
+                      className="hover:underline"
+                    >
                       {contact.phone}
                     </a>
                   </p>
                 )}
                 {contact?.email && (
                   <p>
-                    <a href={`mailto:${contact.email}`} className="hover:underline">
+                    <a
+                      href={contactHref(`mailto:${contact.email}`, contact.email)}
+                      className="hover:underline"
+                    >
                       {contact.email}
                     </a>
                   </p>
@@ -1728,7 +1735,10 @@ function ContactView({
             </p>
             {/* A link, not an embedded map: no third party is called when the page opens. */}
             <a
-              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`}
+              href={contactHref(
+                `https://www.openstreetmap.org/search?query=${encodeURIComponent(address)}`,
+                address,
+              )}
               className="text-sm text-primary underline-offset-4 hover:underline"
               rel="noopener noreferrer"
               target="_blank"
@@ -1745,7 +1755,10 @@ function ContactView({
             <span className="sr-only">{w.phone}</span>
           </dt>
           <dd>
-            <a href={`tel:${phone.replace(/[^+\d]/g, "")}`} {...mark(texts, "phone")}>
+            <a
+              href={contactHref(`tel:${phone.replace(/[^+\d]/g, "")}`, phone)}
+              {...mark(texts, "phone")}
+            >
               {phone}
             </a>
           </dd>
@@ -1758,7 +1771,7 @@ function ContactView({
             <span className="sr-only">{w.email}</span>
           </dt>
           <dd>
-            <a href={`mailto:${email}`} {...mark(texts, "email")}>
+            <a href={contactHref(`mailto:${email}`, email)} {...mark(texts, "email")}>
               {email}
             </a>
           </dd>

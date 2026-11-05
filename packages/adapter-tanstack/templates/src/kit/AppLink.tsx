@@ -2,11 +2,13 @@
 // through the router (no new document, so nothing flashes white); anything else (another site,
 // mailto:, tel:, a file) is an ordinary link.
 import { Link } from "@tanstack/react-router";
+import { contactHref } from "./contact-href";
 
 export function AppLink({
   href,
   ...props
 }: { href?: string } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href">) {
+  href = contactHref(href);
   if (!href?.startsWith("/") || href.startsWith("//")) return <a href={href} {...props} />;
   const url = new URL(href, "http://app.invalid");
   return (

@@ -67,6 +67,27 @@ function put(root: unknown, path: Path, text: string): void {
   if (key === undefined) throw new Error("The generated text root cannot be replaced.");
   (parent as Record<string | number, unknown>)[key] = text;
 }
+/** Write changed leaves only; YAML keeps comments/shape, JSON records remain JSON. */
+export function writeWebsiteValues(
+  source: string,
+  changes: { path: Path; value: string }[],
+  json = false,
+): string {
+  if (!changes.length) return source;
+  if (json) {
+    const value: unknown = JSON.parse(source);
+    for (const change of changes) put(value, change.path, change.value);
+    return `${JSON.stringify(value, null, 2)}${source.endsWith("\n") ? "\n" : ""}`;
+  }
+  const editor = new YamlEditor(source);
+  for (const { path, value } of changes) {
+    const key = path.at(-1);
+    if (typeof key === "number") editor.setItem(path.slice(0, -1).map(String), key, value);
+    else editor.set(path.map(String), value);
+  }
+  return editor.text;
+}
+
 function matchingLeaves(leaves: string[], phrases: Set<string>): Set<number> {
   const found = new Set<number>(),
     prefixes = new Map<string, number[]>(),
@@ -268,6 +289,16 @@ export async function repairWebsiteCopy(
     }
   }
   const output = { ...files };
-  for (const file of changed) output[file] = `${JSON.stringify(parsed.get(file), null, 2)}\n`; // JSON remains valid YAML; keys/numbers/booleans are untouched.
+  for (const file of changed) {
+    const source = files[file];
+    if (source === undefined) throw new Error("The generated text file changed.");
+    const locations = paths.get(file) ?? [];
+    const before = new YamlEditor(source).get([]);
+    const changes = locations.flatMap((path) => {
+      const value = at(parsed.get(file), path);
+      return typeof value === "string" && value !== at(before, path) ? [{ path, value }] : [];
+    });
+    output[file] = writeWebsiteValues(source, changes, file.endsWith(".json"));
+  }
   return output;
 }

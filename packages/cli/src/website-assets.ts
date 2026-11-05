@@ -15,9 +15,14 @@ import { YamlEditor } from "@smithable/core";
 import type { Io } from "./io.js";
 import { digest } from "./website-input.js";
 
+// A deterministic neutral raster placeholder; the content grammar permits raster images only.
 export const WEBSITE_PLACEHOLDER = Buffer.from(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#e5e7eb"/><path d="M0 800 400 400 650 650 850 450 1200 800" fill="#cbd5e1"/></svg>',
+  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAYCAIAAAAUMWhjAAAAbElEQVR4nO3NsQ3AIAxEUfZfLTUDUEQpsgQFCERigy/hOksuff+F87qpF+jAERMdoBoV4BkdIBkDsJcpNQHYYrSUDPwxHh0V+GCIkRkAMdp8DSyN+dYEaIZlaAXehnEFAI2B/mEAPQcccCCmDI3PwnyZ/hJKAAAAAElFTkSuQmCC",
+  "base64",
 );
+// Read-only compatibility with the exact neutral SVG emitted before the raster placeholder.
+const LEGACY_PLACEHOLDER_SHA256 =
+  "fbb13c3598e6338c49d6815deb0580cbb0f7de7946a83dd71084c7fea24db4af";
 export const WEBSITE_ASSETS = "smithable.assets.json";
 export interface WebsiteAsset {
   path: string;
@@ -121,7 +126,11 @@ export function parseAssetManifest(value: unknown): WebsiteAssetManifest {
     if (
       a.factualPhotoReview !== photographic ||
       (source.kind === "placeholder" &&
-        (!a.path.endsWith(".svg") || a.concept || a.sha256 !== digest(WEBSITE_PLACEHOLDER))) ||
+        (a.concept ||
+          !(
+            (a.path.endsWith(".png") && a.sha256 === digest(WEBSITE_PLACEHOLDER)) ||
+            (a.path.endsWith(".svg") && a.sha256 === LEGACY_PLACEHOLDER_SHA256)
+          ))) ||
       (source.kind === "original" && a.path.endsWith(".svg")) ||
       !a.path.includes(`/${a.sha256}.`)
     )

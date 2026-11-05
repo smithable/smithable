@@ -1,6 +1,9 @@
+import { createHash } from "node:crypto";
 // Single-page facts for hosted generation. Evidence stays outside the model's context.
 import { PAGE_START } from "@smithable/ai";
 import { parse } from "node-html-parser";
+import { extractImageContexts } from "./image-context.js";
+import { projectSitePersonal } from "./site-personal.js";
 import { enumValue, inlineHidden, list, record, string, webAddress } from "./site-validation.js";
 
 export interface SiteFact {
@@ -33,6 +36,8 @@ export interface SiteFacts {
 }
 const BUSINESS_TYPE =
   /^(LocalBusiness|Organization|Restaurant|Hotel|LodgingBusiness|Store|HairSalon|ProfessionalService|FoodEstablishment|Dentist|MedicalBusiness|AutoRepair|CafeOrCoffeeShop|Bakery|BarOrPub|HealthAndBeautyBusiness|Plumber|Electrician|HVACBusiness|HomeAndConstructionBusiness|Attorney|Accountant|TravelAgency|RealEstateAgent|SportsActivityLocation|Campground|TouristAttraction)$/;
+export const isSiteBusinessType = (type: string): boolean =>
+  BUSINESS_TYPE.test(type.replace(/^https?:\/\/schema.org\//, ""));
 const schemaTypes = (value: unknown): string[] =>
   (Array.isArray(value) ? value : [value])
     .filter((v): v is string => typeof v === "string")
@@ -174,6 +179,10 @@ export function extractSiteFacts(
         .map((v) => clean(v))
         .filter(Boolean);
       if (parts.length) add("address", parts.join(", "), `${at}.address`);
+      for (const key of ["addressLocality", "addressRegion", "addressCountry"]) {
+        const value = clean(address[key]);
+        if (value) add("location", value, `${at}.address.${key}`);
+      }
     }
     const hours = Array.isArray(item.openingHours) ? item.openingHours : [item.openingHours];
     for (const h of hours.slice(0, 14)) {
@@ -374,7 +383,7 @@ export function extractSiteFacts(
       ["email", "email"],
       ["telephone", "phone"],
       ["streetAddress", "address"],
-      ["addressLocality", "address"],
+      ["addressLocality", "location"],
       ["postalCode", "address"],
       ["openingHours", "hours"],
     ] as const) {
@@ -565,14 +574,25 @@ export function describeSiteFacts(facts: SiteFacts): string {
 
 export function siteFactsResult(html: string, url: string) {
   const facts = extractSiteFacts(html, url);
-  const useful =
-    facts.fields.filter((f) => f.kind !== "name").length +
-    facts.navigation.length +
-    facts.forms.length;
-  return {
+  const text = parse(html).structuredText;
+  const { model } = projectSitePersonal({
     facts,
-    description: describeSiteFacts(facts),
-    tooLittle: facts.ambiguous === true || useful < 2,
+    images: extractImageContexts(html, url, "page-1"),
+    sourceCorpus: {
+      version: 1,
+      pages: [{ id: "page-1", text, sha256: createHash("sha256").update(text).digest("hex") }],
+    },
+    pages: [{ id: "page-1", url, html }],
+  });
+  const useful =
+    model.facts.fields.filter((fact) => fact.kind !== "name").length +
+    model.facts.navigation.length +
+    model.facts.forms.length;
+  return {
+    facts: model.facts,
+    model,
+    description: model.description,
+    tooLittle: model.facts.ambiguous === true || useful < 2,
   };
 }
 

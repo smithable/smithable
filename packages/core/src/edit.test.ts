@@ -295,3 +295,25 @@ test("adding inside adjacent nested flow-map closers preserves the intended pare
   expect(editor.text.startsWith("# keep\n")).toBe(true);
   expect(editor.text.endsWith("# tail\n")).toBe(true);
 });
+
+test("comment ranges follow YAML syntax rather than quote-looking plain text", () => {
+  const source =
+    '# leading\nplain: Say "hello # plain comment\napostrophe: Rock \'n roll # apostrophe comment\nquoted: "a # literal" # quoted comment\nmultiline: "first\n  # still a scalar\n  last" # multiline comment\nblock: |\n  # block scalar text\nflow: {key: value} # flow comment\n# trailing\n';
+  const editor = new YamlEditor(source);
+  const comments = editor.commentRanges().map((range) => source.slice(range.start, range.end));
+  expect(comments).toEqual([
+    "# leading",
+    "# plain comment",
+    "# apostrophe comment",
+    "# quoted comment",
+    "# multiline comment",
+    "# flow comment",
+    "# trailing",
+  ]);
+  expect(editor.text).toBe(source);
+  editor.set(["plain"], "A different value");
+  const updated = editor.text;
+  expect(editor.commentRanges().map((range) => updated.slice(range.start, range.end))).toEqual(
+    comments,
+  );
+});
