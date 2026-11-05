@@ -8,8 +8,8 @@ import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 import type { FieldControlProps } from "./model";
 import { addDays } from "./slots";
-import { shownZone, timeParts } from "./time-text";
-import { language, w } from "./words";
+import { clockText, dateText, shownZone, whenOf } from "./time-text";
+import { w } from "./words";
 import { instantOf, wallTime } from "./zoned";
 
 interface Times {
@@ -74,22 +74,14 @@ function Slots({
   const clock = (wall: string) => {
     const at = instantOf(wall, timeZone);
     const zone = shownZone(timeZone);
-    return new Intl.DateTimeFormat(language(), {
-      timeZone: zone,
-      // Past midnight where the person is: the day says so, under the app's day it belongs to.
-      ...(wallTime(at, zone).slice(0, 10) === wall.slice(0, 10)
-        ? {}
-        : { weekday: "short" as const }),
-      ...timeParts(),
-    }).format(at);
+    const shown = whenOf(wallTime(at, zone));
+    const time = clockText(shown.hour, shown.minute);
+    // Past midnight where the person is: the day says so, under the app's day it belongs to.
+    return wallTime(at, zone).slice(0, 10) === wall.slice(0, 10)
+      ? time
+      : `${w.weekdaysShort[shown.weekday]} ${time}`;
   };
-  const dayName = (date: string) =>
-    new Intl.DateTimeFormat(language(), {
-      timeZone: "UTC",
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    }).format(new Date(`${date}T12:00:00Z`));
+  const dayName = (date: string) => dateText(whenOf(date), { weekday: "short" });
   if (length === null)
     return <p className="text-sm text-muted-foreground">{w.chooseLengthFirst}</p>;
   const shown = day ?? today;

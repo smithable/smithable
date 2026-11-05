@@ -309,7 +309,7 @@ export function landingRoute(
         const dayField = sectionLook?.layout === "week" ? weekBy(model, sectionLook.by) : undefined;
         if (dayField?.type.kind === "scalar" && dayField.type.name === "datetime")
           imports.add("#/kit/zoned", "wallTime").add("#/generated/app", "app");
-        if (money) imports.add("#/generated/app", "app");
+        if (money) imports.add("#/generated/app", "app").add("#/kit/format", "moneyText");
         // A ledger without money figures its first number, by type (look-breadth §3); none, no figure.
         const count =
           !money && given.layout === "ledger"
@@ -318,6 +318,7 @@ export function landingRoute(
                   f.type.kind === "scalar" && (f.type.name === "int" || f.type.name === "decimal"),
               )
             : undefined;
+        if (count) imports.add("#/kit/format", "numberText");
         // A card opens its article when the model has an articles page, and shows its picture.
         const article = ir.pages.find(
           (p) => p.pattern.kind === "articles" && p.pattern.model === model.name,
@@ -424,10 +425,10 @@ export function landingRoute(
             }${
               money
                 ? `
-            amount: row.${money.name} == null ? undefined : new Intl.NumberFormat(undefined, { style: "currency", currency: app.currency }).format(row.${money.name} / 100),`
+            amount: row.${money.name} == null ? undefined : moneyText(row.${money.name}, app.currency),`
                 : count
                   ? `
-            amount: row.${count.name} == null ? undefined : new Intl.NumberFormat().format(row.${count.name}),`
+            amount: row.${count.name} == null ? undefined : numberText(row.${count.name}),`
                   : ""
             }${
               dayField

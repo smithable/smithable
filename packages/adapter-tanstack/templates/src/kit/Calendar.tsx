@@ -7,7 +7,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "#/components/ui/button";
-import { shownZone, wallClock } from "./time-text";
+import { FORMATS } from "./formats";
+import { dateText, shownZone, wallClock, whenOf } from "./time-text";
 import { w } from "./words";
 import { instantOf, wallTime } from "./zoned";
 
@@ -150,11 +151,23 @@ function isoWeek(text: string): string {
   return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
-/** The Monday of an ISO week. */
+/** The first day of the week a date is in: Monday, or Sunday when the app says so (app.week). */
+const firstOfWeek = (text: string) =>
+  FORMATS.week === "sunday" ? addDays(text, -day(text).getUTCDay()) : monday(text);
+
+/** The week a date is in as the address names it: the ISO week of the Monday in it. */
+const weekOf = (text: string) => isoWeek(addDays(firstOfWeek(text), 1));
+
+/** The first day of a week the address names: its Monday, or the Sunday before. */
 function weekStart(week: string): string {
   const [year, n] = week.split("-W");
-  return addDays(monday(`${year}-01-04`), (Number(n) - 1) * 7);
+  const start = addDays(monday(`${year}-01-04`), (Number(n) - 1) * 7);
+  return FORMATS.week === "sunday" ? addDays(start, -1) : start;
 }
+
+/** A calendar's heading for a day, in the app's order and the page's words. */
+const heading = (shown: Parameters<typeof dateText>[1], text: string) =>
+  dateText(whenOf(text), shown);
 
 /**
  * What a calendar shows for its address: the days (a week, or the month's full weeks), the range
@@ -180,24 +193,22 @@ export function calendarRange(
   let label: string;
   let prev: CalendarSearch;
   let next: CalendarSearch;
-  const heading = (options: Intl.DateTimeFormatOptions, text: string) =>
-    new Intl.DateTimeFormat(undefined, { ...options, timeZone: "UTC" }).format(day(text));
   if (view === "day") {
     const shown = search.day as string;
     days = [shown];
-    label = heading({ weekday: "long", day: "numeric", month: "long", year: "numeric" }, shown);
+    label = heading({ weekday: "long", month: "long", year: true }, shown);
     prev = { day: addDays(shown, -1) };
     next = { day: addDays(shown, 1) };
   } else if (view === "month") {
     const month = search.month as string;
     const first = `${month}-01`;
     const last = addDays(`${addDays(first, 31).slice(0, 7)}-01`, -1);
-    const start = monday(first);
-    const end = addDays(monday(last), 6);
+    const start = firstOfWeek(first);
+    const end = addDays(firstOfWeek(last), 6);
     days = Array.from({ length: (day(end).getTime() - day(start).getTime()) / DAY + 1 }, (_, i) =>
       addDays(start, i),
     );
-    label = heading({ month: "long", year: "numeric" }, first);
+    label = `${w.months[Number(month.slice(5, 7)) - 1]} ${month.slice(0, 4)}`;
     prev = { month: addDays(first, -1).slice(0, 7) };
     next = { month: addDays(last, 1).slice(0, 7) };
   } else if (view === "agenda" || view === "days") {
@@ -205,21 +216,24 @@ export function calendarRange(
     const start = search.from ?? today;
     const length = view === "days" ? 7 : 28;
     days = Array.from({ length }, (_, i) => addDays(start, i));
-    label = `${heading({ day: "numeric", month: "long" }, start)} – ${heading(
-      { day: "numeric", month: "long", year: "numeric" },
+    label = `${heading({ month: "long" }, start)} – ${heading(
+      { month: "long", year: true },
       addDays(start, length - 1),
     )}`;
     prev = { from: addDays(start, -length) };
     next = { from: addDays(start, length) };
   } else {
-    const start = search.week ? weekStart(search.week) : monday(today);
+    const start = search.week ? weekStart(search.week) : firstOfWeek(today);
     days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-    label = `${heading({ day: "numeric", month: "long" }, start)} – ${heading(
-      { day: "numeric", month: "long", year: "numeric" },
+    const range = `${heading({ month: "long" }, start)} – ${heading(
+      { month: "long", year: true },
       addDays(start, 6),
     )}`;
-    prev = { week: isoWeek(addDays(start, -7)) };
-    next = { week: isoWeek(addDays(start, 7)) };
+    // ISO week numbers count Monday-first weeks: a Sunday-first calendar shows none (formats.md §3).
+    label =
+      FORMATS.week === "monday" ? `${w.week} ${Number(isoWeek(start).slice(6))} · ${range}` : range;
+    prev = { week: weekOf(addDays(start, -7)) };
+    next = { week: weekOf(addDays(start, 7)) };
   }
   const first = days[0] as string;
   const last = days.at(-1) as string;
@@ -235,14 +249,14 @@ export function calendarRange(
         : view === "month"
           ? { month: today.slice(0, 7) }
           : view === "week"
-            ? { week: isoWeek(today) }
+            ? { week: weekOf(today) }
             : {},
     /** The other view, around the same days: a day goes back to its week. */
     other:
       view === "day"
-        ? { week: isoWeek(first) }
+        ? { week: weekOf(first) }
         : view === "month"
-          ? { week: isoWeek(first < today && today <= last ? today : (days[7] ?? first)) }
+          ? { week: weekOf(first < today && today <= last ? today : (days[7] ?? first)) }
           : { month: (days[3] as string).slice(0, 7) },
     /** The page's own view, back from a month or a day. */
     own,
@@ -342,19 +356,9 @@ export function Calendar({
   // Close agree. Opened from an address (a return from sign-in), closing takes `open` away.
   const pushed = useRef(false);
   const today = wallTime(new Date(), timeZone).slice(0, 10);
-  const longDay = (text: string) =>
-    new Intl.DateTimeFormat(undefined, {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      timeZone: "UTC",
-    }).format(day(text));
+  const longDay = (text: string) => heading({ weekday: "long", month: "long" }, text);
   const shortDay = (text: string) =>
-    new Intl.DateTimeFormat(undefined, {
-      weekday: "short",
-      day: "numeric",
-      timeZone: "UTC",
-    }).format(day(text));
+    `${w.weekdaysShort[whenOf(text).weekday]} ${Number(text.slice(8, 10))}`;
 
   // Each record on the day it starts, in the app's time zone.
   const placed: Placed[] = items.map((item) => {

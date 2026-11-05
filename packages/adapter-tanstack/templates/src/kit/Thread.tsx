@@ -6,9 +6,8 @@ import { useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
-import { displayValue, formatValue } from "./format";
+import { displayValue, formatValue, instantText } from "./format";
 import type { AppUi, RecordUi, Row } from "./model";
-import { hourCycle, shownZone } from "./time-text";
 import { w } from "./words";
 
 export function Thread<R extends Row>({
@@ -51,15 +50,7 @@ export function Thread<R extends Row>({
     const f = field(name);
     return f ? formatValue(f, displayValue(f, row), app) : "";
   };
-  const when = (row: R) =>
-    row.createdAt
-      ? new Intl.DateTimeFormat(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-          hourCycle: hourCycle(),
-          timeZone: shownZone(app.timeZone),
-        }).format(new Date(String(row.createdAt)))
-      : "";
+  const when = (row: R) => (row.createdAt ? instantText(String(row.createdAt), app.timeZone) : "");
   return (
     <div data-kit="thread" className="space-y-4">
       {shown.length === 0 ? (
