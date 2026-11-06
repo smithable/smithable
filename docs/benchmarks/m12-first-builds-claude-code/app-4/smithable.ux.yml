@@ -1,21 +1,15 @@
 smithableUx: 0.1
 pages:
-  catalog:
+  tools:
     table:
       view: cards
-    record:
-      subtitle: category
-      detail: [condition, area]
-      pictures: aside
-  borrowed:
+  loans:
     table:
-      columns: [tool, status, neededFrom, returnBy]
-  lending:
-    table:
-      columns: [tool, borrower, status, neededFrom, returnBy]
+      columns: [tool, borrower, from, until, status]
+      sort: -from
 tones:
   Loan.status:
-    lent: warning
+    requested: warning
     returned: success
     declined: danger
 theme:

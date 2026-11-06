@@ -1,30 +1,19 @@
 smithableContent: 0.1
 pages:
   home:
-    features:
-      items: [{ title: See what's nearby, text: "Browse the drills, ladders and hedge trimmers already sitting in sheds on your street." }, { title: Ask for the dates you need, text: "Pick a tool, say when you need it and when it will be back. The owner decides." }, { title: Always know where it is, text: "Every tool shows whether it's free, and lenders keep track of what's out and what has come home." }]
-    faq:
-      items: [{ question: Who can borrow?, answer: "Neighbors who have been invited. Anyone can look through the tools, but borrowing and lending need a sign-in." }, { question: Does borrowing cost anything?, answer: No. Tools are lent between neighbors for free. }, { question: How do I get the tool?, answer: "Once the owner agrees, the two of you arrange the handover yourselves. A message from the tool's page reaches the owner." }]
     hero:
-      title: Borrow it from next door
-      subtitle: Why buy a drill for one shelf? Share the tools your neighbors already own, and lend out yours.
+      title: Borrow the drill, skip the store
+      subtitle: Your neighbors already own the ladder, the hedge trimmer and the tile cutter. Find what you need nearby and give your own tools a second life.
       button: Browse tools
-      secondButton: Lend a tool
+      secondButton: Ask to borrow
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-  catalog:
-    title: Tools
-  myTools:
-    title: My tools
-  borrowed:
-    title: Borrowed
-  lending:
-    title: Lending
-actions:
-  markReturned:
-    label: Mark returned
+    features:
+      items: [{ title: See what's on the street, text: "Look through every tool the neighborhood has shared, with photos, condition and where to pick it up." }, { title: Ask for the days you need, text: "Pick a tool, choose the dates and add a note. The owner says yes or no." }, { title: Share what sits in your shed, text: List a tool in a minute and decide who borrows it and when. }, { title: Keep track of what's out, text: Every loan shows who has the tool and when it's due back. }]
+    faq:
+      items: [{ question: Does borrowing cost anything?, answer: No. Tools are lent between neighbors for free. }, { question: Who can join?, answer: Neighbors invited by the library's organizers. Anyone can browse the tools first. }, { question: What if something breaks?, answer: Talk to the owner and note it on the loan. Mark a tool's condition so the next borrower knows. }]
 logo:
   src: images/logo.webp
   alt: A toolbox

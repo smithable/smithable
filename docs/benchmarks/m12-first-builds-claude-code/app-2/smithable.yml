@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Sales CRM
-  description: A CRM where a small sales team keeps its companies, contacts, deals and follow-ups in one place.
+  name: Pipeline CRM
+  description: A simple CRM where a small sales team keeps its companies, contacts, deals and follow-ups in one place.
   currency: EUR
   timezone: Europe/Helsinki
 models:
@@ -21,12 +21,11 @@ models:
   Contact:
     fields:
       name: string!
-      company: Company!
+      company: Company
       jobTitle: string
-      email: email unique
+      email: email
       phone: phone
       notes: text
-      deals: Deal[]
     trash: true
   Deal:
     fields:
@@ -34,19 +33,15 @@ models:
       company: Company!
       contact: Contact
       stage: lead | qualified | proposal | negotiation | won | lost
-      value: money!
+      value:
+        type: money
+        min: 0
       expectedClose: date
-      closedOn: date
-      lostReason: string
       notes: text
-      salesperson: User
-      followUps: FollowUp[]
-    ownedBy: salesperson
     trash: true
   FollowUp:
     fields:
       company: Company!
-      contact: Contact
       deal: Deal
       dueOn: date! = TODAY()
       done: bool
@@ -66,7 +61,7 @@ pages:
       dealsByStage:
         count: Deal
         by: stage
-      openFollowUps:
+      followUpsDue:
         list: FollowUp
         where:
           done: false
@@ -74,29 +69,27 @@ pages:
   companies:
     crud: Company
     search: [name, industry]
-    filters: [accountManager]
     sortable: [name, createdAt]
+    actions: [mergeCompanies]
   contacts:
     crud: Contact
     search: [name, email, jobTitle]
     filters: [company]
-    sortable: [name, createdAt]
   deals:
     crud: Deal
     search: [title]
-    filters: [stage, company, salesperson]
+    filters: [stage, company, expectedClose]
     sortable: [expectedClose, value, title]
     actions: [markWon, markLost]
   followUps:
     crud: FollowUp
-    search: [note]
-    filters: [done, company]
+    filters: [done, company, dueOn]
     defaultFilter:
       done: false
-    sortable: [dueOn]
     actions: [markDone]
   team:
     users: manage
+navigation: [start, companies, contacts, deals, followUps, team]
 actions:
   markWon:
     on: Deal
@@ -104,18 +97,21 @@ actions:
       stage: [lead, qualified, proposal, negotiation]
     set:
       stage: won
-      closedOn: TODAY()
+    intent: Close a deal as won.
   markLost:
     on: Deal
     when:
       stage: [lead, qualified, proposal, negotiation]
     set:
       stage: lost
-      closedOn: TODAY()
-      lostReason:
+    intent: Close a deal as lost.
   markDone:
     on: FollowUp
     when:
       done: false
     set:
       done: true
+    intent: Tick off a follow-up once it is handled.
+  mergeCompanies:
+    merge: Company
+    intent: Combine two entries for the same company; their contacts, deals and follow-ups move to the one kept.

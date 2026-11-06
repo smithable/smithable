@@ -3,7 +3,8 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Who on the team can see and edit which records?",
-    "What should a deal hold?"
+    "Who can see the companies, contacts and deals?",
+    "What should a deal hold?",
+    "Who are follow-ups assigned to?"
   ]
 }

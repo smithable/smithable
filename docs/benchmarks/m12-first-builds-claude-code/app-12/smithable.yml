@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is the web shop working? The state of its services, its outages and their updates, live.
+  description: Is the shop working? The state of our web shop's services, its outages and their updates.
   timezone: Europe/Helsinki
 models:
   Component:
@@ -26,6 +26,12 @@ models:
       status: investigating | identified | monitoring | resolved
       message: text!
 pages:
+  incidents:
+    crud: Incident
+    filters: [status, component]
+    actions: [identified, monitoring, resolve]
+  components:
+    crud: Component
   home:
     route: /
     landing:
@@ -41,31 +47,11 @@ pages:
         where:
           status: resolved
       footer:
-  incidents:
-    crud: Incident
-    actions: [identified, monitoring, resolve]
-    filters: [status, component]
-  updates:
-    crud: IncidentUpdate
-  components:
-    crud: Component
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
-  team:
-    users: manage
   privacy:
     route: /privacy
     legal: privacy
+  team:
+    users: manage
 actions:
   identified:
     on: Incident
@@ -77,8 +63,8 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: The cause is found and a fix is being worked on.
-    intent: The cause is found; the outage moves to identified, with an update saying so.
+        message: We have found the cause and are working on a fix.
+    intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
     when:
@@ -89,8 +75,8 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is out. We are watching before we close this.
-    intent: A fix is out; the outage is watched before it is closed, with an update saying so.
+        message: A fix is in place. We are watching before we close this.
+    intent: A fix is out; the incident is watched before it is closed.
   resolve:
     on: Incident
     when:
@@ -102,6 +88,5 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This outage is resolved.
-    intent: The outage is over, with an update saying so. The service's state stays what the team sets.
-navigation: [overview, incidents, updates, components, team]
+        message: This incident is resolved.
+    intent: The outage is over, with an update saying so.

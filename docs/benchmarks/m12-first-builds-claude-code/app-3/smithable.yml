@@ -1,9 +1,9 @@
 smithable: 0.1
 app:
-  name: Duly
-  description: "Invoicing for freelancers: keep your clients, send invoices and track the payments that come in."
+  name: Billfold
+  description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
   currency: EUR
-  timezone: Europe/Helsinki
+  timezone: Europe/Stockholm
 models:
   Client:
     fields:
@@ -23,54 +23,41 @@ models:
       invoice: Invoice!
   Payment:
     fields:
-      paidOn: date! = TODAY()
       amount: money!
+      paidOn: date! = TODAY()
       method: bankTransfer | card | cash | other
-      note: text
+      note: string
       invoice: Invoice!
-    namedBy: [invoice, paidOn]
   Invoice:
     fields:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      dueOn: date!
       status: draft | sent | paid | overdue
       lines: InvoiceLine[]
       payments: Payment[]
       total:
         type: money
         formula: SUM(lines.amount)
-      amountPaid:
+      received:
         type: money
         formula: SUM(payments.amount)
-      balanceDue:
+      balance:
         type: money
-        formula: total - amountPaid
+        formula: SUM(lines.amount) - SUM(payments.amount)
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-        button: overview
-      features:
-      faq:
-      callToAction:
-        button: overview
-      footer:
-  privacy:
-    route: /privacy
-    legal: privacy
   overview:
     dashboard:
       received:
         sum: Payment.amount
+        by: paidOn
       outstanding:
-        sum: Invoice.balanceDue
+        sum: Invoice.total
         where:
           status: sent
       overdue:
-        sum: Invoice.balanceDue
+        sum: Invoice.total
         where:
           status: overdue
       invoiced:
@@ -88,15 +75,26 @@ pages:
     sortable: [name, createdAt]
   payments:
     crud: Payment
-    sortable: [paidOn, amount]
-    filters: [invoice, method]
+    filters: [invoice, method, paidOn]
+  home:
+    route: /
+    landing:
+      hero:
+        button: overview
+      features:
+      faq:
+      callToAction:
+        button: overview
+      footer:
+  privacy:
+    route: /privacy
+    legal: privacy
   invoices:
     crud: Invoice
     search: [number]
     filters: [client, status]
     sortable: [issuedOn, dueOn, number]
     actions: [markSent, markPaid, markOverdue]
-navigation: [overview, invoices, clients, payments]
 actions:
   markSent:
     on: Invoice
@@ -113,9 +111,10 @@ actions:
       status: paid
     add:
       Payment:
-        paidOn: TODAY()
         amount:
-    intent: The client paid the invoice; the final payment is recorded with it.
+        paidOn: TODAY()
+        method:
+    intent: The client paid the invoice; the payment is recorded with it.
   markOverdue:
     on: Invoice
     when:

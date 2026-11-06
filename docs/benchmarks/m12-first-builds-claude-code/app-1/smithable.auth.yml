@@ -5,15 +5,15 @@ defaultAccess: private
 roles:
   admin: all
   staff:
-    description: Reception. Runs the day, the sessions and who comes to them.
-    pages: [sessions, bookings]
+    description: Reception and teachers. Run the sessions and see who comes to them.
+    pages: [schedule, sessions, bookings, class-types, instructors]
     read: [Session, Booking]
     create: [Session, Booking]
     write: [Session, Booking]
     delete: [Booking]
   member:
     description: A student who books classes.
-    pages: [my-bookings]
+    pages: [schedule, my-bookings]
     create: [Booking]
 assistant:
   for: signed-in

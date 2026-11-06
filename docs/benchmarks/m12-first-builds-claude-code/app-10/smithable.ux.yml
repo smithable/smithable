@@ -3,15 +3,8 @@ pages:
   recipes:
     table:
       view: cards
-    record:
-      pictures: aside
-      lists:
-        ingredients: inline
-    icon: book
-  shopping-lists:
-    record:
-      lists:
-        items: inline
-    icon: cart
+tones:
+  ShoppingList.status:
+    done: success
 theme:
   preset: cafe

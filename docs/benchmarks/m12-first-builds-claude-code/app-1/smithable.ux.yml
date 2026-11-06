@@ -3,8 +3,8 @@ pages:
   schedule:
     calendar:
       colorBy: classType
-      capacity:
-        left: placesLeft
-        of: capacity
+  sessions:
+    table:
+      sort: startsAt
 theme:
   preset: stillwater

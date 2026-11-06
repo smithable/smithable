@@ -1,28 +1,22 @@
 smithableContent: 0.1
 pages:
-  my-registrations:
-    title: My registrations
-  attendees:
-    title: Attendees
   home:
     hero:
-      title: Plan your conference, talk by talk
-      subtitle: See the full programme, meet the speakers and save your place in the talks you want to hear.
-      button: See the schedule
-      secondButton: Meet the speakers
+      title: Two days of talks worth travelling for
+      subtitle: Browse the programme, meet the speakers and save your seat in a few clicks.
+      button: See the programme
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
-    speakers:
-      title: Speakers
     callToAction:
-      title: Places are limited
-      button: Register for a talk
+      title: Ready to join us?
+      text: Sign in with your email address and register in under a minute.
+      button: Register now
     features:
-      items: [{ title: The whole programme, text: "Every talk in one schedule, with its time, its room and who is on stage." }, { title: Places you can count on, text: "Each talk shows how many places remain, and a registration holds yours." }, { title: Your own day, text: "The talks you signed up for are gathered in one list, ready when you arrive." }]
+      items: [{ title: The full programme, text: "Every talk with its time, room and track, laid out day by day." }, { title: Speakers you can get to know, text: Read each speaker's background and see which sessions they lead. }, { title: Quick registration, text: "Pick a ticket, tell us about any dietary needs, and you're in." }, { title: "Your registration, always at hand", text: "Check or update your details, or cancel if your plans change." }]
     faq:
-      items: [{ question: Do I need an account to see the programme?, answer: No. The schedule and the speakers are open to everyone; you only sign in when you register for a talk. }, { question: How do I register for a talk?, answer: "Open the talk in the schedule, sign in with your email address and press the button to take a place." }, { question: Can I change my mind?, answer: Yes. You can cancel a registration from your own list at any time until the talk starts. }, { question: What if a talk is full?, answer: "Once every place is taken, no more registrations are accepted unless someone cancels and frees a place." }]
+      items: [{ question: How do I register?, answer: "Sign in with your email address, open My registration and fill in the short form." }, { question: Can I change my details later?, answer: Yes. Your registration stays editable until the conference starts. }, { question: What if I can no longer attend?, answer: Cancel your registration from its page so your place can go to someone else. }, { question: Is there a student ticket?, answer: "Yes, choose the student ticket when you register." }]
 logo:
   src: images/logo.webp
   alt: A ticket

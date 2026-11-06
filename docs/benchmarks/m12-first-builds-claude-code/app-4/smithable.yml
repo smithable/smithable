@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
-  name: Neighbor Toolshed
-  description: A tool library where neighbors lend each other the tools they own.
-  timezone: Europe/Helsinki
+  name: Toolshed Commons
+  description: Neighbors list the tools they own and lend them to each other.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Tool:
     fields:
@@ -10,9 +11,9 @@ models:
       photos: pictures
       description: text
       category: powerTools | handTools | garden | ladders | cleaning | other
-      condition: likeNew | good | worn
-      area: string
-      loans: Loan[]
+      condition: good | worn | needsCare
+      place: string
+      available: bool = true
   Loan:
     fields:
       tool: Tool!
@@ -20,50 +21,30 @@ models:
         type: User
         by: app
         default: ME()
-      status:
-        type: requested | lent | returned | declined
-        by: app
-      neededFrom: date!
-      returnBy: date!
+      from: date!
+      until: date!
       note: text
-      returnedOn:
-        type: date
-        by: app
-    namedBy: [tool, neededFrom]
-    capacity:
-      per: tool
-      max: 1
-      where:
-        status: [requested, lent]
+      status: requested | lent | returned | declined
 pages:
-  catalog:
+  tools:
     route: /
     crud: Tool
-    search: [name, description, area]
-    filters: [category, condition]
-    sortable: [name, createdAt]
+    search: [name, description, place]
+    filters: [category, condition, available]
     favorites: true
-    contact: owner
   myTools:
     crud: Tool
     mine: true
-  borrowed:
+  loans:
     crud: Loan
-    filters: [borrower, status]
-    defaultFilter:
-      borrower: me
-  lending:
-    crud: Loan
-    mine: true
-    filters: [status]
-    defaultFilter:
-      status: [requested, lent]
+    filters: [status, tool, from]
+    actions: [lend, decline, markReturned]
   home:
     route: /welcome
     landing:
       hero:
-        button: catalog
-        secondButton: myTools
+        button: tools
+        secondButton: loans
       features:
       faq:
       footer:
@@ -79,19 +60,19 @@ actions:
       status: requested
     set:
       status: lent
-    intent: The tool's owner agrees and hands the tool over.
+    intent: The tool's owner agrees to the request and hands the tool over.
   decline:
     on: Loan
     when:
       status: requested
     set:
       status: declined
-    intent: The tool's owner cannot lend it this time, which frees the tool for others.
+    intent: The tool's owner turns the request down.
   markReturned:
     on: Loan
     when:
       status: lent
     set:
       status: returned
-      returnedOn: TODAY()
-    intent: The tool is back with its owner and can be borrowed again.
+    intent: The tool's owner confirms the tool came back.
+navigation: [tools, myTools, loans, team]

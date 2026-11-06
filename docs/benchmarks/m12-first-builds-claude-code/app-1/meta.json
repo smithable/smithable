@@ -4,6 +4,7 @@
   "wordStarter": "booking",
   "questions": [
     "Do people need an account to book a class?",
-    "What can visitors see without signing in?"
+    "Who manages the class schedule?",
+    "Should classes have limited spots, with a waitlist when full?"
   ]
 }
