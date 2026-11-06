@@ -187,6 +187,7 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
   if (filtering) {
     imports.add("#/kit/Filters", "Filters").add("#/kit/params", "text");
     if (filtering.imports.lists) imports.add("drizzle-orm", "inArray");
+    if (filtering.imports.choices) imports.add(n.module, n.ui);
     if (filtering.imports.toggles || filtering.imports.people) imports.add("drizzle-orm", "eq");
     if (filtering.imports.people)
       imports.add("drizzle-orm", "or", "isNull", "asc").add("#/db", "db");

@@ -69,3 +69,23 @@ test("a calendar of records that need a person gets no samples, and no helper to
   expect(seed).not.toContain("aroundToday");
   expect(seed).not.toContain("#/kit/zoned");
 });
+
+test("a calendar filtered by the model's own choice imports the model's labels for its chips", () => {
+  const route =
+    generate(`smithable: 0.1
+app: { name: Conference }
+models:
+  Talk:
+    fields:
+      title: string!
+      track: design | code
+      startsAt: datetime!
+pages:
+  talks: { crud: Talk }
+  schedule:
+    calendar: { model: Talk, starts: startsAt }
+    filters: [track]
+`)("src/routes/schedule/index.tsx") ?? "";
+  expect(route).toContain('talkUi.fields.find((f) => f.name === "track")?.choices');
+  expect(route).toMatch(/import \{[^}]*\btalkUi\b[^}]*\} from "#\/generated\/talk";/);
+});
