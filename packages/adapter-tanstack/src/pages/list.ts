@@ -102,6 +102,8 @@ export function filterCode(
   // A field that refers to a person, as a filter.
   let people = false;
   let lists = false;
+  // A chips filter on the model's own choice field: its labels come from the model's module.
+  let choices = false;
   let subSelects = false;
   let liveThrough = false;
   let toggles = false;
@@ -238,6 +240,7 @@ export function filterCode(
     const label = t.field(model, field).label ?? humanize(field.name);
     if (field.type.kind === "choice") {
       lists = true;
+      choices = true;
       const values = field.type.values;
       conditions.push(
         `${value} ? inArray(${n.table}.${dataKey(field)}, ${value}.split(",").filter((v) => ${literal(values)}.includes(v)) as (${values.map((v) => JSON.stringify(v)).join(" | ")})[]) : undefined`,
@@ -413,6 +416,7 @@ const ${v} = createServerFn()
       ranges,
       dated,
       lists,
+      choices,
       subSelects,
       liveThrough,
       titles,
