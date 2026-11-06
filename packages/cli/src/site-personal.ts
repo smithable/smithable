@@ -17,6 +17,7 @@ export interface SitePersonalMap {
   version: 1;
   key: string;
   classification?: { business: boolean; person: boolean };
+  nextPhoneOrdinal?: number;
   entries: {
     id: string;
     kind: SitePersonalKind;
@@ -52,16 +53,16 @@ export const SITE_PERSONAL_SAMPLES = {
 const MAX_TEXT = 8 * 1024 * 1024;
 const MAX_ENTRIES = 2000;
 const ORDINARY_NAMES = new Set(
-  "a an and as at be bill black blue brown business by call example code company contact data day field for from green hill home in is it mark may model name of on or our page person private product public record red rose sample service shop source staff street studio team text the their they this to type us user was we white will with workshop you your".split(
+  "a an and art as at be bill black blue brown business by call example code company contact data day field for from grace green hill home in is it june lane mark may model name of on or our page person private product public record red rose sample service shop source staff street studio team text the their they this to type us user was we white will with workshop you your".split(
     " ",
   ),
 );
-function nameToken(value: string): boolean {
+function nameToken(value: string, allowOrdinary = false): boolean {
   const text = normalizeSitePersonalText(value);
   return (
     /^[\p{L}][\p{L}\p{M}’'-]+$/u.test(text) &&
     (/^\p{Lu}/u.test(text) || !/[\p{Lu}\p{Ll}]/u.test(text)) &&
-    !ORDINARY_NAMES.has(text.toLowerCase())
+    (allowOrdinary || !ORDINARY_NAMES.has(text.toLowerCase()))
   );
 }
 
@@ -80,13 +81,12 @@ const decodePercent = (part: string) => {
 };
 
 /** A bare person-shaped label is not, by itself, evidence of a trading name. */
+const BUSINESS_WORD =
+  /(?<![\p{L}\p{N}])(?:photography|photographer|workshop|studio|salon|shop|store|cafe|café|bakery|cuts|repair|repairs|yoga|consulting|services|company|restaurant|hotel|harbour|harbor|ltd|llc|inc|ab|oy|frisör|salong|bageri|massage|verkstad|kiosk|butik|gård)(?![\p{L}\p{N}])/iu;
 export function isSitePersonNameShape(value: string): boolean {
   const text = normalizeSitePersonalText(value);
   return (
-    /^(?:\p{Lu}[\p{L}’'-]+\s+){1,2}\p{Lu}[\p{L}’'-]+$/u.test(text) &&
-    !/(?<![\p{L}\p{N}])(?:photography|photographer|workshop|studio|salon|shop|store|cafe|café|bakery|cuts|repair|repairs|yoga|consulting|services|company|restaurant|hotel|harbour|harbor|ltd|llc|inc|ab|oy)(?![\p{L}\p{N}])/iu.test(
-      text,
-    )
+    /^(?:\p{Lu}[\p{L}’'-]+\s+){1,3}\p{Lu}[\p{L}’'-]+$/u.test(text) && !BUSINESS_WORD.test(text)
   );
 }
 const keyed = (key: string, kind: string, value: string) =>
@@ -193,7 +193,7 @@ function allocateSamples(entries: SitePersonalMap["entries"]): SitePersonalMap["
     if (entry.kind === "name")
       return [
         ...(text.split(/\s+/u).length > 1 || nameToken(text) ? [text] : []),
-        ...text.split(/[\s.-]+/u).filter(nameToken),
+        ...text.split(/[\s.-]+/u).filter((part) => nameToken(part, true)),
       ];
     if (entry.kind === "identity")
       return text.split(/\s+/u).length > 1 || nameToken(text) ? [text] : [];
@@ -243,7 +243,14 @@ function allocateSamples(entries: SitePersonalMap["entries"]): SitePersonalMap["
   });
 }
 export function parseSitePersonalMap(value: unknown): SitePersonalMap {
-  const item = record(value, ["version", "key", "entries", "handles", "classification"]);
+  const item = record(value, [
+    "version",
+    "key",
+    "entries",
+    "handles",
+    "classification",
+    "nextPhoneOrdinal",
+  ]);
   if (item.version !== 1 || typeof item.key !== "string" || !/^[a-f\d]{64}$/.test(item.key))
     throw new Error("Invalid private source map.");
   const key = item.key,
@@ -261,14 +268,16 @@ export function parseSitePersonalMap(value: unknown): SitePersonalMap {
     if (!canonical(original)) throw new Error("An identifier has no searchable characters.");
     if (
       kind === "phone" &&
-      (!/^\+?[\d\s().-]+$/.test(original) || original.replace(/\D/g, "").length < 3)
+      (!/^\+?[\d\s().-]+$/.test(original) || original.replace(/\D/g, "").length < 1)
     )
       throw new Error("Invalid source phone identifier.");
     if (
       entry.id !== id ||
       ids.has(id) ||
       seen.has(canonical(original)) ||
-      ordinal !== (ordinals.get(kind) ?? 0)
+      (kind === "phone"
+        ? ordinal < (ordinals.get(kind) ?? 0)
+        : ordinal !== (ordinals.get(kind) ?? 0))
     )
       throw new Error("Invalid source replacement mapping.");
     if (kind === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(original))
@@ -297,12 +306,31 @@ export function parseSitePersonalMap(value: unknown): SitePersonalMap {
   for (const entry of entries)
     if (!sampleCandidate(entry, entry.replacement))
       throw new Error("Invalid source replacement mapping.");
-  const allocated = allocateSamples(entries);
+  const historicalNext =
+    Math.max(
+      -1,
+      ...entries.filter((entry) => entry.kind === "phone").map((entry) => entry.ordinal),
+    ) + 1;
+  const nextPhoneOrdinal =
+    item.nextPhoneOrdinal === undefined
+      ? historicalNext
+      : integer(item.nextPhoneOrdinal, MAX_ENTRIES + 1);
+  if (nextPhoneOrdinal < historicalNext)
+    throw new Error("Invalid source phone allocation watermark.");
+  const retiredPhones = entries.some(
+    (entry) => entry.kind === "phone" && entry.original.replace(/\D/g, "").length < 7,
+  );
+  const allocated = allocateSamples(
+    entries.filter(
+      (entry) => entry.kind !== "phone" || entry.original.replace(/\D/g, "").length >= 7,
+    ),
+  );
   return {
     version: 1,
     key,
     entries: allocated,
     handles,
+    ...(retiredPhones || item.nextPhoneOrdinal !== undefined ? { nextPhoneOrdinal } : {}),
     classification: { business: classification.business, person: classification.person },
   };
 }
@@ -442,11 +470,11 @@ function searchable(value: string, queryPlus = false): SearchText {
   throw new Error("Source text has excessive encoding layers.");
 }
 /** Search normalized text, splicing only matched source ranges. Single names are visible
- * text only: keys and code retain their ordinary identifiers. */
+ * text only; ordinary-word names also require a person context. Keys and code keep identifiers. */
 export function replaceSitePersonalText(
   value: string,
   map: SitePersonalMap,
-  options: { preserveSamples?: boolean; context?: "text" | "value" | "key" | "code" } = {},
+  options: { preserveSamples?: boolean; context?: "text" | "value" | "name" | "key" | "code" } = {},
 ): string {
   wellFormed(value);
   for (const match of value.matchAll(/data:/giu)) {
@@ -472,7 +500,7 @@ export function replaceSitePersonalText(
     derived: boolean;
     normalized: string;
     key: string;
-    sensitive: boolean;
+    single: boolean;
     pattern: string;
   };
   const selected = new Map<string, Row>();
@@ -489,7 +517,7 @@ export function replaceSitePersonalText(
     const normalized = normalizeSitePersonalText(entry.original);
     let key: string,
       pattern: string,
-      sensitive = false;
+      single = false;
     const first = /^[\p{L}\p{N}]/u.test(normalized) ? "(?<![\\p{L}\\p{N}])" : "";
     const last = /[\p{L}\p{N}]$/u.test(normalized) ? "(?![\\p{L}\\p{N}])" : "";
     if (entry.kind === "url") {
@@ -497,21 +525,29 @@ export function replaceSitePersonalText(
       pattern = `${escapePattern(normalized)}(?=$|[\\s<>"'\\x60)\\]}]|[.,;!?](?=$|[\\s<>"'\\x60)\\]}]))`;
     } else if (
       entry.kind === "phone" ||
-      (/^\+?[\d\s().-]+$/.test(normalized) && normalized.replace(/\D/g, "").length >= 3)
+      (/^\+?[\d\s().-]+$/.test(normalized) && normalized.replace(/\D/g, "").length >= 7)
     ) {
       const digits = normalized.replace(/\D/g, "");
-      if (digits.length < 3) throw new Error("Invalid source phone identifier.");
+      if (digits.length < 7) return;
       key = `phone:${digits}`;
       pattern = `(?<![\\p{L}\\p{N}])\\+?\\(?${digits.split("").map(escapePattern).join("[\\s().+-]*")}${normalized.endsWith(")") ? "\\)?" : ""}(?![\\p{L}\\p{N}])`;
+    } else if (entry.kind === "identity" && !/\s/u.test(normalized)) {
+      if (/^[\p{L}\p{M}]+$/u.test(normalized) && !visible) return;
+      if (ORDINARY_NAMES.has(normalized.toLowerCase())) {
+        if (!visible) return;
+        single = true;
+        key = `single:${canonical(normalized)}`;
+      } else key = `literal:${canonical(normalized)}`;
+      pattern = `${first}${escapePattern(normalized)}${last}`;
     } else if (entry.kind === "name" || entry.kind === "identity") {
       const tokens = normalized.split(/[\s._-]+/u).filter(Boolean);
       if (!tokens.length) return;
       if (!/\s/u.test(normalized)) {
-        if (!visible || !nameToken(normalized)) return;
-        sensitive = true;
-        key = `single:${normalized}`;
+        if (!visible || !nameToken(normalized, true)) return;
+        single = true;
+        key = `single:${canonical(normalized)}`;
       } else key = `name:${canonical(tokens.join(""))}`;
-      pattern = sensitive
+      pattern = single
         ? `${first}${escapePattern(normalized)}${last}`
         : `${first}${tokens.map(escapePattern).join("[\\s._-]*")}${last}`;
     } else {
@@ -519,14 +555,14 @@ export function replaceSitePersonalText(
       pattern = `${first}${escapePattern(normalized).replace(/ /g, "\\s+")}${last}`;
     }
     if (!selected.has(key))
-      selected.set(key, { ...entry, derived, normalized, key, sensitive, pattern });
+      selected.set(key, { ...entry, derived, normalized, key, single, pattern });
   };
   const explicit = [...map.entries].sort((a, b) => a.ordinal - b.ordinal);
   for (const entry of explicit) insert(entry);
   for (const entry of explicit.filter(
     (entry) => entry.kind === "name" && entry.original.split(/\s+/u).length > 1,
   ))
-    for (const original of entry.original.split(/[\s.-]+/u).filter(nameToken))
+    for (const original of entry.original.split(/[\s.-]+/u).filter((part) => nameToken(part, true)))
       insert({ ...entry, original }, true);
   for (const [ordinal, handle] of map.handles.entries())
     insert({ original: handle.original, replacement: handle.handle, kind: "url", ordinal });
@@ -567,12 +603,12 @@ export function replaceSitePersonalText(
     ordinal: number;
   };
   const changes: Change[] = [];
-  const collect = (patterns: string[], input: SearchText, sensitive: boolean, url = false) => {
+  const collect = (patterns: string[], input: SearchText, single: boolean, url = false) => {
     if (!patterns.length) return;
     const combined = patterns.join("|");
     if (combined.length > 128000)
       throw new Error("Source replacement patterns exceed their bound.");
-    const regex = new RegExp(`(?=(${combined}))`, sensitive ? "gu" : "giu");
+    const regex = new RegExp(`(?=(${combined}))`, "giu");
     let attempts = 0;
     let protection = 0;
     for (const match of input.text.matchAll(regex)) {
@@ -591,12 +627,25 @@ export function replaceSitePersonalText(
           replacement = "https://source.invalid/omitted";
         }
       } else {
-        row = sensitive
-          ? selected.get(`single:${norm}`)
+        row = single
+          ? selected.get(`single:${canonical(norm)}`)
           : (selected.get(`literal:${canonical(norm)}`) ??
             selected.get(`name:${canonical(norm).replace(/[\s._-]/g, "")}`) ??
             selected.get(`phone:${norm.replace(/\D/g, "")}`));
         replacement = row?.replacement;
+      }
+      if (
+        row?.single &&
+        ORDINARY_NAMES.has(row.normalized.toLowerCase()) &&
+        options.context !== "name"
+      ) {
+        const before = input.text.slice(Math.max(0, at - 40), at);
+        const salutation =
+          /(?:^|[^\p{L}\p{N}])(?:thanks|thank you|regards|dear|hello|hi|owner|founder|author|contact|tack|hälsningar)[\s,:!—-]*$/iu.test(
+            before,
+          );
+        // Complete detected names already have their own longest-match row.
+        if (!salutation) continue;
       }
       if (!replacement) throw new Error("A source replacement could not be resolved.");
       const start = input.starts[at] ?? at,
@@ -630,16 +679,16 @@ export function replaceSitePersonalText(
   const urlPatterns = urlRows.map((row) => row.pattern);
   if (hosts.size)
     urlPatterns.push(
-      `https?:\\/\\/(?:www\\.)?(?:${[...hosts].map(escapePattern).join("|")})(?::[0-9]{1,5})?(?![\\p{L}\\p{N}.-])(?:[/?#][^\\s<>"'\\x60)\\]\\}]*)?`,
+      `https?:\\/\\/(?:www\\.)?(?:${[...hosts].map(escapePattern).join("|")})(?::[0-9]{1,5})?(?![\\p{L}\\p{N}-]|\\.[\\p{L}\\p{N}])(?:[/?#][^\\s<>"'\\x60)\\]\\}]*)?`,
     );
   collect(urlPatterns, source, false, true);
   collect(
-    rows.filter((row) => row.kind !== "url" && !row.sensitive).map((row) => row.pattern),
+    rows.filter((row) => row.kind !== "url" && !row.single).map((row) => row.pattern),
     query,
     false,
   );
   collect(
-    rows.filter((row) => row.sensitive).map((row) => row.pattern),
+    rows.filter((row) => row.single).map((row) => row.pattern),
     query,
     true,
   );
@@ -679,7 +728,7 @@ export function projectSitePersonal(
 ): { model: SiteModelProjection; personalMap: SitePersonalMap } {
   const mode = options.contentMode ?? "sample";
   if (!["sample", "full"].includes(mode)) throw new Error("Invalid website content mode.");
-  const map = options.personalMap
+  const map: SitePersonalMap = options.personalMap
     ? parseSitePersonalMap(options.personalMap)
     : {
         version: 1 as const,
@@ -696,6 +745,19 @@ export function projectSitePersonal(
   map.classification = classification;
   const businessNames = new Set(
     input.facts.fields.filter((fact) => fact.kind === "name").map((fact) => canonical(fact.value)),
+  );
+  // These name locators are emitted only for the extractor's selected business entity.
+  // Preserve that distinction when a saved input is replayed without its HTML.
+  const structuredBusinessNames = new Set(
+    input.facts.fields
+      .filter(
+        (fact) =>
+          fact.kind === "name" &&
+          ((fact.evidence.element.startsWith('script[type="application/ld+json"][') &&
+            fact.evidence.element.endsWith(".name")) ||
+            fact.evidence.element === '[itemscope] [itemprop="name"]'),
+      )
+      .map((fact) => canonical(fact.value)),
   );
   const counts = () =>
     Object.fromEntries(
@@ -726,18 +788,14 @@ export function projectSitePersonal(
     if (!original || /^[-–—.]+$|^(?:n\/a|none|null)$/iu.test(original)) return;
     if (kind === "phone" && !/^\+?[\d\s().-]+$/.test(original)) {
       const numbers = [...original.matchAll(/\+?[\d\s().-]{3,40}\d/g)].filter(
-        (match) => match[0].replace(/\D/g, "").length >= 3,
+        (match) => match[0].replace(/\D/g, "").length >= 7,
       );
       if (!numbers.length) return;
       for (const number of numbers) add("phone", number[0]);
       return;
     }
     if (original.length > 1000) throw new Error("A source identifier exceeds its bound.");
-    if (
-      kind === "phone" &&
-      (!/^\+?[\d\s().-]+$/.test(original) || original.replace(/\D/g, "").length < 3)
-    )
-      throw new Error("Invalid source phone identifier.");
+    if (kind === "phone" && original.replace(/\D/g, "").length < 7) return;
     if (
       !map.entries.some((entry) => canonical(entry.original) === canonical(original)) &&
       !pending.has(canonical(original))
@@ -753,7 +811,7 @@ export function projectSitePersonal(
     if (kind === "name" && !identity)
       for (const part of original.split(/[\s.-]+/u))
         if (
-          nameToken(part) &&
+          nameToken(part, true) &&
           !pending.has(canonical(part)) &&
           !map.entries.some((entry) => canonical(entry.original) === canonical(part))
         )
@@ -769,12 +827,13 @@ export function projectSitePersonal(
     ))
       add("email", match[0]);
     const phoneText = text.replace(
-      /\b(?:\d{1,2}[.:]\d{2}|\d{4})\s*[-–]\s*(?:\d{1,2}[.:]\d{2}|\d{4})\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/gu,
+      /(?<!\d[ .-]?)\b(?:(?:\d{1,2}[.:]\d{2}|\d{4})\s*[-–]\s*(?:\d{1,2}[.:]\d{2}|\d{4})|[12]\d{3}[- ](?:0?[1-9]|1[0-2])[- ](?:0?[1-9]|[12]\d|3[01])|(?:0?[1-9]|[12]\d|3[01])[./ -](?:0?[1-9]|1[0-2])[./ -][12]\d{3}|(?:0?[1-9]|[12]\d|3[01])[./-](?:0?[1-9]|1[0-2])[./-]\d{2})\b(?![ .-]\d)/gu,
       (part) => " ".repeat(part.length),
     );
     const phonePatterns = [
       /(?<![\p{L}\p{N}])(?:\+\d|0\d)[\d\s().-]{5,35}\d(?![\p{L}\p{N}])/gu,
       /(?<![\p{L}\p{N}])\(?\d{2,4}\)?(?:[ .-]\d{2,7}){1,4}(?![\p{L}\p{N}])/gu,
+      /(?<![\p{L}\p{N}])\d{7,15}(?![\p{L}\p{N}])/gu,
     ];
     for (const pattern of phonePatterns)
       for (const match of phoneText.matchAll(pattern))
@@ -783,8 +842,13 @@ export function projectSitePersonal(
             context = text.slice(Math.max(0, at - 16), at + match[0].length + 16);
           if (
             !/[+().-]/u.test(match[0]) &&
-            /(?:€|\bEUR\b|\bUSD\b|\$|\bSEK\b)/iu.test(context) &&
+            /(?:€|£|:-|\bkr\b|\bEUR\b|\bUSD\b|\$|\bSEK\b)/iu.test(context) &&
             !/\b(?:call|phone|tel)\b/iu.test(context)
+          )
+            continue;
+          if (
+            /^\d{7,15}$/u.test(match[0]) &&
+            !/\b(?:call|phone|tel|telephone|mobile|ring|telefon|mobil)\b/iu.test(context)
           )
             continue;
           add("phone", match[0]);
@@ -808,7 +872,7 @@ export function projectSitePersonal(
       ...roleWords.split("|"),
     ]);
     for (const match of text.matchAll(
-      /(?<![\p{L}\p{N}])\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+){1,3}/gu,
+      /(?<![\p{L}\p{N}])\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+){1,4}/gu,
     )) {
       const at = match.index ?? 0,
         parts = match[0].split(" ");
@@ -821,6 +885,7 @@ export function projectSitePersonal(
       while (parts.at(-1) && stop.has(parts.at(-1)?.toLowerCase() ?? "")) parts.pop();
       if (
         parts.length >= 2 &&
+        parts.length <= 4 &&
         (names ||
           prefixed ||
           beforeRole.test(text.slice(Math.max(0, at - 30), at)) ||
@@ -832,7 +897,7 @@ export function projectSitePersonal(
   const sourceTelephone = (value: string) => {
     const normalized = normalizeSitePersonalText(value);
     for (const match of normalized.matchAll(/\+?\d[\d\s().-]{1,38}\d/g))
-      if (match[0].replace(/\D/g, "").length >= 3) add("phone", match[0]);
+      if (match[0].replace(/\D/g, "").length >= 7) add("phone", match[0]);
   };
   for (const entry of map.entries.filter((entry) => entry.kind === "name"))
     add("name", entry.original);
@@ -890,8 +955,10 @@ export function projectSitePersonal(
       types.some((type) => typeof type === "string" && isSiteBusinessType(type)) &&
       typeof declaredName === "string" &&
       businessNames.has(canonical(declaredName))
-    )
+    ) {
       classification.business = true;
+      structuredBusinessNames.add(canonical(declaredName));
+    }
     if (types.some((type) => typeof type === "string" && /(?:^|\/)Person$/.test(type))) {
       classification.person = true;
       for (const key of ["name", "alternateName"])
@@ -929,8 +996,10 @@ export function projectSitePersonal(
         types.some(isSiteBusinessType) &&
         name &&
         businessNames.has(canonical(name.getAttribute("content") ?? name.text))
-      )
+      ) {
         classification.business = true;
+        structuredBusinessNames.add(canonical(name.getAttribute("content") ?? name.text));
+      }
     }
     for (const script of root.querySelectorAll('script[type="application/ld+json"]')) {
       let value: unknown;
@@ -962,21 +1031,52 @@ export function projectSitePersonal(
   }
   // A refused personal site still receives a scrubbed projection. Keep persisted
   // identity IDs intact, but detect its personal components before allocation.
-  const personalTitle =
-    !classification.business &&
-    input.facts.fields.some((fact) => fact.kind === "name" && isSitePersonNameShape(fact.value));
+  if (
+    input.facts.fields.some(
+      (fact) => fact.kind === "name" && BUSINESS_WORD.test(normalizeSitePersonalText(fact.value)),
+    )
+  )
+    classification.business = true;
+  const personalTitle = input.facts.fields.some(
+    (fact) =>
+      fact.kind === "name" &&
+      isSitePersonNameShape(fact.value) &&
+      !structuredBusinessNames.has(canonical(fact.value)),
+  );
   if (personalTitle) classification.person = true;
+  // Person evidence remains relevant when a trade word also grants business eligibility.
+  if (classification.person)
+    for (const fact of input.facts.fields.filter(
+      (fact) => fact.kind === "name" && !structuredBusinessNames.has(canonical(fact.value)),
+    )) {
+      const person = normalizeSitePersonalText(fact.value)
+        .split(/\s+/u)
+        .filter((part) => !BUSINESS_WORD.test(part))
+        .join(" ");
+      if (isSitePersonNameShape(person)) {
+        add("name", person);
+        for (const part of person.split(/[\s.-]+/u)) if (nameToken(part, true)) add("name", part);
+      }
+    }
   if (classification.person && !classification.business)
     for (const fact of input.facts.fields.filter((fact) => fact.kind === "name"))
       for (const part of normalizeSitePersonalText(fact.value).split(/[\s.-]+/u))
-        if (nameToken(part)) add("name", part);
+        if (nameToken(part, true)) add("name", part);
   for (const { kind, original } of [...pending.values()].sort((a, b) =>
     keyed(map.key, a.kind, canonical(a.original)).localeCompare(
       keyed(map.key, b.kind, canonical(b.original)),
     ),
   )) {
     if (map.entries.length >= MAX_ENTRIES) throw new Error("Too many source identifiers.");
-    const ordinal = map.entries.filter((entry) => entry.kind === kind).length;
+    const ordinal = Math.max(
+      Math.max(
+        -1,
+        ...map.entries.filter((entry) => entry.kind === kind).map((entry) => entry.ordinal),
+      ) + 1,
+      kind === "phone" ? (map.nextPhoneOrdinal ?? 0) : 0,
+    );
+    if (ordinal > MAX_ENTRIES) throw new Error("Source allocation ordinals exceed their bound.");
+    if (kind === "phone" && map.nextPhoneOrdinal !== undefined) map.nextPhoneOrdinal = ordinal + 1;
     map.entries.push({
       id: keyed(map.key, kind, canonical(original)),
       kind,
@@ -1055,7 +1155,7 @@ export function projectSitePersonal(
       map.entries.some(
         (entry) =>
           entry.kind === "name" &&
-          nameToken(entry.original) &&
+          nameToken(entry.original, true) &&
           canonical(entry.original) === canonical(value),
       )
         ? "person"

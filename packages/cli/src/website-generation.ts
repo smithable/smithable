@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseExpression, parse as parseProgram } from "@babel/parser";
 import { generateApp } from "@smithable/adapter-tanstack";
 import { completeJson, type Provider } from "@smithable/ai";
 import { type SpecIR, YamlEditor, type YamlValue } from "@smithable/core";
@@ -50,27 +51,33 @@ export function websitePrivateProviders(
     ...map.entries.map((entry) => entry.id),
     ...map.handles.map((handle) => handle.id),
   ].join(":");
-  const safeText = (text: string) => replaceSitePersonalText(text, map, { context: "code" });
-  const safe = (value: unknown): unknown => {
-    if (typeof value === "string") return safeText(value);
+  const safeText = (text: string, context: "code" | "text" | "name" | "key") =>
+    replaceSitePersonalText(text, map, { context });
+  const safe = (value: unknown, strings: "code" | "text" | "name"): unknown => {
+    if (typeof value === "string") return safeText(value, strings);
     if (typeof value === "number") {
       const text = String(value),
-        replaced = safeText(text);
+        replaced = safeText(text, strings);
       return replaced === text ? value : replaced;
     }
-    if (Array.isArray(value)) return value.map(safe);
+    if (Array.isArray(value)) return value.map((child) => safe(child, strings));
     if (!value || typeof value !== "object") return value;
     const prototype = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) return value;
     const result: Record<string, unknown> = Object.create(prototype);
     for (const [key, child] of Object.entries(value)) {
-      const target = safeText(key);
+      const target = safeText(key, "key");
       if (
         ["__proto__", "prototype", "constructor"].includes(target) ||
         Object.hasOwn(result, target)
       )
         throw new Error("The website model data contains conflicting keys.");
-      result[target] = safe(child);
+      result[target] = safe(
+        child,
+        strings !== "code" && /^(?:firstName|lastName|givenName|familyName|fullName)$/i.test(key)
+          ? "name"
+          : strings,
+      );
     }
     return result;
   };
@@ -80,7 +87,7 @@ export function websitePrivateProviders(
       ...provider,
       async complete(request) {
         try {
-          const answer = await provider.complete(safe(request) as typeof request);
+          const answer = await provider.complete(safe(request, "code") as typeof request);
           let parsed: unknown;
           let json = false;
           try {
@@ -89,7 +96,7 @@ export function websitePrivateProviders(
           } catch {
             /* Non-JSON repair text still uses the same known-set pass. */
           }
-          const text = json ? JSON.stringify(safe(parsed)) : safeText(answer.text);
+          const text = json ? JSON.stringify(safe(parsed, "text")) : safeText(answer.text, "text");
           return { ...answer, text };
         } catch (error) {
           const clean = new Error("The website model request could not finish.");
@@ -140,6 +147,8 @@ const visibleKeys = new Set([
   "text",
   "body",
   "subject",
+  "default",
+  "options",
 ]);
 
 function replaceYamlComments(source: string, map: SitePersonalMap): string {
@@ -147,7 +156,7 @@ function replaceYamlComments(source: string, map: SitePersonalMap): string {
   for (const { start, end } of new YamlEditor(source).commentRanges().reverse())
     output =
       output.slice(0, start) +
-      replaceSitePersonalText(output.slice(start, end), map, { context: "code" }) +
+      replaceSitePersonalText(output.slice(start, end), map, { context: "text" }) +
       output.slice(end);
   return output;
 }
@@ -238,11 +247,46 @@ export function replaceWebsitePersonalFiles(
             original.toLowerCase() === context.authoritativeAdmin
           )
             return value;
+          const referenceArray =
+            typeof path.at(-1) === "number" &&
+            ((file === "smithable.yml" &&
+              (path[0] === "navigation" ||
+                (path[0] === "models" &&
+                  ["unique", "review", "namedBy"].includes(String(path[2]))) ||
+                (path[0] === "pages" &&
+                  ["actions", "search", "filters", "sortable"].includes(String(path[2]))) ||
+                (path[0] === "actions" &&
+                  (["with", "copy", "triggers"].includes(String(path[2])) ||
+                    path[2] === "touches")))) ||
+              (file === "smithable.ux.yml" &&
+                path[0] === "pages" &&
+                ((path.length === 5 &&
+                  ((path[2] === "table" && ["columns", "totals"].includes(String(path[3]))) ||
+                    (path[2] === "filters" && path[3] === "shown") ||
+                    (path[2] === "record" && path[3] === "detail") ||
+                    (path[2] === "form" && path[3] === "fieldOrder"))) ||
+                  (path.length === 6 &&
+                    path[2] === "record" &&
+                    path[3] === "summary" &&
+                    ["status", "amount", "dates"].includes(String(path[4]))) ||
+                  (path.length === 7 &&
+                    path[2] === "form" &&
+                    path[3] === "sections" &&
+                    typeof path[4] === "number" &&
+                    path[5] === "fields"))) ||
+              (file === "smithable.auth.yml" &&
+                path[0] === "roles" &&
+                ["pages", "read", "create", "write", "delete", "actions"].includes(
+                  String(path[2]),
+                )));
           const human =
-            file.startsWith("smithable.content") ||
-            file.startsWith("samples/") ||
-            visibleKeys.has(String(path.at(-1))) ||
-            (path.length === 2 && path[0] === "app" && path[1] === "name");
+            !referenceArray &&
+            (file.startsWith("smithable.content") ||
+              file.startsWith("samples/") ||
+              visibleKeys.has(String(path.at(-1))) ||
+              path.some((part) => part === "default" || part === "options") ||
+              typeof path.at(-1) === "number" ||
+              (path.length === 2 && path[0] === "app" && path[1] === "name"));
           const templated =
             file.startsWith("smithable.content") &&
             path[0] === "outgoing" &&
@@ -257,7 +301,13 @@ export function replaceWebsitePersonalFiles(
                 )
                 .join("")
             : replaceSitePersonalText(original, context.personalMap, {
-                context: human ? "text" : "code",
+                context: /^(?:firstName|lastName|givenName|familyName|fullName)$/i.test(
+                  String(path.at(-1)),
+                )
+                  ? "name"
+                  : human
+                    ? "text"
+                    : "code",
               });
           const replaced = inertSampleContactText(scrubbed);
           const containsSample = context.personalMap.entries.some((entry) =>
@@ -401,6 +451,202 @@ function compilerIdentity(
   );
 }
 
+/** Inspect data text separately from identifiers; parsing failure never echoes source. */
+function programHasPersonalText(
+  source: string,
+  file: string,
+  map: SitePersonalMap,
+  inspectActions: boolean,
+): boolean {
+  const changed = (value: string, context: "text" | "name" | "key" | "code" = "text") => {
+    // Decoded program literals may legitimately contain code-unit sentinels.
+    const text = [...value.toWellFormed()]
+      .map((char) => {
+        const code = char.charCodeAt(0);
+        return (code < 32 && ![9, 10, 13].includes(code)) ||
+          (code >= 127 && code <= 159) ||
+          code === 0xfffd
+          ? " "
+          : char;
+      })
+      .join("");
+    return (
+      replaceSitePersonalText(text, map, { context }) !== text ||
+      (inspectActions &&
+        context !== "key" &&
+        context !== "code" &&
+        inertSampleContactText(text) !== text)
+    );
+  };
+  if (file.endsWith(".json")) {
+    let value: unknown;
+    try {
+      if (/^(?:.*\/)?(?:tsconfig|jsconfig)(?:\.[^/]*)?\.json$/i.test(file)) {
+        const convert = (node: unknown): unknown => {
+          const n = node as Record<string, unknown>;
+          if (n.type === "ObjectExpression") {
+            const data: Record<string, unknown> = Object.create(null);
+            for (const property of n.properties as Record<string, unknown>[]) {
+              const key = property.key as Record<string, unknown>;
+              if (
+                property.type !== "ObjectProperty" ||
+                property.computed ||
+                property.shorthand ||
+                key.type !== "StringLiteral"
+              )
+                throw new Error();
+              data[String(convert(key))] = convert(property.value);
+            }
+            return data;
+          }
+          if (n.type === "ArrayExpression") return (n.elements as unknown[]).map(convert);
+          if (n.type === "NullLiteral") return null;
+          if (n.type === "BooleanLiteral") return n.value;
+          if (
+            n.type === "StringLiteral" &&
+            source.slice(Number(n.start), Number(n.start) + 1) === '"'
+          )
+            return n.value;
+          if (
+            n.type === "NumericLiteral" &&
+            /^(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(
+              source.slice(Number(n.start), Number(n.end)),
+            )
+          )
+            return n.value;
+          if (
+            n.type === "UnaryExpression" &&
+            n.operator === "-" &&
+            (n.argument as Record<string, unknown>)?.type === "NumericLiteral"
+          )
+            return -Number(convert(n.argument));
+          throw new Error();
+        };
+        const expression = parseExpression(source);
+        const nodes: unknown[] = [expression];
+        const seen = new Set<object>();
+        while (nodes.length) {
+          const node = nodes.pop();
+          if (!node || typeof node !== "object" || seen.has(node)) continue;
+          seen.add(node);
+          const data = node as Record<string, unknown>;
+          if (
+            ["CommentBlock", "CommentLine"].includes(String(data.type)) &&
+            changed(String(data.value ?? ""))
+          )
+            return true;
+          for (const [key, child] of Object.entries(data)) {
+            if (["loc", "extra"].includes(key)) continue;
+            if (Array.isArray(child)) nodes.push(...child);
+            else if (child && typeof child === "object") nodes.push(child);
+          }
+        }
+        value = convert(expression);
+      } else value = JSON.parse(source);
+    } catch {
+      throw new Error("Generated website data could not be checked.");
+    }
+    const pending: { value: unknown; name: boolean }[] = [{ value, name: false }];
+    while (pending.length) {
+      const { value: item, name } = pending.pop() as { value: unknown; name: boolean };
+      if (typeof item === "string" || typeof item === "number") {
+        if (changed(String(item), name ? "name" : "text")) return true;
+      } else if (Array.isArray(item)) {
+        for (const child of item) pending.push({ value: child, name });
+      } else if (item && typeof item === "object")
+        for (const [key, child] of Object.entries(item)) {
+          if (changed(key, "key")) return true;
+          pending.push({
+            value: child,
+            name: /^(?:firstName|lastName|givenName|familyName|fullName)$/i.test(key),
+          });
+        }
+    }
+    return false;
+  }
+  let root: unknown;
+  try {
+    root = parseProgram(source, {
+      sourceType: /\.[cm][jt]s$/.test(file)
+        ? /\.c[jt]s$/.test(file)
+          ? "script"
+          : "module"
+        : "unambiguous",
+      allowReturnOutsideFunction: /\.c[jt]s$/.test(file),
+      plugins: [
+        ...(/\.[cm]?tsx?$/.test(file) ? ["typescript" as const] : []),
+        ...(/\.[jt]sx$/.test(file) ? ["jsx" as const] : []),
+      ],
+    });
+  } catch {
+    throw new Error("Generated website code could not be checked.");
+  }
+  const spans: { start: number; end: number }[] = [];
+  type Frame = { value: unknown; parent?: Record<string, unknown>; context?: "key" | "name" };
+  const pending: Frame[] = [{ value: root }];
+  while (pending.length) {
+    const { value, parent, context } = pending.pop() as Frame;
+    if (!value || typeof value !== "object") continue;
+    const node = value as Record<string, unknown>;
+    const key =
+      context === "key" || parent?.key === value || (parent?.property === value && parent.computed);
+    let text: string | undefined;
+    if (
+      ["StringLiteral", "DirectiveLiteral", "JSXText", "CommentBlock", "CommentLine"].includes(
+        String(node.type),
+      )
+    )
+      text = String(node.value ?? "");
+    else if (node.type === "TemplateElement") {
+      const part = node.value as { cooked?: string | null; raw?: string };
+      text = part.cooked ?? part.raw ?? "";
+    } else if (node.type === "NumericLiteral" || node.type === "BigIntLiteral")
+      text = String(node.value);
+    if (text !== undefined) {
+      const property = parent?.key as Record<string, unknown> | undefined;
+      const attribute = parent?.name as Record<string, unknown> | undefined;
+      const slot = property?.name ?? property?.value ?? attribute?.name;
+      const named =
+        parent?.value === value &&
+        /^(?:firstName|lastName|givenName|familyName|fullName)$/i.test(String(slot));
+      if (changed(text, key ? "key" : named || context === "name" ? "name" : "text")) return true;
+      if (typeof node.start === "number" && typeof node.end === "number")
+        spans.push({ start: node.start, end: node.end });
+      continue;
+    }
+    for (const [field, child] of Object.entries(node)) {
+      if (["loc", "extra", "start", "end"].includes(field)) continue;
+      const slot =
+        (node.key as Record<string, unknown> | undefined)?.name ??
+        (node.key as Record<string, unknown> | undefined)?.value ??
+        (node.name as Record<string, unknown> | undefined)?.name;
+      const childContext =
+        field === "key" || (field === "property" && node.computed)
+          ? "key"
+          : field === "value" &&
+              /^(?:firstName|lastName|givenName|familyName|fullName)$/i.test(String(slot))
+            ? "name"
+            : ["TemplateLiteral", "JSXExpressionContainer"].includes(String(node.type))
+              ? context
+              : undefined;
+      if (Array.isArray(child)) {
+        for (const item of child)
+          pending.push({ value: item, parent: node, context: childContext });
+      } else if (child && typeof child === "object")
+        pending.push({ value: child, parent: node, context: childContext });
+    }
+  }
+  const code: string[] = [];
+  let at = 0;
+  for (const span of spans.sort((a, b) => a.start - b.start)) {
+    if (span.end <= at) continue;
+    code.push(source.slice(at, Math.max(at, span.start)), " ");
+    at = span.end;
+  }
+  code.push(source.slice(at));
+  return changed(code.join(""), "code");
+}
+
 /** Generated source can repeat content through templates: check the final written artifacts too. */
 export function replaceWebsitePersonalArtifacts(
   dir: string,
@@ -461,10 +707,18 @@ export function replaceWebsitePersonalArtifacts(
           const expected = compiler.get(name);
           const checkedSource = expected?.actual === source ? expected.neutral : source;
           const matchContext = expected?.actual !== source ? fileMatchContext(name) : "code";
+          const personal = /\.(?:[cm]?[jt]sx?|json)$/i.test(name)
+            ? programHasPersonalText(
+                checkedSource,
+                name,
+                context.personalMap,
+                expected?.actual !== source,
+              )
+            : replaceSitePersonalText(checkedSource, context.personalMap, {
+                context: matchContext,
+              }) !== checkedSource;
           if (
-            replaceSitePersonalText(checkedSource, context.personalMap, {
-              context: matchContext,
-            }) !== checkedSource ||
+            personal ||
             (expected?.actual !== source && inertSampleContactText(checkedSource) !== checkedSource)
           )
             throw new Error(

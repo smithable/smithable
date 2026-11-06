@@ -70,14 +70,21 @@ export function contactHref(href: string | undefined, value = href): string | un
           );
         }),
       );
-      // Explicit international sample numbers are inert in every URI or query context.
+      // Explicit +999 samples are inert in every URI; queries also recognize 00999.
+      // A web path beginning with 00999 can be an ordinary numeric record ID.
       // Bare sample digits stay limited to phone contexts above, never arbitrary numeric IDs.
       const destination = text.split(/[?#]/, 1)[0] ?? "";
       const rawInternational =
         /^[a-z][a-z\d+.-]*:/i.test(destination) && !mailto ? [destination] : [];
-      const internationalSample = [...rawInternational, ...query.values()].some((value) =>
-        /(?:^|[^\p{L}\p{N}_])(?:\+|00)[\s().-]*9[\s().-]*9[\s().-]*9[\s().-]*\d/u.test(value),
-      );
+      const internationalSample =
+        rawInternational.some((value) =>
+          url && /^https?:$/.test(url.protocol)
+            ? /(?:^|[^\p{L}\p{N}_])\+[\s().-]*9[\s().-]*9[\s().-]*9[\s().-]*\d/u.test(value)
+            : /(?:^|[^\p{L}\p{N}_])(?:\+|00)[\s().-]*9[\s().-]*9[\s().-]*9[\s().-]*\d/u.test(value),
+        ) ||
+        [...query.values()].some((value) =>
+          /(?:^|[^\p{L}\p{N}_])(?:\+|00)[\s().-]*9[\s().-]*9[\s().-]*9[\s().-]*\d/u.test(value),
+        );
       // A bare relative route is not a street address; explicit queries and URI destinations are.
       const addresses = [...query.values(), ...(url || /[\s,]/.test(text) ? [text] : [])];
       const sampleAddress = addresses.some((address) =>
