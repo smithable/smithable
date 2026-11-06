@@ -476,17 +476,17 @@ function mapped(names: string[], phones: string[] = []) {
   });
 }
 test("explicit fragments and first ordinals win on shared names and phone aliases across reuse", () => {
-  const original = mapped(["Anna Lind", "Anna Berg", "Anna"], ["+46 8 123", "468-123"]);
+  const original = mapped(["Anna Lind", "Anna Berg", "Anna"], ["+46 8 12345", "468-12345"]);
   const anna = replaceSitePersonalText("Anna", original);
   expect(anna).toBe(original.entries.find((entry) => entry.original === "Anna")?.replacement);
   const firstPhone = original.entries.find((entry) => entry.kind === "phone")?.replacement;
-  expect(replaceSitePersonalText("468-123", original)).toBe(firstPhone);
+  expect(replaceSitePersonalText("468-12345", original)).toBe(firstPhone);
   const appended = mapped(
     ["Anna Lind", "Anna Berg", "Anna", "Anna Stone"],
-    ["+46 8 123", "468-123", "46 8123"],
+    ["+46 8 12345", "468-12345", "46 812345"],
   );
   expect(replaceSitePersonalText("Anna", appended)).toBe(anna);
-  expect(replaceSitePersonalText("46 8123", appended)).toBe(firstPhone);
+  expect(replaceSitePersonalText("46 812345", appended)).toBe(firstPhone);
   const derived = mapped(["Anna Lind", "Anna Berg"]);
   expect(replaceSitePersonalText("Anna", derived)).toBe(derived.entries[0]?.replacement);
 });
@@ -503,7 +503,7 @@ test("single ordinary-name words are safe and code/keys never match name fragmen
   ).toBe("page, will, rose, hill, Page, Will");
   expect(replaceSitePersonalText(code, map, { context: "code" })).not.toContain("Will Smith");
   expect(replaceSitePersonalText("Elin", map, { context: "text" })).not.toBe("Elin");
-  expect(replaceSitePersonalText("elin", map, { context: "text" })).toBe("elin");
+  expect(replaceSitePersonalText("elin", map, { context: "text" })).not.toBe("elin");
   expect(replaceSitePersonalText("Elin", map, { context: "code" })).toBe("Elin");
   const business = input(html.replaceAll("Harbour Workshop", "Harbour Workshop"));
   const result = projectSitePersonal(business, { personalKey: key });
@@ -625,13 +625,13 @@ test("form-space matching ignores query keys and fragments and charges rejected 
     "Query normalization",
   );
 });
-test("hyphenated single names retain text case and cannot rewrite keys or code", () => {
+test("hyphenated single names ignore text case and cannot rewrite keys or code", () => {
   const map = mapped(["Anne-Marie"]);
   expect(replaceSitePersonalText("const anne_marie = 1", map, { context: "code" })).toBe(
     "const anne_marie = 1",
   );
   expect(replaceSitePersonalText("Anne-Marie", map, { context: "key" })).toBe("Anne-Marie");
-  expect(replaceSitePersonalText("anne-marie", map)).toBe("anne-marie");
+  expect(replaceSitePersonalText("anne-marie", map)).not.toBe("anne-marie");
   expect(replaceSitePersonalText("Anne-Marie", map)).not.toBe("Anne-Marie");
 });
 test("map allocation excludes implicit fragments even if no persisted fragment entry exists", () => {
@@ -711,4 +711,353 @@ test("Unicode business words and ordinary phone labels do not reject the site", 
   );
   expect(result.model.facts.ambiguous).not.toBe(true);
   expect(parseSitePersonalMap(result.personalMap)).toEqual(result.personalMap);
+});
+
+function bodyReading(text: string) {
+  const value = input();
+  value.sourceCorpus.pages = [
+    { id: "p1", text, sha256: createHash("sha256").update(text).digest("hex") },
+  ];
+  return value;
+}
+
+test("bare seven-to-fifteen digit phones require phone context", () => {
+  const result = projectSitePersonal(
+    bodyReading(
+      "Call 5552345678. Phone 7654321. Mobile 123456789012345. Order 9876543210. Reference 876543210.",
+    ),
+    { personalKey: key },
+  );
+  const phones = result.personalMap.entries
+    .filter((entry) => entry.kind === "phone")
+    .map((entry) => entry.original);
+  expect(phones).toEqual(expect.arrayContaining(["5552345678", "7654321", "123456789012345"]));
+  expect(phones).not.toContain("9876543210");
+  expect(phones).not.toContain("876543210");
+});
+
+test("space dates and Nordic or sterling prices are not phone numbers", () => {
+  const result = projectSitePersonal(
+    bodyReading(
+      "Dates 2024 10 01 and 01 10 2024. Prices 12 500 000 kr, 45 600 000 £, 87 500 000 :- and 12 500 000 SEK. Hours 0900-1700.",
+    ),
+    { personalKey: key },
+  );
+  expect(
+    result.personalMap.entries
+      .filter((entry) => entry.kind === "phone")
+      .every((entry) => entry.original.replace(/\D/g, "") === "358401234567"),
+  ).toBe(true);
+});
+
+test("all short structured phones are ignored including on legacy map reload", () => {
+  const source =
+    html.replace('"telephone":"+358 40 1234567"', '"telephone":"999"') +
+    '<a itemprop="telephone" href="tel:000">Emergency</a>';
+  const result = projectSitePersonal(
+    {
+      ...bodyReading("Call 1177. tel:12."),
+      facts: extractSiteFacts(source, url),
+      pages: [{ id: "p1", url, html: source }],
+      images: [],
+    },
+    { personalKey: key },
+  );
+  expect(result.personalMap.entries.filter((entry) => entry.kind === "phone")).toHaveLength(0);
+  const legacy = mapped([], ["999", "000", "12", "+358 40 9876543"]);
+  expect(
+    legacy.entries.filter((entry) => entry.kind === "phone").map((entry) => entry.original),
+  ).toEqual(["+358 40 9876543"]);
+  expect(parseSitePersonalMap(JSON.parse(JSON.stringify(legacy)))).toEqual(legacy);
+  expect(legacy.entries[0]?.ordinal).toBe(3);
+  const appended = projectSitePersonal(input(), { personalMap: legacy }).personalMap;
+  expect(appended.entries.find((entry) => entry.id === legacy.entries[0]?.id)).toEqual(
+    legacy.entries[0],
+  );
+  expect(parseSitePersonalMap(JSON.parse(JSON.stringify(appended)))).toEqual(appended);
+});
+
+test("four-token person titles refuse while every supported Swedish trade word protects businesses", () => {
+  const personal = projectSitePersonal(
+    input('<meta property="og:site_name" content="Anna Maria Sofia Lind">'),
+    { personalKey: key },
+  );
+  expect(personal.model.facts.ambiguous).toBe(true);
+  for (const word of [
+    "Frisör",
+    "Salong",
+    "Bageri",
+    "Massage",
+    "Verkstad",
+    "Kiosk",
+    "Café",
+    "Butik",
+    "Gård",
+  ]) {
+    const source = `<title>Anna Berg</title><meta property="og:site_name" content="Anna Berg ${word}">`;
+    const result = projectSitePersonal(input(source), { personalKey: key });
+    expect(result.model.facts.ambiguous).not.toBe(true);
+    expect(
+      result.model.facts.fields.some(
+        (fact) => fact.kind === "name" && fact.value === `Anna Berg ${word}`,
+      ),
+    ).toBe(true);
+  }
+});
+
+test("single-token identity handles match exact insensitive literals in every context", () => {
+  for (const identity of ["@anna_berg", "anna.berg", "annaberg92"]) {
+    const source = html.replaceAll("Harbour Workshop", identity);
+    const map = projectSitePersonal(input(source), { personalKey: key }).personalMap;
+    for (const context of ["text", "name", "code", "key"] as const) {
+      expect(replaceSitePersonalText(identity.toUpperCase(), map, { context })).not.toBe(
+        identity.toUpperCase(),
+      );
+      expect(replaceSitePersonalText(`${identity}extra`, map, { context })).toBe(
+        `${identity}extra`,
+      );
+    }
+  }
+});
+
+test("ordinary-word identities cannot rewrite code or keys", () => {
+  for (const identity of ["Page", "Studio"]) {
+    const map = projectSitePersonal(input(html.replaceAll("Harbour Workshop", identity)), {
+      personalKey: key,
+    }).personalMap;
+    expect(replaceSitePersonalText(identity.toLowerCase(), map, { context: "code" })).toBe(
+      identity.toLowerCase(),
+    );
+    expect(replaceSitePersonalText(identity, map, { context: "key" })).toBe(identity);
+    expect(replaceSitePersonalText(identity, map, { context: "name" })).not.toBe(identity);
+  }
+});
+
+test("single detected names ignore case but ordinary words require person-shaped context", () => {
+  const map = mapped(["Anna Lind", "Mark Berg", "Bill Smith"]);
+  for (const text of [
+    "ANNA",
+    "anna.jpg",
+    "@anna",
+    "Thanks Mark!",
+    "Regards BILL",
+    "mark berg",
+    "bill smith",
+  ])
+    expect(replaceSitePersonalText(text, map)).not.toBe(text);
+  for (const text of ["mark this page", "pay the bill", "MARK this item", "bill"])
+    expect(replaceSitePersonalText(text, map)).toBe(text);
+  expect(replaceSitePersonalText("MARK", map, { context: "name" })).not.toBe("MARK");
+  expect(replaceSitePersonalText("anna", map, { context: "key" })).toBe("anna");
+  expect(replaceSitePersonalText("Anna", map, { context: "code" })).toBe("Anna");
+});
+
+test("source hosts at sentence end preserve punctuation and reject host-prefix impostors", () => {
+  const { personalMap } = projectSitePersonal(input(), { personalKey: key });
+  expect(replaceSitePersonalText("Visit https://alice.example.", personalMap)).toBe(
+    "Visit https://source.invalid/omitted.",
+  );
+  expect(
+    replaceSitePersonalText("Visit https://alice.example.evil.", personalMap, { context: "code" }),
+  ).toBe("Visit https://alice.example.evil.");
+});
+
+test("a role prefix leaves room for every token of a four-word person name", () => {
+  const result = projectSitePersonal(
+    bodyReading("Manager Anna Maria Sofia Lind welcomes visitors."),
+    { personalKey: key },
+  );
+  const names = result.personalMap.entries
+    .filter((entry) => entry.kind === "name")
+    .map((entry) => entry.original);
+  expect(names).toContain("Anna Maria Sofia Lind");
+  expect(names).toContain("Lind");
+  expect(replaceSitePersonalText("LIND", result.personalMap)).not.toBe("LIND");
+  expect(
+    replaceSitePersonalText("Manager Anna Maria Sofia Lind", result.personalMap),
+  ).not.toContain("Lind");
+});
+
+test("date masks retain valid spaced phones and do not mask a phone prefix", () => {
+  const result = projectSitePersonal(
+    bodyReading(
+      "Call 08 12 34 56. Telephone 0812 34 56 78. Call 2012 10 01 56. Date 2024 10 01 and 01 10 2024.",
+    ),
+    { personalKey: key },
+  );
+  const digits = result.personalMap.entries
+    .filter((entry) => entry.kind === "phone")
+    .map((entry) => entry.original.replace(/\D/g, ""));
+  expect(digits).toEqual(expect.arrayContaining(["08123456", "0812345678", "2012100156"]));
+  expect(digits).not.toContain("20241001");
+  expect(digits).not.toContain("01102024");
+});
+
+test("retired highest phone ordinals stay reserved through reload and append", () => {
+  for (const source of [["+358409876543", "999"], ["999"]]) {
+    const legacy = mapped([], source);
+    expect(legacy.nextPhoneOrdinal).toBe(source.length);
+    const again = parseSitePersonalMap(JSON.parse(JSON.stringify(legacy)));
+    const next = projectSitePersonal(input(), { personalMap: again }).personalMap;
+    for (const entry of next.entries.filter(
+      (entry) => entry.kind === "phone" && !source.includes(entry.original),
+    ))
+      expect(entry.ordinal).toBeGreaterThanOrEqual(source.length);
+    expect(next.nextPhoneOrdinal).toBeGreaterThan(source.length);
+    expect(parseSitePersonalMap(JSON.parse(JSON.stringify(next)))).toEqual(next);
+  }
+  const valid = mapped([], ["+358409876543"]);
+  for (const watermark of [0, -1, 1.5, 2002, "2"])
+    expect(() => parseSitePersonalMap({ ...valid, nextPhoneOrdinal: watermark })).toThrow();
+  const exhausted = parseSitePersonalMap({ ...valid, nextPhoneOrdinal: 2001 });
+  expect(() => projectSitePersonal(input(), { personalMap: exhausted })).toThrow("ordinals");
+});
+
+test("alphabetic identity literals retain code and key protection", () => {
+  for (const identity of ["oakdev", "info", "anna"]) {
+    const map = projectSitePersonal(input(html.replaceAll("Harbour Workshop", identity)), {
+      personalKey: key,
+    }).personalMap;
+    expect(
+      replaceSitePersonalText(`const ${identity} = 1; console.${identity}();`, map, {
+        context: "code",
+      }),
+    ).toBe(`const ${identity} = 1; console.${identity}();`);
+    expect(replaceSitePersonalText(identity, map, { context: "key" })).toBe(identity);
+    expect(replaceSitePersonalText(identity.toUpperCase(), map)).not.toBe(identity.toUpperCase());
+  }
+});
+
+test("common-word personal tokens require person-shaped context", () => {
+  const map = mapped(["June River", "Art Stone", "Lane River", "Grace Stone"]);
+  for (const text of ["in june", "art class", "choose a lane", "a period of grace"])
+    expect(replaceSitePersonalText(text, map)).toBe(text);
+  for (const text of ["Thanks June!", "Dear ART", "Regards Lane", "Hello Grace"])
+    expect(replaceSitePersonalText(text, map)).not.toBe(text);
+  for (const name of ["JUNE", "art", "LANE", "grace"])
+    expect(replaceSitePersonalText(name, map, { context: "name" })).not.toBe(name);
+});
+
+test("business eligibility preserves previously observed person components without inventing them", () => {
+  const source = '<meta property="og:site_name" content="Anna Svensson Massage">';
+  const reading = input(source);
+  const map = { ...mapped([]), classification: { business: false, person: true } };
+  const result = projectSitePersonal(reading, { personalMap: map });
+  expect(result.model.facts.ambiguous).not.toBe(true);
+  expect(
+    result.model.facts.fields.some(
+      (fact) => fact.kind === "name" && fact.value === "Anna Svensson Massage",
+    ),
+  ).toBe(true);
+  expect(
+    result.personalMap.entries
+      .filter((entry) => entry.kind === "name")
+      .map((entry) => entry.original),
+  ).toEqual(expect.arrayContaining(["Anna Svensson", "Anna", "Svensson"]));
+  expect(replaceSitePersonalText("ANNA", result.personalMap)).not.toBe("ANNA");
+  const mixedReading = input(source);
+  const businessFact = mixedReading.facts.fields.find((fact) => fact.kind === "name");
+  if (!businessFact) throw new Error("Business fixture is missing its name fact.");
+  mixedReading.facts.fields.push({ ...businessFact, value: "Anna Svensson" });
+  const mixed = projectSitePersonal(mixedReading, { personalKey: key });
+  expect(mixed.model.facts.ambiguous).not.toBe(true);
+  expect(
+    mixed.personalMap.entries.some(
+      (entry) => entry.kind === "name" && entry.original === "Svensson",
+    ),
+  ).toBe(true);
+  const businessOnly = projectSitePersonal(reading, { personalKey: key });
+  expect(
+    businessOnly.personalMap.entries.some(
+      (entry) => entry.kind === "name" && entry.original === "Anna Svensson",
+    ),
+  ).toBe(false);
+});
+
+test("a structured person-shaped trading identity is not new person evidence", () => {
+  const reading = input(
+    '<meta property="og:site_name" content="Jane Doe"><script type="application/ld+json">{"@type":"LocalBusiness","name":"Jane Doe"}</script>',
+  );
+  const result = projectSitePersonal(reading, { personalKey: key });
+  expect(result.personalMap.classification).toEqual({ business: true, person: false });
+  expect(
+    result.personalMap.entries.some(
+      (entry) => entry.kind === "name" && ["Jane", "Doe"].includes(entry.original),
+    ),
+  ).toBe(false);
+  const replay = projectSitePersonal(
+    { ...reading, pages: undefined },
+    { personalMap: result.personalMap },
+  );
+  expect(replay.personalMap).toEqual(result.personalMap);
+  expect(replay.model).toEqual(result.model);
+});
+
+test("date and hour masks cannot consume numeric groups from a surrounding phone", () => {
+  const result = projectSitePersonal(
+    bodyReading(
+      "Call 070 12 12 2024. Call +46 8 12 12 2024. Call 0701-1234 56. Hours 0900-1700 and date 2024 10 01.",
+    ),
+    { personalKey: key },
+  );
+  const digits = result.personalMap.entries
+    .filter((entry) => entry.kind === "phone")
+    .map((entry) => entry.original.replace(/\D/g, ""));
+  expect(digits).toEqual(expect.arrayContaining(["07012122024", "46812122024", "0701123456"]));
+  expect(digits).not.toContain("09001700");
+  expect(digits).not.toContain("20241001");
+});
+
+test("persisted business eligibility cannot hide a new independent person fact", () => {
+  const first = projectSitePersonal(
+    input('<meta property="og:site_name" content="Berg Design Studio">'),
+    { personalKey: key },
+  );
+  const reading = input('<meta property="og:site_name" content="Berg Design Studio">');
+  const fact = reading.facts.fields.find((entry) => entry.kind === "name");
+  if (!fact) throw new Error("Name fixture missing");
+  reading.facts.fields.push({
+    ...fact,
+    value: "Anna Berg",
+    evidence: { ...fact.evidence, element: "title", text: "Anna Berg" },
+  });
+  const next = projectSitePersonal(
+    { ...reading, pages: undefined },
+    { personalMap: first.personalMap },
+  );
+  expect(next.personalMap.classification?.business).toBe(true);
+  expect(next.personalMap.classification?.person).toBe(true);
+  expect(
+    next.personalMap.entries.some((entry) => entry.kind === "name" && entry.original === "Anna"),
+  ).toBe(true);
+  expect(replaceSitePersonalText("ANNA", next.personalMap)).not.toBe("ANNA");
+});
+
+test("independent person evidence never decomposes an observed structured trading identity", () => {
+  const source =
+    '<script type="application/ld+json">{"@type":"LocalBusiness","name":"Grace Lane Studio"}</script>';
+  const reading = input(source);
+  const fact = reading.facts.fields.find((entry) => entry.kind === "name");
+  if (!fact) throw new Error("Name fixture missing");
+  reading.facts.fields.push({
+    ...fact,
+    value: "Erik Lund",
+    evidence: { ...fact.evidence, element: "title", text: "Erik Lund" },
+  });
+  const result = projectSitePersonal(reading, { personalKey: key });
+  expect(
+    result.personalMap.entries.some((entry) => entry.kind === "name" && entry.original === "Erik"),
+  ).toBe(true);
+  for (const original of ["Grace Lane", "Grace", "Lane"])
+    expect(
+      result.personalMap.entries.some(
+        (entry) => entry.kind === "name" && entry.original === original,
+      ),
+    ).toBe(false);
+  const replay = projectSitePersonal(
+    { ...reading, pages: undefined },
+    { personalMap: result.personalMap },
+  );
+  expect(replay.personalMap).toEqual(result.personalMap);
+  expect(replay.model).toEqual(result.model);
 });

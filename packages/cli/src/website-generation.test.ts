@@ -350,8 +350,8 @@ test("pure compiler provenance permits typed identity but rejects injected ident
   if (spec.has(["app", "description"]))
     spec.set(["app", "description"], "This page will show rose collections.");
   else spec.add(["app"], "description", "This page will show rose collections.");
-  spec.add(["models"], "Anna", { fields: { name: "string!" } });
-  spec.add(["models", "Service", "fields"], "member", "Anna");
+  spec.add(["models"], "MemberDetails", { fields: { name: "string!" } });
+  spec.add(["models", "Service", "fields"], "member", "MemberDetails");
   for (const field of ["page", "will", "rose"])
     spec.add(["models", "Service", "fields"], field, "string");
   writeFileSync(join(dir, "smithable.yml"), `# This page will keep a rose note.\n${spec.text}`);
@@ -1065,4 +1065,161 @@ test("standalone prose uses the same visible-name context before the final check
   mkdirSync(join(dir, "samples"));
   writeFileSync(join(dir, "samples/note.md"), files["samples/note.md"] ?? "");
   expect(() => replaceWebsitePersonalArtifacts(dir, context)).not.toThrow();
+});
+
+test("final JS, TS, JSX and JSON inspect data literals without rewriting identifiers or keys", async () => {
+  const context = await prepareWebsiteContext(
+    input(
+      '<meta property="og:site_name" content="Harbour"><script type="application/ld+json">[{"@type":"Person","name":"Anna Lind"},{"@type":"Person","name":"Mark Brown"}]</script>',
+    ),
+    false,
+    [],
+    () => {},
+  );
+  const { replaceWebsitePersonalArtifacts } = await import("./website-generation.js");
+  const check = (file: string, source: string) => {
+    const dir = tempDir();
+    writeFileSync(join(dir, file), source);
+    replaceWebsitePersonalArtifacts(dir, context);
+    return readFileSync(join(dir, file), "utf8");
+  };
+  for (const [file, source] of [
+    ["ok.ts", 'const Anna = 1; const data = {"Anna": 2}; export {Anna, data};'],
+    ["ok.tsx", 'const Anna = () => <div/>; export const page = <Anna title="Fresh"/>;'],
+    ["ok.json", '{"Anna": 1, "value": "Fresh"}'],
+    ["computed.ts", 'const Anna = 1; const data = {["Anna"]: 1}; data["Anna"];'],
+    ["tsconfig.json", '{// compiler config\n"compilerOptions": {"strict": true,},}'],
+    ["sentinels.ts", String.raw`const a = "\uD800"; const b = "\uFFFD";`],
+  ])
+    expect(check(String(file), String(source))).toBe(source);
+  for (const [file, source] of [
+    ["bad.ts", 'export const value = "anna";'],
+    ["bad.js", 'const value = "\\u0041nna";'],
+    ["bad.js", 'const value = "\\x41nna";'],
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: this fixture is generated JavaScript source.
+    ["bad.ts", "const value = `Anna ${1}`;"],
+    ["bad.tsx", "const page = <div>Anna</div>;"],
+    ["bad.tsx", 'const page = <div title="Anna"/>;'],
+    ["bad.tsx", 'const page = <Person givenName="MARK"/>;'],
+    ["bad.ts", 'const person = {givenName: "MARK"};'],
+    ["template.ts", "const person = {fullName: `MARK`};"],
+    ["expression.tsx", 'const page = <Card fullName={"MARK"}/>;'],
+    ["comment.ts", "// Ask anna\nexport const okay = true;"],
+    ["action.ts", String.raw`const href = "\x74\x65\x6c:\x2b9991234";`],
+    ["bad.json", '{"value": "anna"}'],
+    ["bad.json", '{"givenName": "MARK"}'],
+    ["tsconfig.private.json", '// Maintainer anna\n{"compilerOptions": {}}'],
+    ["jsconfig.private.json", '{"compilerOptions": {/* anna */"strict": true}}'],
+  ])
+    expect(() => check(String(file), String(source))).toThrow(
+      "Generated website code still contains source contact details",
+    );
+  expect(() => check("broken.ts", 'const privateAnna = "Anna')).toThrow(
+    /^Generated website code could not be checked\.$/,
+  );
+  expect(() => check("data.json", '{// comment\n"value": true,}')).toThrow(
+    /^Generated website data could not be checked\.$/,
+  );
+  expect(() => check("broken.json", '{"secretAnna":')).toThrow(
+    /^Generated website data could not be checked\.$/,
+  );
+});
+
+test("provider answer values use text/name contexts while request code and answer keys remain structural", async () => {
+  const context = await prepareWebsiteContext(
+    input(
+      '<meta property="og:site_name" content="Harbour"><script type="application/ld+json">[{"@type":"Person","name":"Anna Lind"},{"@type":"Person","name":"Mark Brown"}]</script>',
+    ),
+    false,
+    [],
+    () => {},
+  );
+  const { websitePrivateProviders } = await import("./website-generation.js");
+  let received = "";
+  let answer = JSON.stringify({
+    Anna: "anna",
+    person: { givenName: "MARK", fullname: "MARK" },
+    code: "const Anna = 1",
+  });
+  const provider: Provider = {
+    name: "fixture",
+    tier: "local",
+    location: "local",
+    price: { input: 0, output: 0 },
+    complete: async (request) => {
+      received = request.user;
+      return { text: answer, model: "fixture", inputTokens: 1, outputTokens: 1 };
+    },
+  };
+  const wrapped = websitePrivateProviders([provider], context.personalMap)[0];
+  if (!wrapped) throw new Error("Missing fixture provider");
+  const result = await wrapped.complete({
+    system: "Return JSON",
+    user: "const Anna = 1",
+    schema: {},
+  });
+  expect(received).toBe("const Anna = 1");
+  const parsed = JSON.parse(result.text);
+  expect(Object.keys(parsed)).toContain("Anna");
+  expect(parsed.Anna).not.toMatch(/anna/i);
+  expect(parsed.person.givenName).not.toMatch(/mark/i);
+  expect(parsed.person.fullname).not.toMatch(/mark/i);
+  expect(parsed.code).not.toContain("Anna");
+  answer = "Ask anna for details.";
+  expect(
+    (await wrapped.complete({ system: "Return prose", user: "Safe", schema: {} })).text,
+  ).not.toMatch(/anna/i);
+});
+
+test("YAML comments, defaults, option lists and array values use text while concrete references stay structural", async () => {
+  const context = await prepareWebsiteContext(
+    input(
+      '<meta property="og:site_name" content="Harbour"><script type="application/ld+json">{"@type":"Person","name":"Anna Lind"}</script>',
+    ),
+    false,
+    [],
+    () => {},
+  );
+  const { replaceWebsitePersonalFiles } = await import("./website-generation.js");
+  const source =
+    "# Ask anna\nmodels:\n  Anna:\n    fields:\n      owner: Anna\n      title:\n        type: string\n        default: anna\n        options: [Anna, Fresh]\n    unique: [[Anna, title]]\nnavigation: [Anna]\n";
+  const result = replaceWebsitePersonalFiles(
+    {
+      "smithable.yml": source,
+      "samples/rows.yml": "- label: Anna\n  values: [anna, Fresh]\n  count: 1177\n",
+    },
+    context,
+  );
+  const spec = new YamlEditor(String(result["smithable.yml"]));
+  expect(spec.get(["models", "Anna", "fields", "owner"])).toBe("Anna");
+  expect(spec.get(["navigation", "0"])).toBe("Anna");
+  expect(spec.get(["models", "Anna", "unique", "0", "0"])).toBe("Anna");
+  expect(spec.get(["models", "Anna", "fields", "title", "default"])).not.toBe("anna");
+  expect(spec.get(["models", "Anna", "fields", "title", "options", "0"])).not.toBe("Anna");
+  expect(result["smithable.yml"]).not.toContain("# Ask anna");
+  const rows = new YamlEditor(String(result["samples/rows.yml"]));
+  expect(rows.get(["0", "label"])).not.toBe("Anna");
+  expect(rows.get(["0", "values", "0"])).not.toBe("anna");
+  expect(rows.get(["0", "count"])).toBe(1177);
+});
+
+test("UX reference arrays are schema-anchored rather than matching page ids or nested text", async () => {
+  const context = await prepareWebsiteContext(
+    input(
+      '<meta property="og:site_name" content="Harbour"><script type="application/ld+json">{"@type":"Person","name":"Anna Lind"}</script>',
+    ),
+    false,
+    [],
+    () => {},
+  );
+  const { replaceWebsitePersonalFiles } = await import("./website-generation.js");
+  const source =
+    "pages:\n  status:\n    intro: [Anna]\n    table:\n      columns: [Anna]\n    form:\n      sections:\n        - name: contacts\n          fields: [Anna]\n  orders:\n    record:\n      detail: [Anna]\n    detail:\n      notes: [Anna]\n";
+  const result = replaceWebsitePersonalFiles({ "smithable.ux.yml": source }, context);
+  const value = new YamlEditor(String(result["smithable.ux.yml"]));
+  expect(value.get(["pages", "status", "intro", "0"])).not.toBe("Anna");
+  expect(value.get(["pages", "orders", "detail", "notes", "0"])).not.toBe("Anna");
+  expect(value.get(["pages", "status", "table", "columns", "0"])).toBe("Anna");
+  expect(value.get(["pages", "status", "form", "sections", "0", "fields", "0"])).toBe("Anna");
+  expect(value.get(["pages", "orders", "record", "detail", "0"])).toBe("Anna");
 });

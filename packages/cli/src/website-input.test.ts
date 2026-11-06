@@ -409,3 +409,46 @@ test("corrected sample projection survives serialized installation and consumpti
   expect(consumed.personalMap).toEqual(reading.personalMap);
   expect(parseWebsiteInput(JSON.parse(JSON.stringify(consumed))).model).toEqual(reading.model);
 });
+
+test("reader follow-up exclusions survive the installed-input boundary", async () => {
+  const html = `<meta property="og:site_name" content="Anna Berg Frisör">
+<nav><a href="/services">Services</a><a href="/booking">Booking</a></nav>
+<p>Manager Anna Maria Sofia Lind welcomes visitors. Call 5552345678.</p>
+<p>Our price is 12 500 000 kr. Updated 2024 10 01. Open 0900-1700.</p>
+<a href="tel:999">Emergency</a><a href="tel:000">Emergency</a>`;
+  const bytes = Buffer.byteLength(html);
+  const reading = siteBundleResult({
+    version: 1,
+    startUrl: url,
+    pages: [{ id: "p1", url, html, fetchedAt: new Date(0).toISOString(), bytes, depth: 0 }],
+    crawl: { pages: 1, bytes, elapsedMs: 1, diagnostics: [] },
+  });
+  expect(reading.tooLittle).toBe(false);
+  expect(reading.model.facts.fields).toEqual(
+    expect.arrayContaining([expect.objectContaining({ kind: "name", value: "Anna Berg Frisör" })]),
+  );
+  const phones = reading.personalMap.entries.filter((entry) => entry.kind === "phone");
+  expect(phones.map((entry) => entry.original)).toEqual(["5552345678"]);
+  expect(JSON.stringify(reading.model)).not.toContain("5552345678");
+  expect(JSON.stringify(reading.model)).not.toContain("Anna Maria Sofia Lind");
+  const raw = JSON.stringify({
+    version: 1,
+    options: { contentMode: "sample" },
+    facts: reading.facts,
+    images: reading.images,
+    sourceCorpus: reading.sourceCorpus,
+    personalMap: reading.personalMap,
+    model: reading.model,
+    originals: [],
+    authorization: { id: "auth-reader-followup", site: url, images: false },
+  });
+  const sha256 = digest(raw);
+  const project = join(tempDir("website-followup-roundtrip-"), "project");
+  mkdirSync(project);
+  expect(
+    await installWebsiteInputCommand(project, "job", sha256, quiet, Readable.from([raw])),
+  ).toBe(0);
+  const consumed = consumeWebsiteInput(project, "job", { version: 1, sha256 });
+  expect(consumed.model).toEqual(reading.model);
+  expect(consumed.personalMap).toEqual(reading.personalMap);
+});
