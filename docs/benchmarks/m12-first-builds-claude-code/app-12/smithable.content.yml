@@ -1,43 +1,11 @@
 smithableContent: 0.1
-models:
-  Component:
-    label: Service
-    pluralLabel: Services
-    fields:
-      incidents:
-        label: Outages
-  Incident:
-    fields:
-      component:
-        label: Service
-    label: Outage
-    pluralLabel: Outages
-  IncidentUpdate:
-    fields:
-      incident:
-        label: Outage
-    label: Update
-    pluralLabel: Updates
 pages:
-  components:
-    title: Services
-  incidents:
-    title: Outages
   home:
     hero:
-      title: Is the shop working?
-      subtitle: "Checkout, payments, delivery: see how each part of the shop is doing right now, and what we are doing about anything that is not."
-      button: Past outages
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
-    services:
-      title: Services
-    open:
-      title: Happening now
-    recent:
-      title: Recently resolved
 logo:
   src: images/logo.webp
   alt: A pulse line in a circle

@@ -2,23 +2,23 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: Browse without an account, text: "Every open job is listed with its employer, location and hourly wage, so you can look before you sign in." }, { title: Apply in a few minutes, text: "Sign in, pick the job, add your member number and a short note, and attach your resume if you have one." }, { title: Follow your applications, text: "See each application you sent in one place, and whether it has been shortlisted, hired or declined." }]
-      title: How it works
+      items: [{ title: Jobs from our own region, text: "Every opening here is shared by the union, with employers who respect the contract." }, { title: Clear pay and terms, text: "Each post states the wage, the kind of work and the date applications close." }, { title: Apply in minutes, text: "Sign in, write a few lines about yourself, attach your resume and send it." }, { title: Follow your applications, text: "See whether you have been shortlisted or hired, all in one place." }]
+    faq:
+      items: [{ question: Who can apply?, answer: Anyone with an account can apply; members in good standing are encouraged to sign in with the address the union has on file. }, { question: Can I see the jobs without signing in?, answer: Yes. Open jobs are listed for everyone; signing in is only needed to apply. }, { question: Who sees my application?, answer: Only you and the union staff who handle the job posting. }, { question: Can I apply to the same job twice?, answer: "No, one application per job. You can edit yours while it is under review." }]
     hero:
-      title: Union jobs, close to home
-      subtitle: Find work with local employers and apply directly through your union.
+      title: Good union jobs, close to home
+      subtitle: Browse open positions shared by your local and apply in a few minutes.
       button: See open jobs
-      secondButton: My applications
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
-    openJobs:
-      title: Open jobs
+  jobs:
+    title: Jobs
   myApplications:
     title: My applications
   applications:
-    title: All applications
+    title: Applications
 logo:
   src: images/logo.webp
   alt: A map pin

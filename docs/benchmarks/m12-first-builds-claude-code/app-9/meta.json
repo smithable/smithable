@@ -4,6 +4,7 @@
   "wordStarter": "booking",
   "questions": [
     "Who opens tickets?",
-    "What should a ticket hold besides its priority and assignee?"
+    "Can the person who opened a ticket follow it?",
+    "What should a ticket hold besides priority and assignee?"
   ]
 }

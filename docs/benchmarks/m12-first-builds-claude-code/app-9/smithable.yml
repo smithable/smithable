@@ -1,42 +1,37 @@
 smithable: 0.1
 app:
-  name: IT Help Desk
-  description: Where an IT team tracks its tickets, their priorities and who handles them.
+  name: Fixdesk
+  description: "The IT team's help desk: tickets, their priority and who handles them."
   timezone: Europe/Helsinki
 models:
-  SupportCase:
+  Ticket:
     fields:
       subject: string!
-      customerEmail:
+      requesterEmail:
         type: email!
         locked: true
       status: open | inProgress | closed | reopened
-      priority:
-        type: int!
-        min: 1
-        max: 5
-        default: 3
-        description: 1 is the most urgent, 5 the least.
+      priority: normal | low | high | urgent
       assignee:
         type: User
         required:
           status: [inProgress, closed]
-      body: text
+      description: text
       attachments: files
-      messages: Message[]
-  Message:
+      notes: Note[]
+  Note:
     fields:
       content: text!
-      agent:
+      author:
         type: User
         by: app
         default: ME()
       attachments: files
-      supportCase: SupportCase!
+      ticket: Ticket!
 pages:
-  cases:
-    crud: SupportCase
-    search: [subject, customerEmail]
+  tickets:
+    crud: Ticket
+    search: [subject, requesterEmail]
     filters: [status, priority, assignee]
     sortable: [priority, createdAt]
     actions: [assignToMe, assignTo, startWork, close, reopen]
@@ -44,33 +39,33 @@ pages:
     users: manage
 actions:
   assignToMe:
-    on: SupportCase
+    on: Ticket
     when:
       assignee: not ME()
     set:
       assignee: ME()
-    intent: "Take the ticket: you become its assignee."
+    intent: "Take the ticket: you become the one who handles it."
   assignTo:
-    on: SupportCase
+    on: Ticket
     set:
       assignee:
     intent: Give the ticket to someone on the team.
   startWork:
-    on: SupportCase
+    on: Ticket
     when:
       status: [open, reopened]
     set:
       status: inProgress
     intent: Someone is working on the ticket now; it needs an assignee.
   close:
-    on: SupportCase
+    on: Ticket
     when:
       status: [open, inProgress, reopened]
     set:
       status: closed
     intent: The problem is solved.
   reopen:
-    on: SupportCase
+    on: Ticket
     when:
       status: closed
     set:

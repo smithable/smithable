@@ -1,14 +1,13 @@
 smithableUx: 0.1
 pages:
-  cases:
+  tickets:
     table:
-      sort: priority
-      columns: [subject, status, priority, assignee, customerEmail]
-    record:
-      lists:
-        messages: thread
+      columns: [subject, requesterEmail, status, priority, assignee]
 tones:
-  SupportCase.status:
+  Ticket.priority:
+    high: warning
+    urgent: danger
+  Ticket.status:
     closed: success
     reopened: warning
 theme:

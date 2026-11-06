@@ -1,13 +1,4 @@
 smithableContent: 0.1
-models:
-  Ingredient:
-    fields:
-      inStock:
-        label: In stock
-      reorderLevel:
-        label: Reorder level
-      aboveReorder:
-        label: Above reorder level
 logo:
   src: images/logo.webp
   alt: A parcel box

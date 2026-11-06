@@ -1,22 +1,15 @@
 smithableUx: 0.1
 pages:
-  companies:
-    table:
-      columns: [name, industry, phone, accountManager]
-  contacts:
-    table:
-      columns: [name, company, jobTitle, email, phone]
   deals:
     table:
-      columns: [title, company, stage, value, expectedClose, salesperson]
       totals: [value]
   followUps:
     table:
       sort: dueOn
-      columns: [dueOn, company, contact, deal, note, done]
 tones:
   Deal.stage:
     won: success
     lost: danger
+    negotiation: warning
 theme:
-  preset: quiet-workspace
+  preset: corporate

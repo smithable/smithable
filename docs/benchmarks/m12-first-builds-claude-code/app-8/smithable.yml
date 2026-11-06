@@ -1,12 +1,14 @@
 smithable: 0.1
 app:
-  name: Conference Registration
-  description: The programme of a conference, its speakers, and registration for its talks.
-  timezone: Europe/Helsinki
+  name: Confhub
+  description: Programme, speakers and attendee registration for a conference.
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   Speaker:
     fields:
       name: string!
+      jobTitle: string
       company: string
       bio: markdown
       portrait: picture
@@ -19,22 +21,20 @@ models:
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
-      capacity: int! = 100
-      registrations: Registration[]
-      placesLeft:
-        type: int
-        formula: capacity - COUNT(registrations)
+      track: keynote | technical | business | workshop
+      level: beginner | intermediate | advanced
   Registration:
     fields:
-      talk: Talk! unique
+      fullName: string!
+      email: email!
+      company: string
+      jobTitle: string
+      ticket: standard | student | vip
+      dietaryNeeds: string
+      status: confirmed | cancelled
       attendee: User
-    namedBy: talk
     ownedBy: attendee
-    capacity:
-      per: talk
-      max: talk.capacity
-      closes: talk.startsAt
-      cancelUntil: talk.startsAt
+    namedBy: fullName
 pages:
   home:
     route: /
@@ -43,30 +43,38 @@ pages:
         button: schedule
         secondButton: speakers
       features:
-      speakers:
+      lineup:
         records: Speaker
       faq:
       callToAction:
-        button: schedule
+        button: my-registration
       footer:
   schedule:
     calendar:
       model: Talk
       starts: startsAt
-    filters: [speaker]
-  my-registrations:
+    filters: [speaker, track]
+  my-registration:
     crud: Registration
     mine: true
   talks:
     crud: Talk
-    filters: [speaker, startsAt]
+    filters: [speaker, track, level, startsAt]
   speakers:
     crud: Speaker
-  attendees:
+  registrations:
     crud: Registration
-    filters: [talk]
-  team:
-    users: manage
+    filters: [ticket, status]
+    search: [fullName, email, company]
   privacy:
     route: /privacy
     legal: privacy
+actions:
+  cancelRegistration:
+    on: Registration
+    when:
+      status: confirmed
+    set:
+      status: cancelled
+    intent: The attendee no longer comes to the conference.
+navigation: [schedule, speakers, my-registration, talks, registrations]

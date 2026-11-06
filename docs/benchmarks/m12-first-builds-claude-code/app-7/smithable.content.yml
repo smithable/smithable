@@ -2,16 +2,15 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Follow every team, every match
-      subtitle: Meet our squads, see when we play next and catch up on the latest scores.
-      button: See the matches
-      secondButton: Meet the teams
+      title: Welcome to the club
+      subtitle: Fixtures, results and the players behind every team, from the first team to the youngest juniors.
+      button: Fixtures & results
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    fixtures:
-      title: Coming up
+    upcoming:
+      title: Upcoming matches
     results:
       title: Latest results
     ourTeams:

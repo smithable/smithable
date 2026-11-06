@@ -1,16 +1,14 @@
 smithableUx: 0.1
 pages:
-  schedule:
-    calendar:
-      capacity:
-        left: placesLeft
-        of: capacity
   talks:
     table:
-      columns: [title, speaker, startsAt, room, placesLeft]
       sort: startsAt
-  attendees:
+  speakers:
     table:
-      columns: [attendee, talk]
+      view: cards
+tones:
+  Registration.status:
+    confirmed: success
+    cancelled: danger
 theme:
   preset: modern

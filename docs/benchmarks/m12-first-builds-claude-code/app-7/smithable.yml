@@ -1,13 +1,18 @@
 smithable: 0.1
 app:
-  name: Our Football Club
-  description: The club's public site with its teams, players, fixtures and results.
-  timezone: Europe/Helsinki
+  name: Club Football
+  description: The club's site with its teams, players, fixtures and results.
+  currency: EUR
+  timezone: Europe/Mariehamn
+  clock: 24h
+  date: day-month
+  week: monday
 models:
   Team:
     fields:
       name: string!
-      ageGroup: senior | youth | veterans
+      ageGroup: senior | youth | junior
+      league: string
       coach: string
       photo: picture
       about: text
@@ -17,21 +22,22 @@ models:
     fields:
       name: string!
       team: Team!
-      number:
+      position: goalkeeper | defender | midfielder | forward
+      shirtNumber:
         type: int
         min: 1
         max: 99
-      position: goalkeeper | defender | midfielder | forward
       photo: picture
-      about: text
+      bio: text
   Match:
     fields:
       team: Team!
       opponent: string!
       kickoff: datetime!
-      venue: home | away
+      venue: home | away | neutral
       ground: string
-      status: scheduled | played | postponed
+      competition: league | cup | friendly
+      status: scheduled | played | postponed | cancelled
       goalsFor:
         type: int
         min: 0
@@ -43,28 +49,26 @@ models:
         required:
           status: played
       report: text
-    namedBy: [team, opponent]
+    namedBy: [team, opponent, kickoff]
 pages:
+  matches:
+    crud: Match
+    filters: [team, status, venue, competition, kickoff]
+    search: [opponent, ground]
+    actions: [recordResult, postpone]
   teams:
     crud: Team
-    search: [name, coach]
-    filters: [ageGroup]
   players:
     crud: Player
     search: [name]
     filters: [team, position]
-  matches:
-    crud: Match
-    search: [opponent, ground]
-    filters: [team, status, venue]
-    actions: [recordResult]
   home:
     route: /
     landing:
       hero:
         button: matches
         secondButton: teams
-      fixtures:
+      upcoming:
         records: Match
         where:
           status: scheduled
@@ -78,8 +82,6 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-  staff:
-    users: manage
 actions:
   recordResult:
     on: Match
@@ -89,4 +91,11 @@ actions:
       status: played
       goalsFor:
       goalsAgainst:
-    intent: Enter the final score of a match and mark it as played.
+    intent: Enter the final score of a match once it has been played.
+  postpone:
+    on: Match
+    when:
+      status: scheduled
+    set:
+      status: postponed
+    intent: Mark a match as postponed.

@@ -2,5 +2,9 @@
   "description": "A public uptime page for a web shop: which services work, outages and their updates.",
   "starter": "status",
   "wordStarter": "status",
-  "questions": []
+  "questions": [
+    "Who posts outages and updates?",
+    "Should the page also announce planned maintenance ahead of time?",
+    "Can visitors subscribe to hear about new outages?"
+  ]
 }

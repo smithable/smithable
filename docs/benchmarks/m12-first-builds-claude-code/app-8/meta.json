@@ -3,8 +3,8 @@
   "starter": "booking",
   "wordStarter": "records",
   "questions": [
-    "What do attendees register for?",
+    "Do attendees register for the whole conference, or sign up for each talk?",
     "What can visitors see without signing in?",
-    "Who manages the talks, speakers and attendee list?"
+    "Who manages talks and speakers?"
   ]
 }
