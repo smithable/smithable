@@ -35,7 +35,7 @@ export const FEATURES: Record<string, string> = {
   "page:<kind>":
     "a page of that kind (crud, landing, sections, dashboard, settings, onboarding, users, calendar, …)",
   "field:<type>":
-    "a field of that type (a scalar such as file, image, money, phone; choice; reference; list)",
+    "a field of that type (a scalar such as file, files, picture, money, phone; choice; reference; list)",
   "auth:<provider>": "sign-in with that provider (google, email, …)",
   "section:<name>":
     "a non-empty section: incoming, outgoing, timers, queries, actions, or a plugin's",
@@ -127,24 +127,30 @@ export function affects(dir: string, fix: Fix): Answer {
   const { kit = [], features = [], stack = [] } = fix.affects;
   const kitFile = kit.find((path) => existsSync(join(dir, path)));
   if (kitFile) return { answer: "yes", reason: `The app has ${kitFile}.` };
-  if (stack.length) {
-    let pkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
-    try {
-      pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-    } catch {
-      return { answer: "unknown", reason: "The app's package.json could not be read." };
-    }
-    const found = stack.find((p) => pkg.dependencies?.[p] ?? pkg.devDependencies?.[p]);
-    if (found) return { answer: "yes", reason: `The app uses ${found}.` };
-  }
+  // What could not be read leaves "unknown" only when nothing else says yes.
+  let unread: string | undefined;
   if (features.length) {
     const quiet = { out: () => {}, err: () => {} };
     const spec = loadSpec(dir, quiet);
-    if (!spec.ir || !spec.auth)
-      return { answer: "unknown", reason: "The app's spec files could not be read." };
-    const holding = features.find((f) => holds(f, spec));
-    if (holding) return { answer: "yes", reason: `The app has ${FEATURE_WORDS(holding)}.` };
+    if (!spec.ir || !spec.auth) unread = "The app's spec files could not be read.";
+    else {
+      const holding = features.find((f) => holds(f, spec));
+      if (holding) return { answer: "yes", reason: `The app has ${FEATURE_WORDS(holding)}.` };
+    }
   }
+  if (stack.length) {
+    let pkg:
+      | { dependencies?: Record<string, string>; devDependencies?: Record<string, string> }
+      | undefined;
+    try {
+      pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    } catch {
+      unread ??= "The app's package.json could not be read.";
+    }
+    const found = stack.find((p) => pkg?.dependencies?.[p] ?? pkg?.devDependencies?.[p]);
+    if (found) return { answer: "yes", reason: `The app uses ${found}.` };
+  }
+  if (unread) return { answer: "unknown", reason: unread };
   return {
     answer: "no",
     reason: `The app has none of what the fix is about (${[...kit, ...features, ...stack].join(", ")}).`,
@@ -179,7 +185,7 @@ function holds(feature: string, spec: ReturnType<typeof loadSpec>): boolean {
           ? f.type.name === value
           : f.type.kind === "choice"
             ? value === "choice"
-            : value === (f.type.many ? "list" : "reference"),
+            : f.type.kind === "relation" && value === (f.type.many ? "list" : "reference"),
       ),
     );
   if (kind === "auth")
@@ -193,7 +199,13 @@ function holds(feature: string, spec: ReturnType<typeof loadSpec>): boolean {
       actions: ir.actions,
     };
     const list = sections[value];
-    return list ? list.length > 0 : ir.extensions?.[value] !== undefined;
+    if (list) return list.length > 0;
+    const plugin = ir.extensions?.[value];
+    return Array.isArray(plugin)
+      ? plugin.length > 0
+      : plugin !== null && typeof plugin === "object"
+        ? Object.keys(plugin).length > 0
+        : plugin !== undefined;
   }
   if (kind === "theme") return ux?.theme.preset === value;
   return false;
@@ -255,6 +267,6 @@ export function migrationKind(sql: string[]): Fix["migration"] {
     /^CREATE INDEX\b/i.test(s) ||
     (/^ALTER TABLE\s+\S+\s+ADD\s+(?:COLUMN\s+)?\S+/i.test(s) &&
       (!/\bNOT NULL\b/i.test(s) || /\bDEFAULT\b/i.test(s)) &&
-      !/\b(?:UNIQUE|PRIMARY KEY|REFERENCES)\b/i.test(s));
+      !/\b(?:UNIQUE|PRIMARY KEY|REFERENCES|CHECK|CONSTRAINT)\b/i.test(s));
   return statements.every(adds) ? "additive" : "destructive";
 }

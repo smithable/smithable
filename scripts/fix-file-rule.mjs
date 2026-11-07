@@ -22,7 +22,8 @@ const changed = (filter, ...paths) =>
     .filter(Boolean);
 const engine = changed("ACMRD").filter(
   (path) =>
-    /^packages\/adapter-tanstack\/(templates\/|src\/)/.test(path) &&
+    (/^packages\/adapter-tanstack\/(templates\/|src\/)/.test(path) ||
+      path === "packages/cli/src/generate.ts") &&
     !/(\.test\.ts|\.gen\.ts|\/__snapshots__\/.*)$/.test(path),
 );
 const fixes = changed("AM", "fixes/*.yml");

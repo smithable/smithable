@@ -91,6 +91,9 @@ test("a migration only adds, or the build before it may not run on it", () => {
   ).toBe("additive");
   expect(migrationKind(["ALTER TABLE `customer` ADD `code` text NOT NULL;"])).toBe("destructive");
   expect(migrationKind(["CREATE UNIQUE INDEX `u` ON `customer` (`email`);"])).toBe("destructive");
+  expect(migrationKind(["ALTER TABLE `customer` ADD `age` integer CHECK (`age` > 0);"])).toBe(
+    "destructive",
+  );
   expect(migrationKind(["ALTER TABLE `customer` DROP COLUMN `notes`;"])).toBe("destructive");
   expect(
     migrationKind([
