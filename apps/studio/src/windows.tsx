@@ -41,12 +41,14 @@ export interface Arrangement {
 }
 
 /**
- * Smith first (smith-first.md §6): Smith with Changes under him, the preview beside him, and No
- * code and Code as the third place, which the arrow at the preview's edge opens.
+ * Smith first (smith-first.md §6): Smith, the preview beside him, and No code and Code as the
+ * third place, which the arrow at the preview's edge opens. Changes is the detail view, closed
+ * at first and opened from Smith's Show all or the windows menu (ask-flows.md §8); an
+ * arrangement kept in the browser stays as it was.
  */
 const DEFAULT: Arrangement = {
   layout: "two",
-  slots: ["smith+changes", "preview", "manual"],
+  slots: ["smith", "preview", "manual"],
   manual: "nocode",
 };
 const KEY = "smithable:windows";
@@ -62,9 +64,9 @@ export function keptArrangement(kept: {
 }): Arrangement {
   const old = kept.slots.find((s): s is ManualView => s === "nocode" || s === "code");
   const slots = kept.slots.map((s) => (s === "nocode" || s === "code" ? "manual" : s));
-  const missing = (["manual", "preview", "smith+changes"] as SlotContent[]).filter(
+  const missing = (["manual", "preview", "smith"] as SlotContent[]).filter(
     (w) =>
-      !slots.some((s) => s === w || (w === "smith+changes" && (s === "smith" || s === "changes"))),
+      !slots.some((s) => s === w || (w === "smith" && (s === "smith+changes" || s === "changes"))),
   );
   const seen = new Set<string>();
   const unique = slots.map((s) => {
@@ -322,11 +324,11 @@ export function usePhoneSettings(): [PhoneSettings, (next: PhoneSettings) => voi
     try {
       return {
         code: true,
-        changesUnderSmith: true,
+        changesUnderSmith: false,
         ...JSON.parse(localStorage.getItem(PHONE) ?? "{}"),
       };
     } catch {
-      return { code: true, changesUnderSmith: true };
+      return { code: true, changesUnderSmith: false };
     }
   });
   useEffect(() => {

@@ -151,6 +151,26 @@ const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
 const browser = await chromium.launch();
 // Wide enough that the preview, beside No code and Smith, shows lists as tables.
 const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
+// The test's layout keeps Changes under Smith (closed by default since ask-flows.md §8): an
+// arrangement kept in the browser, as a person's would be. Only when none is kept yet.
+await page.addInitScript(() => {
+  try {
+    if (!localStorage.getItem("smithable:windows"))
+      localStorage.setItem(
+        "smithable:windows",
+        JSON.stringify({
+          layout: "two",
+          slots: ["smith+changes", "preview", "manual"],
+          manual: "nocode",
+        }),
+      );
+    if (!localStorage.getItem("smithable:phone"))
+      localStorage.setItem(
+        "smithable:phone",
+        JSON.stringify({ code: true, changesUnderSmith: true }),
+      );
+  } catch {}
+});
 try {
   await checkStaticStates(browser);
   await checkPublicLook(browser);
@@ -1878,6 +1898,73 @@ try {
         .getByText("Milestone: First look")
         .waitFor({ state: "detached", timeout: 60000 * P });
       if (tags()) throw new Error(`tags left: ${tags()}`);
+    },
+  );
+  await step(
+    "Smith tells the history by number, names a milestone, and undoes after one confirmation (A 234)",
+    async () => {
+      const box = page.getByLabel("Describe a change, or ask a question");
+      const say = async (text) => {
+        await box.fill(text);
+        await box.press("Enter");
+      };
+      const history = page.getByRole("region", { name: "The history" });
+      const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
+      const before = spec();
+      // A change of its own, so the undo takes back nothing another step needs.
+      await op("setFilters", { page: "orders", fields: ["status", "shippingMethod"] });
+      await page
+        .getByRole("group", { name: "Ready prompts" })
+        .getByRole("button", { name: "What have I changed?" })
+        .click({ timeout: 30000 * P });
+      // The lines start with their numbers, newest first, and say what undo puts back.
+      const first = history.locator("[data-history-line]").first();
+      await first.waitFor({ timeout: 30000 * P });
+      if (!/^#\d+ .*Undoing it puts back the app's files/.test(await first.innerText()))
+        throw new Error(`the first line: ${await first.innerText()}`);
+      const number = /^#(\d+)/.exec(await first.innerText())?.[1];
+      // Changes shows the same number on its line.
+      await trace
+        .locator("[data-change-number]", { hasText: `#${number}` })
+        .first()
+        .waitFor();
+      await say("name this a milestone Smith's mark");
+      await trace.getByText("Milestone: Smith's mark").waitFor({ timeout: 30000 * P });
+      await say("remove the milestone smiths mark");
+      await trace
+        .getByText("Milestone: Smith's mark")
+        .waitFor({ state: "detached", timeout: 30000 * P });
+      // No keeps it; Yes undoes it, through the X's route.
+      await say("Undo the last change");
+      const confirm = page.getByRole("region", { name: "Confirm" });
+      await confirm.getByText(`Undo #${number} `).waitFor({ timeout: 30000 * P });
+      await confirm.getByRole("button", { name: "No" }).click();
+      await history.getByText("Nothing undone.").waitFor();
+      await say(`undo #${number}`);
+      await confirm.getByRole("button", { name: "Yes" }).click({ timeout: 30000 * P });
+      await history.getByText(`Undid: #${number} `).waitFor({ timeout: 60000 * P });
+      if (spec() !== before) throw new Error("the undo did not put the spec back");
+      await say(`undo #${number}`);
+      await history.getByText(`#${number} is undone already`).waitFor({ timeout: 30000 * P });
+      // A browser that kept no arrangement opens with Changes closed; Show all opens it.
+      const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      try {
+        await fresh.goto(`${base}/?guide=off`);
+        await fresh.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
+        const changes = fresh.getByRole("list", { name: "Change trace" });
+        if (await changes.count()) throw new Error("Changes is open at first");
+        await fresh
+          .getByRole("group", { name: "Ready prompts" })
+          .getByRole("button", { name: "What have I changed?" })
+          .click({ timeout: 30000 * P });
+        await fresh
+          .getByRole("region", { name: "The history" })
+          .getByRole("button", { name: "Show all" })
+          .click({ timeout: 30000 * P });
+        await changes.waitFor({ timeout: 10000 * P });
+      } finally {
+        await fresh.close();
+      }
     },
   );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {

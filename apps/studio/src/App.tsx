@@ -234,6 +234,7 @@ export function App() {
   };
   // Smith's window on a phone: Smith or, under him, Changes, chosen by the tabs or a swipe.
   const [phoneSub, setPhoneSub] = useState<"smith" | "changes">("smith");
+  const [changesAt, setChangesAt] = useState<{ id: string; at: number }>();
   // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
   // Floating, Smith leaves the first place and the preview takes the width: the window there
   // (Changes) comes back by the arrow or its tab (smith-first.md §12.3).
@@ -828,6 +829,14 @@ export function App() {
   // record), and its steps act on Studio as it is when they run.
   const live = useRef({ run, undo, workIn, nocodePlace, showWindow, arrangement, layout, narrow });
   live.current = { run, undo, workIn, nocodePlace, showWindow, arrangement, layout, narrow };
+  // Changes opened from Smith's answer (ask-flows.md §8): at a line, or at the top.
+  const showChanges = (id?: string) => {
+    const at = id ?? project?.trace[0]?.id;
+    if (at) setChangesAt({ id: at, at: Date.now() });
+    if (!narrow) workIn("changes");
+    else if (phone.changesUnderSmith) setPhoneSub("changes");
+    else showWindow("changes");
+  };
   if (!project) return <p className="p-6 text-sm text-quiet">Opening the project…</p>;
   // Smith's thread, wherever it is: on the overlay, in the floating panel, or in a window.
   const layerOn = !project.making && (overlaid || floating);
@@ -846,6 +855,7 @@ export function App() {
         words={words}
         waiting={project.waiting}
         trace={project.trace}
+        onShowChanges={showChanges}
         ready={{
           sections,
           parts,
@@ -1506,6 +1516,7 @@ export function App() {
                                 words={words}
                                 plugins={spec.plugins}
                                 onUndo={(ids) => void undoChanges(ids)}
+                                {...(changesAt ? { openAt: changesAt } : {})}
                                 onMilestone={async (id, name) => {
                                   const named = await api
                                     .milestone(id, name)

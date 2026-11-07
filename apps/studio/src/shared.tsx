@@ -4,6 +4,7 @@ import type { SpecPlugin } from "@smithable/core";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, type ChangeDetail, type TraceEntry } from "./api";
 import { type PartChange, summaryDiff } from "./builder/change-diff";
+import { entryText, grouped, numbers, restores, summary as summaryOf } from "./history";
 import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
 import { Button, cx, Input, Panel } from "./ui";
@@ -450,26 +451,17 @@ export function Preview({
   );
 }
 
-/** `words` words an entry the Builder's way ("Customers: added a website"), where it can. */
-/** Consecutive changes made for one request to a model, which the list shows as one. */
-function grouped(entries: TraceEntry[]): TraceEntry[][] {
-  const groups: TraceEntry[][] = [];
-  for (const e of entries) {
-    const last = groups.at(-1);
-    if (e.request && last?.[0]?.request === e.request && !e.isUndo && !last[0].isUndo) last.push(e);
-    else groups.push([e]);
-  }
-  return groups;
-}
-
 export function Trace({
   entries,
   words,
   plugins = [],
   onUndo,
   onMilestone,
+  openAt,
 }: {
   entries: TraceEntry[];
+  /** A change to open and show (Smith's Show all or one of his lines, ask-flows.md §8). */
+  openAt?: { id: string; at: number };
   /** Builder's wording of an operation: given, an opened change says what changed in the summary's words; not, it shows the files' patch. */
   words?: (op: string, args: Record<string, unknown>) => string | undefined;
   plugins?: SpecPlugin[];
@@ -480,18 +472,24 @@ export function Trace({
 }) {
   const [open, setOpen] = useState<string>();
   const [onlyMilestones, setOnlyMilestones] = useState(false);
-  const text = (e: TraceEntry) => {
-    const plain = e.operation && words?.(e.operation.op, e.operation.args);
-    return plain ? (e.isUndo ? `Undid: ${plain}` : plain) : e.description;
-  };
+  const text = (e: TraceEntry) => entryText(e, words);
   // A request's changes in one line from what they did, oldest first (A 232); the request
   // itself is said when the entry is opened.
-  const summary = (group: TraceEntry[]) => {
-    const parts = [...group].reverse().map(text);
-    return parts.length <= 3
-      ? parts.join("; ")
-      : `${parts.slice(0, 2).join("; ")}; and ${parts.length - 2} more`;
-  };
+  const summary = (group: TraceEntry[]) => summaryOf(group, words);
+  // Opened from Smith at a line: that line's group open, and in view.
+  const list = useRef<HTMLOListElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when Smith asks again
+  useEffect(() => {
+    if (!openAt) return;
+    const group = grouped(entries).find((g) => g.some((e) => e.id === openAt.id));
+    const first = group?.[0]?.id;
+    if (!first) return;
+    setOnlyMilestones(false);
+    setOpen(first);
+    requestAnimationFrame(() =>
+      list.current?.querySelector(`[data-change="${first}"]`)?.scrollIntoView({ block: "start" }),
+    );
+  }, [openAt?.at]);
   if (entries.length === 0) return <p className="p-3 text-sm text-quiet">No changes yet.</p>;
   const named = entries.filter((e) => e.milestone && !e.undone);
   // With no milestone left (the last one unnamed), the list shows every change again.
@@ -511,7 +509,7 @@ export function Trace({
           Only milestones ({named.length})
         </label>
       )}
-      <ol aria-label="Change trace" className="divide-y divide-line">
+      <ol ref={list} aria-label="Change trace" className="divide-y divide-line">
         {groups.map((group) => {
           const [e] = group as [TraceEntry, ...TraceEntry[]];
           const opened = open === e.id;
@@ -519,7 +517,11 @@ export function Trace({
           const tagged = group.find((g) => g.milestone && !g.undone) ?? e;
           const milestone = tagged.milestone;
           return (
-            <li key={e.id} className={cx("relative px-3 py-2", e.undone && "opacity-50")}>
+            <li
+              key={e.id}
+              data-change={e.id}
+              className={cx("relative px-3 py-2", e.undone && "opacity-50")}
+            >
               {onUndo && !e.undone && !e.isUndo && (
                 // A request's changes are undone together, the newest first.
                 <button
@@ -541,11 +543,24 @@ export function Trace({
                 {milestone && (
                   <span data-milestone className="block text-xs font-semibold text-accent">
                     Milestone: {milestone}
+                    {tagged.number ? `, #${tagged.number}` : ""}
                   </span>
                 )}
                 <span className={cx("block text-sm", e.undone && "line-through")}>
+                  {numbers(group) && (
+                    <span data-change-number className="mr-1 text-quiet">
+                      {numbers(group)}
+                    </span>
+                  )}
                   {group.length > 1 ? summary(group) : text(e)}
                 </span>
+                {group.some((g) => g.undoneBy || g.undoes) && (
+                  <span className="block text-xs text-quiet">
+                    {e.undoes
+                      ? `Undid #${e.undoes}`
+                      : `Undone by ${[...new Set(group.flatMap((g) => (g.undoneBy ? [`#${g.undoneBy}`] : [])))].join(", ")}`}
+                  </span>
+                )}
                 <span className="mt-0.5 block text-xs text-quiet">
                   {/* The Builder (words given) says only when; Studio says how every change was made
                     and the files. A model's use and its cost are not shown here (Johan, 2026-10-23). */}
@@ -564,9 +579,7 @@ export function Trace({
                   {e.request && <p className="text-xs text-muted">You asked: {e.request}</p>}
                   {!e.isUndo && !e.undone && (
                     <p data-undo-restores className="text-xs text-muted">
-                      {e.snapshot && e.id === entries.find((x) => !x.isUndo && !x.undone)?.id
-                        ? "Undoing it puts back the app's files, and the records as they were before it."
-                        : "Undoing it puts back the app's files; the records stay as they are now."}
+                      {restores(e, entries)}
                     </p>
                   )}
                   {onMilestone && !e.isUndo && !e.undone && (
