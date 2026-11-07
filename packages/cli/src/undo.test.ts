@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { git } from "./git.js";
 import { captureIo } from "./test-io.js";
-import { undoableChanges, undoChange } from "./undo.js";
+import { numberedChanges, undoableChanges, undoChange, undoNumbers } from "./undo.js";
 
 /** A project's history of spec texts (or files by name), each committed as a change, oldest first. */
 function history(specs: (string | Record<string, string>)[]): { dir: string; shas: string[] } {
@@ -150,4 +150,36 @@ public:
   expect(io.stderr).toBe("");
   expect(code).toBe(0);
   expect(io.stdout).toContain('Safe to undo "Change 1".');
+});
+
+test("changes are numbered in the order made, an undo too, and undone by their numbers", async () => {
+  const { dir, shas } = history([
+    base,
+    withPhone,
+    withOrder.replace("      name: string!\n", "      name: string!\n      phone: string\n"),
+    withPhone,
+  ]);
+  dirs.push(dir);
+  expect(numberedChanges(dir).map((c) => [c.number, c.sha])).toEqual(
+    [1, 2, 3].map((n) => [n, shas[n - 1]]).reverse(),
+  );
+  const io = captureIo();
+  expect(await undoNumbers(dir, io, "3")).toBe(0);
+  const [undo] = numberedChanges(dir);
+  expect(undo).toMatchObject({ number: 4, reverts: shas[2] });
+  expect(git(dir, ["log", "-1", "--format=%s"]).out).toBe('Revert "smithable: Change 3"');
+  const again = captureIo();
+  expect(await undoNumbers(dir, again, "#3")).toBe(1);
+  expect(again.stderr).toContain("#3 is undone already (by #4).");
+  expect(await undoNumbers(dir, again, "4")).toBe(1);
+  expect(again.stderr).toContain("#4 undid #3; redo takes it back.");
+  expect(await undoNumbers(dir, again, "40")).toBe(1);
+  expect(again.stderr).toContain("There is no change #40; the newest is #4.");
+  expect(await undoNumbers(dir, again, "twelve")).toBe(2);
+  // A range passes over the undone and the undo, and checks the rest newest first.
+  const range = captureIo();
+  expect(await undoNumbers(dir, range, "1..4", { check: true })).toBe(0);
+  expect(range.stdout).toContain("#4 undid #3");
+  expect(range.stdout).toContain("#3 is undone already (by #4).");
+  expect(range.stdout).toContain('Safe to undo "Change 2": it is the newest change.');
 });

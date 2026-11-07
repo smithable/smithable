@@ -13,7 +13,7 @@ import {
   validateUx,
 } from "@smithable/core";
 import { restoreDatabase } from "./database.js";
-import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
+import { git, nextChangeNumber, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { exec, type Io } from "./io.js";
 import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
@@ -50,6 +50,78 @@ export function undoableChanges(dir: string): Change[] {
     });
   }
   return changes;
+}
+
+/** Each numbered change in the history (ask-flows.md §8), newest first. */
+export function numberedChanges(
+  dir: string,
+): { number: number; sha: string; subject: string; reverts?: string }[] {
+  return git(dir, ["log", "--format=%H%x1f%s%x1f%b%x1e"])
+    .out.split("\x1e")
+    .flatMap((entry) => {
+      const [sha = "", subject = "", body = ""] = entry.trim().split("\x1f");
+      const number = Number(trailer(body, "Smithable-Change"));
+      if (!number) return [];
+      const reverts = /This reverts commit ([0-9a-f]{40})/.exec(body)?.[1];
+      return [{ number, sha, subject, ...(reverts ? { reverts } : {}) }];
+    });
+}
+
+/**
+ * `smithable undo 12` and `smithable undo 12..14`: changes by their numbers, by the same rule as
+ * Studio, newest first, each through undoChange (the newest with its records, an earlier one as
+ * a new change), stopping at the first refusal. A number already undone, or an undo's, is named
+ * and passed over in a range, and refused alone.
+ */
+export async function undoNumbers(
+  dir: string,
+  io: Io,
+  numbers: string,
+  flags: { check?: boolean; yes?: boolean } = {},
+): Promise<number> {
+  const range = /^#?(\d+)(?:\.\.#?(\d+))?$/.exec(numbers);
+  if (!range) {
+    io.err(`"${numbers}" is not a change number: say 12, or 12..14 for a range.\n`);
+    return 2;
+  }
+  const from = Number(range[1]);
+  const to = Number(range[2] ?? range[1]);
+  const changes = numberedChanges(dir);
+  const newest = changes.reduce((n, c) => Math.max(n, c.number), 0);
+  const undoneBy = new Map(changes.flatMap((c) => (c.reverts ? [[c.reverts, c.number]] : [])));
+  const numberOf = new Map(changes.map((c) => [c.sha, c.number]));
+  const one = from === to;
+  for (let n = Math.max(from, to); n >= Math.min(from, to); n--) {
+    const found = changes.filter((c) => c.number === n);
+    if (found.length > 1) {
+      io.err(
+        `Two changes are #${n}: ${found.map((c) => `${c.sha.slice(0, 12)} (${c.subject})`).join(" and ")}. Choose one with --change <id>.\n`,
+      );
+      return 1;
+    }
+    const change = found[0];
+    const passed = (text: string) => {
+      io[one ? "err" : "out"](`${text}\n`);
+      return one;
+    };
+    if (!change) {
+      if (passed(`There is no change #${n}; the newest is #${newest}.`)) return 1;
+      continue;
+    }
+    if (change.reverts) {
+      if (passed(`#${n} undid #${numberOf.get(change.reverts) ?? "?"}; redo takes it back.`))
+        return 1;
+      continue;
+    }
+    const by = undoneBy.get(change.sha);
+    if (by) {
+      if (passed(`#${n} is undone already (by #${by}).`)) return 1;
+      continue;
+    }
+    const status = await undoChange(dir, io, change.sha, flags);
+    if (status !== 0) return status;
+  }
+  return 0;
 }
 
 const EDITABLE: { key: keyof FilesPlan["files"]; path: string }[] = [
@@ -296,7 +368,11 @@ function undoLocked(dir: string, io: Io): number {
     io.err("There is no operation to undo.\n");
     return 1;
   }
+  // Git's own message for the revert, with the change number its commit takes like any other.
+  const number = nextChangeNumber(dir);
   const revert = git(dir, ["revert", "--no-edit", target.sha]);
+  if (revert.ok)
+    git(dir, ["commit", "--amend", "-q", "--no-edit", "--trailer", `Smithable-Change: ${number}`]);
   if (!revert.ok) {
     git(dir, ["revert", "--abort"]);
     io.err(
