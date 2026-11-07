@@ -40,6 +40,7 @@ import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
+import { milestones, nameMilestone } from "./milestones.js";
 import { openQuestions } from "./new.js";
 import { runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
@@ -116,6 +117,13 @@ export interface TraceEntry {
   rewritten: string[];
   /** What the person asked a model, for a change it made (several changes may share one). */
   request?: string;
+  /**
+   * Its undo, while it is the newest change, puts the dev database back as it was before it (a
+   * snapshot was kept); otherwise undo puts back the files and the records stay (A 232).
+   */
+  snapshot: boolean;
+  /** The name a person gave this point, to find it again (milestones.ts). */
+  milestone?: string;
 }
 
 /** A file a person edits, as opposed to the generated ones (docs/design/studio-changes.md §3). */
@@ -147,10 +155,13 @@ let traced: { dir: string; head: string; entries: TraceEntry[] } | undefined;
 export function trace(dir: string): TraceEntry[] {
   // Only the app's own history: a repository around it is someone else's.
   if (!ownRepository(dir)) return [];
+  const named = milestones(dir);
+  // A milestone named or taken away moves no head: the names are part of what was read.
   const head = git(dir, ["rev-parse", "HEAD"]);
-  if (head.ok && traced?.dir === dir && traced.head === head.out) return traced.entries;
-  const entries = readTrace(dir);
-  traced = head.ok ? { dir, head: head.out, entries } : undefined;
+  const at = head.ok ? `${head.out} ${JSON.stringify([...named])}` : undefined;
+  if (at && traced?.dir === dir && traced.head === at) return traced.entries;
+  const entries = readTrace(dir, named);
+  traced = at ? { dir, head: at, entries } : undefined;
   return entries;
 }
 
@@ -199,21 +210,21 @@ export function editWords(
     : `${parts.length} changes in ${file}: ${parts.slice(0, 2).map(sentence).join("; ")}; and ${parts.length - 2} more`;
 }
 
-function readTrace(dir: string): TraceEntry[] {
+function readTrace(dir: string, named: Map<string, string>): TraceEntry[] {
   // Each commit's fields, then (after \x1d) the files it changed, one a line.
   const log = git(dir, ["log", "--name-only", "--format=%x1e%H%x1f%s%x1f%aI%x1f%b%x1d"]);
   if (!log.ok) return [];
   const records = log.out.split("\x1e").filter((e) => e.trim());
   const entries = records.map((r) => r.split("\x1d")[0] ?? "");
-  const named = new Map(
+  const files = new Map(
     records.map((r) => {
       const [head = "", names = ""] = r.split("\x1d");
       return [head.trim().split("\x1f")[0] ?? "", names.split("\n").filter(Boolean)];
     }),
   );
-  const changed = (sha: string) => (named.get(sha) ?? []).filter(ownFile);
+  const changed = (sha: string) => (files.get(sha) ?? []).filter(ownFile);
   const rewritten = (sha: string) =>
-    (named.get(sha) ?? []).filter((n) => n.startsWith("src/") && !ownFile(n));
+    (files.get(sha) ?? []).filter((n) => n.startsWith("src/") && !ownFile(n));
   const reverted = new Set(
     entries.flatMap((e) => [...e.matchAll(/This reverts commit ([0-9a-f]{40})/g)].map((m) => m[1])),
   );
@@ -267,6 +278,8 @@ function readTrace(dir: string): TraceEntry[] {
         files: changed(sha),
         rewritten: rewritten(sha),
         ...(model?.request ? { request: model.request } : {}),
+        snapshot: !isUndo && (trailer(body, "Smithable-Snapshot") ?? "none") !== "none",
+        ...(named.has(sha) ? { milestone: named.get(sha) } : {}),
       },
     ];
   });
@@ -1371,6 +1384,13 @@ export async function studio(
           return json({ ok: false, output: "Nothing is waiting to be tried again." }, 409);
         startMaking(asked);
         return json({ ok: true, accepted: true }, 202);
+      }
+      // A change named as a milestone, renamed, or (an empty name) unnamed (A 232).
+      if (req.method === "POST" && url.pathname === "/api/milestone") {
+        const { change, name } = await body();
+        if (typeof change !== "string" || typeof name !== "string")
+          return json({ ok: false, output: "A milestone needs a change and a name." }, 400);
+        return json(nameMilestone(dir, change, name));
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
         const { change, check, confirm } = await body();

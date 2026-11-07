@@ -467,6 +467,7 @@ export function Trace({
   words,
   plugins = [],
   onUndo,
+  onMilestone,
 }: {
   entries: TraceEntry[];
   /** Builder's wording of an operation: given, an opened change says what changed in the summary's words; not, it shows the files' patch. */
@@ -474,82 +475,176 @@ export function Trace({
   plugins?: SpecPlugin[];
   /** Undoes a change by its id (studio-v3.md §3): the X on each entry still in place. */
   onUndo?: (ids: string[]) => void;
+  /** Names a change as a milestone, or (an empty name) unnames it (A 232). */
+  onMilestone?: (id: string, name: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState<string>();
+  const [onlyMilestones, setOnlyMilestones] = useState(false);
   const text = (e: TraceEntry) => {
     const plain = e.operation && words?.(e.operation.op, e.operation.args);
     return plain ? (e.isUndo ? `Undid: ${plain}` : plain) : e.description;
   };
+  // A request's changes in one line from what they did, oldest first (A 232); the request
+  // itself is said when the entry is opened.
+  const summary = (group: TraceEntry[]) => {
+    const parts = [...group].reverse().map(text);
+    return parts.length <= 3
+      ? parts.join("; ")
+      : `${parts.slice(0, 2).join("; ")}; and ${parts.length - 2} more`;
+  };
   if (entries.length === 0) return <p className="p-3 text-sm text-quiet">No changes yet.</p>;
+  const named = entries.filter((e) => e.milestone && !e.undone);
+  // With no milestone left (the last one unnamed), the list shows every change again.
+  const filtering = onlyMilestones && named.length > 0;
+  const groups = grouped(entries).filter(
+    (group) => !filtering || group.some((g) => g.milestone && !g.undone),
+  );
   return (
-    <ol aria-label="Change trace" className="divide-y divide-line">
-      {grouped(entries).map((group) => {
-        const [e] = group as [TraceEntry, ...TraceEntry[]];
-        const opened = open === e.id;
-        return (
-          <li key={e.id} className={cx("relative px-3 py-2", e.undone && "opacity-50")}>
-            {onUndo && !e.undone && !e.isUndo && (
-              // A request's changes are undone together, the newest first.
+    <>
+      {named.length > 0 && (
+        <label className="flex items-center gap-2 px-3 py-1 text-xs text-muted">
+          <input
+            type="checkbox"
+            checked={filtering}
+            onChange={(e) => setOnlyMilestones(e.target.checked)}
+          />
+          Only milestones ({named.length})
+        </label>
+      )}
+      <ol aria-label="Change trace" className="divide-y divide-line">
+        {groups.map((group) => {
+          const [e] = group as [TraceEntry, ...TraceEntry[]];
+          const opened = open === e.id;
+          // The change in the group that carries the milestone, or the newest to be named.
+          const tagged = group.find((g) => g.milestone && !g.undone) ?? e;
+          const milestone = tagged.milestone;
+          return (
+            <li key={e.id} className={cx("relative px-3 py-2", e.undone && "opacity-50")}>
+              {onUndo && !e.undone && !e.isUndo && (
+                // A request's changes are undone together, the newest first.
+                <button
+                  type="button"
+                  aria-label={`Undo: ${group.length > 1 ? summary(group) : text(e)}`}
+                  title="Undo this change"
+                  onClick={() => onUndo(group.map((g) => g.id))}
+                  className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-quiet hover:bg-subtle hover:text-red-700"
+                >
+                  ×
+                </button>
+              )}
               <button
                 type="button"
-                aria-label={`Undo: ${group.length > 1 && e.request ? e.request : text(e)}`}
-                title="Undo this change"
-                onClick={() => onUndo(group.map((g) => g.id))}
-                className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-quiet hover:bg-subtle hover:text-red-700"
+                aria-expanded={opened}
+                onClick={() => setOpen(opened ? undefined : e.id)}
+                className="block w-full pr-6 text-left"
               >
-                ×
-              </button>
-            )}
-            <button
-              type="button"
-              aria-expanded={opened}
-              onClick={() => setOpen(opened ? undefined : e.id)}
-              className="block w-full pr-6 text-left"
-            >
-              <span className={cx("block text-sm", e.undone && "line-through")}>
-                {group.length > 1 && e.request ? `You asked: ${e.request}` : text(e)}
-              </span>
-              <span className="mt-0.5 block text-xs text-quiet">
-                {/* The Builder (words given) says only when; Studio says how every change was made
+                {milestone && (
+                  <span data-milestone className="block text-xs font-semibold text-accent">
+                    Milestone: {milestone}
+                  </span>
+                )}
+                <span className={cx("block text-sm", e.undone && "line-through")}>
+                  {group.length > 1 ? summary(group) : text(e)}
+                </span>
+                <span className="mt-0.5 block text-xs text-quiet">
+                  {/* The Builder (words given) says only when; Studio says how every change was made
                     and the files. A model's use and its cost are not shown here (Johan, 2026-10-23). */}
-                {!words ? (
-                  <>
-                    {e.isUndo ? "undo" : e.engine}
-                    {e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
-                  </>
-                ) : null}
-                {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                {!words && e.files.length > 0 && ` · ${e.files.join(", ")}`}
-              </span>
-            </button>
-            {opened && (
-              <div className="mt-2 space-y-2">
-                {group.length > 1 && (
-                  <ul className="list-disc pl-5 text-xs text-muted">
-                    {[...group].reverse().map((g) => (
-                      <li key={g.id}>{text(g)}</li>
-                    ))}
-                  </ul>
-                )}
-                {words ? (
-                  <>
-                    <PlainChange newest={e} oldest={group.at(-1) ?? e} plugins={plugins} />
-                    <details>
-                      <summary className="cursor-pointer text-xs text-accent">
-                        Show the files
-                      </summary>
-                      <FilesChange entry={e} />
-                    </details>
-                  </>
-                ) : (
-                  <FilesChange entry={e} />
-                )}
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+                  {!words ? (
+                    <>
+                      {e.isUndo ? "undo" : e.engine}
+                      {e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
+                    </>
+                  ) : null}
+                  {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {!words && e.files.length > 0 && ` · ${e.files.join(", ")}`}
+                </span>
+              </button>
+              {opened && (
+                <div className="mt-2 space-y-2">
+                  {e.request && <p className="text-xs text-muted">You asked: {e.request}</p>}
+                  {!e.isUndo && !e.undone && (
+                    <p data-undo-restores className="text-xs text-muted">
+                      {e.snapshot && e.id === entries.find((x) => !x.isUndo && !x.undone)?.id
+                        ? "Undoing it puts back the app's files, and the records as they were before it."
+                        : "Undoing it puts back the app's files; the records stay as they are now."}
+                    </p>
+                  )}
+                  {onMilestone && !e.isUndo && !e.undone && (
+                    <MilestoneName
+                      key={milestone ?? ""}
+                      name={milestone ?? ""}
+                      onName={(name) => onMilestone(tagged.id, name)}
+                    />
+                  )}
+                  {group.length > 1 && (
+                    <ul className="list-disc pl-5 text-xs text-muted">
+                      {[...group].reverse().map((g) => (
+                        <li key={g.id}>{text(g)}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {words ? (
+                    <>
+                      <PlainChange newest={e} oldest={group.at(-1) ?? e} plugins={plugins} />
+                      <details>
+                        <summary className="cursor-pointer text-xs text-accent">
+                          Show the files
+                        </summary>
+                        <FilesChange entry={e} />
+                      </details>
+                    </>
+                  ) : (
+                    <FilesChange entry={e} />
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </>
+  );
+}
+
+/** Names the point a change left as a milestone, renames it or takes the name away (A 232). */
+function MilestoneName({
+  name,
+  onName,
+}: {
+  name: string;
+  onName: (name: string) => Promise<void>;
+}) {
+  const [text, setText] = useState(name);
+  const [busy, setBusy] = useState(false);
+  const save = async (next: string) => {
+    setBusy(true);
+    await onName(next);
+    setBusy(false);
+  };
+  return (
+    <form
+      className="flex items-center gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save(text);
+      }}
+    >
+      <Input
+        aria-label="Milestone name"
+        placeholder="Name this point, e.g. First bookings"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        className="h-7 flex-1 text-xs"
+      />
+      <Button type="submit" disabled={busy || !text.trim() || text.trim() === name}>
+        {name ? "Rename" : "Name it"}
+      </Button>
+      {name && (
+        <Button type="button" disabled={busy} onClick={() => void save("")}>
+          Not a milestone
+        </Button>
+      )}
+    </form>
   );
 }
 

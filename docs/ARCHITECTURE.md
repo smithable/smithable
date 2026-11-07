@@ -641,6 +641,8 @@ Added churn scoring             frontier model   · 6.1k tokens · €0.03
 
 - Each entry shows the tier, model, tokens, cost and duration. A running total shows usage against the plan's allowance.
 - **Comparison with conventional AI builders is shown only as a labeled estimate** derived from the benchmark measurements (roadmap M7), never invented per change. The M7 baseline ([report](benchmarks/m7-report.md)): a coding agent editing the repository used about 350k–1.4M tokens (median about 400k) and $0.35–1.07 per small change; the same agent calling Smithable's operations about 110k tokens ($0.13); a deterministic operation none.
+- A model's several changes for one request show as one line written from what they did ("Added membership expiry; restricted booking cancellation"); the request itself is shown when the entry is opened. An opened change says what its undo puts back: the app's files always, and the dev database's records too only for the newest change that kept a snapshot.
+- A person can name a change as a **milestone** to find that point again: an annotated Git tag `milestone/<slug>` on its commit, its message the name, so it stays in the project's history (`packages/cli/src/milestones.ts`). A change has one name at most; an empty name takes it away.
 - The trace is part of the product, not only the demo. It explains bills and builds trust. It is stored with the project's history and contains no project content in analytics unless explicitly permitted.
 
 ### 9.8 Starting from a sentence

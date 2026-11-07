@@ -23,6 +23,10 @@ export interface TraceEntry {
   rewritten: string[];
   /** What the person asked a model, for a change it made. */
   request?: string;
+  /** Its undo, while it is the newest, puts the dev database back as it was before it. */
+  snapshot: boolean;
+  /** The name a person gave this point, to find it again. */
+  milestone?: string;
 }
 
 /** One change opened: its patch, how many generated files it changed, the files before and after. */
@@ -331,6 +335,9 @@ export const api = {
   undoChange: (change: string, confirm = false) =>
     changing(call<Result>("/api/undo", { change, confirm })),
   redo: () => changing(call<Result>("/api/redo", {})),
+  /** Names a change as a milestone, renames it, or (an empty name) unnames it (A 232). */
+  milestone: (change: string, name: string) =>
+    call<{ ok: boolean; output: string }>("/api/milestone", { change, name }),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
   report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
   sendReport: (send: boolean, choice?: "always" | "never" | "ask") =>
