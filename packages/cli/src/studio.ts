@@ -1476,16 +1476,21 @@ export async function studio(
         const { depth } = await body();
         if (depth !== "tests" && depth !== "browser")
           return json({ ok: false, output: "Test it runs depth tests or browser." }, 400);
-        const result = await capture((io) =>
-          verify(dir, io, { depth, json: true, where: "studio" }),
+        // The result on stdout alone, its words for a refusal on stderr.
+        const out: string[] = [];
+        const err: string[] = [];
+        const code = verify(
+          dir,
+          { out: (t) => out.push(t), err: (t) => err.push(t) },
+          { depth, json: true, where: "studio" },
         );
         let verification: Verification | undefined;
         try {
-          verification = JSON.parse(result.output.slice(result.output.indexOf("{")));
+          verification = JSON.parse(out.join(""));
         } catch {}
         return json({
-          ok: result.ok,
-          ...(verification ? { verification } : { output: result.output }),
+          ok: code === 0,
+          ...(verification ? { verification } : { output: err.join("").trim() }),
         });
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
