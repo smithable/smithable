@@ -17,7 +17,26 @@ export function pairwise(
     candidates = candidates.flatMap((row) =>
       (dimensions[key] ?? []).map((value) => ({ ...row, [key]: value })),
     );
-  const uncovered = new Set(candidates.flatMap(pairs));
+  // Each pair gets a number once, and each candidate its pairs' numbers: scoring strings anew
+  // each round was nearly all of the time.
+  const ids = new Map<string, number>();
+  const idsOf = (row: MatrixCase) =>
+    Int32Array.from(pairs(row), (pair) => {
+      const known = ids.get(pair);
+      if (known !== undefined) return known;
+      ids.set(pair, ids.size);
+      return ids.size - 1;
+    });
+  let scored = candidates.map((row) => ({ row, ids: idsOf(row) }));
+  const uncovered = new Uint8Array(ids.size).fill(1);
+  let left = ids.size;
+  const cover = (row: Int32Array) => {
+    for (const id of row)
+      if (uncovered[id]) {
+        uncovered[id] = 0;
+        left--;
+      }
+  };
   const selected: MatrixCase[] = [];
   for (const row of mandatory) {
     if (
@@ -26,22 +45,23 @@ export function pairwise(
     )
       throw new Error("Mandatory case is outside the matrix.");
     selected.push({ ...row });
-    for (const pair of pairs(row)) uncovered.delete(pair);
+    cover(idsOf(row));
   }
-  while (uncovered.size) {
-    let best: MatrixCase | undefined,
+  while (left) {
+    let best: (typeof scored)[number] | undefined,
       bestScore = 0;
-    for (const row of candidates) {
-      const score = pairs(row).reduce((score, pair) => score + Number(uncovered.has(pair)), 0);
+    for (const candidate of scored) {
+      let score = 0;
+      for (const id of candidate.ids) score += uncovered[id] ?? 0;
       if (score > bestScore) {
         bestScore = score;
-        best = row;
+        best = candidate;
       }
     }
     if (!best) throw new Error("Uncovered pair has no candidate.");
-    selected.push(best);
-    for (const pair of pairs(best)) uncovered.delete(pair);
-    candidates = candidates.filter((row) => row !== best);
+    selected.push(best.row);
+    cover(best.ids);
+    scored = scored.filter((candidate) => candidate !== best);
   }
   return selected;
 }

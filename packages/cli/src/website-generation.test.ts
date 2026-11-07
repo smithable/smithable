@@ -1,8 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import type { Provider } from "@smithable/ai";
 import { type SpecIR, YamlEditor } from "@smithable/core";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterAll, afterEach, expect, test, vi } from "vitest";
 import { extractImageContexts } from "./image-context.js";
 import { extractSiteFacts } from "./site-facts.js";
 import { projectSitePersonal } from "./site-personal.js";
@@ -326,8 +327,18 @@ test("sample mode omits known staff portraits while full instruction retains aut
   expect(original.assets[0]?.source).toMatchObject({ kind: "original", url: image.src });
 });
 
-test("pure compiler provenance permits typed identity but rejects injected identity in compiler/custom/public files", async () => {
-  const { STARTERS } = await import("./starters.gen.js");
+// One generated app for the two provenance tests below: making and checking it is most of their
+// time, so each test has its own share.
+const provenanceDirs: string[] = [];
+afterAll(() => {
+  for (const dir of provenanceDirs) rmSync(dir, { recursive: true, force: true });
+});
+let provenance: ReturnType<typeof provenanceApp> | undefined;
+const sharedProvenance = () => {
+  if (!provenance) provenance = provenanceApp();
+  return provenance;
+};
+async function provenanceApp() {
   const { loadSpec } = await import("./validate.js");
   const { replaceWebsitePersonalArtifacts } = await import("./website-generation.js");
   const context = await prepareWebsiteContext(
@@ -341,23 +352,29 @@ test("pure compiler provenance permits typed identity but rejects injected ident
   for (const name of ["Anna Page", "Will Smith", "Rose Hill"])
     expect(context.personalMap.entries.some((entry) => entry.original === name)).toBe(true);
   context.authoritativeAdmin = "a@example.test";
-  const dir = tempDir("website-identity-compile-");
-  const starter = STARTERS.barbers;
-  if (!starter) throw new Error("fixture starter missing");
+  // The smallest app with the identity in its name, a typed model and ordinary-word fields: a
+  // starter's whole app took ten seconds to check six times, most of it in kit files.
+  const dir = mkdtempSync(join(tmpdir(), "website-identity-compile-"));
+  provenanceDirs.push(dir);
+  const starter = {
+    "smithable.yml": `# This page will keep a rose note.
+smithable: 0.1
+app:
+  name: Jane Doe
+  description: This page will show rose collections.
+models:
+  MemberDetails:
+    fields: { name: string! }
+  Service:
+    fields: { name: string!, member: MemberDetails, page: string, will: string, rose: string }
+pages:
+  services: { crud: Service }
+`,
+    "smithable.auth.yml":
+      "smithableAuth: 0.1\nsignIn:\n  providers: [email]\ndefaultAccess: shared\nadmins: [a@example.test]\n",
+  };
   for (const [file, text] of Object.entries(starter)) writeFileSync(join(dir, file), text);
-  const spec = new YamlEditor(readFileSync(join(dir, "smithable.yml"), "utf8"));
-  spec.set(["app", "name"], "Jane Doe");
-  if (spec.has(["app", "description"]))
-    spec.set(["app", "description"], "This page will show rose collections.");
-  else spec.add(["app"], "description", "This page will show rose collections.");
-  spec.add(["models"], "MemberDetails", { fields: { name: "string!" } });
-  spec.add(["models", "Service", "fields"], "member", "MemberDetails");
-  for (const field of ["page", "will", "rose"])
-    spec.add(["models", "Service", "fields"], field, "string");
-  writeFileSync(join(dir, "smithable.yml"), `# This page will keep a rose note.\n${spec.text}`);
-  const administrator = new YamlEditor(readFileSync(join(dir, "smithable.auth.yml"), "utf8"));
-  administrator.set(["admins"], ["a@example.test"]);
-  writeFileSync(join(dir, "smithable.auth.yml"), administrator.text);
+  mkdirSync(join(dir, "public"));
   const { replaceWebsitePersonalFiles } = await import("./website-generation.js");
   const primary = Object.fromEntries(
     Object.keys(starter).map((file) => [file, readFileSync(join(dir, file), "utf8")]),
@@ -389,47 +406,49 @@ test("pure compiler provenance permits typed identity but rejects injected ident
   expect(commands.some((command) => command.includes("drizzle-kit"))).toBe(true);
   expect(commands.some((command) => command.includes("tsr"))).toBe(true);
   expect(commands.some((command) => command.includes("install"))).toBe(false);
+  return { dir, context, replaceWebsitePersonalArtifacts };
+}
+
+test("pure compiler provenance permits typed identity in the whole compiled app", async () => {
+  const { dir, context, replaceWebsitePersonalArtifacts } = await sharedProvenance();
   expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).not.toThrow();
   expect(readFileSync(join(dir, "src/generated/service.ts"), "utf8")).toContain("page");
   expect(readFileSync(join(dir, "src/generated/service.ts"), "utf8")).toContain("will");
   expect(readFileSync(join(dir, "src/generated/service.ts"), "utf8")).toContain("rose");
-  const originalSpec = readFileSync(join(dir, "smithable.yml"), "utf8");
-  writeFileSync(join(dir, "smithable.yml"), `${originalSpec}# Jane Doe a@example.test\n`);
-  expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).toThrow(
-    "source contact details",
-  );
-  expect(readFileSync(join(dir, "smithable.yml"), "utf8")).toContain("# Jane Doe");
-  writeFileSync(join(dir, "smithable.yml"), originalSpec);
-  const authTarget = join(dir, "src/lib/auth.ts");
-  const authSource = readFileSync(authTarget, "utf8");
+});
+
+test("pure compiler provenance rejects identity injected into compiler, custom and public files", async () => {
+  const { dir, context, replaceWebsitePersonalArtifacts } = await sharedProvenance();
+  // Each injected file is checked beside the spec files alone, after the same file without the
+  // injection passed there: a file's check does not depend on the others, and the whole app is
+  // checked in the test above.
+  const injected = (file: string, clean: string, added: string) => {
+    const alone = tempDir("website-identity-injected-");
+    for (const name of ["smithable.yml", "smithable.auth.yml"])
+      writeFileSync(join(alone, name), readFileSync(join(dir, name), "utf8"));
+    mkdirSync(dirname(join(alone, file)), { recursive: true });
+    writeFileSync(join(alone, file), clean);
+    expect(() => replaceWebsitePersonalArtifacts(alone, context, true)).not.toThrow();
+    writeFileSync(join(alone, file), `${clean}${added}`);
+    expect(() => replaceWebsitePersonalArtifacts(alone, context, true)).toThrow(
+      "source contact details",
+    );
+    return readFileSync(join(alone, file), "utf8");
+  };
+  const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+  expect(injected("smithable.yml", spec, "# Jane Doe a@example.test\n")).toContain("# Jane Doe");
+  const authSource = readFileSync(join(dir, "src/lib/auth.ts"), "utf8");
   expect(authSource).toContain("a@example.test");
-  writeFileSync(authTarget, `${authSource}\nexport const publicContact="a@example.test";\n`);
-  expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).toThrow(
-    "source contact details",
+  injected("src/lib/auth.ts", authSource, '\nexport const publicContact="a@example.test";\n');
+  const app = readFileSync(join(dir, "src/generated/app.ts"), "utf8");
+  injected("src/generated/app.ts", app, '\nexport const customerName = "Jane Doe";\n');
+  injected(
+    "src/custom/page.ts",
+    "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.\n",
+    'export const person="Jane Doe";',
   );
-  writeFileSync(authTarget, authSource);
-  const target = join(dir, "src/generated/app.ts");
-  const original = readFileSync(target, "utf8");
-  writeFileSync(target, `${original}\nexport const customerName = "Jane Doe";\n`);
-  expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).toThrow(
-    "source contact details",
-  );
-  writeFileSync(target, original);
-  mkdirSync(join(dir, "src/custom"), { recursive: true });
-  writeFileSync(
-    join(dir, "src/custom/page.ts"),
-    '// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.\nexport const person="Jane Doe";',
-  );
-  expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).toThrow(
-    "source contact details",
-  );
-  writeFileSync(join(dir, "src/custom/page.ts"), "export const value=1;");
-  writeFileSync(join(dir, "public/person.html"), "<p>Jane Doe</p>");
-  expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).toThrow(
-    "source contact details",
-  );
-  // About 10 s alone: a full parallel run takes several times that (A, 2026-11-07).
-}, 90_000);
+  injected("public/person.html", "<p>A page</p>", "<p>Jane Doe</p>");
+});
 
 test("JSON sample records remain valid JSON and all embedded contact actions are inert", async () => {
   const context = await prepareWebsiteContext(

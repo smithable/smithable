@@ -12,8 +12,45 @@ function identity(dir: string): string[] {
   );
 }
 
+/**
+ * The number the next change takes (ask-flows.md §8): one more than the highest
+ * `Smithable-Change` trailer in the history, which undo never rewinds, so none is reused.
+ */
+export function nextChangeNumber(dir: string): number {
+  const log = git(dir, ["log", "--format=%(trailers:key=Smithable-Change,valueonly)"]);
+  return log.out.split("\n").reduce((n, line) => Math.max(n, Number(line.trim()) || 0), 0) + 1;
+}
+
+/**
+ * Whether a commit message is one of the person's changes, the ones Changes shows and numbers:
+ * a change or an undo, not the start of the history or the project's setting up.
+ */
+export function isChangeMessage(message: string): boolean {
+  const subject = message.split("\n")[0] ?? "";
+  return (
+    (subject.startsWith("smithable: ") || subject.startsWith('Revert "smithable: ')) &&
+    subject !== "smithable: start of history" &&
+    !/^Smithable-Setup: /m.test(message)
+  );
+}
+
+/** The message with its change number as a trailer, in its trailer paragraph when it has one. */
+function numbered(dir: string, message: string): string {
+  const line = `Smithable-Change: ${nextChangeNumber(dir)}`;
+  const text = message.replace(/\n+$/, "");
+  const last = text.split("\n\n").at(-1) ?? "";
+  return text.includes("\n\n") && /^[A-Z][\w-]+: /.test(last)
+    ? `${text}\n${line}\n`
+    : `${text}\n\n${line}\n`;
+}
+
 export function git(dir: string, args: string[]): { ok: boolean; out: string } {
   const who = ["commit", "revert", "tag"].includes(args[0] ?? "") ? identity(dir) : [];
+  // Every change commit gets its number here, the one place they all pass through; the
+  // project's mutation lock, held by every change, keeps two from taking the same one.
+  const m = args[0] === "commit" ? args.indexOf("-m") + 1 : 0;
+  if (m > 0 && isChangeMessage(args[m] ?? ""))
+    args = [...args.slice(0, m), numbered(dir, args[m] ?? ""), ...args.slice(m + 1)];
   const safeConfig = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"];
   const result = spawnSync("git", [...safeConfig, ...who, ...args], {
     cwd: dir,

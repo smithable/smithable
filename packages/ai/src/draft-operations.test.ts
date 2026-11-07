@@ -488,80 +488,87 @@ test("a public landing page's button to a list of public records opens that list
   expect(dropClosedShortcuts(tidied, [])).toBe(tidied);
 });
 
+// A tool library whose public landing page shows tools, and a fake model answering in turn.
+const toolLibrary = [
+  { op: "setApp", args: { name: "Tool library" } },
+  { op: "addModel", args: { model: "Tool", fields: { name: "string!" } } },
+  { op: "addPage", args: { page: "tools", model: "Tool" } },
+  { op: "addLandingPage", args: { page: "home", route: "/" } },
+  { op: "addSection", args: { page: "home", section: "catalogue", records: "Tool" } },
+  { op: "setPublic", args: { pages: ["home"] } },
+];
+const toolPrompts: string[] = [];
+const toolModel = (answers: unknown[]): Provider => ({
+  name: "fake",
+  tier: "frontier",
+  location: "eu",
+  price: { input: 1, output: 3 },
+  async complete(request) {
+    toolPrompts.push(request.user);
+    const answer = answers[Math.min(toolPrompts.length, answers.length) - 1];
+    return { text: JSON.stringify(answer), model: "fake", inputTokens: 1, outputTokens: 1 };
+  },
+});
+
 test("a valid draft that a visitor would find broken goes back to the model once, with the validator's words", async () => {
-  const library = [
-    { op: "setApp", args: { name: "Tool library" } },
-    { op: "addModel", args: { model: "Tool", fields: { name: "string!" } } },
-    { op: "addPage", args: { page: "tools", model: "Tool" } },
-    { op: "addLandingPage", args: { page: "home", route: "/" } },
-    { op: "addSection", args: { page: "home", section: "catalogue", records: "Tool" } },
-    { op: "setPublic", args: { pages: ["home"] } },
-  ];
-  const prompts: string[] = [];
-  const provider = (answers: unknown[]): Provider => ({
-    name: "fake",
-    tier: "frontier",
-    location: "eu",
-    price: { input: 1, output: 3 },
-    async complete(request) {
-      prompts.push(request.user);
-      const answer = answers[Math.min(prompts.length, answers.length) - 1];
-      return { text: JSON.stringify(answer), model: "fake", inputTokens: 1, outputTokens: 1 };
-    },
-  });
+  toolPrompts.length = 0;
   // The landing page is public and shows tools, which visitors may not read: the model is told,
   // and opens the tools.
   const fixed = await draftProjectByOperations({
     description: "a tool library",
     providers: [
-      provider([
-        { operations: library },
+      toolModel([
+        { operations: toolLibrary },
         { operations: [{ op: "setPublic", args: { pages: ["home"], read: ["Tool"] } }] },
       ]),
     ],
   });
   if (fixed.kind !== "draft") throw new Error("no draft");
-  expect(prompts).toHaveLength(2);
-  expect(prompts[1]).toContain("Visitors can open home, but may not read Tool");
+  expect(toolPrompts).toHaveLength(2);
+  expect(toolPrompts[1]).toContain("Visitors can open home, but may not read Tool");
   expect(fixed.files["smithable.auth.yml"]).toContain("read: [Tool]");
   expect(fixed.operations?.at(-1)).toEqual({
     op: "setPublic",
     args: { pages: ["home"], read: ["Tool"] },
   });
+});
 
+test("a visitor's flaw is asked about once: an empty or unusable remedy keeps the valid draft", async () => {
   // It is asked once: an answer that leaves it, or a remedy that cannot be applied, still gives
   // the draft that was valid before.
   for (const second of [
     { operations: [] },
     { operations: [{ op: "setPublic", args: { read: ["Nothing"] } }] },
   ]) {
-    prompts.length = 0;
+    toolPrompts.length = 0;
     const kept = await draftProjectByOperations({
       description: "a tool library",
-      providers: [provider([{ operations: library }, second])],
+      providers: [toolModel([{ operations: toolLibrary }, second])],
     });
     if (kept.kind !== "draft") throw new Error("no draft");
-    expect(prompts).toHaveLength(2);
+    expect(toolPrompts).toHaveLength(2);
     expect(kept.files["smithable.auth.yml"]).toContain("pages: [home]");
     expect(kept.files["smithable.auth.yml"]).not.toContain("read:");
     expect(checkSpecFiles(kept.files)).toEqual([]);
   }
+});
 
+test("a remedy that brings a new flaw is told of that one too", async () => {
+  toolPrompts.length = 0;
   // A remedy that brings a new flaw is told of that one too: tools that name their keeper are
   // closed to visitors, which empties the landing page's section, which is then removed.
-  prompts.length = 0;
   const twice = await draftProjectByOperations({
     description: "a tool library",
     providers: [
-      provider([
+      toolModel([
         {
           operations: [
-            library[0],
+            toolLibrary[0],
             {
               op: "addModel",
               args: { model: "Tool", fields: { name: "string!", keeper: "User" } },
             },
-            ...library.slice(2, 5),
+            ...toolLibrary.slice(2, 5),
             { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
           ],
         },
@@ -571,27 +578,29 @@ test("a valid draft that a visitor would find broken goes back to the model once
     ],
   });
   if (twice.kind !== "draft") throw new Error("no draft");
-  expect(prompts).toHaveLength(3);
-  expect(prompts[1]).toContain("Anyone on the internet can read Tool");
-  expect(prompts[2]).toContain("remove the section of home that shows it");
+  expect(toolPrompts).toHaveLength(3);
+  expect(toolPrompts[1]).toContain("Anyone on the internet can read Tool");
+  expect(toolPrompts[2]).toContain("remove the section of home that shows it");
   expect(twice.files["smithable.yml"]).not.toContain("catalogue");
   expect(visitorFlaws(toProjectFiles(twice.files))).toEqual([]);
+});
 
+test("a remedy that undoes an earlier one is not what the person gets", async () => {
+  toolPrompts.length = 0;
   // A remedy that undoes an earlier one is not what the person gets: the tools closed in one
   // round and opened again in the next stay closed, the best the draft has been.
-  prompts.length = 0;
   const back = await draftProjectByOperations({
     description: "a tool library",
     providers: [
-      provider([
+      toolModel([
         {
           operations: [
-            library[0],
+            toolLibrary[0],
             {
               op: "addModel",
               args: { model: "Tool", fields: { name: "string!", keeper: "User" } },
             },
-            ...library.slice(2, 5),
+            ...toolLibrary.slice(2, 5),
             { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
           ],
         },
@@ -601,20 +610,22 @@ test("a valid draft that a visitor would find broken goes back to the model once
     ],
   });
   if (back.kind !== "draft") throw new Error("no draft");
-  expect(prompts).toHaveLength(3);
+  expect(toolPrompts).toHaveLength(3);
   expect(back.files["smithable.auth.yml"]).not.toContain("read:");
   expect(back.operations?.at(-1)).toEqual({ op: "setPublic", args: { read: [] } });
+});
 
+test("a field no app may hold is taken out by the engine, with no call to the model", async () => {
+  toolPrompts.length = 0;
   // A field no app may hold (a card number, a password) is taken out by the engine itself,
   // with no call to the model; what the person gets says so in its operations.
-  prompts.length = 0;
   const paying = await draftProjectByOperations({
     description: "a tool library",
     providers: [
-      provider([
+      toolModel([
         {
           operations: [
-            library[0],
+            toolLibrary[0],
             {
               op: "addModel",
               args: {
@@ -629,22 +640,24 @@ test("a valid draft that a visitor would find broken goes back to the model once
     ],
   });
   if (paying.kind !== "draft") throw new Error("no draft");
-  expect(prompts).toHaveLength(1);
+  expect(toolPrompts).toHaveLength(1);
   expect(paying.files["smithable.yml"]).not.toContain("cardNumber");
   expect(paying.files["smithable.yml"]).not.toContain("password");
   expect(paying.operations?.filter((o) => o.op === "removeField").map((o) => o.args.field)).toEqual(
     ["cardNumber", "password"],
   );
+});
 
+test("a draft without a visitor's flaw costs no second call", async () => {
+  toolPrompts.length = 0;
   // A draft without such a flaw costs no second call.
-  prompts.length = 0;
   const fine = await draftProjectByOperations({
     description: "a tool library",
     providers: [
-      provider([
+      toolModel([
         {
           operations: [
-            ...library.slice(0, 5),
+            ...toolLibrary.slice(0, 5),
             { op: "setPublic", args: { pages: ["home"], read: ["Tool"] } },
           ],
         },
@@ -652,9 +665,8 @@ test("a valid draft that a visitor would find broken goes back to the model once
     ],
   });
   expect(fine.kind).toBe("draft");
-  expect(prompts).toHaveLength(1);
-  // A whole draft round trip: seconds on a loaded machine, so not vitest's five.
-}, 30_000);
+  expect(toolPrompts).toHaveLength(1);
+});
 
 test("a Swedish description sets the app's language before the model answers, and a repeat is skipped", async () => {
   const draft = await draftProjectByOperations({

@@ -18,6 +18,7 @@ import {
   projectSitePersonal,
   replaceSitePersonalText,
   type SitePersonalMap,
+  sitePersonalReplacer,
 } from "./site-personal.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -161,6 +162,20 @@ function replaceYamlComments(source: string, map: SitePersonalMap): string {
   return output;
 }
 
+/** replaceSitePersonalText for many texts against one map, its patterns built once per context
+ * (built for each text, they made checking a generated app take seconds). */
+function personalReplacer(map: SitePersonalMap) {
+  const built = new Map<string, (value: string) => string>();
+  return (value: string, context: "text" | "name" | "key" | "code") => {
+    let replace = built.get(context);
+    if (!replace) {
+      replace = sitePersonalReplacer(map, { context });
+      built.set(context, replace);
+    }
+    return replace(value);
+  };
+}
+
 /** Local-only known-set pass; only the typed specification name may retain business identity. */
 export function replaceWebsitePersonalFiles(
   files: Record<string, string>,
@@ -172,6 +187,7 @@ export function replaceWebsitePersonalFiles(
       "smithable.website.json": `${JSON.stringify({ version: 1, contentMode: "full", personal: context.personal, sampleFields: [] }, null, 2)}\n`,
     };
   const businessName = context.businessName;
+  const replacePersonal = personalReplacer(context.personalMap);
   const output: Record<string, string> = {};
   const previous = files["smithable.website.json"]
     ? (JSON.parse(files["smithable.website.json"]) as {
@@ -205,11 +221,9 @@ export function replaceWebsitePersonalFiles(
       )
         continue;
       sampleFields.push({
-        file: replaceSitePersonalText(field.file, context.personalMap, { context: "key" }),
+        file: replacePersonal(field.file, "key"),
         path: field.path.map((part) =>
-          typeof part === "string"
-            ? replaceSitePersonalText(part, context.personalMap, { context: "key" })
-            : part,
+          typeof part === "string" ? replacePersonal(part, "key") : part,
         ),
       });
     }
@@ -294,21 +308,16 @@ export function replaceWebsitePersonalFiles(
           const scrubbed = templated
             ? original
                 .split(/(\{[^{}]+\})/g)
-                .map((part, index) =>
-                  replaceSitePersonalText(part, context.personalMap, {
-                    context: index % 2 ? "code" : "text",
-                  }),
-                )
+                .map((part, index) => replacePersonal(part, index % 2 ? "code" : "text"))
                 .join("")
-            : replaceSitePersonalText(original, context.personalMap, {
-                context: /^(?:firstName|lastName|givenName|familyName|fullName)$/i.test(
-                  String(path.at(-1)),
-                )
+            : replacePersonal(
+                original,
+                /^(?:firstName|lastName|givenName|familyName|fullName)$/i.test(String(path.at(-1)))
                   ? "name"
                   : human
                     ? "text"
                     : "code",
-              });
+              );
           const replaced = inertSampleContactText(scrubbed);
           const containsSample = context.personalMap.entries.some((entry) =>
             original
@@ -321,9 +330,7 @@ export function replaceWebsitePersonalFiles(
             const field = {
               file,
               path: path.map((part) =>
-                typeof part === "string"
-                  ? replaceSitePersonalText(part, context.personalMap, { context: "key" })
-                  : part,
+                typeof part === "string" ? replacePersonal(part, "key") : part,
               ),
             };
             if (
@@ -340,7 +347,7 @@ export function replaceWebsitePersonalFiles(
         if (!value || typeof value !== "object") return value;
         const result: Record<string, unknown> = Object.create(null);
         for (const [key, child] of Object.entries(value)) {
-          const target = replaceSitePersonalText(key, context.personalMap, { context: "key" });
+          const target = replacePersonal(key, "key");
           if (
             ["__proto__", "prototype", "constructor"].includes(target) ||
             Object.hasOwn(result, target)
@@ -368,10 +375,7 @@ export function replaceWebsitePersonalFiles(
       } catch {
         throw new Error("Generated website content could not be checked.");
       }
-    } else
-      text = replaceSitePersonalText(source, context.personalMap, {
-        context: fileMatchContext(file),
-      });
+    } else text = replacePersonal(source, fileMatchContext(file));
     output[file] = text;
   }
   if (sampleFields.length || Object.values(context.personal.counts).some((count) => count > 0))
@@ -455,7 +459,7 @@ function compilerIdentity(
 function programHasPersonalText(
   source: string,
   file: string,
-  map: SitePersonalMap,
+  replace: ReturnType<typeof personalReplacer>,
   inspectActions: boolean,
 ): boolean {
   const changed = (value: string, context: "text" | "name" | "key" | "code" = "text") => {
@@ -471,7 +475,7 @@ function programHasPersonalText(
       })
       .join("");
     return (
-      replaceSitePersonalText(text, map, { context }) !== text ||
+      replace(text, context) !== text ||
       (inspectActions &&
         context !== "key" &&
         context !== "code" &&
@@ -657,6 +661,7 @@ export function replaceWebsitePersonalArtifacts(
   const compiler = trustedCompilerOutput
     ? compilerIdentity(dir, context)
     : new Map<string, { actual: string; neutral: string }>();
+  const replacePersonal = personalReplacer(context.personalMap);
   let count = 0;
   const visit = (path: string, relative: string) => {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
@@ -711,12 +716,10 @@ export function replaceWebsitePersonalArtifacts(
             ? programHasPersonalText(
                 checkedSource,
                 name,
-                context.personalMap,
+                replacePersonal,
                 expected?.actual !== source,
               )
-            : replaceSitePersonalText(checkedSource, context.personalMap, {
-                context: matchContext,
-              }) !== checkedSource;
+            : replacePersonal(checkedSource, matchContext) !== checkedSource;
           if (
             personal ||
             (expected?.actual !== source && inertSampleContactText(checkedSource) !== checkedSource)

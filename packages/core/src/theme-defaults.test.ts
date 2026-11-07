@@ -154,6 +154,41 @@ test("legacy themes keep the exact platform UX without defaults metadata", () =>
     });
   }
 });
+// The booking app's four pages the cases below name, without the rest: each case applies three
+// operations, and each reads and checks the whole spec (the full booking app took seconds).
+const smallSpec = `smithable: 0.1
+app: { name: Studio }
+models:
+  ClassType:
+    fields: { name: string!, durationMinutes: int! = 60 }
+  Instructor:
+    fields: { name: string!, portrait: picture }
+  Session:
+    fields: { classType: ClassType!, instructor: Instructor!, startsAt: datetime! }
+pages:
+  home:
+    route: /
+    landing:
+      hero: { button: schedule }
+  schedule:
+    calendar: { model: Session, duration: classType.durationMinutes }
+    filters: [classType, instructor]
+  sessions: { crud: Session }
+  instructors: { crud: Instructor }
+`;
+const smallAuth = `smithableAuth: 0.1
+signIn: { providers: [email] }
+defaultAccess: private
+admins: [owner@studio.example]
+public:
+  pages: [home, schedule]
+  read: [ClassType, Instructor, Session]
+`;
+const smallIr = validateSpec({ path: "smithable.yml", text: smallSpec }).ir;
+if (!smallIr) throw new Error("invalid small fixture");
+const smallAuthIr = validateAuth({ path: "smithable.auth.yml", text: smallAuth }, smallIr).auth;
+if (!smallAuthIr) throw new Error("invalid small auth fixture");
+
 test("literal platform values survive theme changes; only inherit removes their authorship", () => {
   const defaults: ThemeIR = {
     ...direction,
@@ -189,8 +224,8 @@ test("literal platform values survive theme changes; only inherit removes their 
   for (const [id, page, value] of cases) {
     const cap: UxCapability = UX_CAPABILITIES[id];
     const initial = {
-      spec: specText,
-      auth: authText,
+      spec: smallSpec,
+      auth: smallAuth,
       themes: [defaults],
       ux: "smithableUx: 0.1\ntheme: {preset: direction}\n",
     };
@@ -212,9 +247,9 @@ test("literal platform values survive theme changes; only inherit removes their 
     expect(at(reset.files.ux ?? ""), id).toBeUndefined();
     const result = validateUx(
       { path: "smithable.ux.yml", text: reset.files.ux ?? "" },
-      ir,
+      smallIr,
       [defaults],
-      auth,
+      smallAuthIr,
     );
     expect(
       result.diagnostics.filter((d) => d.severity === "error"),
