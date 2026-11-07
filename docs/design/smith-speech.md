@@ -74,6 +74,13 @@ is not planned.** Under `custom`, speech is off too, so no list of speech provid
 - **`service`** runs on the hosted service only. The gateway holds the AWS keys. Transcribe
   streaming and Polly neural run in Frankfurt or Ireland, since Stockholm has neither. Both
   are in the EU, so it fits `eu-only`. The CLI's local Studio has `browser` only.
+  On the hosted service's levels (eu-levels.md in the service's repository), `service` is offered at
+  Normal, Relaxed and Global. Not at Strict (B's question, 2026-11-07): Strict takes AI only from EU
+  companies, and Transcribe and Polly are AWS's managed AI services, the same class as Bedrock,
+  which Strict excludes; that our hosting runs on AWS is data at rest in our own account, another
+  thing. A Strict project has `browser` only where the browser says it is on the device, else
+  speech is off with the line why. A transcription by an EU company (Mistral's Voxtral) is the
+  later option for Strict, not planned now.
 
 The line shown at turn-on and in the voice menu names, per browser, where the voice and the text
 go: "Your voice is sent to Google to be written out, and kept under Google's terms", "Your voice
