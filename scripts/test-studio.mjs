@@ -1911,8 +1911,15 @@ try {
       const history = page.getByRole("region", { name: "The history" });
       const spec = () => readFileSync(join(dir, "smithable.yml"), "utf8");
       const before = spec();
-      // A change of its own, so the undo takes back nothing another step needs.
+      // A change of its own, so the undo takes back nothing another step needs; Studio has it
+      // before Smith is asked (its number first in Changes).
       await op("setFilters", { page: "orders", fields: ["status", "shippingMethod"] });
+      const newest = (await (await fetch(`${base}/api/project`)).json()).trace[0].number;
+      await trace
+        .locator("[data-change-number]")
+        .first()
+        .filter({ hasText: `#${newest} ` })
+        .waitFor({ timeout: 30000 * P });
       await page
         .getByRole("group", { name: "Ready prompts" })
         .getByRole("button", { name: "What have I changed?" })
@@ -1923,6 +1930,8 @@ try {
       if (!/^#\d+ .*Undoing it puts back the app's files/.test(await first.innerText()))
         throw new Error(`the first line: ${await first.innerText()}`);
       const number = /^#(\d+)/.exec(await first.innerText())?.[1];
+      if (Number(number) !== newest)
+        throw new Error(`the newest line is #${number}, not #${newest}`);
       // Changes shows the same number on its line.
       await trace
         .locator("[data-change-number]", { hasText: `#${number}` })
