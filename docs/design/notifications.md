@@ -130,8 +130,9 @@ outgoing:
   write them (generation stays byte-identical); the app's first start without them makes a pair
   and keeps it in the database under `DATA_DIR`, so a backup keeps it and the subscriptions stay
   valid. Settings, when given, win over a kept pair. A key pair lost or replaced ends every
-  subscription; people turn push on again. (A release that refuses to start without the keys, as
-  it does without `BETTER_AUTH_SECRET`, is the other way; step 3 settles it.)
+  subscription; people turn push on again. Settled (Fable, 2026-11-07): the pair is made at first
+  start and kept, not required like `BETTER_AUTH_SECRET`: a self-hosted app without push keys
+  must still start, and nothing is sent until someone turns push on.
 - **Turning it on is the person's own.** Under their name in the menu, "Notifications" lists the
   entries with `push` that reach them ("New orders"), each a toggle, off until they turn it on;
   the first one turned on in a browser asks the browser's permission and subscribes it. A person
