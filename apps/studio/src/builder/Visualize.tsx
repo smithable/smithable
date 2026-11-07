@@ -1,14 +1,16 @@
 // Studio's Visualize (A 150, Johan 2026-10-24): the app map's three views in a place of their own,
 // the whole window below the header: the kinds of record and how they refer to each other, the
 // menus and pages, and what happens by itself or at a button. A name opens it in No code.
+// Beside them the app card (A 233, app-card.md), as `smithable card` writes it.
 import type { AuthIR, SpecIR } from "@smithable/core";
 import { useState } from "react";
 import { Tabs } from "../ui";
 import { BehaviourMap } from "./BehaviourMap";
+import { Card } from "./Card";
 import { DataMap } from "./DataMap";
 import { NavMap } from "./NavMap";
 
-type View = "data" | "nav" | "acts";
+type View = "data" | "nav" | "acts" | "card";
 
 export function Visualize({
   ir,
@@ -29,6 +31,7 @@ export function Visualize({
             ["data", "Data map"],
             ["nav", "Navigation"],
             ["acts", "What happens"],
+            ["card", "Card"],
           ]}
           value={view}
           onChange={setView}
@@ -39,6 +42,8 @@ export function Visualize({
           <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>
         ) : view === "data" ? (
           <DataMap ir={ir} auth={auth} onOpen={onOpen} />
+        ) : view === "card" ? (
+          <Card ir={ir} />
         ) : view === "nav" ? (
           <NavMap ir={ir} auth={auth} onOpen={onOpen} />
         ) : (
