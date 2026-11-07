@@ -138,6 +138,22 @@ test("verify keeps a result for the committed revision and refuses uncommitted e
   expect(verify(dir, captureIo(), { depth: "deep" })).toBe(2);
 });
 
+test("verify on a fresh app starts its history, as an operation does", () => {
+  const dir = tempDir("smithable-verify-fresh-");
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Shop }\nmodels:\n  Item: { fields: { name: string! } }\npages:\n  items: { crud: Item }\n",
+  );
+  writeFileSync(join(dir, "smithable.auth.yml"), "smithableAuth: 0.1\nsignIn: none\n");
+  writeFileSync(join(dir, ".gitignore"), "data\n");
+  const io = captureIo();
+  expect(verify(dir, io, { json: true })).toBe(0);
+  const head = git(dir, ["rev-parse", "HEAD"]).out.trim();
+  expect(JSON.parse(io.stdout).revision).toBe(head);
+  expect(git(dir, ["log", "--format=%s"]).out.trim()).toBe("smithable: start of history");
+  expect(readKept(dir, head, "local")).toBeDefined();
+});
+
 test("op --json prints the operation's result alone on stdout, its words on stderr", async () => {
   const dir = project();
   const io = captureIo();

@@ -29,7 +29,7 @@ import {
 } from "@smithable/core";
 import { findTests } from "@smithable/index";
 import { countValues, databasePath } from "./database.js";
-import { git, ownRepository, uncommittedRefusal } from "./git.js";
+import { ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { exec, type Io, tool } from "./io.js";
 import { projectRevision } from "./project-revision.js";
 import { projectIndex } from "./rules.js";
@@ -460,9 +460,9 @@ export function verify(
     else io.out(allLines(v));
     return code;
   };
-  const refused = !ownRepository(dir)
-    ? "This project has no history yet: make a change with smithable op first.\n"
-    : uncommittedRefusal(dir, "since a result belongs to one committed revision");
+  // A fresh app starts its history here, as with an operation: its result is that commit's.
+  ensureRepository(dir);
+  const refused = uncommittedRefusal(dir, "since a result belongs to one committed revision");
   if (refused) {
     io.err(refused);
     const v = unverified("", env, depth);
