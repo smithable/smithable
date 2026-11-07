@@ -42,7 +42,7 @@ import { themeLab } from "./theme-lab.js";
 import { themes } from "./themes.js";
 import { timers } from "./timers.js";
 import { translate } from "./translate.js";
-import { undo, undoChange } from "./undo.js";
+import { undo, undoChange, undoNumbers } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
 import { notPassedLines, verify } from "./verify.js";
@@ -182,16 +182,22 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return verify(values.dir ?? args[0] ?? ".", io, {
       ...(values.depth ? { depth: values.depth } : {}),
       ...(values.record ? { record: values.record } : {}),
+      ...(values.out ? { out: values.out } : {}),
       json: values.json === true,
     });
   }
   if (command === "undo")
-    return values.change
-      ? undoChange(values.dir ?? ".", io, values.change, {
+    return args[0]
+      ? undoNumbers(values.dir ?? ".", io, args[0], {
           check: values.check === true,
           yes: values.yes === true,
         })
-      : undo(values.dir ?? ".", io);
+      : values.change
+        ? undoChange(values.dir ?? ".", io, values.change, {
+            check: values.check === true,
+            yes: values.yes === true,
+          })
+        : undo(values.dir ?? ".", io);
   if (command === "redo") return redo(values.dir ?? ".", io);
   if (command === "report")
     return report(values.dir ?? ".", io, {

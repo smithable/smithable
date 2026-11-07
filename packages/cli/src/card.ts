@@ -69,6 +69,21 @@ export function card(
   return 0;
 }
 
+/** The card as Markdown and HTML for Studio's Card view, or what stops it (A 233). */
+export function cardTexts(dir: string): { md: string; html: string } | { error: string } {
+  // The spec's warnings go to err and stay there; only a refusal says why.
+  const write = (format: "md" | "html") => {
+    const out: string[] = [];
+    const err: string[] = [];
+    const io: Io = { out: (t) => out.push(t), err: (t) => err.push(t) };
+    return card(dir, io, { format }) === 0 ? out.join("") : { error: err.join("").trim() };
+  };
+  const md = write("md");
+  if (typeof md !== "string") return md;
+  const html = write("html");
+  return typeof html === "string" ? { md, html } : html;
+}
+
 /** What the project's folder knows: Git, src/custom/ by path and size, drift, migrations. */
 export function projectFacts(root: string, specFiles: string[]): CardProject {
   const custom: CardProject["customFiles"] = [];

@@ -7,11 +7,14 @@ import type { Part, SummarySection } from "@smithable/index";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { type Assumption, api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
+import { lastLine } from "../history";
 import { Button, cx, Input } from "../ui";
 import { useVerified, Verified } from "../Verified";
 import { PREFILLED, type Prefill } from "./ChangeForms";
+import { CHIP, CHIP_MAIN, MINE, SMITHS } from "./chat-style";
 import { CustomCode, customFile } from "./custom-code";
 import { asksTheDocs, type DocsHit, docsIndex, searchDocs } from "./docs-search";
+import { useHistoryFlow } from "./HistoryFlow";
 import { type Mood, SmithFace } from "./SmithFace";
 import { ASK_SMITH, HANDED } from "./Wizard";
 
@@ -50,7 +53,10 @@ export function Ask({
   trace,
   ready,
   peopleRunning = false,
+  onShowChanges,
 }: {
+  /** Opens the Changes window, at a change when one is given (ask-flows.md §8). */
+  onShowChanges?: (id?: string) => void;
   /** Whether the sample users are running: a bare "stop" is then said to them. */
   peopleRunning?: boolean;
   /** The guide's stop, said as Smith's line with Next and Skip (smith-first.md §7). */
@@ -255,6 +261,19 @@ export function Ask({
     }
   };
   proposeRef.current = (text) => void propose(text);
+  // The history read by rule (ask-flows.md §8): what have I changed, undo, milestones.
+  const history = useHistoryFlow({
+    trace,
+    words,
+    onDone,
+    onShow: onShowChanges,
+    propose: (text) => {
+      setRequest(text);
+      void propose(text);
+    },
+  });
+  // Right after a request's changes applied, "Undo that" is offered until the next thing is sent.
+  const [justApplied, setJustApplied] = useState(false);
   const apply = async () => {
     if (!proposal) return;
     setBusy(true);
@@ -283,6 +302,7 @@ export function Ask({
       setProposal(undefined);
       if (result.ok) {
         setRequest("");
+        setJustApplied(true);
         onDone?.();
       }
     } catch (error) {
@@ -340,7 +360,7 @@ export function Ask({
             ? left <= 0
               ? "sad"
               : "impatient"
-            : busy || making
+            : busy || making || history.busy
               ? "working"
               : proposal?.kind === "question"
                 ? "confused"
@@ -356,6 +376,17 @@ export function Ask({
   const box = useRef<HTMLTextAreaElement>(null);
   const send = () => {
     if (!request.trim()) return;
+    setJustApplied(false);
+    if (!making && history.interrupt(request.trim())) {
+      setRequest("");
+      return;
+    }
+    if (!making && history.take(request.trim())) {
+      setRequest("");
+      setLocal(undefined);
+      setOutput("");
+      return;
+    }
     if (making)
       void api.waiting({ add: request.trim() }).then(
         () => setRequest(""),
@@ -517,6 +548,7 @@ export function Ask({
             </div>
           </div>
         )}
+        {history.view}
         {/* A ready prompt's answer comes last, where the thread is scrolled to (A 200). */}
         {ready && !making && local && <ReadyAnswer shown={local} ready={ready} />}
       </div>
@@ -552,8 +584,19 @@ export function Ask({
           ? parts.length > 1 && <PartDots at={partsSaid} count={parts.length} />
           : ready &&
             !making &&
-            !quiet && (
+            !quiet &&
+            !history.waiting && (
               <ReadyChips
+                history={
+                  trace && lastLine(trace)
+                    ? ["What have I changed?", justApplied ? "Undo that" : "Undo the last change"]
+                    : []
+                }
+                onSay={(text) => {
+                  setJustApplied(false);
+                  setLocal(undefined);
+                  history.take(text);
+                }}
                 // Words in the box are a request of their own: the prompts rest until it is sent.
                 disabled={busy || Boolean(request.trim())}
                 resting={!busy && Boolean(request.trim())}
@@ -578,18 +621,6 @@ export function Ask({
     </div>
   );
 }
-
-/** A chip under a line of Smith's, and the one that goes on. */
-const CHIP =
-  "smith-chip rounded-full border border-line px-2.5 py-0.5 text-xs text-muted hover:border-accent hover:text-accent";
-const CHIP_MAIN =
-  "smith-chip rounded-full border border-accent px-2.5 py-0.5 text-xs text-accent hover:bg-accent-soft";
-
-/** A message's bubble: the person's on the right, Smith's on the left; Smith's rise as they come. */
-const MINE =
-  "ml-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-accent-soft px-3 py-1.5 text-sm";
-const SMITHS =
-  "smith-line mr-auto w-fit max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-subtle px-3 py-1.5 text-sm";
 
 /**
  * The thread: the change log read as a conversation, oldest first, with what this tab's session
@@ -1067,7 +1098,12 @@ function ReadyChips({
   onPick,
   leftOpen = [],
   onReask,
+  history = [],
+  onSay,
 }: {
+  /** The history's chips when a line is still in place (ask-flows.md §8), said as if typed. */
+  history?: string[];
+  onSay?: (text: string) => void;
   disabled: boolean;
   /** Off for the words in the box, which the person is told. */
   resting?: boolean;
@@ -1092,6 +1128,16 @@ function ReadyChips({
           className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
         >
           {label}
+        </button>
+      ))}
+      {history.map((text) => (
+        <button
+          key={text}
+          type="button"
+          onClick={() => onSay?.(text)}
+          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
+        >
+          {text}
         </button>
       ))}
       {leftOpen.map((a) => (

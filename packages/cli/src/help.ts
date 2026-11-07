@@ -281,9 +281,11 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "undo",
-    usage: "undo [--change <id> [--check] [--yes]]",
+    usage: "undo [<number> | <from>..<to> | --change <id>] [--check] [--yes]",
     text: [
       "Undo the last operation, including the dev database",
+      "<number> undoes change #12 by the same rule (the newest with its records, an earlier one",
+      "as a new change); 12..14 undoes each in place, newest first, stopping at a refusal",
       "--change <id> undoes that change (an id from the history) as a new change, unless a later",
       "change depends on it or edited the same part; --check only says whether it is safe",
     ],
@@ -312,13 +314,14 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "verify",
-    usage: "verify [--depth change|tests|browser] [--json] [--record <report>]",
+    usage: "verify [--depth change|tests|browser] [--json] [--record <report>] [--out <dir>]",
     text: [
       "Say what was verified for the current revision: the checks its last change ran, and,",
       "with --depth tests, the app's type check and tests; --record takes a sampleusers report",
-      "for this revision as the browser check; nothing is verified with uncommitted edits",
+      "for this revision as the browser check; nothing is verified with uncommitted edits;",
+      "--out writes the result and the test report to another folder",
     ],
-    options: ["depth", "json", "record", "dir"],
+    options: ["depth", "json", "record", "out", "dir"],
   },
   {
     name: "timers",
