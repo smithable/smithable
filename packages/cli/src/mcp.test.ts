@@ -34,7 +34,7 @@ test("the instructions say what the result's states mean", async () => {
   expect(instructions).toContain("not a test of the app");
   const { tools } = await mcp.listTools();
   const verify = tools.find((t) => t.name === "smithable_verify");
-  expect(Object.keys(verify?.inputSchema.properties ?? {})).toEqual(["depth", "record"]);
+  expect(Object.keys(verify?.inputSchema.properties ?? {}).sort()).toEqual(["depth", "record"]);
 });
 
 test("an operation's result carries its verification as structured content", async () => {
@@ -62,4 +62,11 @@ test("smithable_verify gives the current revision's result, as text and structur
   const bad = await mcp.callTool({ name: "smithable_verify", arguments: { depth: "deep" } });
   expect(bad.isError).toBe(true);
   expect(bad.structuredContent).toBeUndefined();
+  // Uncommitted edits: refused, and the result says nothing was verified.
+  writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\napp: { name: Changed }\n");
+  const dirty = await mcp.callTool({ name: "smithable_verify", arguments: {} });
+  expect(dirty.isError).toBe(true);
+  expect(checkOf(dirty.structuredContent as unknown as Verification, "spec").reason).toBe(
+    "uncommitted edits: nothing was verified",
+  );
 });
