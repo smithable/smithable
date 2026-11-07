@@ -253,8 +253,12 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
   }
   let run: { ran?: number; failed?: number; broken?: number; log?: string } = {};
   if (all.length && named.length) {
-    const log = join(KEPT, `tests-${v.revision || "working"}-${v.environment.where}.json`);
-    mkdirSync(join(dir, KEPT), { recursive: true });
+    // Beside the kept results, not among them: one file per revision and place there.
+    const log = join(
+      "data/.smithable/test-runs",
+      `${v.revision || "working"}-${v.environment.where}.json`,
+    );
+    mkdirSync(join(dir, "data/.smithable/test-runs"), { recursive: true });
     // A report left by an earlier run is never read as this one's.
     rmSync(join(dir, log), { force: true });
     const [command, args] = tool(dir, "vitest", [
@@ -268,6 +272,7 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
     const spawned = spawnSync(command, args, {
       cwd: dir,
       stdio: "ignore",
+      timeout: 15 * 60_000,
       shell: process.platform === "win32",
     });
     try {
@@ -280,7 +285,8 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
       run = {
         ran: (json.numPassedTests ?? Number.NaN) + (json.numFailedTests ?? Number.NaN),
         failed: json.numFailedTests ?? Number.NaN,
-        broken: json.numFailedTestSuites ?? 0,
+        // A file counts as failed when a test in it failed: broken only when none did.
+        broken: json.numFailedTests ? 0 : (json.numFailedTestSuites ?? 0),
         log,
       };
       // Vitest exits non-zero on any failure: a report that says none is not trusted alone.
@@ -355,7 +361,8 @@ export function notPassedLines(v: Verification): string {
       `${LABEL[c.id]} ${c.state.replace("-", " ")}: ${c.says}${c.reason ? ` (${c.reason})` : ""}\n`,
     );
   }
-  if (beyond.length) {
+  // After a failure the deeper depths are not the next step.
+  if (beyond.length && !v.checks.some((c) => c.state === "failed")) {
     const next = DEPTHS[DEPTHS.indexOf(v.depth) + 1] ?? "browser";
     lines.push(`Not checked: ${beyond.join(", ")}. Run smithable verify --depth ${next}.\n`);
   }
@@ -490,11 +497,13 @@ export function verify(
       report = JSON.parse(readFileSync(flags.record, "utf8"));
     } catch (error) {
       io.err(`Could not read the report ${flags.record}: ${(error as Error).message}\n`);
+      keep(dir, v);
       return 1;
     }
     const refusal = browserFromReport(v, report, flags.record);
     if (refusal) {
       io.err(`${refusal}\n`);
+      keep(dir, v);
       return 1;
     }
   } else if (depth !== "change" && checkOf(v, "spec").state !== "failed") {
