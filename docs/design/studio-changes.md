@@ -36,7 +36,8 @@ Builder's tabs become **What it does · Look · Changes**; Code mode's become
    is opened today.
 3. **The list**, newest first, with the rest of the tab's height: on a desktop that is the
    whole panel, twenty changes without scrolling. Each entry is one line as today (the words of
-   the change, then how it was made, when), and opens in place (§3).
+   the change, then how it was made, when), and opens in place (§3). Each line starts with its
+   number ("#12", [ask-flows.md](ask-flows.md) §8), never reused, so a change can be named by it.
 
 The box under the panels goes. What it gave while looking at the preview stays as one line
 under the preview: "Last change: added a website to Customers" and, for the newest change that
