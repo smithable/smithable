@@ -13,7 +13,8 @@ if (!base) {
 const changed = (filter, ...paths) =>
   execFileSync(
     "git",
-    ["diff", "--name-only", `--diff-filter=${filter}`, base, "HEAD", "--", ...paths],
+    // From where the branch left the base, so the base's own later changes are not counted.
+    ["diff", "--name-only", `--diff-filter=${filter}`, `${base}...HEAD`, "--", ...paths],
     {
       encoding: "utf8",
     },

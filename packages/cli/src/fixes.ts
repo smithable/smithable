@@ -132,7 +132,8 @@ export function affects(dir: string, fix: Fix): Answer {
   if (features.length) {
     const quiet = { out: () => {}, err: () => {} };
     const spec = loadSpec(dir, quiet);
-    if (!spec.ir || !spec.auth) unread = "The app's spec files could not be read.";
+    if (!spec.ir || !spec.auth || (!spec.ux && features.some((f) => f.startsWith("theme:"))))
+      unread = "The app's spec files could not be read.";
     else {
       const holding = features.find((f) => holds(f, spec));
       if (holding) return { answer: "yes", reason: `The app has ${FEATURE_WORDS(holding)}.` };
@@ -252,20 +253,18 @@ export function fixesCommand(io: Io, json: boolean): number {
  * destructive (a unique index, a table rebuilt, a column dropped or renamed).
  */
 export function migrationKind(sql: string[]): Fix["migration"] {
+  // Comments out first, then every statement on its own, wherever its semicolon is.
   const statements = sql
-    .flatMap((text) => text.split(/-->\s*statement-breakpoint|;\s*$/m))
-    .map((s) =>
-      s
-        .replace(/^\s*--.*$/gm, "")
-        .trim()
-        .replace(/;$/, ""),
-    )
+    .flatMap((text) => text.replace(/--.*$/gm, "").split(";"))
+    .map((s) => s.trim())
     .filter(Boolean);
   if (statements.length === 0) return "none";
   const adds = (s: string) =>
     /^CREATE TABLE\b/i.test(s) ||
     /^CREATE INDEX\b/i.test(s) ||
     (/^ALTER TABLE\s+\S+\s+ADD\s+(?:COLUMN\s+)?\S+/i.test(s) &&
+      // One clause only: "ADD a text, DROP b" is not an addition.
+      !s.replace(/\([^()]*\)/g, "").includes(",") &&
       (!/\bNOT NULL\b/i.test(s) || /\bDEFAULT\b/i.test(s)) &&
       !/\b(?:UNIQUE|PRIMARY KEY|REFERENCES|CHECK|CONSTRAINT)\b/i.test(s));
   return statements.every(adds) ? "additive" : "destructive";

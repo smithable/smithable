@@ -95,6 +95,12 @@ test("a migration only adds, or the build before it may not run on it", () => {
     "destructive",
   );
   expect(migrationKind(["ALTER TABLE `customer` DROP COLUMN `notes`;"])).toBe("destructive");
+  expect(migrationKind(["CREATE TABLE `a` (`id` integer); -- new\nDROP TABLE `b`;"])).toBe(
+    "destructive",
+  );
+  expect(migrationKind(["ALTER TABLE `t` ADD COLUMN `a` text, DROP COLUMN `b`;"])).toBe(
+    "destructive",
+  );
   expect(
     migrationKind([
       "PRAGMA foreign_keys=OFF;--> statement-breakpoint\nCREATE TABLE `__new_customer` (`id` integer);",
