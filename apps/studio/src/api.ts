@@ -300,6 +300,8 @@ export interface PeopleState {
 export const api = {
   project: () => call<Project>("/api/project"),
   releaseReview: () => call<ReleaseReview>("/api/release-review"),
+  /** The app card as Markdown and HTML (app-card.md), or what stops it. */
+  card: () => call<{ md: string; html: string } | { error: string }>("/api/card"),
   logs: () => call<string[]>("/api/logs"),
   outbox: () => call<KeptMail[]>("/api/outbox"),
   people: () => call<PeopleState>("/api/people"),
