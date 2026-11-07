@@ -72,6 +72,8 @@ export interface MigrationPlan {
   values?: { model: string; field: string; from: string; to: string }[];
   /** Apply the migration to the dev database now. */
   apply: boolean;
+  /** Set by the tools: the migration was applied to the dev database, or applying it failed. */
+  outcome?: "applied" | "failed";
 }
 
 /** `smithable generate [dir]`: writes the app for the spec in `dir`. */
@@ -238,10 +240,10 @@ export async function runTools(
   if (!(await routeTree(dir, io)) && !run(["exec", "tsr", "generate"])) return 1;
   lap("route generator");
   if (schema && migration?.apply) {
-    const applied = applyMigrations(dir, io);
-    if (applied === false) return 1;
-    // Otherwise by the app's own database module, in a process of its own.
-    if (applied === undefined && !run(["exec", "tsx", "src/db/index.ts"])) return 1;
+    // Here, or (undefined) by the app's own database module, in a process of its own.
+    const applied = applyMigrations(dir, io) ?? run(["exec", "tsx", "src/db/index.ts"]);
+    migration.outcome = applied ? "applied" : "failed";
+    if (!applied) return 1;
     lap("migration");
   }
   return 0;

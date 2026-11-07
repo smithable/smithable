@@ -13,6 +13,8 @@ import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
   applyOperation,
   applyOperations,
+  checkOf,
+  type Depth,
   type Effect,
   editAsRename,
   findOperation,
@@ -25,11 +27,14 @@ import {
   parseOperationArgs,
   parseTheme,
   type SpecIR,
+  setCheck,
   storageOf,
   translationPath,
+  type Verification,
   validateAuth,
   validateContent,
   validateSpec,
+  verificationBefore,
   YamlEditor,
 } from "@smithable/core";
 import {
@@ -39,7 +44,7 @@ import {
   restoreDatabase,
   snapshotDatabase,
 } from "./database.js";
-import { generate } from "./generate.js";
+import { generate, type MigrationPlan } from "./generate.js";
 import {
   discardChanges,
   ensureRepository,
@@ -64,6 +69,18 @@ import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
 import { themeTransaction } from "./theme-transaction.js";
 import { projectThemeFiles, projectThemes, projectTranslations } from "./validate.js";
+import {
+  browserNotRun,
+  countConsequences,
+  countModels,
+  customUsers,
+  dataCheck,
+  environment,
+  keep,
+  runDeeper,
+  typecheckCheck,
+  type Where,
+} from "./verify.js";
 
 const SPEC = "smithable.yml";
 const CONTENT = "smithable.content.yml";
@@ -108,6 +125,12 @@ export interface OpFlags {
    * written with the change and committed in it, so an undo takes them back too.
    */
   files?: { path: string; bytes: Uint8Array }[];
+  /** How deep to verify the change (change-verified.md §3.3); `change` when unsaid. */
+  verify?: Depth;
+  /** Where the change is made, for its result; local (or hosted, in a workspace) when unsaid. */
+  where?: Where;
+  /** Given the change's result (`--json`), kept or not, whenever the change got as far as one. */
+  onResult?: (verification: Verification) => void;
 }
 
 /** `smithable op <name> [args…]`: applies an operation, regenerates, migrates and checkpoints. */
@@ -261,7 +284,9 @@ async function runOperationLocked(
       io.err(text);
     },
   };
-  const code = await applyAndCheckpoint(dir, kept, name, args, flags, plan);
+  const result: { v?: Verification } = {};
+  const code = await applyAndCheckpoint(dir, kept, name, args, flags, plan, result);
+  if (result.v) flags.onResult?.(result.v);
   if (code !== FAILED) return code;
   recordFailure(dir, name, args, said.join(""), flags.trace);
   if (!flags.reportLater) await afterFailure(dir, io);
@@ -274,7 +299,8 @@ async function applyAndCheckpoint(
   name: string,
   args: OperationArgs,
   flags: OpFlags,
-  plan?: FilesPlan,
+  plan: FilesPlan | undefined,
+  out: { v?: Verification },
 ): Promise<number> {
   if (flags.projectCheck && !flags.projectCheck()) {
     io.err("The current project changed while this request waited. Reopen its editor.\n");
@@ -396,7 +422,19 @@ async function applyAndCheckpoint(
     : batch
       ? applyOperations(files, batch)
       : applyOperation(files, operation?.name ?? name, args);
+  const depth = flags.verify ?? "change";
+  // What the change will do, every check not run (change-verified.md §4); filled as it runs.
+  const verifyBefore = () => {
+    const custom = result.ok ? customUsers(dir) : undefined;
+    return verificationBefore(files, result, {
+      base: flags.expectedRevision ?? projectRevision(dir),
+      environment: environment(flags.where),
+      depth,
+      ...(custom ? { custom } : {}),
+    });
+  };
   if (!result.ok) {
+    out.v = verifyBefore();
     io.err(`${result.message}\n`);
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
     // A refusal, said in words: not a failure to report (only what throws below is one).
@@ -432,6 +470,9 @@ async function applyAndCheckpoint(
     .ir as SpecIR;
   const after = validateSpec({ path: SPEC, text: result.files.spec }, { plugins: files.plugins })
     .ir as SpecIR;
+  const v = verifyBefore();
+  out.v = v;
+  countConsequences(dir, before, v.consequences);
 
   lap("apply and validate");
   // A plan's data loss: the stored fields the files no longer have.
@@ -442,6 +483,7 @@ async function applyAndCheckpoint(
     choicesInUse(dir, before, after, result.effects);
   lap("required but empty");
   if (blocker) {
+    setCheck(v, "data", "failed", blocker, { reason: "refused before anything was written" });
     io.err(`${blocker}\n`);
     return 1;
   }
@@ -509,6 +551,17 @@ async function applyAndCheckpoint(
     applyBaseRevision = projectRevision(dir);
   }
 
+  // The data check's counts before (§3.1): every stored column of the models the change touches.
+  const renamedTo = new Map(
+    result.effects.flatMap((e) => (e.kind === "rename-model" ? [[e.from, e.to] as const] : [])),
+  );
+  const countedBefore = countModels(
+    dir,
+    before,
+    before.models
+      .map((m) => m.name)
+      .filter((m) => v.changed.models.includes(renamedTo.get(m) ?? m)),
+  );
   const id = new Date().toISOString().replace(/[-:.]/g, "").replace("T", "-").slice(0, 17);
   const snapshot = snapshotDatabase(dir, id);
   lap("database snapshot");
@@ -623,16 +676,70 @@ async function applyAndCheckpoint(
       expectedSource = projectRevision(dir);
       expectedSourceFiles = sourceDigests(dir);
     }
+    setCheck(v, "spec", "passed", "The spec and its companion files have no errors.");
+    const migration = {
+      name: migrationName(result.description),
+      renames,
+      values,
+      models,
+      apply: true,
+    } as MigrationPlan;
     const code = await generate(dir, io, {
       tools: true,
       onlyChanged: true,
       force: false,
-      migration: { name: migrationName(result.description), renames, values, models, apply: true },
+      migration,
     });
-    if (code !== 0) return fail(`Regenerating the app failed.`);
+    if (code !== 0 && migration.outcome === "failed") {
+      setCheck(v, "generate", "passed", "The app was regenerated.");
+      setCheck(
+        v,
+        "migrate",
+        "failed",
+        "The migration could not be applied to the development database.",
+      );
+      return fail("Migrating the development database failed.");
+    }
+    if (code !== 0) {
+      setCheck(v, "generate", "failed", "Regenerating the app failed.");
+      return fail(`Regenerating the app failed.`);
+    }
+    setCheck(v, "generate", "passed", "The app was regenerated with its tools.");
+    setCheck(
+      v,
+      "migrate",
+      "passed",
+      migration.outcome === "applied"
+        ? "The development database was migrated."
+        : "No migration was needed: the database's shape did not change.",
+    );
     if (name === "applyTheme" && sourceMoved())
       return fail("The project changed before its checkpoint.");
     lap("generate and tools");
+    // What a confirmed change may empty: a type converted, a choice value cleared, the trash.
+    const mayLose = new Set(
+      result.effects.flatMap((e) =>
+        e.kind === "change-field" &&
+        (result.destructive || Object.values(e.renamed ?? {}).includes(""))
+          ? [`${e.model}.${e.field}`]
+          : [],
+      ),
+    );
+    if (args.trash === false && typeof args.model === "string") mayLose.add(args.model);
+    const data = dataCheck(
+      countedBefore,
+      countModels(dir, after, v.changed.models),
+      result.effects,
+      mayLose,
+    );
+    setCheck(v, "data", data.state, data.says, data.reason ? { reason: data.reason } : {});
+    if (data.state === "failed") return fail(`The data check failed: ${data.says}`);
+    // The app's own code failing its type check is the person's to fix, not a failure to report.
+    if (depth !== "change" && !typecheckCheck(dir, v)) {
+      fail("The app's type check failed.");
+      return 1;
+    }
+    lap("data and type check");
 
     for (const effect of result.effects) {
       if (effect.kind === "rule-identified") recordRule(dir, effect.rule, effect.text);
@@ -669,13 +776,18 @@ async function applyAndCheckpoint(
           .filter(Boolean),
       ),
     );
+    // The deeper checks run on the committed revision and never roll back (§3.2).
+    v.revision = git(dir, ["rev-parse", "HEAD"]).out.trim();
+    if (depth !== "change") runDeeper(dir, v, false);
+    if (depth === "browser") browserNotRun(v);
+    keep(dir, v);
     io.out(
       `${result.description}${prepared ? `: ${prepared.rows.length} added` : ""}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
     );
     // A merge or a split is the app's own work; any other action without "on" is custom code.
     if (operation?.name === "addAction" && !args.on && !args.merge && !args.split)
       io.out(actionNote(String(args.action)));
-    return 0;
+    return checkOf(v, "tests").state === "failed" ? 1 : 0;
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error);
     return fail(

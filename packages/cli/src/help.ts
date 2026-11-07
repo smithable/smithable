@@ -260,9 +260,11 @@ export const COMMANDS: Command[] = [
       "a list is written with commas, --pages home,items, or the option given again;",
       "a word @path gives a file's text, e.g. op addTheme forest --text @forest.yml;",
       "--yes confirms changes that lose data; --setup marks a change made for the owner",
-      "when a project is set up, which the history does not show and undo passes over)",
+      "when a project is set up, which the history does not show and undo passes over;",
+      "--verify tests also runs the app's type check and tests; --json prints the result:",
+      "what the change did and which checks passed, failed or did not run)",
     ],
-    options: ["yes", "setup", "dir"],
+    options: ["yes", "setup", "verify", "json", "dir"],
   },
   {
     name: "undo",
@@ -294,6 +296,16 @@ export const COMMANDS: Command[] = [
     name: "test",
     usage: "test [dir]",
     text: ["Run the app's tests and remember the results for rule status"],
+  },
+  {
+    name: "verify",
+    usage: "verify [--depth change|tests|browser] [--json] [--record <report>]",
+    text: [
+      "Say what was verified for the current revision: the checks its last change ran, and,",
+      "with --depth tests, the app's type check and tests; --record takes a sampleusers report",
+      "for this revision as the browser check; nothing is verified with uncommitted edits",
+    ],
+    options: ["depth", "json", "record", "dir"],
   },
   {
     name: "timers",

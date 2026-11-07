@@ -1,6 +1,12 @@
 import { parseArgs } from "node:util";
 import { STARTER_TEXTS } from "@smithable/ai";
-import { findOperation, SPEC_VERSION } from "@smithable/core";
+import {
+  DEPTHS,
+  type Depth,
+  findOperation,
+  SPEC_VERSION,
+  type Verification,
+} from "@smithable/core";
 import { ask } from "./ask.js";
 import { backup, restore } from "./backup.js";
 import { build } from "./build.js";
@@ -16,7 +22,7 @@ import { generate } from "./generate.js";
 import { commandHelp, help, operationHelp } from "./help.js";
 import { hostedLevel } from "./hosted-level.js";
 import { inspect, test } from "./inspect.js";
-import { type Io, processIo } from "./io.js";
+import { type Io, keepStdoutForProtocol, processIo } from "./io.js";
 import { mcp } from "./mcp.js";
 import { clarify, create } from "./new.js";
 import { op } from "./op.js";
@@ -38,6 +44,7 @@ import { translate } from "./translate.js";
 import { undo, undoChange } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
+import { notPassedLines, verify } from "./verify.js";
 import { VERSION } from "./version.js";
 import { approveAssetReviewCommand, readWebsiteAssetReviewCommand } from "./website-assets.js";
 import { installWebsiteInputCommand } from "./website-input.js";
@@ -114,10 +121,40 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     io.out(text);
     return 0;
   }
-  if (command === "op")
-    return op(values.dir ?? ".", io, args[0], operationWords(argv).slice(1), {
-      yes: values.yes === true,
-      ...(values.setup ? { setup: true } : {}),
+  if (command === "op") {
+    const depth = values.verify ?? "change";
+    if (!(DEPTHS as readonly string[]).includes(depth)) {
+      io.err("--verify is change, tests or browser.\n");
+      return 2;
+    }
+    // With --json, stdout carries the result alone; what the change says goes to stderr.
+    const json = values.json === true;
+    if (json) keepStdoutForProtocol();
+    let result: Verification | undefined;
+    const code = await op(
+      values.dir ?? ".",
+      json ? { out: io.err, err: io.err } : io,
+      args[0],
+      operationWords(argv).slice(1),
+      {
+        yes: values.yes === true,
+        ...(values.setup ? { setup: true } : {}),
+        verify: depth as Depth,
+        onResult: (v) => {
+          result = v;
+        },
+      },
+    );
+    if (json && result) io.out(`${JSON.stringify(result, null, 2)}\n`);
+    // Without --json, a line per check that did not pass (change-verified.md §5.1).
+    else if (result?.revision) io.out(notPassedLines(result));
+    return code;
+  }
+  if (command === "verify")
+    return verify(values.dir ?? args[0] ?? ".", io, {
+      ...(values.depth ? { depth: values.depth } : {}),
+      ...(values.record ? { record: values.record } : {}),
+      json: values.json === true,
     });
   if (command === "undo")
     return values.change
@@ -431,6 +468,9 @@ const CONFIG = {
     fast: { type: "boolean" },
     everything: { type: "boolean" },
     for: { type: "string" },
+    verify: { type: "string" },
+    depth: { type: "string" },
+    record: { type: "string" },
   },
 } as const;
 
@@ -448,8 +488,9 @@ function operationWords(argv: string[]): string[] {
   const words: string[] = [];
   for (let i = argv.indexOf("op") + 1; i < argv.length; i++) {
     const word = argv[i] as string;
-    if (word === "--dir") i++;
-    else if (!/^(--yes|--setup|--help|-h|--dir=.*)$/.test(word)) words.push(word);
+    if (word === "--dir" || word === "--verify") i++;
+    else if (!/^(--yes|--setup|--json|--help|-h|--dir=.*|--verify=.*)$/.test(word))
+      words.push(word);
   }
   return words;
 }

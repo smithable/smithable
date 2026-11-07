@@ -1,6 +1,6 @@
 # The result of a change: what it will do, and what was verified (design)
 
-Status: proposed 2026-11-07, Fable, on Johan's decision from the builder-inspiration review ("What
+Status: step 1 built (PR #NNNN), 2026-11-07. Proposed 2026-11-07, Fable, on Johan's decision from the builder-inspiration review ("What
 a change verified, and what it will do: one result for every change"; backlog Fable 100, with
 Fable 27; the stale plan is A 232); build after Johan reads it: core and CLI first (§7). A second
 reviewer's points taken the same day (failures before not-run in the line, per-environment
