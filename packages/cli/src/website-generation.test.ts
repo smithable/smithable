@@ -1,8 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import type { Provider } from "@smithable/ai";
 import { type SpecIR, YamlEditor } from "@smithable/core";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterAll, afterEach, expect, test, vi } from "vitest";
 import { extractImageContexts } from "./image-context.js";
 import { extractSiteFacts } from "./site-facts.js";
 import { projectSitePersonal } from "./site-personal.js";
@@ -326,7 +327,18 @@ test("sample mode omits known staff portraits while full instruction retains aut
   expect(original.assets[0]?.source).toMatchObject({ kind: "original", url: image.src });
 });
 
-test("pure compiler provenance permits typed identity but rejects injected identity in compiler/custom/public files", async () => {
+// One generated app for the two provenance tests below: making and checking it is most of their
+// time, so each test has its own share.
+const provenanceDirs: string[] = [];
+afterAll(() => {
+  for (const dir of provenanceDirs) rmSync(dir, { recursive: true, force: true });
+});
+let provenance: ReturnType<typeof provenanceApp> | undefined;
+const sharedProvenance = () => {
+  if (!provenance) provenance = provenanceApp();
+  return provenance;
+};
+async function provenanceApp() {
   const { loadSpec } = await import("./validate.js");
   const { replaceWebsitePersonalArtifacts } = await import("./website-generation.js");
   const context = await prepareWebsiteContext(
@@ -342,7 +354,8 @@ test("pure compiler provenance permits typed identity but rejects injected ident
   context.authoritativeAdmin = "a@example.test";
   // The smallest app with the identity in its name, a typed model and ordinary-word fields: a
   // starter's whole app took ten seconds to check six times, most of it in kit files.
-  const dir = tempDir("website-identity-compile-");
+  const dir = mkdtempSync(join(tmpdir(), "website-identity-compile-"));
+  provenanceDirs.push(dir);
   const starter = {
     "smithable.yml": `# This page will keep a rose note.
 smithable: 0.1
@@ -393,13 +406,22 @@ pages:
   expect(commands.some((command) => command.includes("drizzle-kit"))).toBe(true);
   expect(commands.some((command) => command.includes("tsr"))).toBe(true);
   expect(commands.some((command) => command.includes("install"))).toBe(false);
+  return { dir, context, replaceWebsitePersonalArtifacts };
+}
+
+test("pure compiler provenance permits typed identity in the whole compiled app", async () => {
+  const { dir, context, replaceWebsitePersonalArtifacts } = await sharedProvenance();
   expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).not.toThrow();
   expect(readFileSync(join(dir, "src/generated/service.ts"), "utf8")).toContain("page");
   expect(readFileSync(join(dir, "src/generated/service.ts"), "utf8")).toContain("will");
   expect(readFileSync(join(dir, "src/generated/service.ts"), "utf8")).toContain("rose");
+});
+
+test("pure compiler provenance rejects identity injected into compiler, custom and public files", async () => {
+  const { dir, context, replaceWebsitePersonalArtifacts } = await sharedProvenance();
   // Each injected file is checked beside the spec files alone, after the same file without the
-  // injection passed there: a file's check does not depend on the others, and the whole app was
-  // checked above.
+  // injection passed there: a file's check does not depend on the others, and the whole app is
+  // checked in the test above.
   const injected = (file: string, clean: string, added: string) => {
     const alone = tempDir("website-identity-injected-");
     for (const name of ["smithable.yml", "smithable.auth.yml"])
