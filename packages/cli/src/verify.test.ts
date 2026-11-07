@@ -58,6 +58,15 @@ test("the data check: counts held pass, a lost value fails, a confirmed loss is 
     dataCheck({ Item: 0, "Item.name": 0 }, { Item: 0, "Item.name": 0 }, [], new Set()),
   ).toEqual({ state: "passed", says: "No records to keep." });
   expect(dataCheck({ Item: null }, { Item: 3 }, [], new Set()).state).toBe("inconclusive");
+  // A model the spec no longer has is named once with its count, never "no records to keep".
+  expect(dataCheck({ Item: 12, "Item.name": 12 }, {}, [], new Set()).says).toBe(
+    "Removed with the spec's change: Item (12).",
+  );
+  // The trash emptied: the model's rows and every field of them may go.
+  expect(
+    dataCheck({ Item: 3, "Item.name": 3 }, { Item: 1, "Item.name": 1 }, [], new Set(["Item"]))
+      .state,
+  ).toBe("passed");
 });
 
 test("a result is kept per revision and place; one without a revision is not", () => {
@@ -92,13 +101,19 @@ test("a sampleusers report is refused for another revision and mapped onto the b
     state: "not-run",
     reason: "blocked at save: no button",
   });
+  // Passed needs steps that ran, none failed; a report for another environment is refused.
+  browserFromReport(v, { revision: "abc123", status: "passed", steps: [] }, "r.json");
+  expect(checkOf(v, "browser").state).toBe("inconclusive");
+  expect(
+    browserFromReport(v, { revision: "abc123", environment: { where: "hosted" } }, "r.json"),
+  ).toContain("hosted environment");
   for (const [status, state] of [
     ["passed", "passed"],
     ["failed", "failed"],
     ["budget exhausted", "inconclusive"],
     ["cancelled", "inconclusive"],
   ]) {
-    browserFromReport(v, { revision: "abc123", status, steps: [] }, "r.json");
+    browserFromReport(v, { revision: "abc123", status, steps: [{ status: "passed" }] }, "r.json");
     expect(checkOf(v, "browser").state).toBe(state);
   }
 });
@@ -123,16 +138,25 @@ test("verify keeps a result for the committed revision and refuses uncommitted e
   expect(verify(dir, captureIo(), { depth: "deep" })).toBe(2);
 });
 
-test("op --json prints the result alone on stdout, its words on stderr", async () => {
+test("op --json prints the operation's result alone on stdout, its words on stderr", async () => {
   const dir = project();
   const io = captureIo();
   const code = await run(["op", "removeField", "Item", "nope", "--json", "--dir", dir], io);
   expect(code).toBe(1);
-  const v = JSON.parse(io.stdout);
+  const result = JSON.parse(io.stdout);
+  expect(result).toMatchObject({ ok: false });
+  expect(result.message).toContain("nope");
+  expect(result.files).toBeUndefined();
+  const v = result.verification;
   expect(v.revision).toBe("");
   expect(checkOf(v, "spec").state).toBe("failed");
   expect(io.stderr).toContain("nope");
   expect(existsSync(join(dir, "data/.smithable/verified"))).toBe(false);
+  // Refused before it had a result: still one JSON document, with what it said.
+  const unknown = captureIo();
+  expect(await run(["op", "noSuchOperation", "--json", "--dir", dir], unknown)).toBe(2);
+  expect(JSON.parse(unknown.stdout)).toMatchObject({ ok: false, diagnostics: [] });
+  expect(JSON.parse(unknown.stdout).message).toContain('Unknown operation "noSuchOperation".');
   const bad = captureIo();
   expect(
     await run(["op", "removeField", "Item", "name", "--verify", "deep", "--dir", dir], bad),

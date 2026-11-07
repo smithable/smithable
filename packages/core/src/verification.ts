@@ -157,6 +157,9 @@ export function setCheck(
   if (state === "failed")
     for (let i = index + 1; i < v.checks.length; i++) {
       const later = v.checks[i] as Check;
+      // What the change touches outside the app is read from the files before Apply: kept.
+      if (later.id === "outside" && (later.state !== "not-run" || later.says !== "Not run."))
+        continue;
       v.checks[i] = {
         id: later.id,
         kind: later.kind,
@@ -183,6 +186,8 @@ export function testsCheck(run: {
   named: number;
   ran?: number;
   failed?: number;
+  /** Test files that could not run at all (an import that fails, a broken setup). */
+  broken?: number;
   log?: string;
 }): Pick<Check, "state" | "says" | "reason" | "evidence"> {
   if (run.available === 0)
@@ -198,11 +203,19 @@ export function testsCheck(run: {
     ...(run.failed !== undefined ? { failed: run.failed } : {}),
     ...(run.log ? { log: run.log } : {}),
   };
-  if (run.ran === undefined)
+  const count = (n: number | undefined) => n !== undefined && Number.isInteger(n) && n >= 0;
+  if (!count(run.ran) || !count(run.failed) || (run.broken !== undefined && !count(run.broken)))
     return {
       state: "inconclusive",
       says: "The test run gave no results.",
       reason: "no results",
+      evidence,
+    };
+  if ((run.broken ?? 0) > 0)
+    return {
+      state: "failed",
+      says: `${run.broken} test ${run.broken === 1 ? "file" : "files"} could not run.`,
+      reason: "tests failed",
       evidence,
     };
   if ((run.failed ?? 0) > 0)
@@ -393,7 +406,9 @@ function recordConsequences(before: SpecIR, after: SpecIR, effects: Effect[]): C
         field.default !== undefined &&
         !field.formula &&
         !old.fields.some((f) => f.name === field.name) &&
-        !effects.some((e) => e.kind === "rename-field" && e.to === field.name)
+        !effects.some(
+          (e) => e.kind === "rename-field" && e.model === model.name && e.to === field.name,
+        )
       )
         out.push({
           about: "records",

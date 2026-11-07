@@ -22,6 +22,7 @@ import {
   kebab,
   type OperationArgs,
   OperationError,
+  type OperationResult,
   operationsFor,
   PEOPLE_PATH,
   parseOperationArgs,
@@ -30,7 +31,6 @@ import {
   setCheck,
   storageOf,
   translationPath,
-  type Verification,
   validateAuth,
   validateContent,
   validateSpec,
@@ -130,7 +130,7 @@ export interface OpFlags {
   /** Where the change is made, for its result; local (or hosted, in a workspace) when unsaid. */
   where?: Where;
   /** Given the change's result (`--json`), kept or not, whenever the change got as far as one. */
-  onResult?: (verification: Verification) => void;
+  onResult?: (result: OperationResult) => void;
 }
 
 /** `smithable op <name> [args…]`: applies an operation, regenerates, migrates and checkpoints. */
@@ -284,9 +284,9 @@ async function runOperationLocked(
       io.err(text);
     },
   };
-  const result: { v?: Verification } = {};
+  const result: { r?: OperationResult } = {};
   const code = await applyAndCheckpoint(dir, kept, name, args, flags, plan, result);
-  if (result.v) flags.onResult?.(result.v);
+  if (result.r) flags.onResult?.(result.r);
   if (code !== FAILED) return code;
   recordFailure(dir, name, args, said.join(""), flags.trace);
   if (!flags.reportLater) await afterFailure(dir, io);
@@ -300,7 +300,7 @@ async function applyAndCheckpoint(
   args: OperationArgs,
   flags: OpFlags,
   plan: FilesPlan | undefined,
-  out: { v?: Verification },
+  out: { r?: OperationResult },
 ): Promise<number> {
   if (flags.projectCheck && !flags.projectCheck()) {
     io.err("The current project changed while this request waited. Reopen its editor.\n");
@@ -433,8 +433,9 @@ async function applyAndCheckpoint(
       ...(custom ? { custom } : {}),
     });
   };
+  out.r = result;
   if (!result.ok) {
-    out.v = verifyBefore();
+    result.verification = verifyBefore();
     io.err(`${result.message}\n`);
     for (const d of result.diagnostics) io.err(`${formatDiagnostic(d)}\n`);
     // A refusal, said in words: not a failure to report (only what throws below is one).
@@ -471,18 +472,22 @@ async function applyAndCheckpoint(
   const after = validateSpec({ path: SPEC, text: result.files.spec }, { plugins: files.plugins })
     .ir as SpecIR;
   const v = verifyBefore();
-  out.v = v;
-  countConsequences(dir, before, v.consequences);
+  result.verification = v;
+  countConsequences(dir, before, result.effects, v.consequences);
 
   lap("apply and validate");
   // A plan's data loss: the stored fields the files no longer have.
   const lost = plan ? lostFields(before, after) : [];
   const destructive = plan ? lost.length > 0 : result.destructive;
-  const blocker =
-    requiredButEmpty(dir, before, after, result.effects) ??
-    choicesInUse(dir, before, after, result.effects);
+  const required = requiredButEmpty(dir, before, after, result.effects);
+  // A required field over empty values is a consequence too, still refused (§4).
+  if (required) v.consequences.push({ about: "records", says: required, undo: "full" });
+  const blocker = required ?? choicesInUse(dir, before, after, result.effects);
   lap("required but empty");
   if (blocker) {
+    setCheck(v, "spec", "passed", "The spec and its companion files have no errors.");
+    for (const id of ["generate", "migrate"] as const)
+      setCheck(v, id, "not-run", "Not run.", { reason: "refused before anything was written" });
     setCheck(v, "data", "failed", blocker, { reason: "refused before anything was written" });
     io.err(`${blocker}\n`);
     return 1;
@@ -619,6 +624,7 @@ async function applyAndCheckpoint(
     return 1;
   }
   // From the first write to the commit: rollback only while no newer editor files would be lost.
+  let committed = false;
   try {
     writeFileSync(join(dir, SPEC), result.files.spec);
     if (result.files.content !== undefined) writeFileSync(contentPath, result.files.content);
@@ -717,10 +723,14 @@ async function applyAndCheckpoint(
       return fail("The project changed before its checkpoint.");
     lap("generate and tools");
     // What a confirmed change may empty: a type converted, a choice value cleared, the trash.
+    const typeOf = (ir: SpecIR, model: string, field: string) =>
+      ir.models.find((m) => m.name === model)?.fields.find((f) => f.name === field)?.type;
     const mayLose = new Set(
       result.effects.flatMap((e) =>
         e.kind === "change-field" &&
-        (result.destructive || Object.values(e.renamed ?? {}).includes(""))
+        ((result.destructive &&
+          typeOf(before, e.model, e.field) !== typeOf(after, e.model, e.field)) ||
+          Object.values(e.renamed ?? {}).includes(""))
           ? [`${e.model}.${e.field}`]
           : [],
       ),
@@ -760,6 +770,8 @@ async function applyAndCheckpoint(
     const message = `${plan ? plan.subject : `smithable: ${result.description}`}\n\n${plan ? `${plan.body}\n` : ""}Smithable-Op: ${JSON.stringify({ op: recordedName, args: recorded })}\n${applied}Smithable-Snapshot: ${snapshot ? id : "none"}\nSmithable-Duration: ${Date.now() - started} ms\n${flags.setup ? "Smithable-Setup: yes\n" : ""}${flags.trailer ? `${flags.trailer}\n` : ""}`;
     const commit = git(dir, ["commit", "-q", "-m", message]);
     if (!commit.ok) return fail(`Could not commit the change: ${commit.out}`);
+    committed = true;
+    v.revision = git(dir, ["rev-parse", "HEAD"]).out.trim();
     lap("commit");
     // Undo goes back through recent changes: their snapshots stay, older ones go.
     const recent = git(dir, [
@@ -777,10 +789,19 @@ async function applyAndCheckpoint(
       ),
     );
     // The deeper checks run on the committed revision and never roll back (§3.2).
-    v.revision = git(dir, ["rev-parse", "HEAD"]).out.trim();
-    if (depth !== "change") runDeeper(dir, v, false);
+    try {
+      if (depth !== "change") runDeeper(dir, v, false);
+    } catch (error) {
+      setCheck(v, "tests", "inconclusive", "The tests could not be run.", {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
     if (depth === "browser") browserNotRun(v);
-    keep(dir, v);
+    try {
+      keep(dir, v);
+    } catch (error) {
+      io.err(`The change's result could not be kept: ${(error as Error).message}\n`);
+    }
     io.out(
       `${result.description}${prepared ? `: ${prepared.rows.length} added` : ""}. Undo with: ${flags.mcp ? "smithable_undo" : "smithable undo"}\n`,
     );
@@ -790,6 +811,11 @@ async function applyAndCheckpoint(
     return checkOf(v, "tests").state === "failed" ? 1 : 0;
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error);
+    // After the commit nothing rolls back (§3.2): the change stands, and undo is one step.
+    if (committed) {
+      io.err(`The change was committed, but what followed stopped (${why}).\n`);
+      return 1;
+    }
     return fail(
       `The change stopped halfway (${why}), so it was rolled back${snapshot ? ` to the database snapshot ${id}` : ""}.`,
     );

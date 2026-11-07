@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join, relative } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
@@ -94,16 +102,41 @@ export function countModels(dir: string, ir: SpecIR, models: string[]): Counts |
   return counts;
 }
 
-/** A record consequence's count (§4): how many records hold the values it is about. */
-export function countConsequences(dir: string, ir: SpecIR, consequences: Consequence[]): void {
+/**
+ * A record consequence's count (§4), from the database before the change: how many records hold
+ * the values of a field it is about, else how many records its model has.
+ */
+export function countConsequences(
+  dir: string,
+  ir: SpecIR,
+  effects: Effect[],
+  consequences: Consequence[],
+): void {
   for (const c of consequences) {
-    if (c.about !== "records" || c.undo === "full" || !c.model || !c.field) continue;
-    const field = ir.models.find((m) => m.name === c.model)?.fields.find((f) => f.name === c.field);
-    if (!field || storageOf(field) === "none") continue;
-    const { table, column } = columnOf(c.model, c.field, storageOf(field) === "reference");
+    if (c.about !== "records" || !c.model) continue;
+    // A consequence names the model and field as they are after the change.
+    const name =
+      effects.flatMap((e) => (e.kind === "rename-model" && e.to === c.model ? [e.from] : []))[0] ??
+      c.model;
+    const model = ir.models.find((m) => m.name === name);
+    if (!model) continue;
+    const fieldName =
+      effects.flatMap((e) =>
+        e.kind === "rename-field" && e.model === c.model && e.to === c.field ? [e.from] : [],
+      )[0] ?? c.field;
+    const field = model.fields.find((f) => f.name === fieldName);
+    const stored = field && storageOf(field) !== "none" ? field : undefined;
+    const { table, column } = columnOf(
+      model.name,
+      stored?.name ?? "id",
+      stored ? storageOf(stored) === "reference" : false,
+    );
     const n = countValues(dir, table, column);
-    if (n)
-      c.says = `${c.says} ${n.filled} of ${n.total} ${plural(c.model).toLowerCase()} have a value.`;
+    if (!n) continue;
+    const noun = plural(c.model).toLowerCase();
+    c.says = stored
+      ? `${c.says} ${n.filled} of ${n.total} ${noun} have a value.`
+      : `${c.says} ${n.total} ${n.total === 1 ? c.model.toLowerCase() : noun} so far.`;
   }
 }
 
@@ -137,7 +170,15 @@ export function dataCheck(
     }
     return name === undefined ? to : `${to}.${name}`;
   };
+  // A key the spec no longer has after the change went with it: said, not compared.
   const keys = Object.keys(before).filter((key) => now(key) in after);
+  const modelOf = (key: string) => key.split(".")[0] as string;
+  // A removed model is named once, not with each of its fields.
+  const removed = Object.keys(before)
+    .filter((key) => !(now(key) in after) && (!key.includes(".") || now(modelOf(key)) in after))
+    .map((key) => `${key} (${before[key] ?? "?"})`);
+  const may = (key: string) =>
+    [key, now(key), modelOf(key), modelOf(now(key))].some((k) => mayLose.has(k));
   const lost: string[] = [];
   const confirmed: string[] = [];
   for (const key of keys) {
@@ -150,7 +191,7 @@ export function dataCheck(
         reason: "not counted",
       };
     if (is >= was) continue;
-    (mayLose.has(key) ? confirmed : lost).push(`${key} ${was} → ${is}`);
+    (may(key) ? confirmed : lost).push(`${key} ${was} → ${is}`);
   }
   const models = keys.filter((k) => !k.includes("."));
   const records = models.reduce((n, k) => n + (before[k] ?? 0), 0);
@@ -160,11 +201,12 @@ export function dataCheck(
       says: `Values were lost: ${lost.join(", ")}.`,
       reason: "counts dropped",
     };
-  if (records === 0) return { state: "passed", says: "No records to keep." };
+  const gone = removed.length ? ` Removed with the spec's change: ${removed.join(", ")}.` : "";
+  if (records === 0) return { state: "passed", says: gone ? gone.trim() : "No records to keep." };
   const noun = models.length === 1 ? plural(models[0] as string).toLowerCase() : "records";
   return {
     state: "passed",
-    says: `${records} ${noun} kept their values${confirmed.length ? `, apart from what the change was confirmed to remove (${confirmed.join(", ")})` : ""}.`,
+    says: `${records} ${noun} kept their values${confirmed.length ? `, apart from what the change was confirmed to remove (${confirmed.join(", ")})` : ""}.${gone}`,
   };
 }
 
@@ -201,14 +243,20 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
   if (concepts.length && all.length) {
     const { ir, auth } = loadSpec(dir, quiet);
     const index = ir && auth ? projectIndex(dir, ir, auth) : undefined;
-    named = index
-      ? [...new Set(concepts.flatMap((c) => findTests(index, c).map((t) => t.file)))].sort()
-      : [];
+    if (!index) {
+      setCheck(v, "tests", "inconclusive", "The project's index could not be read.", {
+        reason: "no index",
+      });
+      return;
+    }
+    named = [...new Set(concepts.flatMap((c) => findTests(index, c).map((t) => t.file)))].sort();
   }
-  let run: { ran?: number; failed?: number; log?: string } = {};
+  let run: { ran?: number; failed?: number; broken?: number; log?: string } = {};
   if (all.length && named.length) {
-    const log = join(KEPT, `tests-${v.revision || "working"}.json`);
+    const log = join(KEPT, `tests-${v.revision || "working"}-${v.environment.where}.json`);
     mkdirSync(join(dir, KEPT), { recursive: true });
+    // A report left by an earlier run is never read as this one's.
+    rmSync(join(dir, log), { force: true });
     const [command, args] = tool(dir, "vitest", [
       "run",
       "--reporter",
@@ -217,20 +265,32 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
       log,
       ...(named === all ? [] : named),
     ]);
-    spawnSync(command, args, { cwd: dir, stdio: "ignore", shell: process.platform === "win32" });
+    const spawned = spawnSync(command, args, {
+      cwd: dir,
+      stdio: "ignore",
+      shell: process.platform === "win32",
+    });
     try {
+      if (spawned.error) throw spawned.error;
       const json = JSON.parse(readFileSync(join(dir, log), "utf8")) as {
-        numPassedTests: number;
-        numFailedTests: number;
+        numPassedTests?: number;
+        numFailedTests?: number;
+        numFailedTestSuites?: number;
       };
       run = {
-        ran: json.numPassedTests + json.numFailedTests,
-        failed: json.numFailedTests,
+        ran: (json.numPassedTests ?? Number.NaN) + (json.numFailedTests ?? Number.NaN),
+        failed: json.numFailedTests ?? Number.NaN,
+        broken: json.numFailedTestSuites ?? 0,
         log,
       };
+      // Vitest exits non-zero on any failure: a report that says none is not trusted alone.
+      if (spawned.status !== 0 && !run.failed && !run.broken) run = { log };
     } catch {}
   }
   const result = testsCheck({ available: all.length, named: named.length, ...run });
+  // Nothing the change touched names a model, field, page or action: every test ran.
+  if (result.state === "passed" && !concepts.length)
+    result.says = `${result.says} Nothing the change touched is named by a test, so all of them ran.`;
   setCheck(v, "tests", result.state, result.says, {
     ...(result.reason ? { reason: result.reason } : {}),
     ...(result.evidence ? { evidence: result.evidence } : {}),
@@ -239,6 +299,16 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
 
 /** The app's own type check (`pnpm typecheck`), its output on stderr. */
 export function typecheckCheck(dir: string, v: Verification): boolean {
+  let scripts: Record<string, string> = {};
+  try {
+    scripts = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).scripts ?? {};
+  } catch {}
+  if (!scripts.typecheck) {
+    setCheck(v, "typecheck", "not-configured", "The app has no typecheck script.", {
+      reason: "no typecheck script",
+    });
+    return true;
+  }
   const code = exec("pnpm", ["typecheck"], dir);
   setCheck(
     v,
@@ -252,7 +322,8 @@ export function typecheckCheck(dir: string, v: Verification): boolean {
 
 /** The browser check is sampleusers' (§5.4): until its report is handed over, not run. */
 export function browserNotRun(v: Verification): void {
-  if (checkOf(v, "browser").state !== "not-run") return;
+  const browser = checkOf(v, "browser");
+  if (browser.state !== "not-run" || browser.reason?.startsWith("blocked by")) return;
   setCheck(v, "browser", "not-run", "Not run.", {
     reason:
       "Browser checks come with sampleusers (change-verified.md §7, step 4): hand its report over with smithable verify --record <report>.",
@@ -275,7 +346,7 @@ export function notPassedLines(v: Verification): string {
   const lines: string[] = [];
   const beyond: string[] = [];
   for (const c of v.checks) {
-    if (c.state === "passed" || c.state === "not-configured") continue;
+    if (c.state === "passed" || (c.state === "not-configured" && c.id === "outside")) continue;
     if (c.state === "not-run" && !DEPTH_CHECKS[v.depth].includes(c.id)) {
       beyond.push(LABEL[c.id].toLowerCase());
       continue;
@@ -310,7 +381,8 @@ export function browserFromReport(
   v: Verification,
   report: {
     revision?: string;
-    target?: { revision?: string };
+    environment?: { where?: string };
+    target?: { revision?: string; where?: string };
     status?: string;
     summary?: string;
     steps?: { status?: string; name?: string; reason?: string }[];
@@ -321,12 +393,18 @@ export function browserFromReport(
   if (!revision) return "The report names no revision, so it cannot be tied to this one.";
   if (revision !== v.revision)
     return `The report is for revision ${revision.slice(0, 12)}, not ${v.revision.slice(0, 12)}.`;
+  const where = report.environment?.where ?? report.target?.where;
+  if (where && where !== v.environment.where)
+    return `The report is for the ${where} environment, not ${v.environment.where}.`;
   const steps = report.steps ?? [];
   const failed = steps.filter((s) => s.status === "failed").length;
   const blocking = steps.find((s) => s.status === "blocked" || s.status === "failed");
+  // Passed only with steps that ran and none that failed (§2.1).
   const state =
     report.status === "passed"
-      ? "passed"
+      ? steps.length && !failed
+        ? "passed"
+        : "inconclusive"
       : report.status === "failed"
         ? "failed"
         : report.status === "blocked"
@@ -389,13 +467,24 @@ export function verify(
       ir && auth ? "The spec has no errors." : "The spec has errors: smithable validate.",
     );
     for (const id of ["generate", "migrate", "data", "outside"] as const)
-      if (checkOf(v, id).state === "not-run")
+      if (checkOf(v, id).state === "not-run" && !checkOf(v, id).reason?.startsWith("blocked by"))
         setCheck(v, id, "not-run", "Not run.", {
           reason: "It runs with a change (smithable op); this revision has no result from one.",
         });
   }
-  deepen(v, depth);
+  // A browser report is recorded at depth browser, over the checks of the depths before it.
+  deepen(v, flags.record ? "browser" : depth);
   if (flags.record) {
+    if (["typecheck", "tests"].some((id) => checkOf(v, id as CheckId).state === "not-run"))
+      runDeeper(dir, v);
+    const failed = v.checks.find((c) => c.id !== "browser" && c.state === "failed");
+    if (failed) {
+      io.err(
+        `The browser report is not recorded: the ${LABEL[failed.id].toLowerCase()} check failed.\n`,
+      );
+      keep(dir, v);
+      return print(v, 1);
+    }
     let report: Parameters<typeof browserFromReport>[1];
     try {
       report = JSON.parse(readFileSync(flags.record, "utf8"));
