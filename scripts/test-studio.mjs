@@ -1562,6 +1562,12 @@ try {
       await verified.getByRole("button").first().click();
       await verified.getByRole("list", { name: "What was checked" }).waitFor();
       await verified.getByRole("button", { name: "Test it" }).waitFor();
+      // And under its line in Changes.
+      await trace
+        .locator("[data-verified]")
+        .first()
+        .getByText(/^Change applied\. /)
+        .waitFor({ timeout: 30000 * P });
       // Opened, it says what changed in words.
       await trace.getByRole("button", { name: /^(?:#\d+ )?Customers: added a mobile/ }).click();
       await trace
