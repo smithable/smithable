@@ -178,12 +178,12 @@ When the person wants help the docs cannot give, the panel offers to open a supp
 for an email address and a one-line consent ("Send this conversation to Smithable's support, who
 will answer by mail"). The address is checked first: the service mails it a link, and only the
 link's click sends the case, so nobody can make support mail a stranger. Cases are limited per
-address and per visitor address a day. The service then posts the question and the conversation so far to the support
-app's incoming route, the one its mail-in uses (`incoming.support` in `examples/support`), as a
-mail-shaped call: `from` the visitor's address, a subject from the question, the conversation as
-the body; with the route's secret as `Authorization: Bearer`, and an `Idempotency-Key` the
-service makes per checked request, so a retry makes one case (docs/spec/v0.1.md, Incoming). The route creates the
-`SupportCase` with the address in `customerEmail`; the app's `caseReceived` mail and every
+email address and per visitor address a day. The service then posts the question and the
+conversation so far to the support app's incoming route, the one its mail-in uses
+(`incoming.support` in `examples/support`), as a mail-shaped call: `from` the visitor's address, a
+subject from the question, the conversation as the body; with the route's secret as
+`Authorization: Bearer`, and an `Idempotency-Key` the service makes per checked request, so a
+retry makes one case (docs/spec/v0.1.md, Incoming). The route creates the `SupportCase` with the address in `customerEmail`; the app's `caseReceived` mail and every
 agent's reply reach the visitor, and the case's thread holds the rest. Only once the support
 portal runs as Smithable's own in production; a second step, not built with the first.
 
