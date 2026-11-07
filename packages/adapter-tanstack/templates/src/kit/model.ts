@@ -150,12 +150,13 @@ export function textMarker(path: string) {
 
 /**
  * Marks an element with the part of the app description it shows, for the preview editor
- * (select a field, drag a column). Only in development: production builds leave it out.
+ * (select a field, drag a column, a record's value: where it comes from). Only in development:
+ * production builds leave it out.
  */
 export function editorMarker(
   ui: ModelUi,
   field?: FieldUi,
-  part?: "field" | "column",
+  part?: "field" | "column" | "value",
   page?: string,
 ) {
   if (!import.meta.env.DEV || !ui.model) return {};

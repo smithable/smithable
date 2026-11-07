@@ -1169,6 +1169,80 @@ try {
     },
   );
   await step(
+    "a column moves with Alt and an arrow; a record's value says where it comes from (A 231)",
+    async () => {
+      await page.getByRole("button", { name: "Select" }).click();
+      await preview
+        .locator("html[data-sm-selecting]")
+        .waitFor({ state: "attached", timeout: 60000 * P });
+      // The keyboard's way of the drag before: the selected column one place to the right.
+      // The preview shows the order the drag before made first: a move counts from what it shows.
+      await preview
+        .locator('th[data-sm-part="column"]')
+        .first()
+        .and(preview.locator('[data-sm-concept="field:Customer.email"]'))
+        .waitFor({ timeout: 60000 * P });
+      // A click in a preview that reloads under it (the change before) selects nothing: once more.
+      const choose = async (target, click) => {
+        for (let i = 0; ; i++) {
+          await click();
+          const held = await target
+            .and(preview.locator("[data-sm-selected]"))
+            .waitFor({ timeout: 5000 })
+            .then(
+              () => true,
+              () => false,
+            );
+          if (held) return;
+          if (i > 12 * P) throw new Error("the click selected nothing");
+        }
+      };
+      const email = preview.locator('th[data-sm-concept="field:Customer.email"]');
+      await choose(email, () => email.click({ timeout: 60000 * P }));
+      // Selected, it takes the keys (focused, as a click leaves it).
+      await email.press("Alt+ArrowRight");
+      const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
+      for (let i = 0; !/columns: \[name, email/.test(ux()); i++) {
+        if (i > 60 * P) throw new Error(ux());
+        await page.waitForTimeout(1000);
+      }
+      // The preview has reloaded with the change, in select mode again, before the next click.
+      await preview
+        .locator('th[data-sm-part="column"]')
+        .nth(1)
+        .and(preview.locator('[data-sm-concept="field:Customer.email"]'))
+        .waitFor({ timeout: 60000 * P });
+      await preview
+        .locator("html[data-sm-selecting]")
+        .waitFor({ state: "attached", timeout: 60000 * P });
+      // A value in the table is selected as its field, never changed in place as text; Studio
+      // says where it comes from.
+      const value = preview
+        .locator('td[data-sm-part="value"][data-sm-concept="field:Customer.email"]')
+        .nth(3);
+      await value.waitFor({ timeout: 60000 * P });
+      await choose(value, () => value.dispatchEvent("click"));
+      if (await value.evaluate((e) => e.isContentEditable))
+        throw new Error("the value is editable");
+      await page
+        .locator("[data-value-origin]")
+        .getByText("each customer's email", { exact: false })
+        .waitFor({ timeout: 60000 * P });
+      await page.getByRole("button", { name: "Select" }).click();
+      // Undone, so the steps after find the drag's change last, as before.
+      const undone = await fetch(`${base}/api/undo`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-smithable": "1" },
+        body: "{}",
+      });
+      if (!undone.ok) throw new Error(`undo answered ${undone.status}`);
+      for (let i = 0; !/columns: \[email, name/.test(ux()); i++) {
+        if (i > 60 * P) throw new Error(ux());
+        await page.waitForTimeout(1000);
+      }
+    },
+  );
+  await step(
     "a page title is changed in place in the preview: smithable.content.yml follows",
     async () => {
       // The preview reloads a few seconds after the column change before: a click that lands in
@@ -3210,8 +3284,13 @@ try {
       if (waiting) process.kill(-waiting.pid);
     } catch {}
   }
-} catch {
-  // Reported above.
+} catch (error) {
+  // A failed step has said so above; anything else (a check outside the steps, the site not
+  // built) is said here, and fails the run rather than skipping the steps after it.
+  if (!failed) {
+    console.log(`  ✗ ${error instanceof Error ? error.message : error}`);
+    failed = true;
+  }
 } finally {
   await browser.close();
   try {
