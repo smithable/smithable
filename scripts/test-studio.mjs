@@ -1955,10 +1955,25 @@ try {
       if (spec() !== before) throw new Error("the undo did not put the spec back");
       await say(`undo #${number}`);
       await history.getByText(`#${number} is undone already`).waitFor({ timeout: 30000 * P });
-      // A browser that kept no arrangement opens with Changes closed; Show all opens it.
+      // A browser that kept no arrangement opens with Changes closed; Show all opens it. Smith
+      // docked (he floats by default, and then Changes waits behind the preview's arrow).
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
+        await fresh.addInitScript(() => {
+          try {
+            localStorage.setItem("smithable:smith", "docked");
+          } catch {}
+        });
         await fresh.goto(`${base}/?guide=off`);
+        // A browser new to the project may get Smith's presentation first.
+        const overlay = fresh.getByRole("dialog", { name: /^Smith presents / });
+        await fresh
+          .getByRole("heading", { name: "Ask Smith", exact: true })
+          .or(overlay)
+          .first()
+          .waitFor({ timeout: 30000 * P });
+        if (await overlay.count())
+          await overlay.getByRole("button", { name: "Skip", exact: true }).click();
         await fresh.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
         const changes = fresh.getByRole("list", { name: "Change trace" });
         if (await changes.count()) throw new Error("Changes is open at first");
