@@ -120,14 +120,15 @@ export function useHistoryFlow({
 
   const run = async (request: string, read: HistoryRequest, after?: string) => {
     setAnswer(undefined);
-    setConfirm(undefined);
+    // A question about the history is answered and a waiting confirmation stays (§8).
+    if (read.kind !== "list" && read.kind !== "what") setConfirm(undefined);
+    const say = (a: Answer) => reply(request, a, after);
     if (read.kind === "list") {
-      if (entries.length === 0) return reply(request, { text: "Nothing changed yet." }, after);
+      if (entries.length === 0) return say({ text: "Nothing changed yet." });
       const listed = listing(entries, read.scope, words);
       if ("unknown" in listed) {
         const names = entries.filter((e) => e.milestone && !e.undone).map((e) => e.milestone ?? "");
-        return reply(
-          request,
+        return say(
           listed.unknown.startsWith("#")
             ? { text: `There is no change ${listed.unknown}; the newest is #${newest}.` }
             : {
@@ -136,33 +137,27 @@ export function useHistoryFlow({
                   : `No milestone is called "${listed.unknown}", and none is named yet.`,
                 chips: names.map((n) => `What have I changed since "${n}"`),
               },
-          after,
         );
       }
       if (listed.lines.length === 0)
-        return reply(request, { text: "Nothing changed in that time.", all: true }, after);
+        return say({ text: "Nothing changed in that time.", all: true });
       const firstHidden = listed.more ? grouped(entries)[listed.lines.length]?.[0]?.id : undefined;
-      return reply(
-        request,
-        {
-          text: "Your changes, the newest first:",
-          lines: listed.lines.map((l) => ({
-            text: `${l.text}. ${restores(l.group.find((e) => !e.undone) ?? (l.group[0] as TraceEntry), entries)}`,
-            id: l.group[0]?.id ?? "",
-          })),
-          ...(firstHidden ? { all: firstHidden } : {}),
-        },
-        after,
-      );
+      return say({
+        text: "Your changes, the newest first:",
+        lines: listed.lines.map((l) => ({
+          text: `${l.text}. ${restores(l.group.find((e) => !e.undone) ?? (l.group[0] as TraceEntry), entries)}`,
+          id: l.group[0]?.id ?? "",
+        })),
+        ...(firstHidden ? { all: firstHidden } : {}),
+      });
     }
     if (read.kind === "what") {
       const [e, two] = byNumber(read.number);
       if (!e)
-        return reply(request, {
+        return say({
           text: `There is no change #${read.number}; the newest is #${newest}.`,
         });
-      if (two)
-        return reply(request, { text: `Two changes are #${read.number}: see Changes.`, all: e.id });
+      if (two) return say({ text: `Two changes are #${read.number}: see Changes.`, all: e.id });
       const group = grouped(entries).find((g) => g.includes(e)) ?? [e];
       const parts = [
         label([e]),
@@ -171,12 +166,12 @@ export function useHistoryFlow({
         e.undone ? `Undone by #${e.undoneBy ?? "?"}.` : e.isUndo ? "" : restores(e, entries),
         group.length > 1 ? `Part of ${label(group)}.` : "",
       ].filter(Boolean);
-      return reply(request, { text: "", lines: [{ text: parts.join(" "), id: e.id }] });
+      return say({ text: "", lines: [{ text: parts.join(" "), id: e.id }] });
     }
     if (read.kind === "undo") {
       if ("last" in read) {
         const group = lastLine(entries);
-        if (!group) return reply(request, { text: "There is nothing left to undo." }, after);
+        if (!group) return say({ text: "There is nothing left to undo." });
         return ask(
           request,
           group.filter((e) => !e.undone).map((e) => e.id),
@@ -185,20 +180,21 @@ export function useHistoryFlow({
       }
       if ("words" in read) {
         const found = lineByWords(entries, read.words, words);
-        if (!found) return reply(request, { text: "I found no change about that.", all: true });
+        if (!found) return say({ text: "I found no change about that.", all: true });
         if ("two" in found)
-          return reply(request, {
+          return say({
             text: "Which one?",
             chips: found.two.map((g) => `Undo ${numbers(g)}`),
           });
         const left = found.group.filter((e) => !e.undone);
         if (left.length === 0)
-          return reply(request, {
+          return say({
             text: `That one is undone already (${label(found.group)}).`,
           });
         return ask(
           request,
           left.map((e) => e.id),
+          after,
         );
       }
       // By number: one, or a range newest first, passing over the undone and the undos.
@@ -209,7 +205,7 @@ export function useHistoryFlow({
         const found = byNumber(n);
         const [e] = found;
         if (found.length > 1) {
-          return reply(request, {
+          return say({
             text: `Two changes are #${n}. Which one?`,
             lines: found.map((f) => ({ text: label([f]), id: f.id })),
           });
@@ -219,8 +215,8 @@ export function useHistoryFlow({
         else if (e.undone) notes.push(`#${n} is undone already (by #${e.undoneBy ?? "?"}).`);
         else ids.push(e.id);
       }
-      if (one || ids.length === 0) return reply(request, { text: notes.join(" ") }, after);
-      if (notes.length) setAnswer({ request, text: notes.join(" ") });
+      if (ids.length === 0) return say({ text: notes.join(" ") });
+      if (notes.length && !one) setAnswer({ request, text: notes.join(" ") });
       return ask(request, ids, after);
     }
     // Milestones: a name changes no file, so it is set without a confirmation, unless the name
@@ -232,20 +228,26 @@ export function useHistoryFlow({
         .catch((e: Error) => ({ ok: false, output: e.message }));
       setBusy(false);
       if (result.ok) onDone?.();
-      reply(request, { text: result.ok ? done : result.output });
+      say({ text: result.ok ? done : result.output });
     };
     if (read.kind === "name") {
       const target = read.number
         ? byNumber(read.number)[0]
         : lastLine(entries)?.find((e) => !e.undone);
       if (!target)
-        return reply(request, {
+        return say({
           text: read.number
             ? `There is no change #${read.number}; the newest is #${newest}.`
             : "There is no change to name yet.",
         });
+      // A point that is undone, or an undo, is not one to come back to.
+      if (target.undone || target.isUndo)
+        return say({
+          text: `#${target.number} is ${target.isUndo ? "an undo" : "undone"}; name a change that is in place.`,
+        });
       const elsewhere = entries.find(
-        (e) => e.milestone?.toLowerCase() === read.name.toLowerCase() && e.id !== target.id,
+        (e) =>
+          !e.undone && e.milestone?.toLowerCase() === read.name.toLowerCase() && e.id !== target.id,
       );
       if (elsewhere) {
         setConfirm({
@@ -271,7 +273,7 @@ export function useHistoryFlow({
     const from = read.kind === "rename" ? read.from : read.name;
     const at = milestoneNamed(entries, from);
     if (!at)
-      return reply(request, {
+      return say({
         text: milestones.length
           ? `No milestone is called "${from}". The milestones:`
           : "No milestone is named yet.",

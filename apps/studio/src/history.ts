@@ -106,7 +106,8 @@ export function readHistory(request: string): HistoryRequest | undefined {
     );
   if (m) {
     const rest = (m[1] ?? "").trim();
-    const raw = text.slice(text.length - rest.length);
+    const plain = text.replace(/[.!?]+$/, "");
+    const raw = plain.slice(plain.length - rest.length);
     if (!rest || /^(?:so far|in all|all|everything|ever)$/.test(rest))
       return { kind: "list", scope: { all: true } };
     if (/^today$/.test(rest)) return { kind: "list", scope: { today: true } };
@@ -156,7 +157,14 @@ export function splitHistory(request: string): { first: HistoryRequest; rest: st
   const m = /^(.+?)(?:,\s*|\s+)(?:and then|then|and)\s+(.+)$/i.exec(request.trim());
   if (!m) return undefined;
   const first = readHistory(m[1] ?? "");
-  if (!first || (first.kind === "undo" && "words" in first) || first.kind === "name") return;
+  // A milestone's name and an undo's words are free text to the end: never split.
+  if (
+    !first ||
+    (first.kind === "undo" && "words" in first) ||
+    ["name", "rename", "unname"].includes(first.kind) ||
+    (first.kind === "list" && "milestone" in first.scope)
+  )
+    return;
   return { first, rest: (m[2] ?? "").trim() };
 }
 

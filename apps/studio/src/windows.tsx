@@ -65,8 +65,7 @@ export function keptArrangement(kept: {
   const old = kept.slots.find((s): s is ManualView => s === "nocode" || s === "code");
   const slots = kept.slots.map((s) => (s === "nocode" || s === "code" ? "manual" : s));
   const missing = (["manual", "preview", "smith"] as SlotContent[]).filter(
-    (w) =>
-      !slots.some((s) => s === w || (w === "smith" && (s === "smith+changes" || s === "changes"))),
+    (w) => !slots.some((s) => s === w || (w === "smith" && s === "smith+changes")),
   );
   const seen = new Set<string>();
   const unique = slots.map((s) => {

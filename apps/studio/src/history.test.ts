@@ -46,6 +46,10 @@ test("requests about the history are read by rule, free text only where §8 allo
     kind: "list",
     scope: { milestone: "today", quoted: true },
   });
+  expect(readHistory("What have I changed since Before the shop?")).toEqual({
+    kind: "list",
+    scope: { milestone: "Before the shop" },
+  });
   expect(readHistory("Undo the last change")).toEqual({ kind: "undo", last: true });
   expect(readHistory("undo that")).toEqual({ kind: "undo", last: true });
   expect(readHistory("take that back")).toEqual({ kind: "undo", last: true });
@@ -82,6 +86,12 @@ test("an undo before another request is split at the clause boundary; free text 
   });
   expect(splitHistory("undo the change that added phone and email")).toBeUndefined();
   expect(splitHistory("add a field and a page")).toBeUndefined();
+  expect(splitHistory("remove the milestone Rock and Roll")).toBeUndefined();
+  expect(splitHistory("what have I changed since Before and after")).toBeUndefined();
+  expect(splitHistory("what did #3 do and add a notes field")).toEqual({
+    first: { kind: "what", number: 3 },
+    rest: "add a notes field",
+  });
 });
 
 test("lines carry their numbers, a group's range, and who undid them", () => {
