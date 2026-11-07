@@ -28,7 +28,8 @@ export interface CardFacts {
     description?: string;
     languages: string[];
     hash: string;
-    smithable?: string;
+    /** The version of the generator that wrote it (core's `smithable`, renamed for the app). */
+    engine?: string;
     rules?: string[];
   };
   does: {
@@ -328,7 +329,7 @@ export function AppCard({ cards, main }: { cards: Record<string, CardFacts>; mai
         {app.description && <p>{c.makersWords(c.quoted(app.description))}</p>}
         <p>{c.inLanguages(list(app.languages.map((l) => names.of(l) ?? l)))}</p>
         {app.rules && <p>{c.appRules(app.rules.map(c.quoted).join(" "))}</p>}
-        <p className="text-muted-foreground">{c.version(app.hash, app.smithable)}</p>
+        <p className="text-muted-foreground">{c.version(app.hash, app.engine)}</p>
         <p className="text-muted-foreground">{c.written}</p>
       </header>
       <section className="space-y-2">

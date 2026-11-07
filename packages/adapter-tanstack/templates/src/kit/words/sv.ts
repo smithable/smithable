@@ -715,9 +715,9 @@ export const w = {
     makersWords: (quoted: string) => `${quoted} (skaparens ord)`,
     inLanguages: (languages: string) => `På ${languages}.`,
     appRules: (rules: string) => `Dess regler, med skaparens ord: ${rules}`,
-    version: (hash: string, smithable?: string) =>
-      `Version ${hash}${smithable ? `, skriven av Smithable ${smithable}` : ""}.`,
-    written: "Skrivet av Smithable ur appens definition. Inte redigerat för hand.",
+    version: (hash: string, engine?: string) =>
+      `Version ${hash}${engine ? `, av version ${engine} av dess generator` : ""}.`,
+    written: "Skrivet ur appens definition med fasta regler. Inte redigerat för hand.",
     doesTitle: "Vad den gör",
     kinds: {
       string: "text",
@@ -847,7 +847,7 @@ export const w = {
     builtWith: (adapter?: string, database?: string) =>
       adapter
         ? `Byggd med ${adapter}${database ? ` på ${database}` : ""} (kontextfilen).`
-        : "Byggd med den teknik som Smithable som genererar den använder; kontextfilen nämner ingen.",
+        : "Byggd med den teknik som generatorn som skriver den använder; kontextfilen nämner ingen.",
     rewritten: "Genererad kod och kitkod skrivs om vid varje ändring.",
     customContract: (
       label: string,
@@ -877,7 +877,7 @@ export const w = {
     dutyBackups: (uploads: boolean) =>
       `Säkerhetskopior av databasen${uploads ? " och de uppladdade filerna" : ""}.`,
     dutyCustom:
-      "Att den egna koden är rätt; Smithable typkontrollerar den och kör dess exempel men skriver inga regler för den.",
+      "Att den egna koden är rätt; den typkontrolleras och körs mot sina exempel, men inga regler skrivs för den.",
     notTitle: "Vad det här kortet inte är",
     not: "Det här kortet beskriver hur appen är definierad. Det är ingen säkerhetsgranskning eller juridisk rådgivning.",
     link: "Appkortet",

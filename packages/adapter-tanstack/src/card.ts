@@ -16,9 +16,8 @@ export function cardModule(
 ): string {
   const context = files.find((f) => f.name === "smithable.context.yml")?.text;
   const cards = Object.fromEntries(
-    [content.language, ...(content.languages ?? [])].map((language) => [
-      language,
-      appCard({
+    [content.language, ...(content.languages ?? [])].map((language) => {
+      const facts = appCard({
         ir,
         auth,
         content,
@@ -26,8 +25,11 @@ export function cardModule(
         language,
         ...(smithable ? { smithable } : {}),
         ...(context === undefined ? {} : { context }),
-      }),
-    ]),
+      });
+      // The generator's version as the app names it: a detached app mentions no Smithable.
+      const { smithable: engine, ...app } = facts.app;
+      return [language, { ...facts, app: { ...app, ...(engine ? { engine } : {}) } }];
+    }),
   );
   return `${HEADER}import type { CardFacts } from "#/kit/AppCard";
 

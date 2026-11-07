@@ -758,9 +758,9 @@ export const w = {
     makersWords: (quoted: string) => `${quoted} (the maker's words)`,
     inLanguages: (languages: string) => `In ${languages}.`,
     appRules: (rules: string) => `Its rules, in the maker's words: ${rules}`,
-    version: (hash: string, smithable?: string) =>
-      `Version ${hash}${smithable ? `, written by Smithable ${smithable}` : ""}.`,
-    written: "Written from the app's definition by Smithable. Not edited by hand.",
+    version: (hash: string, engine?: string) =>
+      `Version ${hash}${engine ? `, by version ${engine} of its generator` : ""}.`,
+    written: "Written from the app's definition by fixed rules. Not edited by hand.",
     doesTitle: "What it does",
     kinds: {
       string: "text",
@@ -892,7 +892,7 @@ export const w = {
     builtWith: (adapter?: string, database?: string) =>
       adapter
         ? `Built with ${adapter}${database ? ` on ${database}` : ""} (the context file).`
-        : "Built with the stack of the Smithable that generates it; the context file names none.",
+        : "Built with the stack of the generator that writes it; the context file names none.",
     rewritten: "Generated and kit code is rewritten on each change.",
     customContract: (
       label: string,
@@ -922,7 +922,7 @@ export const w = {
     dutyBackups: (uploads: boolean) =>
       `Backups of the database${uploads ? " and the uploads" : ""}.`,
     dutyCustom:
-      "The correctness of custom code, which Smithable type-checks and runs its examples against but does not write rules for.",
+      "The correctness of custom code, which is type-checked and run against its examples but has no rules written for it.",
     notTitle: "What this card is not",
     not: "This card describes how the app is defined. It is not a security review or legal advice.",
     link: "The app card",
