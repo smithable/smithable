@@ -262,8 +262,10 @@ export function Ask({
       const result = await api.applyProposal(proposal.id);
       // The app moved since it was proposed: the same proposal, with what it does now, asked again.
       if (result.stale && proposal.kind === "change") {
+        // What it did before is not what it does now: without a new answer, none is shown.
+        const { verification: _old, ...rest } = proposal;
         setProposal({
-          ...proposal,
+          ...rest,
           ...(result.verification ? { verification: result.verification } : {}),
         });
         setOutput(result.output);

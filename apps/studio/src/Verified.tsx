@@ -81,7 +81,11 @@ export function Verified({
                   .verify(depth)
                   .then(
                     (r) => {
-                      if (r.verification) onTested?.(r.verification);
+                      // Tested on the newest revision: filed under this change only when it is that.
+                      if (r.verification?.revision === verification.revision)
+                        onTested?.(r.verification);
+                      else if (r.verification)
+                        setSaid("A newer change came since; it was tested instead.");
                       else setSaid(r.output ?? "");
                     },
                     (e: Error) => setSaid(e.message),

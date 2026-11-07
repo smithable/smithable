@@ -677,7 +677,18 @@ export async function studio(
   };
   // What a proposal will do before Apply (change-verified.md §4, §5.2): its consequences on
   // the project as it is now, every check not run, and the revision it was made against.
-  const proposalVerification = (steps: { op: string; args: OperationArgs }[]) => {
+  const proposalVerification = (
+    steps: { op: string; args: OperationArgs }[],
+  ): { base: string; verification?: Verification } => {
+    // What it will do is worked out beside the proposal: a failure here never loses the proposal.
+    try {
+      return consequencesOf(steps);
+    } catch (error) {
+      log(`Could not work out what the proposal will do: ${(error as Error).message}\n`);
+      return { base: projectRevision(dir) };
+    }
+  };
+  const consequencesOf = (steps: { op: string; args: OperationArgs }[]) => {
     const plugins = loadPlugins(dir);
     const files = projectFiles(dir, plugins);
     const result = applyOperations(files, steps);
@@ -1293,7 +1304,7 @@ export async function studio(
         return json({
           ...rest,
           id,
-          ...(before ? { verification: before.verification } : {}),
+          ...(before?.verification ? { verification: before.verification } : {}),
           ...(rest.kind === "change" ? { files: undefined } : {}),
           usage: usageLine(usage, rest.kind === "change" ? rest.generator : undefined),
         });
@@ -1319,7 +1330,7 @@ export async function studio(
             stale: true,
             output:
               "The app changed since this was proposed. Here is what it does now; apply again if you still want it.",
-            verification: now.verification,
+            ...(now.verification ? { verification: now.verification } : {}),
           });
         }
         const result = await capture((io) =>
