@@ -439,7 +439,14 @@ export function browserFromReport(
 export function verify(
   dir: string,
   io: Io,
-  flags: { depth?: string; json?: boolean; record?: string; where?: Where },
+  flags: {
+    depth?: string;
+    json?: boolean;
+    record?: string;
+    where?: Where;
+    /** Given the result printed (MCP's structured content). */
+    onResult?: (v: Verification) => void;
+  },
 ): number {
   const depth = (flags.depth ?? "change") as Depth;
   if (!DEPTHS.includes(depth)) {
@@ -448,6 +455,7 @@ export function verify(
   }
   const env = environment(flags.where);
   const print = (v: Verification, code: number) => {
+    flags.onResult?.(v);
     if (flags.json) io.out(`${JSON.stringify(v, null, 2)}\n`);
     else io.out(allLines(v));
     return code;
