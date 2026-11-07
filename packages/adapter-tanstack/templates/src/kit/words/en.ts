@@ -748,6 +748,185 @@ export const w = {
   mergeDone: (other: string, kept: string) => `${other} was merged into ${kept}.`,
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "thing was" : "things were"} changed since the merge, or ${n === 1 ? "is" : "are"} not yours to change, and stay as ${n === 1 ? "it is" : "they are"}.`,
+  /** The app card (kit AppCard, docs/design/app-card.md), for the administrators. */
+  card: {
+    list: (items: string[], or = false) =>
+      items.length < 2
+        ? (items[0] ?? "")
+        : `${items.slice(0, -1).join(", ")} ${or ? "or" : "and"} ${items[items.length - 1]}`,
+    quoted: (text: string) => `“${text}”`,
+    makersWords: (quoted: string) => `${quoted} (the maker's words)`,
+    inLanguages: (languages: string) => `In ${languages}.`,
+    appRules: (rules: string) => `Its rules, in the maker's words: ${rules}`,
+    version: (hash: string, smithable?: string) =>
+      `Version ${hash}${smithable ? `, written by Smithable ${smithable}` : ""}.`,
+    written: "Written from the app's definition by Smithable. Not edited by hand.",
+    doesTitle: "What it does",
+    kinds: {
+      string: "text",
+      text: "long text",
+      markdown: "formatted text",
+      int: "a whole number",
+      decimal: "a number",
+      money: "an amount",
+      bool: "yes or no",
+      date: "a date",
+      datetime: "a date and time",
+      email: "an email address",
+      phone: "a phone number",
+      url: "a web address",
+      picture: "a picture",
+      pictures: "pictures",
+      file: "a document",
+      files: "documents",
+    },
+    choiceOf: (choices: string) => `a choice of ${choices}`,
+    referenceTo: (model: string) => `a reference to ${model}`,
+    listOf: (model: string) => `a list of ${model}`,
+    computed: "computed",
+    required: "required",
+    unique: (scope: "owner" | "app") =>
+      `unique ${scope === "owner" ? "per owner" : "in the whole app"}`,
+    byRules: (rules: string) => `by the rules ${rules}`,
+    uniqueTogether: (fields: string, scope: "owner" | "app") =>
+      `${fields} unique together ${scope === "owner" ? "per owner" : "in the whole app"}`,
+    belongs: (field: string) => `Each belongs to its ${field}.`,
+    trash: "Deleted ones go to a trash first.",
+    rules: (rules: string) => `Rules, in the maker's words: ${rules}`,
+    pageKinds: {
+      crud: "a list",
+      landing: "a landing page",
+      sections: "a page of parts",
+      dashboard: "a dashboard",
+      settings: "settings",
+      onboarding: "a first-time setup",
+      users: "the users page",
+      data: "a data page",
+      review: "a review page",
+      calendar: "a calendar",
+      calculator: "a calculator",
+      articles: "articles",
+      custom: "a custom page",
+      legal: "the privacy page",
+      order: "an order page",
+    },
+    ofModel: (model: string) => ` of ${model}`,
+    at: (route: string) => `at ${route}`,
+    pages: (pages: string) => `Pages: ${pages}.`,
+    customAction: (label: string) => `${label}: custom code, described below.`,
+    copies: (one: string) => `copies ${/^[aeiou]/i.test(one) ? "an" : "a"} ${one}`,
+    merges: (many: string) => `merges ${many}`,
+    splits: (one: string) => `splits ${/^[aeiou]/i.test(one) ? "an" : "a"} ${one}`,
+    changes: (one: string, sets?: string) =>
+      `changes ${/^[aeiou]/i.test(one) ? "an" : "a"} ${one}${sets ? `, setting ${sets}` : ""}`,
+    adding: (many: string) => `, adding ${many}`,
+    onlyWhile: (when: string) => `; only while ${when}`,
+    peopleTitle: "What it stores about people",
+    byCode: "a code sent by mail",
+    signIn: (ways: string, invitedOnly: boolean, domains: string) =>
+      `People sign in with ${ways}. ${invitedOnly ? "Only invited people and the administrators may sign in." : "Anyone may make an account."}${domains ? ` Only addresses at ${domains}.` : ""} The app stores each account's address, name and role.`,
+    readAnyone: "anyone, signed in or not",
+    readSignedIn: "everyone who signs in",
+    eachOwner: "each record's owner",
+    noOne: "no one",
+    holds: (model: string, fields: string, readers: string, visitorsWhere?: string) =>
+      `${model} hold ${fields}; read by ${readers}${visitorsWhere ? `, and by visitors where ${visitorsWhere}` : ""}.`,
+    uploads: (models: string) => `Pictures or documents are stored with ${models}.`,
+    auditLog:
+      "Every change is written to an audit log in the app's database (who, when, which fields, never their values); addresses and browsers on it are blanked after 90 days, and its lines removed after 12 months. Each request's access line goes to the server's output, kept as long as whoever runs the app keeps it.",
+    sensitiveKinds: {
+      "card-data": "a payment card's number, security code or expiry",
+      "secret-field": "a password, a key or a token",
+      "identity-number": "a national identity or passport number",
+      "special-category-data": "health data or another specially protected kind of personal data",
+    },
+    sensitive: (field: string, kind: string) =>
+      `The field ${field} has a name that looks like ${kind}.`,
+    accessTitle: "Who may see or change what",
+    visitors: "Visitors",
+    read: "read",
+    add: "add",
+    change: "change",
+    delete: "delete",
+    own: "own",
+    where: (condition: string) => `where ${condition}`,
+    orJoin: ", or ",
+    none: "none",
+    ownOnly: "own only",
+    whileWhen: (condition: string) => `while ${condition}`,
+    opens: (pages: string) => `open ${pages}`,
+    opensNone: "open no page",
+    runs: (actions: string) => `run ${actions}`,
+    approves: (models: string) => `approve the files of ${models}`,
+    oneRole: "A person has one role.",
+    api: (models: string, actions: string, assistantsDelete?: boolean) =>
+      `The API offers ${models || "no records"}${actions ? ` and the actions ${actions}` : ""}; a key does what its role may.${assistantsDelete === undefined ? "" : ` Assistants connect at /mcp with a key, and ${assistantsDelete ? "may delete what the key's role may" : "never delete"}.`}`,
+    customRunsAs:
+      "Custom code runs with the access of the person who starts it; what it does is described below by its declarations only.",
+    outsideTitle: "What it talks to outside the app",
+    mailCodes: "Mail: sign-in codes.",
+    mail: (text: string) => `Mail: ${text}`,
+    call: (to: string, text: string) => `A call to ${to}: ${text}`,
+    callsIn: (text: string) => `Calls in: ${text}`,
+    sentNone: "The text alone goes.",
+    sentAll: "The fields its record page shows go.",
+    sentFields: (fields: string) => `Fields that go: ${fields}.`,
+    apiTalks: "The API, for programs with a key.",
+    analytics: (provider: string, cookies: boolean) =>
+      `Analytics: ${provider}, ${cookies ? "with cookies, after the visitor agrees in the consent bar" : "without cookies"}.`,
+    anyone: "anyone",
+    ask: (whom: string, may: "read" | "change") =>
+      `Ask, the assistant in the app, is on for ${whom}, ${may === "change" ? "reading and changing what they may" : "reading only"}. Its model is the one whoever runs the app sets; this card cannot say where that model runs.`,
+    policy: (policy: "local-only" | "eu-only" | "best-available" | "custom") =>
+      `The models that help build the app: ${
+        policy === "local-only"
+          ? "only models on the maker's own machine"
+          : policy === "eu-only"
+            ? "only models hosted in the EU"
+            : policy === "custom"
+              ? "only the providers the context file allows"
+              : "the best model configured, wherever it runs"
+      }.`,
+    customMayCall: "Custom code and plugins may call services this card cannot see.",
+    builtTitle: "What is generated and what is custom",
+    builtWith: (adapter?: string, database?: string) =>
+      adapter
+        ? `Built with ${adapter}${database ? ` on ${database}` : ""} (the context file).`
+        : "Built with the stack of the Smithable that generates it; the context file names none.",
+    rewritten: "Generated and kit code is rewritten on each change.",
+    customContract: (
+      label: string,
+      touches: { reads: string[]; writes: string[] } | undefined,
+      examples: number,
+    ) =>
+      `Custom action ${label}: ${
+        touches
+          ? `a contract the type check holds it to (read ${touches.reads.join(", ") || "nothing"}, write ${touches.writes.join(", ") || "nothing"}), not a proof of what it does`
+          : "no contract, so it may reach anything the person running it may"
+      }; ${examples ? `${examples === 1 ? "one example tests" : `${examples} examples test`} it` : "no example tests it"}.`,
+    customPage: (page: string, component: string) => `Custom page ${page} (${component}).`,
+    customSection: (section: string, page: string, component: string) =>
+      `Custom section ${section} on ${page} (${component}).`,
+    customQuery: (name: string, returns: string) => `Custom query ${name}, choosing ${returns}.`,
+    customIncoming: (name: string) => `Custom code handles the call ${name}.`,
+    plugins: (plugins: string) => `Plugins: ${plugins}.`,
+    dutiesTitle: "What the person running it is responsible for",
+    dutyMail: "The mail server's settings, since the app sends mail.",
+    dutySecret: (name: string) => `The secret of the incoming ${name}.`,
+    dutyCall: (target: string) => `The address and secret of ${target}.`,
+    dutyAssistant: "The assistant's model settings.",
+    dutyKeys: "The API keys, made and revoked by an administrator.",
+    dutyPrivacy: (hosting?: string) =>
+      `The operator's details on the privacy page${hosting ? `, which says of the hosting, in the operator's words: “${hosting}”` : ""}.`,
+    noPrivacy: "The app has no privacy page while it stores people's details.",
+    dutyBackups: (uploads: boolean) =>
+      `Backups of the database${uploads ? " and the uploads" : ""}.`,
+    dutyCustom:
+      "The correctness of custom code, which Smithable type-checks and runs its examples against but does not write rules for.",
+    notTitle: "What this card is not",
+    not: "This card describes how the app is defined. It is not a security review or legal advice.",
+    link: "The app card",
+  },
 };
 
 export type Words = typeof w;

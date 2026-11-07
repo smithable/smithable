@@ -36,6 +36,7 @@ import {
   viewerModule,
 } from "./auth.js";
 import { calculatorFiles } from "./calculators.js";
+import { cardModule, cardRoute } from "./card.js";
 import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
 import { doorModule, doorRoutes, peopleModule, samplePeople } from "./dev-door.js";
 import { examplesTest } from "./examples.js";
@@ -808,6 +809,12 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // The sample users the development door acts as (docs/design/sample-users.md §5).
         ...(people.length ? [generated("src/generated/people.ts", peopleModule(people))] : []),
         generated("src/generated/roles.ts", rolesModule(auth)),
+        // The app card for the administrators (docs/design/app-card.md §4).
+        generated(
+          "src/generated/card.ts",
+          cardModule(ir, auth, options.content, options.cardFiles, options.smithableVersion),
+        ),
+        generated("src/routes/app-card.tsx", cardRoute()),
         generated(
           "src/routes/sign-in.tsx",
           signInRoute(auth, onboarding?.route, hasInvitations(ir, auth), people.length > 0),

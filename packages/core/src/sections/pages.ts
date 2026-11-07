@@ -35,7 +35,14 @@ import { textSchema } from "./text-schema.js";
 const ROUTE_PATTERN = /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/;
 
 /** Routes the generated app uses itself (see the deployment contract). */
-const RESERVED_ROUTES = [/^\/health$/, /^\/api(?:\/|$)/, /^\/sign-in$/, /^\/files(?:\/|$)/];
+// The app's own routes; /app-card is the app card for its administrators (app-card.md §4).
+const RESERVED_ROUTES = [
+  /^\/health$/,
+  /^\/api(?:\/|$)/,
+  /^\/sign-in$/,
+  /^\/files(?:\/|$)/,
+  /^\/app-card$/,
+];
 
 /** The page kinds proper: `sections` is every page's, and a page of sections alone. */
 const KINDS = PATTERN_KINDS.filter((k) => k !== "sections");

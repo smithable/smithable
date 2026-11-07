@@ -14,6 +14,7 @@ import {
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
 import { analyticsOf, YamlEditor } from "@smithable/core";
+import { cardFiles } from "./card.js";
 import { exec, execQuiet, type Io, lap, tool } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
 import { loadSpec } from "./validate.js";
@@ -106,6 +107,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     auth,
     ...(plugins?.length ? { plugins } : {}),
     customPages: customPages(dir),
+    cardFiles: cardFiles(dir, content ?? {}),
     ...(content ? { content } : {}),
     ...(ux ? { ux } : {}),
     ...(themes ? { themes } : {}),

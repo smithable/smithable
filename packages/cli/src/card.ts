@@ -38,18 +38,8 @@ export function card(
     io.err(`The app is in ${languages.join(", ")}, not "${options.language}".\n`);
     return 2;
   }
-  // The files the card is written from, in the order its version hash reads them.
-  const names = [
-    "smithable.yml",
-    "smithable.auth.yml",
-    "smithable.ux.yml",
-    "smithable.content.yml",
-    "smithable.context.yml",
-    ...(content.languages ?? []).map(translationPath),
-  ];
-  const files = names.flatMap((name) =>
-    existsSync(join(root, name)) ? [{ name, text: readFileSync(join(root, name), "utf8") }] : [],
-  );
+  const names = cardFileNames(content);
+  const files = cardFiles(root, content);
   const context = files.find((f) => f.name === "smithable.context.yml")?.text;
   const facts = appCard({
     ir,
@@ -82,6 +72,28 @@ export function cardTexts(dir: string): { md: string; html: string } | { error: 
   if (typeof md !== "string") return md;
   const html = write("html");
   return typeof html === "string" ? { md, html } : html;
+}
+
+/** The files the card is written from, in the order its version hash reads them. */
+function cardFileNames(content: { languages?: string[] }): string[] {
+  return [
+    "smithable.yml",
+    "smithable.auth.yml",
+    "smithable.ux.yml",
+    "smithable.content.yml",
+    "smithable.context.yml",
+    ...(content.languages ?? []).map((l) => translationPath(l as Language)),
+  ];
+}
+
+/** Those files' texts, for the card here and the one generated into the app. */
+export function cardFiles(
+  root: string,
+  content: { languages?: string[] },
+): { name: string; text: string }[] {
+  return cardFileNames(content).flatMap((name) =>
+    existsSync(join(root, name)) ? [{ name, text: readFileSync(join(root, name), "utf8") }] : [],
+  );
 }
 
 /** What the project's folder knows: Git, src/custom/ by path and size, drift, migrations. */
