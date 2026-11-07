@@ -6,10 +6,9 @@ defaultAccess: shared
 roles:
   admin: all
   member:
-    description: A family member who cooks, adds recipes and shops.
+    description: A family member who adds recipes and shopping lists.
     pages: all
     create: all
-    write: [Recipe, Ingredient, ShoppingList, ShoppingItem]
 assistant:
   for: signed-in
 defaultRole: member

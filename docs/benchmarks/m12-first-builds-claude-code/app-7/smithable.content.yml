@@ -2,15 +2,15 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Welcome to the club
-      subtitle: Fixtures, results and the players behind every team, from the first team to the youngest juniors.
+      title: Clubhouse FC
+      subtitle: Fixtures, results, teams and players — everything about the club in one place.
       button: Fixtures & results
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    upcoming:
-      title: Upcoming matches
+    fixtures:
+      title: Coming up
     results:
       title: Latest results
     ourTeams:

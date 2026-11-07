@@ -1,8 +1,7 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
+defaultAccess: private
 roles:
   admin: all
   member: { pages: all, create: all }

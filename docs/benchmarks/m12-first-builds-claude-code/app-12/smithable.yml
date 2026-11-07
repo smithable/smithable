@@ -1,8 +1,8 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is the shop working? The state of our web shop's services, its outages and their updates.
-  timezone: Europe/Helsinki
+  description: Is the shop working? The live state of our web shop's services, outages and their updates.
+  timezone: Europe/Stockholm
 models:
   Component:
     fields:
@@ -75,8 +75,8 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is in place. We are watching before we close this.
-    intent: A fix is out; the incident is watched before it is closed.
+        message: A fix is in place. We are keeping an eye on it before closing this.
+    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
     when:
@@ -90,3 +90,4 @@ actions:
         status: resolved
         message: This incident is resolved.
     intent: The outage is over, with an update saying so.
+navigation: [incidents, components, team]

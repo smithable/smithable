@@ -1,10 +1,9 @@
 smithable: 0.1
 app:
-  name: Lotus Room Yoga
+  name: Open Sky Yoga
   description: Class schedule, teachers and online booking for a yoga studio.
-  timezone: Europe/London
-  clock: 24h
-  week: monday
+  currency: EUR
+  timezone: Europe/Stockholm
 models:
   ClassType:
     fields:
@@ -46,6 +45,7 @@ pages:
     calendar:
       model: Session
       starts: startsAt
+    filters: [classType, instructor]
   my-bookings:
     crud: Booking
     mine: true
@@ -54,16 +54,14 @@ pages:
     filters: [classType, instructor, startsAt]
     defaultFilter:
       startsAt: upcoming
+    sortable: [startsAt, capacity]
   bookings:
     crud: Booking
-    filters: [session]
   class-types:
     crud: ClassType
     filters: [level]
   instructors:
     crud: Instructor
-  team:
-    users: manage
   home:
     route: /
     landing:
@@ -80,8 +78,3 @@ pages:
   privacy:
     route: /privacy
     legal: privacy
-navigation:
-  main: [schedule, my-bookings, sessions, bookings, class-types, instructors, team, home, privacy]
-  schedule: [schedule, my-bookings, sessions, bookings]
-  studioSetup: [class-types, instructors, team]
-  website: [home]

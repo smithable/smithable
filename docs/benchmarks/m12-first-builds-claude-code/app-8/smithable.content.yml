@@ -2,21 +2,23 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: Two days of talks worth travelling for
-      subtitle: Browse the programme, meet the speakers and save your seat in a few clicks.
+      title: Two days of ideas worth sharing
+      subtitle: Browse the programme, meet the speakers and save your seat in the talks you don't want to miss.
       button: See the programme
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
+    lineup:
+      title: Speakers
     callToAction:
-      title: Ready to join us?
-      text: Sign in with your email address and register in under a minute.
-      button: Register now
+      title: Seats are limited
+      text: Sign in and register for the talks you want to attend.
+      button: Pick your talks
     features:
-      items: [{ title: The full programme, text: "Every talk with its time, room and track, laid out day by day." }, { title: Speakers you can get to know, text: Read each speaker's background and see which sessions they lead. }, { title: Quick registration, text: "Pick a ticket, tell us about any dietary needs, and you're in." }, { title: "Your registration, always at hand", text: "Check or update your details, or cancel if your plans change." }]
+      items: [{ title: The full programme, text: "Every keynote, talk, workshop and panel in one week view, with rooms and times." }, { title: Meet the speakers, text: Read about the people on stage and see everything each of them presents. }, { title: A seat that is yours, text: Register for a talk in one click and see how many places are still free. }]
     faq:
-      items: [{ question: How do I register?, answer: "Sign in with your email address, open My registration and fill in the short form." }, { question: Can I change my details later?, answer: Yes. Your registration stays editable until the conference starts. }, { question: What if I can no longer attend?, answer: Cancel your registration from its page so your place can go to someone else. }, { question: Is there a student ticket?, answer: "Yes, choose the student ticket when you register." }]
+      items: [{ question: Do I need an account to register?, answer: You can browse the programme freely; sign in with your email address to register for talks. }, { question: What if a talk is full?, answer: "Each talk has a set number of seats. When they are gone, registration for that talk closes." }, { question: Can I cancel a registration?, answer: "Yes, from My registrations, up until the talk begins, so someone else can take your seat." }]
 logo:
   src: images/logo.webp
   alt: A ticket

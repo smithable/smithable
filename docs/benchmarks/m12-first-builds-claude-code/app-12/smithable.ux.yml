@@ -5,8 +5,9 @@ tones:
     degraded: warning
     down: danger
   Incident.status:
-    resolved: success
     investigating: danger
     identified: warning
+    monitoring: warning
+    resolved: success
 theme:
   preset: helpdesk

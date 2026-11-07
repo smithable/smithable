@@ -1,9 +1,9 @@
 smithable: 0.1
 app:
   name: Pipeline CRM
-  description: A simple CRM where a small sales team keeps its companies, contacts, deals and follow-ups in one place.
+  description: A CRM for a small sales team to track companies, contacts, deals and follow-ups.
   currency: EUR
-  timezone: Europe/Helsinki
+  timezone: Europe/Stockholm
 models:
   Company:
     fields:
@@ -21,7 +21,7 @@ models:
   Contact:
     fields:
       name: string!
-      company: Company
+      company: Company!
       jobTitle: string
       email: email
       phone: phone
@@ -37,7 +37,11 @@ models:
         type: money
         min: 0
       expectedClose: date
+      closedOn:
+        type: date
+        by: app
       notes: text
+      followUps: FollowUp[]
     trash: true
   FollowUp:
     fields:
@@ -70,7 +74,6 @@ pages:
     crud: Company
     search: [name, industry]
     sortable: [name, createdAt]
-    actions: [mergeCompanies]
   contacts:
     crud: Contact
     search: [name, email, jobTitle]
@@ -89,7 +92,6 @@ pages:
     actions: [markDone]
   team:
     users: manage
-navigation: [start, companies, contacts, deals, followUps, team]
 actions:
   markWon:
     on: Deal
@@ -97,6 +99,7 @@ actions:
       stage: [lead, qualified, proposal, negotiation]
     set:
       stage: won
+      closedOn: TODAY()
     intent: Close a deal as won.
   markLost:
     on: Deal
@@ -104,6 +107,7 @@ actions:
       stage: [lead, qualified, proposal, negotiation]
     set:
       stage: lost
+      closedOn: TODAY()
     intent: Close a deal as lost.
   markDone:
     on: FollowUp
@@ -111,7 +115,5 @@ actions:
       done: false
     set:
       done: true
-    intent: Tick off a follow-up once it is handled.
-  mergeCompanies:
-    merge: Company
-    intent: Combine two entries for the same company; their contacts, deals and follow-ups move to the one kept.
+    intent: Tick off a follow-up once it is done.
+navigation: [start, companies, contacts, deals, followUps, team]

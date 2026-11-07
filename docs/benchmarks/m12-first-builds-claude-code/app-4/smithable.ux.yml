@@ -3,14 +3,9 @@ pages:
   tools:
     table:
       view: cards
-  loans:
-    table:
-      columns: [tool, borrower, from, until, status]
-      sort: -from
 tones:
   Loan.status:
-    requested: warning
+    lent: warning
     returned: success
-    declined: danger
 theme:
   preset: workbench
