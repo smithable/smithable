@@ -218,4 +218,5 @@ test("reachable seven-digit allocator fallback remains inert after its plus is r
   expect(contactHref(`/orders?number=${bare}`)).toBe(`/orders?number=${bare}`);
   expect(contactHref("tel:9990004004001")).toBe("tel:9990004004001");
   expect(contactHref("tel:9990000100001")).toBe("tel:9990000100001");
-});
+  // About 1.5 s alone: a full parallel run takes several times that (A, 2026-11-07).
+}, 30_000);

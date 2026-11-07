@@ -1506,6 +1506,13 @@ export function App() {
                                 words={words}
                                 plugins={spec.plugins}
                                 onUndo={(ids) => void undoChanges(ids)}
+                                onMilestone={async (id, name) => {
+                                  const named = await api
+                                    .milestone(id, name)
+                                    .catch((e: Error) => ({ ok: false, output: e.message }));
+                                  if (!named.ok) setMessage({ ok: false, text: named.output });
+                                  await refresh();
+                                }}
                               />
                             </div>
                           </Panel>

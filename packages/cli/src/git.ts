@@ -13,7 +13,7 @@ function identity(dir: string): string[] {
 }
 
 export function git(dir: string, args: string[]): { ok: boolean; out: string } {
-  const who = args[0] === "commit" || args[0] === "revert" ? identity(dir) : [];
+  const who = ["commit", "revert", "tag"].includes(args[0] ?? "") ? identity(dir) : [];
   const safeConfig = ["-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"];
   const result = spawnSync("git", [...safeConfig, ...who, ...args], {
     cwd: dir,

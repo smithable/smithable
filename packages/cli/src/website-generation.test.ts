@@ -428,7 +428,8 @@ test("pure compiler provenance permits typed identity but rejects injected ident
   expect(() => replaceWebsitePersonalArtifacts(dir, context, true)).toThrow(
     "source contact details",
   );
-}, 30_000);
+  // About 10 s alone: a full parallel run takes several times that (A, 2026-11-07).
+}, 90_000);
 
 test("JSON sample records remain valid JSON and all embedded contact actions are inert", async () => {
   const context = await prepareWebsiteContext(

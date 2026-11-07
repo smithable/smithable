@@ -1849,6 +1849,37 @@ try {
       if ((await changeCount()) !== count + 1) throw new Error("a refused undo changed something");
     },
   );
+  await step(
+    "a change is named as a milestone, found again with Only milestones, and unnamed (A 232)",
+    async () => {
+      // The newest change still in place (the newest is the undo before, which is no point to name).
+      const entry = trace
+        .locator(":scope > li", { has: page.getByRole("button", { name: /^Undo: / }) })
+        .first();
+      await entry.locator("button[aria-expanded]").click();
+      // What its undo puts back is said, the files and whether the records go back too.
+      await entry.locator("[data-undo-restores]").waitFor({ timeout: 60000 * P });
+      await entry.getByLabel("Milestone name").fill("First look");
+      await entry.getByRole("button", { name: "Name it" }).click();
+      await trace.getByText("Milestone: First look").waitFor({ timeout: 60000 * P });
+      const tags = () =>
+        spawnSync("git", ["tag", "-l", "milestone/*"], {
+          cwd: dir,
+          encoding: "utf8",
+        }).stdout.trim();
+      if (tags() !== "milestone/first-look") throw new Error(`tags: ${tags()}`);
+      const only = page.getByLabel("Only milestones (1)");
+      await only.check();
+      if ((await trace.locator(":scope > li").count()) !== 1)
+        throw new Error("Only milestones shows other changes");
+      await only.uncheck();
+      await entry.getByRole("button", { name: "Not a milestone" }).click();
+      await trace
+        .getByText("Milestone: First look")
+        .waitFor({ state: "detached", timeout: 60000 * P });
+      if (tags()) throw new Error(`tags left: ${tags()}`);
+    },
+  );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     await sub("Look");
