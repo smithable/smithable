@@ -29,7 +29,7 @@ import {
 } from "@smithable/core";
 import { findTests } from "@smithable/index";
 import { countValues, databasePath } from "./database.js";
-import { git, ownRepository, uncommittedRefusal } from "./git.js";
+import { ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { exec, type Io, tool } from "./io.js";
 import { projectRevision } from "./project-revision.js";
 import { projectIndex } from "./rules.js";
@@ -439,7 +439,14 @@ export function browserFromReport(
 export function verify(
   dir: string,
   io: Io,
-  flags: { depth?: string; json?: boolean; record?: string; where?: Where },
+  flags: {
+    depth?: string;
+    json?: boolean;
+    record?: string;
+    where?: Where;
+    /** Given the result printed (MCP's structured content). */
+    onResult?: (v: Verification) => void;
+  },
 ): number {
   const depth = (flags.depth ?? "change") as Depth;
   if (!DEPTHS.includes(depth)) {
@@ -448,19 +455,21 @@ export function verify(
   }
   const env = environment(flags.where);
   const print = (v: Verification, code: number) => {
+    flags.onResult?.(v);
     if (flags.json) io.out(`${JSON.stringify(v, null, 2)}\n`);
     else io.out(allLines(v));
     return code;
   };
-  const refused = !ownRepository(dir)
-    ? "This project has no history yet: make a change with smithable op first.\n"
-    : uncommittedRefusal(dir, "since a result belongs to one committed revision");
+  // A fresh app starts its history here, as with an operation: its result is that commit's.
+  ensureRepository(dir);
+  const refused = uncommittedRefusal(dir, "since a result belongs to one committed revision");
   if (refused) {
     io.err(refused);
-    if (!flags.json) return 1;
     const v = unverified("", env, depth);
     for (const c of v.checks) c.reason = "uncommitted edits: nothing was verified";
-    return print(v, 1);
+    if (flags.json) return print(v, 1);
+    flags.onResult?.(v);
+    return 1;
   }
   const revision = git(dir, ["rev-parse", "HEAD"]).out.trim();
   const kept = readKept(dir, revision, env.where);
@@ -498,13 +507,13 @@ export function verify(
     } catch (error) {
       io.err(`Could not read the report ${flags.record}: ${(error as Error).message}\n`);
       keep(dir, v);
-      return 1;
+      return print(v, 1);
     }
     const refusal = browserFromReport(v, report, flags.record);
     if (refusal) {
       io.err(`${refusal}\n`);
       keep(dir, v);
-      return 1;
+      return print(v, 1);
     }
   } else if (depth !== "change" && checkOf(v, "spec").state !== "failed") {
     runDeeper(dir, v);
