@@ -474,24 +474,23 @@ function searchable(value: string, queryPlus = false): SearchText {
 export function replaceSitePersonalText(
   value: string,
   map: SitePersonalMap,
-  options: { preserveSamples?: boolean; context?: "text" | "value" | "name" | "key" | "code" } = {},
+  options: SitePersonalOptions = {},
 ): string {
-  wellFormed(value);
-  for (const match of value.matchAll(/data:/giu)) {
-    const header = value.slice((match.index ?? 0) + 5, (match.index ?? 0) + 261),
-      comma = header.indexOf(",");
-    if (
-      comma >= 0 &&
-      !/\s/u.test(header.slice(0, comma)) &&
-      /;base64$/iu.test(header.slice(0, comma))
-    )
-      throw new Error("Encoded source blobs are not model context.");
-  }
-  for (const entry of map.entries) {
-    const encoded = Buffer.from(entry.original).toString("base64");
-    if (encoded.length >= 8 && value.includes(encoded))
-      throw new Error("Encoded source identifiers are not model context.");
-  }
+  return sitePersonalReplacer(map, options)(value);
+}
+type SitePersonalOptions = {
+  preserveSamples?: boolean;
+  context?: "text" | "value" | "name" | "key" | "code";
+};
+/** replaceSitePersonalText with the map's patterns built once, for many texts checked against
+ * one map that does not change meanwhile (every literal of a generated app's files). */
+export function sitePersonalReplacer(
+  map: SitePersonalMap,
+  options: SitePersonalOptions = {},
+): (value: string) => string {
+  const encodings = map.entries
+    .map((entry) => Buffer.from(entry.original).toString("base64"))
+    .filter((encoded) => encoded.length >= 8);
   type Row = {
     original: string;
     replacement: string;
@@ -572,9 +571,6 @@ export function replaceSitePersonalText(
       Number(a.derived) - Number(b.derived) ||
       a.ordinal - b.ordinal,
   );
-  const source = searchable(value),
-    query = value.includes("+") && value.includes("?") ? searchable(value, true) : source;
-  const protections: { start: number; end: number }[] = [];
   const targets = [
     ...new Set([
       ...(options.preserveSamples !== false ? map.entries.map((entry) => entry.replacement) : []),
@@ -586,85 +582,6 @@ export function replaceSitePersonalText(
     .map(escapePattern)
     .join("|");
   if (targets.length > 400000) throw new Error("Sample text protection exceeds its bound.");
-  for (const match of source.text.matchAll(new RegExp(targets, "gu"))) {
-    const at = match.index ?? 0;
-    protections.push({
-      start: source.starts[at] ?? at,
-      end: source.ends[at + match[0].length - 1] ?? at + match[0].length,
-    });
-    if (protections.length > 10000) throw new Error("Too many sample text fragments.");
-  }
-  type Change = {
-    start: number;
-    end: number;
-    text: string;
-    length: number;
-    priority: number;
-    ordinal: number;
-  };
-  const changes: Change[] = [];
-  const collect = (patterns: string[], input: SearchText, single: boolean, url = false) => {
-    if (!patterns.length) return;
-    const combined = patterns.join("|");
-    if (combined.length > 128000)
-      throw new Error("Source replacement patterns exceed their bound.");
-    const regex = new RegExp(`(?=(${combined}))`, "giu");
-    let attempts = 0;
-    let protection = 0;
-    for (const match of input.text.matchAll(regex)) {
-      if (++attempts > 10000) throw new Error("Too many source text replacements.");
-      const text = match[1] ?? "",
-        at = match.index ?? 0;
-      let row: Row | undefined,
-        replacement: string | undefined,
-        matched = text;
-      const norm = normalizeSitePersonalText(text);
-      if (url) {
-        row = selected.get(`url:${canonical(norm)}`);
-        if (row) replacement = row.replacement;
-        else {
-          matched = text.replace(/[.,;!?]+$/u, "");
-          replacement = "https://source.invalid/omitted";
-        }
-      } else {
-        row = single
-          ? selected.get(`single:${canonical(norm)}`)
-          : (selected.get(`literal:${canonical(norm)}`) ??
-            selected.get(`name:${canonical(norm).replace(/[\s._-]/g, "")}`) ??
-            selected.get(`phone:${norm.replace(/\D/g, "")}`));
-        replacement = row?.replacement;
-      }
-      if (
-        row?.single &&
-        ORDINARY_NAMES.has(row.normalized.toLowerCase()) &&
-        options.context !== "name"
-      ) {
-        const before = input.text.slice(Math.max(0, at - 40), at);
-        const salutation =
-          /(?:^|[^\p{L}\p{N}])(?:thanks|thank you|regards|dear|hello|hi|owner|founder|author|contact|tack|hälsningar)[\s,:!—-]*$/iu.test(
-            before,
-          );
-        // Complete detected names already have their own longest-match row.
-        if (!salutation) continue;
-      }
-      if (!replacement) throw new Error("A source replacement could not be resolved.");
-      const start = input.starts[at] ?? at,
-        end = input.ends[at + matched.length - 1] ?? at + matched.length;
-      while (protection < protections.length && (protections[protection]?.end ?? 0) <= start)
-        protection++;
-      const protectedRange = protections[protection];
-      if (protectedRange && start < protectedRange.end && end > protectedRange.start) continue;
-      if (changes.length >= 10000) throw new Error("Too many source text replacements.");
-      changes.push({
-        start,
-        end,
-        text: replacement,
-        length: matched.length,
-        priority: url ? -1 : Number(row?.derived),
-        ordinal: row?.ordinal ?? MAX_ENTRIES,
-      });
-    }
-  };
   const urlRows = rows.filter((row) => row.kind === "url");
   const hosts = new Set<string>();
   for (const handle of map.handles) {
@@ -681,37 +598,139 @@ export function replaceSitePersonalText(
     urlPatterns.push(
       `https?:\\/\\/(?:www\\.)?(?:${[...hosts].map(escapePattern).join("|")})(?::[0-9]{1,5})?(?![\\p{L}\\p{N}-]|\\.[\\p{L}\\p{N}])(?:[/?#][^\\s<>"'\\x60)\\]\\}]*)?`,
     );
-  collect(urlPatterns, source, false, true);
-  collect(
-    rows.filter((row) => row.kind !== "url" && !row.single).map((row) => row.pattern),
-    query,
-    false,
-  );
-  collect(
-    rows.filter((row) => row.single).map((row) => row.pattern),
-    query,
-    true,
-  );
-  changes.sort(
-    (a, b) =>
-      a.start - b.start || b.length - a.length || a.priority - b.priority || a.ordinal - b.ordinal,
-  );
-  const merged: Change[] = [];
-  for (const change of changes) {
-    const previous = merged.at(-1);
-    if (previous && change.start < previous.end) previous.end = Math.max(previous.end, change.end);
-    else merged.push({ ...change });
-  }
-  const output: string[] = [];
-  let at = 0;
-  for (const change of merged) {
-    output.push(value.slice(at, change.start), change.text);
-    at = change.end;
-  }
-  output.push(value.slice(at));
-  const result = output.join("");
-  if (Buffer.byteLength(result) > MAX_TEXT) throw new Error("Replaced text exceeds its bound.");
-  return result;
+  return (value) => {
+    wellFormed(value);
+    for (const match of value.matchAll(/data:/giu)) {
+      const header = value.slice((match.index ?? 0) + 5, (match.index ?? 0) + 261),
+        comma = header.indexOf(",");
+      if (
+        comma >= 0 &&
+        !/\s/u.test(header.slice(0, comma)) &&
+        /;base64$/iu.test(header.slice(0, comma))
+      )
+        throw new Error("Encoded source blobs are not model context.");
+    }
+    for (const encoded of encodings)
+      if (value.includes(encoded))
+        throw new Error("Encoded source identifiers are not model context.");
+    const source = searchable(value),
+      query = value.includes("+") && value.includes("?") ? searchable(value, true) : source;
+    const protections: { start: number; end: number }[] = [];
+    for (const match of source.text.matchAll(new RegExp(targets, "gu"))) {
+      const at = match.index ?? 0;
+      protections.push({
+        start: source.starts[at] ?? at,
+        end: source.ends[at + match[0].length - 1] ?? at + match[0].length,
+      });
+      if (protections.length > 10000) throw new Error("Too many sample text fragments.");
+    }
+    type Change = {
+      start: number;
+      end: number;
+      text: string;
+      length: number;
+      priority: number;
+      ordinal: number;
+    };
+    const changes: Change[] = [];
+    const collect = (patterns: string[], input: SearchText, single: boolean, url = false) => {
+      if (!patterns.length) return;
+      const combined = patterns.join("|");
+      if (combined.length > 128000)
+        throw new Error("Source replacement patterns exceed their bound.");
+      const regex = new RegExp(`(?=(${combined}))`, "giu");
+      let attempts = 0;
+      let protection = 0;
+      for (const match of input.text.matchAll(regex)) {
+        if (++attempts > 10000) throw new Error("Too many source text replacements.");
+        const text = match[1] ?? "",
+          at = match.index ?? 0;
+        let row: Row | undefined,
+          replacement: string | undefined,
+          matched = text;
+        const norm = normalizeSitePersonalText(text);
+        if (url) {
+          row = selected.get(`url:${canonical(norm)}`);
+          if (row) replacement = row.replacement;
+          else {
+            matched = text.replace(/[.,;!?]+$/u, "");
+            replacement = "https://source.invalid/omitted";
+          }
+        } else {
+          row = single
+            ? selected.get(`single:${canonical(norm)}`)
+            : (selected.get(`literal:${canonical(norm)}`) ??
+              selected.get(`name:${canonical(norm).replace(/[\s._-]/g, "")}`) ??
+              selected.get(`phone:${norm.replace(/\D/g, "")}`));
+          replacement = row?.replacement;
+        }
+        if (
+          row?.single &&
+          ORDINARY_NAMES.has(row.normalized.toLowerCase()) &&
+          options.context !== "name"
+        ) {
+          const before = input.text.slice(Math.max(0, at - 40), at);
+          const salutation =
+            /(?:^|[^\p{L}\p{N}])(?:thanks|thank you|regards|dear|hello|hi|owner|founder|author|contact|tack|hälsningar)[\s,:!—-]*$/iu.test(
+              before,
+            );
+          // Complete detected names already have their own longest-match row.
+          if (!salutation) continue;
+        }
+        if (!replacement) throw new Error("A source replacement could not be resolved.");
+        const start = input.starts[at] ?? at,
+          end = input.ends[at + matched.length - 1] ?? at + matched.length;
+        while (protection < protections.length && (protections[protection]?.end ?? 0) <= start)
+          protection++;
+        const protectedRange = protections[protection];
+        if (protectedRange && start < protectedRange.end && end > protectedRange.start) continue;
+        if (changes.length >= 10000) throw new Error("Too many source text replacements.");
+        changes.push({
+          start,
+          end,
+          text: replacement,
+          length: matched.length,
+          priority: url ? -1 : Number(row?.derived),
+          ordinal: row?.ordinal ?? MAX_ENTRIES,
+        });
+      }
+    };
+    collect(urlPatterns, source, false, true);
+    collect(
+      rows.filter((row) => row.kind !== "url" && !row.single).map((row) => row.pattern),
+      query,
+      false,
+    );
+    collect(
+      rows.filter((row) => row.single).map((row) => row.pattern),
+      query,
+      true,
+    );
+    changes.sort(
+      (a, b) =>
+        a.start - b.start ||
+        b.length - a.length ||
+        a.priority - b.priority ||
+        a.ordinal - b.ordinal,
+    );
+    const merged: Change[] = [];
+    for (const change of changes) {
+      const previous = merged.at(-1);
+      if (previous && change.start < previous.end)
+        previous.end = Math.max(previous.end, change.end);
+      else merged.push({ ...change });
+    }
+    const output: string[] = [];
+    let at = 0;
+    for (const change of merged) {
+      output.push(value.slice(at, change.start), change.text);
+      at = change.end;
+    }
+    output.push(value.slice(at));
+    const result = output.join("");
+    if (Buffer.byteLength(result) > MAX_TEXT) throw new Error("Replaced text exceeds its bound.");
+    return result;
+  };
 }
 export function projectSitePersonal(
   input: {

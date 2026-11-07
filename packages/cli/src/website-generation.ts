@@ -18,6 +18,7 @@ import {
   projectSitePersonal,
   replaceSitePersonalText,
   type SitePersonalMap,
+  sitePersonalReplacer,
 } from "./site-personal.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -458,7 +459,15 @@ function programHasPersonalText(
   map: SitePersonalMap,
   inspectActions: boolean,
 ): boolean {
+  // One replacer per context for the whole file: building the map's patterns for each of a
+  // file's literals made checking a generated app take seconds.
+  const replacers = new Map<string, (value: string) => string>();
   const changed = (value: string, context: "text" | "name" | "key" | "code" = "text") => {
+    let replace = replacers.get(context);
+    if (!replace) {
+      replace = sitePersonalReplacer(map, { context });
+      replacers.set(context, replace);
+    }
     // Decoded program literals may legitimately contain code-unit sentinels.
     const text = [...value.toWellFormed()]
       .map((char) => {
@@ -471,7 +480,7 @@ function programHasPersonalText(
       })
       .join("");
     return (
-      replaceSitePersonalText(text, map, { context }) !== text ||
+      replace(text) !== text ||
       (inspectActions &&
         context !== "key" &&
         context !== "code" &&
