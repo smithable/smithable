@@ -156,7 +156,10 @@ test("real multi-page extraction feeds only facts into the existing create pipel
     vi.unstubAllEnvs();
     await new Promise<void>((done) => server.close(() => done()));
   }
-});
+  // Last resort (2026-11-08): it runs the real create pipeline once, which takes about 0.9 s
+  // alone, 0.7 s of it the test runner loading the modules create reaches, and over 5 s under a
+  // gate's load. What it proves is that pipeline end to end; lightening it is open (A's backlog).
+}, 30_000);
 
 test("resumed owner-description fallback ignores ambiguous identity and originals but still checks source copy", async () => {
   const { extractSiteFacts } = await import("./site-facts.js");
