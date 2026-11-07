@@ -29,14 +29,20 @@ export function Card({ ir }: { ir: SpecIR }) {
     a.href = URL.createObjectURL(new Blob([card.html], { type: "text/html" }));
     a.download = "app-card.html";
     a.click();
-    URL.revokeObjectURL(a.href);
+    // Some browsers start the download after click returns: the file is let go a moment later.
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 p-3">
       <div className="flex justify-end gap-2">
         <Button
           variant="ghost"
-          onClick={() => void navigator.clipboard.writeText(card.md).then(() => setCopied(true))}
+          onClick={() =>
+            void navigator.clipboard.writeText(card.md).then(
+              () => setCopied(true),
+              () => {},
+            )
+          }
         >
           {copied ? "Copied" : "Copy as Markdown"}
         </Button>
