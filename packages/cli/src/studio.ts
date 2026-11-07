@@ -1138,6 +1138,7 @@ export async function studio(
             ...(typeof expectedRevision === "string" ? { expectedRevision } : {}),
             ...(typeof requestId === "string" ? { requestId } : {}),
             reportLater: true,
+            where: "studio",
             trace: traceIdOf(req.headers.traceparent),
             ...(given && bytes ? { files: [{ path: given.path as string, bytes }] } : {}),
           }),

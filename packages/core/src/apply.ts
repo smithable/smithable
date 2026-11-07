@@ -22,6 +22,7 @@ import { specOperations } from "./sections/spec-operations.js";
 import { SECTIONS, validateSpec } from "./spec.js";
 import { didYouMean } from "./suggest.js";
 import { type ThemeIR, themeNamed, themeNames } from "./theme.js";
+import type { Verification } from "./verification.js";
 
 /**
  * Every operation: those about the spec as a whole (rules and access belong to any concept),
@@ -71,8 +72,10 @@ export type OperationResult =
       description: string;
       destructive: boolean;
       effects: Effect[];
+      /** What the change will do and what was verified (verification.ts); the host fills it. */
+      verification?: Verification;
     }
-  | { ok: false; message: string; diagnostics: Diagnostic[] };
+  | { ok: false; message: string; diagnostics: Diagnostic[]; verification?: Verification };
 
 /**
  * The operations of a project: the built-in ones and its plugins'. A plugin operation whose name

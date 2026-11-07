@@ -1,6 +1,12 @@
 import { parseArgs } from "node:util";
 import { STARTER_TEXTS } from "@smithable/ai";
-import { findOperation, SPEC_VERSION } from "@smithable/core";
+import {
+  DEPTHS,
+  type Depth,
+  findOperation,
+  type OperationResult,
+  SPEC_VERSION,
+} from "@smithable/core";
 import { ask } from "./ask.js";
 import { backup, restore } from "./backup.js";
 import { build } from "./build.js";
@@ -17,7 +23,7 @@ import { generate } from "./generate.js";
 import { commandHelp, help, operationHelp } from "./help.js";
 import { hostedLevel } from "./hosted-level.js";
 import { inspect, test } from "./inspect.js";
-import { type Io, processIo } from "./io.js";
+import { type Io, keepStdoutForProtocol, processIo } from "./io.js";
 import { mcp } from "./mcp.js";
 import { clarify, create } from "./new.js";
 import { op } from "./op.js";
@@ -39,6 +45,7 @@ import { translate } from "./translate.js";
 import { undo, undoChange } from "./undo.js";
 import { upgrade } from "./upgrade.js";
 import { validate } from "./validate.js";
+import { notPassedLines, verify } from "./verify.js";
 import { VERSION } from "./version.js";
 import { approveAssetReviewCommand, readWebsiteAssetReviewCommand } from "./website-assets.js";
 import { installWebsiteInputCommand } from "./website-input.js";
@@ -115,11 +122,69 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     io.out(text);
     return 0;
   }
-  if (command === "op")
-    return op(values.dir ?? ".", io, args[0], operationWords(argv).slice(1), {
-      yes: values.yes === true,
-      ...(values.setup ? { setup: true } : {}),
+  if (command === "op") {
+    const depth = values.verify ?? "change";
+    if (!(DEPTHS as readonly string[]).includes(depth)) {
+      io.err("--verify is change, tests or browser.\n");
+      return 2;
+    }
+    // With --json, stdout carries the result alone; what the change says goes to stderr.
+    const json = values.json === true;
+    if (json) keepStdoutForProtocol();
+    let applied: OperationResult | undefined;
+    // What a change said before it had a result (an unknown operation, uncommitted edits).
+    const said: string[] = [];
+    const code = await op(
+      values.dir ?? ".",
+      json
+        ? {
+            out: io.err,
+            err: (text) => {
+              said.push(text);
+              io.err(text);
+            },
+          }
+        : io,
+      args[0],
+      operationWords(argv).slice(1),
+      {
+        yes: values.yes === true,
+        ...(values.setup ? { setup: true } : {}),
+        verify: depth as Depth,
+        onResult: (r) => {
+          applied = r;
+        },
+      },
+    );
+    // The operation's result without the project's files, its verification on it (§3).
+    if (json) {
+      const {
+        files: _files,
+        added: _added,
+        removed: _removed,
+        ...shown
+      } = (applied ?? {
+        ok: false,
+        message: said.join("").trim(),
+        diagnostics: [],
+      }) as Partial<Extract<OperationResult, { ok: true }>>;
+      io.out(`${JSON.stringify(shown, null, 2)}\n`);
+      return code;
+    }
+    // Without --json, a line per check that did not pass (change-verified.md §5.1), also when
+    // the change was rolled back (a refusal has said its diagnostics already).
+    const v = applied?.ok ? applied.verification : undefined;
+    if (v && (v.revision || v.checks.some((c) => c.state === "failed"))) io.out(notPassedLines(v));
+    return code;
+  }
+  if (command === "verify") {
+    if (values.json === true) keepStdoutForProtocol();
+    return verify(values.dir ?? args[0] ?? ".", io, {
+      ...(values.depth ? { depth: values.depth } : {}),
+      ...(values.record ? { record: values.record } : {}),
+      json: values.json === true,
     });
+  }
   if (command === "undo")
     return values.change
       ? undoChange(values.dir ?? ".", io, values.change, {
@@ -440,6 +505,9 @@ const CONFIG = {
     fast: { type: "boolean" },
     everything: { type: "boolean" },
     for: { type: "string" },
+    verify: { type: "string" },
+    depth: { type: "string" },
+    record: { type: "string" },
   },
 } as const;
 
@@ -457,8 +525,9 @@ function operationWords(argv: string[]): string[] {
   const words: string[] = [];
   for (let i = argv.indexOf("op") + 1; i < argv.length; i++) {
     const word = argv[i] as string;
-    if (word === "--dir") i++;
-    else if (!/^(--yes|--setup|--help|-h|--dir=.*)$/.test(word)) words.push(word);
+    if (word === "--dir" || word === "--verify") i++;
+    else if (!/^(--yes|--setup|--json|--help|-h|--dir=.*|--verify=.*)$/.test(word))
+      words.push(word);
   }
   return words;
 }
