@@ -668,6 +668,13 @@ export async function studio(
 
   /** The last proposal a model made, waiting to be applied or dropped. */
   let pending: { id: string; request: string; proposal: Proposal; base?: string } | undefined;
+  // An undo of the newest change (a revert and the snapshot put back) runs none of a change's
+  // checks: its revision gets a result that says so, the spec checked (change-verified.md §7).
+  const undoResult = () => {
+    const head = git(dir, ["rev-parse", "HEAD"]).out.trim();
+    if (!readKept(dir, head, "studio") && !readKept(dir, head, "local"))
+      verify(dir, { out: () => {}, err: () => {} }, { depth: "change", where: "studio" });
+  };
   // What a proposal will do before Apply (change-verified.md §4, §5.2): its consequences on
   // the project as it is now, every check not run, and the revision it was made against.
   const proposalVerification = (steps: { op: string; args: OperationArgs }[]) => {
@@ -1480,10 +1487,14 @@ export async function studio(
             undoChange(dir, io, change, { check: check === true, yes: confirm === true }),
           );
           const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
-          if (result.ok && !check) changed({ description: result.output });
+          if (result.ok && !check) {
+            undoResult();
+            changed({ description: result.output });
+          }
           return json({ ...result, needsConfirm });
         }
         const result = await capture((io) => undo(dir, io));
+        if (result.ok) undoResult();
         // The database went back to its snapshot: the preview reopens it.
         if (result.ok) restored(packages);
         return json(result);
