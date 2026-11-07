@@ -26,6 +26,7 @@ import {
   usageLine,
 } from "./ask.js";
 import { BETA, readBeta } from "./beta.js";
+import { cardTexts } from "./card.js";
 import { customize } from "./customize.js";
 import { warmTools } from "./generate.js";
 import {
@@ -971,6 +972,8 @@ export async function studio(
         notice = undefined;
         return json(answer);
       }
+      // The app card, written from the spec files as `smithable card` writes it (A 233).
+      if (url.pathname === "/api/card" && req.method === "GET") return json(cardTexts(dir));
       if (url.pathname === "/api/release-review" && req.method === "GET")
         return json(releaseReview(dir));
       if (url.pathname === "/api/logs") return json(logs);

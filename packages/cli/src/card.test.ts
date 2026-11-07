@@ -1,6 +1,7 @@
 import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import { cardTexts } from "./card.js";
 import { run } from "./cli.js";
 import { git } from "./git.js";
 import { tempDir } from "./test-dir.js";
@@ -38,4 +39,15 @@ test("card prints the app card with the project's facts; its JSON is the spec fi
   const bad = captureIo();
   expect(await run(["card", dir, "--format", "pdf"], bad)).toBe(2);
   expect(await run(["card", dir, "--language", "fi"], bad)).toBe(2);
+});
+
+test("Studio's card is the command's, in Markdown and HTML, or what stops it (A 233)", () => {
+  const dir = tempDir("smithable-card-studio-");
+  cpSync(join(examples, "crm"), dir, { recursive: true });
+  const card = cardTexts(dir);
+  if ("error" in card) throw new Error(card.error);
+  expect(card.md).toMatch(/^# Acme CRM\n/);
+  expect(card.html).toMatch(/^<!doctype html>/);
+  writeFileSync(join(dir, "smithable.yml"), "app: [\n");
+  expect(cardTexts(dir)).toHaveProperty("error");
 });

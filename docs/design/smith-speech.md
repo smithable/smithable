@@ -18,9 +18,13 @@ sorted away. Studio's Smith only (an app's assistant: assistant.md §8). Reviewe
 
 ## 2. What people get
 
-Three controls in Smith's panel, beside the chat box. Speech is off until the person turns it on;
-turning it on shows, in one line, where the voice goes (§3), asks the browser for the microphone,
-and sets press to talk and sound on.
+Three controls in Smith's panel, beside the chat box. Sound is on from the start, where the policy
+allows a voice (§3): Smith speaks his introduction, and that first message says that sound can be
+turned off and on with the speaker button and that Esc stops him (Johan, 2026-11-07). A browser
+that refuses to play before the person has touched the page shows the sound button pulsing with
+"Turn on sound" instead, and the first click starts it. The mic is off until the person uses it,
+since it needs the browser's permission: the first press shows, in one line, where the voice goes
+(§3), asks the browser for the microphone, and sets press to talk.
 
 - **Mic:** off, press to talk, automatic. Press to talk listens while the mic button or the key is
   held; a click without holding listens for one utterance, for anyone who cannot hold a key.
@@ -164,6 +168,7 @@ confirmation. The transcript is kept as any typed message is, and only it.
 
 ## 9. Open questions
 
-1. The defaults: press to talk and sound on once speech is turned on? 2. The AWS region:
-Frankfurt or Ireland? 3. The browser's cloud recognition under `best-available`: offered with
-§3's line, or only on the device? 4. Whether `local-only` ever gets speech.
+Answered by Johan on 2026-11-07: sound on from the start with the spoken introduction and the
+mic press to talk until pressed (§2); Frankfurt (eu-central-1) for Transcribe and Polly; the
+browser's cloud recognition offered under `best-available` with §3's line; `local-only` gets no
+speech, revisited if a local-only customer asks.

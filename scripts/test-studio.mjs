@@ -982,6 +982,26 @@ try {
     },
   );
   await step(
+    "Card: the app card as the command writes it, downloaded as HTML (A 233)",
+    async () => {
+      await page.locator("label", { hasText: /^Map$/ }).click();
+      await sub("Card");
+      const card = page.frameLocator('iframe[title="App card"]');
+      await card.getByRole("heading", { level: 1 }).waitFor({ timeout: 30000 * P });
+      await card.getByText("It is not a security review or legal advice.").waitFor();
+      const [file] = await Promise.all([
+        page.waitForEvent("download", { timeout: 10000 * P }),
+        page.getByRole("button", { name: "Download as HTML" }).click(),
+      ]);
+      if (file.suggestedFilename() !== "app-card.html")
+        throw new Error(`downloaded ${file.suggestedFilename()}`);
+      const text = readFileSync(await file.path(), "utf8");
+      if (!text.startsWith("<!doctype html>"))
+        throw new Error(`not the card: ${text.slice(0, 80)}`);
+      await page.locator("label", { hasText: /^Map$/ }).click();
+    },
+  );
+  await step(
     "Who can: each tick one grant, the all headers, the record rule's warning, anyone, a new role",
     async () => {
       const authFile = join(dir, "smithable.auth.yml");
