@@ -187,6 +187,7 @@ public:
 const smallIr = validateSpec({ path: "smithable.yml", text: smallSpec }).ir;
 if (!smallIr) throw new Error("invalid small fixture");
 const smallAuthIr = validateAuth({ path: "smithable.auth.yml", text: smallAuth }, smallIr).auth;
+if (!smallAuthIr) throw new Error("invalid small auth fixture");
 
 test("literal platform values survive theme changes; only inherit removes their authorship", () => {
   const defaults: ThemeIR = {

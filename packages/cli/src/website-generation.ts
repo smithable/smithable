@@ -162,7 +162,6 @@ function replaceYamlComments(source: string, map: SitePersonalMap): string {
   return output;
 }
 
-/** Local-only known-set pass; only the typed specification name may retain business identity. */
 /** replaceSitePersonalText for many texts against one map, its patterns built once per context
  * (built for each text, they made checking a generated app take seconds). */
 function personalReplacer(map: SitePersonalMap) {
@@ -177,6 +176,7 @@ function personalReplacer(map: SitePersonalMap) {
   };
 }
 
+/** Local-only known-set pass; only the typed specification name may retain business identity. */
 export function replaceWebsitePersonalFiles(
   files: Record<string, string>,
   context: WebsiteContext,
