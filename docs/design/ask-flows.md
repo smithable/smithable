@@ -1,6 +1,6 @@
 # Ask without a model: a conversation that keeps its place, answers from the page and forgives a typo (design)
 
-Status: draft for Johan, 2026-10-24. Builds on [assistant.md](assistant.md) (Ask in the app, its wording rules in §5 and decisions 3, 4 and 6) and on Studio's chat ([ask-in-studio.md](ask-in-studio.md), Smith's small talk by rule). The history kept across a reload, the steering back to the app and Smith's answers from the docs are a separate item built beside this one; this note is about what the rules can do before any model is asked.
+Status: draft for Johan, 2026-10-24; §8 (the history: what I changed, undo, milestones) added 2026-11-07 for Fable 102. Builds on [assistant.md](assistant.md) (Ask in the app, its wording rules in §5 and decisions 3, 4 and 6) and on Studio's chat ([ask-in-studio.md](ask-in-studio.md), Smith's small talk by rule). The history kept across a reload, the steering back to the app and Smith's answers from the docs are a separate item built beside this one; this note is about what the rules can do before any model is asked.
 
 The references that started it: four small open-source chatbots without a model, read for their architecture, not their code: AI-ChatBox (triggers to a list of answers, one picked at random), RuleChat (ordered regular expressions, first match wins, the matched rule shown), DecodeBot (exact, then keyword, then typo-tolerant matching), and ELIZA (a pattern takes words out of the sentence and puts them into the answer). What they do well is to answer at once, for nothing, the same way every time. What they do badly is to be written by hand: every rule is a regular expression someone typed, so the bot knows what its author thought of and nothing else, in one language.
 
@@ -72,28 +72,63 @@ ELIZA's trick, taking words out of the sentence and putting them into the answer
 
 Because the flow is derived, it can be drawn and tested without anyone writing it. For each kind a person may make, the conversation is a small graph: the slots in order, the sideways question, cancel, the card. Studio's Visualize tab shows it beside "What happens" for the kind, from the same IR. The adapter's tests hold, per starter, a table of conversations (the sentences in, the filled form or the fallback out), and the assistant bench gets conversations beside its single questions, so a change to the readers is measured the way the first-build readers are.
 
-## 8. The five questions (ARCHITECTURE §2.4)
+## 8. The history: what I changed, undo, milestones
+
+Added 2026-11-07 (Fable 102). Johan: Smith presents the recent changes, the Changes window is not shown by default, the person tells Smith to undo the latest or another change, and a chip asks "what changes have I made". These are flows of this note: read by rule, no model, words from Studio's language file, worded by §5's variants. "The history" here is the change log, not the chat's history store of §10. The flows read what Changes already has (ARCHITECTURE §9.7, studio-changes.md, studio-v3.md §3): the trace's entries, newest first, a request's several changes as one line written from what they did, each change's milestone, and what its undo puts back. Nothing new is stored. The chat panel is `Ask` (`apps/studio/src/builder/Ask.tsx`); the Changes window is `Trace` (`apps/studio/src/shared.tsx`), placed by `App.tsx` and `windows.tsx`.
+
+**Reading.** §4's vocabulary gains, at question time, the words of the Changes lines and the milestone names, read from the trace (they change at run time, unlike the rest of §4's). Two places are free text and exempt from "every word accounted for": the words after "undo the change that" (or "undo" followed by anything but "that", "it" or "the last change"), up to the end of the message, and a milestone's name after "milestone", "call it" or "call the last change", up to the end of the message or a quote; neither is split at §1's clause boundaries. A request that arrives while a change runs waits in the box's queue, as today, and is read when the change has landed.
+
+**What have I changed.** "What have I changed", "what did I do", "show my changes" and their language-file equivalents answer with the Changes lines, newest first, each with what its undo would put back in the Changes window's own words ("Undoing it puts back the app's files, and the records as they were before it" for the newest change still in place when it kept a snapshot; "…; the records stay as they are now" for any other). Three scopes, from a trailing word or phrase:
+
+- **today**: the changes since midnight in the browser's time zone (the person's day, not the app's time zone of §2);
+- **since a milestone** ("since <name>", "after <name>"): the changes after the one carrying that milestone, the name matched by §4's tolerance among the milestone names; a scope word wins over a milestone of the same name unless quoted; no match lists the milestones as chips;
+- **all** ("everything", "all my changes"), and the bare question: from the newest back.
+
+At most five lines, a request's group being one line and "Undid: …" lines counting like any other, each with its milestone as in Changes; then **Show all**, which opens the Changes window at the first line not shown. With no change yet: "Nothing changed yet" and the ready prompts.
+
+**Undo.** The target is a line of Changes that is still in place and is not itself an undo (an "Undid: …" line is taken back by "redo", ask-in-studio.md §1, not by undo):
+
+- **"Undo the last change"**, "undo that", "take that back": the newest such line, which is what the Changes window's X on that line undoes: a request's changes together, newest first, each checked and undone in turn and stopping at the first refusal, as the X does, the answer saying what was undone and what was not. With every change undone: "There is nothing left to undo".
+- **"Undo the change that <words>"** ("undo the phone field", "undo adding the Orders page"): the words are scored against the lines and their milestone names as §3 scores a question against the FAQ: a margin over the second best, a floor. A request's group is one line; a single change inside it is undone from Changes. Two close: Smith asks which, the two lines as chips. Below the floor: "I found no change about that", with Show all. A line already undone: "That one is undone already (Undid: …)", and nothing else happens.
+
+Before confirming, Smith asks the daemon the check the X relies on (`smithable undo --change <id> --check`, `packages/cli/src/undo.ts`): a refusal (a later change depends on it, a later change edited the same part, it made the app itself) is said in its own words with the line it names, and Show all, and no confirmation is shown. Safe, one confirmation names the line and what comes back: for the newest with a snapshot, "the files and the records as they were before it"; for the newest without one, or an earlier one, "the files only; the records stay as they are now", and for an earlier one "the N later changes stay" (up to three lines, then "and N more"). A column the undo removes is named in the same confirmation ("It deletes the phone column and the values in it"): that is the destructive confirmation the Changes window asks, not a second one. **Yes** undoes through the X's route (`/api/undo`, the ids, confirmed); if the history moved since the confirmation was shown, the confirmation is void and Smith checks and asks again. While a confirmation waits it is a question of Smith's, as §2's open slot: a question is answered and the confirmation repeated; No, "stop" or "cancel" end it; a new request ends it and is read; it does not survive a reload. The answer is the Changes window's "Undid: …".
+
+**Milestones.** "Name this a milestone <x>", "call the last change <x>": the newest line still in place gets the name through Changes' route (`/api/milestone`, `packages/cli/src/milestones.ts`), with no confirmation, since a name changes no file; a line that already has a name is renamed, and the answer says so. "Rename the milestone <x> to <y>" and "remove the milestone <x>" act on that milestone; one that does not exist is answered with the milestones as chips. The one confirmation: a name already on another change ("Move 'Before the shop' here?"), Yes moves it, anything else keeps it where it is. An earlier change is named in Changes.
+
+**Mixed requests.** As §1: split at the clause boundary (outside the free text above), each part read on its own, in order. An undo's confirmation is answered before the next part is read, so "undo that and add a notes field" proposes the field on the app as the undo left it; No drops the undo and the next part goes on.
+
+**Chips.** The ready prompts live under the box (studio-v3.md §2, `ReadyChips` in `Ask.tsx`): "What should I do next?", "Help me add…", "How do I publish?", then any "You left open: …"; they are not shown while Smith works, presents, waits for an answer (a confirmation included, which has its own Yes and No) or a guide runs, and they rest, disabled with a line saying why, while words are in the box. Kept so, with two more after the three when a line is still in place: **What have I changed?** and **Undo the last change**. Right after a request's changes applied, **Undo that** replaces **Undo the last change** until the next thing is sent. A chip sends its words as if typed, so it reaches the same flow and its confirmation.
+
+**The Changes window is the detail view.** Closed by default: the first arrangement is Smith alone in his column (`windows.tsx`'s default no longer "smith+changes"; an arrangement already kept in the browser stays), and on a phone Changes is no longer under Smith by default. It opens from Smith's Show all, from a line in his answer (Changes opened at that entry, expanded), and from the windows menu as today. What it shows and does does not change, only that it can be opened at an entry: its lines, "Undid: …", milestones and X are the words and actions Smith uses, so both tell the same story.
+
+**Safety.** Nothing is undone without the confirmation, and the confirmation is Studio's text built from the check, never a model's. The model never decides what to undo: a request the rules do not read goes to the model as any other (§6), and an undo in its answer is not run, nor offered as a chip; Smith offers Show all, for the person to choose the line. The X's rules stand: only the newest change puts the records back, and only when it kept a snapshot; an earlier one is a new change that reverses its files, refused when later changes depend on it.
+
+**Tests.** In `scripts/test-studio.mjs` and Ask's units, a table as §7 has: "what have I changed" (bare, today, since a milestone, since a misspelt one, a milestone named "today", all, empty, more than five); "undo the last change", "undo that" after a request of three changes, after an undo, with everything undone; "undo the change that <words>" (one match, a typo, two close, none, already undone, refused by a dependant, an earlier one with "files only" and the later changes named, one that removes a column, the history moved before Yes), Yes, No, a question while it waits, a new request while it waits; "name this a milestone <x>", on a named line, a name taken elsewhere, rename and remove of a missing one; "undo that and add a notes field"; the chips (shown, "Undo that" after a request, resting with words in the box, gone while Smith works or waits); Changes closed at first, opened by Show all and by a line, on a desktop and a phone.
+
+## 9. The five questions (ARCHITECTURE §2.4)
 
 Nothing new is added to the spec, so the questions are asked of the mechanism: common (every booking, order and support app has the same first sentence, and visitors ask the same five questions); deterministic (everything is read from the spec and the content, with no model); it reduces AI use (visitors get none, and a signed-in person's model is asked only for what the rules do not read); technology-neutral (no model or provider is named; the generated app depends on nothing of Smithable's); and better than free text, since there is nothing to write. A hand-written rule language fails the fifth question and is not added.
 
-## 9. Not in this note
+## 10. Not in this note
 
 The history store and its keys, Smith's steering texts and its answers from the docs (the item built beside this one); voice in and out (assistant.md §8); any rule language; translating a question into the app's language before reading it (a question in Swedish to an English app goes to the model, as today).
 
-## 10. Steps
+## 11. Steps
 
 1. **Answers from the page and the fallback** (§3, §6): the kit's `ask.ts` reads FAQ items, hours and address; the fallback and small-talk texts in the language files. The visitor's chat becomes useful before any conversation is kept.
 2. **The conversation** (§2): slots from a create's required fields and a custom action's input, the card, the state in the panel's store; then the standard action on a named record.
 3. **Typo tolerance** (§4) in the kit's reader and in Builder's.
 4. **Variants** (§5) and the shared voice with Smith.
 5. **Visualize, the test tables and the bench** (§7).
+6. **The history** (§8): Studio's session, one pull request, after Johan has read it.
 
 The readers (steps 1 to 3's reading) are core-side work; the panel, the store and Studio are the Studio session's; the bench the measuring session's.
 
-## 11. Decisions for Johan
+## 12. Decisions for Johan
 
 1. **No rule language; the flow from the forms, the answers from the content.** Recommended: yes.
 2. **Typo tolerance bounded as §4** (the app's vocabulary only, one or two edits by word length, never on numbers and dates, the reading shown). Recommended: yes.
 3. **Variants chosen by the turn count, not at random**, so conversations are testable. Recommended: yes.
 4. **The visitor's fallback names what the chat can do here and the way to a person; no model for visitors**, as decided on 2026-10-04. Recommended: yes.
 5. **The conversation's state lives in the browser only; the server stores no question** (decision 6 kept). Recommended: yes.
+6. **Smith tells the history and undoes by words, after one confirmation built from the undo check; Changes closed by default as the detail view** (§8). Recommended: yes.
