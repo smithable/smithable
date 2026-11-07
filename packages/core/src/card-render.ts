@@ -116,40 +116,41 @@ function blocks(facts: CardFacts, project?: CardProject): Block[] {
 
   // 2. What it does.
   out.push({ h2: "What it does" });
-  out.push({
-    ul: does.models.map((m) => {
-      const fields = m.fields.map((f) => {
-        const kind =
-          f.kind === "choice"
-            ? `a choice of ${list(f.choices ?? [], "or")}`
-            : f.kind === "reference"
-              ? `a reference to ${f.of}`
-              : f.kind === "list"
-                ? `a list of ${f.of}`
-                : (KIND[f.kind] ?? f.kind);
-        const notes = [
-          kind,
-          f.computed ? "computed" : "",
-          f.required ? "required" : "",
-          f.unique ? `unique ${f.unique === "owner" ? "per owner" : "in the whole app"}` : "",
-        ].filter(Boolean);
-        return `${f.label} (${notes.join(", ")})${f.rules ? `, by the rules ${f.rules.map(quoted).join(" ")}` : ""}`;
-      });
-      const together = m.unique.map(
-        (u) =>
-          `${list(u.fields)} unique together ${u.scope === "owner" ? "per owner" : "in the whole app"}`,
-      );
-      return [
-        `${m.plural}: ${list(fields)}.`,
-        ...together.map((t) => `${t}.`),
-        m.ownedBy ? `Each belongs to its ${lower(m.ownedBy)}.` : "",
-        m.trash ? "Deleted ones go to a trash first." : "",
-        m.rules ? `Rules, in the maker's words: ${m.rules.map(quoted).join(" ")}` : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }),
-  });
+  if (does.models.length)
+    out.push({
+      ul: does.models.map((m) => {
+        const fields = m.fields.map((f) => {
+          const kind =
+            f.kind === "choice"
+              ? `a choice of ${list(f.choices ?? [], "or")}`
+              : f.kind === "reference"
+                ? `a reference to ${f.of}`
+                : f.kind === "list"
+                  ? `a list of ${f.of}`
+                  : (KIND[f.kind] ?? f.kind);
+          const notes = [
+            kind,
+            f.computed ? "computed" : "",
+            f.required ? "required" : "",
+            f.unique ? `unique ${f.unique === "owner" ? "per owner" : "in the whole app"}` : "",
+          ].filter(Boolean);
+          return `${f.label} (${notes.join(", ")})${f.rules ? `, by the rules ${f.rules.map(quoted).join(" ")}` : ""}`;
+        });
+        const together = m.unique.map(
+          (u) =>
+            `${list(u.fields)} unique together ${u.scope === "owner" ? "per owner" : "in the whole app"}`,
+        );
+        return [
+          `${m.plural}: ${list(fields)}.`,
+          ...together.map((t) => `${t}.`),
+          m.ownedBy ? `Each belongs to its ${lower(m.ownedBy)}.` : "",
+          m.trash ? "Deleted ones go to a trash first." : "",
+          m.rules ? `Rules, in the maker's words: ${m.rules.map(quoted).join(" ")}` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+      }),
+    });
   if (does.pages.length)
     out.push({
       p: `Pages: ${list(does.pages.map((p) => `${p.title} (${PAGE_KIND[p.kind] ?? p.kind}${p.model ? ` of ${lower(p.model)}` : ""}, at ${p.route})`))}.`,
@@ -184,7 +185,7 @@ function blocks(facts: CardFacts, project?: CardProject): Block[] {
   }
   for (const r of people.records)
     aboutPeople.push(
-      `${r.model} hold ${list(r.fields.map(lower))}; read by ${r.readers === "visitors" ? "anyone, signed in or not" : r.readers === "everyone" ? "everyone who signs in" : list([...r.readers, ...(r.owner ? ["each record's owner"] : [])])}.`,
+      `${r.model} hold ${list(r.fields.map(lower))}; read by ${r.readers === "visitors" ? "anyone, signed in or not" : r.readers === "everyone" ? "everyone who signs in" : list([...r.readers, ...(r.owner ? ["each record's owner"] : [])]) || "no one"}${r.visitorsWhere ? `, and by visitors where ${r.visitorsWhere}` : ""}.`,
     );
   if (people.uploads.length)
     aboutPeople.push(`Pictures or documents are stored with ${list(people.uploads.map(lower))}.`);
@@ -251,7 +252,7 @@ function blocks(facts: CardFacts, project?: CardProject): Block[] {
   if (access.api) talks.push("The API, for programs with a key.");
   if (outside.analytics)
     talks.push(
-      `Analytics: ${ANALYTICS[outside.analytics.provider] ?? outside.analytics.provider}, ${outside.analytics.cookies ? "with cookies, after the visitor agrees" : "without cookies"}.`,
+      `Analytics: ${ANALYTICS[outside.analytics.provider] ?? outside.analytics.provider}, ${outside.analytics.cookies ? "with cookies, after the visitor agrees in the consent bar" : "without cookies"}.`,
     );
   if (access.ask) {
     const whom =
@@ -278,7 +279,7 @@ function blocks(facts: CardFacts, project?: CardProject): Block[] {
   ];
   for (const a of does.actions.filter((x) => x.kind === "custom"))
     parts.push(
-      `Custom action ${a.label}: ${a.touches === "anything" ? "no contract, so it may reach anything the person running it may" : `a contract the type check holds it to (read ${list(a.touches?.reads ?? []) || "nothing"}, write ${list(a.touches?.writes ?? []) || "nothing"}), not a proof of what it does`}; ${a.examples ? `${a.examples === 1 ? "one example tests" : `${a.examples} examples test`} it` : "no example tests it"}.`,
+      `Custom action ${a.label}: ${a.touches === "anything" ? "no contract, so it may reach anything the person running it may" : `a contract the type check holds it to (read ${list(a.touches?.reads ?? []) || "nothing"}, write ${list(a.touches?.writes ?? []) || "nothing"}), not a proof of what it does`}; ${a.examples ? `${a.examples === 1 ? "one example tests" : `${a.examples} examples test`} it` : "no example tests it"}.${a.rules ? ` Rules, in the maker's words: ${a.rules.map(quoted).join(" ")}` : ""}`,
     );
   for (const p of built.customPages) parts.push(`Custom page ${page(p.id)} (${p.component}).`);
   for (const s of built.customSections)
@@ -315,10 +316,10 @@ function blocks(facts: CardFacts, project?: CardProject): Block[] {
     );
   else if (responsible.privacy.personal)
     duties.push("The app has no privacy page while it stores people's details.");
-  duties.push("Backups of the database and the uploads.");
+  duties.push(`Backups of the database${people.uploads.length ? " and the uploads" : ""}.`);
   if (responsible.customCode)
     duties.push(
-      "The correctness of custom code, which Smithable type-checks and tests but does not write rules for.",
+      "The correctness of custom code, which Smithable type-checks and runs its examples against but does not write rules for.",
     );
   out.push({ h2: "What the person running it is responsible for" }, { ul: duties });
 
@@ -342,7 +343,12 @@ const sentFields = (fields: CardFacts["outside"]["mail"][number]["fields"]) =>
         : ` Fields that go: ${list(fields)}.`;
 
 /** Plain text for Markdown: its marks escaped, so a quoted text cannot make a link or a heading. */
-const md = (text: string) => text.replace(/[\\`*_[\]<>|#~!]/g, "\\$&").replace(/^(\d+)\./, "$1\\.");
+const md = (text: string) =>
+  text
+    .replace(/\s*\n\s*/g, " ")
+    .replace(/[\\`*_[\]<>|#~!]/g, "\\$&")
+    .replace(/^(\d+)\./, "$1\\.")
+    .replace(/^([-+=])/, "\\$1");
 const html = (text: string) =>
   text
     .replace(/&/g, "&amp;")
@@ -385,7 +391,7 @@ export function renderCard(facts: CardFacts, format: "md" | "html", project?: Ca
     })
     .join("\n");
   return `<!doctype html>
-<html lang="${html(facts.language)}">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

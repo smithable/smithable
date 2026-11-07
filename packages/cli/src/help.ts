@@ -124,7 +124,7 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "card",
-    usage: "card [dir] [--format md|html|json]",
+    usage: "card [dir] [--format md|html|json] [--language <code>] [--out <file>]",
     text: [
       "Print the app card: one page that says what the app is, written from its spec files by",
       "fixed rules (what it stores, about people too, who may see or change what, what it talks",

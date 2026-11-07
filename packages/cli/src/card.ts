@@ -1,7 +1,7 @@
 // `smithable card` (docs/design/app-card.md): the app card, from the spec files by core's appCard,
 // with what only the project's folder knows (the commit, the custom files by path and size, files
 // edited by hand, the migrations) gathered here and kept apart. Custom code is never read.
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
   appCard,
@@ -75,7 +75,8 @@ export function projectFacts(root: string, specFiles: string[]): CardProject {
   const walk = (folder: string) => {
     for (const name of readdirSync(join(root, folder)).sort()) {
       const path = `${folder}/${name}`;
-      const stat = statSync(join(root, path));
+      // Never followed out of src/custom/ or round in a loop: a link is listed, not walked.
+      const stat = lstatSync(join(root, path));
       if (stat.isDirectory()) walk(path);
       else custom.push({ path, bytes: stat.size });
     }
@@ -94,7 +95,8 @@ export function projectFacts(root: string, specFiles: string[]): CardProject {
   const head = git(root, ["log", "-1", "--format=%H %cs"]);
   if (!head.ok || !head.out) return facts;
   const [id = "", date = ""] = head.out.split(" ");
-  const dirty = git(root, ["status", "--porcelain", "--", ...specFiles]).out !== "";
+  const status = git(root, ["status", "--porcelain", "--", ...specFiles]);
+  const dirty = status.ok && status.out !== "";
   const ai = git(root, ["log", "--format=%H", "--grep=^Smithable-AI: "]);
   return {
     ...facts,

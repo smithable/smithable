@@ -1,7 +1,7 @@
 # The app card: one page that says what an app is (design)
 
 Status: proposed 2026-11-07, Fable, from an outside review of 2026-10-11 the owner found
-excellent (backlog Fable 25); step 1 built (#PR, core's facts and renderer, `smithable card`). Second
+excellent (backlog Fable 25); step 1 built (#1056, core's facts and renderer, `smithable card`). Second
 reviewers' points taken the same day (the definition apart from project facts, the version hash,
 facts per language, the walk over the schema, custom code as declarations only).
 

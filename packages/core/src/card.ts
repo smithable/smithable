@@ -10,6 +10,7 @@ import { modelAccess, pageAccess, reviewRoles, uniqueScope } from "./access.js";
 import { type AuthIR, apiOffers } from "./auth.js";
 import { conditionText } from "./condition.js";
 import type { ContentIR, Language } from "./content.js";
+import { ANALYTICS, type AnalyticsProvider } from "./context-file.js";
 import { explainAccess } from "./explain-access.js";
 import {
   type Condition,
@@ -161,6 +162,8 @@ export interface CardFacts {
       readers: "visitors" | "everyone" | string[];
       /** Each record's owner reads it too. */
       owner: boolean;
+      /** Visitors read the records that fit this condition (in words). */
+      visitorsWhere?: string;
     }[];
     /** Models with pictures or documents, by label. */
     uploads: string[];
@@ -268,9 +271,13 @@ export function appCard(input: CardInput): CardFacts {
     (other && get(other)) || get(content);
   const label = (model: string) => pick((c) => c.models[model]?.label) ?? humanize(model);
   const pluralLabel = (model: string) => {
+    // The language's own plural, else its own label, before the app's language's.
+    const said = (c: ContentIR | undefined) => c?.models[model]?.pluralLabel;
     const own = pick((c) => c.models[model]?.label);
     return (
-      pick((c) => c.models[model]?.pluralLabel) ??
+      said(other) ??
+      (other?.models[model]?.label ? own : undefined) ??
+      said(content) ??
       (own ? (language === "en" ? plural(own) : own) : humanize(plural(model)))
     );
   };
@@ -373,12 +380,14 @@ export function appCard(input: CardInput): CardFacts {
       {
         model: pluralLabel(m.name),
         fields: personal.map((f) => fieldLabel(m.name, f.name)),
-        readers: read.public
-          ? ("visitors" as const)
-          : read.roles.length >= everyone.length
-            ? ("everyone" as const)
-            : read.roles,
-        owner: !read.public && read.owner && read.roles.length < everyone.length,
+        readers:
+          read.public && !read.where
+            ? ("visitors" as const)
+            : everyone.length && read.roles.length >= everyone.length
+              ? ("everyone" as const)
+              : read.roles,
+        owner: !(read.public && !read.where) && read.owner && read.roles.length < everyone.length,
+        ...(read.public && read.where ? { visitorsWhere: conditionText(read.where) } : {}),
       },
     ];
   });
@@ -475,7 +484,7 @@ export function appCard(input: CardInput): CardFacts {
   );
   const customActions = ir.actions.filter((a) => a.custom).map((a) => a.name);
   const customIncoming = ir.incoming.filter((i) => i.custom).map((i) => i.name);
-  const plugins = [...(ctx?.plugins ?? []), ...Object.keys(ir.extensions ?? {})];
+  const plugins = [...new Set([...(ctx?.plugins ?? []), ...Object.keys(ir.extensions ?? {})])];
   const customCode =
     customPages.length +
       customSections.length +
@@ -490,6 +499,12 @@ export function appCard(input: CardInput): CardFacts {
     : undefined;
   const uploads = ir.models.filter((m) => m.fields.some(isUpload)).map((m) => pluralLabel(m.name));
   const languages = [content.language, ...(content.languages ?? [])];
+  const sensitive = ir.models.flatMap((m) =>
+    m.fields.flatMap((f) => {
+      const kind = sensitiveKind(f);
+      return kind ? [{ model: label(m.name), field: fieldLabel(m.name, f.name), kind }] : [];
+    }),
+  );
 
   return {
     card: CARD_VERSION,
@@ -520,12 +535,7 @@ export function appCard(input: CardInput): CardFacts {
         : {}),
       records,
       uploads,
-      sensitive: ir.models.flatMap((m) =>
-        m.fields.flatMap((f) => {
-          const kind = sensitiveKind(f);
-          return kind ? [{ model: label(m.name), field: fieldLabel(m.name, f.name), kind }] : [];
-        }),
-      ),
+      sensitive,
     },
     access: {
       rows: [...(signIn ? everyone : []), undefined].map(row),
@@ -553,7 +563,14 @@ export function appCard(input: CardInput): CardFacts {
         mail: Boolean(i.mail),
         text: incomingText(i, lower),
       })),
-      ...(analytics ? { analytics: { provider: analytics, cookies: analytics === "google" } } : {}),
+      ...(analytics
+        ? {
+            analytics: {
+              provider: analytics,
+              cookies: ANALYTICS[analytics as AnalyticsProvider]?.consent ?? false,
+            },
+          }
+        : {}),
       aiPolicy: ctx?.ai?.policy ?? "best-available",
     },
     built: {
@@ -574,7 +591,7 @@ export function appCard(input: CardInput): CardFacts {
       apiKeys: auth.api !== undefined,
       privacy: {
         page: legal !== undefined,
-        personal: records.length > 0 || signIn !== undefined,
+        personal: records.length > 0 || signIn !== undefined || sensitive.length > 0,
         ...(hosting ? { hosting } : {}),
       },
       customCode: customCode || plugins.length > 0,
