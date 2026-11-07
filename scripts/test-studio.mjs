@@ -1519,7 +1519,7 @@ try {
       if (await trace.getByText(/ tokens/).count())
         throw new Error("Changes shows a model's tokens");
       // Opened, it says what changed in words.
-      await trace.getByRole("button", { name: /^Customers: added a mobile/ }).click();
+      await trace.getByRole("button", { name: /^(?:#\d+ )?Customers: added a mobile/ }).click();
       await trace
         .getByRole("region", { name: "What changed" })
         .getByText(/a mobile \(a phone number\)/)
