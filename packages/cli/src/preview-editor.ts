@@ -1,7 +1,8 @@
 // The preview editor (ARCHITECTURE §10.3): a Vite plugin that `smithable studio` adds to the
 // app's own Vite config for the preview only. It injects a small runtime into the page that,
 // in select mode, outlines the part of the spec under the pointer, reports a click to Studio,
-// and lets table columns be dragged. The app's own builds never include it.
+// and lets table columns be dragged (or moved with Alt and the arrows). A record's value is
+// selected as its field, never changed in place as text. The app's own builds never include it.
 
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -264,6 +265,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (!marked) return;
     clear("data-sm-selected");
     marked.setAttribute("data-sm-selected", "");
+    // A selected column takes the keys, so Alt and the arrows move it.
+    if (marked.dataset.smPart === "column") {
+      marked.tabIndex = -1;
+      marked.focus({ preventScroll: true });
+    }
     // A column comes with its table's columns, so Studio can hide it or change their order.
     const columns = marked.dataset.smPart === "column"
       ? [...marked.closest("tr").querySelectorAll("[data-sm-part=column]")].map(fieldOf)
@@ -288,7 +294,8 @@ if (typeof window !== "undefined" && window.parent !== window) {
     post({ type: "columns", page: target.dataset.smPage, columns: order.map(fieldOf) });
     dragged = null;
   });
-  // Ctrl+Z (Cmd+Z) outside a text field undoes the last change, as it does in Studio.
+  // Ctrl+Z (Cmd+Z) outside a text field undoes the last change, as it does in Studio. Heard as
+  // the key goes down to the page, so a page that stops a key on its way back up never hides it.
   document.addEventListener("keydown", (event) => {
     const t = event.target;
     const typing = t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -296,12 +303,25 @@ if (typeof window !== "undefined" && window.parent !== window) {
       event.preventDefault();
       post({ type: "undo" });
     }
+    // A selected column moves with Alt+Left and Alt+Right: the drag's keyboard way (A 231).
+    const chosen = selecting ? document.querySelector("[data-sm-selected][data-sm-part=column]") : null;
+    if (chosen && event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !typing) {
+      const headers = [...(chosen.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])];
+      const at = headers.indexOf(chosen);
+      const to = at + (event.key === "ArrowLeft" ? -1 : 1);
+      event.preventDefault();
+      if (to >= 0 && to < headers.length) {
+        headers.splice(at, 1);
+        headers.splice(to, 0, chosen);
+        post({ type: "columns", page: chosen.dataset.smPage, columns: headers.map(fieldOf) });
+      }
+    }
     // Ctrl+R (Cmd+R) in the preview reloads the preview alone, not Studio around it.
     if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "r") {
       event.preventDefault();
       location.reload();
     }
-  });
+  }, true);
   // A sideways swipe over the page where nothing under the finger scrolls sideways itself: on a
   // phone, Studio's row goes on to the next window (A 174). Vertical panning stays the page's.
   let touch = null;

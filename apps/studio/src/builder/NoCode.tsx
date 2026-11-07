@@ -2,7 +2,7 @@
 // Who can and Content (the texts, with Languages under them). What the preview reports in it
 // lands here: a part picked in Select opens Behavior at it, columns dragged and texts changed in
 // place are made as changes.
-import type { ModelIR } from "@smithable/core";
+import { formatFormula, humanize, type ModelIR } from "@smithable/core";
 import { describeChange, type SummarySection, summarize } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
@@ -35,6 +35,28 @@ function placeOf(s: Selection | undefined): { sub: SubView; path: string[] } | u
   if (kind === "action") return { sub: "behavior", path: ["actions", name] };
   if (kind === "text") return { sub: "content", path: name.split(".") };
   return undefined;
+}
+
+/**
+ * Where a value picked in the preview comes from (A 231): a record's field or its formula, so it
+ * is changed in the records or the formula, never written over as text.
+ */
+function ValueOrigin({ models, concept }: { models: ModelIR[]; concept: string }) {
+  const [model = "", name = ""] = concept.slice("field:".length).split(".");
+  const of = models.find((m) => m.name === model);
+  const field = of?.fields.find((f) => f.name === name);
+  if (!of || !field) return null;
+  const whose = `each ${humanize(model).toLowerCase()}'s ${humanize(field.name).toLowerCase()}`;
+  return (
+    <p
+      data-value-origin
+      className="basis-full rounded border border-line bg-panel px-2 py-1 text-xs text-muted"
+    >
+      {field.formula
+        ? `The value picked in the preview is ${whose}, worked out by its formula ${formatFormula(field.formula)}: change the formula here to change it.`
+        : `The value picked in the preview is ${whose}, kept in its record: change it in the app's records; the field is set here.`}
+    </p>
+  );
 }
 
 /** The event that opens a part of the app in Behavior (Smith's answer leads there). */
@@ -172,6 +194,8 @@ export function NoCode({
     onPlace({ sub: next });
   };
   const [opened, setOpened] = useState(() => placeOf(place.selection)?.path);
+  // A record's value picked in the preview: its field says where the value comes from.
+  const [picked, setPicked] = useState(place.selection);
   const words = (op: string, args: Record<string, unknown>) =>
     spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
   const sections = useMemo(
@@ -198,6 +222,7 @@ export function NoCode({
     if (!at) return;
     setSubState(at.sub);
     setOpened(at.path);
+    setPicked(s);
     onPlace({ sub: at.sub, selection: s });
   };
   // A part named elsewhere (Smith's "What does this app do?") opens here.
@@ -261,6 +286,15 @@ export function NoCode({
             }}
             tools={(path) => {
               const [area, name] = path;
+              if (
+                spec.ir &&
+                picked?.part === "value" &&
+                area === "models" &&
+                path.length === 4 &&
+                path[2] === "fields" &&
+                picked.concept === `field:${name}.${path[3]}`
+              )
+                return <ValueOrigin models={spec.ir.models} concept={picked.concept} />;
               if (path.length !== 2 || typeof name !== "string") return undefined;
               if (area === "models") return <ImportRecords model={name} run={run} />;
               // A custom action: the picture its contract draws (intents.md §7), and its examples (§6).

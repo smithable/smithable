@@ -640,6 +640,7 @@ export function ModelTable<R extends Row>({
                       key={field.name}
                       data-part="cell"
                       data-field={field.name}
+                      {...editorMarker(ui, field, "value")}
                       className={cn(
                         numeric(field.kind) && "text-right tabular-nums",
                         // A date and its time on one line.
