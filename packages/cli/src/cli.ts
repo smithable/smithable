@@ -18,6 +18,7 @@ import { customize } from "./customize.js";
 import { deploy } from "./deploy.js";
 import { detach } from "./detach.js";
 import { runDev } from "./dev.js";
+import { affectedCommand, fixesCommand } from "./fixes.js";
 import { readPageCommand } from "./from-page.js";
 import { generate } from "./generate.js";
 import { commandHelp, help, operationHelp } from "./help.js";
@@ -185,6 +186,9 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       json: values.json === true,
     });
   }
+  if (command === "affected")
+    return affectedCommand(values.dir ?? ".", io, args[0], values.json === true);
+  if (command === "fixes") return fixesCommand(io, values.json === true);
   if (command === "undo")
     return values.change
       ? undoChange(values.dir ?? ".", io, values.change, {

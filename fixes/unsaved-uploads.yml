@@ -1,0 +1,8 @@
+id: unsaved-uploads
+title: Files uploaded but never saved on a record were kept for ever, and an app's stored files had no cap.
+severity: security
+exposure: Uploads that were never used could have filled the app's storage.
+introduced: unknown
+affects:
+  features: [field:picture, field:pictures, field:file, field:files]
+migration: none

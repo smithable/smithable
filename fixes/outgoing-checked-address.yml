@@ -1,0 +1,8 @@
+id: outgoing-checked-address
+title: Calls to other services could connect to an address that had not been checked.
+severity: security
+exposure: A call the app makes when something happens to a record could have reached an address inside the network it runs in.
+introduced: unknown
+affects:
+  features: [section:outgoing]
+migration: none
