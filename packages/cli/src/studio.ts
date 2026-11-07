@@ -125,6 +125,11 @@ export interface TraceEntry {
   snapshot: boolean;
   /** The name a person gave this point, to find it again (milestones.ts). */
   milestone?: string;
+  /** Its number, #12, in the order made (ask-flows.md §8); none for a change made before them. */
+  number?: number;
+  /** The number of the undo that took it back, or for an undo the number of what it undid. */
+  undoneBy?: number;
+  undoes?: number;
 }
 
 /** A file a person edits, as opposed to the generated ones (docs/design/studio-changes.md §3). */
@@ -229,6 +234,16 @@ function readTrace(dir: string, named: Map<string, string>): TraceEntry[] {
   const reverted = new Set(
     entries.flatMap((e) => [...e.matchAll(/This reverts commit ([0-9a-f]{40})/g)].map((m) => m[1])),
   );
+  // Each change's number, and which change's undo took it back.
+  const numbers = new Map<string, number>();
+  const revertedBy = new Map<string, string>();
+  for (const e of entries) {
+    const [sha = "", , , body = ""] = e.trim().split("\x1f");
+    const n = Number(trailer(body, "Smithable-Change"));
+    if (n) numbers.set(sha, n);
+    const of = /This reverts commit ([0-9a-f]{40})/.exec(body)?.[1];
+    if (of) revertedBy.set(of, sha);
+  }
   const operations = new Map(
     entries.flatMap((e) => {
       const [sha = "", , , body = ""] = e.trim().split("\x1f");
@@ -281,6 +296,11 @@ function readTrace(dir: string, named: Map<string, string>): TraceEntry[] {
         ...(model?.request ? { request: model.request } : {}),
         snapshot: !isUndo && (trailer(body, "Smithable-Snapshot") ?? "none") !== "none",
         ...(named.has(sha) ? { milestone: named.get(sha) } : {}),
+        ...(numbers.has(sha) ? { number: numbers.get(sha) } : {}),
+        ...(numbers.has(revertedBy.get(sha) ?? "")
+          ? { undoneBy: numbers.get(revertedBy.get(sha) ?? "") }
+          : {}),
+        ...(isUndo && numbers.has(undone) ? { undoes: numbers.get(undone) } : {}),
       },
     ];
   });

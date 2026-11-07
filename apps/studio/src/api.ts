@@ -27,6 +27,11 @@ export interface TraceEntry {
   snapshot: boolean;
   /** The name a person gave this point, to find it again. */
   milestone?: string;
+  /** Its number, #12, in the order made (ask-flows.md §8); none for one made before numbers. */
+  number?: number;
+  /** The number of the undo that took it back; for an undo, the number of what it undid. */
+  undoneBy?: number;
+  undoes?: number;
 }
 
 /** One change opened: its patch, how many generated files it changed, the files before and after. */
@@ -336,6 +341,9 @@ export const api = {
   /** One change undone by its id (studio-v3.md §3): an earlier one as a new change, or refused. */
   undoChange: (change: string, confirm = false) =>
     changing(call<Result>("/api/undo", { change, confirm })),
+  /** Whether undoing it is safe, in the check's words; nothing is changed (ask-flows.md §8). */
+  undoCheck: (change: string) =>
+    call<{ ok: boolean; output: string }>("/api/undo", { change, check: true }),
   redo: () => changing(call<Result>("/api/redo", {})),
   /** Names a change as a milestone, renames it, or (an empty name) unnames it (A 232). */
   milestone: (change: string, name: string) =>
