@@ -5,7 +5,13 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { plainSchema } from "@smithable/ai";
-import { type JsonSchema, type OperationArgs, operationsFor } from "@smithable/core";
+import {
+  DEPTHS,
+  type JsonSchema,
+  type OperationArgs,
+  operationsFor,
+  type Verification,
+} from "@smithable/core";
 import { buildContext, estimateTokens } from "@smithable/index";
 import { logTokens } from "./context.js";
 import { customize } from "./customize.js";
@@ -16,12 +22,14 @@ import { loadPlugins } from "./plugins.js";
 import { projectIndex } from "./rules.js";
 import { undo } from "./undo.js";
 import { loadSpec } from "./validate.js";
+import { verify } from "./verify.js";
 import { VERSION } from "./version.js";
 
 const INSTRUCTIONS = `This is a Smithable app. What it does is described in smithable.yml, sign-in and access in smithable.auth.yml, and visible text in smithable.content.yml; the code is generated from them.
 
 - Change the app with the smithable_* operation tools, not by editing files. Each one checks the change, regenerates the code, migrates the database and makes a checkpoint that smithable_undo reverts.
-- An operation's result says whether it worked: a successful one has already validated the spec, regenerated the code and migrated the database. It also says whether custom code is affected. Do not read files or run commands to verify it.
+- An operation's result says what was verified. Its structured content is the change's verification: each check (spec, generate, migrate, data, typecheck, tests, browser, outside) is passed, failed, not-run, inconclusive or not-configured, with the reason. Only passed means it ran and found what it looked for: never treat a check that was not run as passed. A successful operation has validated the spec, regenerated the code, migrated the database and counted the stored values; those are deterministic checks, not a test of the app, and an operation is never an end-to-end test. The consequences say what the change does to records, access, custom code and anything outside the app. Do not read files or run commands to check what the result already says.
+- To go deeper, call smithable_verify with depth "tests" (the app's type check and the tests that name what changed, on the current revision). Browser checks come from a sampleusers report, handed over with record.
 - Find what to change with smithable_context (give it the request) or smithable_inspect; you rarely need to open source files.
 - When no operation fits how a page should look or behave, call smithable_customize_page and edit the file it creates in src/custom/pages/. Custom actions already in the spec are implemented in src/custom/actions/. Never edit src/generated/, src/kit/ or the generated routes: they are overwritten, and a hand edit blocks every later operation.`;
 
@@ -32,7 +40,12 @@ interface Tool {
   name: string;
   description: string;
   inputSchema: JsonSchema;
-  run(args: OperationArgs, io: Io): number | Promise<number>;
+  /** `result.verification`: the change's result (change-verified.md §5.3), the tool's structured content. */
+  run(
+    args: OperationArgs,
+    io: Io,
+    result: { verification?: Verification },
+  ): number | Promise<number>;
 }
 
 const noInput = { type: "object", properties: {}, additionalProperties: false };
@@ -60,12 +73,15 @@ function tools(dir: string): Tool[] {
           },
         },
       },
-      run: async ({ confirm, ...args }, io) => {
+      run: async ({ confirm, ...args }, io, result) => {
         // Looked up before the change: after a rename, custom code still uses the old name.
         const users = customUsers(dir, op.name, args);
         const code = await runOperation(dir, io, op.name, args, {
           yes: confirm === true,
           mcp: true,
+          onResult: (r) => {
+            if (r.verification) result.verification = r.verification;
+          },
         });
         if (code === 0) {
           io.out(
@@ -178,6 +194,27 @@ function tools(dir: string): Tool[] {
       },
     },
     {
+      name: "smithable_verify",
+      description:
+        "What was verified on the current revision (the app's last change), deepened to the depth asked: change (what the change itself checked), tests (adds the app's type check and the tests that name what changed). With record, a sampleusers report for this revision becomes the browser check. Refused while files have uncommitted edits.",
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          depth: { type: "string", enum: [...DEPTHS], description: "change when unsaid." },
+          record: { type: "string", description: "The path of a sampleusers report to record." },
+        },
+      },
+      run: ({ depth, record }, io, result) =>
+        verify(dir, io, {
+          ...(typeof depth === "string" ? { depth } : {}),
+          ...(typeof record === "string" ? { record } : {}),
+          onResult: (v) => {
+            result.verification = v;
+          },
+        }),
+    },
+    {
       name: "smithable_undo",
       description: "Undoes the last operation: the spec, the code and the development database.",
       inputSchema: noInput,
@@ -234,7 +271,8 @@ export function mcpServer(dir: string, onChange: () => void = () => {}): Server 
     let text = "";
     const io: Io = { out: (t) => (text += t), err: (t) => (text += t) };
     const args = (request.params.arguments ?? {}) as OperationArgs;
-    const code = await tool.run(args, io);
+    const result: { verification?: Verification } = {};
+    const code = await tool.run(args, io, result);
     const output = text.trim() || (code === 0 ? "Done." : "Failed.");
     logTokens(dir, {
       source: "mcp",
@@ -242,7 +280,13 @@ export function mcpServer(dir: string, onChange: () => void = () => {}): Server 
       tokens: { input: estimateTokens(JSON.stringify(args)), output: estimateTokens(output) },
     });
     onChange();
-    return { content: [{ type: "text", text: output }], isError: code !== 0 };
+    return {
+      content: [{ type: "text", text: output }],
+      ...(result.verification
+        ? { structuredContent: result.verification as unknown as Record<string, unknown> }
+        : {}),
+      isError: code !== 0,
+    };
   });
   return server;
 }
