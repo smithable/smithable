@@ -375,3 +375,27 @@ export {
   uxChoiceProblem,
 } from "./ux-capabilities.js";
 export { convertValue } from "./values.js";
+export {
+  CHECKS,
+  type Changed,
+  type Check,
+  type CheckId,
+  type CheckKind,
+  type CheckState,
+  type Consequence,
+  changedBy,
+  checkOf,
+  DEPTH_CHECKS,
+  DEPTHS,
+  type Depth,
+  deepen,
+  operationsHash,
+  type PlanBase,
+  planBase,
+  planMoved,
+  setCheck,
+  testsCheck,
+  unverified,
+  type Verification,
+  verificationBefore,
+} from "./verification.js";

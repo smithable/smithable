@@ -1,6 +1,6 @@
 # The result of a change: what it will do, and what was verified (design)
 
-Status: proposed 2026-11-07, Fable, on Johan's decision from the builder-inspiration review ("What
+Status: step 1 built (PR #1057), 2026-11-07. Proposed 2026-11-07, Fable, on Johan's decision from the builder-inspiration review ("What
 a change verified, and what it will do: one result for every change"; backlog Fable 100, with
 Fable 27; the stale plan is A 232); build after Johan reads it: core and CLI first (§7). A second
 reviewer's points taken the same day (failures before not-run in the line, per-environment
@@ -181,8 +181,11 @@ grew, the confirmation is asked again. This is A 232.
 ## 7. Build order
 
 1. **Core and CLI (Fable).** The types; records, access and custom-code consequences in core;
-   the checks, counts and outside in `runOperation` and undo; `--json` and `--verify` on `op`;
-   `smithable verify` with `--record`; the kept file; ARCHITECTURE §8 says what runs.
+   the checks, counts and outside in `runOperation`, and so in an undo of an earlier change,
+   which goes through it; `--json` and `--verify` on `op`; `smithable verify` with `--record`;
+   the kept file; ARCHITECTURE §8 says what runs. An undo of the latest change (a revert and a
+   snapshot restored) makes no result in step 1; `smithable verify` on its revision says what
+   was not run. Its own result comes with Studio's step.
 2. **Studio (A).** The line and its details; the consequences on the proposal preview; the
    stale plan (A 232); "Test it".
 3. **MCP (Fable).** Structured content, `smithable_verify`, the instructions.
