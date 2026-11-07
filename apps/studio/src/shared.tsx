@@ -548,8 +548,9 @@ export function Trace({
                 )}
                 <span className={cx("block text-sm", e.undone && "line-through")}>
                   {numbers(group) && (
-                    <span data-change-number className="mr-1 text-quiet">
-                      {numbers(group)}
+                    // The space is a real one, so the line reads "#12 Added …" aloud and to tests.
+                    <span data-change-number className="text-quiet">
+                      {`${numbers(group)} `}
                     </span>
                   )}
                   {group.length > 1 ? summary(group) : text(e)}
