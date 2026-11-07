@@ -6,9 +6,5 @@ pages:
   speakers:
     table:
       view: cards
-tones:
-  Registration.status:
-    confirmed: success
-    cancelled: danger
 theme:
   preset: modern

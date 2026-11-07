@@ -3,19 +3,19 @@ pages:
   home:
     hero:
       title: Get paid for your work, without the paperwork
-      subtitle: Billfold keeps your clients, invoices and incoming payments in one tidy place, so you always know who owes you what.
+      subtitle: Billfold keeps your clients, invoices and payments in one place, so you always know who owes you what.
       button: Start invoicing
       image:
         src: images/hero.webp
         alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
         generated: true
     callToAction:
-      title: Your next invoice takes two minutes
-      button: Sign in
+      title: Send your first invoice today
+      button: Get started
     features:
-      items: [{ title: Invoices in minutes, text: "Pick a client, add your hours or items, and the totals add themselves up." }, { title: Track every payment, text: Record full or partial payments and see the balance left on each invoice. }, { title: Never miss a late payer, text: Invoices that pass their due date are flagged as overdue automatically. }, { title: A clear overview, text: "See what is outstanding, overdue and received this month at a glance." }]
+      items: [{ title: Clients at hand, text: "Keep each client's address, email and VAT number ready for the next invoice." }, { title: Invoices that add up, text: Add lines with quantity and price; the totals work themselves out. }, { title: Payments tracked, text: "Record what came in, partly or in full, and see the balance left on every invoice." }, { title: Late ones flagged, text: "An unpaid invoice is marked overdue on its own, so nothing slips by." }]
     faq:
-      items: [{ question: Who can see my clients and invoices?, answer: Only you. Every freelancer's records are private to their own account. }, { question: Can a client pay an invoice in parts?, answer: Yes. Add each payment as it arrives and the invoice shows what is still due. }, { question: What happens when an invoice is late?, answer: "A week after its due date an unpaid invoice is marked overdue, so it stands out on your overview." }]
+      items: [{ question: Can my clients see my other clients?, answer: "No. Every freelancer sees only their own clients, invoices and payments." }, { question: Can a client pay in parts?, answer: Yes. Record each payment against the invoice and the remaining balance updates. }, { question: Does the client get the invoice by email?, answer: "When you mark an invoice as sent, your client is emailed about it." }]
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

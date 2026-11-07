@@ -1,24 +1,25 @@
 smithableContent: 0.1
+models:
+  Instructor:
+    label: Teacher
+    pluralLabel: Teachers
+  Session:
+    fields:
+      instructor:
+        label: Teacher
 pages:
+  instructors:
+    title: Teachers
   home:
+    faq:
+      items: [{ question: Do I need experience to join?, answer: "No. Classes marked beginner or all levels welcome anyone, and teachers offer options for every body." }, { question: How do I book a class?, answer: "Open the schedule, pick a class and press Book. You sign in with your email address, no password needed." }, { question: Can I cancel my booking?, answer: "Yes, from My bookings, up to two hours before the class starts, so someone else can take your place." }, { question: What should I bring?, answer: Comfortable clothes and water. Mats and props are available at the studio. }]
     hero:
-      title: Breathe, move, rest
-      subtitle: Classes for every level with teachers who know you by name. Find a class in the schedule and book your mat in a minute.
-      button: See the schedule
+      title: Find your breath, find your class
+      subtitle: See the week's classes, meet our teachers and book your mat online in a few taps.
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
+        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
         generated: true
-    classes:
-      title: Our classes
-    teachers:
-      title: Our teachers
-    callToAction:
-      title: Your mat is waiting
-      text: Pick a class that suits your week and book it online.
-      button: Book a class
-    faq:
-      items: [{ question: Do I need experience to join?, answer: "Not at all. Classes marked for beginners are a gentle start, and teachers offer options in every class." }, { question: How do I book a class?, answer: "Open the schedule, choose a class and press Book. You sign in with your email address, with no password to remember." }, { question: Can I cancel a booking?, answer: "Yes, from My bookings, up to two hours before the class begins, so someone else can take your place." }, { question: What should I bring?, answer: Comfortable clothes and a bottle of water. Mats and props are available at the studio. }]
 logo:
   src: images/logo.webp
   alt: A lotus over a ripple

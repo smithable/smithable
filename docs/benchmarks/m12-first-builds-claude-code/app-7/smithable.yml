@@ -1,20 +1,15 @@
 smithable: 0.1
 app:
-  name: Club Football
-  description: The club's site with its teams, players, fixtures and results.
-  currency: EUR
-  timezone: Europe/Mariehamn
-  clock: 24h
-  date: day-month
-  week: monday
+  name: Clubhouse FC
+  description: "The football club's site: our teams, their players, the fixtures and the results."
+  timezone: Europe/Helsinki
 models:
   Team:
     fields:
       name: string!
-      ageGroup: senior | youth | junior
-      league: string
+      ageGroup: senior | youth | junior | veterans
       coach: string
-      photo: picture
+      picture: picture
       about: text
       players: Player[]
       matches: Match[]
@@ -22,39 +17,35 @@ models:
     fields:
       name: string!
       team: Team!
-      position: goalkeeper | defender | midfielder | forward
-      shirtNumber:
+      number:
         type: int
         min: 1
         max: 99
-      photo: picture
+      position: goalkeeper | defender | midfielder | forward
+      picture: picture
       bio: text
   Match:
     fields:
       team: Team!
       opponent: string!
       kickoff: datetime!
-      venue: home | away | neutral
+      venue: home | away
       ground: string
       competition: league | cup | friendly
-      status: scheduled | played | postponed | cancelled
+      status: scheduled | played | postponed | canceled
       goalsFor:
         type: int
         min: 0
-        required:
-          status: played
       goalsAgainst:
         type: int
         min: 0
-        required:
-          status: played
       report: text
     namedBy: [team, opponent, kickoff]
 pages:
   matches:
     crud: Match
-    filters: [team, status, venue, competition, kickoff]
     search: [opponent, ground]
+    filters: [team, status, competition, venue, kickoff]
     actions: [recordResult, postpone]
   teams:
     crud: Team
@@ -68,7 +59,7 @@ pages:
       hero:
         button: matches
         secondButton: teams
-      upcoming:
+      fixtures:
         records: Match
         where:
           status: scheduled
@@ -98,4 +89,3 @@ actions:
       status: scheduled
     set:
       status: postponed
-    intent: Mark a match as postponed.

@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "booking",
   "questions": [
-    "Who updates the site?",
+    "Who updates the site's teams, players and match results?",
     "What can visitors see without signing in?",
-    "What should a match record hold?"
+    "How much should a match record hold?"
   ]
 }

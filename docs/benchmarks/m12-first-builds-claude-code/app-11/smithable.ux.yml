@@ -1,5 +1,9 @@
 smithableUx: 0.1
 pages:
+  incidents:
+    record:
+      lists:
+        updates: thread
   maintenance:
     table:
       sort: -startsAt
@@ -13,4 +17,4 @@ tones:
     identified: warning
     resolved: success
 theme:
-  preset: modern
+  preset: minimal

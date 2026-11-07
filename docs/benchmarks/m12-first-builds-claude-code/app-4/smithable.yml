@@ -1,30 +1,27 @@
 smithable: 0.1
 app:
-  name: Toolshed Commons
-  description: Neighbors list the tools they own and lend them to each other.
+  name: Toolshed
+  description: "Neighbors share their tools: list what you own, find what you need, and keep track of what is lent out."
   currency: EUR
-  timezone: Europe/Stockholm
+  timezone: Europe/Helsinki
 models:
   Tool:
     fields:
       name: string!
       photos: pictures
       description: text
-      category: powerTools | handTools | garden | ladders | cleaning | other
-      condition: good | worn | needsCare
+      category: powerTools | handTools | garden | ladders | cleaning | camping | other
+      condition: likeNew | good | worn
       place: string
       available: bool = true
   Loan:
     fields:
       tool: Tool!
-      borrower:
-        type: User
-        by: app
-        default: ME()
-      from: date!
-      until: date!
+      borrower: User!
+      lentOn: date!
+      dueOn: date
+      status: lent | returned
       note: text
-      status: requested | lent | returned | declined
 pages:
   tools:
     route: /
@@ -32,47 +29,33 @@ pages:
     search: [name, description, place]
     filters: [category, condition, available]
     favorites: true
+    contact: owner
   myTools:
     crud: Tool
     mine: true
   loans:
     crud: Loan
-    filters: [status, tool, from]
-    actions: [lend, decline, markReturned]
+    filters: [status, tool]
+    defaultFilter:
+      status: lent
+    actions: [markReturned]
   home:
     route: /welcome
     landing:
       hero:
         button: tools
-        secondButton: loans
+        secondButton: myTools
       features:
       faq:
       footer:
   privacy:
     route: /privacy
     legal: privacy
-  team:
-    users: manage
 actions:
-  lend:
-    on: Loan
-    when:
-      status: requested
-    set:
-      status: lent
-    intent: The tool's owner agrees to the request and hands the tool over.
-  decline:
-    on: Loan
-    when:
-      status: requested
-    set:
-      status: declined
-    intent: The tool's owner turns the request down.
   markReturned:
     on: Loan
     when:
       status: lent
     set:
       status: returned
-    intent: The tool's owner confirms the tool came back.
-navigation: [tools, myTools, loans, team]
+    intent: The lender records that the tool came back.

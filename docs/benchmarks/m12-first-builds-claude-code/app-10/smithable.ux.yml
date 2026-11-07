@@ -3,6 +3,8 @@ pages:
   recipes:
     table:
       view: cards
+    record:
+      pictures: aside
 tones:
   ShoppingList.status:
     done: success

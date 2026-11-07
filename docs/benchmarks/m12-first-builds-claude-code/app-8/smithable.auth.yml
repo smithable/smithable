@@ -5,15 +5,15 @@ defaultAccess: private
 roles:
   admin: all
   organizer:
-    description: "Runs the conference: the programme, the speakers and the attendee list."
-    pages: [talks, speakers, registrations, schedule, my-registration]
+    description: "Runs the programme: talks, speakers and who attends."
+    pages: [talks, speakers, registrations, my-registrations]
     read: [Talk, Speaker, Registration]
     create: [Talk, Speaker, Registration]
     write: [Talk, Speaker, Registration]
     delete: [Talk, Speaker, Registration]
   attendee:
-    description: Registers to attend the conference.
-    pages: [my-registration]
+    description: Comes to the conference and registers for talks.
+    pages: [my-registrations]
     create: [Registration]
 assistant:
   for: signed-in

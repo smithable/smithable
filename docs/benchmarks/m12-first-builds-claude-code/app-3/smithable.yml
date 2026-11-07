@@ -33,19 +33,19 @@ models:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date!
+      dueOn: date! = DATEADD(issuedOn, 30, "day")
       status: draft | sent | paid | overdue
       lines: InvoiceLine[]
       payments: Payment[]
       total:
         type: money
         formula: SUM(lines.amount)
-      received:
+      paidAmount:
         type: money
         formula: SUM(payments.amount)
       balance:
         type: money
-        formula: SUM(lines.amount) - SUM(payments.amount)
+        formula: total - paidAmount
 pages:
   overview:
     dashboard:
@@ -53,11 +53,11 @@ pages:
         sum: Payment.amount
         by: paidOn
       outstanding:
-        sum: Invoice.total
+        sum: Invoice.balance
         where:
           status: sent
       overdue:
-        sum: Invoice.total
+        sum: Invoice.balance
         where:
           status: overdue
       invoiced:
@@ -66,13 +66,9 @@ pages:
       latest:
         list: Invoice
         limit: 5
-    period:
-      Invoice: issuedOn
-      Payment: paidOn
   clients:
     crud: Client
     search: [name, email]
-    sortable: [name, createdAt]
   payments:
     crud: Payment
     filters: [invoice, method, paidOn]
@@ -125,7 +121,13 @@ actions:
 timers:
   markOverdue:
     on: Invoice
-    at: 7 days after dueOn
+    at: dueOn
     where:
       status: sent
     run: markOverdue
+outgoing:
+  invoiceSent:
+    when: markSent
+    to: mail
+    recipient: client.email
+navigation: [overview, invoices, clients, payments]

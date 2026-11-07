@@ -3,8 +3,8 @@
   "starter": "booking",
   "wordStarter": "booking",
   "questions": [
-    "Do people need an account to book a class?",
-    "Who manages the class schedule?",
-    "Should classes have limited spots, with a waitlist when full?"
+    "How do people book a class?",
+    "Who manages the classes and the schedule?",
+    "Should a class have a limited number of spots?"
   ]
 }

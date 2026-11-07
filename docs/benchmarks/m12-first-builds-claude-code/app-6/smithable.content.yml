@@ -1,24 +1,22 @@
 smithableContent: 0.1
 pages:
   home:
-    features:
-      items: [{ title: Jobs from our own region, text: "Every opening here is shared by the union, with employers who respect the contract." }, { title: Clear pay and terms, text: "Each post states the wage, the kind of work and the date applications close." }, { title: Apply in minutes, text: "Sign in, write a few lines about yourself, attach your resume and send it." }, { title: Follow your applications, text: "See whether you have been shortlisted or hired, all in one place." }]
-    faq:
-      items: [{ question: Who can apply?, answer: Anyone with an account can apply; members in good standing are encouraged to sign in with the address the union has on file. }, { question: Can I see the jobs without signing in?, answer: Yes. Open jobs are listed for everyone; signing in is only needed to apply. }, { question: Who sees my application?, answer: Only you and the union staff who handle the job posting. }, { question: Can I apply to the same job twice?, answer: "No, one application per job. You can edit yours while it is under review." }]
     hero:
-      title: Good union jobs, close to home
-      subtitle: Browse open positions shared by your local and apply in a few minutes.
+      title: Union jobs, posted by your local
+      subtitle: See the openings our employers send us, and apply in a few minutes.
       button: See open jobs
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
-  jobs:
-    title: Jobs
-  myApplications:
-    title: My applications
-  applications:
-    title: Applications
+    openJobs:
+      title: Open right now
+    features:
+      title: How it works
+      items: [{ title: Openings from union employers, text: "Every post comes through the local, so you know the work is covered by our agreements." }, { title: Apply online, text: "Sign in, pick a job, add a short note and your résumé, and send it." }, { title: Follow your applications, text: "See whether each application is being reviewed, accepted or declined, and get an email when it is decided." }]
+    faq:
+      title: Questions
+      items: [{ question: Who can apply?, answer: Anyone with an account can apply; the local checks membership when it reviews applications. }, { question: Can I see jobs without signing in?, answer: Yes. The open jobs are on the site for everyone; you sign in only to apply. }, { question: How will I hear back?, answer: "Your application's status changes in the app, and you get an email once it is accepted or declined." }, { question: Can an employer post a job here?, answer: Contact the union office; staff put each opening on the board. }]
 logo:
   src: images/logo.webp
   alt: A map pin
