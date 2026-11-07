@@ -1,7 +1,7 @@
 # The app card: one page that says what an app is (design)
 
 Status: proposed 2026-11-07, Fable, from an outside review of 2026-10-11 the owner found
-excellent (backlog Fable 25); build after Johan reads it: core and CLI first (§7). Second
+excellent (backlog Fable 25); step 1 built (#PR, core's facts and renderer, `smithable card`). Second
 reviewers' points taken the same day (the definition apart from project facts, the version hash,
 facts per language, the walk over the schema, custom code as declarations only).
 
@@ -103,14 +103,24 @@ content file's (or a language file's). An empty part is left out, never padded.
   runs in the browser too (rule 8). `summarize`'s facts move into core where the card needs them;
   the summary keeps its English sentences on top. Project facts are a second, optional argument
   the host fills.
-- **One renderer, the kit's.** `src/kit/card.ts` turns facts and words into blocks (headings,
-  lines, the table); it imports only `words/<language>.ts` and `formats.ts`. The adapter's build
-  compiles those files for its own use, so `renderCard(facts)` gives the CLI and Studio the very
-  sentences the app shows. Quoted texts are escaped for Markdown and HTML. A test renders each
-  starter's card both ways and compares.
+- **One shape of facts, two renderers** (settled when step 1 was built). The shared thing is
+  the facts: `CardFacts` is one versioned JSON shape from core, the same in the CLI, Studio and
+  the app. Core's `renderCard(facts, "md" | "html", project?)` writes the English sentences for
+  the CLI and Studio; the generated app's page renders the same facts through the kit's
+  `AppCard` with its own words files. Why not one kit renderer for all three: templates are
+  embedded as text and no kit file is compiled for the engine's own use, and generated apps may
+  never import a Smithable package (rule 4), so sharing one file would mean a second build of kit
+  code inside the engine. The facts carry no sentences of their own (only conditions in words,
+  `conditionText`, and the timers', outgoing and incoming entries' one-line summaries, as core
+  says them elsewhere), so the kit can word them anew; the shape is the interface in
+  `packages/core/src/card.ts`, with a test of its parts. Quoted texts are escaped for Markdown and
+  HTML. The card is English only for now, like Studio; the labels follow `--language`.
 - **The CLI.** `smithable card [--format md|html|json] [--language <code>] [--out <file>]`;
   Markdown to standard output by default. HTML is one self-contained file, printable. JSON is the
-  `CardFacts`, so two versions can be compared by a program.
+  `CardFacts` alone, without the project facts, so two versions can be compared by a program.
+  The CLI gathers the project facts (`CardProject`: the commit, the custom files by path and size,
+  generated files edited by hand, the migrations, the confirmed model changes) and passes them to
+  the renderer apart from the facts; core reads no disk and no Git.
 - **Studio.** A Card view beside "What it does", in the app's language with a switch to the
   others, and Download (Markdown, HTML).
 - **The generated app.** `src/generated/card.ts` holds one facts literal per language (as the
@@ -136,9 +146,10 @@ already say what the app is for and who runs it (open question 2).
   byte-identical (rule 6): it reads only the spec files, never Git or the clock.
 - **The CLI and Studio make it on demand.** Smithable writes no card file into the project.
   A card sent with `--out` names its commit and date, so an old copy says it is old.
-- **Two tests.** One walks the spec's JSON Schema (as what-it-does.md's walk does) and fails on a
-  key the card neither shows nor lists in its allow-list of keys left out on purpose (the look,
-  presentation-only texts), so a new section must take a side. The other renders each starter
+- **Two tests.** One walks the spec's JSON Schema with the auth and context files' (as
+  what-it-does.md's walk does) and fails on a key the card neither shows nor lists in its
+  allow-list of keys left out on purpose, each with its reason (the look, presentation-only
+  texts, values), so a new section must take a side (`packages/core/src/card.test.ts`). The other renders each starter
   and a fixture with conditional access, custom parts and every integration: each model, field,
   role, page, action, timer and entry appears, and every cell agrees with `explainAccess`.
 - **Custom code is described by what declares it**, never by reading its content: the spec's
@@ -162,12 +173,16 @@ already say what the app is for and who runs it (open question 2).
 
 ## 7. Build order
 
-1. **Core and CLI (Fable).** `CardFacts` and `appCard`; the facts `summarize` and `legalFacts`
-   share, moved into core; the kit's `card.ts` and the `card*` words in `en.ts` and `sv.ts`;
-   `renderCard` in the adapter; `smithable card` with its three formats; the starters' walk test;
-   a paragraph on the card in ARCHITECTURE §6.3 (the kit) and §11 (the command).
-2. **The generated page (A).** `src/generated/card.ts`, the kit's `AppCard`, the `/app-card`
-   route for administrators, the users page's link; `kit-words.mjs` covers it.
+1. **Core and CLI (Fable), built.** `CardFacts` and `appCard` in core, with `personalFields`
+   shared with the privacy page's `legalFacts`; core's `renderCard` (§4); `smithable card` with
+   its three formats; the test over every example (each model, field, page, action and timer on
+   the card, every cell as `explainAccess` says it, byte-identical facts) and the schema walk.
+   Left for later: moving `summarize`'s facts into core, export names from the project index, the
+   verification line (change-verified.md), a paragraph in ARCHITECTURE §6.3 once the kit has
+   `AppCard`.
+2. **The generated page (A).** `src/generated/card.ts`, the kit's `AppCard` over the same
+   `CardFacts`, with the `card*` words in `en.ts` and `sv.ts`, the `/app-card` route for
+   administrators, the users page's link; `kit-words.mjs` covers it.
 3. **Studio (A).** The Card view, the language switch, Download.
 4. **The docs page (C).** `docs/site/app-card.md`: what the card is for, a starter's card as the
    example, what it never says.
