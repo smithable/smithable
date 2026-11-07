@@ -465,10 +465,11 @@ export function verify(
     : uncommittedRefusal(dir, "since a result belongs to one committed revision");
   if (refused) {
     io.err(refused);
-    if (!flags.json) return 1;
     const v = unverified("", env, depth);
     for (const c of v.checks) c.reason = "uncommitted edits: nothing was verified";
-    return print(v, 1);
+    if (flags.json) return print(v, 1);
+    flags.onResult?.(v);
+    return 1;
   }
   const revision = git(dir, ["rev-parse", "HEAD"]).out.trim();
   const kept = readKept(dir, revision, env.where);
@@ -506,13 +507,13 @@ export function verify(
     } catch (error) {
       io.err(`Could not read the report ${flags.record}: ${(error as Error).message}\n`);
       keep(dir, v);
-      return 1;
+      return print(v, 1);
     }
     const refusal = browserFromReport(v, report, flags.record);
     if (refusal) {
       io.err(`${refusal}\n`);
       keep(dir, v);
-      return 1;
+      return print(v, 1);
     }
   } else if (depth !== "change" && checkOf(v, "spec").state !== "failed") {
     runDeeper(dir, v);
