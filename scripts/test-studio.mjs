@@ -1463,6 +1463,22 @@ try {
       await page.getByRole("button", { name: "Send", exact: true }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
       await proposal.getByText("(loses data)").waitFor({ timeout: 30000 * P });
+      // What it will do to the records there now, above Apply (change-verified.md §5.2, A 236).
+      await proposal
+        .getByRole("region", { name: "What it will do" })
+        .getByText(/notes/)
+        .first()
+        .waitFor({ timeout: 30000 * P });
+      // The app moves before Apply: the plan is not applied as shown, but asked again (§4.1).
+      await op("setFilters", { page: "orders", fields: ["status", "shippingMethod"] });
+      const notes = () => readFileSync(join(dir, "smithable.yml"), "utf8").includes("notes:");
+      if (!notes()) throw new Error("the CRM has no notes field to start with");
+      await proposal.getByRole("button", { name: "Apply" }).click();
+      await page
+        .getByText("The app changed since this was proposed.", { exact: false })
+        .waitFor({ timeout: 30000 * P });
+      if (!notes()) throw new Error("a stale plan was applied");
+      await op("setFilters", { page: "orders", fields: ["status"] });
       await proposal.getByRole("button", { name: "Discard" }).click();
       await page
         .getByRole("list", { name: "Thread" })
@@ -1498,6 +1514,14 @@ try {
       // Without the model's use or cost under it (Johan, 2026-10-23).
       if (await trace.getByText(/ tokens/).count())
         throw new Error("Changes shows a model's tokens");
+      // What it verified, under Smith's line for it: applied, data, what was not tested.
+      const verified = page.getByRole("list", { name: "Thread" }).locator("[data-verified]");
+      await verified
+        .getByText(/^Change applied\. Data preserved\. /)
+        .waitFor({ timeout: 30000 * P });
+      await verified.getByRole("button").first().click();
+      await verified.getByRole("list", { name: "What was checked" }).waitFor();
+      await verified.getByRole("button", { name: "Test it" }).waitFor();
       // Opened, it says what changed in words.
       await trace.getByRole("button", { name: /^Customers: added a mobile/ }).click();
       await trace

@@ -228,6 +228,32 @@ export async function runFilesChange(
   );
 }
 
+/** The project's files as the operation layer reads them: the spec files, plugins and themes. */
+export function projectFiles(dir: string, plugins: ReturnType<typeof loadPlugins>) {
+  const contentPath = join(dir, CONTENT);
+  const authPath = join(dir, AUTH);
+  const uxPath = join(dir, UX);
+  const contextPath = join(dir, "smithable.context.yml");
+  const peoplePath = join(dir, PEOPLE_PATH);
+  return {
+    spec: readFileSync(join(dir, SPEC), "utf8"),
+    ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
+    ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
+    ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
+    ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
+    ...(existsSync(peoplePath) ? { people: readFileSync(peoplePath, "utf8") } : {}),
+    plugins,
+    themes: projectThemes(dir),
+    themePaths: Object.fromEntries(
+      projectThemeFiles(dir).flatMap((path) => {
+        const theme = parseTheme({ path, text: readFileSync(path, "utf8") }).theme;
+        return theme ? [[theme.name, `themes/${path.slice(path.lastIndexOf("/") + 1)}`]] : [];
+      }),
+    ),
+    translations: projectTranslations(dir),
+  };
+}
+
 export async function runOperation(
   dir: string,
   io: Io,
@@ -390,23 +416,7 @@ async function applyAndCheckpoint(
   const uxPath = join(dir, UX);
   const contextPath = join(dir, "smithable.context.yml");
   const peoplePath = join(dir, PEOPLE_PATH);
-  const files = {
-    spec: readFileSync(join(dir, SPEC), "utf8"),
-    ...(existsSync(contentPath) ? { content: readFileSync(contentPath, "utf8") } : {}),
-    ...(existsSync(authPath) ? { auth: readFileSync(authPath, "utf8") } : {}),
-    ...(existsSync(uxPath) ? { ux: readFileSync(uxPath, "utf8") } : {}),
-    ...(existsSync(contextPath) ? { context: readFileSync(contextPath, "utf8") } : {}),
-    ...(existsSync(peoplePath) ? { people: readFileSync(peoplePath, "utf8") } : {}),
-    plugins,
-    themes: projectThemes(dir),
-    themePaths: Object.fromEntries(
-      projectThemeFiles(dir).flatMap((path) => {
-        const theme = parseTheme({ path, text: readFileSync(path, "utf8") }).theme;
-        return theme ? [[theme.name, `themes/${path.slice(path.lastIndexOf("/") + 1)}`]] : [];
-      }),
-    ),
-    translations: projectTranslations(dir),
-  };
+  const files = projectFiles(dir, plugins);
   // An edit of the whole spec that only renames a key is the rename operation (core does the
   // same inside applyOperation); recorded as that, so the history says what happened.
   if (operation?.name === "editSpec" && typeof args.text === "string" && !args.file) {

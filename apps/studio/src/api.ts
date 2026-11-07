@@ -1,4 +1,4 @@
-import type { ThemeIR } from "@smithable/core";
+import type { ThemeIR, Verification } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
 
 /** The change trace (ARCHITECTURE §9.7), as `smithable studio` reports it. */
@@ -147,6 +147,8 @@ export type Proposal = { usage: string; id: string } & (
         description: string;
         destructive: boolean;
       }[];
+      /** What it will do, before Apply: its consequences, every check not run (change-verified.md). */
+      verification?: Verification;
     }
   | { kind: "question"; question: string; options: string[] }
   /** A question about the app, answered (docs/design/studio-v2.md §4). */
@@ -164,6 +166,9 @@ export interface Result {
   report?: "sent" | "offer";
   /** For an editSpec: the newest change's id after it (grown or new), for the editor to grow. */
   change?: string;
+  /** A proposal whose base moved: not applied, its consequences worked out again (§4.1). */
+  stale?: boolean;
+  verification?: Verification;
 }
 
 /** A hosted workspace waking: starting, preparing its packages first, or every one busy. */
@@ -362,6 +367,11 @@ export const api = {
   said: (line?: { request: string; reply: string }) =>
     call<{ said: { at: string; request: string; reply: string }[] }>("/api/said", line),
   applyProposal: (id: string) => changing(call<Result>("/api/ask/apply", { id })),
+  /** Each change's verification kept for its revision, by id; one with none is left out. */
+  verified: (ids: string[]) => call<Record<string, Verification>>("/api/verified", { ids }),
+  /** Test it: the next depth on the newest revision (change-verified.md §5.2). */
+  verify: (depth: "tests" | "browser") =>
+    call<{ ok: boolean; verification?: Verification; output?: string }>("/api/verify", { depth }),
   /** Calls `onEvent` for every change and log line the daemon reports. */
   /** Tries again to make the described app, as it was asked. */
   retryMaking: () => call<{ ok: boolean }>("/api/making/retry", {}),
