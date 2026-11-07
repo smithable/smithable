@@ -8,7 +8,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { columnOf, plural } from "@smithable/adapter-tanstack";
 import {
   type Check,
@@ -54,11 +54,17 @@ export function keptPath(dir: string, revision: string, where: Where): string {
   return join(dir, KEPT, `${revision}-${where}.json`);
 }
 
-/** Keeps a result for its revision; one without a revision (a failure before the commit) is not kept. */
-export function keep(dir: string, v: Verification): void {
+/**
+ * Keeps a result for its revision; one without a revision (a failure before the commit) is not
+ * kept. `out`: another folder to write it to (a project mounted read-only, the hosted runner).
+ */
+export function keep(dir: string, v: Verification, out?: string): void {
   if (!v.revision) return;
-  mkdirSync(join(dir, KEPT), { recursive: true });
-  writeFileSync(keptPath(dir, v.revision, v.environment.where), `${JSON.stringify(v, null, 2)}\n`);
+  const file = out
+    ? join(out, `${v.revision}-${v.environment.where}.json`)
+    : keptPath(dir, v.revision, v.environment.where);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(v, null, 2)}\n`);
 }
 
 export function readKept(dir: string, revision: string, where: Where): Verification | undefined {
@@ -229,7 +235,7 @@ function testFiles(dir: string): string[] {
  * The tests depth on the committed revision (§3.3): the app's type check, then the tests that
  * name what changed (all of them when nothing names a change, as `smithable verify` on edits).
  */
-export function runDeeper(dir: string, v: Verification, typecheck = true): void {
+export function runDeeper(dir: string, v: Verification, typecheck = true, out?: string): void {
   if (typecheck) typecheckCheck(dir, v);
   if (checkOf(v, "typecheck").state === "failed") return;
   const all = testFiles(dir);
@@ -254,19 +260,18 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
   let run: { ran?: number; failed?: number; broken?: number; log?: string } = {};
   if (all.length && named.length) {
     // Beside the kept results, not among them: one file per revision and place there.
-    const log = join(
-      "data/.smithable/test-runs",
-      `${v.revision || "working"}-${v.environment.where}.json`,
-    );
-    mkdirSync(join(dir, "data/.smithable/test-runs"), { recursive: true });
+    const folder = out ?? join(dir, "data/.smithable/test-runs");
+    const file = join(folder, `${v.revision || "working"}-${v.environment.where}.json`);
+    const log = out ? file : relative(dir, file);
+    mkdirSync(folder, { recursive: true });
     // A report left by an earlier run is never read as this one's.
-    rmSync(join(dir, log), { force: true });
+    rmSync(file, { force: true });
     const [command, args] = tool(dir, "vitest", [
       "run",
       "--reporter",
       "json",
       "--outputFile.json",
-      log,
+      file,
       ...(named === all ? [] : named),
     ]);
     const spawned = spawnSync(command, args, {
@@ -277,7 +282,7 @@ export function runDeeper(dir: string, v: Verification, typecheck = true): void 
     });
     try {
       if (spawned.error) throw spawned.error;
-      const json = JSON.parse(readFileSync(join(dir, log), "utf8")) as {
+      const json = JSON.parse(readFileSync(file, "utf8")) as {
         numPassedTests?: number;
         numFailedTests?: number;
         numFailedTestSuites?: number;
@@ -444,6 +449,8 @@ export function verify(
     json?: boolean;
     record?: string;
     where?: Where;
+    /** Where the result and the test run's report are written; the project's data/ when unsaid. */
+    out?: string;
     /** Given the result printed (MCP's structured content). */
     onResult?: (v: Verification) => void;
   },
@@ -491,14 +498,20 @@ export function verify(
   // A browser report is recorded at depth browser, over the checks of the depths before it.
   deepen(v, flags.record ? "browser" : depth);
   if (flags.record) {
-    if (["typecheck", "tests"].some((id) => checkOf(v, id as CheckId).state === "not-run"))
-      runDeeper(dir, v);
+    // The lower checks of a kept result for this revision are reused when they passed (or had
+    // nothing to run); otherwise they run first.
+    if (
+      !(["typecheck", "tests"] as const).every((id) =>
+        ["passed", "not-configured"].includes(checkOf(v, id).state),
+      )
+    )
+      runDeeper(dir, v, true, flags.out);
     const failed = v.checks.find((c) => c.id !== "browser" && c.state === "failed");
     if (failed) {
       io.err(
         `The browser report is not recorded: the ${LABEL[failed.id].toLowerCase()} check failed.\n`,
       );
-      keep(dir, v);
+      keep(dir, v, flags.out);
       return print(v, 1);
     }
     let report: Parameters<typeof browserFromReport>[1];
@@ -506,19 +519,19 @@ export function verify(
       report = JSON.parse(readFileSync(flags.record, "utf8"));
     } catch (error) {
       io.err(`Could not read the report ${flags.record}: ${(error as Error).message}\n`);
-      keep(dir, v);
+      keep(dir, v, flags.out);
       return print(v, 1);
     }
     const refusal = browserFromReport(v, report, flags.record);
     if (refusal) {
       io.err(`${refusal}\n`);
-      keep(dir, v);
+      keep(dir, v, flags.out);
       return print(v, 1);
     }
   } else if (depth !== "change" && checkOf(v, "spec").state !== "failed") {
-    runDeeper(dir, v);
+    runDeeper(dir, v, true, flags.out);
     if (depth === "browser") browserNotRun(v);
   }
-  keep(dir, v);
+  keep(dir, v, flags.out);
   return print(v, v.checks.some((c) => c.state === "failed") ? 1 : 0);
 }

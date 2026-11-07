@@ -182,6 +182,7 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     return verify(values.dir ?? args[0] ?? ".", io, {
       ...(values.depth ? { depth: values.depth } : {}),
       ...(values.record ? { record: values.record } : {}),
+      ...(values.out ? { out: values.out } : {}),
       json: values.json === true,
     });
   }

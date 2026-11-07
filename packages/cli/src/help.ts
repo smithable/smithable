@@ -312,13 +312,14 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "verify",
-    usage: "verify [--depth change|tests|browser] [--json] [--record <report>]",
+    usage: "verify [--depth change|tests|browser] [--json] [--record <report>] [--out <dir>]",
     text: [
       "Say what was verified for the current revision: the checks its last change ran, and,",
       "with --depth tests, the app's type check and tests; --record takes a sampleusers report",
-      "for this revision as the browser check; nothing is verified with uncommitted edits",
+      "for this revision as the browser check; nothing is verified with uncommitted edits;",
+      "--out writes the result and the test report to another folder",
     ],
-    options: ["depth", "json", "record", "dir"],
+    options: ["depth", "json", "record", "out", "dir"],
   },
   {
     name: "timers",

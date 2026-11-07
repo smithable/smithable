@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkOf, setCheck, unverified } from "@smithable/core";
 import { expect, test } from "vitest";
@@ -152,6 +152,49 @@ test("verify on a fresh app starts its history, as an operation does", () => {
   expect(JSON.parse(io.stdout).revision).toBe(head);
   expect(git(dir, ["log", "--format=%s"]).out.trim()).toBe("smithable: start of history");
   expect(readKept(dir, head, "local")).toBeDefined();
+});
+
+test("verify --out writes the result elsewhere, for a project mounted read-only", () => {
+  const dir = project();
+  const out = tempDir("smithable-verify-out-");
+  chmodSync(dir, 0o555);
+  try {
+    expect(verify(dir, captureIo(), { json: true, out })).toBe(0);
+  } finally {
+    chmodSync(dir, 0o755);
+  }
+  const head = git(dir, ["rev-parse", "HEAD"]).out.trim();
+  expect(readdirSync(out)).toEqual([`${head}-local.json`]);
+  expect(existsSync(join(dir, "data"))).toBe(false);
+});
+
+test("--record reuses a kept result's passed type check and tests", () => {
+  const dir = project();
+  // A type check that would leave a mark, were it run.
+  writeFileSync(
+    join(dir, "package.json"),
+    JSON.stringify({ scripts: { typecheck: "node -e \"require('fs').writeFileSync('ran','')\"" } }),
+  );
+  writeFileSync(join(dir, ".gitignore"), "data\nran\n");
+  git(dir, ["add", "-A"]);
+  git(dir, ["commit", "-q", "-m", "smithable: a type check"]);
+  const head = git(dir, ["rev-parse", "HEAD"]).out.trim();
+  const v = { ...unverified(head, env, "tests"), revision: head };
+  setCheck(v, "spec", "passed", "ok");
+  setCheck(v, "typecheck", "passed", "ok");
+  setCheck(v, "tests", "passed", "ok");
+  keep(dir, v);
+  const report = join(tempDir("smithable-report-"), "report.json");
+  writeFileSync(
+    report,
+    JSON.stringify({ revision: head, status: "passed", steps: [{ status: "passed" }] }),
+  );
+  const io = captureIo();
+  expect(verify(dir, io, { json: true, record: report })).toBe(0);
+  expect(existsSync(join(dir, "ran"))).toBe(false);
+  const recorded = JSON.parse(io.stdout);
+  expect(checkOf(recorded, "browser").state).toBe("passed");
+  expect(checkOf(recorded, "tests").state).toBe("passed");
 });
 
 test("op --json prints the operation's result alone on stdout, its words on stderr", async () => {
