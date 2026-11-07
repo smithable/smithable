@@ -123,6 +123,19 @@ export const COMMANDS: Command[] = [
     options: ["plugin", "json", "explain", "write"],
   },
   {
+    name: "card",
+    usage: "card [dir] [--format md|html|json] [--language <code>] [--out <file>]",
+    text: [
+      "Print the app card: one page that says what the app is, written from its spec files by",
+      "fixed rules (what it stores, about people too, who may see or change what, what it talks",
+      "to outside, what is custom, what whoever runs it is responsible for), with the project's",
+      "commit and custom files; Markdown by default, --format html for one printable file,",
+      "--format json for its facts; --language <code> for another of the app's languages;",
+      "--out <file> writes it there",
+    ],
+    options: ["format", "language", "out"],
+  },
+  {
     name: "theme",
     usage: "theme --from <url> | theme lab | theme revision",
     text: [

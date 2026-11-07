@@ -4,6 +4,7 @@ import { findOperation, SPEC_VERSION } from "@smithable/core";
 import { ask } from "./ask.js";
 import { backup, restore } from "./backup.js";
 import { build } from "./build.js";
+import { card } from "./card.js";
 import { writeCode } from "./code.js";
 import { complete, script } from "./completion.js";
 import { context } from "./context.js";
@@ -186,6 +187,12 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       );
     case "generate":
       return generate(dir, io, { tools: true, force: values.force === true });
+    case "card":
+      return card(dir, io, {
+        ...(values.format ? { format: values.format } : {}),
+        ...(values.language ? { language: values.language } : {}),
+        ...(values.out ? { out: values.out } : {}),
+      });
     case "read-page":
       return readPageCommand(
         args[0],
@@ -414,6 +421,8 @@ const CONFIG = {
     port: { type: "string" },
     project: { type: "string" },
     out: { type: "string" },
+    format: { type: "string" },
+    language: { type: "string" },
     as: { type: "string" },
     states: { type: "boolean" },
     /** The app the theme lab shows instead of making its own (the tests' app). */

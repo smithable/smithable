@@ -6,8 +6,8 @@ import {
   isUpload,
   modelAccess,
   type PageIR,
+  personalFields,
   type SpecIR,
-  USER_MODEL,
 } from "@smithable/core";
 import type { GenContext } from "../shared.js";
 import {
@@ -32,11 +32,7 @@ const ANALYTICS_NAMES: Record<string, string> = {
 export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenContext, "options">) {
   const everyone = auth.roles.map((r) => r.name);
   const records = ir.models.flatMap((m) => {
-    const personal = m.fields.filter(
-      (f) =>
-        (f.type.kind === "scalar" && ["email", "phone"].includes(f.type.name)) ||
-        (f.type.kind === "relation" && f.type.model === USER_MODEL),
-    );
+    const personal = personalFields(m);
     if (!personal.length) return [];
     const read = modelAccess(m, auth).read;
     const readers: "visitors" | "members" | string[] = read.public
