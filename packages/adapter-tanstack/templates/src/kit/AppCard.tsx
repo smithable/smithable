@@ -314,8 +314,9 @@ export function AppCard({ cards, main }: { cards: Record<string, CardFacts>; mai
     <section className="space-y-2">
       <h2 className="border-b pb-1 text-xl font-semibold">{title}</h2>
       <ul className="list-disc space-y-1 pl-5">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
+        {items.map((item, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: two lines may say the same
+          <li key={i}>{item}</li>
         ))}
       </ul>
     </section>
@@ -334,8 +335,9 @@ export function AppCard({ cards, main }: { cards: Record<string, CardFacts>; mai
         <h2 className="border-b pb-1 text-xl font-semibold">{c.doesTitle}</h2>
         {models.length > 0 && (
           <ul className="list-disc space-y-1 pl-5">
-            {models.map((m) => (
-              <li key={m}>{m}</li>
+            {models.map((m, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: two lines may say the same
+              <li key={i}>{m}</li>
             ))}
           </ul>
         )}
@@ -353,8 +355,9 @@ export function AppCard({ cards, main }: { cards: Record<string, CardFacts>; mai
         )}
         {actions.length > 0 && (
           <ul className="list-disc space-y-1 pl-5">
-            {actions.map((a) => (
-              <li key={a}>{a}</li>
+            {actions.map((a, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: two lines may say the same
+              <li key={i}>{a}</li>
             ))}
           </ul>
         )}
@@ -385,24 +388,31 @@ export function AppCard({ cards, main }: { cards: Record<string, CardFacts>; mai
               {access.rows.map((r) => (
                 <tr key={r.role ?? ""}>
                   <th className="border p-1 text-left">{who(r.role)}</th>
-                  {r.models.map((m) => (
-                    <td key={m.model} className="border p-1 align-top">
-                      {cell([
-                        [c.read, m.read],
-                        [c.add, m.add],
-                        [c.change, m.change],
-                        [c.delete, m.delete],
-                      ])}
-                    </td>
-                  ))}
+                  {/* Each cell under its own column, by the model's name, not its place. */}
+                  {does.models.map((dm) => {
+                    const m = r.models.find((x) => x.model === dm.name);
+                    return (
+                      <td key={dm.name} className="border p-1 align-top">
+                        {m
+                          ? cell([
+                              [c.read, m.read],
+                              [c.add, m.add],
+                              [c.change, m.change],
+                              [c.delete, m.delete],
+                            ])
+                          : c.none}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <ul className="list-disc space-y-1 pl-5">
-          {[...runs, ...accessLines].map((line) => (
-            <li key={line}>{line}</li>
+          {[...runs, ...accessLines].map((line, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: two lines may say the same
+            <li key={i}>{line}</li>
           ))}
         </ul>
       </section>

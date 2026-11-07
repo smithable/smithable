@@ -102,7 +102,7 @@ test.each(["crm", "booking"])(
         /\.tsx?$/.test(f.path) &&
         !f.path.endsWith(".test.ts") &&
         // The app card's facts: a record of the whole definition, by rule (words-once.md §2).
-        f.path !== "src/generated/card.ts",
+        f.path !== "src/generated/card.server.ts",
     );
     const where = (value: string) =>
       generated.filter((f) => literals(f.content).has(value)).map((f) => f.path);

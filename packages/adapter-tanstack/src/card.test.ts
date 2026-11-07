@@ -23,14 +23,17 @@ test("an app with sign-in serves its card to the administrators at /app-card, in
     auth: signedIn,
     cardFiles: [{ name: "smithable.yml", text: spec }],
   });
-  const card = files.find((f) => f.path === "src/generated/card.ts")?.content ?? "";
+  const card = files.find((f) => f.path === "src/generated/card.server.ts")?.content ?? "";
+  const fn = files.find((f) => f.path === "src/generated/card.ts")?.content ?? "";
   const route = files.find((f) => f.path === "src/routes/app-card.tsx")?.content ?? "";
   expect(card).toContain('name: "Shop"');
   expect(card).toContain('export const MAIN = "en"');
   // The app imports no Smithable package: the facts are data, the renderer the kit's.
-  expect(`${card}${route}`).not.toContain("@smithable/");
+  expect(`${card}${fn}${route}`).not.toContain("@smithable/");
   expect(route).toContain('roles: ["admin"]');
-  expect(route).toContain("<AppCard cards={CARDS} main={MAIN} />");
+  // The facts reach a browser only through the server function, for an administrator.
+  expect(route).not.toContain("card.server");
+  expect(fn).toContain('if (viewer?.role !== "admin") throw new AccessDenied');
 });
 
 test("an app without sign-in has no card, and a spec page cannot take its route", () => {

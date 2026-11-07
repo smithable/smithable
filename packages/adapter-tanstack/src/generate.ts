@@ -36,7 +36,7 @@ import {
   viewerModule,
 } from "./auth.js";
 import { calculatorFiles } from "./calculators.js";
-import { cardModule, cardRoute } from "./card.js";
+import { cardModule, cardRoute, cardServerFnModule } from "./card.js";
 import { dataModule, isMarkdown, modelModule, modelSchemaModule, trashModule } from "./data.js";
 import { doorModule, doorRoutes, peopleModule, samplePeople } from "./dev-door.js";
 import { examplesTest } from "./examples.js";
@@ -811,9 +811,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         generated("src/generated/roles.ts", rolesModule(auth)),
         // The app card for the administrators (docs/design/app-card.md §4).
         generated(
-          "src/generated/card.ts",
+          "src/generated/card.server.ts",
           cardModule(ir, auth, options.content, options.cardFiles, options.smithableVersion),
         ),
+        generated("src/generated/card.ts", cardServerFnModule()),
         generated("src/routes/app-card.tsx", cardRoute()),
         generated(
           "src/routes/sign-in.tsx",
