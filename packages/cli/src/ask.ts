@@ -124,6 +124,23 @@ export function aiDestinations(env: NodeJS.ProcessEnv = process.env): string[] {
   return [...new Set(providersFor(env).map((p) => where[p.name] ?? p.name))];
 }
 
+/**
+ * Where Smith may hear and speak (docs/design/smith-speech.md §3), from the same policy as his
+ * requests: `browser` (the browser's own recognition and voices; under eu-only only what the
+ * browser says runs on the device) and, on the hosted service, `service` (its gateway, in the EU).
+ * Under local-only, or a policy that names its providers, Smith neither hears nor speaks.
+ */
+export function speechProviders(
+  env: NodeJS.ProcessEnv = process.env,
+): { name: "browser" | "service"; onDeviceOnly?: true }[] {
+  const policy = parsePolicy(env.SMITHABLE_AI_POLICY);
+  if (policy === "local-only" || typeof policy !== "string") return [];
+  return [
+    { name: "browser", ...(policy === "eu-only" ? { onDeviceOnly: true as const } : {}) },
+    ...(env.SMITHABLE_SPEECH_SERVICE ? [{ name: "service" as const }] : []),
+  ];
+}
+
 /** Answers kept as files in a folder, by their key. */
 function folderStore(folder: string): ResponseStore {
   const path = (key: string) => join(folder, key.slice(0, 2), `${key}.json`);

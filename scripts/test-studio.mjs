@@ -2053,6 +2053,28 @@ try {
       }
     },
   );
+  await step(
+    "Smith's speech controls sit beside his box, or one line says why speech is off (A 235)",
+    async () => {
+      await page
+        .locator("[data-speech], [data-speech-off]")
+        .first()
+        .waitFor({ timeout: 30000 * P });
+      if (!(await page.locator("[data-speech]").count())) return;
+      await page.getByRole("button", { name: /^Mic: / }).waitFor();
+      const sound = page.getByRole("button", { name: /^Sound: (?:on|off)$/ });
+      if (!(await sound.isEnabled())) return;
+      const before = await sound.getAttribute("aria-label");
+      await sound.click();
+      const after = await sound.getAttribute("aria-label");
+      if (after === before) throw new Error(`the sound button stays "${before}"`);
+      // The choice is the browser's, kept for the next visit.
+      const kept = await page.evaluate(() => localStorage.getItem("smithable:speech"));
+      if (!kept?.includes(`"sound":${after === "Sound: on"}`))
+        throw new Error(`the sound choice is not kept: ${kept}`);
+      await sound.click();
+    },
+  );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     await sub("Look");
