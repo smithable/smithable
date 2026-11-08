@@ -856,6 +856,7 @@ export function App() {
         waiting={project.waiting}
         trace={project.trace}
         onShowChanges={showChanges}
+        speech={project.speech ?? []}
         // A milestone named or an undo from Smith: the windows read the history again.
         onDone={() => void refresh()}
         ready={{

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { proposalOutcome, usageLine } from "./ask.js";
+import { proposalOutcome, speechProviders, usageLine } from "./ask.js";
 import { tempDir } from "./test-dir.js";
 
 test("a change a wording rule read says so, not that no model was used", () => {
@@ -63,4 +63,19 @@ test("Smith's AI notice names where the policy's models run, and nothing without
       AWS_REGION: "eu-north-1",
     }),
   ).toEqual(["Anthropic's Claude on Amazon Bedrock, outside the EU"]);
+});
+
+test("Smith hears and speaks where the AI policy lets his requests go (smith-speech.md §3)", () => {
+  expect(speechProviders({})).toEqual([{ name: "browser" }]);
+  expect(speechProviders({ SMITHABLE_AI_POLICY: "eu-only" })).toEqual([
+    { name: "browser", onDeviceOnly: true },
+  ]);
+  expect(speechProviders({ SMITHABLE_AI_POLICY: "local-only" })).toEqual([]);
+  expect(speechProviders({ SMITHABLE_AI_POLICY: "allow:anthropic" })).toEqual([]);
+  expect(
+    speechProviders({
+      SMITHABLE_AI_POLICY: "eu-only",
+      SMITHABLE_SPEECH_SERVICE: "/_smithable/speech",
+    }),
+  ).toEqual([{ name: "browser", onDeviceOnly: true }, { name: "service" }]);
 });

@@ -8,6 +8,8 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { type Assumption, api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
 import { lastLine } from "../history";
+import { SpeechControls } from "../speech/SpeechControls";
+import { useSpeech } from "../speech/useSpeech";
 import { Button, cx, Input } from "../ui";
 import { useVerified, Verified } from "../Verified";
 import { PREFILLED, type Prefill } from "./ChangeForms";
@@ -54,7 +56,10 @@ export function Ask({
   ready,
   peopleRunning = false,
   onShowChanges,
+  speech: speechProviders = [],
 }: {
+  /** Where Smith may hear and speak, from the host's policy layer (smith-speech.md §3). */
+  speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
   /** Opens the Changes window, at a change when one is given (ask-flows.md §8). */
   onShowChanges?: (id?: string) => void;
   /** Whether the sample users are running: a bare "stop" is then said to them. */
@@ -274,6 +279,65 @@ export function Ask({
   });
   // Right after a request's changes applied, "Undo that" is offered until the next thing is sent.
   const [justApplied, setJustApplied] = useState(false);
+  // Speech (smith-speech.md, step 1): what is heard goes into the box, and is sent a moment
+  // after listening ends unless the box is touched meanwhile.
+  const sendLater = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const requestNow = useRef(request);
+  requestNow.current = request;
+  const sendNow = useRef<() => void>(() => {});
+  const speech = useSpeech(
+    speechProviders,
+    (text) => {
+      if (!text) return;
+      clearTimeout(sendLater.current);
+      const next = requestNow.current.trim() ? `${requestNow.current.trim()} ${text}` : text;
+      requestNow.current = next;
+      setRequest(next);
+    },
+    (heard) => {
+      if (!heard) return;
+      clearTimeout(sendLater.current);
+      sendLater.current = setTimeout(() => sendNow.current(), 1500);
+    },
+  );
+  const speechNow = useRef(speech);
+  speechNow.current = speech;
+  // Hold Ctrl+Shift+Space to talk anywhere in Studio (the preview's keys are its own page's);
+  // a repeat is ignored, and letting go of any of the three, or leaving the tab, releases.
+  // The keys are listened to once; the speech is read through a ref, so a hold that changes the
+  // settings (the first use) does not lose its release.
+  useEffect(() => {
+    let held = false;
+    const speech = () => speechNow.current;
+    const down = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey && e.shiftKey && e.code === "Space")) return;
+      e.preventDefault();
+      if (e.repeat || held) return;
+      held = true;
+      speech().listen(true);
+    };
+    const up = (e: KeyboardEvent) => {
+      if (
+        !held ||
+        !["Space", "ControlLeft", "ControlRight", "ShiftLeft", "ShiftRight"].includes(e.code)
+      )
+        return;
+      held = false;
+      speech().release();
+    };
+    const away = () => {
+      if (held) speech().release();
+      held = false;
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", away);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", away);
+    };
+  }, []);
   const apply = async () => {
     if (!proposal) return;
     setBusy(true);
@@ -376,6 +440,8 @@ export function Ask({
   const box = useRef<HTMLTextAreaElement>(null);
   const send = () => {
     if (!request.trim()) return;
+    clearTimeout(sendLater.current);
+    speech.stopSpeaking();
     setJustApplied(false);
     if (!making && history.interrupt(request.trim())) {
       setRequest("");
@@ -394,9 +460,63 @@ export function Ask({
       );
     else void propose(followUp(request.trim(), last.current));
   };
+  // Esc stops Smith speaking when the focus is in his panel, and does nothing else then (§2.1).
+  const panel = useRef<HTMLDivElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the hook's state as it is now
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || !speech.speaking) return;
+      if (!panel.current?.contains(document.activeElement)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      speech.stopSpeaking();
+    };
+    window.addEventListener("keydown", esc, true);
+    return () => window.removeEventListener("keydown", esc, true);
+  }, [speech.speaking]);
+  sendNow.current = () => {
+    if (!busy) send();
+  };
+  // Smith says aloud what he writes, where sound is on (§5): his greeting once, then each new
+  // line of the thread, a proposal and its question, and what he answers by himself.
+  // The lines after the last one heard, by their time and words; the thread as it first loads is
+  // only marked, never read out.
+  const lines = trace ? threadLines(trace, said, words) : undefined;
+  const lastHeard = useRef<string | undefined>(undefined);
+  const newestLine = lines?.at(-1);
+  const lastKey = newestLine ? `${newestLine.at}|${newestLine.reply}` : "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new last line is the signal
+  useEffect(() => {
+    if (!lines) return;
+    const keys = lines.map((l) => `${l.at}|${l.reply}`);
+    if (lastHeard.current !== undefined) {
+      const from = keys.indexOf(lastHeard.current);
+      for (const line of lines.slice(from + 1)) speech.speak(line.reply);
+    }
+    lastHeard.current = keys.at(-1) ?? "";
+  }, [lastKey]);
+  const greeted = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, when a voice is there
+  useEffect(() => {
+    if (greeted.current || !speech.canSpeak || !ready || making) return;
+    greeted.current = true;
+    speech.speak(greetingText(ready.appName, partsSaid > 0, true).join(" "));
+  }, [speech.canSpeak, Boolean(ready), making]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new proposal is the signal
+  useEffect(() => {
+    if (proposal?.kind === "change")
+      speech.speak(
+        `I propose: ${proposal.operations.map((o) => words?.(o.op, o.args) ?? o.description).join(". ")}.`,
+      );
+    else if (proposal?.kind === "question") speech.speak(proposal.question);
+  }, [proposal?.id]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new answer is the signal
+  useEffect(() => {
+    if (output) speech.speak(output);
+  }, [output]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div ref={panel} className="flex min-h-0 flex-1 flex-col">
       {beta && left !== undefined && left <= 15 && (
         // The sandbox's time, where it stays in view however the thread scrolls.
         <p className="flex shrink-0 items-center gap-2 border-b border-line bg-subtle px-4 py-1.5 text-xs">
@@ -409,7 +529,9 @@ export function Ask({
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {/* Whenever Smith can be asked, the app being made included (legal-1.0 U6). */}
         {ai && <AiNotice to={ai} />}
-        {ready && !making && <Greeting ready={ready} presenting={partsSaid > 0} />}
+        {ready && !making && (
+          <Greeting ready={ready} presenting={partsSaid > 0} sound={speech.canSpeak} />
+        )}
         {beta && !making && <BetaLines beta={beta} left={left} />}
         {/* The presentation where it was said: after the lines before it, before the ones since. */}
         {trace && <Thread trace={trace} said={said} words={words} upTo={show?.startedAt} />}
@@ -566,7 +688,12 @@ export function Ask({
             ref={box}
             aria-label="Describe a change, or ask a question"
             value={request}
-            onChange={(e) => setRequest(e.target.value)}
+            onChange={(e) => {
+              // Any touch of the box keeps a spoken message from going by itself.
+              clearTimeout(sendLater.current);
+              setRequest(e.target.value);
+            }}
+            onPointerDown={() => clearTimeout(sendLater.current)}
             // Enter sends, as in any chat; Shift-Enter starts a new line.
             onKeyDown={(e) => {
               if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
@@ -580,6 +707,7 @@ export function Ask({
             {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
           </Button>
         </div>
+        {speechProviders.length > 0 || speech.why ? <SpeechControls speech={speech} /> : null}
         {overlay || presenting
           ? parts.length > 1 && <PartDots at={partsSaid} count={parts.length} />
           : ready &&
@@ -651,7 +779,9 @@ function Thread({
   return (
     <ol aria-label="Thread" className="space-y-3">
       {lines.map((line) => (
-        <li key={`${line.at}|${line.reply}`} className="space-y-1">
+        // A change's own id: two lines alike in the same second must not share a key, or the
+        // verified line is drawn under the wrong one.
+        <li key={`${"id" in line ? line.id : ""}|${line.at}|${line.reply}`} className="space-y-1">
           {line.request && <p className={MINE}>{line.request}</p>}
           <p className={SMITHS}>{line.reply}</p>
           {"id" in line && line.id === newest && verified[newest] && (
@@ -761,15 +891,32 @@ export function followUp(
 }
 
 /** Smith's greeting, by rule, as an assistant opens a chat; no model is asked (Johan, 2026-10-23). */
-function Greeting({ ready, presenting }: { ready: Ready; presenting: boolean }) {
+/** Smith's first words, which he says aloud too where sound is on (smith-speech.md §2). */
+export function greetingText(appName: string | undefined, presenting: boolean, sound: boolean) {
+  return [
+    presenting
+      ? "Hi! I'm Smith. I build this app with you; here is what it is, part by part."
+      : `Hi! How can I help you with your ${appName ? `${appName} ` : ""}app?`,
+    ...(sound
+      ? ["You hear me as I write: the speaker button turns my voice off and on, and Esc stops me."]
+      : []),
+  ];
+}
+
+function Greeting({
+  ready,
+  presenting,
+  sound,
+}: {
+  ready: Ready;
+  presenting: boolean;
+  sound: boolean;
+}) {
   return (
     <div className={cx(SMITHS, "space-y-1")}>
-      {presenting ? (
-        // Smith first, then the app, whose name the presentation's first part says (Johan).
-        <p>Hi! I'm Smith. I build this app with you; here is what it is, part by part.</p>
-      ) : (
-        <p>Hi! How can I help you with your {ready.appName ? `${ready.appName} ` : ""}app?</p>
-      )}
+      {greetingText(ready.appName, presenting, sound).map((line) => (
+        <p key={line}>{line}</p>
+      ))}
     </div>
   );
 }
