@@ -271,40 +271,61 @@ export async function sendFeedback(
       throw new Error(message ?? `The feedback was not accepted (${response.status}).`);
     return { sent: true, message };
   }
-  const body = [
-    feedback.comment,
-    "",
-    `Smithable ${feedback.smithable}, Node ${feedback.node}, ${feedback.platform}`,
-    ...(feedback.changes?.length
-      ? ["", "What I did:", ...feedback.changes.map((c) => `- ${c}`)]
-      : []),
-    ...(feedback.failure
-      ? [
-          "",
-          `The last failure: ${feedback.failure.operation}`,
-          "```",
-          feedback.failure.error,
-          "```",
-        ]
-      : []),
-    ...(feedback.specFiles
-      ? [
-          "",
-          ...Object.entries(feedback.specFiles).flatMap(([name, text]) => [
-            `${name}:`,
-            "```yaml",
-            text,
+  const body = (specFiles = feedback.specFiles, note?: string) =>
+    [
+      feedback.comment,
+      "",
+      `Smithable ${feedback.smithable}, Node ${feedback.node}, ${feedback.platform}`,
+      ...(feedback.changes?.length
+        ? ["", "What I did:", ...feedback.changes.map((c) => `- ${c}`)]
+        : []),
+      ...(feedback.failure
+        ? [
+            "",
+            `The last failure: ${feedback.failure.operation}`,
             "```",
-          ]),
-        ]
-      : []),
-  ].join("\n");
+            feedback.failure.error,
+            "```",
+          ]
+        : []),
+      ...(note ? ["", note] : []),
+      ...(specFiles
+        ? [
+            "",
+            ...Object.entries(specFiles).flatMap(([name, text]) => [
+              `${name}:`,
+              "```yaml",
+              text,
+              "```",
+            ]),
+          ]
+        : []),
+    ].join("\n");
   const title = `Feedback: ${feedback.comment.split("\n")[0]?.slice(0, 80) ?? ""}`;
-  if (via === "mail")
-    return {
-      url: `mailto:${FEEDBACK_MAIL}?${new URLSearchParams({ subject: title, body: body.slice(0, 1800) }).toString().replace(/\+/g, "%20")}`,
-    };
-  return { url: `${ISSUES}?${new URLSearchParams({ title, body: body.slice(0, 6000) })}` };
+  // A link has a length limit (GitHub's about 8 KB, mail programs' less): the spec files go first,
+  // with a line saying so, and then the end is cut.
+  const link = (text: string) =>
+    via === "mail"
+      ? `mailto:${FEEDBACK_MAIL}?${new URLSearchParams({ subject: title, body: text }).toString().replace(/\+/g, "%20")}`
+      : `${ISSUES}?${new URLSearchParams({ title, body: text })}`;
+  const limit = via === "mail" ? 1900 : 7500;
+  const note = feedback.specFiles
+    ? "(The spec files did not fit in this link: attach them, or ask for them.)"
+    : undefined;
+  let url = link(body());
+  const short = body(undefined, note);
+  for (let cut = 1; url.length > limit && cut > 0.05; cut -= 0.1)
+    url = link(cut === 1 ? short : `${short.slice(0, Math.floor(short.length * cut))}\n(cut)`);
+  return { url };
+}
+
+/**
+ * The last failure as feedback sends it: the spec files go once, and only with their own box, and
+ * no log (it grows while the panel is open, and what is sent is what was shown).
+ */
+export function feedbackFailure(dir: string, log: string[] = []): Report | undefined {
+  const report = buildReport(dir, log);
+  return report && { ...report, files: {}, log: [] };
 }
 
 /** Builds the feedback the person chose to send, from their words and what they ticked. */
@@ -314,9 +335,7 @@ export function buildFeedback(
   add: { changes?: string[]; specFiles?: boolean; failure?: boolean },
   log: string[] = [],
 ): Feedback {
-  const report = add.failure ? buildReport(dir, log) : undefined;
-  // The spec files go once, and only when ticked: not inside the failure as well.
-  const failure = report && { ...report, files: {} };
+  const failure = add.failure ? feedbackFailure(dir, log) : undefined;
   return {
     kind: "feedback",
     smithable: VERSION,

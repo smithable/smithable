@@ -1302,11 +1302,7 @@ function ReadyChips({
         </button>
       ))}
       {onFeedback && (
-        <button
-          type="button"
-          onClick={onFeedback}
-          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
-        >
+        <button type="button" onClick={onFeedback} className={CHIP}>
           Leave feedback
         </button>
       )}

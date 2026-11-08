@@ -69,6 +69,7 @@ import {
 import {
   buildFeedback,
   buildReport,
+  feedbackFailure,
   recordFailure,
   reportChoice,
   reportText,
@@ -1288,9 +1289,7 @@ export async function studio(
       }
       // Feedback (A 242): what each thing the person may add would send, in full, and sending it.
       if (req.method === "GET" && url.pathname === "/api/feedback") {
-        const report = buildReport(dir, logs);
-        // The failure as feedback sends it: its spec files go only with that box ticked.
-        const failure = report && { ...report, files: {} };
+        const failure = feedbackFailure(dir, logs);
         return json({
           hosted: Boolean(process.env.SMITHABLE_REPORT_URL),
           specFiles: specFilesOf(dir),
@@ -1298,9 +1297,30 @@ export async function studio(
         });
       }
       if (req.method === "POST" && url.pathname === "/api/feedback") {
-        const { comment, changes, specFiles, failure, via } = await body();
+        const { comment, changes, specFiles, failure, via, shown } = (await body()) as {
+          comment?: unknown;
+          changes?: unknown;
+          specFiles?: unknown;
+          failure?: unknown;
+          via?: unknown;
+          shown?: { specFiles?: unknown; failure?: unknown };
+        };
         if (typeof comment !== "string" || !comment.trim())
           return json({ ok: false, message: "Say what you think first." }, 400);
+        // What leaves is what the panel showed: a file or failure that changed since is not sent.
+        const now = feedbackFailure(dir, logs);
+        if (
+          (specFiles === true &&
+            JSON.stringify(specFilesOf(dir)) !== JSON.stringify(shown?.specFiles)) ||
+          (failure === true && (now ? reportText(now) : undefined) !== shown?.failure)
+        )
+          return json(
+            {
+              ok: false,
+              message: "Something changed while this was open: close it and look again.",
+            },
+            409,
+          );
         const lines = Array.isArray(changes)
           ? changes.filter((c): c is string => typeof c === "string")
           : [];

@@ -44,6 +44,7 @@ export function FeedbackDialog({
           ...(add.failure ? { failure: true } : {}),
         },
         via,
+        { specFiles: info?.specFiles ?? {}, failure: info?.failure },
       )
       .catch((e: Error) => ({ ok: false, message: e.message, url: undefined, sent: undefined }));
     setBusy(false);

@@ -361,12 +361,14 @@ export const api = {
   sendFeedback: (
     comment: string,
     add: { changes?: string[]; specFiles?: boolean; failure?: boolean },
-    via: "issue" | "mail" = "issue",
+    via: "issue" | "mail",
+    shown: { specFiles: Record<string, string>; failure?: string },
   ) =>
     call<{ ok: boolean; sent?: true; url?: string; message?: string }>("/api/feedback", {
       comment,
       ...add,
       via,
+      shown,
     }),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
   report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),

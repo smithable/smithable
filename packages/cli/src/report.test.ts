@@ -209,6 +209,14 @@ test("feedback: the person's words, and only what they ticked; an issue or a mai
   expect("url" in issue && new URL(issue.url).searchParams.get("body")).toContain(
     "What I did:\n- Added a field",
   );
+  // Spec files that do not fit in a link stay out, with a line saying so.
+  const big = buildFeedback(dir, "Big", { specFiles: true });
+  big.specFiles = { "smithable.yml": "models: {}\n".repeat(2000) };
+  const bigIssue = await sendFeedback(big);
+  expect("url" in bigIssue && bigIssue.url.length).toBeLessThanOrEqual(7500);
+  expect("url" in bigIssue && new URL(bigIssue.url).searchParams.get("body")).toContain(
+    "did not fit in this link",
+  );
   const mail = await sendFeedback(withChanges, "mail");
   expect("url" in mail && mail.url).toMatch(
     /^mailto:hello@smithable\.ai\?subject=Feedback%3A%20The%20list/,
