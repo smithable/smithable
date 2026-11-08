@@ -4,6 +4,14 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
+  staff:
+    description: A stylist. Runs the day, confirms and cancels appointments, and enters time off.
+    pages: [day, appointments, time-off]
+    read: [Appointment, TimeOff]
+    create: [Appointment, TimeOff]
+    write: [Appointment, TimeOff]
+    delete: [TimeOff]
+    actions: [confirm, cancel]
   member:
     description: A customer who books appointments.
     pages: [appointments]

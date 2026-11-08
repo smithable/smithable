@@ -3,7 +3,8 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "What should a deal track besides its company and contact?",
-    "Who on the team can see and edit deals?"
+    "Who can see which companies and deals?",
+    "What should a deal track?",
+    "What is a follow-up linked to?"
   ]
 }

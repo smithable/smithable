@@ -1,94 +1,15 @@
 smithableContent: 0.1
 pages:
   home:
-    title: Join Us for the Conference
-    subtitle: Discover inspiring talks and connect with industry leaders.
+    title: Join us at Conference Connect
+    subtitle: Discover inspiring talks, network with industry leaders, and grow your knowledge.
+    faq:
+      items: [{ question: How do I register for a talk?, answer: "Browse the list of talks, select the ones you're interested in, and click 'Register' to secure your spot." }, { question: Can I cancel my registration?, answer: "Yes, you can cancel your registration up until the talk starts. Go to 'My Attendance' and remove the talk from your list." }, { question: Will the talks be recorded?, answer: Some talks may be recorded and made available after the conference. Check the talk details for more information. }]
     hero:
       image:
         src: images/hero.webp
         alt: A long table set for a celebration under string lights in a garden
         generated: true
-  talks:
-    title: Talks
-  speakers:
-    title: Speakers
-  attendees:
-    title: Attendees
-  registrations:
-    title: Registrations
-models:
-  Talk:
-    label: Talk
-    pluralLabel: Talks
-    fields:
-      title:
-        label: Title
-      description:
-        label: Description
-      startsAt:
-        label: Starts At
-      speaker:
-        label: Speaker
-      room:
-        label: Room
-      status:
-        label: Status
-        values:
-          draft: Draft
-          scheduled: Scheduled
-          canceled: Canceled
-      capacity:
-        label: Capacity
-      endsAt:
-        label: Ends At
-  Speaker:
-    label: Speaker
-    pluralLabel: Speakers
-    fields:
-      name:
-        label: Name
-      bio:
-        label: Bio
-      email:
-        label: Email
-      phone:
-        label: Phone
-      website:
-        label: Website
-      picture:
-        label: Picture
-  Attendee:
-    label: Attendee
-    pluralLabel: Attendees
-    fields:
-      name:
-        label: Name
-      email:
-        label: Email
-      phone:
-        label: Phone
-      company:
-        label: Company
-      ticket:
-        label: Ticket Type
-        values:
-          standard: Standard
-          vip: VIP
-  Registration:
-    label: Registration
-    pluralLabel: Registrations
-    fields:
-      attendee:
-        label: Attendee
-      talk:
-        label: Talk
-      registeredAt:
-        label: Registered At
-      status:
-        label: Status
-        values:
-          confirmed: Confirmed
-          canceled: Canceled
 logo:
   src: images/logo.webp
   alt: A ticket

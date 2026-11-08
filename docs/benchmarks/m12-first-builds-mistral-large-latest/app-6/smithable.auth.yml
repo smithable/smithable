@@ -8,5 +8,5 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, jobs]
+  pages: [home, jobPosts]
 admins: [johan@smithable.ai]

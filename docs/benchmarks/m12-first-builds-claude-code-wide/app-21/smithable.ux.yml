@@ -2,25 +2,18 @@ smithableUx: 0.1
 pages:
   tyot:
     table:
-      sort: -date
-      columns: [title, car, status, date, mechanic, total]
-    icon: clipboard
+      sort: scheduledOn
+      columns: [car, description, status, scheduledOn, mechanic, total]
   laskut:
     table:
-      columns: [number, customer, status, amount, dueDate]
-    icon: receipt
-  autot:
-    table:
-      columns: [registration, make, carModel, year, customer]
-    icon: truck
-  asiakkaat:
-    icon: users
+      columns: [number, customer, status, issuedOn, dueOn, amount]
 tones:
   Job.status:
     inProgress: warning
     done: success
+    canceled: danger
   Invoice.status:
     sent: warning
     paid: success
 theme:
-  preset: corporate
+  preset: workbench

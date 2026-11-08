@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
-  name: Agency Pipeline
-  description: "A sales pipeline for our web agency: leads, deals and who follows up when."
+  name: Pipeline
+  description: "A sales pipeline for a six-person web agency: leads, deals and who follows up when."
   currency: EUR
+  timezone: Europe/Berlin
 models:
   Lead:
     fields:
@@ -10,13 +11,14 @@ models:
       company: string
       email: email
       phone: phone
-      source: referral | website | event | outreach | other
+      website: url
+      source: referral | website | event | outbound | other
       status: new | contacted | qualified | lost
-      assignedTo: User
-      nextFollowUp: date
+      assignee: User
       notes: text
       deals: Deal[]
-    ownedBy: assignedTo
+      followUps: FollowUp[]
+    ownedBy: assignee
     trash: true
   Deal:
     fields:
@@ -27,41 +29,82 @@ models:
         type: money
         min: 0
       expectedClose: date
-      assignedTo: User
-      nextFollowUp: date
-      followUpNote: string
+      closedOn:
+        type: date
+        by: app
+      assignee: User
       notes: text
-    ownedBy: assignedTo
+    ownedBy: assignee
+    trash: true
+  FollowUp:
+    fields:
+      lead: Lead!
+      dueOn: date! = TODAY()
+      assignee: User
+      kind: call | email | meeting | other
+      note: text
+      done: bool
+    ownedBy: assignee
     trash: true
 pages:
-  deals:
-    crud: Deal
-    search: [title, lead]
-    filters: [stage, assignedTo, nextFollowUp, expectedClose]
-    actions: [markWon, markLost]
+  start:
+    dashboard:
+      followUpsDue:
+        list: FollowUp
+        where:
+          done: false
+        limit: 10
+      openDeals:
+        count: Deal
+        where:
+          stage: [discovery, proposal, negotiation]
+      pipelineValue:
+        sum: Deal.value
+        where:
+          stage: [discovery, proposal, negotiation]
+      dealsByStage:
+        count: Deal
+        by: stage
   leads:
     crud: Lead
     search: [name, company, email]
-    filters: [status, source, assignedTo, nextFollowUp]
+    filters: [status, source, assignee]
+    sortable: [name, company, createdAt]
+  deals:
+    crud: Deal
+    search: [title]
+    filters: [stage, assignee, expectedClose]
+    sortable: [expectedClose, value, title]
+    actions: [winDeal, loseDeal]
   followUps:
-    calendar:
-      model: Deal
-      starts: nextFollowUp
+    crud: FollowUp
+    search: [note]
+    filters: [done, assignee, dueOn, kind]
+    defaultFilter:
+      done: false
+    sortable: [dueOn]
+    actions: [markDone]
   team:
     users: manage
 actions:
-  markWon:
+  winDeal:
     on: Deal
     when:
       stage: [discovery, proposal, negotiation]
     set:
       stage: won
-    intent: Mark the deal as won.
-  markLost:
+      closedOn: TODAY()
+  loseDeal:
     on: Deal
     when:
       stage: [discovery, proposal, negotiation]
     set:
       stage: lost
-    intent: Mark the deal as lost.
-navigation: [deals, leads, followUps, team]
+      closedOn: TODAY()
+  markDone:
+    on: FollowUp
+    when:
+      done: false
+    set:
+      done: true
+navigation: [start, leads, deals, followUps, team]

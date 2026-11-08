@@ -1,0 +1,36 @@
+smithableUx: 0.1
+theme:
+  preset: helpdesk
+pages:
+  home:
+    sections:
+      recent:
+        columns: 3
+      planned:
+        columns: 3
+  incidents:
+    record:
+      lists:
+        updates: thread
+      first: thread
+      subtitle: component.name
+      detail: [status, detectedAt]
+      summary:
+        dates: [detectedAt, resolvedAt]
+  components:
+    record:
+      subtitle: status
+  maintenance:
+    record:
+      subtitle: component.name
+      detail: [startsAt, endsAt]
+      summary:
+        dates: [startsAt, endsAt]
+tones:
+  Component.status:
+    operational: success
+    degraded: warning
+    down: danger
+    maintenance: warning
+  Incident.status:
+    resolved: success

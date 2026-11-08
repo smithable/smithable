@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Habit Tracker
-  description: Keep track of your habits with daily check-ins and streaks.
+  description: Keeps each person's habits, their daily check-ins and their streaks, for the habit app and its users.
   timezone: Europe/Stockholm
 models:
   Habit:
@@ -9,39 +9,47 @@ models:
       name: string!
       description: text
       frequency: daily | weekdays | weekly
-      status: active | paused | archived
+      targetPerDay:
+        type: int!
+        min: 1
+        max: 100
+        default: 1
       startedOn: date! = TODAY()
+      status: active | paused | archived
       currentStreak:
         type: int
         by: app
         default: 0
-      lastCheckIn:
-        type: date
+        description: The number of consecutive days (or periods, by frequency) up to today with a check-in for this habit; filled by the app from the check-ins.
+      longestStreak:
+        type: int
         by: app
+        default: 0
+        description: The longest run of consecutive check-in days this habit has ever had; filled by the app from the check-ins.
       checkIns: CheckIn[]
   CheckIn:
     fields:
       habit: Habit!
-      date: date! = TODAY()
+      day: date! = TODAY()
+      count:
+        type: int!
+        min: 1
+        max: 100
+        default: 1
       note: text
-    unique: [{ fields: [habit, date], scope: owner }]
+    unique: [{ fields: [habit, day], scope: owner }]
 pages:
   habits:
     crud: Habit
-    actions: [resetStreak, pause, resume, checkInHabit]
     search: [name, description]
     filters: [status, frequency]
     defaultFilter:
       status: active
-  checkIns:
+    actions: [pause, resume, archive]
+  check-ins:
     crud: CheckIn
-    filters: [habit, date]
+    filters: [habit, day]
 actions:
-  resetStreak:
-    on: Habit
-    set:
-      currentStreak: 0
-    intent: Start the habit's streak over after a missed day.
   pause:
     on: Habit
     when:
@@ -51,17 +59,12 @@ actions:
   resume:
     on: Habit
     when:
-      status: paused
+      status: [paused, archived]
     set:
       status: active
-  checkInHabit:
+  archive:
     on: Habit
     when:
-      status: active
+      status: [active, paused]
     set:
-      lastCheckIn: TODAY()
-    add:
-      CheckIn:
-        date: TODAY()
-        note:
-    intent: Check in on a habit for today.
+      status: archived

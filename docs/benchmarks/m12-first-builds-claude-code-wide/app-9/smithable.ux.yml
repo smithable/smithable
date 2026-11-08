@@ -1,23 +1,18 @@
 smithableUx: 0.1
 pages:
-  albums:
-    table:
-      columns: [title, artist, year, condition, pricePaid]
-      view: cards
-    record:
-      subtitle: artist
-      detail: [year, condition]
-    icon: layers
   artists:
     table:
       sort: name
-    icon: users
+  albums:
+    table:
+      columns: [title, artist, year, format, condition, pricePaid]
+      totals: [pricePaid]
+      mark: picture
+theme:
+  preset: ink-and-brass
 tones:
   Album.condition:
     mint: success
     nearMint: success
     good: warning
-    fair: warning
     poor: danger
-theme:
-  preset: ink-and-brass

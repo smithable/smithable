@@ -1,10 +1,10 @@
 {
   "description": "Bird sightings for our birdwatching club: species, place, date and who saw it.",
   "starter": "records",
-  "wordStarter": "api",
+  "wordStarter": "invoicing",
   "questions": [
-    "What can visitors see without signing in?",
-    "How should species be recorded?",
-    "What else should a sighting hold?"
+    "What can visitors who aren't signed in see?",
+    "Should species be a shared list that members pick from, or typed freely with each sighting?",
+    "Besides species, place, date and observer, what else should a sighting hold?"
   ]
 }

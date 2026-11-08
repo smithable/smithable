@@ -4,10 +4,21 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member: { pages: [omat-varaukset], create: [Booking] }
+  staff:
+    description: "Vastaanotto: hoitaa tunnit ja niiden varaukset."
+    pages: [tunnit, varaukset]
+    read: [Session, Booking]
+    create: [Session, Booking]
+    write: [Session, Booking]
+    delete: [Booking]
+  member:
+    description: Asiakas, joka varaa joogatunteja.
+    pages: [omat-varaukset]
+    create: [Booking]
 assistant:
   for: signed-in
 public:
-  pages: [home, lukujarjestys, tietosuoja]
+  pages: [home, lukujarjestys, privacy]
   read: [Instructor, Session, ClassType]
+defaultRole: member
 admins: [johan@smithable.ai]

@@ -1,9 +1,13 @@
 smithable: 0.1
 app:
-  name: Salong Sax & Kam
-  description: Tidsbokning hos frisörsalongens frisörer, som kunderna gör själva på nätet.
+  name: Klippt & Klart
+  description: Tidsbokning för en frisörsalong, där kunderna själva bokar tid hos en frisör på nätet.
   currency: SEK
   timezone: Europe/Stockholm
+  clock: 24h
+  date: day-month
+  week: monday
+  numbers: comma
 models:
   Service:
     fields:
@@ -19,8 +23,8 @@ models:
       timeOffs: TimeOff[]
     schedule:
       hours:
-        mon-fri: 09:00-17:00
-        sat: 10:00-14:00
+        mon-fri: 09:00-18:00
+        sat: 10:00-15:00
       breaks: 12:00-12:30
       gap: 10
       away: TimeOff
@@ -48,33 +52,6 @@ models:
       while:
         status: [requested, confirmed]
       cancelUntil: 12h
-pages:
-  home:
-    route: /
-    landing:
-      hero:
-      services:
-        records: Service
-      barbers:
-        records: Barber
-      footer:
-  appointments:
-    crud: Appointment
-    filters: [status]
-    actions: [confirm, cancel]
-  day:
-    calendar:
-      model: Appointment
-      starts: startsAt
-  services:
-    crud: Service
-  barbers:
-    crud: Barber
-  time-off:
-    crud: TimeOff
-  privacy:
-    route: /privacy
-    legal: privacy
 actions:
   confirm:
     on: Appointment
@@ -101,3 +78,30 @@ outgoing:
     when: confirm
     to: mail
     recipient: owner
+pages:
+  home:
+    route: /
+    landing:
+      hero:
+        button: appointments
+      services:
+        records: Service
+      barbers:
+        records: Barber
+      footer:
+  appointments:
+    crud: Appointment
+    filters: [status]
+  day:
+    calendar:
+      model: Appointment
+      starts: startsAt
+  services:
+    crud: Service
+  barbers:
+    crud: Barber
+  time-off:
+    crud: TimeOff
+  privacy:
+    route: /privacy
+    legal: privacy

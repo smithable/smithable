@@ -1,27 +1,20 @@
 smithable: 0.1
 app:
-  name: Fixdesk
-  description: "The IT team's help desk: tickets, their priorities and who handles them."
-  currency: EUR
-  timezone: Europe/Stockholm
+  name: IT Help Desk
+  description: "The IT team's tickets: what is wrong, how urgent it is and who is handling it."
+  timezone: Europe/Helsinki
 models:
-  SupportCase:
+  Ticket:
     fields:
       subject: string!
-      requesterEmail:
-        type: email!
-        locked: true
+      requesterEmail: email
       status: open | inProgress | closed | reopened
-      priority:
-        type: int!
-        min: 1
-        max: 5
-        default: 3
+      priority: low | normal | high | urgent
       assignee:
         type: User
         required:
           status: [inProgress, closed]
-      body: text
+      description: text
       attachments: files
       messages: Message[]
   Message:
@@ -32,10 +25,10 @@ models:
         by: app
         default: ME()
       attachments: files
-      supportCase: SupportCase!
+      ticket: Ticket!
 pages:
   tickets:
-    crud: SupportCase
+    crud: Ticket
     search: [subject, requesterEmail]
     filters: [status, priority, assignee]
     sortable: [priority, createdAt]
@@ -44,33 +37,33 @@ pages:
     users: manage
 actions:
   assignToMe:
-    on: SupportCase
+    on: Ticket
     when:
       assignee: not ME()
     set:
       assignee: ME()
     intent: "Take the ticket: you become its assignee."
   assignTo:
-    on: SupportCase
+    on: Ticket
     set:
       assignee:
     intent: Give the ticket to someone on the team.
   startWork:
-    on: SupportCase
+    on: Ticket
     when:
       status: [open, reopened]
     set:
       status: inProgress
     intent: Someone is working on the ticket now; it needs an assignee.
   close:
-    on: SupportCase
+    on: Ticket
     when:
       status: [open, inProgress, reopened]
     set:
       status: closed
     intent: The problem is solved.
   reopen:
-    on: SupportCase
+    on: Ticket
     when:
       status: closed
     set:

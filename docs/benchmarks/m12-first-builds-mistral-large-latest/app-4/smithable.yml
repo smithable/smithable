@@ -2,69 +2,77 @@ smithable: 0.1
 app:
   name: NeighborTools
   description: A tool library where neighbors lend each other tools.
+  timezone: Europe/Helsinki
 models:
   Tool:
     fields:
       name: string!
       photos: pictures!
       description: text!
-      category: gardening | woodworking | plumbing | electrical | automotive | cleaning | other
-      condition: new | likeNew | good | worn | broken
+      category: gardening | woodworking | cleaning | kitchen | power | hand | other
+      condition: new | likeNew | good | worn
       location: string
       available: bool = true
-      borrower:
-        type: User
-        locked:
-          available: false
-      dueBack: date
-  Borrowing:
+    review: [photos]
+  Loan:
     fields:
       tool: Tool!
       borrower: User!
-      borrowedOn: date = TODAY()
-      dueBack: date!
-      returnedOn: date
-      notes: text
+      borrowedAt: datetime = NOW()
+      dueAt: datetime
+      returnedAt: datetime
+      status: requested | approved | returned
 pages:
   tools:
     crud: Tool
-  myTools:
-    crud: Tool
-  borrowings:
-    crud: Borrowing
+    search: [name, description, location]
+    filters: [category, condition, available]
+    sortable: [name, createdAt]
+    favorites: true
+  loans:
+    crud: Loan
+    actions: [approveLoan, returnTool]
   home:
     route: /
     landing:
       hero:
       footer:
-      availableTools:
-        records: Tool
-        where:
-          available: true
   privacy:
     route: /privacy
     legal: privacy
-navigation: [tools, myTools, borrowings]
+  team:
+    users: manage
+  admin:
+    data: all
 actions:
-  borrow:
-    on: Tool
+  approveLoan:
+    on: Loan
     when:
-      available: true
+      status: requested
     set:
-      available: false
-      borrower: ME()
-      dueBack:
-    add:
-      Borrowing:
-        borrower: ME()
-        dueBack:
-    intent: Mark a tool as borrowed and create a borrowing record.
+      status: approved
   returnTool:
-    on: Tool
+    on: Loan
     when:
-      available: false
+      status: approved
     set:
-      available: true
-      borrower:
-      dueBack:
-    intent: Mark a tool as returned and available.
+      status: returned
+      returnedAt: NOW()
+outgoing:
+  loanRequested:
+    when: Loan created
+    where:
+      status: requested
+    to: mail
+    recipient: owner
+  loanApproved:
+    when: approveLoan
+    to: mail
+    recipient: borrower
+  loanDueSoon:
+    when: Loan changed
+    where:
+      status: approved
+    fields: [dueAt]
+    to: mail
+    recipient: borrower

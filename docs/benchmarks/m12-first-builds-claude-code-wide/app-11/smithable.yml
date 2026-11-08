@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
-  name: IT Status Board
-  description: "The state of our IT systems: what is down, what is being fixed and when it is back."
+  name: IT Status
+  description: An internal board showing which of our IT systems are down, what is being fixed, and when they are back.
+  timezone: Europe/Helsinki
 models:
   Component:
     fields:
@@ -34,8 +35,20 @@ models:
       endsAt: datetime!
       description: text
 pages:
-  components:
-    crud: Component
+  home:
+    route: /
+    landing:
+      hero:
+        button: incidents
+      systems:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      planned:
+        records: Maintenance
+      footer:
   incidents:
     crud: Incident
     filters: [status, component]
@@ -44,19 +57,9 @@ pages:
     actions: [identified, monitoring, resolve]
   maintenance:
     crud: Maintenance
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      down:
-        count: Component
-        where:
-          status: [down, degraded]
-      latest:
-        list: Incident
-        limit: 5
+  components:
+    crud: Component
+    filters: [status]
   team:
     users: manage
 actions:
@@ -71,7 +74,7 @@ actions:
         at: NOW()
         status: identified
         message: The cause is found and a fix is being worked on.
-    intent: The cause is found; the incident moves to identified, with an update saying so.
+    intent: The cause is found; the incident moves to identified with an update.
   monitoring:
     on: Incident
     when:
@@ -83,7 +86,7 @@ actions:
         at: NOW()
         status: monitoring
         message: A fix is out. We are watching before we close this.
-    intent: A fix is out; the incident is watched before it is closed, with an update saying so.
+    intent: A fix is out and being watched, with an update saying so.
   resolve:
     on: Incident
     when:
@@ -95,5 +98,5 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: resolved
-        message: This incident is resolved. The system is back.
+        message: This is resolved and the system is back.
     intent: The incident is over and the system is back, with an update saying so.

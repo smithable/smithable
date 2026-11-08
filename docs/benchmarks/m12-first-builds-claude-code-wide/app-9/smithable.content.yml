@@ -2,17 +2,20 @@ smithableContent: 0.1
 models:
   Album:
     fields:
+      format:
+        values:
+          lp: LP
+          doubleLp: Double LP
+          ep: EP
+          single: Single
       condition:
         values:
           mint: Mint (M)
-          nearMint: Near mint (NM)
-          veryGoodPlus: Very good plus (VG+)
-          veryGood: Very good (VG)
+          nearMint: Near Mint (NM)
+          veryGoodPlus: Very Good Plus (VG+)
+          veryGood: Very Good (VG)
           good: Good (G)
-          fair: Fair (F)
           poor: Poor (P)
-      pricePaid:
-        label: What I paid
 logo:
   src: images/logo.webp
   alt: Three stacked cards

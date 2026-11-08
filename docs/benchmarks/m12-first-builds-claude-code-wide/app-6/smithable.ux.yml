@@ -1,6 +1,11 @@
 smithableUx: 0.1
 theme:
-  preset: warm-service
+  preset: paperwork
+pages:
+  invoices:
+    record:
+      lists:
+        lines: inline
 tones:
   Invoice.status:
     paid: success

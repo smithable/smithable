@@ -5,6 +5,11 @@ pages:
       view: cards
     record:
       pictures: aside
+    icon: book
+  shoppingLists:
+    table:
+      sort: neededBy
+    icon: cart
 tones:
   ShoppingList.status:
     done: success

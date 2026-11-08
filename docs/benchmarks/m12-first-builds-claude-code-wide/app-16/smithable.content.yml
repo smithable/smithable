@@ -1,8 +1,17 @@
 smithableContent: 0.1
 models:
-  WaitingEntry:
+  WaitingListEntry:
     label: Waiting list entry
     pluralLabel: Waiting list
+actions:
+  markPaid:
+    label: Mark paid
+  offerPlot:
+    label: Offer a plot
+  accept:
+    label: Accepted
+  withdraw:
+    label: Withdraw
 logo:
   src: images/logo.webp
   alt: Three stacked cards

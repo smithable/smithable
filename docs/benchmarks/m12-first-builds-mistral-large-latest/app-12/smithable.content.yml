@@ -1,6 +1,8 @@
 smithableContent: 0.1
 pages:
   home:
+    footer:
+      items: [{ label: Status, link: / }, { label: History, link: /history }, { label: Privacy, link: /privacy }]
     hero:
       image:
         src: images/hero.webp

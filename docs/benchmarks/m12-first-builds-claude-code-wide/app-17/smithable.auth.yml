@@ -3,8 +3,15 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin:
-    description: Salongen. Sköter tjänsterna, frisörerna och deras ledighet; bekräftar bokningar.
+  admin: all
+  staff:
+    description: En frisör. Sköter dagen, bekräftar och avbokar tider och lägger in sin ledighet.
+    pages: [day, appointments, time-off]
+    read: [Appointment, TimeOff]
+    create: [Appointment, TimeOff]
+    write: [Appointment, TimeOff]
+    delete: [TimeOff]
+    actions: [confirm, cancel]
   member:
     description: En kund som bokar tid.
     pages: [appointments]

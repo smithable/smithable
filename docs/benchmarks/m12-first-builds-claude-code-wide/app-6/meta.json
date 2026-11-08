@@ -3,8 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "booking",
   "questions": [
-    "Can households open the app to see their own invoices, or is it only for the three of you?",
+    "Should households be able to sign in and see their own invoices?",
     "What should an invoice hold?",
-    "Do you also want to record payments against invoices?"
+    "Do you want to track payments on each invoice?"
   ]
 }

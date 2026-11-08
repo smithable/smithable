@@ -1,15 +1,13 @@
 smithableAuth: 0.1
 signIn:
   providers: [email]
-  selfSignUp: false
-defaultAccess: shared
+defaultAccess: private
 roles:
   admin: all
-  organizer: all
+  member: { pages: all, create: all }
 assistant:
   for: signed-in
 public:
-  pages: [home, talks]
-  read: [Talk]
-defaultRole: organizer
+  pages: [home, talks, speakers, privacy]
+  read: [Talk, Speaker]
 admins: [johan@smithable.ai]

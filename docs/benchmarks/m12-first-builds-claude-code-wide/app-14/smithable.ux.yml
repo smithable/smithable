@@ -2,17 +2,18 @@ smithableUx: 0.1
 pages:
   guests:
     table:
-      columns: [name, rsvp, meal, table, side]
+      columns: [name, party, answer, meal, table]
       sort: name
     icon: users
   tables:
     table:
       sort: name
-    record:
-      subtitle: seats
+      columns: [name, seats]
     icon: layers
+  overview:
+    icon: chart
 tones:
-  Guest.rsvp:
+  Guest.answer:
     attending: success
     waiting: warning
     declined: danger

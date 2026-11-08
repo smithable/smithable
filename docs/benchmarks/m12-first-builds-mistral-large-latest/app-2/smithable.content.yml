@@ -1,17 +1,104 @@
-# Visible text. Only what differs from the texts Smithable derives from names.
 smithableContent: 0.1
-logo: { src: images/logo.webp, alt: Two interlinked rings, generated: true }
-
-models:
-  Customer:
-    fields:
-      segment:
-        values: { smb: Small business }
-      creditLimit:
-        help: Orders are held when the outstanding balance goes above this amount.
-  Order:
-    fields:
-      placedAt: { label: Placed on }
-
 pages:
-  team: { subtitle: Who has access and who is invited. }
+  companies:
+    title: Companies
+    subtitle: Manage your business relationships
+  contacts:
+    title: Contacts
+    subtitle: People you work with
+  deals:
+    title: Deals
+    subtitle: Opportunities in progress
+  follow-ups:
+    title: Follow-ups
+    subtitle: What needs your attention
+  start:
+    title: Start
+    subtitle: Your day at a glance
+models:
+  Company:
+    label: Company
+    pluralLabel: Companies
+    fields:
+      name:
+        label: Name
+      email:
+        label: Email
+      phone:
+        label: Phone
+      segment:
+        label: Segment
+        values:
+          smb: SMB
+          enterprise: Enterprise
+          government: Government
+      creditLimit:
+        label: Credit limit
+      notes:
+        label: Notes
+      accountManager:
+        label: Account manager
+  Contact:
+    label: Contact
+    pluralLabel: Contacts
+    fields:
+      firstName:
+        label: First name
+      lastName:
+        label: Last name
+      email:
+        label: Email
+      phone:
+        label: Phone
+      company:
+        label: Company
+      title:
+        label: Title
+      notes:
+        label: Notes
+  Deal:
+    label: Deal
+    pluralLabel: Deals
+    fields:
+      title:
+        label: Title
+      company:
+        label: Company
+      contact:
+        label: Contact
+      status:
+        label: Status
+        values:
+          prospect: Prospect
+          negotiation: Negotiation
+          closedWon: Closed won
+          closedLost: Closed lost
+      amount:
+        label: Amount
+      expectedCloseDate:
+        label: Expected close date
+      notes:
+        label: Notes
+  FollowUp:
+    label: Follow-up
+    pluralLabel: Follow-ups
+    fields:
+      company:
+        label: Company
+      contact:
+        label: Contact
+      deal:
+        label: Deal
+      dueOn:
+        label: Due on
+      done:
+        label: Done
+      note:
+        label: Note
+actions:
+  mergeCompanies:
+    label: Merge companies
+logo:
+  src: images/logo.webp
+  alt: Two interlinked rings
+  generated: true

@@ -1,15 +1,10 @@
 smithableUx: 0.1
-pages:
-  jobs:
-    table:
-      sort: closesOn
-      columns: [title, employer, trade, jobType, location, closesOn, status]
 tones:
   Job.status:
     open: success
   Application.status:
-    accepted: success
+    shortlisted: warning
+    hired: success
     declined: danger
-    reviewing: warning
 theme:
-  preset: navy
+  preset: corporate

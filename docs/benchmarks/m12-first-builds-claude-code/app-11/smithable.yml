@@ -1,8 +1,8 @@
 smithable: 0.1
 app:
   name: API Status
-  description: Is our API working? Live state of its services, incidents and planned maintenance.
-  timezone: UTC
+  description: Is our API working? Live status, incidents and planned maintenance.
+  timezone: Etc/UTC
 models:
   Component:
     fields:
@@ -34,18 +34,6 @@ models:
       endsAt: datetime!
       description: text
 pages:
-  overview:
-    dashboard:
-      open:
-        count: Incident
-        where:
-          status: [investigating, identified, monitoring]
-      perMonth:
-        count: Incident
-        by: detectedAt
-      latest:
-        list: Incident
-        limit: 5
   incidents:
     crud: Incident
     filters: [status, component]
@@ -66,16 +54,28 @@ pages:
         records: Incident
         where:
           status: [investigating, identified, monitoring]
-      planned:
-        records: Maintenance
       recent:
         records: Incident
         where:
           status: resolved
+      planned:
+        records: Maintenance
       footer:
   privacy:
     route: /privacy
     legal: privacy
+  overview:
+    dashboard:
+      open:
+        count: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      perMonth:
+        count: Incident
+        by: detectedAt
+      latest:
+        list: Incident
+        limit: 5
   team:
     users: manage
 actions:

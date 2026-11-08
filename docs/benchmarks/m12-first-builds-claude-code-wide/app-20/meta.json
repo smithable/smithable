@@ -3,9 +3,9 @@
   "starter": "booking",
   "wordStarter": "records",
   "questions": [
-    "Kuka voi varata tunteja?",
+    "Kuka voi varata tunnin?",
     "Mitä vierailija näkee kirjautumatta?",
-    "Liittyykö varauksiin sarjakortteja tai jäsenyyksiä?"
+    "Tarvitaanko varausten lisäksi muita tietoja?"
   ],
   "lang": "fi"
 }

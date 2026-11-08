@@ -1,5 +1,30 @@
 smithableContent: 0.1
 language: sv
+pages:
+  home:
+    features:
+      items: [{ title: Fota och lägg upp, text: "Ta några bilder, skriv vad det är och sätt ett pris. Klart på en minut." }, { title: Fynda nära dig, text: "Bläddra bland grannarnas saker, sök på det du letar efter och spara dina favoriter." }, { title: Kontakta säljaren direkt, text: Hittar du något du vill ha skickar du ett meddelande till säljaren och bestämmer var ni ses. }]
+      title: Så funkar loppisen
+    hero:
+      title: Ge dina saker ett nytt hem
+      subtitle: "Vår loppis på nätet: lägg upp det du vill sälja med bilder och pris, och fynda bland andras saker."
+      button: Se vad som säljs
+      secondButton: Sälj något
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+    title: Välkommen
+  catalog:
+    title: Till salu
+  myItems:
+    title: Mina saker
+  saved:
+    title: Sparade
+  review:
+    title: Granska bilder
+  privacy:
+    title: Integritet
 models:
   Item:
     label: Sak
@@ -19,43 +44,23 @@ models:
           furniture: Möbler
           clothes: Kläder
           books: Böcker
-          kids: Barn
           kitchen: Kök
+          toys: Leksaker
           electronics: Elektronik
           other: Övrigt
       condition:
         label: Skick
         values:
           likeNew: Som ny
-          good: Bra skick
+          good: Bra
           worn: Sliten
       place:
         label: Plats
       available:
         label: Till salu
-pages:
-  catalog:
-    title: Alla saker
-  myItems:
-    title: Mina saker
-  saved:
-    title: Sparade
-  review:
-    title: Granska bilder
-  home:
-    title: Välkommen
-    hero:
-      title: Fynda på vår loppis
-      subtitle: Lägg upp det du vill sälja med bilder och pris, eller hitta något nytt bland grannarnas saker.
-      button: Se alla saker
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-        generated: true
-    latest:
-      title: Senast upplagt
-  privacy:
-    title: Integritet
+actions:
+  markSold:
+    label: Markera som såld
 logo:
   src: images/logo.webp
   alt: A flower of five round petals

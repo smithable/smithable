@@ -8,6 +8,6 @@ pages:
     table:
       columns: [species, place, seenOn, observer, count]
       sort: -seenOn
-    icon: calendar
+    icon: list
 theme:
   preset: woodland

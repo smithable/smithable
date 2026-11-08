@@ -1,3 +1,16 @@
 smithableUx: 0.1
 theme:
   preset: warm-service
+pages:
+  home:
+    sections:
+      featured:
+        layout: cards
+        columns: 3
+  recipes:
+    form:
+      aside: summary
+      sections: [{ name: basic, fields: [name, kind, servings, prepTime, cookTime, summary] }, { name: instructions, fields: [instructions] }]
+    record:
+      summary:
+        dates: [addedOn]

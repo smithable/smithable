@@ -1,16 +1,16 @@
 smithable: 0.1
 app:
-  name: Tidy Ledger
-  description: "Monthly invoicing for a small cleaning company: households, their invoices and what has been paid."
+  name: Sparkle Ledger
+  description: "Monthly invoicing for a small cleaning company: its households, their invoices and what has been paid."
   currency: EUR
+  timezone: Europe/Stockholm
 models:
-  Household:
+  Client:
     fields:
       name: string!
       email: email!
       phone: phone
       address: text
-      notes: text
       invoices: Invoice[]
   InvoiceLine:
     fields:
@@ -24,7 +24,7 @@ models:
   Invoice:
     fields:
       number: string! unique
-      household: Household!
+      client: Client!
       issuedOn: date! = TODAY()
       dueOn: date!
       status: draft | sent | paid | overdue
@@ -34,16 +34,15 @@ models:
         formula: SUM(lines.amount)
 pages:
   households:
-    crud: Household
+    crud: Client
     search: [name, email, phone]
-  invoice-lines:
-    crud: InvoiceLine
-  team:
-    users: manage
+    sortable: [name]
   invoices:
     crud: Invoice
-    filters: [household, status, issuedOn]
-    actions: [markSent, markPaid, markOverdue, invoiceNextMonth]
+    search: [number]
+    filters: [client, status, issuedOn]
+    sortable: [issuedOn, dueOn, number]
+    actions: [markSent, markPaid, markOverdue, nextMonth]
   overview:
     dashboard:
       outstanding:
@@ -64,6 +63,9 @@ pages:
       latest:
         list: Invoice
         limit: 5
+    period: issuedOn
+  team:
+    users: manage
 actions:
   markSent:
     on: Invoice
@@ -86,11 +88,11 @@ actions:
     set:
       status: overdue
     intent: The invoice is late.
-  invoiceNextMonth:
+  nextMonth:
     on: Invoice
     copy:
-      status: draft
       number:
+      status: draft
       issuedOn: TODAY()
       dueOn:
     with: [lines]
@@ -106,4 +108,4 @@ outgoing:
   invoiceSent:
     when: markSent
     to: mail
-    recipient: household.email
+    recipient: client.email

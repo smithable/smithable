@@ -5,3 +5,7 @@ pages:
       view: cards
 theme:
   preset: craft
+tones:
+  Item.condition:
+    likeNew: success
+    worn: warning

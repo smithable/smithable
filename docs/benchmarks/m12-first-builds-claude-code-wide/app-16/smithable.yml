@@ -1,9 +1,9 @@
 smithable: 0.1
 app:
   name: Allotment Society
-  description: Keeps track of who has which plot, the waiting list for plots and each member's yearly fee.
+  description: Keeps track of who has which plot, the waiting list for a plot and each member's yearly fee.
   currency: EUR
-  timezone: Europe/Mariehamn
+  timezone: Europe/Helsinki
 models:
   Member:
     fields:
@@ -12,56 +12,59 @@ models:
       phone: phone
       address: string
       joinedOn: date! = TODAY()
-      status: active | left
+      status: active | former
       notes: text
       plots: Plot[]
       fees: Fee[]
   Plot:
     fields:
       number: string! unique
-      area: string
-      sizeSqm: int
-      status: let | vacant
-      member: Member
-      since: date
+      size: int
+      location: string
+      status: vacant | let | reserved
+      member:
+        type: Member
+        required:
+          status: let
+      letSince: date
       notes: text
     namedBy: number
-  WaitingEntry:
+  WaitingListEntry:
     fields:
       name: string!
       email: email
       phone: phone
       appliedOn: date! = TODAY()
       wish: text
-      status: waiting | offered | allotted | withdrawn
+      status: waiting | offered | accepted | withdrawn
   Fee:
     fields:
       member: Member!
       year: int!
       amount: money!
-      status: due | paid
+      status: unpaid | paid
       paidOn: date
     namedBy: [member, year]
+    unique: [{ fields: [member, year], scope: app }]
 pages:
   plots:
     crud: Plot
-    search: [number, area, notes]
+    search: [number, location]
     filters: [status, member]
   members:
     crud: Member
     search: [name, email, phone]
     filters: [status]
-    defaultFilter:
-      status: active
-  waitingList:
-    crud: WaitingEntry
-    filters: [status, appliedOn]
+  waiting-list:
+    crud: WaitingListEntry
+    search: [name, email]
+    filters: [status]
     defaultFilter:
       status: [waiting, offered]
-    actions: [offerPlot, markAllotted, withdraw]
+    actions: [offerPlot, accept, withdraw]
   fees:
     crud: Fee
-    filters: [status, year, member]
+    filters: [year, status, member]
     actions: [markPaid]
   team:
     users: manage
@@ -69,29 +72,25 @@ actions:
   markPaid:
     on: Fee
     when:
-      status: due
+      status: unpaid
     set:
       status: paid
       paidOn: TODAY()
-    intent: Record that the yearly fee has been paid.
   offerPlot:
-    on: WaitingEntry
+    on: WaitingListEntry
     when:
       status: waiting
     set:
       status: offered
-    intent: Mark that a plot has been offered to this applicant.
-  markAllotted:
-    on: WaitingEntry
+  accept:
+    on: WaitingListEntry
     when:
-      status: [waiting, offered]
+      status: offered
     set:
-      status: allotted
-    intent: Mark that the applicant has been given a plot.
+      status: accepted
   withdraw:
-    on: WaitingEntry
+    on: WaitingListEntry
     when:
       status: [waiting, offered]
     set:
       status: withdrawn
-    intent: Take the applicant off the waiting list.

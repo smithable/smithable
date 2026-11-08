@@ -3,8 +3,7 @@
   "starter": "booking",
   "wordStarter": "booking",
   "questions": [
-    "How do people book a class?",
-    "Who manages the classes and the schedule?",
-    "Should a class have a limited number of spots?"
+    "Do people need an account to book a class?",
+    "Who manages the schedule, classes and teachers?"
   ]
 }

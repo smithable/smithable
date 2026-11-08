@@ -4,16 +4,9 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member:
-    description: Can view and create shopping lists.
-    pages: all
-    create: [ShoppingList]
-    write: [ShoppingList]
-    delete: [ShoppingList]
+  member: { pages: all, create: [ShoppingList, ShoppingListItem], write: [ShoppingList, ShoppingListItem] }
 assistant:
   for: signed-in
 public:
-  pages: [home, recipes]
-  read: [Recipe]
-defaultRole: member
+  pages: [home, privacy]
 admins: [johan@smithable.ai]

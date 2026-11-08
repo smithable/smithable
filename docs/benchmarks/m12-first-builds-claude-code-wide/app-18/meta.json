@@ -3,9 +3,9 @@
   "starter": "invoicing",
   "wordStarter": "records",
   "questions": [
-    "Vilka ska använda appen?",
-    "Ska kunderna kunna se något själva?",
-    "Vad ska en offert innehålla?"
+    "Vilka i firman ska använda appen?",
+    "Ska kunderna kunna se något utan att logga in?",
+    "Hur hänger offerter och fakturor ihop?"
   ],
   "lang": "sv"
 }

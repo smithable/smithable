@@ -4,4 +4,4 @@ pages:
     table:
       view: cards
 theme:
-  preset: craft
+  preset: playful

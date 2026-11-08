@@ -1,9 +1,13 @@
 smithable: 0.1
 app:
   name: Hofladen
-  description: "Unser kleiner Hofladen: Produkte vorbestellen und zur passenden Abholzeit am Hof abholen."
+  description: Der Hofladen zeigt sein Sortiment und seine Abholzeiten, Kunden bestellen vor und holen ab.
   currency: EUR
   timezone: Europe/Berlin
+  clock: 24h
+  date: day-month
+  week: monday
+  numbers: comma
 models:
   Product:
     fields:
@@ -14,17 +18,12 @@ models:
       category: vegetables | fruit | eggs | dairy | meat | bakery | other
       picture: picture
       available: bool = true
-  PickupTime:
-    fields:
-      day: date!
-      hours: string!
-      note: text
   Order:
     fields:
       name: string!
       phone: phone!
       email: email
-      pickup: PickupTime
+      wanted: datetime
       note: text
       status: new | accepted | ready | collected | declined
       reason: text
@@ -41,13 +40,16 @@ models:
       amount:
         type: money
         formula: quantity * unitPrice
+  PickupTime:
+    fields:
+      day: date!
+      hours: string!
+      note: text
 pages:
   bestellungen:
     crud: Order
-    filters: [status, pickup]
-    sortable: [createdAt]
-    defaultFilter:
-      status: [new, accepted, ready]
+    filters: [status]
+    sortable: [createdAt, wanted]
     actions: [accept, ready, collected, decline]
   produkte:
     crud: Product
@@ -55,16 +57,16 @@ pages:
     actions: [soldOut, backOn]
   abholzeiten:
     crud: PickupTime
-  abholung:
-    route: /abholung
+  hofladen:
+    route: /hofladen
     landing:
       hero:
-      zeiten:
+      features:
+      abholung:
         records: PickupTime
-        view: table
       footer:
-  datenschutz:
-    route: /datenschutz
+  privacy:
+    route: /privacy
     legal: privacy
   team:
     users: manage
@@ -75,28 +77,28 @@ actions:
       available: true
     set:
       available: false
-    intent: Heute nicht mehr vorrätig.
+    intent: Heute ist nichts mehr davon da.
   backOn:
     on: Product
     when:
       available: false
     set:
       available: true
-    intent: Kann wieder bestellt werden.
+    intent: Das Produkt kann wieder bestellt werden.
   accept:
     on: Order
     when:
       status: new
     set:
       status: accepted
-    intent: Die Vorbestellung wird angenommen.
+    intent: Der Hofladen nimmt die Vorbestellung an.
   ready:
     on: Order
     when:
       status: accepted
     set:
       status: ready
-    intent: Die Bestellung liegt zur Abholung bereit.
+    intent: Die Bestellung ist gepackt und liegt zur Abholung bereit.
   collected:
     on: Order
     when:
@@ -112,16 +114,4 @@ actions:
       status: declined
       reason:
     intent: "Die Bestellung kann nicht erfüllt werden: Grund angeben."
-outgoing:
-  orderPlaced:
-    when: Order created
-    to: mail
-    recipient: admin
-  orderAccepted:
-    when: accept
-    to: mail
-    recipient: email
-  orderReady:
-    when: ready
-    to: mail
-    recipient: email
+navigation: [bestellungen, produkte, abholzeiten, team]

@@ -1,10 +1,10 @@
 {
   "description": "A town flea market site where anyone can post things to sell, with photos and a price.",
   "starter": "marketplace",
-  "wordStarter": "marketplace",
+  "wordStarter": "booking",
   "questions": [
-    "Do people need an account to post something for sale?",
-    "What can visitors see without signing in?",
-    "Besides photos and a price, what should a listing hold?"
+    "Can people browse listings without signing in?",
+    "How do buyers get in touch with a seller?",
+    "Besides photos and price, what should a listing hold?"
   ]
 }

@@ -4,6 +4,10 @@ app:
   description: Lägg upp saker du vill sälja på vår loppis, med bilder och pris, och hitta fynd från andra.
   currency: SEK
   timezone: Europe/Stockholm
+  clock: 24h
+  date: day-month
+  week: monday
+  numbers: comma
 models:
   Item:
     fields:
@@ -11,7 +15,7 @@ models:
       photos: pictures!
       description: text!
       price: money
-      category: furniture | clothes | books | kids | kitchen | electronics | other
+      category: furniture | clothes | books | kitchen | toys | electronics | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
@@ -22,6 +26,8 @@ pages:
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
+    defaultFilter:
+      available: true
     sortable: [price, createdAt]
     favorites: true
     contact: owner
@@ -34,14 +40,22 @@ pages:
   review:
     review: all
   home:
-    route: /welcome
+    route: /valkommen
     landing:
       hero:
-      latest:
-        records: Item
-        where:
-          available: true
+        button: catalog
+        secondButton: myItems
+      features:
       footer:
   privacy:
     route: /privacy
     legal: privacy
+actions:
+  markSold:
+    on: Item
+    when:
+      available: true
+    set:
+      available: false
+    intent: Säljaren markerar att saken är såld så att den inte längre visas som till salu.
+navigation: [catalog, myItems, saved, review]

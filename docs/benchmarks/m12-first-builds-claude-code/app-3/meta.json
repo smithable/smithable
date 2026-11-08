@@ -3,7 +3,8 @@
   "starter": "invoicing",
   "wordStarter": "invoicing",
   "questions": [
-    "Can an invoice be paid in several parts, or is each payment for one whole invoice?",
-    "Can clients see their invoices without signing in?"
+    "Who uses the app?",
+    "Can clients see their invoices without signing in?",
+    "How are payments recorded?"
   ]
 }

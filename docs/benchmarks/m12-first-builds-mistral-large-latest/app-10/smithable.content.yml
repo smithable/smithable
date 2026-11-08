@@ -2,7 +2,7 @@ smithableContent: 0.1
 pages:
   home:
     title: Family Recipes
-    subtitle: A collection of cherished family recipes and shopping lists.
+    subtitle: A collection of cherished family recipes with ingredients and shopping lists.
     hero:
       image:
         src: images/hero.webp
@@ -10,6 +10,10 @@ pages:
         generated: true
   recipes:
     title: Recipes
+    subtitle: Browse and manage your family recipes.
+  shopping-lists:
+    title: Shopping Lists
+    subtitle: Organize your grocery shopping.
 models:
   Recipe:
     label: Recipe
@@ -19,43 +23,57 @@ models:
         label: Name
       summary:
         label: Summary
-      ingredients:
-        label: Ingredients
-      instructions:
-        label: Instructions
-      prepTime:
-        label: Prep Time (minutes)
-      cookTime:
-        label: Cook Time (minutes)
+      kind:
+        label: Status
+        values:
+          general: General
+          favorite: Favorite
+      link:
+        label: Link
+      addedOn:
+        label: Added on
       servings:
         label: Servings
-      category:
-        label: Category
-        values:
-          breakfast: Breakfast
-          lunch: Lunch
-          dinner: Dinner
-          dessert: Dessert
-          snack: Snack
-          drink: Drink
-      difficulty:
-        label: Difficulty
-        values:
-          easy: Easy
-          medium: Medium
-          hard: Hard
-      favorite:
-        label: Favorite
+      prepTime:
+        label: Prep time (minutes)
+      cookTime:
+        label: Cook time (minutes)
+      instructions:
+        label: Instructions
+  Ingredient:
+    label: Ingredient
+    pluralLabel: Ingredients
+    fields:
+      name:
+        label: Name
+      amount:
+        label: Amount
+      unit:
+        label: Unit
   ShoppingList:
     label: Shopping List
     pluralLabel: Shopping Lists
     fields:
       name:
         label: Name
-      items:
-        label: Items
+      createdOn:
+        label: Created on
       completed:
         label: Completed
+  ShoppingListItem:
+    label: Item
+    pluralLabel: Items
+    fields:
+      ingredient:
+        label: Ingredient
+      amount:
+        label: Amount
+      unit:
+        label: Unit
+      list:
+        label: Shopping List
+      purchased:
+        label: Purchased
 logo:
   src: images/logo.webp
   alt: Three stacked cards

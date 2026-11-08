@@ -3,9 +3,9 @@
   "starter": "kiosk",
   "wordStarter": "records",
   "questions": [
-    "Wer gibt die Vorbestellungen ein?",
-    "Was sehen Besucher ohne Anmeldung?",
-    "Wie funktionieren die Abholzeiten?"
+    "Wer gibt die Vorbestellungen auf?",
+    "Wie werden die Abholzeiten festgelegt?",
+    "Was sollen die Produkte zeigen?"
   ],
   "lang": "de"
 }

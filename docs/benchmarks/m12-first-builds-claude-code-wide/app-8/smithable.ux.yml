@@ -3,8 +3,10 @@ pages:
   shelf:
     table:
       view: cards
+    record:
+      pictures: top
 tones:
   Item.status:
     available: success
 theme:
-  preset: quiet-workspace
+  preset: craft

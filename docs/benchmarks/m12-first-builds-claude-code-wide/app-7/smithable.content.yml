@@ -1,16 +1,13 @@
 smithableContent: 0.1
 pages:
   home:
+    features:
+      items: [{ title: Sell in minutes, text: "Snap a few photos, add a price and your item is up for the whole town to see." }, { title: Find bargains nearby, text: "Search and filter by category, condition and price to spot what you need just around the corner." }, { title: Talk to the seller, text: Send the seller a message straight from the listing and agree on when to meet. }, { title: Save your favorites, text: Tap the heart on anything you like and come back to it later. }]
     hero:
-      title: Your town's flea market, online
-      subtitle: Post what you no longer need with a few photos and a price, and find treasures from your neighbors.
-      button: Browse items
       image:
         src: images/hero.webp
-        alt: An outdoor market with stalls of vegetables and flowers
-        generated: true
-    latest:
-      title: Just posted
+        alt: People at tables under string lights by a food truck on a summer evening
+        generated: false
 logo:
   src: images/logo.webp
   alt: A price tag

@@ -3,8 +3,8 @@
   "starter": "crm",
   "wordStarter": "crm",
   "questions": [
-    "Can people outside the team do anything without signing in?",
-    "What is a lead?",
-    "What should a deal hold besides its stage?"
+    "Are leads and deals separate records, or does a lead turn into a deal?",
+    "What should a deal hold?",
+    "Should people outside the team be able to reach it without signing in?"
   ]
 }

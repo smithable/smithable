@@ -3,8 +3,14 @@ signIn:
   providers: [email]
 defaultAccess: private
 roles:
-  admin:
-    description: Studio staff. Manage the schedule, classes and teachers.
+  admin: all
+  staff:
+    description: Reception. Manages the schedule, bookings, and messages.
+    pages: [sessions, bookings, messages]
+    read: [Session, Booking, Message]
+    create: [Session, Booking]
+    write: [Session, Booking]
+    delete: [Booking]
   member:
     description: A student who books classes.
     pages: [my-bookings]
@@ -13,7 +19,7 @@ assistant:
   for: signed-in
 public:
   pages: [home, schedule, blog, about, privacy]
+  read: [Instructor, Session, { Post: { where: { status: published } } }, ClassType]
   create: [Message]
-  read: [ClassType, Instructor, Session, { Post: { where: { status: published } } }]
 defaultRole: member
 admins: [johan@smithable.ai]

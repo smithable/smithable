@@ -1,13 +1,16 @@
 smithable: 0.1
 app:
-  name: Yoga Studio
+  name: Harmony Yoga Studio
   description: Class schedule and online booking for a yoga studio.
+  currency: USD
+  timezone: America/New_York
 models:
   Instructor:
     fields:
       name: string!
       bio: markdown
       portrait: picture
+      sessions: Session[]
   Session:
     fields:
       instructor: Instructor!
@@ -57,17 +60,9 @@ actions:
     set:
       status: published
     intent: The post is out for everyone to read.
-timers:
-  remind:
-    on: Booking
-    at: 1 day before session.startsAt
-  publish:
-    on: Post
-    at: publishedOn
-    where:
-      status: draft
-    run: publish
 pages:
+  schedule:
+    crud: Session
   sessions:
     crud: Session
     sortable: [startsAt, capacity]
@@ -78,60 +73,76 @@ pages:
     crud: Instructor
   messages:
     crud: Message
-  posts:
+  blog:
     crud: Post
-    filters: [status]
   home:
     route: /
     landing:
       hero:
-        shortcuts: [schedule, blog]
-      footer:
+        button: schedule
+        secondButton: blog
       estimate:
-        custom: Estimate
+        custom: MonthlyPassCalculator
       gallery:
       faq:
+      callToAction:
+        button: schedule
       news:
         records: Post
       contact:
         form: Message
       classes:
         records: ClassType
-      callToAction:
-        button: schedule
-  schedule:
-    calendar: Session
-  blog:
-    articles: Post
+      footer:
   about:
     sections:
       intro:
         text:
       story:
-        text:
+        mediaText:
       team:
         records: Instructor
       faq:
   privacy:
     route: /privacy
     legal: privacy
+  posts:
+    crud: Post
+    filters: [status]
   my-bookings:
     crud: Booking
     sections:
       cancelling:
         text:
+  bookings:
+    crud: Booking
+    filters: [session.startsAt, session.classType]
+    defaultFilter:
+      session.startsAt: today
   admin:
     data: all
   class-types:
     crud: ClassType
-    filters: [level]
 navigation:
-  main: [sessions, instructors, messages, posts, home, schedule, blog, about, privacy, my-bookings, admin, class-types]
-  schedule: [schedule, my-bookings, sessions]
+  main: [schedule, sessions, instructors, messages, blog, home, about, privacy, posts, my-bookings, bookings, admin, class-types]
+  schedule: [schedule, my-bookings, sessions, bookings]
   messages: [messages]
   website: [blog, about, posts, home]
   admin: [admin]
   studioSetup: [class-types, instructors]
+timers:
+  morning:
+    every: day
+    at: 06:30
+  remind:
+    on: Booking
+    at: 1 day before session.startsAt
+  publish:
+    on: Post
+    at: publishedOn
+    where:
+      status: draft
+    run: publish
 outgoing:
   reminder:
     when: remind
@@ -149,3 +160,19 @@ outgoing:
     when: Booking deleted
     to: mail
     recipient: owner
+  sessionMoved:
+    when: Session changed
+    fields: [startsAt]
+    to: mail
+    recipient: bookings.owner
+    show: [classType, startsAt, instructor]
+    previous: true
+  todaysBookings:
+    when: morning
+    to: mail
+    recipient: admin
+    list:
+      model: Booking
+      when: session.startsAt
+      within: today
+      columns: [session, attendee]

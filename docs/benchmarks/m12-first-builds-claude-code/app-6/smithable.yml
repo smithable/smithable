@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Local Union Job Board
-  description: Job openings shared with union members, who apply online and follow their applications.
+  name: Union Jobs
+  description: Job posts from the local union, where members find work and apply.
   currency: USD
   timezone: America/New_York
 models:
@@ -9,33 +9,38 @@ models:
     fields:
       title: string!
       employer: string!
-      trade: construction | electrical | plumbing | manufacturing | transport | healthcare | office | other
-      jobType: fullTime | partTime | temporary | apprenticeship
       location: string
+      trade: string
+      jobType: fullTime | partTime | temporary | apprenticeship
       pay: string
       description: text!
-      startsOn: date
       closesOn: date
-      status: open | filled | closed
+      status: open | closed
       applications: Application[]
   Application:
     fields:
-      job: Job! unique
+      job:
+        type: Job!
+        unique: owner
       name: string!
       email: email!
       phone: phone
+      memberNumber: string
       message: text
       resume: file
-      status: submitted | reviewing | accepted | declined
+      status:
+        type: submitted | shortlisted | hired | declined
+        by: app
 pages:
   jobs:
+    route: /
     crud: Job
-    search: [title, employer, location, description]
-    filters: [trade, jobType, status, closesOn]
+    search: [title, employer, location, trade, description]
+    filters: [jobType, status, closesOn]
     defaultFilter:
       status: open
-    favorites: true
-    actions: [markFilled, closeJob]
+    sortable: [closesOn, createdAt]
+    actions: [closeJob, reopenJob]
   myApplications:
     crud: Application
     mine: true
@@ -43,59 +48,47 @@ pages:
     crud: Application
     filters: [job, status]
   home:
-    route: /
+    route: /welcome
     landing:
       hero:
         button: jobs
-      openJobs:
-        records: Job
-        where:
-          status: open
+        secondButton: myApplications
       features:
       faq:
       footer:
   privacy:
     route: /privacy
     legal: privacy
+  team:
+    users: manage
 actions:
-  markFilled:
-    on: Job
-    when:
-      status: open
-    set:
-      status: filled
   closeJob:
     on: Job
     when:
       status: open
     set:
       status: closed
-  startReview:
+  reopenJob:
+    on: Job
+    when:
+      status: closed
+    set:
+      status: open
+  shortlist:
     on: Application
     when:
       status: submitted
     set:
-      status: reviewing
-  accept:
+      status: shortlisted
+  hire:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
-      status: accepted
+      status: hired
   decline:
     on: Application
     when:
-      status: [submitted, reviewing]
+      status: [submitted, shortlisted]
     set:
       status: declined
-outgoing:
-  applicationReceived:
-    when: Application created
-    to: mail
-    recipient: admin
-  applicationAnswered:
-    when: Application changed
-    where:
-      status: [accepted, declined]
-    to: mail
-    recipient: email

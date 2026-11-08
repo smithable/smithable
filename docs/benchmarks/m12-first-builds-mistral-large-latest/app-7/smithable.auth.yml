@@ -8,6 +8,6 @@ roles:
 assistant:
   for: signed-in
 public:
-  pages: [home, teams, players, matches, privacy]
+  pages: [home, teams, players, matches]
   read: [Team, Player, Match]
 admins: [johan@smithable.ai]

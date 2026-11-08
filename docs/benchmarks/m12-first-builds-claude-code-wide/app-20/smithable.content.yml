@@ -1,4 +1,34 @@
 smithableContent: 0.1
+pages:
+  home:
+    features:
+      items: [{ title: Viikon tunnit yhdellä silmäyksellä, text: "Lukujärjestyksestä näet, mitä tunteja on tulossa, kuka ohjaa ja montako paikkaa on vielä vapaana." }, { title: Varaa paikkasi muutamalla napautuksella, text: Kirjaudu sähköpostillasi ja varaa tunti suoraan puhelimelta tai koneelta. }, { title: "Peru, jos suunnitelmat muuttuvat", text: "Omat varauksesi löytyvät yhdestä paikasta, ja voit perua ne ennen tunnin alkua." }, { title: Tutustu ohjaajiin, text: "Lue, keitä ohjaajamme ovat ja millaisia tunteja he vetävät." }]
+      title: Näin varaaminen toimii
+    hero:
+      title: Löydä oma tuntisi ja varaa paikkasi
+      subtitle: Katso viikon joogatunnit, tutustu ohjaajiin ja varaa paikka verkossa.
+      button: Katso lukujärjestys
+      image:
+        src: images/hero.webp
+        alt: Soft out-of-focus light through linen curtains in pale tones
+        generated: true
+    classes:
+      title: Tuntimme
+    title: Etusivu
+  lukujarjestys:
+    title: Lukujärjestys
+  omat-varaukset:
+    title: Omat varaukset
+  tunnit:
+    title: Tunnit
+  varaukset:
+    title: Varaukset
+  tuntityypit:
+    title: Tuntityypit
+  ohjaajat:
+    title: Ohjaajat
+  privacy:
+    title: Tietosuoja
 models:
   ClassType:
     label: Tuntityyppi
@@ -45,7 +75,7 @@ models:
       bookings:
         label: Varaukset
       placesLeft:
-        label: Vapaita paikkoja
+        label: Paikkoja jäljellä
   Booking:
     label: Varaus
     pluralLabel: Varaukset
@@ -54,40 +84,7 @@ models:
         label: Tunti
       attendee:
         label: Osallistuja
-pages:
-  home:
-    title: Etusivu
-    hero:
-      title: Löydä hetki itsellesi matolla
-      subtitle: Katso viikon joogatunnit ja varaa paikkasi verkossa muutamalla klikkauksella.
-      button: Katso lukujärjestys
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
-        generated: true
-    classes:
-      title: Tuntimme
-    instructors:
-      title: Ohjaajamme
-    callToAction:
-      title: Valmis aloittamaan?
-      text: Valitse sopiva tunti ja varaa paikkasi jo tänään.
-      button: Varaa tunti
-  lukujarjestys:
-    title: Lukujärjestys
-  omat-varaukset:
-    title: Omat varaukset
-  tunnit:
-    title: Tunnit
-  tuntityypit:
-    title: Tuntityypit
-  ohjaajat:
-    title: Ohjaajat
-  tietosuoja:
-    title: Tietosuoja
-  yllapito:
-    title: Ylläpito
 logo:
   src: images/logo.webp
-  alt: A flower of five round petals
+  alt: Three nested arcs
   generated: true

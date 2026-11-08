@@ -20,7 +20,7 @@ models:
       name:
         label: Namn
       bio:
-        label: Om mig
+        label: Om frisören
       portrait:
         label: Porträtt
       timeOffs:
@@ -68,15 +68,15 @@ pages:
   home:
     title: Hem
     hero:
-      title: Boka din klippning på nätet
-      subtitle: Välj tjänst, frisör och en tid som passar dig – när som helst på dygnet.
+      title: Boka din klippning när det passar dig
+      subtitle: Välj behandling, frisör och en ledig tid – direkt på nätet, dygnet runt.
       button: Boka tid
       image:
         src: images/hero.webp
         alt: Soft out-of-focus light through linen curtains in pale tones
         generated: true
     services:
-      title: Våra tjänster
+      title: Våra behandlingar
     barbers:
       title: Våra frisörer
   appointments:
@@ -93,5 +93,5 @@ pages:
     title: Integritet
 logo:
   src: images/logo.webp
-  alt: Two triangles as mountains
+  alt: A single wave line
   generated: true

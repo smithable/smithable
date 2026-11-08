@@ -3,8 +3,7 @@
   "starter": "invoicing",
   "wordStarter": "booking",
   "questions": [
-    "How do you price a quote?",
-    "How should payments be tracked?",
-    "What else should each job hold besides the price?"
+    "What should each quote hold?",
+    "How are payments recorded against a quote?"
   ]
 }

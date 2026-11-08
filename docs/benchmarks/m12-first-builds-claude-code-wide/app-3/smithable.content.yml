@@ -2,11 +2,18 @@ smithableContent: 0.1
 pages:
   home:
     hero:
+      title: Book your next haircut in a minute
+      subtitle: Choose the service, pick your favourite stylist and take any free time that suits you.
+      button: Book now
       image:
         src: images/hero.webp
         alt: A hair salon with mirrors, chairs and plants in daylight
         generated: true
+    services:
+      title: Our services
+    stylists:
+      title: Meet our stylists
 logo:
   src: images/logo.webp
-  alt: A calendar page
+  alt: Open scissors
   generated: true

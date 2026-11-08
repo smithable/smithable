@@ -1,6 +1,8 @@
 smithableContent: 0.1
 pages:
-  abholung:
+  hofladen:
+    features:
+      items: [{ title: Sortiment ansehen, text: "Sehen Sie, was gerade auf dem Hof geerntet, gebacken oder gelegt wurde." }, { title: Vorbestellen ohne Konto, text: "Waren auswählen, Name und Telefonnummer angeben, Wunschtermin wählen – fertig." }, { title: Bequem abholen, text: "Wir packen Ihre Bestellung, und Sie holen sie zur passenden Abholzeit ab." }]
     hero:
       image:
         src: images/hero.webp

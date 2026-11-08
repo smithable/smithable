@@ -3,6 +3,7 @@
   "starter": "api",
   "wordStarter": "api",
   "questions": [
-    "Besides a title, what should a task hold?"
+    "What should a task keep besides its title?",
+    "Should notes belong to a task, or only to a project?"
   ]
 }

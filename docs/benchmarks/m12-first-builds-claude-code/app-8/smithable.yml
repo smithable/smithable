@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Talkline Conference
-  description: Programme, speakers and talk registration for a conference.
+  name: Podium Conference
+  description: Programme, speakers and attendee registration for a conference.
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -15,61 +15,64 @@ models:
   Talk:
     fields:
       title: string!
-      summary: text
+      abstract: markdown
       speaker: Speaker!
-      format: talk | keynote | workshop | panel
-      room: string
       startsAt: datetime!
       durationMinutes: int! = 45
-      capacity: int! = 100
-      registrations: Registration[]
-      placesLeft:
-        type: int
-        formula: capacity - COUNT(registrations)
+      room: string
+      track: keynote | technical | business | workshop
   Registration:
     fields:
-      talk: Talk! unique
-      attendee: User
-    namedBy: talk
-    ownedBy: attendee
-    capacity:
-      per: talk
-      max: talk.capacity
-      closes: talk.startsAt
-      cancelUntil: talk.startsAt
+      fullName: string!
+      email: email! unique
+      company: string
+      ticket: standard | student | speaker
+      dietaryNeeds: text
+      status: confirmed | cancelled
+    namedBy: fullName
 pages:
   home:
     route: /
     landing:
       hero:
-        button: schedule
-        secondButton: speakers
-      features:
-      lineup:
+        button: my-registration
+        secondButton: programme
+      speakersShown:
         records: Speaker
+      features:
       faq:
       callToAction:
-        button: schedule
+        button: my-registration
       footer:
-  schedule:
+  programme:
     calendar:
       model: Talk
       starts: startsAt
-    filters: [format, speaker]
   talks:
     crud: Talk
-    filters: [format, speaker, startsAt]
+    filters: [speaker, track, startsAt]
   speakers:
     crud: Speaker
-  my-registrations:
+  my-registration:
     crud: Registration
+    mine: true
   registrations:
     crud: Registration
-    filters: [talk]
+    filters: [ticket, status]
+    search: [fullName, email, company]
   privacy:
     route: /privacy
     legal: privacy
+actions:
+  cancelRegistration:
+    on: Registration
+    when:
+      status: confirmed
+    set:
+      status: cancelled
+    intent: The attendee no longer comes to the conference.
 navigation:
-  main: [home, schedule, talks, speakers, my-registrations, registrations, privacy]
-  programme: [schedule, speakers, my-registrations, talks, registrations]
+  main: [home, programme, talks, speakers, my-registration, registrations, privacy]
+  conference: [programme, talks, speakers]
+  registration: [my-registration, registrations]
   website: [home]

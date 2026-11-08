@@ -1,32 +1,36 @@
 smithable: 0.1
 app:
-  name: Toolshed
-  description: "Neighbors share their tools: list what you own, find what you need, and keep track of what is lent out."
+  name: Toolshare
+  description: Neighbors lend each other the tools they own, from drills to ladders.
   currency: EUR
   timezone: Europe/Helsinki
 models:
   Tool:
     fields:
-      name: string!
+      title: string!
       photos: pictures
-      description: text
-      category: powerTools | handTools | garden | ladders | cleaning | camping | other
+      description: text!
+      category: power | hand | garden | ladders | cleaning | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
   Loan:
     fields:
       tool: Tool!
-      borrower: User!
+      borrowerName: string!
+      borrowerEmail: email
       lentOn: date!
       dueOn: date
-      status: lent | returned
+      status: out | returned
+      returnedOn:
+        type: date
+        by: app
       note: text
 pages:
   tools:
     route: /
     crud: Tool
-    search: [name, description, place]
+    search: [title, description, place]
     filters: [category, condition, available]
     favorites: true
     contact: owner
@@ -35,9 +39,9 @@ pages:
     mine: true
   loans:
     crud: Loan
-    filters: [status, tool]
+    filters: [status, dueOn]
     defaultFilter:
-      status: lent
+      status: out
     actions: [markReturned]
   home:
     route: /welcome
@@ -55,7 +59,9 @@ actions:
   markReturned:
     on: Loan
     when:
-      status: lent
+      status: out
     set:
       status: returned
-    intent: The lender records that the tool came back.
+      returnedOn: TODAY()
+    intent: Record that the borrowed tool came back.
+navigation: [tools, myTools, loans]
