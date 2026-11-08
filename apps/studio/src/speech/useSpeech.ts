@@ -118,16 +118,11 @@ export function useSpeech(
 
   // Recognition: where the policy keeps it on the device, only a browser that says it is.
   const Rec = browserProvider ? recognitionClass() : undefined;
-  // On the device only when the browser itself says so (Chrome's `available`); nothing assumed.
-  const [localHearing, setLocalHearing] = useState(false);
-  useEffect(() => {
-    if (!Rec?.available) return;
-    void Rec.available({ langs: ["en-US"], processLocally: true }).then(
-      (state) => setLocalHearing(state === "available"),
-      () => undefined,
-    );
-  }, [Rec]);
-  const canHear = Boolean(Rec) && (!onDeviceOnly || localHearing);
+  // On the device only when the browser itself says so (Chrome's `available`), asked only where
+  // the policy needs it and only at the mic's first press: the call is experimental, and crashed
+  // a headless Chromium page when made on every load. Unknown until asked; nothing assumed.
+  const [localHearing, setLocalHearing] = useState<boolean | undefined>(undefined);
+  const canHear = Boolean(Rec) && (!onDeviceOnly || localHearing !== false);
   const canSpeak = Boolean(synth) && voices.length > 0;
   const why = !providers.length
     ? "Speech is off for this project: its AI policy does not let a voice leave this computer."
@@ -188,6 +183,16 @@ export function useSpeech(
   const listen = useCallback(
     (hold: boolean) => {
       if (!Rec || !canHear || rec.current) return;
+      if (onDeviceOnly && localHearing === undefined) {
+        // Asked once, then listening starts if the browser hears on this computer.
+        void (Rec.available?.({ langs: ["en-US"], processLocally: true }) ?? Promise.resolve("no"))
+          .then(
+            (state) => state === "available",
+            () => false,
+          )
+          .then((local) => setLocalHearing(local));
+        return;
+      }
       stopSpeaking();
       const r = new Rec();
       r.lang = "en-US";
@@ -226,7 +231,7 @@ export function useSpeech(
       setListening(true);
       if (settings.mic === "off" || !settings.told) save({ ...settings, mic: "press", told: true });
     },
-    [Rec, canHear, onDeviceOnly, stopSpeaking, settings],
+    [Rec, canHear, onDeviceOnly, localHearing, stopSpeaking, settings],
   );
   const release = useCallback(() => rec.current?.stop(), []);
   // A hidden tab stops listening; it keeps speaking.
@@ -253,7 +258,7 @@ export function useSpeech(
     mic: settings.mic,
     listening,
     interim,
-    where: whereLine("browser", browser, onDeviceOnly && localHearing),
+    where: whereLine("browser", browser, onDeviceOnly && localHearing === true),
     told: Boolean(settings.told),
     listen,
     release,
