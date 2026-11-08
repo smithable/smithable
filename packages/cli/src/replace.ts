@@ -19,6 +19,7 @@ import {
 import { dirname, join, resolve, sep } from "node:path";
 import type { Assumption, Usage } from "@smithable/ai";
 import { generate } from "./generate.js";
+import { ensureRepository } from "./git.js";
 import type { Io } from "./io.js";
 import {
   administered,
@@ -256,6 +257,8 @@ export async function replaceProject(
       const code = await generate(dir, io, { tools: false, force: false });
       if (code !== 0) return code;
     }
+    // A history of its own from here (the starter's was not the person's): a commit to publish.
+    if (!control) ensureRepository(dir);
     reopenDatabase(dir);
     return 0;
   }
