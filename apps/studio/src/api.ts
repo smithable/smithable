@@ -355,6 +355,21 @@ export const api = {
   /** Names a change as a milestone, renames it, or (an empty name) unnames it (A 232). */
   milestone: (change: string, name: string) =>
     call<{ ok: boolean; output: string }>("/api/milestone", { change, name }),
+  /** Feedback (A 242): what the things a person may add would send, in full. */
+  feedback: () =>
+    call<{ hosted: boolean; specFiles: Record<string, string>; failure?: string }>("/api/feedback"),
+  sendFeedback: (
+    comment: string,
+    add: { changes?: string[]; specFiles?: boolean; failure?: boolean },
+    via: "issue" | "mail",
+    shown: { specFiles: Record<string, string>; failure?: string },
+  ) =>
+    call<{ ok: boolean; sent?: true; url?: string; message?: string }>("/api/feedback", {
+      comment,
+      ...add,
+      via,
+      shown,
+    }),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
   report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
   sendReport: (send: boolean, choice?: "always" | "never" | "ask") =>

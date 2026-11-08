@@ -67,12 +67,16 @@ import {
   replaceProject,
 } from "./replace.js";
 import {
+  buildFeedback,
   buildReport,
+  feedbackFailure,
   recordFailure,
   reportChoice,
   reportText,
+  sendFeedback,
   sendReport,
   setReportChoice,
+  specFilesOf,
   traceIdOf,
 } from "./report.js";
 import { projectIndex } from "./rules.js";
@@ -1127,6 +1131,7 @@ export async function studio(
           "/api/making/retry",
           "/api/making/answer",
           "/api/waiting",
+          "/api/feedback",
           "/mcp",
         ].includes(url.pathname) &&
         !url.pathname.startsWith("/api/preview/")
@@ -1278,6 +1283,58 @@ export async function studio(
         if (!sending || !built) return json({ ok: true });
         try {
           return json({ ok: true, ...(await sendReport(built)) });
+        } catch (error) {
+          return json({ ok: false, message: (error as Error).message });
+        }
+      }
+      // Feedback (A 242): what each thing the person may add would send, in full, and sending it.
+      if (req.method === "GET" && url.pathname === "/api/feedback") {
+        const failure = feedbackFailure(dir, logs);
+        return json({
+          hosted: Boolean(process.env.SMITHABLE_REPORT_URL),
+          specFiles: specFilesOf(dir),
+          ...(failure ? { failure: reportText(failure) } : {}),
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/feedback") {
+        const { comment, changes, specFiles, failure, via, shown } = (await body()) as {
+          comment?: unknown;
+          changes?: unknown;
+          specFiles?: unknown;
+          failure?: unknown;
+          via?: unknown;
+          shown?: { specFiles?: unknown; failure?: unknown };
+        };
+        if (typeof comment !== "string" || !comment.trim())
+          return json({ ok: false, message: "Say what you think first." }, 400);
+        // What leaves is what the panel showed: a file or failure that changed since is not sent.
+        const now = feedbackFailure(dir, logs);
+        if (
+          (specFiles === true &&
+            JSON.stringify(specFilesOf(dir)) !== JSON.stringify(shown?.specFiles)) ||
+          (failure === true && (now ? reportText(now) : undefined) !== shown?.failure)
+        )
+          return json(
+            {
+              ok: false,
+              message: "Something changed while this was open: close it and look again.",
+            },
+            409,
+          );
+        const lines = Array.isArray(changes)
+          ? changes.filter((c): c is string => typeof c === "string")
+          : [];
+        const feedback = buildFeedback(
+          dir,
+          comment.trim(),
+          { changes: lines, specFiles: specFiles === true, failure: failure === true },
+          logs,
+        );
+        try {
+          return json({
+            ok: true,
+            ...(await sendFeedback(feedback, via === "mail" ? "mail" : "issue")),
+          });
         } catch (error) {
           return json({ ok: false, message: (error as Error).message });
         }
