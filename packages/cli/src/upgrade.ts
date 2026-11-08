@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
 import { migrateSpec, writeActionGrants, writeNamedBy, writeUniqueScopes } from "@smithable/core";
+import { migrationKind } from "./fixes.js";
 import { generate, projectProfile } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
@@ -52,6 +53,11 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
       ? writeActionGrants(readFileSync(authPath, "utf8"), loaded.ir, loaded.auth)
       : { text: "", written: [] as string[] };
   if (grants.written.length) writeFileSync(authPath, grants.text);
+  // The migrations the upgrade writes, for what they do to the build before it (fixes.ts).
+  const drizzle = join(dir, "drizzle");
+  const sqlFiles = () =>
+    existsSync(drizzle) ? readdirSync(drizzle).filter((f) => f.endsWith(".sql")) : [];
+  const before = new Set(sqlFiles());
   if ((await generate(dir, io, { tools: true, force: false, upgrade: true })) !== 0) {
     discardChanges(dir);
     io.err("The upgrade was undone.\n");
@@ -80,15 +86,26 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
     io.out(`Already up to date (stack profile ${STACK_PROFILE.id}).\n`);
     return 0;
   }
+  const migration = migrationKind(
+    sqlFiles()
+      .filter((f) => !before.has(f))
+      .map((f) => readFileSync(join(drizzle, f), "utf8")),
+  );
   git(dir, ["add", "-A"]);
   git(dir, [
     "commit",
     "-q",
     "-m",
-    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied, titles: titles.written, unique: scopes.written, grants: grants.written })}\n`,
+    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied, titles: titles.written, unique: scopes.written, grants: grants.written, migration })}\n`,
   ]);
   io.out(
-    `Upgraded from stack profile ${from} to ${STACK_PROFILE.id}; the type check and tests pass. Undo with: smithable undo\n`,
+    `Upgraded from stack profile ${from} to ${STACK_PROFILE.id}; the type check and tests pass. Undo with: smithable undo\n${
+      migration === "none"
+        ? ""
+        : migration === "additive"
+          ? "The database change only adds: the build before this one still runs on it.\n"
+          : "The database change is not only additive: the build before this one may not run on it.\n"
+    }`,
   );
   return 0;
 }

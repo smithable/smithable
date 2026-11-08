@@ -123,6 +123,21 @@ export const COMMANDS: Command[] = [
     options: ["plugin", "json", "explain", "write"],
   },
   {
+    name: "affected",
+    usage: "affected <fix-id> [--json] [--dir <dir>]",
+    text: [
+      "Say whether a fix this engine carries (fixes/<id>.yml) affects the project: yes, no or",
+      "unknown, with a one-line reason, from its spec files and package.json alone",
+    ],
+    options: ["json", "dir"],
+  },
+  {
+    name: "fixes",
+    usage: "fixes [--json]",
+    text: ["List the fixes this engine carries, each with its severity and what it affects"],
+    options: ["json"],
+  },
+  {
     name: "card",
     usage: "card [dir] [--format md|html|json] [--language <code>] [--out <file>]",
     text: [

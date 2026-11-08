@@ -1,0 +1,8 @@
+id: upload-receipts
+title: A record could take a picture or document that was uploaded by someone else or for another field.
+severity: security
+exposure: Someone who could edit a record could attach a file another person had uploaded.
+introduced: unknown
+affects:
+  features: [field:picture, field:pictures, field:file, field:files]
+migration: none
