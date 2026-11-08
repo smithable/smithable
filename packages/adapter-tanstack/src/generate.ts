@@ -46,7 +46,7 @@ import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
-import { outgoingModule } from "./outgoing.js";
+import { liveModels, liveRoute, outgoingModule } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { activityModule, hasInspector } from "./pages/data.js";
@@ -765,6 +765,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             ),
           ]
         : []),
+      ...(liveModels(ir, auth).length
+        ? [generated("src/routes/events.ts", liveRoute(ir, t, liveModels(ir, auth)))]
+        : []),
       generated(
         "src/routes/__root.tsx",
         rootRoute(
@@ -904,6 +907,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/kit/tell.server.ts",
         ],
         used: ({ ir }) => ir.outgoing.length > 0,
+      },
+      {
+        // Live in the app (notifications.md §3): the stream, the banner, the chime.
+        files: ["src/kit/live.server.ts", "src/kit/Live.tsx"],
+        used: ({ ir, auth }) => liveModels(ir, auth).length > 0,
       },
       {
         // "Contact the owner" on a record's page (marketplace.md §2.4).

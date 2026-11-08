@@ -1614,12 +1614,40 @@ async function barbersFlow(dir, base) {
     // The save moves on to the new appointment's page: let that navigation finish first.
     await page.waitForLoadState("networkidle");
   };
+  // Live (notifications.md §3): the shop, its list open in another browser, hears of the booking.
+  const shop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   try {
+    const shopPage = await shop.newPage();
+    await signInAs(shopPage, base, "admin");
+    const streaming = shopPage.waitForResponse((r) => new URL(r.url()).pathname === "/events", {
+      timeout: 20000 * P,
+    });
+    await open(shopPage, `${base}/appointments`);
+    await streaming;
     await signInAs(page, base, "member");
     await form();
     const earliest = await times.first().textContent();
     await times.first().click();
     await book("Pia Wall");
+    // The entry's title line (the content file's subject), and the list loaded again.
+    await shopPage
+      .locator('[data-kit="live-notice"]', { hasText: "A new appointment to confirm" })
+      .waitFor({ timeout: 20000 * P })
+      .catch(async () => {
+        throw new Error(
+          `the shop saw no live notice of the booking (on ${shopPage.url()}: ${(await shopPage.locator("body").innerText()).slice(0, 200).replace(/\s+/g, " ")})`,
+        );
+      });
+    await shopPage
+      .getByRole("main")
+      .getByText("Pia Wall", { exact: true })
+      // The table's row (the phone's card of it is hidden at this width).
+      .filter({ visible: true })
+      .first()
+      .waitFor({ timeout: 20000 * P })
+      .catch(() => {
+        throw new Error("the shop's list did not load again with the booking");
+      });
     // Taken: Elin's earliest time is not offered again.
     await form();
     if ((await times.first().textContent()) === earliest)
@@ -1661,7 +1689,7 @@ async function barbersFlow(dir, base) {
       .getByText("Pia Wall", { exact: true })
       .waitFor({ timeout: 15000 * P });
     console.log(
-      `  ✓ barbers: the earliest time with Elin (${earliest}) is booked and no longer offered; a booking days ahead is cancelled online, one within 12 hours says to contact the shop; the shop's day shows it in Elin's column`,
+      `  ✓ barbers: the earliest time with Elin (${earliest}) is booked and no longer offered; a booking days ahead is cancelled online, one within 12 hours says to contact the shop; the shop's day shows it in Elin's column; the shop, with its list open, saw the booking live and the list refresh`,
     );
   } catch (error) {
     console.log(

@@ -479,6 +479,9 @@ export const w = {
   asTheApp: "As the app",
   clock12: "12-hour",
   clock24: "24-hour",
+  noticesMore: (n: number) => `and ${n} more`,
+  noticeSoundOffer: "Play a sound for these?",
+  noticeSound: "A sound with each notice",
   yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */
   alreadyHas: (label: string, field: string) =>
