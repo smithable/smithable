@@ -136,6 +136,23 @@ writeFileSync(
   join(dir, "data/.smithable/notice.txt"),
   "The description could not be used this time.\n",
 );
+// The project has a history from smithable new (cloud #348): the setup's own edits are committed,
+// as a developer commits theirs, so Studio's first change is not refused for them.
+spawnSync("git", ["add", "-A"], { cwd: dir });
+spawnSync(
+  "git",
+  [
+    "-c",
+    "user.name=Test",
+    "-c",
+    "user.email=test@smithable.invalid",
+    "commit",
+    "-q",
+    "-m",
+    "test: the project's setup",
+  ],
+  { cwd: dir },
+);
 // A stand-in model, so describing a change works without a real one.
 const model = await startFakeModel();
 const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
