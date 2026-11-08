@@ -1503,6 +1503,22 @@ try {
       await page.getByRole("button", { name: "Send", exact: true }).click();
       const proposal = page.getByRole("region", { name: "Proposal" });
       await proposal.getByText("(loses data)").waitFor({ timeout: 30000 * P });
+      // What it will do to the records there now, above Apply (change-verified.md §5.2, A 236).
+      await proposal
+        .getByRole("region", { name: "What it will do" })
+        .getByText(/notes/)
+        .first()
+        .waitFor({ timeout: 30000 * P });
+      // The app moves before Apply: the plan is not applied as shown, but asked again (§4.1).
+      await op("setFilters", { page: "orders", fields: ["status", "shippingMethod"] });
+      const notes = () => readFileSync(join(dir, "smithable.yml"), "utf8").includes("notes:");
+      if (!notes()) throw new Error("the CRM has no notes field to start with");
+      await proposal.getByRole("button", { name: "Apply" }).click();
+      await page
+        .getByText("The app changed since this was proposed.", { exact: false })
+        .waitFor({ timeout: 30000 * P });
+      if (!notes()) throw new Error("a stale plan was applied");
+      await op("setFilters", { page: "orders", fields: ["status"] });
       await proposal.getByRole("button", { name: "Discard" }).click();
       await page
         .getByRole("list", { name: "Thread" })
@@ -1538,6 +1554,20 @@ try {
       // Without the model's use or cost under it (Johan, 2026-10-23).
       if (await trace.getByText(/ tokens/).count())
         throw new Error("Changes shows a model's tokens");
+      // What it verified, under Smith's line for it: applied, data, what was not tested.
+      const verified = page.getByRole("list", { name: "Thread" }).locator("[data-verified]");
+      await verified
+        .getByText(/^Change applied\. Data preserved\. /)
+        .waitFor({ timeout: 30000 * P });
+      await verified.getByRole("button").first().click();
+      await verified.getByRole("list", { name: "What was checked" }).waitFor();
+      await verified.getByRole("button", { name: "Test it" }).waitFor();
+      // And under its line in Changes.
+      await trace
+        .locator("[data-verified]")
+        .first()
+        .getByText(/^Change applied\. /)
+        .waitFor({ timeout: 30000 * P });
       // Opened, it says what changed in words.
       await trace.getByRole("button", { name: /^(?:#\d+ )?Customers: added a mobile/ }).click();
       await trace
@@ -1896,7 +1926,7 @@ try {
       const entry = trace
         .locator(":scope > li", { has: page.getByRole("button", { name: /^Undo: / }) })
         .first();
-      await entry.locator("button[aria-expanded]").click();
+      await entry.locator("button[aria-expanded]").first().click(); // the line, before its verified line
       // What its undo puts back is said, the files and whether the records go back too.
       await entry.locator("[data-undo-restores]").waitFor({ timeout: 60000 * P });
       await entry.getByLabel("Milestone name").fill("First look");
@@ -2206,6 +2236,8 @@ try {
     await customers
       // The notice shows until the files' refresh says the page is its own, which under load may come first.
       .getByText(/the page is now src\/custom\/pages\/customers\.tsx|This page's code is your own/)
+      // Either says it, and both may show at once.
+      .first()
       .waitFor({ timeout: 60000 * P });
     await page
       .getByText("This page's code is your own: src/custom/pages/customers.tsx")
