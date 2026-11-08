@@ -503,6 +503,23 @@ plainly).
 - **What the owner cannot turn off:** the provider's hosted page (no card form in the app), the
   amount check, the refund roles, the Payment lines. Those are the app's guarantees to the
   payer, not settings.
+- **Card numbers written anyway are masked.** People send card data when a payment went wrong
+  and they write about it, rarely on the first try (Johan, 2026-11-08). So the line is not the
+  only guard: when the spec has a `payments` section, the kit masks what looks like a card
+  number (13 to 19 digits with spaces or dashes that pass the Luhn check, the card industry's own
+  check digit) in every text that reaches the app through its people: the contact block, a
+  thread's reply, the support page's form, the assistant's box and mail that comes in as a
+  record. The number is stored as its last four digits (`**** 1234`), the writer is told in
+  the form's answer, and nothing of it reaches the audit log, the outbox or a model. A number
+  that is not a card's (an order number, a phone) fails the check and is left alone.
+- **Finding out what went wrong.** Every step of a payment writes a log line that carries the
+  Payment's id and the provider's reference: the checkout asked for, the provider's answer,
+  the event received and whether it was verified or refused and why, each state move, the hold
+  timer's release, a refund asked and answered. So the app's log search (the project page's,
+  by words; logging.md §5) finds a payment's whole story by either id, and the Payments page's
+  line has "Logs" beside a failed or noted payment, which opens the search with the id filled in
+  (hosted: the project page's log search; self-hosted: the id to search the app's output for).
+  The Payment's `note` says the reason in the app's words; the log says what the provider said.
 
 ## 8. Growing the DSL: the five questions
 
