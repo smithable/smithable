@@ -100,8 +100,21 @@ listening starts and closes when it stops.
 
 ### 4.2 Who is speaking, and the modes
 
-Silero VAD through `@ricky0123/vad-web` (MIT, about 2 MB, loaded only once speech is turned on)
-marks where speech starts and ends and keeps a short lead-in so the first syllable is not lost.
+Silero VAD (v5, the model `@ricky0123/vad-web` ships, MIT) marks where speech starts and ends and
+keeps a short lead-in so the first syllable is not lost.
+
+**Where its files live.** Silero runs on onnxruntime-web's WebAssembly runtime (MIT). The two large
+files, the runtime's binary and the model, are about 17 MB on disk and about 6 MB on the wire, too
+much for the CLI's package when most installs never turn automatic mode on. So they are not in
+it: the docs site publishes them under `docs.smithable.ai/vad/<version>/` (the version joins
+onnxruntime's and vad-web's versions, so a new one never changes an old folder), a hosted Studio serves
+the same files itself beside its bundle, and Studio fetches them only when automatic mode starts,
+first from its own host, then from the docs site, each checked against the hash its build carries
+(subresource integrity). Both are our own hosts in the EU, so nothing third-party is fetched and
+the AI policy has nothing to decide. The runtime's small loader (about 75 KB) is in Studio's
+bundle, loaded at the same moment. When neither host answers (offline, a blocked host), a simple
+detector runs instead, loudness over the room's level weighted by a voice's zero-crossing rate,
+and the line under the controls says a simpler voice detector is in use.
 In automatic mode only these segments go to a provider. With `browser`, recognition starts at
 the onset and stops at the end (step 2 measures whether the first syllable survives); where it is
 on the device it may run the whole time. Noise is the browser's suppression plus the VAD's
@@ -166,7 +179,10 @@ confirmation. The transcript is kept as any typed message is, and only it.
    voice and the key; the transcript; `speech` beside `ai` in the session's answer from the host's
    policy layer (the daemon; B mirrors it on the service).
 2. **Step 2 (A).** The self-interruption test (§4.3) and the two-capture test (§4.1) first; then
-   the VAD, automatic mode, and barge-in for the voices that pass.
+   the VAD, automatic mode, and barge-in for the voices that pass. The tests are a test mode in
+   Studio (`?speech-test` in its address), which writes out each browser's and voice's results
+   to copy; the four-browser run through speakers is done by a person, so automatic mode and the VAD
+   are built first and barge-in follows the results.
 3. **Step 3 (B, the service; A, Studio's side).** Two gateway endpoints: transcribe a segment as
    a stream (interim and final text back) and speak a text (audio back). Each takes Studio's
    session, checks the person is a member of the project, decides the policy and the region on the
