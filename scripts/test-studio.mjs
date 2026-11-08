@@ -1154,7 +1154,19 @@ try {
   await step(
     "click the email field in the preview, make it required: spec, validation and form follow",
     async () => {
-      await openPreview("/customers/new");
+      // After the step before undid eight changes in a row, the app may still be regenerating
+      // when the preview opens the page, and shows Not found: the page is opened again.
+      for (let tries = 1; ; tries++) {
+        await openPreview("/customers/new");
+        try {
+          await preview
+            .locator('[data-sm-concept="field:Customer.email"]')
+            .waitFor({ timeout: 30000 * P });
+          break;
+        } catch (error) {
+          if (tries === 3) throw error;
+        }
+      }
       await page.getByRole("button", { name: "Select" }).click();
       await preview
         .locator("html[data-sm-selecting]")
