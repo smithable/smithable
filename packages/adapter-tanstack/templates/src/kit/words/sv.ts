@@ -705,4 +705,181 @@ export const w = {
   mergeDone: (other: string, kept: string) => `${other} slogs ihop med ${kept}.`,
   mergeStayed: (n: number) =>
     `${n} ${n === 1 ? "sak har" : "saker har"} ändrats sedan sammanslagningen, eller får inte ändras av dig, och blir som de är.`,
+  /** Appkortet (kit AppCard, docs/design/app-card.md), för administratörerna. */
+  card: {
+    list: (items: string[], or = false) =>
+      items.length < 2
+        ? (items[0] ?? "")
+        : `${items.slice(0, -1).join(", ")} ${or ? "eller" : "och"} ${items[items.length - 1]}`,
+    quoted: (text: string) => `”${text}”`,
+    makersWords: (quoted: string) => `${quoted} (skaparens ord)`,
+    inLanguages: (languages: string) => `På ${languages}.`,
+    appRules: (rules: string) => `Dess regler, med skaparens ord: ${rules}`,
+    version: (hash: string, engine?: string) =>
+      `Version ${hash}${engine ? `, av version ${engine} av dess generator` : ""}.`,
+    written: "Skrivet ur appens definition med fasta regler. Inte redigerat för hand.",
+    doesTitle: "Vad den gör",
+    kinds: {
+      string: "text",
+      text: "lång text",
+      markdown: "formaterad text",
+      int: "ett heltal",
+      decimal: "ett tal",
+      money: "ett belopp",
+      bool: "ja eller nej",
+      date: "ett datum",
+      datetime: "ett datum och en tid",
+      email: "en e-postadress",
+      phone: "ett telefonnummer",
+      url: "en webbadress",
+      picture: "en bild",
+      pictures: "bilder",
+      file: "ett dokument",
+      files: "dokument",
+    },
+    choiceOf: (choices: string) => `ett val mellan ${choices}`,
+    referenceTo: (model: string) => `en hänvisning till ${model}`,
+    listOf: (model: string) => `en lista med ${model}`,
+    computed: "beräknat",
+    required: "obligatoriskt",
+    unique: (scope: "owner" | "app") => `unikt ${scope === "owner" ? "per ägare" : "i hela appen"}`,
+    byRules: (rules: string) => `enligt reglerna ${rules}`,
+    uniqueTogether: (fields: string, scope: "owner" | "app") =>
+      `${fields} unika tillsammans ${scope === "owner" ? "per ägare" : "i hela appen"}`,
+    belongs: (field: string) => `Var och en hör till sin ${field}.`,
+    trash: "Borttagna hamnar först i papperskorgen.",
+    rules: (rules: string) => `Regler, med skaparens ord: ${rules}`,
+    pageKinds: {
+      crud: "en lista",
+      landing: "en startsida",
+      sections: "en sida av delar",
+      dashboard: "en översikt",
+      settings: "inställningar",
+      onboarding: "en första uppstart",
+      users: "användarsidan",
+      data: "en datasida",
+      review: "en granskningssida",
+      calendar: "en kalender",
+      calculator: "en kalkylator",
+      articles: "artiklar",
+      custom: "en egen sida",
+      legal: "integritetssidan",
+      order: "en beställningssida",
+    },
+    ofModel: (model: string) => ` över ${model}`,
+    at: (route: string) => `på ${route}`,
+    pages: (pages: string) => `Sidor: ${pages}.`,
+    customAction: (label: string) => `${label}: egen kod, beskriven nedan.`,
+    copies: (one: string) => `kopierar: ${one}`,
+    merges: (many: string) => `slår ihop ${many}`,
+    splits: (one: string) => `delar: ${one}`,
+    changes: (one: string, sets?: string) => `ändrar: ${one}${sets ? `, och sätter ${sets}` : ""}`,
+    adding: (many: string) => `, och lägger till ${many}`,
+    onlyWhile: (when: string) => `; bara medan ${when}`,
+    peopleTitle: "Vad den lagrar om människor",
+    byCode: "en kod som skickas med e-post",
+    signIn: (ways: string, invitedOnly: boolean, domains: string) =>
+      `Man loggar in med ${ways}. ${invitedOnly ? "Bara inbjudna och administratörerna kan logga in." : "Vem som helst kan skapa ett konto."}${domains ? ` Bara adresser på ${domains}.` : ""} Appen lagrar varje kontos adress, namn och roll.`,
+    readAnyone: "vem som helst, inloggad eller inte",
+    readSignedIn: "alla som loggar in",
+    eachOwner: "varje posts ägare",
+    noOne: "ingen",
+    holds: (model: string, fields: string, readers: string, visitorsWhere?: string) =>
+      `${model} innehåller ${fields}; läses av ${readers}${visitorsWhere ? `, och av besökare där ${visitorsWhere}` : ""}.`,
+    uploads: (models: string) => `Bilder eller dokument lagras med ${models}.`,
+    auditLog:
+      "Varje ändring skrivs i en logg i appens databas (vem, när, vilka fält, aldrig värdena); adresser och webbläsare i den töms efter 90 dagar och raderna tas bort efter 12 månader. Varje förfrågans rad går till serverns utdata och sparas så länge den som driver appen sparar den.",
+    sensitiveKinds: {
+      "card-data": "ett betalkorts nummer, säkerhetskod eller giltighetstid",
+      "secret-field": "ett lösenord, en nyckel eller en token",
+      "identity-number": "ett personnummer eller passnummer",
+      "special-category-data": "hälsodata eller annan särskilt skyddad personuppgift",
+    },
+    sensitive: (field: string, kind: string) =>
+      `Fältet ${field} har ett namn som ser ut som ${kind}.`,
+    accessTitle: "Vem som får se eller ändra vad",
+    visitors: "Besökare",
+    read: "läsa",
+    add: "lägga till",
+    change: "ändra",
+    delete: "ta bort",
+    own: "egna",
+    where: (condition: string) => `där ${condition}`,
+    orJoin: ", eller ",
+    none: "inget",
+    ownOnly: "bara egna",
+    whileWhen: (condition: string) => `medan ${condition}`,
+    opens: (pages: string) => `öppna ${pages}`,
+    opensNone: "öppna ingen sida",
+    runs: (actions: string) => `köra ${actions}`,
+    approves: (models: string) => `godkänna filerna för ${models}`,
+    oneRole: "En person har en roll.",
+    api: (models: string, actions: string, assistantsDelete?: boolean) =>
+      `API:et erbjuder ${models || "inga poster"}${actions ? ` och åtgärderna ${actions}` : ""}; en nyckel gör vad dess roll får.${assistantsDelete === undefined ? "" : ` Assistenter ansluter på /mcp med en nyckel och ${assistantsDelete ? "får ta bort vad nyckelns roll får" : "tar aldrig bort något"}.`}`,
+    customRunsAs:
+      "Egen kod körs med samma behörighet som personen som startar den; vad den gör beskrivs nedan bara utifrån det den deklarerar.",
+    outsideTitle: "Vad den pratar med utanför appen",
+    mailCodes: "E-post: inloggningskoder.",
+    mail: (text: string) => `E-post: ${text}`,
+    call: (to: string, text: string) => `Ett anrop till ${to}: ${text}`,
+    callsIn: (text: string) => `Inkommande anrop: ${text}`,
+    sentNone: "Bara texten skickas.",
+    sentAll: "Fälten som postens sida visar skickas.",
+    sentFields: (fields: string) => `Fält som skickas: ${fields}.`,
+    apiTalks: "API:et, för program med en nyckel.",
+    analytics: (provider: string, cookies: boolean) =>
+      `Besöksstatistik: ${provider}, ${cookies ? "med kakor, efter att besökaren godkänt i samtyckesraden" : "utan kakor"}.`,
+    anyone: "vem som helst",
+    ask: (whom: string, may: "read" | "change") =>
+      `Fråga, assistenten i appen, är på för ${whom}, ${may === "change" ? "läser och ändrar det de får" : "läser bara"}. Dess modell är den som den som driver appen ställer in; det här kortet kan inte säga var den modellen körs.`,
+    policy: (policy: "local-only" | "eu-only" | "best-available" | "custom") =>
+      `Modellerna som hjälper till att bygga appen: ${
+        policy === "local-only"
+          ? "bara modeller på skaparens egen dator"
+          : policy === "eu-only"
+            ? "bara modeller som körs inom EU"
+            : policy === "custom"
+              ? "bara de leverantörer som kontextfilen tillåter"
+              : "den bästa inställda modellen, var den än körs"
+      }.`,
+    customMayCall: "Egen kod och tillägg kan anropa tjänster som det här kortet inte ser.",
+    builtTitle: "Vad som är genererat och vad som är eget",
+    builtWith: (adapter?: string, database?: string) =>
+      adapter
+        ? `Byggd med ${adapter}${database ? ` på ${database}` : ""} (kontextfilen).`
+        : "Byggd med den teknik som generatorn som skriver den använder; kontextfilen nämner ingen.",
+    rewritten: "Genererad kod och kitkod skrivs om vid varje ändring.",
+    customContract: (
+      label: string,
+      touches: { reads: string[]; writes: string[] } | undefined,
+      examples: number,
+    ) =>
+      `Egen åtgärd ${label}: ${
+        touches
+          ? `ett kontrakt som typkontrollen håller den till (läser ${touches.reads.join(", ") || "inget"}, skriver ${touches.writes.join(", ") || "inget"}), inte ett bevis för vad den gör`
+          : "inget kontrakt, så den kan nå allt som personen som kör den får"
+      }; ${examples ? `${examples === 1 ? "ett exempel testar" : `${examples} exempel testar`} den` : "inget exempel testar den"}.`,
+    customPage: (page: string, component: string) => `Egen sida ${page} (${component}).`,
+    customSection: (section: string, page: string, component: string) =>
+      `Egen del ${section} på ${page} (${component}).`,
+    customQuery: (name: string, returns: string) => `Egen fråga ${name}, som väljer ${returns}.`,
+    customIncoming: (name: string) => `Egen kod tar emot anropet ${name}.`,
+    plugins: (plugins: string) => `Tillägg: ${plugins}.`,
+    dutiesTitle: "Vad den som driver den ansvarar för",
+    dutyMail: "E-postserverns inställningar, eftersom appen skickar e-post.",
+    dutySecret: (name: string) => `Hemligheten för det inkommande ${name}.`,
+    dutyCall: (target: string) => `Adressen och hemligheten för ${target}.`,
+    dutyAssistant: "Assistentens modellinställningar.",
+    dutyKeys: "API-nycklarna, som en administratör skapar och återkallar.",
+    dutyPrivacy: (hosting?: string) =>
+      `Driftens uppgifter på integritetssidan${hosting ? `, som säger om driften, med driftens egna ord: ”${hosting}”` : ""}.`,
+    noPrivacy: "Appen har ingen integritetssida fast den lagrar personuppgifter.",
+    dutyBackups: (uploads: boolean) =>
+      `Säkerhetskopior av databasen${uploads ? " och de uppladdade filerna" : ""}.`,
+    dutyCustom:
+      "Att den egna koden är rätt; den typkontrolleras och körs mot sina exempel, men inga regler skrivs för den.",
+    notTitle: "Vad det här kortet inte är",
+    not: "Det här kortet beskriver hur appen är definierad. Det är ingen säkerhetsgranskning eller juridisk rådgivning.",
+    link: "Appkortet",
+  },
 } satisfies Words;

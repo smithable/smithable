@@ -2838,9 +2838,19 @@ async function threadFlow(base) {
     console.log(
       "  ✓ browser: a list shown as a conversation; a comment sent from the reply box shows in place, with no page of its own",
     );
+    // The app card (app-card.md §4): written from the app for the administrators, linked from
+    // the team page; another role is refused.
+    await open(page, `${base}/app-card`);
+    await page.getByRole("heading", { level: 1, name: "Acme CRM" }).waitFor({ timeout: 10000 * P });
+    await page.getByText("It is not a security review or legal advice.").waitFor();
     // Another person sees it unread: a badge on the row, the Unread toggle keeps that customer,
     // and opening its conversation reads it.
     await signInAs(page, base, "sales");
+    const card = await page.request.get(`${base}/app-card`);
+    if (card.status() !== 403) throw new Error(`the app card answers ${card.status()} to sales`);
+    console.log(
+      "  ✓ browser: the app card is written from the app for the administrators, and refused to other roles",
+    );
     await open(page, `${base}/customers`);
     const helios = page.locator('tr[data-part="row"]', { hasText: "Helios Energy" });
     await helios

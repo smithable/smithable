@@ -68,6 +68,11 @@ export interface GenerateOptions {
   auth: AuthIR;
   /** Pages with a custom component in src/custom/pages/ (found by the host). */
   customPages?: string[];
+  /**
+   * The spec files in their order (smithable.yml, auth, ux, content, context, languages), for the
+   * app card's version and AI policy (docs/design/app-card.md); the host reads them.
+   */
+  cardFiles?: { name: string; text: string }[];
   /** Presentation from smithable.ux.yml: theme, table columns, form field order. */
   ux?: UxIR;
   /** The project's own themes (themes/<name>.yml), which the ux file's preset may name. */

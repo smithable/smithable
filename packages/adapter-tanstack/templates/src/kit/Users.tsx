@@ -225,6 +225,12 @@ export function Users({
 
   return (
     <div data-kit="users" className="space-y-6">
+      {/* What the app is, for the administrators: its card (docs/design/app-card.md §4). */}
+      <p className="text-right text-sm">
+        <a href="/app-card" className="underline">
+          {w.card.link}
+        </a>
+      </p>
       <Card className="p-card">
         <form onSubmit={invite} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">

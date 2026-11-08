@@ -4,6 +4,7 @@ import { parseExpression, parse as parseProgram } from "@babel/parser";
 import { generateApp } from "@smithable/adapter-tanstack";
 import { completeJson, type Provider } from "@smithable/ai";
 import { type SpecIR, YamlEditor, type YamlValue } from "@smithable/core";
+import { cardFiles } from "./card.js";
 import {
   IMAGE_INFERENCE_SCHEMA,
   type SiteImageContext,
@@ -408,6 +409,8 @@ function compilerIdentity(
     smithableVersion: VERSION,
     kitRevision: templateKitRevision,
     auth,
+    // The same spec files generate() passes, so the app card's facts match the written ones.
+    cardFiles: cardFiles(dir, content ?? {}),
     ...(content ? { content } : {}),
     ...(ux ? { ux } : {}),
     ...(themes ? { themes } : {}),
