@@ -6,6 +6,7 @@ import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { type Assumption, describedWith, type Proposal } from "@smithable/ai";
 import {
+  applyOperations,
   BUILT_IN_THEMES,
   EDITABLE_FILES,
   editAsOperations,
@@ -13,8 +14,10 @@ import {
   type OperationArgs,
   sameContent,
   themeThumbnail,
+  type Verification,
   validateContent,
   validateSpec,
+  verificationBefore,
 } from "@smithable/core";
 import { describeChange } from "@smithable/index";
 import {
@@ -43,15 +46,16 @@ import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
 import { milestones, nameMilestone } from "./milestones.js";
 import { openQuestions } from "./new.js";
-import { runOperation } from "./op.js";
+import { projectFiles, runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
-import { declaredPlugins, pluginPath } from "./plugins.js";
+import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
 import {
   PREVIEW_TOKEN_DIGEST,
   previewConfig,
   tokenDigest,
   writePreviewConfig as writeConfig,
 } from "./preview-editor.js";
+import { projectRevision } from "./project-revision.js";
 import { redo, redoTarget } from "./redo.js";
 import { releaseReview } from "./release-review.js";
 import {
@@ -76,6 +80,7 @@ import { sampleRunner } from "./sample-run.js";
 import { translate } from "./translate.js";
 import { undo, undoChange } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
+import { countConsequences, customUsers, environment, readKept, verify } from "./verify.js";
 import { warmPreview } from "./warm.js";
 
 /** The built Studio app (apps/studio), next to the CLI in the repository. */
@@ -683,7 +688,48 @@ export async function studio(
   void warmTools(dir);
 
   /** The last proposal a model made, waiting to be applied or dropped. */
-  let pending: { id: string; request: string; proposal: Proposal } | undefined;
+  let pending: { id: string; request: string; proposal: Proposal; base?: string } | undefined;
+  // An undo of the newest change (a revert and the snapshot put back) runs none of a change's
+  // checks: its revision gets a result that says so, the spec checked (change-verified.md §7).
+  const undoResult = () => {
+    const head = git(dir, ["rev-parse", "HEAD"]).out.trim();
+    if (!readKept(dir, head, "studio") && !readKept(dir, head, "local"))
+      verify(dir, { out: () => {}, err: () => {} }, { depth: "change", where: "studio" });
+  };
+  // What a proposal will do before Apply (change-verified.md §4, §5.2): its consequences on
+  // the project as it is now, every check not run, and the revision it was made against.
+  const proposalVerification = (
+    steps: { op: string; args: OperationArgs }[],
+  ): { base: string; verification?: Verification } => {
+    // What it will do is worked out beside the proposal: a failure here never loses the proposal.
+    try {
+      return consequencesOf(steps);
+    } catch (error) {
+      log(`Could not work out what the proposal will do: ${(error as Error).message}\n`);
+      return { base: projectRevision(dir) };
+    }
+  };
+  const consequencesOf = (steps: { op: string; args: OperationArgs }[]) => {
+    const plugins = loadPlugins(dir);
+    const files = projectFiles(dir, plugins);
+    const result = applyOperations(files, steps);
+    const base = projectRevision(dir);
+    const custom = result.ok ? customUsers(dir) : undefined;
+    const v = verificationBefore(files, result, {
+      base,
+      environment: environment("studio"),
+      depth: "change",
+      ...(custom ? { custom } : {}),
+    });
+    if (result.ok) {
+      const ir = (text: string) =>
+        validateSpec({ path: "smithable.yml", text }, { plugins: files.plugins }).ir;
+      const before = ir(files.spec);
+      if (before && ir(result.files.spec))
+        countConsequences(dir, before, result.effects, v.consequences);
+    }
+    return { base, verification: v };
+  };
   /**
    * Smith's thread lines that left no change (answers, questions, discarded proposals; A 152):
    * the same in every tab and after a reload, while Studio runs. Kept in memory only, never in
@@ -1270,13 +1316,18 @@ export async function studio(
           conversation: turns,
           docs: parts,
         });
-        pending = proposal ? { id, request: String(request), proposal } : undefined;
+        const before =
+          proposal?.kind === "change" ? proposalVerification(proposal.operations) : undefined;
+        pending = proposal
+          ? { id, request: String(request), proposal, ...(before ? { base: before.base } : {}) }
+          : undefined;
         if (!proposal)
           return json({ kind: "failed", message: "The spec has errors.", usage: "", id });
         const { usage, ...rest } = proposal;
         return json({
           ...rest,
           id,
+          ...(before?.verification ? { verification: before.verification } : {}),
           ...(rest.kind === "change" ? { files: undefined } : {}),
           usage: usageLine(usage, rest.kind === "change" ? rest.generator : undefined),
         });
@@ -1292,7 +1343,22 @@ export async function studio(
             output: "That proposal is no longer the latest one; describe the change again.",
           });
         const proposal = confirmed.proposal;
-        const result = await capture((io) => applyProposal(dir, io, confirmed.request, proposal));
+        // A plan whose base moved is not applied as it was shown (change-verified.md §4.1):
+        // its consequences are worked out again on the app as it is now, and asked again.
+        if (confirmed.base && confirmed.base !== projectRevision(dir)) {
+          const now = proposalVerification(proposal.operations);
+          pending = { ...confirmed, base: now.base };
+          return json({
+            ok: false,
+            stale: true,
+            output:
+              "The app changed since this was proposed. Here is what it does now; apply again if you still want it.",
+            ...(now.verification ? { verification: now.verification } : {}),
+          });
+        }
+        const result = await capture((io) =>
+          applyProposal(dir, io, confirmed.request, proposal, confirmed.base),
+        );
         proposalOutcome(dir, confirmed.id, result.ok ? "applied" : "failed");
         if (result.ok) changed({ description: result.output });
         return json(result);
@@ -1416,6 +1482,40 @@ export async function studio(
           return json({ ok: false, output: "A milestone needs a change and a name." }, 400);
         return json(nameMilestone(dir, change, name));
       }
+      // Each change's verification as kept for its revision (change-verified.md §5.2): Studio's
+      // own, else the command line's; a revision with none is left out.
+      if (req.method === "POST" && url.pathname === "/api/verified") {
+        const { ids } = await body();
+        const found: Record<string, Verification> = {};
+        for (const id of Array.isArray(ids) ? ids.slice(0, 60) : []) {
+          if (typeof id !== "string" || !/^[0-9a-f]{40}$/.test(id)) continue;
+          const v = readKept(dir, id, "studio") ?? readKept(dir, id, "local");
+          if (v) found[id] = v;
+        }
+        return json(found);
+      }
+      // "Test it": the next depth on the newest revision, kept beside its result.
+      if (req.method === "POST" && url.pathname === "/api/verify") {
+        const { depth } = await body();
+        if (depth !== "tests" && depth !== "browser")
+          return json({ ok: false, output: "Test it runs depth tests or browser." }, 400);
+        // The result on stdout alone, its words for a refusal on stderr.
+        const out: string[] = [];
+        const err: string[] = [];
+        const code = verify(
+          dir,
+          { out: (t) => out.push(t), err: (t) => err.push(t) },
+          { depth, json: true, where: "studio" },
+        );
+        let verification: Verification | undefined;
+        try {
+          verification = JSON.parse(out.join(""));
+        } catch {}
+        return json({
+          ok: code === 0,
+          ...(verification ? { verification } : { output: err.join("").trim() }),
+        });
+      }
       if (req.method === "POST" && url.pathname === "/api/undo") {
         const { change, check, confirm } = await body();
         const packages = installed();
@@ -1426,10 +1526,14 @@ export async function studio(
             undoChange(dir, io, change, { check: check === true, yes: confirm === true }),
           );
           const needsConfirm = !result.ok && result.output.includes("Run again with --yes");
-          if (result.ok && !check) changed({ description: result.output });
+          if (result.ok && !check) {
+            undoResult();
+            changed({ description: result.output });
+          }
           return json({ ...result, needsConfirm });
         }
         const result = await capture((io) => undo(dir, io));
+        if (result.ok) undoResult();
         // The database went back to its snapshot: the preview reopens it.
         if (result.ok) restored(packages);
         return json(result);

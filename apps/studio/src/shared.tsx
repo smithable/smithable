@@ -1,6 +1,6 @@
 // Parts both modes show: the app's preview and the change trace (ARCHITECTURE §9.7).
 
-import type { SpecPlugin } from "@smithable/core";
+import type { SpecPlugin, Verification } from "@smithable/core";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, type ChangeDetail, type TraceEntry } from "./api";
 import { type PartChange, summaryDiff } from "./builder/change-diff";
@@ -8,6 +8,7 @@ import { entryText, grouped, numbers, restores, summary as summaryOf } from "./h
 import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
 import { Button, cx, Input, Panel } from "./ui";
+import { useVerified, Verified } from "./Verified";
 
 const PAGE_KEY = "smithable:preview-page";
 /** The page the preview is on, e.g. "/customers/12". */
@@ -490,6 +491,12 @@ export function Trace({
       list.current?.querySelector(`[data-change="${first}"]`)?.scrollIntoView({ block: "start" }),
     );
   }, [openAt?.at]);
+  // What each line's newest change verified (change-verified.md §5.2), the latest thirty.
+  const [verified, setVerified] = useVerified(
+    grouped(entries)
+      .slice(0, 30)
+      .flatMap((g) => (g[0] ? [g[0].id] : [])),
+  );
   if (entries.length === 0) return <p className="p-3 text-sm text-quiet">No changes yet.</p>;
   const named = entries.filter((e) => e.milestone && !e.undone);
   // With no milestone left (the last one unnamed), the list shows every change again.
@@ -575,6 +582,15 @@ export function Trace({
                   {!words && e.files.length > 0 && ` · ${e.files.join(", ")}`}
                 </span>
               </button>
+              {verified[e.id] && (
+                <div className="pr-6">
+                  <Verified
+                    verification={verified[e.id] as Verification}
+                    newest={e.id === entries[0]?.id}
+                    onTested={(v) => setVerified(e.id, v)}
+                  />
+                </div>
+              )}
               {opened && (
                 <div className="mt-2 space-y-2">
                   {e.request && <p className="text-xs text-muted">You asked: {e.request}</p>}
