@@ -1,0 +1,8 @@
+id: related-titles-access
+title: A record's links to related records showed their titles to people who may not read those records.
+severity: security
+exposure: Someone who could open a record could see the titles of records it links to that they were not allowed to read.
+introduced: unknown
+affects:
+  features: [field:reference]
+migration: none

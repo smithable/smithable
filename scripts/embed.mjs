@@ -2,6 +2,7 @@
 // without file system access to this repository (the engine also runs in the browser):
 // - packages/adapter-tanstack/templates → packages/adapter-tanstack/src/templates.gen.ts
 // - examples/*/smithable*.yml           → packages/cli/src/starters.gen.ts
+// - fixes/*.yml                         → packages/cli/src/fixes.gen.ts
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -33,6 +34,17 @@ writeModule(
     .sort()
     .map((file) => [relative(templates, file), readFileSync(file, "utf8")]),
   "packages/adapter-tanstack/templates",
+);
+
+// The fix files (fixes/README.md): which built apps a fix affects, for `smithable affected`.
+writeModule(
+  "packages/cli/src/fixes.gen.ts",
+  "FIXES",
+  readdirSync(join(repo, "fixes"))
+    .filter((f) => f.endsWith(".yml"))
+    .sort()
+    .map((f) => [f, readFileSync(join(repo, "fixes", f), "utf8")]),
+  "fixes/*.yml",
 );
 
 const examples = join(repo, "examples");

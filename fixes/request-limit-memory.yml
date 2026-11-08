@@ -1,0 +1,8 @@
+id: request-limit-memory
+title: The limit on changes per address kept every address it saw, so many addresses could fill the app's memory.
+severity: security
+exposure: Many requests from many addresses could have made the app slow or stop.
+introduced: unknown
+affects:
+  features: [any]
+migration: none

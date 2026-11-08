@@ -43,11 +43,12 @@ on:
     - cron: "0 3,13 * * *"
   workflow_dispatch:
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && format('-{0}', github.run_id) || '' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && github.event.label.name != 'no-fix-file' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   scope:
-    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci'
+    # A label runs again only when it changes the outcome: full-ci, and no-fix-file (fixes/README.md).
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-ci' || github.event.label.name == 'no-fix-file'
     runs-on: ubuntu-latest
     permissions: { contents: read, actions: read }
     outputs:
@@ -111,6 +112,12 @@ jobs:
       # Secrets in the tree or the history (the test scripts' placeholders are allowlisted).
       - run: docker run --rm -v "$PWD:/repo" -v "$PWD/.github/gitleaks.toml:/cfg.toml" ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f git /repo --no-banner --config /cfg.toml
       - run: pnpm lint
+      # A kit, template or generator change says which built apps it reaches (fixes/README.md).
+      - if: github.event_name == 'pull_request'
+        run: node scripts/fix-file-rule.mjs
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          NO_FIX_FILE: ${{ contains(github.event.pull_request.labels.*.name, 'no-fix-file') }}
       - run: pnpm build
       - run: pnpm test
       - run: pnpm site
