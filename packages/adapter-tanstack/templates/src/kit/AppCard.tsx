@@ -28,7 +28,7 @@ export interface CardFacts {
     description?: string;
     languages: string[];
     hash: string;
-    /** The version of the generator that wrote it (core's `smithable`, renamed for the app). */
+    /** The version of the generator that wrote it. */
     engine?: string;
     rules?: string[];
   };
