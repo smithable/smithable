@@ -279,36 +279,42 @@ export function Ask({
   });
   // Right after a request's changes applied, "Undo that" is offered until the next thing is sent.
   const [justApplied, setJustApplied] = useState(false);
-  // Speech (smith-speech.md, step 1): what is heard goes into the box and is sent a moment after
-  // it ends, unless the box is touched; a click on the mic sends its one utterance.
+  // Speech (smith-speech.md, step 1): what is heard goes into the box, and is sent a moment
+  // after listening ends unless the box is touched meanwhile.
   const sendLater = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const oneUtterance = useRef(false);
   const requestNow = useRef(request);
   requestNow.current = request;
   const sendNow = useRef<() => void>(() => {});
-  const speech = useSpeech(speechProviders, (text) => {
-    if (!text) return;
-    const next = requestNow.current.trim() ? `${requestNow.current.trim()} ${text}` : text;
-    requestNow.current = next;
-    setRequest(next);
-    if (oneUtterance.current) {
-      oneUtterance.current = false;
-      speech.release();
-    }
-    clearTimeout(sendLater.current);
-    sendLater.current = setTimeout(() => sendNow.current(), 1500);
-  });
+  const speech = useSpeech(
+    speechProviders,
+    (text) => {
+      if (!text) return;
+      clearTimeout(sendLater.current);
+      const next = requestNow.current.trim() ? `${requestNow.current.trim()} ${text}` : text;
+      requestNow.current = next;
+      setRequest(next);
+    },
+    (heard) => {
+      if (!heard) return;
+      clearTimeout(sendLater.current);
+      sendLater.current = setTimeout(() => sendNow.current(), 1500);
+    },
+  );
+  const speechNow = useRef(speech);
+  speechNow.current = speech;
   // Hold Ctrl+Shift+Space to talk anywhere in Studio (the preview's keys are its own page's);
   // a repeat is ignored, and letting go of any of the three, or leaving the tab, releases.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the hook's functions are what they are now
+  // The keys are listened to once; the speech is read through a ref, so a hold that changes the
+  // settings (the first use) does not lose its release.
   useEffect(() => {
     let held = false;
+    const speech = () => speechNow.current;
     const down = (e: KeyboardEvent) => {
       if (!(e.ctrlKey && e.shiftKey && e.code === "Space")) return;
       e.preventDefault();
       if (e.repeat || held) return;
       held = true;
-      speech.listen(true);
+      speech().listen(true);
     };
     const up = (e: KeyboardEvent) => {
       if (
@@ -317,10 +323,10 @@ export function Ask({
       )
         return;
       held = false;
-      speech.release();
+      speech().release();
     };
     const away = () => {
-      if (held) speech.release();
+      if (held) speech().release();
       held = false;
     };
     window.addEventListener("keydown", down);
@@ -331,7 +337,7 @@ export function Ask({
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", away);
     };
-  }, [speech.listen, speech.release]);
+  }, []);
   const apply = async () => {
     if (!proposal) return;
     setBusy(true);
@@ -473,17 +479,22 @@ export function Ask({
   };
   // Smith says aloud what he writes, where sound is on (§5): his greeting once, then each new
   // line of the thread, a proposal and its question, and what he answers by himself.
-  const replies = trace ? threadLines(trace, said, words).map((l) => l.reply) : [];
-  const repliesSeen = useRef<number | undefined>(undefined);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: new lines are the signal
+  // The lines after the last one heard, by their time and words; the thread as it first loads is
+  // only marked, never read out.
+  const lines = trace ? threadLines(trace, said, words) : undefined;
+  const lastHeard = useRef<string | undefined>(undefined);
+  const newestLine = lines?.at(-1);
+  const lastKey = newestLine ? `${newestLine.at}|${newestLine.reply}` : "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new last line is the signal
   useEffect(() => {
-    if (repliesSeen.current === undefined) {
-      repliesSeen.current = replies.length;
-      return;
+    if (!lines) return;
+    const keys = lines.map((l) => `${l.at}|${l.reply}`);
+    if (lastHeard.current !== undefined) {
+      const from = keys.indexOf(lastHeard.current);
+      for (const line of lines.slice(from + 1)) speech.speak(line.reply);
     }
-    for (const reply of replies.slice(repliesSeen.current)) speech.speak(reply);
-    repliesSeen.current = replies.length;
-  }, [replies.length]);
+    lastHeard.current = keys.at(-1) ?? "";
+  }, [lastKey]);
   const greeted = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when a voice is there
   useEffect(() => {
@@ -696,14 +707,7 @@ export function Ask({
             {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
           </Button>
         </div>
-        {speechProviders.length > 0 || speech.why ? (
-          <SpeechControls
-            speech={speech}
-            onUtterance={() => {
-              oneUtterance.current = true;
-            }}
-          />
-        ) : null}
+        {speechProviders.length > 0 || speech.why ? <SpeechControls speech={speech} /> : null}
         {overlay || presenting
           ? parts.length > 1 && <PartDots at={partsSaid} count={parts.length} />
           : ready &&

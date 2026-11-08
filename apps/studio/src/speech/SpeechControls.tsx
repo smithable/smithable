@@ -8,25 +8,29 @@ import type { Speech } from "./useSpeech";
 const BUTTON =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line text-sm hover:border-accent disabled:opacity-40";
 
-export function SpeechControls({
-  speech,
-  onUtterance,
-}: {
-  speech: Speech;
-  /** A click without holding: listen for one utterance, then send it. */
-  onUtterance: () => void;
-}) {
-  const pressed = useRef(0);
+export function SpeechControls({ speech }: { speech: Speech }) {
+  // Held past a moment it listens until let go; a shorter click listens for one utterance.
+  const holding = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const held = useRef(false);
   const [showWhere, setShowWhere] = useState(false);
   const down = () => {
     if (!speech.told) setShowWhere(true);
-    pressed.current = Date.now();
-    speech.listen(true);
+    held.current = false;
+    holding.current = setTimeout(() => {
+      holding.current = undefined;
+      held.current = true;
+      speech.listen(true);
+    }, 250);
   };
   const up = () => {
-    // A short click listens for one utterance; a hold ends with the release.
-    if (Date.now() - pressed.current < 300) onUtterance();
-    else speech.release();
+    if (holding.current) {
+      clearTimeout(holding.current);
+      holding.current = undefined;
+      speech.listen(false);
+    } else if (held.current) {
+      held.current = false;
+      speech.release();
+    }
   };
   if (!speech.canHear && !speech.canSpeak)
     return (
@@ -50,9 +54,13 @@ export function SpeechControls({
           aria-pressed={speech.listening}
           onPointerDown={(e) => {
             e.preventDefault();
+            // Let go anywhere still releases (the pointer stays the button's).
+            e.currentTarget.setPointerCapture(e.pointerId);
             down();
           }}
           onPointerUp={up}
+          onPointerCancel={up}
+          onLostPointerCapture={() => held.current && up()}
           onKeyDown={(e) => {
             if (e.key !== " " || e.repeat) return;
             e.preventDefault();

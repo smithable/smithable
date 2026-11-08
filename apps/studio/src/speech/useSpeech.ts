@@ -86,7 +86,12 @@ export interface Speech {
 }
 
 /** Speech for Smith in this browser, under the providers the host allows. */
-export function useSpeech(providers: Provider[], onFinal: (text: string) => void): Speech {
+export function useSpeech(
+  providers: Provider[],
+  onFinal: (text: string) => void,
+  /** Listening ended; `heard` when anything final came in it (the moment to send it). */
+  onEnd: (heard: boolean) => void,
+): Speech {
   const [settings, setSettings] = useState(load);
   const save = (next: Settings) => {
     setSettings(next);
@@ -113,7 +118,8 @@ export function useSpeech(providers: Provider[], onFinal: (text: string) => void
 
   // Recognition: where the policy keeps it on the device, only a browser that says it is.
   const Rec = browserProvider ? recognitionClass() : undefined;
-  const [localHearing, setLocalHearing] = useState<boolean>(browser === "firefox");
+  // On the device only when the browser itself says so (Chrome's `available`); nothing assumed.
+  const [localHearing, setLocalHearing] = useState(false);
   useEffect(() => {
     if (!Rec?.available) return;
     void Rec.available({ langs: ["en-US"], processLocally: true }).then(
@@ -124,7 +130,7 @@ export function useSpeech(providers: Provider[], onFinal: (text: string) => void
   const canHear = Boolean(Rec) && (!onDeviceOnly || localHearing);
   const canSpeak = Boolean(synth) && voices.length > 0;
   const why = !providers.length
-    ? "Speech is off for this project: its AI policy keeps everything on this computer."
+    ? "Speech is off for this project: its AI policy does not let a voice leave this computer."
     : !Rec
       ? "This browser cannot write out speech."
       : !canHear
@@ -166,6 +172,8 @@ export function useSpeech(providers: Provider[], onFinal: (text: string) => void
   const rec = useRef<Recognition | undefined>(undefined);
   const final = useRef(onFinal);
   final.current = onFinal;
+  const ended = useRef(onEnd);
+  ended.current = onEnd;
   const channel = useRef<BroadcastChannel | undefined>(undefined);
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
@@ -186,13 +194,16 @@ export function useSpeech(providers: Provider[], onFinal: (text: string) => void
       r.interimResults = true;
       r.continuous = hold;
       if (onDeviceOnly && "processLocally" in r) r.processLocally = true;
+      let heardAny = false;
       r.onresult = (e) => {
         let heard = "";
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
           const text = result?.[0]?.transcript ?? "";
-          if (result?.isFinal) final.current(text.trim());
-          else heard += text;
+          if (result?.isFinal) {
+            heardAny = heardAny || Boolean(text.trim());
+            final.current(text.trim());
+          } else heard += text;
         }
         setInterim(heard);
       };
@@ -201,10 +212,17 @@ export function useSpeech(providers: Provider[], onFinal: (text: string) => void
         rec.current = undefined;
         setListening(false);
         setInterim("");
+        ended.current(heardAny);
       };
       rec.current = r;
       channel.current?.postMessage("listening");
-      r.start();
+      try {
+        r.start();
+      } catch {
+        // A start the browser refuses leaves nothing listening, and the mic free for the next try.
+        rec.current = undefined;
+        return;
+      }
       setListening(true);
       if (settings.mic === "off" || !settings.told) save({ ...settings, mic: "press", told: true });
     },
@@ -235,7 +253,7 @@ export function useSpeech(providers: Provider[], onFinal: (text: string) => void
     mic: settings.mic,
     listening,
     interim,
-    where: whereLine("browser", browser, onDeviceOnly || browser === "firefox"),
+    where: whereLine("browser", browser, onDeviceOnly && localHearing),
     told: Boolean(settings.told),
     listen,
     release,
