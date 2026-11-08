@@ -259,9 +259,9 @@ function reachProblem(r: RecipientIR, channels: Channel[]): string | undefined {
 const renameHint = (c: Channel) =>
   `If ${c} is the name of a target, rename it here and in its settings OUTGOING_${c.toUpperCase()}_URL and OUTGOING_${c.toUpperCase()}_SECRET: ${c} is a built-in channel now.`;
 
-/** An operation's refusal of channels without a recipient. */
-const missingRecipient = (channels: Channel[]) => {
-  const alone = channels.length === 1 && channels[0] !== "mail" ? channels[0] : undefined;
+/** An operation's refusal of channels without a recipient; a new entry's may be an old target's. */
+const missingRecipient = (channels: Channel[], added = true) => {
+  const alone = added && channels.length === 1 && channels[0] !== "mail" ? channels[0] : undefined;
   return `${capital(andList([...channels]))} ${channels.length > 1 ? "need" : "needs"} a recipient: --recipient owner, a role, or a field with an address (email, customer.email).${alone ? ` ${renameHint(alone)}` : ""}`;
 };
 
@@ -977,12 +977,14 @@ const setOutgoingTo: Operation<{ outgoing: string; to: string; recipient?: strin
   apply({ spec }, { outgoing, to, recipient }, ir) {
     const o = ir.outgoing.find((x) => x.name === outgoing);
     if (!o) throw new OperationError(`There is nothing named "${outgoing}" under outgoing.`);
-    if (o.list)
-      throw new OperationError(
-        `"${outgoing}" is a list mail, which goes by mail alone; setOutgoingTo is for an entry about a record or an action.`,
-      );
     const t = readTo(toArg(to));
     if ("problem" in t) throw new OperationError(capital(t.problem));
+    if (o.list) {
+      if ("channels" in t && t.channels.join() === "mail" && recipient === undefined) return [];
+      throw new OperationError(
+        `"${outgoing}" is a list mail, which goes by mail alone to its role; setOutgoingTo changes an entry about a record or an action.`,
+      );
+    }
     const at = ["outgoing", outgoing];
     const put = (key: string, v: YamlValue) =>
       spec.has([...at, key]) ? spec.set([...at, key], v) : spec.add(at, key, v);
@@ -993,7 +995,7 @@ const setOutgoingTo: Operation<{ outgoing: string; to: string; recipient?: strin
       return [];
     }
     const whom = recipient ?? (o.recipient ? recipientText(o.recipient) : undefined);
-    if (!whom) throw new OperationError(missingRecipient(t.channels));
+    if (!whom) throw new OperationError(missingRecipient(t.channels, false));
     if ("custom" in o.when) {
       const problem = readCustom(o.when.custom, { channels: true, recipient: whom });
       if (problem) throw new OperationError(capital(problem));
@@ -1409,11 +1411,10 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         }
         const r = readRecipient(recipientText, model, models);
         const problem = "problem" in r ? r.problem : reachProblem(r.recipient, t.channels);
-        if (problem) {
+        if (problem || "problem" in r) {
           ctx.error(recipientEntry.value, "invalid-outgoing", `${capital(where)}: ${problem}`);
           continue;
         }
-        if ("problem" in r) continue;
         if (r.role) ctx.reference("role", r.role, recipientEntry.value);
         entry.recipient = r.recipient;
       } else if (recipientEntry) {

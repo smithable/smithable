@@ -939,7 +939,9 @@ function checkOutgoingTexts(
   if (model && channelsOf(entry)?.some((c) => c !== "mail") && isScalar(subject))
     for (const path of new Set(placeholdersOf(String(subject.value)))) {
       const why = aboutAPerson(path, model, ir);
-      if (why)
+      // A placeholder refused already is said once.
+      const refused = placeholderProblem(path, entry, ir, auth);
+      if (why && (!refused || refused.warning))
         ctx.warning(
           subject,
           "subject-on-locked-screen",
@@ -956,7 +958,7 @@ function checkOutgoingTexts(
           at,
           "recipient-cannot-read",
           `Outgoing "${name}" ${channelsOf(entry)?.includes("mail") ? "mails" : "tells"} every ${r.role} the ${model.name}'s values, which ${r.role} may not read.`,
-          `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or mail another role.`,
+          `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or ${channelsOf(entry)?.includes("mail") ? "mail" : "tell"} another role.`,
         );
     }
   }
@@ -964,23 +966,37 @@ function checkOutgoingTexts(
 
 /**
  * What a placeholder reveals about a person, by the field's type (an email, a phone, a user) or
- * by being the name of whoever made the change; undefined for anything else.
+ * by being the name of whoever made the change; undefined for anything else. A title ({title},
+ * or a reference's {customer}) is checked by the fields that name the record.
  */
-function aboutAPerson(path: string, model: ModelIR, ir: SpecIR): string | undefined {
+function aboutAPerson(path: string, model: ModelIR, ir: SpecIR, depth = 0): string | undefined {
   if (path === "by") return "names the person whose change it is";
   const [first = "", second] = path.split(".");
-  let f = model.fields.find((x) => x.name === (first === "before" ? second : first));
-  if (f && second !== undefined && first !== "before") {
-    const type = f.type;
-    if (type.kind !== "relation") return undefined;
-    if (type.model === USER_MODEL) return "names a user";
-    f = ir.models.find((m) => m.name === type.model)?.fields.find((x) => x.name === second);
-  }
+  const fieldOf = (m: ModelIR, name: string | undefined) => m.fields.find((x) => x.name === name);
+  const named = (m: ModelIR): string | undefined =>
+    depth > 1
+      ? undefined
+      : (
+          m.nameParts?.map((p) => (p.through ? `${p.through}.${p.field}` : p.field)) ?? [
+            titleField(m),
+          ]
+        )
+          .map((p) => aboutAPerson(p, m, ir, depth + 1))
+          .find(Boolean);
+  if (first === "title" && second === undefined) return named(model);
+  let f = fieldOf(model, first === "before" ? second : first);
+  if (f?.type.kind === "relation" && first !== "before") {
+    if (f.type.model === USER_MODEL) return "names a user";
+    const target = f.type.model;
+    const other = ir.models.find((m) => m.name === target);
+    if (!other) return undefined;
+    if (second === undefined) return named(other);
+    f = fieldOf(other, second);
+  } else if (second !== undefined && first !== "before") return undefined;
   if (!f) return undefined;
   if (f.type.kind === "scalar" && f.type.name === "email") return "is an email address";
   if (f.type.kind === "scalar" && f.type.name === "phone") return "is a phone number";
-  if (f.type.kind === "relation" && f.type.model === USER_MODEL) return "names a user";
-  return undefined;
+  return f.type.kind === "relation" && f.type.model === USER_MODEL ? "names a user" : undefined;
 }
 
 type PlaceholderProblem = { code: string; message: string; hint?: string; warning?: true };

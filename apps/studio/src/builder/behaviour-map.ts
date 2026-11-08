@@ -64,7 +64,7 @@ const recipientText = (r?: RecipientIR) =>
 const told = (o: OutgoingIR) => {
   const channels = channelsOf(o);
   return channels
-    ? `${channels.join(" and ")} to ${recipientText(o.recipient)}`
+    ? `${channels.join(", ").replace(/, (\w+)$/, " and $1")} to ${recipientText(o.recipient)}`
     : `call to ${o.to}`;
 };
 

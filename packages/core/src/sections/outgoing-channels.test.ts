@@ -28,7 +28,13 @@ models:
       phone: phone
       taker: User
       customer: Customer
+      guest: Guest
       status: placed | ready
+  Guest:
+    namedBy: person
+    fields:
+      person: User!
+      note: string
 actions:
   ready:
     on: Sale
@@ -266,6 +272,9 @@ test("a push's or a text's subject that names a person warns: it shows on a lock
   expect(codes("pushed", "For {taker}")).toEqual([locked]);
   expect(codes("pushed", "For {customer.phone}")).toEqual([locked]);
   expect(codes("pushed", "From {by}")).toEqual([locked]);
+  // A title is its field's: a guest named by the person they are.
+  expect(codes("pushed", "For {guest}")).toEqual([locked]);
+  expect(codes("pushed", "{title}")).toEqual([]);
   // A record's name field is not known to be a person's by its type; the text is not on the screen.
   expect(codes("pushed", "Sale {customer} {name}", "From {email}")).toEqual([]);
   // A mail alone is not shown on a locked screen.
@@ -360,9 +369,12 @@ test("setOutgoingTo changes an entry's channels or target, with the reader's che
   expect(refused({ outgoing: "placed", to: "kitchen", recipient: "staff" })).toContain(
     "A target has its own address",
   );
-  expect(refused({ outgoing: "todays", to: "mail" })).toContain(
+  expect(refused({ outgoing: "todays", to: "push" })).toContain(
     '"todays" is a list mail, which goes by mail alone',
   );
+  expect(set({ outgoing: "todays", to: "mail" }).ok).toBe(true);
+  // A recipient missing when a target becomes a channel is not taken for an old target's name.
+  expect(refused({ outgoing: "feed", to: "push" })).not.toContain("OUTGOING_PUSH_URL");
   expect(refused({ outgoing: "nothing", to: "mail" })).toContain('nothing named "nothing"');
 });
 

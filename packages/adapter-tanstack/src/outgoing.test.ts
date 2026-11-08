@@ -495,3 +495,20 @@ pages:
   const schema = files.find((f) => f.path === "src/db/schema.ts")?.content ?? "";
   expect(schema).not.toContain("recordId: integer().notNull()");
 });
+
+test("push and sms wait for the kit's later steps: an entry with mail mails, one without is left out", () => {
+  const placed = ir.outgoing.find((o) => o.name === "orderPlaced");
+  if (!placed) throw new Error("orderPlaced");
+  const spec: SpecIR = {
+    ...ir,
+    outgoing: [
+      { ...placed, name: "orderPushed", to: "push", channels: ["push"] },
+      { ...placed, name: "orderBoth", to: "mail", channels: ["mail", "push"] },
+    ],
+  };
+  const files = generateApp(spec, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  expect(module).toContain("orderBoth");
+  expect(module).not.toContain("orderPushed");
+  expect(files.map((f) => f.content).join("\n")).not.toContain("OUTGOING_PUSH");
+});

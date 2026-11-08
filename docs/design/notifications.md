@@ -278,9 +278,9 @@ the subscriptions table, and the SMS sender beside the mail's.
    channel: `mail` whenever mail is one), the reach of each channel (the spec's `phone` field
    type is the phone field), the lock-screen warning on `{by}` and fields of the types email,
    phone and User (a field `sensitiveKind` flags is refused in every text already), and the
-   operation `setOutgoingTo <name> <channels|target> [--recipient …]`. The adapter still reads
-   `to`, so until steps 2–4 an entry without mail is generated as a call to a target of its
-   channel's name. As designed: `to:` as a channel or a list; the channels `push` and `sms`, reserved as
+   operation `setOutgoingTo <name> <channels|target> [--recipient …]`. Until steps 2–4 the
+   adapter generates an entry's mail alone and leaves out an entry without mail (rather than
+   make it a call to a target of the channel's name). As designed: `to:` as a channel or a list; the channels `push` and `sms`, reserved as
    target names (a spec with a target so named is refused with the reason; its `to` and the
    target's settings are renamed by hand); validation (`sms` needs a phone to reach: a phone
    field, one reference away, or a role or owner; every channel of a list reaches the recipient;

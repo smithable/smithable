@@ -1152,7 +1152,7 @@ function checkAgainstSpec(
           accessAt,
           "recipient-cannot-read",
           `"${o.name}" ${channels.includes("mail") ? "mails" : "tells"} every ${r.role} about ${model.name} records, which ${r.role} may not read: the ${channels.includes("mail") ? "mail" : "message"} would tell them what the record holds.`,
-          `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or mail another role.`,
+          `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or ${channels.includes("mail") ? "mail" : "tell"} another role.`,
         );
     }
   }
