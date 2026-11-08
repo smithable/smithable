@@ -314,7 +314,9 @@ export function buildFeedback(
   add: { changes?: string[]; specFiles?: boolean; failure?: boolean },
   log: string[] = [],
 ): Feedback {
-  const failure = add.failure ? buildReport(dir, log) : undefined;
+  const report = add.failure ? buildReport(dir, log) : undefined;
+  // The spec files go once, and only when ticked: not inside the failure as well.
+  const failure = report && { ...report, files: {} };
   return {
     kind: "feedback",
     smithable: VERSION,

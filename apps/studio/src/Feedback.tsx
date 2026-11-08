@@ -28,6 +28,7 @@ export function FeedbackDialog({
   const [add, setAdd] = useState({ changes: false, specFiles: false, failure: false });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string>();
+  const [link, setLink] = useState<string>();
   useEffect(() => {
     dialog.current?.showModal();
     api.feedback().then(setInfo, () => setInfo({ hosted: false, specFiles: {} }));
@@ -46,14 +47,18 @@ export function FeedbackDialog({
       )
       .catch((e: Error) => ({ ok: false, message: e.message, url: undefined, sent: undefined }));
     setBusy(false);
-    if (result.url) window.open(result.url, "_blank", "noopener");
+    // Opened after a wait, a browser may block the new tab: the link stays in the panel too.
+    if (result.url) {
+      setLink(result.url);
+      window.open(result.url, "_blank", "noopener");
+    }
     setDone(
       !result.ok
         ? (result.message ?? "The feedback could not be sent.")
         : result.url
           ? via === "mail"
-            ? "Your mail program opened with it. Thank you."
-            : "The issue opened on GitHub: send it there. Thank you."
+            ? "It is ready in your mail program. Thank you."
+            : "It is ready as an issue on GitHub: send it there. Thank you."
           : (result.message ?? "Sent to the Smithable team. Thank you."),
     );
   };
@@ -121,7 +126,12 @@ export function FeedbackDialog({
         )}
         {done && (
           <p role="status" className="text-sm">
-            {done}
+            {done}{" "}
+            {link && (
+              <a href={link} target="_blank" rel="noreferrer" className="text-accent underline">
+                {link.startsWith("mailto:") ? "Open the mail" : "Open the issue"}
+              </a>
+            )}
           </p>
         )}
         <div className="flex flex-wrap justify-end gap-2">

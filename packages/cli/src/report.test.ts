@@ -197,6 +197,10 @@ test("feedback: the person's words, and only what they ticked; an issue or a mai
   expect(Object.keys(full.specFiles ?? {})).toEqual(["smithable.yml", "smithable.auth.yml"]);
   expect(JSON.stringify(full.specFiles)).not.toContain("owner@acme.com");
   expect(full.failure).toBeUndefined(); // no failure recorded
+  recordFailure(dir, "addField", { model: "Customer" }, "Unknown type.\n");
+  const failed = buildFeedback(dir, "It failed", { failure: true });
+  expect(failed.failure?.error).toBe("Unknown type.");
+  expect(failed.failure?.files).toEqual({}); // the spec files only with their own box
   const withChanges = buildFeedback(dir, "The list is slow", { changes: ["Added a field"] });
   const issue = await sendFeedback(withChanges);
   expect("url" in issue && new URL(issue.url).searchParams.get("title")).toBe(

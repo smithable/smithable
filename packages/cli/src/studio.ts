@@ -1130,6 +1130,7 @@ export async function studio(
           "/api/making/retry",
           "/api/making/answer",
           "/api/waiting",
+          "/api/feedback",
           "/mcp",
         ].includes(url.pathname) &&
         !url.pathname.startsWith("/api/preview/")
@@ -1287,7 +1288,9 @@ export async function studio(
       }
       // Feedback (A 242): what each thing the person may add would send, in full, and sending it.
       if (req.method === "GET" && url.pathname === "/api/feedback") {
-        const failure = buildReport(dir, logs);
+        const report = buildReport(dir, logs);
+        // The failure as feedback sends it: its spec files go only with that box ticked.
+        const failure = report && { ...report, files: {} };
         return json({
           hosted: Boolean(process.env.SMITHABLE_REPORT_URL),
           specFiles: specFilesOf(dir),

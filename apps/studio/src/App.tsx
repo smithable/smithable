@@ -1281,7 +1281,9 @@ export function App() {
         {feedback !== undefined && (
           <FeedbackDialog
             prefill={feedback}
-            changes={grouped(project.trace.filter((t) => t.at >= sessionStart))
+            changes={grouped(
+              project.trace.filter((t) => Date.parse(t.at) >= Date.parse(sessionStart)),
+            )
               .reverse()
               .map((g) => line(g, words))}
             onClose={() => setFeedback(undefined)}
