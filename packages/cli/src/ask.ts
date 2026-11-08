@@ -243,6 +243,8 @@ export async function applyProposal(
   io: Io,
   request: string,
   proposal: Extract<Proposal, { kind: "change" }>,
+  /** The revision the proposal was made against: the first operation refuses if it moved. */
+  base?: string,
 ): Promise<number> {
   const tokens = proposal.usage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
   const cost = proposal.usage.reduce((sum, u) => sum + u.cost, 0);
@@ -257,7 +259,11 @@ export async function applyProposal(
       cost: i === 0 ? Number(cost.toFixed(6)) : 0,
       currency: last?.currency,
     })}`;
-    const code = await runOperation(dir, io, op, args, { yes: true, trailer });
+    const code = await runOperation(dir, io, op, args, {
+      yes: true,
+      trailer,
+      ...(i === 0 && base ? { expectedRevision: base } : {}),
+    });
     if (code !== 0) {
       if (i > 0)
         io.err(`The first ${i} operation(s) were applied; undo them with smithable undo.\n`);

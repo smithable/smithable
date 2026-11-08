@@ -9,6 +9,7 @@ import { type Assumption, api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
 import { lastLine } from "../history";
 import { Button, cx, Input } from "../ui";
+import { useVerified, Verified } from "../Verified";
 import { PREFILLED, type Prefill } from "./ChangeForms";
 import { CHIP, CHIP_MAIN, MINE, SMITHS } from "./chat-style";
 import { CustomCode, customFile } from "./custom-code";
@@ -278,6 +279,17 @@ export function Ask({
     setBusy(true);
     try {
       const result = await api.applyProposal(proposal.id);
+      // The app moved since it was proposed: the same proposal, with what it does now, asked again.
+      if (result.stale && proposal.kind === "change") {
+        // What it did before is not what it does now: without a new answer, none is shown.
+        const { verification: _old, ...rest } = proposal;
+        setProposal({
+          ...rest,
+          ...(result.verification ? { verification: result.verification } : {}),
+        });
+        setOutput(result.output);
+        return;
+      }
       const done =
         proposal.kind === "change"
           ? proposal.operations.map((o) => words?.(o.op, o.args) ?? o.description)
@@ -631,6 +643,9 @@ function Thread({
   const lines = threadLines(trace, said, words).filter(
     (l) => (!upTo || l.at <= upTo) && (!since || l.at > since),
   );
+  // What the newest change verified, under Smith's line for it (change-verified.md §5.2).
+  const newest = trace[0] && !trace[0].isUndo && !trace[0].undone ? trace[0].id : "";
+  const [verified, setVerified] = useVerified(newest ? [newest] : []);
   // Nothing yet: the greeting opens the conversation.
   if (!lines.length) return null;
   return (
@@ -639,6 +654,15 @@ function Thread({
         <li key={`${line.at}|${line.reply}`} className="space-y-1">
           {line.request && <p className={MINE}>{line.request}</p>}
           <p className={SMITHS}>{line.reply}</p>
+          {"id" in line && line.id === newest && verified[newest] && (
+            <div className="mr-auto max-w-[85%] px-3">
+              <Verified
+                verification={verified[newest]}
+                newest
+                onTested={(v) => setVerified(newest, v)}
+              />
+            </div>
+          )}
         </li>
       ))}
     </ol>
@@ -652,6 +676,7 @@ function threadLines(trace: TraceEntry[], said: Said[], words?: Words) {
       const plain = t.operation && words?.(t.operation.op, t.operation.args);
       const what = plain ?? t.description;
       return {
+        id: t.id,
         at: t.at,
         request: t.request,
         reply: t.isUndo
@@ -1288,6 +1313,20 @@ export function ProposalView({
             ))}
           </ol>
           {custom.length > 0 && <CustomCode files={custom} />}
+          {(proposal.verification?.consequences.length ?? 0) > 0 && (
+            // What it will do to what is there now (change-verified.md §5.2), above Apply.
+            <section aria-label="What it will do" className="space-y-1 text-sm">
+              <p className="font-medium">What it will do</p>
+              <ul className="list-disc space-y-0.5 pl-5">
+                {proposal.verification?.consequences.map((c) => (
+                  <li key={`${c.about}:${c.says}`}>
+                    {c.says}
+                    {c.undo === "none" && <span className="text-red-700"> (cannot be undone)</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button onClick={onApply} disabled={busy}>
               Apply
