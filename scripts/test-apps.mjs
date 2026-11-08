@@ -6048,8 +6048,33 @@ function query(dir, sql, file = "data/db/app.db") {
 }
 
 function smithable(dir, ...args) {
+  // A project has a history from smithable new (cloud #348), and an operation refuses edits
+  // not committed: the steps that edit files by hand commit them first, as a developer would.
+  if (args[0] === "op") ownEdits(dir);
   const result = spawnSync("node", [cli, ...args, "--dir", dir], { cwd: repo, encoding: "utf8" });
   return { code: result.status, out: `${result.stdout}${result.stderr}`, stdout: result.stdout };
+}
+
+/** The test's own hand edits, committed as a developer commits theirs before an operation. */
+function ownEdits(dir) {
+  const status = spawnSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" });
+  if (status.status !== 0 || !status.stdout.trim()) return;
+  spawnSync("git", ["add", "-A"], { cwd: dir });
+  // An identity of its own, so a machine without one configured commits too.
+  spawnSync(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@smithable.invalid",
+      "commit",
+      "-q",
+      "-m",
+      "test: the developer's own edits",
+    ],
+    { cwd: dir },
+  );
 }
 
 /** Runs the CLI without blocking, so a stand-in model in this process can answer it. */
