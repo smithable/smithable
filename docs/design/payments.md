@@ -544,11 +544,14 @@ the audit log.
 
 ## 9. Build order
 
-1. **Core (Fable).** Built (fable/payments-core): the built-in models are the IR's `builtInModels` (`Payment` and its refund lines, `PaymentRefund`), the moves core's `PAYMENT_MOVES`, and a pay-to-create model is marked `heldByPayment`. The section, its validation, the built-in `Payment` model in the IR, the
+1. **Core (Fable).** Built in #1081. The section, its validation, the built-in `Payment` model in the IR, the
    held state on `when: created` and the refusal of a visitor's API create (§4.7), the Payment's
    states and their moves (§4.3), the currencies a section accepts, the payments entry as an
    outgoing `when`, the `{pay}` placeholder, the operations, the summary words, the schema, the context file's key, the spec
-   reference, ARCHITECTURE §6.3 and §3.4.
+   reference, ARCHITECTURE §6.3 and §3.4. As built: the built-in models are the IR's `builtInModels` (`Payment`
+   and its refund lines, `PaymentRefund`), the moves are core's `PAYMENT_MOVES`, and a pay-to-create
+   model is marked `heldByPayment`, which the adapter consumes in step 2 (the held column, the
+   refused API create).
 2. **The kit (A).** The provider interface, `fake`, the checkout flow, the return page, the
    payments address, the hold timer, the Payment list and page, the refund button, the words,
    the privacy page's and the app card's lines; `test:apps` steps on kiosk with `fake`.

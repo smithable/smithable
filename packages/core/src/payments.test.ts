@@ -423,4 +423,29 @@ test("a payment follows a renamed field and refuses the removal of one it uses",
       ok: false,
       message: expect.stringContaining("change or remove the payment first"),
     });
+  // A paid.set formula follows too, and keeps its field; {title} is the record's title, not a field.
+  const withFormula = swap(
+    "      base: money\n",
+    "      base: money\n      fee: money\n      received: money\n      title: string\n",
+  ).replace(
+    "{ set: { status: paid } }",
+    '{ set: { status: paid, received: ROUND(fee * 2) } }\n    description: "{title} {number}"',
+  );
+  const moved = applyOperation({ spec: withFormula }, "renameField", {
+    model: "Invoice",
+    from: "fee",
+    to: "charge",
+  });
+  if (!moved.ok) throw new Error(moved.message);
+  expect(moved.files.spec).toContain("received: ROUND(charge * 2)");
+  const retitled = applyOperation({ spec: withFormula }, "renameField", {
+    model: "Invoice",
+    from: "title",
+    to: "heading",
+  });
+  if (!retitled.ok) throw new Error(retitled.message);
+  expect(retitled.files.spec).toContain('description: "{title} {number}"');
+  expect(
+    applyOperation({ spec: withFormula }, "removeField", { model: "Invoice", field: "fee" }),
+  ).toMatchObject({ ok: false, message: expect.stringContaining("the payment") });
 });

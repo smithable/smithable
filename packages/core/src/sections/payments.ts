@@ -17,6 +17,7 @@ import {
 } from "../context.js";
 import { THREE_DECIMAL_CURRENCIES } from "../currencies.js";
 import type { YamlValue } from "../edit.js";
+import { fieldsUsed, renameInFormula } from "../formula.js";
 import {
   type ActionIR,
   type Condition,
@@ -159,6 +160,7 @@ export function descriptionProblem(
     const [first] = path.split(".");
     if (first === "link" || first === "by" || first === "pay" || first === "before")
       return `"{${path}}" means nothing on the provider's page; a description names fields of the ${model.name}, like {number}, or {title}.`;
+    // placeholderProblem reads only the models (and, for {pay}, refused above, the payments).
     const problem = placeholderProblem(
       path,
       { name, when: { model: model.name, payment: name }, to: "provider" },
@@ -560,7 +562,7 @@ const setPayment: Operation<PaymentArgs> = {
 const removePayment: Operation<{ name: string }> = {
   name: "removePayment",
   summary:
-    "Stop taking a payments entry's payments. The Payment lines there are stay until the owner removes their table.",
+    "Stop taking a payments entry's payments. The Payment lines already made stay until the owner removes their table.",
   schema: {
     type: "object",
     required: ["name"],
@@ -765,6 +767,8 @@ export const paymentsSection: SpecSection<"payments"> = {
       };
       const rewrite = (path: string) => {
         const [first = "", second] = path.split(".");
+        // {title} is the record's title, whatever field is named so (as in outgoing texts).
+        if (first === "title" && second === undefined) return undefined;
         if (own && first === from)
           return [effect.kind === "rename-field" ? effect.to : first, second];
         if (second === from && target(first) === effect.model)
@@ -773,14 +777,27 @@ export const paymentsSection: SpecSection<"payments"> = {
       };
       const named = p.description && placeholdersOf(p.description).some((x) => rewrite(x));
       const amount = own && p.amount === from;
+      // A paid.set formula names the record's fields, or a list's in an aggregate (SUM(lines.amount)).
+      const listOf = (list: string) => {
+        const type = model?.fields.find((f) => f.name === list)?.type;
+        return type?.kind === "relation" && type.many && type.model === effect.model;
+      };
+      const formulas = (p.paid?.set ?? []).flatMap((v) => ("formula" in v ? [v] : []));
       if (effect.kind === "remove-field") {
-        if (amount || keyed.length || named)
+        const inFormula = own && formulas.some((v) => fieldsUsed(v.formula).includes(from));
+        if (amount || keyed.length || named || inFormula)
           return {
             refusal: `The payment "${p.name}" uses ${effect.model}.${from}; change or remove the payment first.`,
           };
         continue;
       }
       if (amount) spec.set([...at, "amount"], effect.to);
+      for (const v of formulas) {
+        const next = renameInFormula(v.text, (name, list) =>
+          name === from && (list === undefined ? own : listOf(list)) ? effect.to : undefined,
+        );
+        if (next !== v.text) spec.set([...at, "paid", "set", v.field], next);
+      }
       for (const path of keyed) spec.renameKey([...path, from], effect.to);
       if (named && p.description)
         spec.set(
