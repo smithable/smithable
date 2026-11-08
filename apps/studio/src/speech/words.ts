@@ -41,13 +41,14 @@ export function spoken(text: string): string {
  */
 export function sentences(text: string, longest = 180): string[] {
   const out: string[] = [];
-  for (const sentence of spoken(text).split(/(?<=[.!?])\s+/)) {
+  // Without lookbehind, which Safari before 16.4 cannot parse.
+  for (const sentence of (spoken(text).match(/[^.!?]+(?:[.!?]+|$)/g) ?? []).map((t) => t.trim())) {
     if (sentence.length <= longest) {
       if (sentence) out.push(sentence);
       continue;
     }
     let piece = "";
-    for (const part of sentence.split(/(?<=,)\s+/)) {
+    for (const part of (sentence.match(/[^,]+(?:,|$)/g) ?? []).map((t) => t.trim())) {
       if (piece && piece.length + part.length + 1 > longest) {
         out.push(piece);
         piece = part;
