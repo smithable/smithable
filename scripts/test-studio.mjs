@@ -3122,7 +3122,10 @@ try {
         if (project.trace?.length) throw new Error("the new app has the old one's history");
         if (!readFileSync(join(pool, "smithable.auth.yml"), "utf8").includes("tester@example.org"))
           throw new Error("the administrator was not set");
-        if (existsSync(join(pool, ".git"))) throw new Error("the old history is still there");
+        // A history of its own, from the swap: the start alone, none of the starter's (cloud #348).
+        const log = spawnSync("git", ["log", "--format=%s"], { cwd: pool, encoding: "utf8" });
+        if (log.stdout.trim() !== "smithable: start of history")
+          throw new Error(`the history after the swap: ${log.stdout || log.stderr}`);
         // The preview answers on the new app: a page only the booking site has.
         if (!(await answers(`${preview}/schedule`, 60)))
           throw new Error("the preview does not show the new app's schedule");

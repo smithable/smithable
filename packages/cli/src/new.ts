@@ -33,6 +33,7 @@ import { summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
 import { askIn, languageAsked, PageError, siteNameOf } from "./from-page.js";
 import { generate } from "./generate.js";
+import { ensureRepository } from "./git.js";
 import { hostedLevel } from "./hosted-level.js";
 import { exec, type Io, tool } from "./io.js";
 import { addLibraryPictures, dropMissingPictures, placePictures } from "./pictures.js";
@@ -628,6 +629,10 @@ export async function create(
   }
   if (sampleData && exec(...tool(dir, "tsx", ["src/db/seed.ts"]), dir) !== 0)
     io.err("Could not add sample data; the app works without it.\n");
+  // History from the moment the project is made (B 79, cloud #348): a project published before
+  // any change has a commit to check out and to name its engine by. Changes, undo and the change
+  // numbers read this commit as the start, not a change.
+  ensureRepository(dir);
   io.out(
     `\nCreated ${dir}. Open it in Studio, to see it and change it:\n\n  cd ${dir}\n  smithable studio\n\nor only run the app with smithable run.\n`,
   );

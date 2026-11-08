@@ -7127,9 +7127,15 @@ for (const [index, example] of examples.entries()) {
   try {
     // Its own administrator: the default is the Git user's address, which on a developer's
     // machine may name Smithable, and a detached project must not.
-    step("smithable new", () =>
-      run("node", [cli, "new", dir, "--starter", example, "--admin", "owner@acme.dev"], repo),
-    );
+    step("smithable new, with a history from the start", () => {
+      run("node", [cli, "new", dir, "--starter", example, "--admin", "owner@acme.dev"], repo);
+      // A project published before any change has a commit (cloud #348): the start, and clean.
+      const log = spawnSync("git", ["log", "--format=%s"], { cwd: dir, encoding: "utf8" });
+      if (log.stdout.trim() !== "smithable: start of history")
+        throw new Error(`the history after new: ${log.stdout || log.stderr}`);
+      const status = spawnSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" });
+      if (status.stdout.trim()) throw new Error(`uncommitted after new:\n${status.stdout}`);
+    });
     if (example === "crm") {
       step("the starter comes with its custom action implemented", () => {
         const code = readFileSync(join(dir, "src/custom/actions/schedule-follow-ups.ts"), "utf8");
