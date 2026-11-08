@@ -2236,6 +2236,8 @@ try {
     await customers
       // The notice shows until the files' refresh says the page is its own, which under load may come first.
       .getByText(/the page is now src\/custom\/pages\/customers\.tsx|This page's code is your own/)
+      // Either says it, and both may show at once.
+      .first()
       .waitFor({ timeout: 60000 * P });
     await page
       .getByText("This page's code is your own: src/custom/pages/customers.tsx")
