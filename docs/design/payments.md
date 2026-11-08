@@ -442,8 +442,7 @@ Three layers:
 
 **Accounts for the tests.** A provider's test mode needs an account, but not an activated
 business (to check per provider). The test keys belong to accounts registered to the company
-behind Smithable, one per provider; the same account can later be activated for the hosted
-service's own billing, which is a separate decision. The keys live in the runner's secrets,
+behind Smithable, one per provider. The keys live in the runner's secrets,
 never in a repository; nothing in this repository names the accounts.
 
 ## 7. What it never does
@@ -511,8 +510,7 @@ subscriptions; Payments in the API.
 ## 10. Open questions for Johan
 
 1. The two first providers: Stripe and Mollie? Recommended: yes.
-2. Register the company's own account with both now, in test mode only, to be activated later if
-   the hosted service's billing goes there? Recommended: yes.
+2. Register the company's own account with both now, in test mode only? Recommended: yes.
 3. The hold time for an unpaid `when: created` record: 30 minutes by default? Recommended: yes,
    a setting per app.
 4. A Payments page for admins and the refund roles, as well as the list on the record page?
