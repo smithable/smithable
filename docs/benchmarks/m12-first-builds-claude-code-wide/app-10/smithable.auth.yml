@@ -4,10 +4,19 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member: { pages: all }
+  curator:
+    description: Catalogues the objects and writes their stories.
+    pages: all
+    create: [Item, Category]
+    write: [Item, Category]
+    delete: [Item, Category]
+  member:
+    description: Looks at the collection.
+    pages: [home, objects, categories]
 assistant:
   for: signed-in
 public:
-  pages: [home, items, privacy]
-  read: [Item]
+  pages: [home, objects, categories, privacy]
+  read: [Item, Category]
+defaultRole: member
 admins: [johan@smithable.ai]

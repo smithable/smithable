@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Greenfield FC
-  description: The teams, players and matches of Greenfield Football Club.
+  description: The club's teams, players, matches and results.
   timezone: Europe/London
 models:
   Team:
@@ -9,45 +9,56 @@ models:
       name: string!
       ageGroup: string!
       coach: string
-      trainingDays: string
-      trainingTime: string
+      homeGround: string
+      logo: picture
   Player:
     fields:
       name: string!
       team: Team!
-      position: string
+      position: string!
       number: int
-      dateOfBirth: date
+      dateOfBirth: date!
+      nationality: string
       height: decimal
       weight: decimal
-      nationality: string
+      profilePicture: picture
   Match:
     fields:
       team: Team!
       opponent: string!
-      date: date!
-      time: string
-      venue: string
-      home: bool = true
-      result: string
-      score: string
+      date: datetime!
+      venue: string!
+      competition: string
+      homeScore: int
+      awayScore: int
+      result: win | draw | loss
       report: markdown
+      highlights: url
 pages:
   teams:
     crud: Team
   players:
     crud: Player
   matches:
+    route: /fixtures-and-results
     crud: Match
+    filters: [team, result, date]
+    defaultFilter:
+      date: upcoming
   home:
     route: /
     landing:
       hero:
+        button: matches
+        secondButton: teams
         shortcuts: [teams, players, matches]
-      footer:
       teams:
         records: Team
+      upcoming:
+        records: Match
+        view: table
+      footer:
   privacy:
     route: /privacy
     legal: privacy
-navigation: [teams, players, matches]
+navigation: [home, teams, players, matches]

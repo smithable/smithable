@@ -4,13 +4,16 @@ app:
   description: Pienen autokorjaamon asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa.
   currency: EUR
   timezone: Europe/Helsinki
+  clock: 24h
+  date: day-month
+  week: monday
+  numbers: comma
 models:
   Customer:
     fields:
       name: string!
       email: email
       phone: phone
-      address: string
       notes: text
       cars: Car[]
       invoices: Invoice[]
@@ -18,45 +21,42 @@ models:
   Car:
     fields:
       registration: string! unique
-      make: string!
+      make: string
       carModel: string
       year: int
-      vin: string
       mileage: int
       customer: Customer!
+      notes: text
       jobs: Job[]
   Job:
     fields:
-      title: string!
       car: Car!
-      status: booked | inProgress | done
-      date: date = TODAY()
-      description: text
+      description: text!
+      status: booked | inProgress | done | canceled
+      scheduledOn: date = TODAY()
       mechanic: User
-      hours: decimal
-      laborCost: money
+      labourCost: money
       partsCost: money
       total:
         type: money
-        formula: laborCost + partsCost
+        formula: labourCost + partsCost
+      completedOn: date
   Invoice:
     fields:
       number: string! unique
       customer: Customer!
       job: Job
       status: draft | sent | paid
-      amount: money!
       issuedOn: date = TODAY()
-      dueDate: date
-      paidOn:
-        type: date
-        by: app
+      dueOn: date
+      amount: money!
+      paidOn: date
     trash: true
 pages:
   tyot:
     crud: Job
-    search: [title]
-    filters: [status, car, mechanic, date]
+    search: [description]
+    filters: [status, mechanic, scheduledOn]
     actions: [startJob, completeJob]
   asiakkaat:
     crud: Customer
@@ -64,11 +64,10 @@ pages:
   autot:
     crud: Car
     search: [registration, make, carModel]
-    filters: [customer]
   laskut:
     crud: Invoice
     search: [number]
-    filters: [status, customer, dueDate]
+    filters: [status, customer]
     actions: [sendInvoice, markPaid]
   tiimi:
     users: manage
@@ -80,21 +79,20 @@ actions:
     set:
       status: inProgress
       mechanic: ME()
-    intent: Aloita työ ja ota se itsellesi.
   completeJob:
     on: Job
     when:
       status: [booked, inProgress]
     set:
       status: done
-    intent: Merkitse työ valmiiksi.
+      completedOn: TODAY()
   sendInvoice:
     on: Invoice
     when:
       status: draft
     set:
       status: sent
-    intent: Merkitse lasku lähetetyksi.
+      issuedOn: TODAY()
   markPaid:
     on: Invoice
     when:
@@ -102,4 +100,3 @@ actions:
     set:
       status: paid
       paidOn: TODAY()
-    intent: Merkitse lasku maksetuksi.

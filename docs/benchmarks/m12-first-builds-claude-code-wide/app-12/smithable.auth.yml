@@ -6,7 +6,7 @@ defaultAccess: shared
 roles:
   admin: all
   staff:
-    description: Writes incidents, their updates and planned maintenance.
+    description: Municipal staff who post incidents, updates and planned maintenance.
     pages: [overview, incidents, updates, maintenance]
     create: all
     write: all
@@ -16,8 +16,4 @@ public:
   pages: [home, privacy]
   read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate, Maintenance]
 defaultRole: staff
-api:
-  models: [Component, Incident]
-  actions: [resolve]
-  assistants: true
 admins: [johan@smithable.ai]

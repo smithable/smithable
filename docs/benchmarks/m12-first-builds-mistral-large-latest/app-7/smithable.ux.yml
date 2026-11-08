@@ -1,3 +1,36 @@
 smithableUx: 0.1
+pages:
+  home:
+    sections:
+      hero:
+        layout: cover
+        overlay: dark
+  teams:
+    table:
+      view: cards
+  players:
+    table:
+      view: cards
+      sort: name
+    record:
+      subtitle: team.name
+      detail: [position, number]
+      pictures: top
+  matches:
+    table:
+      sort: date
+      columns: [date, team, opponent, venue, homeScore, awayScore, result]
+    record:
+      header: summary
+      summary:
+        status: [result]
+        dates: [date]
 theme:
-  preset: nordic
+  preset: navy
+  brand:
+    primary: "#006400"
+tones:
+  Match.result:
+    win: success
+    draw: warning
+    loss: danger

@@ -3,8 +3,8 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Who posts outages and updates?",
+    "Who posts and updates outages on the board?",
     "Do staff need to sign in to see the board?",
-    "Should the board also show planned maintenance windows?"
+    "Besides outages, what else should the board track?"
   ]
 }

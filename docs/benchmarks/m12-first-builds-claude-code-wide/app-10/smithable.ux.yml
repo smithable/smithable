@@ -1,11 +1,13 @@
 smithableUx: 0.1
 pages:
-  items:
+  objects:
     table:
       view: cards
     record:
-      subtitle: period
-      detail: [category, origin]
-    icon: layers
+      pictures: top
+      subtitle: category
+      detail: [period, origin]
+    form:
+      sections: [{ name: object, fields: [name, pictures, category, summary] }, { name: story, fields: [story] }, { name: details, fields: [period, maker, material, origin, accessionNumber, onDisplay, addedOn] }]
 theme:
   preset: editorial

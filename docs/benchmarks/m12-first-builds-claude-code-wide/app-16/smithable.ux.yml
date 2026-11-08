@@ -3,26 +3,33 @@ pages:
   plots:
     table:
       sort: number
-    icon: home
+      columns: [number, size, location, status, member]
+    icon: layers
   members:
     table:
       sort: name
+      columns: [name, email, phone, joinedOn, status]
     icon: users
-  waitingList:
+  waiting-list:
     table:
       sort: appliedOn
+      columns: [name, appliedOn, phone, email, status]
     icon: list
   fees:
     table:
       sort: -year
+      columns: [member, year, amount, status, paidOn]
+      totals: [amount]
     icon: receipt
 tones:
-  Fee.status:
-    paid: success
-    due: warning
   Plot.status:
     vacant: warning
-  WaitingEntry.status:
-    allotted: success
+    let: success
+  Fee.status:
+    unpaid: warning
+    paid: success
+  WaitingListEntry.status:
+    offered: warning
+    accepted: success
 theme:
   preset: woodland

@@ -5,6 +5,7 @@
   "questions": [
     "Who can add or edit recipes in the app?",
     "What can visitors see without signing in?",
-    "What details does each recipe hold?"
-  ]
+    "What should each recipe record include?"
+  ],
+  "dropped": "addToShoppingList"
 }

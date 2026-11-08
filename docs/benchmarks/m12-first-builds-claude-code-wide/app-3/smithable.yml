@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
-  name: Shear Studio
-  description: "Online booking for a hair salon: customers pick a stylist and a free time themselves."
+  name: Salon Booking
+  description: Customers book a hair salon appointment online, choosing a stylist and a free time themselves.
   currency: EUR
+  timezone: Europe/Stockholm
 models:
   Service:
     fields:
@@ -18,8 +19,8 @@ models:
       timeOffs: TimeOff[]
     schedule:
       hours:
-        tue-fri: 09:00-18:00
-        sat: 09:00-15:00
+        mon-fri: 09:00-18:00
+        sat: 10:00-15:00
       breaks: 12:00-12:30
       gap: 10
       away: TimeOff
@@ -47,11 +48,23 @@ models:
       while:
         status: [requested, confirmed]
       cancelUntil: 12h
+actions:
+  confirm:
+    on: Appointment
+    when:
+      status: requested
+    set:
+      status: confirmed
+  cancel:
+    on: Appointment
+    when:
+      status: [requested, confirmed]
+    set:
+      status: cancelled
 pages:
   appointments:
     crud: Appointment
-    filters: [status]
-    actions: [confirm, cancel]
+    filters: [status, stylist]
   day:
     calendar:
       model: Appointment
@@ -66,27 +79,15 @@ pages:
     route: /
     landing:
       hero:
-      footer:
+        button: appointments
       services:
         records: Service
       stylists:
         records: Stylist
+      footer:
   privacy:
     route: /privacy
     legal: privacy
-actions:
-  confirm:
-    on: Appointment
-    when:
-      status: requested
-    set:
-      status: confirmed
-  cancel:
-    on: Appointment
-    when:
-      status: [requested, confirmed]
-    set:
-      status: cancelled
 outgoing:
   appointmentRequested:
     when: Appointment created

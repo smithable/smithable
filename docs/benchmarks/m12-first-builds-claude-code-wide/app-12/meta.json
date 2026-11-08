@@ -3,7 +3,7 @@
   "starter": "status",
   "wordStarter": "barbers",
   "questions": [
-    "Besides checking the status page, can residents do anything else?",
-    "Who on the municipality's side posts incidents and updates?"
+    "Who posts and updates incidents and planned maintenance?",
+    "Can residents do more than view the status page?"
   ]
 }

@@ -1,8 +1,9 @@
 smithable: 0.1
 app:
   name: Town Flea Market
-  description: Anyone in town can post things to sell, with photos and a price, and neighbors browse and get in touch.
+  description: Post the things you want to sell, with photos and a price, and browse what your neighbors are selling.
   currency: EUR
+  timezone: Europe/Helsinki
 models:
   Item:
     fields:
@@ -10,7 +11,7 @@ models:
       photos: pictures!
       description: text!
       price: money
-      category: furniture | clothing | books | bikes | electronics | sports | kids | household | other
+      category: furniture | clothing | books | toys | electronics | kitchen | garden | other
       condition: likeNew | good | worn
       place: string
       available: bool = true
@@ -21,6 +22,8 @@ pages:
     crud: Item
     search: [title, description, place]
     filters: [category, price, condition, available]
+    defaultFilter:
+      available: true
     sortable: [price, createdAt]
     favorites: true
     contact: owner
@@ -30,18 +33,20 @@ pages:
   saved:
     crud: Item
     favorites: only
+  review:
+    review: all
   home:
     route: /welcome
     landing:
       hero:
+        button: catalog
+        secondButton: myItems
       latest:
         records: Item
         where:
           available: true
+      features:
       footer:
   privacy:
     route: /privacy
     legal: privacy
-  review:
-    review: all
-navigation: [catalog, myItems, saved, review]

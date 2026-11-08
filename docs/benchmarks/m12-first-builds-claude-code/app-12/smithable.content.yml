@@ -1,5 +1,15 @@
 smithableContent: 0.1
+models:
+  Component:
+    label: Service
+    pluralLabel: Services
+  Incident:
+    fields:
+      component:
+        label: Service
 pages:
+  components:
+    title: Services
   home:
     hero:
       image:

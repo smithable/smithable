@@ -6,13 +6,13 @@ defaultAccess: shared
 roles:
   admin: all
   it:
-    description: "The IT team: writes incidents, updates and planned maintenance."
-    pages: [components, incidents, maintenance, overview]
+    description: "The IT team: keeps the systems and writes incidents, updates and planned maintenance."
+    pages: [home, incidents, maintenance, components]
     create: all
     write: all
   staff:
-    description: Reads what is down and when it is back.
-    pages: [components, incidents, maintenance, overview]
+    description: "Everyone else: sees what is down and when it is back."
+    pages: [home, incidents, maintenance]
 assistant:
   for: signed-in
 defaultRole: staff

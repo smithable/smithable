@@ -1,15 +1,16 @@
 smithable: 0.1
 app:
   name: IT Help Desk
-  description: Tickets from users, handled by the IT team.
+  description: Tickets from users, prioritized and handled by the team.
+  timezone: Europe/Helsinki
 models:
-  Ticket:
+  SupportCase:
     fields:
       subject: string!
-      requesterEmail:
+      customerEmail:
         type: email!
         locked: true
-      status: open | inProgress | resolved | reopened
+      status: open | inProgress | closed | reopened
       priority:
         type: int!
         min: 1
@@ -18,73 +19,62 @@ models:
       assignee:
         type: User
         required:
-          status: [inProgress, resolved]
+          status: [inProgress, closed]
       body: text
       attachments: files
       messages: Message[]
   Message:
     fields:
       content: text!
-      sender: agent | user
+      sender: agent | customer
       agent:
         type: User
         by: app
         default: ME()
       fromEmail: email
       attachments: files
-      ticket: Ticket!
+      supportCase: SupportCase!
 pages:
   tickets:
-    crud: Ticket
-    search: [subject, requesterEmail]
+    crud: SupportCase
+    search: [subject, customerEmail]
     filters: [status, priority, assignee]
     sortable: [priority, createdAt]
-    actions: [assignToMe, assignTo, startWork, resolve, reopen]
+    actions: [assignToMe, assignTo, startWork, close, reopen]
   team:
     users: manage
 actions:
   assignToMe:
-    on: Ticket
+    on: SupportCase
     when:
       assignee: not ME()
     set:
       assignee: ME()
     intent: "Take the ticket: you become its assignee."
   assignTo:
-    on: Ticket
+    on: SupportCase
     set:
       assignee:
-    intent: Give the ticket to an agent, chosen from the team.
+    intent: Assign the ticket to an agent, chosen from the team.
   startWork:
-    on: Ticket
+    on: SupportCase
     when:
       status: [open, reopened]
     set:
       status: inProgress
     intent: Someone is working on the ticket now; it needs an assignee.
-  resolve:
-    on: Ticket
+  close:
+    on: SupportCase
     when:
       status: [open, inProgress, reopened]
     set:
-      status: resolved
+      status: closed
     intent: The user has their answer.
   reopen:
-    on: Ticket
+    on: SupportCase
     when:
-      status: resolved
+      status: closed
     set:
       status: reopened
     intent: The ticket needs more work after all.
-outgoing:
-  ticketReceived:
-    when: Ticket created
-    to: mail
-    recipient: requesterEmail
-  replySent:
-    when: Message created
-    where:
-      sender: agent
-    to: mail
-    recipient: ticket.requesterEmail
 navigation: [tickets, team]

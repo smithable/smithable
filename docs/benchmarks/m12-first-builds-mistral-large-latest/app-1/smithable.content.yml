@@ -1,11 +1,40 @@
 smithableContent: 0.1
 pages:
   home:
+    faq:
+      items: [{ question: What should I bring to a yoga class?, answer: "Just bring yourself and comfortable clothing. We provide mats, blocks, and other props." }, { question: Can beginners join any class?, answer: Yes! Our all-levels classes are perfect for beginners. We also offer beginner-specific classes. }, { question: How early should I arrive for my first class?, answer: Please arrive 10-15 minutes early to check in and get settled. }, { question: Do you offer private sessions?, answer: "Yes, private sessions are available. Contact us to schedule one." }]
+    title: Find Your Balance at Harmony Yoga
+    subtitle: Join us for classes that nourish the body and mind.
     hero:
+      eyebrow: Welcome to Harmony Yoga
       image:
         src: images/hero.webp
         alt: A yoga class stretching on mats in a bright studio
         generated: true
+    classes:
+      title: Our Classes
+    estimate:
+      title: Is a Monthly Pass Worth It?
+      text: Enter how many classes you plan to attend each month to see if a pass saves you money.
+    gallery:
+      title: Studio Gallery
+    callToAction:
+      text: Sign up for a class and start your journey with us.
+    news:
+      title: Latest News
+    contact:
+      title: Get in Touch
+  about:
+    faq:
+      items: [{ question: What is the history of Harmony Yoga Studio?, answer: "Founded in 2010, Harmony Yoga Studio has been serving the community with a focus on mindfulness and wellness." }, { question: What styles of yoga do you teach?, answer: "We offer Vinyasa, Yin, Hatha, and Restorative yoga, among others." }, { question: Do you have workshops or special events?, answer: "Yes, we regularly host workshops and events. Check our schedule for updates!" }]
+    title: About Us
+    story:
+      title: Our Story
+    team:
+      title: Meet Our Instructors
+  my-bookings:
+    cancelling:
+      text: You can cancel your booking up to the start of the class. After that, the spot is yours.
 logo:
   src: images/logo.webp
   alt: A calendar page

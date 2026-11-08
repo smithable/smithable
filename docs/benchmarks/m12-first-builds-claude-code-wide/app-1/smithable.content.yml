@@ -1,10 +1,4 @@
 smithableContent: 0.1
-models:
-  Payment:
-    fields:
-      method:
-        values:
-          paypal: PayPal
 logo:
   src: images/logo.webp
   alt: A receipt with a torn edge and a coin

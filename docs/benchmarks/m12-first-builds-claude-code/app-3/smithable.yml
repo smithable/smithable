@@ -1,6 +1,6 @@
 smithable: 0.1
 app:
-  name: Billfold
+  name: Ledgerly
   description: "Invoicing for freelancers: keep your clients, send invoices and record the payments that come in."
   currency: EUR
   timezone: Europe/Stockholm
@@ -9,6 +9,7 @@ models:
     fields:
       name: string!
       email: email!
+      phone: phone
       address: text
       vatNumber: string
       invoices: Invoice[]
@@ -26,26 +27,28 @@ models:
       amount: money!
       paidOn: date! = TODAY()
       method: bankTransfer | card | cash | other
-      note: string
+      reference: string
       invoice: Invoice!
   Invoice:
     fields:
       number: string! unique
       client: Client!
       issuedOn: date! = TODAY()
-      dueOn: date! = DATEADD(issuedOn, 30, "day")
+      dueOn: date!
       status: draft | sent | paid | overdue
+      notes: text
       lines: InvoiceLine[]
       payments: Payment[]
       total:
         type: money
         formula: SUM(lines.amount)
-      paidAmount:
+      paid:
         type: money
         formula: SUM(payments.amount)
       balance:
         type: money
-        formula: total - paidAmount
+        formula: total - paid
+    namedBy: number
 pages:
   overview:
     dashboard:
@@ -69,6 +72,7 @@ pages:
   clients:
     crud: Client
     search: [name, email]
+    sortable: [name, createdAt]
   payments:
     crud: Payment
     filters: [invoice, method, paidOn]
@@ -88,7 +92,7 @@ pages:
   invoices:
     crud: Invoice
     search: [number]
-    filters: [client, status]
+    filters: [client, status, dueOn]
     sortable: [issuedOn, dueOn, number]
     actions: [markSent, markPaid, markOverdue]
 actions:
@@ -121,13 +125,7 @@ actions:
 timers:
   markOverdue:
     on: Invoice
-    at: dueOn
+    at: 1 day after dueOn
     where:
       status: sent
     run: markOverdue
-outgoing:
-  invoiceSent:
-    when: markSent
-    to: mail
-    recipient: client.email
-navigation: [overview, invoices, clients, payments]

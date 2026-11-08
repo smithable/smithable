@@ -1,9 +1,13 @@
 smithable: 0.1
 app:
-  name: Joogavaraus
+  name: Joogastudion varaukset
   description: Joogastudion tunnit, ohjaajat ja varaukset verkossa.
   currency: EUR
   timezone: Europe/Helsinki
+  clock: 24h
+  date: day-month
+  week: monday
+  numbers: comma
 models:
   Instructor:
     fields:
@@ -41,17 +45,6 @@ models:
       durationMinutes: int! = 60
       sessions: Session[]
 pages:
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      instructors:
-        records: Instructor
-      callToAction:
-        button: lukujarjestys
-      classes:
-        records: ClassType
   lukujarjestys:
     calendar:
       model: Session
@@ -64,13 +57,23 @@ pages:
     filters: [classType, instructor, startsAt]
     defaultFilter:
       startsAt: upcoming
+  varaukset:
+    crud: Booking
+    filters: [session]
   ohjaajat:
     crud: Instructor
-  tietosuoja:
-    route: /tietosuoja
+  home:
+    route: /
+    landing:
+      hero:
+        button: lukujarjestys
+      features:
+      classes:
+        records: ClassType
+      footer:
+  privacy:
+    route: /privacy
     legal: privacy
-  yllapito:
-    data: all
   tuntityypit:
     crud: ClassType
     filters: [level]

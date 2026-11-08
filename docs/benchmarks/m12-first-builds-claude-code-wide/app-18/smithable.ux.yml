@@ -1,6 +1,15 @@
 smithableUx: 0.1
 theme:
-  preset: corporate
+  preset: workbench
+pages:
+  offerter:
+    record:
+      lists:
+        lines: inline
+  fakturor:
+    record:
+      lists:
+        lines: inline
 tones:
   Quote.status:
     accepted: success

@@ -1,4 +1,21 @@
 smithableContent: 0.1
+pages:
+  home:
+    hero:
+      title: What's working right now
+      subtitle: "The live state of our IT systems: what is down, what is being fixed, and when it is expected back."
+      button: See incidents
+      image:
+        src: images/hero.webp
+        alt: A quiet open-plan office with long wooden desks, plants and large windows over a small town
+        generated: true
+actions:
+  identified:
+    label: Cause found
+  monitoring:
+    label: Fix out
+  resolve:
+    label: Resolve
 logo:
   src: images/logo.webp
   alt: A pulse line in a circle

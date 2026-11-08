@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: Is the shop working? The live state of our web shop's services, outages and their updates.
+  description: Is the shop working? The state of our web shop's services, outages and their updates, live.
   timezone: Europe/Stockholm
 models:
   Component:
@@ -30,6 +30,8 @@ pages:
     crud: Incident
     filters: [status, component]
     actions: [identified, monitoring, resolve]
+  updates:
+    crud: IncidentUpdate
   components:
     crud: Component
   home:
@@ -63,7 +65,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: identified
-        message: We have found the cause and are working on a fix.
+        message: The cause is found and a fix is being worked on.
     intent: The cause is found; the incident moves to identified, with an update saying so.
   monitoring:
     on: Incident
@@ -75,7 +77,7 @@ actions:
       IncidentUpdate:
         at: NOW()
         status: monitoring
-        message: A fix is in place. We are keeping an eye on it before closing this.
+        message: A fix is out. We are watching before we close this.
     intent: A fix is out; the incident is watched before it is closed, with an update saying so.
   resolve:
     on: Incident
@@ -89,5 +91,4 @@ actions:
         at: NOW()
         status: resolved
         message: This incident is resolved.
-    intent: The outage is over, with an update saying so.
-navigation: [incidents, components, team]
+    intent: The outage is over, with an update saying so. The service's state stays what the team sets.

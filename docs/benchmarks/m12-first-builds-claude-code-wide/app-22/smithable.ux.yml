@@ -5,10 +5,8 @@ pages:
       sort: day
 tones:
   Order.status:
+    new: warning
     ready: success
     declined: danger
-    new: warning
 theme:
   preset: woodland
-  brand:
-    font: Fraunces

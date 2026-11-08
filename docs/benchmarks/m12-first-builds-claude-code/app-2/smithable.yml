@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
   name: Pipeline CRM
-  description: A CRM for a small sales team to track companies, contacts, deals and follow-ups.
+  description: A lightweight CRM where a small sales team keeps its companies, contacts, deals and follow-ups in one place.
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -10,7 +10,7 @@ models:
       name: string!
       website: url
       phone: phone
-      industry: string
+      segment: smb | enterprise | government
       notes: text
       accountManager: User
       contacts: Contact[]
@@ -26,22 +26,18 @@ models:
       email: email
       phone: phone
       notes: text
-    trash: true
   Deal:
     fields:
       title: string!
       company: Company!
       contact: Contact
-      stage: lead | qualified | proposal | negotiation | won | lost
+      stage: lead | qualified | proposal | won | lost
       value:
         type: money
         min: 0
       expectedClose: date
-      closedOn:
-        type: date
-        by: app
+      closedOn: date
       notes: text
-      followUps: FollowUp[]
     trash: true
   FollowUp:
     fields:
@@ -50,21 +46,17 @@ models:
       dueOn: date! = TODAY()
       done: bool
       note: text
-    trash: true
 pages:
   start:
     dashboard:
       openDeals:
         count: Deal
         where:
-          stage: [lead, qualified, proposal, negotiation]
+          stage: [lead, qualified, proposal]
       pipelineValue:
         sum: Deal.value
         where:
-          stage: [lead, qualified, proposal, negotiation]
-      dealsByStage:
-        count: Deal
-        by: stage
+          stage: [lead, qualified, proposal]
       followUpsDue:
         list: FollowUp
         where:
@@ -72,8 +64,8 @@ pages:
         limit: 10
   companies:
     crud: Company
-    search: [name, industry]
-    sortable: [name, createdAt]
+    search: [name]
+    filters: [segment, accountManager]
   contacts:
     crud: Contact
     search: [name, email, jobTitle]
@@ -82,11 +74,11 @@ pages:
     crud: Deal
     search: [title]
     filters: [stage, company, expectedClose]
-    sortable: [expectedClose, value, title]
+    sortable: [value, expectedClose, title]
     actions: [markWon, markLost]
   followUps:
     crud: FollowUp
-    filters: [done, company, dueOn]
+    filters: [done, dueOn, company]
     defaultFilter:
       done: false
     actions: [markDone]
@@ -96,7 +88,7 @@ actions:
   markWon:
     on: Deal
     when:
-      stage: [lead, qualified, proposal, negotiation]
+      stage: [lead, qualified, proposal]
     set:
       stage: won
       closedOn: TODAY()
@@ -104,7 +96,7 @@ actions:
   markLost:
     on: Deal
     when:
-      stage: [lead, qualified, proposal, negotiation]
+      stage: [lead, qualified, proposal]
     set:
       stage: lost
       closedOn: TODAY()
@@ -115,5 +107,4 @@ actions:
       done: false
     set:
       done: true
-    intent: Tick off a follow-up once it is done.
-navigation: [start, companies, contacts, deals, followUps, team]
+    intent: Tick off a follow-up once it is handled.

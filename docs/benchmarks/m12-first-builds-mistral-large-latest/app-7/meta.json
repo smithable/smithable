@@ -1,10 +1,10 @@
 {
   "description": "A football club's site: teams, players, matches and results.",
   "starter": "records",
-  "wordStarter": "records",
+  "wordStarter": "booking",
   "questions": [
-    "Who can view the teams, players, matches, and results?",
-    "What details should each match record include?",
-    "Should visitors be able to see upcoming matches and past results without signing in?"
+    "Who can add or edit the teams, players, and matches?",
+    "What can visitors see without signing in?",
+    "What details should each match record include?"
   ]
 }

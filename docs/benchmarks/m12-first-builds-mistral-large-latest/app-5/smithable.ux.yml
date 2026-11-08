@@ -4,4 +4,5 @@ theme:
 pages:
   ingredients:
     table:
-      sort: name
+      columns: [name, currentStock, minimumStock, unit, supplier]
+      totals: [currentStock]

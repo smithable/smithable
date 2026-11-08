@@ -4,7 +4,7 @@
   "wordStarter": "marketplace",
   "questions": [
     "Who adds and edits the objects?",
-    "Besides the objects, what else should the collection be organised around?",
+    "Besides the objects themselves, what else should the collection be organised around?",
     "What should each object record hold?"
   ]
 }

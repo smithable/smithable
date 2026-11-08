@@ -1,84 +1,76 @@
 smithable: 0.1
 app:
-  name: Conference Registration
-  description: Manage talks, speakers and attendees for a conference.
-  timezone: Europe/Mariehamn
+  name: Conference Connect
+  description: "Event registration for a conference: talks, speakers and attendees."
+  timezone: Europe/Helsinki
 models:
-  Speaker:
-    fields:
-      name: string!
-      bio: text
-      email: email!
-      phone: phone
-      website: url
-      picture: picture
   Talk:
     fields:
       title: string!
       description: text
+      summary: text
       startsAt: datetime!
       endsAt: datetime!
-      speaker: Speaker!
       room: string
-      status: draft | scheduled | canceled
-      capacity: int! = 100
-  Attendee:
+      capacity: int! = 50
+      status: draft | scheduled | cancelled
+      cover: picture
+      speaker: Speaker!
+      attendees: Attendee[]
+  Speaker:
     fields:
       name: string!
-      email: email!
-      phone: phone
-      company: string
-      ticket: standard | vip
-  Registration:
+      bio: markdown
+      portrait: picture
+  Attendee:
     fields:
-      attendee: Attendee!
-      talk: Talk!
-      registeredAt: datetime! = NOW()
-      status: confirmed | canceled
+      talk: Talk! unique
+      participant: User
+      registeredAt:
+        type: datetime
+        formula: NOW()
+    ownedBy: participant
     capacity:
       per: talk
       max: talk.capacity
-      where:
-        status: confirmed
+      closes: talk.startsAt
+      cancelUntil: talk.startsAt
 pages:
   talks:
     crud: Talk
-    actions: [cancelTalk]
+    actions: [cancelTalk, scheduleTalk]
   speakers:
     crud: Speaker
-  attendees:
+  my-attendance:
     crud: Attendee
-  registrations:
-    crud: Registration
-    actions: [cancelRegistration]
   home:
     route: /
     landing:
       hero:
-      footer:
-      talks:
+        button: talks
+        secondButton: speakers
+      upcoming-talks:
         records: Talk
         where:
           status: scheduled
-      speakers:
+      featured-speakers:
         records: Speaker
+      faq:
+      footer:
   privacy:
     route: /privacy
     legal: privacy
-  team:
-    users: manage
 actions:
   cancelTalk:
     on: Talk
     when:
       status: scheduled
     set:
-      status: canceled
-    intent: Cancel a scheduled talk.
-  cancelRegistration:
-    on: Registration
+      status: cancelled
+  scheduleTalk:
+    on: Talk
     when:
-      status: confirmed
+      status: draft
     set:
-      status: canceled
-    intent: Cancel a confirmed registration.
+      status: scheduled
+navigation: [home, talks, speakers, my-attendance]

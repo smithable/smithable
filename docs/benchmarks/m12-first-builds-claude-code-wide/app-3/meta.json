@@ -4,7 +4,7 @@
   "wordStarter": "barbers",
   "questions": [
     "Do customers need an account to book, or can they book with just their name and contact details?",
-    "Do customers also choose a service (cut, colour, etc.) that sets how long the appointment is?",
-    "Who manages the schedule behind the scenes?"
+    "Can customers choose a service (like cut or colouring) with its own length and price when booking?",
+    "What can visitors see without signing in?"
   ]
 }

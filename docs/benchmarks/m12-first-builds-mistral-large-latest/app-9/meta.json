@@ -1,10 +1,10 @@
 {
   "description": "A help desk for an IT team: tickets, priorities and who handles them.",
   "starter": "support",
-  "wordStarter": "invoicing",
+  "wordStarter": "booking",
   "questions": [
-    "Who can create a new ticket?",
-    "What should visitors see without signing in?",
-    "What main details should each ticket hold?"
+    "Who can create a ticket?",
+    "What can visitors see without signing in?",
+    "What additional record types might be needed?"
   ]
 }

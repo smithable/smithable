@@ -1,8 +1,5 @@
 smithableUx: 0.1
 pages:
-  deals:
-    table:
-      totals: [value]
   followUps:
     table:
       sort: dueOn
@@ -10,6 +7,6 @@ tones:
   Deal.stage:
     won: success
     lost: danger
-    negotiation: warning
+    proposal: warning
 theme:
   preset: corporate

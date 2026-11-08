@@ -1,13 +1,14 @@
 smithableUx: 0.1
-pages:
-  quotes:
-    table:
-      columns: [title, client, amount, paid, balance, status, quotedOn]
-  payments:
-    table:
-      sort: -paidOn
 tones:
   Quote.status:
     accepted: success
-    sent: warning
     declined: danger
+    sent: warning
+pages:
+  quotes:
+    table:
+      columns: [title, client, quotedOn, amount, paid, status]
+  payments:
+    table:
+      sort: -paidOn
+      totals: [amount]

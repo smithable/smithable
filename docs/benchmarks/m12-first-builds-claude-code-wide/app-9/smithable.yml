@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Crate Digger
-  description: "A personal catalogue of my vinyl records: the albums, their artists, their condition and what I paid."
+  name: Crate
+  description: "A private catalogue of my vinyl records: albums, artists, condition and what I paid."
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -20,19 +20,19 @@ models:
         min: 1900
         max: 2100
       label: string
-      genre: string
-      cover: picture
-      condition: mint | nearMint | veryGoodPlus | veryGood | good | fair | poor
+      format: lp | doubleLp | ep | single
+      condition: veryGoodPlus | mint | nearMint | veryGood | good | poor
       pricePaid: money
       boughtOn: date
-      boughtFrom: string
+      cover: picture
       notes: text
+    namedBy: [title, artist]
 pages:
-  albums:
-    crud: Album
-    search: [title, label, genre, notes]
-    filters: [artist, condition, year, pricePaid]
-    sortable: [title, year, pricePaid, boughtOn]
   artists:
     crud: Artist
     search: [name, country]
+  albums:
+    crud: Album
+    search: [title, label, notes]
+    filters: [artist, format, condition, year]
+    sortable: [title, year, pricePaid, boughtOn]

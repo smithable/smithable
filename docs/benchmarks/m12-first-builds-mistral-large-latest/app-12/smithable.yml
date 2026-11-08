@@ -1,7 +1,8 @@
 smithable: 0.1
 app:
   name: Shop Status
-  description: The uptime of our web shop and its services, live.
+  description: Is our shop working? The state of our services, live.
+  timezone: Europe/London
 models:
   Component:
     fields:
@@ -33,6 +34,17 @@ models:
       endsAt: datetime!
       description: text
 pages:
+  home:
+    route: /
+    landing:
+      hero:
+      services:
+        records: Component
+      open:
+        records: Incident
+        where:
+          status: [investigating, identified, monitoring]
+      footer:
   incidents:
     crud: Incident
     actions: [identified, monitoring, resolve]
@@ -42,21 +54,13 @@ pages:
     crud: Component
   maintenance:
     crud: Maintenance
-  home:
-    route: /
-    landing:
-      hero:
-      footer:
-      services:
-        records: Component
-      open:
-        records: Incident
-        where:
-          status: [investigating, identified, monitoring]
   overview:
     data: all
   team:
     users: manage
+  privacy:
+    route: /privacy
+    legal: privacy
 actions:
   identified:
     on: Incident
@@ -95,4 +99,3 @@ actions:
         status: resolved
         message: This incident is resolved.
     intent: The incident is over, with an update saying so. The component's state stays what the team sets.
-navigation: [overview, incidents, updates, maintenance, components, team]

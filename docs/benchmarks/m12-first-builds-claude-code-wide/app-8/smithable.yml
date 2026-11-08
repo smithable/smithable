@@ -9,7 +9,7 @@ models:
       title: string!
       photos: pictures
       description: text
-      category: furniture | electronics | books | kitchen | stationery | clothing | other
+      category: furniture | electronics | books | kitchen | office | clothing | other
       condition: likeNew | good | worn
       pickupSpot: string
       status: available | given
@@ -30,6 +30,7 @@ pages:
     defaultFilter:
       status: available
     favorites: true
+    contact: owner
   myItems:
     crud: Item
     mine: true
@@ -45,5 +46,4 @@ actions:
       status: available
     set:
       status: given
-    intent: Mark an item as handed over to the colleague who claimed it.
-navigation: [shelf, myItems, myClaims, team]
+    intent: The giver marks the item as handed over to the colleague who claimed it.

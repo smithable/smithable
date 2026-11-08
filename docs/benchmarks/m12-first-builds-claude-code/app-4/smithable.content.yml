@@ -1,30 +1,26 @@
 smithableContent: 0.1
+actions:
+  markReturned:
+    label: Mark returned
 pages:
-  tools:
-    title: Tools
   myTools:
     title: My tools
   loans:
     title: Lent out
   home:
-    features:
-      items: [{ title: Borrow instead of buying, text: That drill you need twice a year is probably sitting in a shed down the street. }, { title: Share what you own, text: "Add your tools with a photo and a few words, and switch them off when they're out." }, { title: Ask the owner directly, text: Send a message from any tool's page to arrange pickup and return. }, { title: Keep track of loans, text: "Note who has what and when it's due back, then mark it returned." }]
-      title: How it works
-    faq:
-      items: [{ question: Does it cost anything?, answer: "No. Lending happens between neighbors, on terms you agree together." }, { question: Who can see my tools?, answer: Anyone can browse the tools. Your name and contact details are never shown; borrowers reach you through a message. }, { question: What if something breaks?, answer: Talk it through with the owner. Note the tool's condition when you lend it out to avoid surprises. }]
-      title: Questions
     hero:
-      title: Your street's shared toolshed
-      subtitle: Find a ladder, a hedge trimmer or a tile cutter nearby, and lend out the tools you rarely use.
+      title: Borrow it from next door
+      subtitle: Why buy a drill you'll use twice a year? See what your neighbors are willing to lend, and share what sits in your own shed.
       button: Browse tools
-      secondButton: Share a tool
+      secondButton: Lend a tool
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-actions:
-  markReturned:
-    label: Mark returned
+    features:
+      items: [{ title: See what's nearby, text: "Look through the tools neighbors have listed, with photos, condition and where to pick them up." }, { title: Ask the owner, text: Send a short note from the tool's page to agree on when to collect it and when to bring it back. }, { title: Keep track of what's out, text: Lenders note who has which tool and mark it returned when it comes home. }]
+    faq:
+      items: [{ question: Does it cost anything?, answer: "No. Lending happens between neighbors, free of charge." }, { question: Who can see my name and address?, answer: Visitors only see the tools. Your details stay private until you reply to someone's request. }, { question: What if a tool breaks?, answer: "Talk it over with the owner. Write any quirks in the description, so borrowers know before they ask." }]
 logo:
   src: images/logo.webp
   alt: A toolbox

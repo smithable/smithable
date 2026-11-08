@@ -1,64 +1,60 @@
 smithable: 0.1
 app:
-  name: Wedding Guests
-  description: The guest list and seating plan for our wedding, with who has answered and their meal choices.
-  timezone: Europe/Mariehamn
+  name: Our Wedding
+  description: The guest list and seating plan for our wedding, with who has answered and what each guest will eat.
+  timezone: Europe/Helsinki
 models:
   Table:
     fields:
       name: string!
       seats: int! = 8
-      notes: text
+      note: text
       guests: Guest[]
   Guest:
     fields:
       name: string!
+      party: string
       email: email
       phone: phone
       side: both | bride | groom
-      rsvp: waiting | attending | declined
+      answer: waiting | attending | declined
       meal: undecided | meat | fish | vegetarian | vegan | child
       dietaryNotes: text
       table: Table
-      notes: text
+      note: text
 pages:
   guests:
     crud: Guest
-    search: [name, email, dietaryNotes]
-    filters: [rsvp, meal, table, side]
+    search: [name, party, email]
+    filters: [answer, meal, table, side]
     actions: [markAttending, markDeclined]
   tables:
     crud: Table
   overview:
     dashboard:
-      attending:
+      answers:
+        count: Guest
+        by: answer
+      meals:
         count: Guest
         where:
-          rsvp: attending
-      waiting:
-        count: Guest
-        where:
-          rsvp: waiting
-      declined:
-        count: Guest
-        where:
-          rsvp: declined
+          answer: attending
+        by: meal
   team:
     users: manage
 actions:
   markAttending:
     on: Guest
     when:
-      rsvp: [waiting, declined]
+      answer: [waiting, declined]
     set:
-      rsvp: attending
+      answer: attending
       meal:
-    intent: Record that the guest is coming, with their meal choice.
+    intent: Record that the guest is coming and which meal they chose.
   markDeclined:
     on: Guest
     when:
-      rsvp: [waiting, attending]
+      answer: [waiting, attending]
     set:
-      rsvp: declined
+      answer: declined
     intent: Record that the guest cannot come.
-navigation: [guests, tables, overview, team]

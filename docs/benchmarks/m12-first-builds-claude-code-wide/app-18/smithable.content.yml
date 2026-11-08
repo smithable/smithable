@@ -13,6 +13,8 @@ models:
         label: Telefon
       address:
         label: Adress
+      orgNumber:
+        label: Org.nr / personnr
       quotes:
         label: Offerter
       invoices:
@@ -38,6 +40,8 @@ models:
           sent: Skickad
           accepted: Godkänd
           declined: Avböjd
+      notes:
+        label: Anteckningar
       lines:
         label: Rader
       total:
@@ -109,14 +113,14 @@ actions:
   markOverdue:
     label: Markera som förfallen
 pages:
+  oversikt:
+    title: Översikt
   offerter:
     title: Offerter
   fakturor:
     title: Fakturor
   kunder:
     title: Kunder
-  oversikt:
-    title: Översikt
   team:
     title: Användare
 logo:

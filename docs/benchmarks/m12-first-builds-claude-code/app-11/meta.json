@@ -3,8 +3,8 @@
   "starter": "status",
   "wordStarter": "status",
   "questions": [
-    "Who can see the status page without signing in?",
-    "Should the API be split into separate components, each with its own status?",
-    "Can visitors subscribe to get notified about new incidents and maintenance?"
+    "Who can see the status page?",
+    "Should visitors be able to subscribe to incident and maintenance updates?",
+    "How should the API be split into parts that each show their own status?"
   ]
 }

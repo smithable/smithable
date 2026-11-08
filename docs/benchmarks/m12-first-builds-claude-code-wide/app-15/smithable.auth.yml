@@ -5,7 +5,11 @@ signIn:
 defaultAccess: shared
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member:
+    description: A club member who logs sightings and adds species.
+    pages: all
+    create: [Sighting, Species]
 assistant:
   for: signed-in
+defaultRole: member
 admins: [johan@smithable.ai]

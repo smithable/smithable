@@ -3,8 +3,8 @@
   "starter": "records",
   "wordStarter": "barbers",
   "questions": [
-    "Is this log for one car, or should it handle several vehicles?",
-    "What should each fuel entry record?",
-    "Should anyone besides you be able to see or add entries?"
+    "Is this for one car or for several?",
+    "What should a fuel entry hold?",
+    "Should anyone else be able to see the log?"
   ]
 }

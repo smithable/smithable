@@ -3,9 +3,12 @@ pages:
   tools:
     table:
       view: cards
+  loans:
+    table:
+      columns: [tool, borrowerName, lentOn, dueOn, status]
 tones:
   Loan.status:
-    lent: warning
+    out: warning
     returned: success
 theme:
   preset: workbench

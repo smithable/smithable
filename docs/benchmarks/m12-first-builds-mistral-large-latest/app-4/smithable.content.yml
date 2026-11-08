@@ -8,6 +8,11 @@ pages:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
+  tools:
+    title: Tools
+    subtitle: Browse available tools in your neighborhood
+  loans:
+    title: My Loans
 logo:
   src: images/logo.webp
   alt: A toolbox

@@ -1,8 +1,5 @@
 smithableContent: 0.1
-pages:
-  practice:
-    title: Practice
 logo:
   src: images/logo.webp
-  alt: A graduation cap
+  alt: Two music notes
   generated: true
