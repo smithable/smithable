@@ -7,6 +7,7 @@ for testing?" Payments were his "maybe payments", the first complete business ca
 before the product is there. Nothing in the engine changes with this note alone; it adds one
 spec section, so merging it is the go-ahead for step 1 of §9, and each later step is confirmed
 when its turn comes. §10 lists what Johan decides. Facts not yet confirmed say "to check".
+Reviewed by three second reviewers (§11).
 
 ## 1. Today
 
@@ -32,11 +33,12 @@ So nothing in a generated app takes a card today.
 
 - **The app never touches card data.** The payer pays on the provider's own hosted page: the app
   sends them there and they come back. Card numbers, codes and the payer's bank sign-in never
-  pass through the app, its database, its logs or Smithable. This keeps the app outside the
-  scope of the card industry's security standard beyond the lightest self-assessment a merchant
-  with a hosted page fills in (the exact form to check, per provider).
-- **The provider's word is the truth.** The provider tells the app by a signed call that a
-  payment succeeded; the app records it. The return to the app's page after paying shows what
+  pass through the app, its database, its logs or Smithable. This is meant to keep the app at
+  the lightest self-assessment the card industry's security standard asks of a merchant whose
+  payers pay on a provider's hosted page (the exact form to check, per provider).
+- **The provider's word is the truth.** The provider tells the app by a call the app verifies
+  (its signature, or the provider's own API asked again, §4.3) that a payment succeeded; the app
+  records it. The return to the app's page after paying shows what
   the provider has said, never decides it.
 - **The owner is the merchant.** The account at the provider is the app owner's: their money,
   their payouts, their terms with the provider, their payment methods. Smithable moves no money
@@ -85,7 +87,7 @@ payments:
 - **`paid.set`** gives fields of the record their values when the payment succeeds, with the
   values `set` takes in a standard action (literals and formulas; nothing asked, since nobody is
   there to answer). It runs as the app, like a timer's action, so it needs no role's write right.
-  It may be left out: the Payment line (§3.3) is always added.
+  It may be left out: every payment made through the provider has its Payment line (§3.3).
 - **`refund`**, optional, names the roles that may refund (admins always may when it is there)
   and, optionally, a condition on the record. Without it the app offers no refund; the owner
   refunds in the provider's own dashboard, and the app learns of it (§4.4).
@@ -133,15 +135,19 @@ is: in the generated schema, written only by the kit, never edited by hand. Its 
 | `record` | the paid record's id (of `on`'s model) |
 | `amount` | money, as asked of the provider |
 | `currency` | the app's currency when it was asked |
-| `status` | `pending`, `paid`, `failed`, `refunded` |
-| `provider` | the provider's name from the context file (`stripe`, `mollie`, `fake`) |
+| `status` | `pending`, `paid`, `failed`, `refunding`, `refunded` (the moves between them in §4.3) |
+| `provider` | the provider's name from the context file (`stripe`, `mollie`, `fake`), test or live mode, and the provider's account id where it gives one |
 | `reference` | the provider's own id for the payment |
-| `note` | what went wrong, in the app's words (declined, amount differs, paid twice, refund refused) |
+| `note` | what went wrong, in the app's words (declined, amount differs, paid twice, paid after the hold, the record no longer asks, refund refused, disputed) |
 | `createdAt`, `paidAt`, `refundedAt` | when |
 
+Under each Payment, its refund lines (§4.4): the amount, the provider's refund id, asked, done
+or refused, and by whom.
+
 - It is in the IR as a model so pages, access, outgoing entries and the app card can refer to
-  it; a spec that has its own model named `Payment` and a `payments` section is refused, naming
-  another name for the maker's (`ManualPayment`).
+  it; a spec that has its own model named `Payment` (actions.md's `recordPayment` example adds
+  one) and a `payments` section is refused, naming another name for the maker's
+  (`ManualPayment`). No starter has such a model today.
 - **Who sees it:** the record page of `on` lists its Payments to whoever may read the record
   (amount, status, when; the provider's reference to admins and refund roles only). A Payments
   page lists them all, newest first, filtered by status, for admins and the roles `refund.by`
@@ -156,9 +162,12 @@ is: in the generated schema, written only by the kit, never edited by hand. Its 
   confirmed"), the paid page and the cancelled page. The kit's own words are in its language
   files, as for every kit part.
 - The currency is `app.currency`, and a `payments` section without one is an error. One currency
-  per app at first: a record is paid in the app's currency, whatever the payer's own. Money is
-  stored in hundredths; a provider takes the currency's own smallest unit, which the provider
-  module converts (a currency without two decimals, such as the yen, to check in step 3).
+  per app at first: a record is paid in the app's currency, whatever the payer's own.
+- Money is stored in hundredths of the currency, the yen's too. A provider takes the currency's
+  own smallest unit, so the kit converts exactly: for a currency with two decimals the stored
+  number is the provider's, for one with none (the yen) an amount that is not whole is refused
+  before the checkout. A currency with three decimals cannot be stored in hundredths, so a
+  `payments` section refuses it. Which currencies each provider takes is to check in step 3.
 
 ### 3.5 The context file
 
@@ -197,9 +206,9 @@ payments: { provider: mollie }       # stripe | mollie | fake
   - `refund.by` names roles in `smithable.auth.yml`; `refund.when` is a condition on `on`.
   - `description`'s placeholders are fields the record page could show.
   - `app.currency` is set.
-  - A warning when `when: created` is on a model whose records are made somewhere the pay step
-    cannot follow (an incoming call, an import, the API): those records are created unheld, as
-    today, and the warning says they are never asked to pay.
+  - A warning when `when: created` is on a model whose records are also made where the pay step
+    cannot follow (an incoming call, an import, a key): those records are created unheld and
+    unpaid (§4.7), and the warning says so.
   - A warning when `when` is a condition and no role that may read the record could press Pay,
     and the record's model is not reached by a pay link (§4.1).
 
@@ -212,32 +221,39 @@ payments: { provider: mollie }       # stripe | mollie | fake
    Pay button on records that fit and are unpaid, to whoever may read them. For someone without
    an account (an invoice's customer), an outgoing mail's text may hold `{pay}`: the address of a
    page of the app that shows the description and the amount and a Pay button, nothing else of
-   the record. The link carries a token bound to the entry and the record, works while the record
-   fits `when` and is unpaid, and ends after 60 days.
-2. **The server function.** It reads the record (as the viewer, or with the link's token), checks
-   `when` and that nothing is pending or paid for it, reads the amount, and in one transaction
-   writes the held record (for `created`) and a `pending` Payment. An amount of zero needs no
-   payment: the record goes on as paid, without a Payment line. A negative amount is refused.
-3. **The checkout.** The kit asks the provider for a checkout session: the amount and currency,
-   the description, the success and cancel addresses of the app (`/payments/<payment id>/back`),
-   the Payment's id as the provider's reference to it, an expiry at the hold time where the
-   provider takes one, and an idempotency key made from the Payment's id, so a retried request
-   does not make a second session. The Payment keeps the provider's reference. Then the browser
-   goes to the provider's page.
+   the record. The link carries a random token (stored as a hash, as keys are) bound to the entry
+   and the record; it works while the record fits `when`, is unpaid and keeps the amount the link
+   was made for, and ends after 60 days. The page is behind the kit's limiter.
+2. **The server function.** A same-origin call, checked as every server function is. It reads
+   the record (as the viewer, or with the link's token), checks `when` and that the record is not
+   paid, reads the amount, and in one write transaction writes the held record (for `created`)
+   and a `pending` Payment. A unique index allows one pending Payment per entry and record, so
+   two clicks at once make one; a click while one is pending goes to step 4. An amount of zero
+   needs no payment: the record is not held, its `created` events fire at once, no Payment line
+   is written and the payments entry's outgoing event does not fire. A negative amount is refused.
+3. **The checkout.** After that transaction (a provider's call never sits inside one), the kit
+   asks the provider for a checkout session: the amount and currency, the description, the
+   success and cancel addresses of the app (`/payments/<payment id>/back`), the Payment's own id
+   in the provider's metadata, an expiry at the hold time where the provider takes one, and an
+   idempotency key made from the Payment's id, so a retried request makes no second session. The
+   Payment keeps the provider's reference, and the browser goes to the provider's page. If the
+   provider refuses or cannot be reached, the Payment is marked `failed` and a held record is
+   released at once, so no place stays blocked; the person is told to try again. If the reference
+   cannot be saved, the provider's call still finds the Payment by the id in its metadata (§4.3).
 4. **A second click.** While a Payment is pending, Pay leads to its session again if the provider
-   still has it open; else that Payment is closed as failed ("left unfinished") and a new one is
-   made. One pending Payment per record at a time.
+   still has it open; else the kit closes it at the provider, marks it `failed` ("left
+   unfinished") and makes a new one.
 
 ### 4.2 Coming back
 
 The page at `/payments/<id>/back` shows the Payment's state as the app knows it: "Paid" once the
 provider's call has come; until then "Waiting for the payment to be confirmed", refreshing itself
 for a minute and then saying the payer will hear by the provider's receipt. The return address
-carries nothing that marks anything paid. Only the browser that started the payment, or a viewer
-who may read the record, sees the page (a cookie set when the payment started); a visitor's page
-says the order's number and the state, nothing else of the record. Cancel comes back to the same
-page, which then offers Pay again (and for `when: created`, says the place is held until the hold
-time).
+carries nothing that marks anything paid. Only the browser that started the payment (a cookie
+set then, bound to the Payment) or a viewer who may read the record sees the page; a visitor's
+page says the order's number and the state, nothing else of the record. Cancel comes back to the
+same page, which then offers Pay again (and for `when: created`, says how long the place is
+held).
 
 ### 4.3 The provider's call
 
@@ -245,56 +261,96 @@ time).
   incoming entries. The spec's entry names are camelCase, so it cannot clash with one.
 - **Verified by the provider's scheme**, in the provider's module: a signature of the body with
   `PAYMENTS_WEBHOOK_SECRET` and a timestamp checked to five minutes, where the provider signs; or,
-  for a provider that sends only a payment's id (Mollie's classic payment calls, to check),
-  by asking the provider's API for that payment with the app's secret key: the answer, not the
-  call, is what the app acts on. An unverified call is refused with 401 and logged.
-- **Idempotent twice over.** The provider's event id is taken in the `incoming_seen` table first,
-  as for every incoming call; and since that table keeps ids for a day while providers retry for
-  longer (days, to check per provider), the Payment's status is the second guard: an event that
-  would make a paid Payment paid again does nothing and answers 200.
-- **What it does,** in one transaction: finds the Payment by the provider's reference (refusing
-  an event for a Payment the app did not make); checks that the event's amount and currency equal
-  the Payment's; marks it `paid` with `paidAt`; unholds the record (for `created`); applies
-  `paid.set`; writes the audit lines; and writes the outbox rows of outgoing entries on the
-  payment (below) and of the record's waiting `created` entries. Then it answers 200. A failure
-  before the commit answers 500, so the provider tries again.
+  for a provider that sends only a payment's id (Mollie's classic payment calls, to check), by
+  asking the provider's API for that payment with the app's secret key: the answer, not the
+  call, is what the app acts on. Either way the payment must carry, in its metadata, the id of a
+  Payment the app made, and match that Payment's stored reference when there is one (it is
+  stored now when there was none). An unverified call, or one for a Payment the app did not
+  make, is refused with 401 and logged.
+- **Bound to the account.** A Payment records the provider, whether it was made in test or live
+  mode, and the provider's account id where the provider gives one; an event from another
+  account or mode is refused. Changing the provider or its keys leaves the old Payments as they
+  are; their refunds are then made at the old provider's dashboard.
+- **One transaction, one state machine.** Everything below happens in one write transaction,
+  the event id included: it is taken in the `incoming_seen` table in that transaction, so a
+  failure that rolls back gives it back, and the provider's retry is acted on. (SQLite runs one
+  write transaction at a time, so two deliveries cannot interleave; a database with row locks
+  takes the Payment's.) Since `incoming_seen` keeps ids for a day while providers retry for longer
+  (days, to check per provider), the Payment's state is the second guard. Its states move only
+  this way:
+
+  | From | To | By |
+  |---|---|---|
+  | `pending` | `paid` | the provider's success, amounts equal |
+  | `pending` | `failed` | the provider's failure or expiry; the hold timer; an unfinished checkout replaced |
+  | `failed` | `paid` | a success after the Payment was given up (§4.5): recorded, then refunded by the app |
+  | `paid` | `refunding` | a refund asked, in the app |
+  | `paid`, `refunding` | `refunded` | the provider's word that the whole amount went back |
+  | `refunding` | `paid` | the provider's refusal of the refund, noted |
+
+  Any other event changes nothing and answers 200: a failure or expiry after `paid`, a success
+  after `refunded`, the same success twice. `paid.set` is applied only on the first move to
+  `paid` of a pending Payment, never again.
+- **What a success does:** checks the event's amount and currency against the Payment's
+  (§4.6) and, with a condition, that the record still fits `when`; marks the Payment `paid` with
+  `paidAt`; unholds the record (for `created`); applies `paid.set`; writes the audit lines; and
+  writes the outbox rows of outgoing entries on the payment (below) and of the record's waiting
+  `created` entries. Then it answers 200. A failure before the commit answers 500, so the
+  provider tries again.
 - **Outgoing hears it:** an outgoing entry's `when` may name the payments entry
   (`when: orderPayment`), fired when a payment of it succeeds, on the paid record, with `where`
   as for an action. So a receipt mail or a call to the kitchen is an ordinary outgoing entry. The
   outline called the event `paid`; the entry's name is how `when` already names actions and
   timers, and it keeps two entries apart.
-- **A payment for a released record** (paid after the hold time, the checkout not closed in
-  time): the Payment is marked paid with the note "paid after the hold ended", the record is not
-  brought back, and the kit refunds it at once, recorded on the Payment (§4.4). An admin sees it
-  on the Payments page.
-- **Paid twice** (two sessions both completed): the second Payment is marked paid with the note
-  "paid twice"; the record is unchanged, and an admin is offered Refund on it.
+- **Money that came for nothing.** The money is the payer's in these cases, and the Payment says
+  so in `note`, shown to admins and the refund roles on the Payments page:
+  - *After the hold* (paid after the record was released, the checkout not closed in time): the
+    record is not brought back, and the app refunds the payment by itself, the one refund no
+    person asks for. The refund is retried with growing pauses for a day, as the outbox's calls
+    are, then shown as given up, with Refund for an admin.
+  - *Paid twice* (two sessions both completed) and *the record no longer asks* (an invoice
+    cancelled while its payer was on the provider's page): the Payment is marked paid, the record
+    is not changed and `paid.set` is not applied. Refund is offered to admins and the refund
+    roles, whether or not the entry has `refund` or the record fits `refund.when`: this is money
+    that should not have come, not a refund of a sale.
 
 ### 4.4 Refunds
 
-- **In the app:** a Refund button on a paid Payment, for the roles `refund.by` names, while the
-  record fits `refund.when`. It asks to be sure ("Refund 24,50 € to the payer?"), calls the
-  provider's refund with an idempotency key from the Payment's id, and marks the Payment
-  "refund asked". It becomes `refunded` when the provider's call says so, as payment does. A
-  refusal by the provider (an old payment, a payout already spent, to check) is noted on the
-  Payment and shown. Full refunds only; partial later. The button is the kit's, not an entry in
-  `actions`, so it takes no action's name.
+- **In the app:** a Refund button on a paid Payment, for the roles `refund.by` names (admins
+  always), while the record fits `refund.when`. It asks to be sure ("Refund 24,50 € to the
+  payer?"), marks the Payment `refunding` in one transaction and then calls the provider's
+  refund, with an idempotency key made from the refund line's own id (below), so a retry of the
+  same request is one refund and a later attempt is a new one. The Payment becomes `refunded`
+  when the provider's call says so, as payment does. A refusal by the provider (an old payment,
+  a balance too low, to check) returns it to `paid` with the reason noted and shown. Full
+  refunds only, from the app; partial later. The button is the kit's, not an entry in `actions`,
+  so it takes no action's name.
+- **Refund lines.** Each refund, asked in the app or made at the provider, is a line of its own
+  under the Payment (amount, the provider's refund id, asked, done or refused, by whom or "the
+  app"), so a partial refund made in the provider's dashboard is recorded with its amount: the
+  Payment then shows "refunded 10,00 € of 24,50 €" and stays `paid` until the whole amount is
+  back.
 - **What a refund does to the record:** nothing by itself. The owner's own action (`decline`,
   `cancel`) says what the record becomes; a refund says what happened to the money.
-- **In the provider's dashboard:** the owner may refund there too; the provider's call marks the
-  Payment refunded all the same.
 - **Disputes** (a payer's bank reverses a payment) are noted on the Payment when the provider's
-  call says so; acting on them is the owner's, at the provider. To check per provider which
-  calls carry them.
+  call says so; the record is not changed, and acting on them is the owner's, at the provider.
+  To check per provider which calls carry them.
 
 ### 4.5 Failures and holds
 
 - A declined or abandoned payment leaves the Payment `failed` (with the provider's reason in
   `note` where it gives one) and the record unpaid. With a condition, Pay is offered again.
-- The hold timer runs every minute: for each held record older than the hold time, it asks the
-  provider to close the checkout where the provider has such a call (to check per provider),
-  marks its pending Payment `failed` ("not paid in time") and removes the record, in one
-  transaction. A held record never goes to the trash: it was never there.
+- **The hold timer** runs every minute, so a place is released within a minute of the hold time.
+  For each held record past it: first, outside any transaction, it asks the provider about the
+  checkout and to close it where the provider has such a call (to check per provider). If the
+  provider says it is paid, the success is recorded as in §4.3. If the payment is still being
+  processed (a payment method that settles later, to check per provider which), the hold stays
+  until it settles or fails: the hold time is a time to start paying, not to have finished. If
+  the provider cannot be reached, the timer tries again next minute. Otherwise, in one
+  transaction, and only if the Payment is still `pending`, it marks it `failed` ("not paid in
+  time") and removes the record, its place freed. A held record never goes to the trash: it was
+  never there. The Payment keeps the record's id as a plain value, not a reference, as the audit
+  log does, so the line stays when the record is gone.
 - The hold time should not be shorter than the provider's shortest checkout expiry, so the
   checkout closes by itself before the record is released (Stripe's shortest expiry is
   30 minutes, to check), and the late payment of §4.3 stays rare.
@@ -302,13 +358,22 @@ time).
 ### 4.6 Amounts
 
 - The amount is read from the record on the server when the payment starts and stored on the
-  Payment; the provider's event must carry the same amount and currency, else the Payment is not
-  marked paid, gets the note "amount differs" and an admin is shown it.
+  Payment; the provider's event must carry the same amount and currency, and when the payment
+  is recorded the record's amount must still be the same. Otherwise the Payment is marked paid
+  with the note "amount differs", `paid.set` is not applied, and admins are shown it, with
+  Refund. A held record cannot be changed, so this concerns `when` as a condition: an order
+  edited while its payer was on the provider's page.
 - A record whose amount changes after it is paid (a line added to an order) keeps its Payment;
   the record page shows "Paid 24,50 € of 28,00 €". Paying the difference is later; the owner
   settles it by hand today.
-- While a Payment is pending, the record's amount may still change; the Payment's amount is what
-  the payer was asked, and it is what is checked.
+- Amounts are compared in the currency's smallest unit, as integers, never as decimals.
+
+### 4.7 Records made another way
+
+With `when: created`, the pay step is the way in: a visitor's create through the API (when the
+model is under `public.create`) is refused for that model, since it would skip paying. Records a
+key's role, an import or an incoming call makes are the app's trusted ways in: they are created
+unheld and unpaid, as today, and validation's warning (§3.6) says so.
 
 ## 5. Providers, and whether the builder picks
 
@@ -320,7 +385,9 @@ settings offer it as a choice with a sentence on each. The first two:
 - **Mollie:** an EU company, in the Netherlands.
 
 **Which provider an app may use on the hosted service follows its level.** A Strict app takes
-only EU companies' services, so it offers Mollie. A Normal app takes services served from the EU
+only services run by EU companies. If that means a company of an EU-owned group rather than a
+non-EU group's EU entity (to check with the level's own definition), Stripe's Irish entity does
+not count, and a Strict app offers Mollie. A Normal app takes services served from the EU
 (Mollie; Stripe if its API is served from the EU, to check). A Relaxed app and a non-EU app may
 use either. A self-hosted app uses what its owner chooses.
 
@@ -346,7 +413,10 @@ readable.
 
 **`fake`**, for development, tests and the gate: a page of the app itself
 (`/payments/fake/<id>`) shows the amount and description with Approve and Decline, and posts a
-signed event back to the app's own payments address, as a provider would. `test:apps`, Studio's
+signed event back to the app's own payments address, as a provider would, signed with a secret
+the app makes for itself when it first starts (kept in its data, never a setting). The fake page
+and the fake payments address exist only when the provider is `fake` or the app is a demo; an
+app with a real provider has neither. `test:apps`, Studio's
 preview, a hosted project's staging (which reaches no outside service) and sampleusers' runs need
 no network and no account. A release with `fake` refuses to start the payments, except a demo.
 
@@ -382,10 +452,17 @@ never in a repository; nothing in this repository names the accounts.
 - No money through Smithable, and no share of it.
 - No provider named in `smithable.yml`.
 - No record marked paid on a return to the app's page; only the provider's verified word.
-- No provider call acted on without its signature, or without the provider's API confirming it.
+- No provider call acted on without its signature, or without the provider's API confirming it,
+  and none for a Payment the app did not make, or from another account or mode.
 - No payment marked paid whose amount or currency differs from what was asked.
-- No refund without a role named for it.
-- No place held for longer than the hold time; the timer releases it.
+- No refund by a person without a role for it: `refund.by`, admins, and for money that should
+  not have come (§4.3) admins and the refund roles. The app refunds by itself only a payment for
+  a record it had already released.
+- No `paid.set` applied twice, after a refund, or for a payment whose amount differs or whose
+  record no longer asks for it.
+- No call to a provider inside a database transaction.
+- No place held past the hold time (within the timer's minute) unless the provider says the
+  payment is still being processed.
 - No Payment line edited or deleted by hand, like the audit log's.
 - A demo (`DEMO_VISITORS=1`) uses `fake` only, whatever the context file says: its visitors'
   copies must never reach a real provider.
@@ -414,8 +491,9 @@ the audit log.
 ## 9. Build order
 
 1. **Core (Fable).** The section, its validation, the built-in `Payment` model in the IR, the
-   held state on `when: created`, the payments entry as an outgoing `when`, the `{pay}`
-   placeholder, the operations, the summary words, the schema, the context file's key, the spec
+   held state on `when: created` and the refusal of a visitor's API create (§4.7), the Payment's
+   states and their moves (§4.3), the currencies a section accepts, the payments entry as an
+   outgoing `when`, the `{pay}` placeholder, the operations, the summary words, the schema, the context file's key, the spec
    reference, ARCHITECTURE §6.3 and §3.4.
 2. **The kit (A).** The provider interface, `fake`, the checkout flow, the return page, the
    payments address, the hold timer, the Payment list and page, the refund button, the words,
@@ -442,3 +520,31 @@ subscriptions; Payments in the API.
 5. Receipts: the provider's own receipt mail on (in the owner's provider account), and the app's
    outgoing `when: <payment>` optional? Recommended: yes.
 6. `when` as a condition rather than an action's name (§3.2)? Recommended: a condition.
+
+## 11. Second reviewers
+
+Taken: the event id taken in the same transaction as the Payment's change, so a rolled-back
+call is retried; a state machine for the Payment, so a late failure never undoes a payment and
+an old success never applies `paid.set` again after a refund; a `refunding` state and refund
+lines of their own (with dashboard partial refunds recorded by amount) instead of a note; a
+refund's idempotency key from the refund line, not the Payment; no provider call inside a
+database transaction, and the hold timer asking the provider first, outside it; a payment still
+being processed keeps its hold; a failed checkout releases the hold at once; one pending Payment
+per record by a unique index, and step 2 and step 4 of §4.1 made one rule; the Payment found by
+its own id in the provider's metadata, and bound to the provider's account and mode; the
+record's id kept as a plain value, so a released record leaves its Payment; `when` checked
+again and the record's amount compared when the payment is recorded, with money that came for
+nothing (late, twice, no longer asked, amount changed) marked and offered for refund, the
+app's own automatic refund named as the one exception to "a role for every refund" and retried;
+a zero amount said in full; the fake provider's secret and its address only when `fake` is the
+provider or the app a demo; the pay link's token hashed, bound to its amount and limited; a
+visitor's API create refused on a pay-to-create model; currencies settled now (exact conversion,
+whole yen, three decimals refused); the PCI sentence softened; "EU company" for Stripe's Irish
+entity marked to check.
+
+Declined: that the kiosk starter's `recordPayment` would be refused by the `Payment` name (it
+is actions.md's example, not a starter; the note says so); a validation warning when no action
+moves a refunded record out of its paid state (what a record becomes is the owner's action, and
+`paid.set` is not run again); CSRF as a rule of its own (the pay step is a same-origin server
+function, as every change in the app); taking payments for imports and keys on pay-to-create
+models (those are the app's trusted ways in, and the warning says so).
