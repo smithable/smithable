@@ -784,7 +784,15 @@ export const paymentsSection: SpecSection<"payments"> = {
       };
       const formulas = (p.paid?.set ?? []).flatMap((v) => ("formula" in v ? [v] : []));
       if (effect.kind === "remove-field") {
-        const inFormula = own && formulas.some((v) => fieldsUsed(v.formula).includes(from));
+        // The record's own field, or a list's field in an aggregate (SUM(lines.amount)).
+        let viaList = false;
+        for (const v of formulas)
+          renameInFormula(v.text, (name, list) => {
+            if (name === from && list !== undefined && listOf(list)) viaList = true;
+            return undefined;
+          });
+        const inFormula =
+          viaList || (own && formulas.some((v) => fieldsUsed(v.formula).includes(from)));
         if (amount || keyed.length || named || inFormula)
           return {
             refusal: `The payment "${p.name}" uses ${effect.model}.${from}; change or remove the payment first.`,

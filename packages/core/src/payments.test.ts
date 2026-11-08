@@ -448,4 +448,21 @@ test("a payment follows a renamed field and refuses the removal of one it uses",
   expect(
     applyOperation({ spec: withFormula }, "removeField", { model: "Invoice", field: "fee" }),
   ).toMatchObject({ ok: false, message: expect.stringContaining("the payment") });
+  // A list's field in an aggregate counts too.
+  const viaList = swap(
+    "{ set: { paid: true } }",
+    "{ set: { paid: true, total: SUM(lines.amount) } }",
+  );
+  expect(
+    applyOperation({ spec: viaList }, "removeField", { model: "Line", field: "amount" }),
+  ).toMatchObject({
+    ok: false,
+    message: expect.stringContaining("the payment"),
+  });
+  const renamedLine = applyOperation({ spec: viaList }, "renameField", {
+    model: "Line",
+    from: "amount",
+    to: "price",
+  });
+  expect(renamedLine.ok && renamedLine.files.spec).toContain("total: SUM(lines.price)");
 });
