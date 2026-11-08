@@ -13,6 +13,7 @@ export function framer(nativeRate: number) {
   let out: number[] = [];
   let k = 0;
   let taken = 0;
+  let last = 0;
   return (chunk: ArrayLike<number>): Float32Array[] => {
     for (let i = 0; i < chunk.length; i++) pending.push(chunk[i] as number);
     const frames: Float32Array[] = [];
@@ -21,7 +22,9 @@ export function framer(nativeRate: number) {
       if (pending.length < n) break;
       let sum = 0;
       for (let i = 0; i < n; i++) sum += pending[i] as number;
-      out.push(n ? sum / n : 0);
+      // Below 16 kHz (a headset's 8 kHz) a sample repeats rather than a silence going in.
+      last = n ? sum / n : last;
+      out.push(last);
       pending = pending.slice(n);
       taken += n;
       k++;

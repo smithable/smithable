@@ -31,20 +31,50 @@ export interface Detector {
   kind: "silero" | "simple";
   /** The probability that a 16 kHz frame of 512 samples is speech. */
   detect: (frame: Float32Array) => Promise<number> | number;
-  release: () => void;
 }
 
-let loading: Promise<Detector> | undefined;
+type Ort = typeof import("onnxruntime-web/wasm");
+let loading:
+  | Promise<{ ort: Ort; session: import("onnxruntime-web/wasm").InferenceSession }>
+  | undefined;
+// One session for the page; its runs one at a time (the runtime refuses two at once).
+let runs: Promise<unknown> = Promise.resolve();
 
-/** The detector, loaded once per page. */
-export function loadDetector(): Promise<Detector> {
-  loading ??= silero().catch(
-    (): Detector => ({ kind: "simple", detect: simpleDetector(), release: () => undefined }),
-  );
-  return loading;
+/**
+ * A detector with its own state, for one listening (automatic mode, or one test): Silero, whose
+ * files are fetched once per page (a failed fetch is tried again next time), or the simple one.
+ */
+export async function loadDetector(): Promise<Detector> {
+  try {
+    loading ??= silero();
+    const { ort, session } = await loading;
+    // Silero v5: a frame with the last 64 samples of the one before, and a state carried along.
+    const sr = new ort.Tensor("int64", BigInt64Array.from([16000n]));
+    let state = new ort.Tensor("float32", new Float32Array(256), [2, 1, 128]);
+    let context = new Float32Array(64);
+    return {
+      kind: "silero",
+      detect: async (frame) => {
+        const input = new Float32Array(64 + frame.length);
+        input.set(context);
+        input.set(frame, 64);
+        context = frame.slice(-64);
+        const run = runs.then(() =>
+          session.run({ input: new ort.Tensor("float32", input, [1, input.length]), state, sr }),
+        );
+        runs = run.catch(() => undefined);
+        const out = await run;
+        if (out.stateN) state = out.stateN as typeof state;
+        return Number(out.output?.data[0] ?? 0);
+      },
+    };
+  } catch {
+    loading = undefined;
+    return { kind: "simple", detect: simpleDetector() };
+  }
 }
 
-async function silero(): Promise<Detector> {
+async function silero() {
   const [ort, glue, wasm, model] = await Promise.all([
     import("onnxruntime-web/wasm"),
     import("onnxruntime-web/ort-wasm-simd-threaded.mjs?raw"),
@@ -55,31 +85,13 @@ async function silero(): Promise<Detector> {
   // Studio's bundle; the binary is the one just checked.
   ort.env.wasm.numThreads = 1;
   ort.env.wasm.wasmBinary = wasm;
-  ort.env.wasm.wasmPaths = {
-    mjs: URL.createObjectURL(new Blob([glue.default], { type: "text/javascript" })),
-  };
-  const session = await ort.InferenceSession.create(model);
-  // Silero v5: a frame with the last 64 samples of the one before, and a state carried along.
-  const sr = new ort.Tensor("int64", BigInt64Array.from([16000n]));
-  let state = new ort.Tensor("float32", new Float32Array(256), [2, 1, 128]);
-  let context = new Float32Array(64);
-  return {
-    kind: "silero",
-    detect: async (frame) => {
-      const input = new Float32Array(64 + frame.length);
-      input.set(context);
-      input.set(frame, 64);
-      context = frame.slice(-64);
-      const out = await session.run({
-        input: new ort.Tensor("float32", input, [1, input.length]),
-        state,
-        sr,
-      });
-      if (out.stateN) state = out.stateN as typeof state;
-      return Number(out.output?.data[0] ?? 0);
-    },
-    release: () => void session.release(),
-  };
+  const loader = URL.createObjectURL(new Blob([glue.default], { type: "text/javascript" }));
+  ort.env.wasm.wasmPaths = { mjs: loader };
+  try {
+    return { ort, session: await ort.InferenceSession.create(model) };
+  } finally {
+    URL.revokeObjectURL(loader);
+  }
 }
 
 export interface Ear {
@@ -99,6 +111,8 @@ export async function openEar(onChunk: (chunk: Float32Array, rate: number) => vo
   });
   const context = new AudioContext();
   try {
+    // Made after the files were fetched, outside the click: Safari starts it suspended.
+    await context.resume();
     const url = URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" }));
     await context.audioWorklet.addModule(url);
     URL.revokeObjectURL(url);
