@@ -28,7 +28,9 @@ import { Visualize } from "./builder/Visualize";
 import { ASK_SMITH } from "./builder/Wizard";
 import { type CodeJump, SHOW_CODE } from "./code-jump";
 import { type Spec, useSpec } from "./engine";
+import { FeedbackDialog } from "./Feedback";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
+import { grouped, line } from "./history";
 import { logStore } from "./logs";
 import { Making } from "./Making";
 import { OutboxDialog } from "./Outbox";
@@ -114,6 +116,9 @@ export function App() {
     notice?: boolean;
   }>();
   const [reporting, setReporting] = useState(false);
+  // Leave feedback (A 242): open with what was said to Smith, if anything; this session's changes.
+  const [feedback, setFeedback] = useState<string>();
+  const [sessionStart] = useState(() => new Date().toISOString());
   const [editingLook, setEditingLook] = useState<{ project: Project; path: string }>();
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
@@ -856,6 +861,7 @@ export function App() {
         waiting={project.waiting}
         trace={project.trace}
         onShowChanges={showChanges}
+        onFeedback={setFeedback}
         speech={project.speech ?? []}
         // A milestone named or an undo from Smith: the windows read the history again.
         onDone={() => void refresh()}
@@ -1112,6 +1118,13 @@ export function App() {
             >
               Help
             </a>
+            <button
+              type="button"
+              onClick={() => setFeedback("")}
+              className="text-xs font-medium text-muted hover:underline"
+            >
+              Leave feedback
+            </button>
             <Button
               variant="ghost"
               onClick={undo}
@@ -1265,6 +1278,15 @@ export function App() {
           </div>
         )}
         {reporting && <ReportDialog onClose={() => setReporting(false)} />}
+        {feedback !== undefined && (
+          <FeedbackDialog
+            prefill={feedback}
+            changes={grouped(project.trace.filter((t) => t.at >= sessionStart))
+              .reverse()
+              .map((g) => line(g, words))}
+            onClose={() => setFeedback(undefined)}
+          />
+        )}
         {troubleshooting && message && (
           <TroubleshootDialog
             error={message.text}

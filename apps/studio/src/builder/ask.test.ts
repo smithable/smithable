@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { followUp, peopleCommand } from "./Ask";
+import { feedbackRequest, followUp, peopleCommand } from "./Ask";
 
 test("words that lean on the last request go with it; anything else stands alone", () => {
   const asked = { text: "Add a date to orders", at: Date.now(), question: false };
@@ -36,4 +36,13 @@ test("Smith lets the sample users run and stops them; other lines are requests",
   expect(peopleCommand("Try everything.")).toBe("everything");
   expect(peopleCommand("let the sample users try everything")).toBe("everything");
   expect(peopleCommand("try everything on the orders page")).toBeUndefined();
+});
+
+test("Smith opens Leave feedback by rule, with the words after feedback:", () => {
+  expect(feedbackRequest("I want to leave feedback")).toBe("");
+  expect(feedbackRequest("leave feedback")).toBe("");
+  expect(feedbackRequest("I'd like to give some feedback.")).toBe("");
+  expect(feedbackRequest("Feedback: the list is slow")).toBe("the list is slow");
+  expect(feedbackRequest("Add a feedback model")).toBeUndefined();
+  expect(feedbackRequest("feedback")).toBeUndefined();
 });

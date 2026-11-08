@@ -213,6 +213,123 @@ export async function sendReport(
   return { url };
 }
 
+/**
+ * Feedback (A 242): the person's own words, and up to three things they chose to add, each shown
+ * in full before it leaves: this session's Changes lines, the spec files as a report sends them,
+ * and the last failure's report. It goes where a report goes; no "always" or "never" for it.
+ */
+export interface Feedback {
+  kind: "feedback";
+  smithable: string;
+  node: string;
+  platform: string;
+  at: string;
+  comment: string;
+  changes?: string[];
+  specFiles?: Record<string, string>;
+  failure?: Report;
+}
+
+/** The spec files as a report sends them: the five files and the themes, addresses left out. */
+export function specFilesOf(dir: string): Record<string, string> {
+  const files: Record<string, string> = {};
+  for (const name of SPEC_FILES)
+    if (existsSync(join(dir, name))) files[name] = redact(readFileSync(join(dir, name), "utf8"));
+  const themes = join(dir, "themes");
+  if (existsSync(themes))
+    for (const name of readdirSync(themes).filter((f) => f.endsWith(".yml")))
+      files[`themes/${name}`] = redact(readFileSync(join(themes, name), "utf8"));
+  return files;
+}
+
+/** Where feedback goes without the service: a mailbox the docs name. */
+export const FEEDBACK_MAIL = "hello@smithable.ai";
+
+/**
+ * Sends feedback: to the service when hosted (the report endpoint, kind "feedback"); else a
+ * public GitHub issue to open with what was ticked, or a mail to write, when asked for by mail.
+ */
+export async function sendFeedback(
+  feedback: Feedback,
+  via: "issue" | "mail" = "issue",
+): Promise<{ sent: true; message?: string } | { url: string }> {
+  const target = process.env.SMITHABLE_REPORT_URL;
+  if (target) {
+    const response = await fetch(target, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-smithable-report": "1" },
+      body: JSON.stringify(feedback),
+    });
+    const message = await response
+      .json()
+      .then((answer: unknown) => {
+        const said = (answer as { message?: unknown } | null)?.message;
+        return typeof said === "string" ? said : undefined;
+      })
+      .catch(() => undefined);
+    if (!response.ok)
+      throw new Error(message ?? `The feedback was not accepted (${response.status}).`);
+    return { sent: true, message };
+  }
+  const body = [
+    feedback.comment,
+    "",
+    `Smithable ${feedback.smithable}, Node ${feedback.node}, ${feedback.platform}`,
+    ...(feedback.changes?.length
+      ? ["", "What I did:", ...feedback.changes.map((c) => `- ${c}`)]
+      : []),
+    ...(feedback.failure
+      ? [
+          "",
+          `The last failure: ${feedback.failure.operation}`,
+          "```",
+          feedback.failure.error,
+          "```",
+        ]
+      : []),
+    ...(feedback.specFiles
+      ? [
+          "",
+          ...Object.entries(feedback.specFiles).flatMap(([name, text]) => [
+            `${name}:`,
+            "```yaml",
+            text,
+            "```",
+          ]),
+        ]
+      : []),
+  ].join("\n");
+  const title = `Feedback: ${feedback.comment.split("\n")[0]?.slice(0, 80) ?? ""}`;
+  if (via === "mail")
+    return {
+      url: `mailto:${FEEDBACK_MAIL}?${new URLSearchParams({ subject: title, body: body.slice(0, 1800) }).toString().replace(/\+/g, "%20")}`,
+    };
+  return { url: `${ISSUES}?${new URLSearchParams({ title, body: body.slice(0, 6000) })}` };
+}
+
+/** Builds the feedback the person chose to send, from their words and what they ticked. */
+export function buildFeedback(
+  dir: string,
+  comment: string,
+  add: { changes?: string[]; specFiles?: boolean; failure?: boolean },
+  log: string[] = [],
+): Feedback {
+  const failure = add.failure ? buildReport(dir, log) : undefined;
+  return {
+    kind: "feedback",
+    smithable: VERSION,
+    node: process.version,
+    platform: process.platform,
+    at: new Date().toISOString(),
+    comment: comment.slice(0, 5000),
+    ...(add.changes?.length
+      ? { changes: add.changes.slice(0, 200).map((c) => redact(c.slice(0, 500))) }
+      : {}),
+    ...(add.specFiles ? { specFiles: specFilesOf(dir) } : {}),
+    ...(failure ? { failure } : {}),
+  };
+}
+
 const settingsPath = () =>
   join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "smithable", "reports.json");
 

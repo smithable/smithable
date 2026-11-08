@@ -355,6 +355,30 @@ try {
     },
   );
   await step(
+    "Leave feedback opens from the header and from Smith, each part shown before it is ticked (A 242)",
+    async () => {
+      await page.locator("header").first().getByRole("button", { name: "Leave feedback" }).click();
+      let dialog = page.getByRole("dialog", { name: "Leave feedback" });
+      await dialog.getByRole("checkbox", { name: "My app's spec files" }).waitFor();
+      if (await dialog.getByRole("checkbox", { name: "My app's spec files" }).isChecked())
+        throw new Error("a part was ticked before the person ticked it");
+      await dialog.getByText("anyone can read").waitFor();
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+      await dialog.waitFor({ state: "detached" });
+      const box = page.getByLabel("Describe a change, or ask a question");
+      await box.fill("feedback: the list is slow");
+      await box.press("Enter");
+      dialog = page.getByRole("dialog", { name: "Leave feedback" });
+      if (
+        (await dialog.getByRole("textbox", { name: "Your feedback" }).inputValue()) !==
+        "the list is slow"
+      )
+        throw new Error("Smith did not start the feedback with the words said");
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+      await dialog.waitFor({ state: "detached" });
+    },
+  );
+  await step(
     "the app in words tops Behavior, the rest behind Show all; a sentence opens the entry it was made from",
     async () => {
       const words = page.getByRole("region", { name: "The app in words" });

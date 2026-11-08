@@ -56,10 +56,13 @@ export function Ask({
   ready,
   peopleRunning = false,
   onShowChanges,
+  onFeedback,
   speech: speechProviders = [],
 }: {
   /** Where Smith may hear and speak, from the host's policy layer (smith-speech.md §3). */
   speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
+  /** Opens Leave feedback (A 242), with the words said to Smith when there are some. */
+  onFeedback?: (prefill: string) => void;
   /** Opens the Changes window, at a change when one is given (ask-flows.md §8). */
   onShowChanges?: (id?: string) => void;
   /** Whether the sample users are running: a bare "stop" is then said to them. */
@@ -443,6 +446,13 @@ export function Ask({
     clearTimeout(sendLater.current);
     speech.stopSpeaking();
     setJustApplied(false);
+    // "I want to leave feedback", "feedback: <words>": the feedback panel, by rule (A 242).
+    const said = feedbackRequest(request.trim());
+    if (said !== undefined && onFeedback) {
+      setRequest("");
+      onFeedback(said);
+      return;
+    }
     if (!making && history.interrupt(request.trim())) {
       setRequest("");
       return;
@@ -720,6 +730,7 @@ export function Ask({
                     ? ["What have I changed?", justApplied ? "Undo that" : "Undo the last change"]
                     : []
                 }
+                onFeedback={onFeedback ? () => onFeedback("") : undefined}
                 onSay={(text) => {
                   setJustApplied(false);
                   setLocal(undefined);
@@ -1247,7 +1258,10 @@ function ReadyChips({
   onReask,
   history = [],
   onSay,
+  onFeedback,
 }: {
+  /** The chip that opens Leave feedback (A 242). */
+  onFeedback?: () => void;
   /** The history's chips when a line is still in place (ask-flows.md §8), said as if typed. */
   history?: string[];
   onSay?: (text: string) => void;
@@ -1287,6 +1301,15 @@ function ReadyChips({
           {text}
         </button>
       ))}
+      {onFeedback && (
+        <button
+          type="button"
+          onClick={onFeedback}
+          className={cx(CHIP, "disabled:pointer-events-none disabled:opacity-50")}
+        >
+          Leave feedback
+        </button>
+      )}
       {leftOpen.map((a) => (
         <button
           key={a.question}
@@ -1551,4 +1574,20 @@ function plainUsage(usage: string): string {
     return "No AI needed.";
   const model = /\(([^)]+)\)/.exec(usage)?.[1];
   return model ? `Made with ${model}.` : "";
+}
+
+/**
+ * A request to leave feedback, read by rule (A 242): the words to start the panel with (empty for
+ * "I want to leave feedback"), or undefined when it is not one.
+ */
+export function feedbackRequest(text: string): string | undefined {
+  const words = /^feedback\s*:\s*([\s\S]+)$/i.exec(text);
+  if (words) return (words[1] ?? "").trim();
+  if (
+    /^(?:i(?:'d| would)? (?:want|like) to |can i |let me |i want to |please )?(?:leave|give|send) (?:you |some |my )?feedback[.!?]*$/i.test(
+      text,
+    )
+  )
+    return "";
+  return undefined;
 }

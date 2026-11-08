@@ -67,12 +67,15 @@ import {
   replaceProject,
 } from "./replace.js";
 import {
+  buildFeedback,
   buildReport,
   recordFailure,
   reportChoice,
   reportText,
+  sendFeedback,
   sendReport,
   setReportChoice,
+  specFilesOf,
   traceIdOf,
 } from "./report.js";
 import { projectIndex } from "./rules.js";
@@ -1278,6 +1281,37 @@ export async function studio(
         if (!sending || !built) return json({ ok: true });
         try {
           return json({ ok: true, ...(await sendReport(built)) });
+        } catch (error) {
+          return json({ ok: false, message: (error as Error).message });
+        }
+      }
+      // Feedback (A 242): what each thing the person may add would send, in full, and sending it.
+      if (req.method === "GET" && url.pathname === "/api/feedback") {
+        const failure = buildReport(dir, logs);
+        return json({
+          hosted: Boolean(process.env.SMITHABLE_REPORT_URL),
+          specFiles: specFilesOf(dir),
+          ...(failure ? { failure: reportText(failure) } : {}),
+        });
+      }
+      if (req.method === "POST" && url.pathname === "/api/feedback") {
+        const { comment, changes, specFiles, failure, via } = await body();
+        if (typeof comment !== "string" || !comment.trim())
+          return json({ ok: false, message: "Say what you think first." }, 400);
+        const lines = Array.isArray(changes)
+          ? changes.filter((c): c is string => typeof c === "string")
+          : [];
+        const feedback = buildFeedback(
+          dir,
+          comment.trim(),
+          { changes: lines, specFiles: specFiles === true, failure: failure === true },
+          logs,
+        );
+        try {
+          return json({
+            ok: true,
+            ...(await sendFeedback(feedback, via === "mail" ? "mail" : "issue")),
+          });
         } catch (error) {
           return json({ ok: false, message: (error as Error).message });
         }

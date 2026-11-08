@@ -3,10 +3,12 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { beforeEach, expect, test } from "vitest";
 import {
+  buildFeedback,
   buildReport,
   recordFailure,
   reportChoice,
   sendFailure,
+  sendFeedback,
   sendReport,
   setReportChoice,
   traceIdOf,
@@ -177,4 +179,61 @@ test("addresses are left out of every file, the error, the log and the arguments
   expect(report?.log).toEqual(["sent to (an email address)"]);
   expect(report?.args.text).toBe("Write to (an email address)");
   expect(JSON.stringify(report)).not.toMatch(/acme\.example/);
+});
+
+test("feedback: the person's words, and only what they ticked; an issue or a mail without the service", async () => {
+  const bare = buildFeedback(dir, "The list is slow\nwith many rows", {});
+  expect(bare).toMatchObject({ kind: "feedback", comment: "The list is slow\nwith many rows" });
+  expect(bare.changes).toBeUndefined();
+  expect(bare.specFiles).toBeUndefined();
+  expect(bare.failure).toBeUndefined();
+  const full = buildFeedback(dir, "x".repeat(6000), {
+    changes: ["Added a field to Customer", "Asked owner@acme.com"],
+    specFiles: true,
+    failure: true,
+  });
+  expect(full.comment).toHaveLength(5000);
+  expect(full.changes?.[1]).not.toContain("owner@acme.com");
+  expect(Object.keys(full.specFiles ?? {})).toEqual(["smithable.yml", "smithable.auth.yml"]);
+  expect(JSON.stringify(full.specFiles)).not.toContain("owner@acme.com");
+  expect(full.failure).toBeUndefined(); // no failure recorded
+  const withChanges = buildFeedback(dir, "The list is slow", { changes: ["Added a field"] });
+  const issue = await sendFeedback(withChanges);
+  expect("url" in issue && new URL(issue.url).searchParams.get("title")).toBe(
+    "Feedback: The list is slow",
+  );
+  expect("url" in issue && new URL(issue.url).searchParams.get("body")).toContain(
+    "What I did:\n- Added a field",
+  );
+  const mail = await sendFeedback(withChanges, "mail");
+  expect("url" in mail && mail.url).toMatch(
+    /^mailto:hello@smithable\.ai\?subject=Feedback%3A%20The%20list/,
+  );
+});
+
+test("feedback goes to the service when hosted, as kind feedback", async () => {
+  let got: unknown;
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (c) => {
+      body += c;
+    });
+    req.on("end", () => {
+      got = JSON.parse(body);
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ message: "Thank you." }));
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  try {
+    const { port } = server.address() as { port: number };
+    process.env.SMITHABLE_REPORT_URL = `http://127.0.0.1:${port}/reports/p1`;
+    expect(await sendFeedback(buildFeedback(dir, "Nice", {}))).toEqual({
+      sent: true,
+      message: "Thank you.",
+    });
+    expect(got).toMatchObject({ kind: "feedback", comment: "Nice" });
+  } finally {
+    server.close();
+  }
 });
