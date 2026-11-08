@@ -98,6 +98,8 @@ test("the section reads into the IR, with the built-in models and the pay-to-cre
     "currency",
     "status",
     "provider",
+    "providerMode",
+    "providerAccount",
     "reference",
     "note",
     "createdAt",
@@ -258,7 +260,7 @@ test("the summary's words", () => {
   const [order, invoice] = ir.payments;
   if (!order || !invoice) throw new Error("no payments");
   expect(paymentText(order, ir.models)).toBe(
-    "An order is paid when it is placed, on the payment provider's page; a paid order becomes paid: yes. Admins may refund a declined order.",
+    "An order is paid when it is added, on the payment provider's page; a paid order becomes paid: yes. Admins may refund a declined order.",
   );
   expect(paymentText(invoice, ir.models)).toBe(
     "An invoice can be paid while it is sent or overdue; a paid invoice becomes paid.",

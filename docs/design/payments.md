@@ -136,7 +136,9 @@ is: in the generated schema, written only by the kit, never edited by hand. Its 
 | `amount` | money, as asked of the provider |
 | `currency` | the app's currency when it was asked |
 | `status` | `pending`, `paid`, `failed`, `refunding`, `refunded` (the moves between them in §4.3) |
-| `provider` | the provider's name from the context file (`stripe`, `mollie`, `fake`), test or live mode, and the provider's account id where it gives one |
+| `provider` | the provider's name from the context file (`stripe`, `mollie`, `fake`) |
+| `providerMode` | `test` or `live`: the provider's mode the payment was made in |
+| `providerAccount` | the provider's account id, where it gives one (optional) |
 | `reference` | the provider's own id for the payment |
 | `note` | what went wrong, in the app's words (declined, amount differs, paid twice, paid after the hold, the record no longer asks, refund refused, disputed) |
 | `createdAt`, `paidAt`, `refundedAt` | when |
@@ -195,7 +197,7 @@ payments: { provider: mollie }       # stripe | mollie | fake
   `when`, `paid.set` and the description; removing one the entry uses is refused until the entry
   changes. `removePayment` keeps the Payment lines there are (the table stays until the section
   is gone and the owner removes it with a migration, as for any model's data), and says so.
-- **Summary:** "An order is paid when it is placed, on the payment provider's page; a paid order
+- **Summary:** "An order is paid when it is added, on the payment provider's page; a paid order
   becomes paid: yes. Admins may refund a declined order." / "An invoice can be paid while it is
   sent or overdue; a paid invoice becomes paid."
 - **Validation:**

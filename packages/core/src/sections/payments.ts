@@ -76,11 +76,18 @@ export function paymentModels(): ModelIR[] {
         field("status", { kind: "choice", values: [...PAYMENT_STATUSES] }, true, "Its state.", {
           default: "pending",
         }),
+        field("provider", scalar("string"), true, "The provider's name: stripe, mollie or fake."),
         field(
-          "provider",
-          scalar("string"),
+          "providerMode",
+          { kind: "choice", values: ["test", "live"] },
           true,
-          "The provider's name, test or live mode, and its account id where it gives one.",
+          "The provider's mode the payment was made in.",
+        ),
+        field(
+          "providerAccount",
+          scalar("string"),
+          false,
+          "The provider's account id, where it gives one.",
         ),
         field("reference", scalar("string"), false, "The provider's own id for the payment."),
         field("note", scalar("text"), false, "What went wrong, in the app's words."),
@@ -327,7 +334,7 @@ function choiceWords(c: Condition, model: ModelIR | undefined): string | undefin
 }
 
 /**
- * A payments entry in words (§3.6): "An order is paid when it is placed, on the payment provider's
+ * A payments entry in words (§3.6): "An order is paid when it is added, on the payment provider's
  * page; a paid order becomes paid: yes. Admins may refund a declined order." The model's word comes
  * from `label` when the summary has the content file's labels.
  */
@@ -338,9 +345,10 @@ export function paymentText(
 ): string {
   const one = (label ?? ((m: string) => humanize(m).toLowerCase()))(p.on);
   const model = models.find((m) => m.name === p.on);
+  // "added" is the created word outgoing's summary uses too, right for any model.
   const when =
     p.when === "created"
-      ? `${capitalize(article(one))} is paid when it is placed, on the payment provider's page`
+      ? `${capitalize(article(one))} is paid when it is added, on the payment provider's page`
       : `${capitalize(article(one))} can be paid while ${
           choiceWords(p.when, model) ? `it is ${choiceWords(p.when, model)}` : conditionText(p.when)
         }`;
