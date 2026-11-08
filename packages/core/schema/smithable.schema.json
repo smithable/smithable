@@ -1295,7 +1295,7 @@
     },
     "outgoing": {
       "type": "object",
-      "description": "Who is told when something happens to a record: a mail to the owner, a role or an address on the record; or a signed call to a named target.",
+      "description": "Who is told when something happens to a record: a mail, a browser push or a text to the owner, a role or an address on the record; or a signed call to a named target.",
       "propertyNames": {
         "pattern": "^[a-z][A-Za-z0-9]*$"
       },
@@ -1358,14 +1358,30 @@
             "description": "For \"<Model> changed\": the mail and the call also say what the changed fields were before the change."
           },
           "to": {
-            "type": "string",
-            "pattern": "^[a-z][A-Za-z0-9]*$",
-            "description": "\"mail\", or the name of a target whose address and secret are settings."
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][A-Za-z0-9]*$"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "mail",
+                    "push",
+                    "sms"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            ],
+            "description": "A channel (mail, push or sms), a list of channels ([mail, push]) that each reach the recipient, or the name of a target whose address and secret are settings (alone; push and sms are not target names)."
           },
           "recipient": {
             "type": "string",
             "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)?$",
-            "description": "For mail: owner, a role, an email field or a field that refers to User, one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner). For a list mail, a role that reads every record of the model."
+            "description": "For mail, push and sms: owner, a role or a field that refers to User (every channel), an email field (mail) or a phone field (sms), one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner). For a list mail, a role that reads every record of the model."
           },
           "list": {
             "type": "object",

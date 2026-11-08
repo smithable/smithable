@@ -589,6 +589,9 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "appointmentRequested",
       "recipient": {
         "kind": "role",
@@ -601,6 +604,9 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "appointmentMade",
       "recipient": {
         "kind": "owner",
@@ -612,6 +618,9 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "appointmentConfirmed",
       "recipient": {
         "kind": "owner",
@@ -1190,6 +1199,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "reminder",
       "recipient": {
         "kind": "owner",
@@ -1201,6 +1213,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "bookingMade",
       "recipient": {
         "kind": "owner",
@@ -1212,6 +1227,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "bookingChanged",
       "recipient": {
         "kind": "owner",
@@ -1223,6 +1241,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "bookingCancelled",
       "recipient": {
         "kind": "owner",
@@ -1234,6 +1255,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "fields": [
         "startsAt",
       ],
@@ -1259,6 +1283,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "empty": "skip",
       "list": {
         "columns": [
@@ -2834,6 +2861,9 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "invoiceSent",
       "recipient": {
         "kind": "field",
@@ -3560,6 +3590,9 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "orderPlaced",
       "recipient": {
         "kind": "role",
@@ -3572,6 +3605,9 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "orderAccepted",
       "recipient": {
         "kind": "field",
@@ -3587,6 +3623,9 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "orderReady",
       "recipient": {
         "kind": "field",
@@ -5255,6 +5294,9 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "caseReceived",
       "recipient": {
         "kind": "field",
@@ -5270,6 +5312,9 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "replySent",
       "recipient": {
         "kind": "field",

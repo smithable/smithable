@@ -10,7 +10,7 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import type { OutgoingIR, SpecIR } from "./ir.js";
+import { channelsOf, type ModelIR, type OutgoingIR, type SpecIR, USER_MODEL } from "./ir.js";
 import { capitalize, humanize, plural } from "./naming.js";
 import { patternInfo } from "./patterns.js";
 import { titleField } from "./samples.js";
@@ -932,7 +932,22 @@ function checkOutgoingTexts(
   const r = entry.recipient;
   const when = entry.when;
   const model = "model" in when ? ir.models.find((m) => m.name === when.model) : undefined;
-  if (any && auth && model && entry.to === "mail" && r?.kind === "role") {
+  // A push or a text shows its subject on a locked screen (notifications.md §6): a placeholder
+  // that reaches a field about a person is said. One that looks sensitive (`sensitiveKind`) is
+  // refused in every text already (`notSendable`).
+  const subject = texts.find((t) => t.key === "subject")?.value;
+  if (model && channelsOf(entry)?.some((c) => c !== "mail") && isScalar(subject))
+    for (const path of new Set(placeholdersOf(String(subject.value)))) {
+      const why = aboutAPerson(path, model, ir);
+      if (why)
+        ctx.warning(
+          subject,
+          "subject-on-locked-screen",
+          `"subject" of outgoing "${name}": {${path}} ${why}, and a push or a text shows its subject on a locked screen, to whoever holds the phone.`,
+          "Leave it out of the subject, or tell by mail alone; {number} or a time is fine.",
+        );
+    }
+  if (any && auth && model && channelsOf(entry) && r?.kind === "role") {
     const read = modelAccess(model, auth).read;
     if (!read.public && !read.roles.includes(r.role)) {
       const at = texts.find((t) => isScalar(t.value))?.value;
@@ -940,11 +955,32 @@ function checkOutgoingTexts(
         ctx.error(
           at,
           "recipient-cannot-read",
-          `Outgoing "${name}" mails every ${r.role} the ${model.name}'s values, which ${r.role} may not read.`,
+          `Outgoing "${name}" ${channelsOf(entry)?.includes("mail") ? "mails" : "tells"} every ${r.role} the ${model.name}'s values, which ${r.role} may not read.`,
           `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or mail another role.`,
         );
     }
   }
+}
+
+/**
+ * What a placeholder reveals about a person, by the field's type (an email, a phone, a user) or
+ * by being the name of whoever made the change; undefined for anything else.
+ */
+function aboutAPerson(path: string, model: ModelIR, ir: SpecIR): string | undefined {
+  if (path === "by") return "names the person whose change it is";
+  const [first = "", second] = path.split(".");
+  let f = model.fields.find((x) => x.name === (first === "before" ? second : first));
+  if (f && second !== undefined && first !== "before") {
+    const type = f.type;
+    if (type.kind !== "relation") return undefined;
+    if (type.model === USER_MODEL) return "names a user";
+    f = ir.models.find((m) => m.name === type.model)?.fields.find((x) => x.name === second);
+  }
+  if (!f) return undefined;
+  if (f.type.kind === "scalar" && f.type.name === "email") return "is an email address";
+  if (f.type.kind === "scalar" && f.type.name === "phone") return "is a phone number";
+  if (f.type.kind === "relation" && f.type.model === USER_MODEL) return "names a user";
+  return undefined;
 }
 
 type PlaceholderProblem = { code: string; message: string; hint?: string; warning?: true };
@@ -1049,7 +1085,7 @@ export function placeholderProblem(
   // of its fields only for a role that may read the other model.
   if (second === titleField(other) || other.nameParts?.some((p) => p.field === second))
     return undefined;
-  if (!auth || entry.to !== "mail") return undefined;
+  if (!auth || !channelsOf(entry)) return undefined;
   const r = entry.recipient;
   const read = modelAccess(other, auth).read;
   if (read.public) return undefined;

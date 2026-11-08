@@ -13,7 +13,7 @@ import {
   readString,
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
-import { type Condition, conditionFits, type SpecIR, USER_MODEL } from "./ir.js";
+import { type Condition, channelsOf, conditionFits, type SpecIR, USER_MODEL } from "./ir.js";
 
 export type { Condition } from "./ir.js";
 
@@ -1096,15 +1096,16 @@ function checkAgainstSpec(
         `Grant ${i.as} create on ${reply.name}, or let the call act as another role.`,
       );
   }
-  // Outgoing mail (integrations.md §4.1b) meets the access rules here. An address typed by a
-  // visitor is not sent to when the visitor's own change sends it: the app would mail whoever a
-  // stranger names. On a standard action staff press (an order accepted, orders.md §4) it is the
+  // Outgoing mail, push and text (integrations.md §4.1b, notifications.md §5) meet the access
+  // rules here. An address or number typed by a visitor is not sent to when the visitor's own
+  // change sends it: the app would mail or text whoever a stranger names. On a standard action staff press (an order accepted, orders.md §4) it is the
   // staff's decision, and the mail goes. A role that may not read the record would be told what
   // it holds.
   for (const o of ir.outgoing) {
     const r = o.recipient;
     // A custom action's mail goes to a role and tells no record.
-    if (o.to !== "mail" || !r || "custom" in o.when) continue;
+    const channels = channelsOf(o);
+    if (!channels || !r || "custom" in o.when) continue;
     const on = o.when.model;
     const model = ir.models.find((m) => m.name === on);
     if (!model) continue;
@@ -1120,21 +1121,27 @@ function checkAgainstSpec(
         );
       continue;
     }
-    // The address is typed on the record itself, or on each record of a list of them.
+    // The address or number is typed on the record itself, or on each record of a list of them.
     const typed =
-      r.kind === "field" && r.via === "email" && r.path.length === 1
-        ? { field: r.path[0], on: model }
-        : r.kind === "list" && r.each.kind === "field" && r.each.via === "email"
-          ? { field: r.each.field, on: ir.models.find((m) => m.name === r.model) ?? model }
+      r.kind === "field" && r.via !== "user" && r.path.length === 1
+        ? { field: r.path[0], on: model, via: r.via }
+        : r.kind === "list" && r.each.kind === "field" && r.each.via !== "user"
+          ? {
+              field: r.each.field,
+              on: ir.models.find((m) => m.name === r.model) ?? model,
+              via: r.each.via,
+            }
           : undefined;
     const createdByVisitors = typed && publicNodes.create?.find((n) => n.name === typed.on.name);
-    if (typed && createdByVisitors && "event" in o.when)
+    if (typed && createdByVisitors && "event" in o.when) {
+      const [what, verb] = typed.via === "phone" ? ["number", "text"] : ["address", "mail"];
       ctx.warning(
         createdByVisitors.at,
         "visitor-typed-recipient",
-        `Visitors may add ${typed.on.name} records and type any address in ${typed.field}, so the app does not send "${o.name}" to it: a stranger could make the app mail anyone.`,
-        `Mail the owner or a role instead, or take ${typed.on.name} out of "create" under "public".`,
+        `Visitors may add ${typed.on.name} records and type any ${what} in ${typed.field}, so the app does not send "${o.name}" to it: a stranger could make the app ${verb} anyone.`,
+        `${verb === "mail" ? "Mail" : "Text"} the owner or a role instead, or take ${typed.on.name} out of "create" under "public".`,
       );
+    }
     if (r.kind === "role") {
       const read = modelAccess(model, auth).read;
       // A list of fields chosen for a reader who may not see them is a mistake, not an oversight
@@ -1144,7 +1151,7 @@ function checkAgainstSpec(
           ctx,
           accessAt,
           "recipient-cannot-read",
-          `"${o.name}" mails every ${r.role} about ${model.name} records, which ${r.role} may not read: the mail would tell them what the record holds.`,
+          `"${o.name}" ${channels.includes("mail") ? "mails" : "tells"} every ${r.role} about ${model.name} records, which ${r.role} may not read: the ${channels.includes("mail") ? "mail" : "message"} would tell them what the record holds.`,
           `Let ${r.role} read ${model.name} (read: [${model.name}] under roles.${r.role} in smithable.auth.yml), or mail another role.`,
         );
     }

@@ -3,13 +3,14 @@
 // `when` and `set`, custom actions as code with what their contract says they read, write and
 // may send (intents.md §7), timers and what they run, and the outgoing entries with what sets
 // each off. Read from the IR only.
-import type {
-  ActionValueIR,
-  Condition,
-  OutgoingIR,
-  RecipientIR,
-  SpecIR,
-  TimerScheduleIR,
+import {
+  type ActionValueIR,
+  type Condition,
+  channelsOf,
+  type OutgoingIR,
+  type RecipientIR,
+  type SpecIR,
+  type TimerScheduleIR,
 } from "@smithable/core";
 
 export interface BehaviourNode {
@@ -60,8 +61,12 @@ const recipientText = (r?: RecipientIR) =>
           ? r.path.join(".")
           : `each of ${r.list}`;
 
-const told = (o: OutgoingIR) =>
-  o.to === "mail" ? `mail to ${recipientText(o.recipient)}` : `call to ${o.to}`;
+const told = (o: OutgoingIR) => {
+  const channels = channelsOf(o);
+  return channels
+    ? `${channels.join(" and ")} to ${recipientText(o.recipient)}`
+    : `call to ${o.to}`;
+};
 
 export function behaviourOf(ir: SpecIR): { nodes: BehaviourNode[]; edges: BehaviourEdge[] } {
   const nodes: BehaviourNode[] = [];
