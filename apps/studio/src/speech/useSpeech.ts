@@ -1,7 +1,10 @@
-// Speech for Smith, step 1 (docs/design/smith-speech.md §8): the `browser` provider (the
-// browser's own recognition and voices), the person's settings, and one listening tab at a time.
-// Press to talk only; the VAD, automatic mode and barge-in are step 2.
+// Speech for Smith (docs/design/smith-speech.md §8): the `browser` provider (the browser's own
+// recognition and voices), the person's settings, one listening tab at a time, press to talk
+// (step 1) and automatic mode (step 2: the voice detector starts and ends each utterance while
+// Smith is silent). Barge-in waits for the speaker test (§4.3); a `browser` voice never has it.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { type Detector, type Ear, loadDetector, openEar } from "./vad";
+import { framer, segmenter } from "./vad-core";
 import { type Browser, browserOf, sentences, usableVoices, whereLine } from "./words";
 
 const KEY = "smithable:speech";
@@ -70,6 +73,13 @@ export interface Speech {
   voice?: string;
   setVoice: (name: string) => void;
   mic: "off" | "press";
+  /** Automatic mode (§4.2): chosen per visit, never saved; back to press to talk by itself. */
+  auto: boolean;
+  setAuto: (on: boolean) => void;
+  /** A line about automatic mode: starting, or why it went back to press to talk. */
+  autoNote?: string;
+  /** Silero's files could not be had: the simple detector runs (the controls say so). */
+  simpleDetector: boolean;
   listening: boolean;
   /** Words heard so far and not final yet, shown greyed. */
   interim: string;
@@ -179,20 +189,35 @@ export function useSpeech(
     channel.current = c;
     return () => c.close();
   }, []);
+  // Asked once, where the policy keeps hearing on the device; true when it may start now.
+  const mayHear = () => {
+    if (!Rec || !canHear) return false;
+    if (onDeviceOnly && localHearing === undefined) {
+      void (Rec.available?.({ langs: ["en-US"], processLocally: true }) ?? Promise.resolve("no"))
+        .then(
+          (state) => state === "available",
+          () => false,
+        )
+        .then((local) => setLocalHearing(local));
+      return false;
+    }
+    return true;
+  };
+  // Automatic mode's state, read inside the detector's callbacks as it is now.
+  const [auto, setAutoOn] = useState(false);
+  const [autoNote, setAutoNote] = useState<string>();
+  const [simple, setSimple] = useState(false);
+  const ear = useRef<Ear | undefined>(undefined);
+  const detector = useRef<Detector | undefined>(undefined);
+  const lastHeard = useRef(0);
+  const speakingNow = useRef(false);
+  speakingNow.current = speaking;
+  // A recognition that failed to open beside the detector's stream (§4.1's two captures).
+  const clash = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: settings are read as they are now
   const listen = useCallback(
     (hold: boolean) => {
-      if (!Rec || !canHear || rec.current) return;
-      if (onDeviceOnly && localHearing === undefined) {
-        // Asked once, then listening starts if the browser hears on this computer.
-        void (Rec.available?.({ langs: ["en-US"], processLocally: true }) ?? Promise.resolve("no"))
-          .then(
-            (state) => state === "available",
-            () => false,
-          )
-          .then((local) => setLocalHearing(local));
-        return;
-      }
+      if (rec.current || !mayHear() || !Rec) return;
       stopSpeaking();
       const r = new Rec();
       r.lang = "en-US";
@@ -212,12 +237,20 @@ export function useSpeech(
         }
         setInterim(heard);
       };
-      r.onerror = () => undefined;
+      r.onerror = (e) => {
+        if (ear.current && e.error === "audio-capture") clash.current = true;
+      };
       r.onend = () => {
         rec.current = undefined;
         setListening(false);
         setInterim("");
         ended.current(heardAny);
+        if (clash.current) {
+          clash.current = false;
+          stopAuto(
+            "This browser's speech recognition cannot listen beside the voice detector: press to talk instead.",
+          );
+        }
       };
       rec.current = r;
       channel.current?.postMessage("listening");
@@ -234,12 +267,82 @@ export function useSpeech(
     [Rec, canHear, onDeviceOnly, localHearing, stopSpeaking, settings],
   );
   const release = useCallback(() => rec.current?.stop(), []);
+
+  // Automatic mode: the detector opens its own stream; an onset starts recognition (while Smith
+  // is silent), about 800 ms of silence ends it, and what was heard is sent as with a release.
+  const listenNow = useRef(listen);
+  listenNow.current = listen;
+  const stopAuto = (note?: string) => {
+    ear.current?.stop();
+    ear.current = undefined;
+    rec.current?.stop();
+    setAutoOn(false);
+    setAutoNote(note);
+  };
+  const startAuto = async () => {
+    if (ear.current || !mayHear()) return;
+    setAutoNote("Starting the voice detector…");
+    const found = await loadDetector();
+    detector.current = found;
+    setSimple(found.kind === "simple");
+    const segments = segmenter();
+    let frames: ((chunk: Float32Array) => Float32Array[]) | undefined;
+    let queue = Promise.resolve();
+    try {
+      ear.current = await openEar((chunk, rate) => {
+        frames ??= framer(rate);
+        for (const frame of frames(chunk))
+          queue = queue.then(async () => {
+            // Nothing is heard while Smith speaks (barge-in is off for these voices).
+            if (speakingNow.current) return segments.reset();
+            const event = segments.push(await found.detect(frame));
+            if (event === "start") {
+              lastHeard.current = Date.now();
+              listenNow.current(true);
+            } else if (event === "end") rec.current?.stop();
+            else if (event === "misfire") rec.current?.abort();
+          });
+      });
+    } catch {
+      setAutoNote("The microphone could not be opened for automatic mode.");
+      return;
+    }
+    lastHeard.current = Date.now();
+    setAutoOn(true);
+    setAutoNote(undefined);
+    channel.current?.postMessage("listening");
+  };
+  // Back to press to talk after ten minutes without the person speaking, and when the tab hides.
+  useEffect(() => {
+    if (!auto) return;
+    const timer = setInterval(() => {
+      if (Date.now() - lastHeard.current > 10 * 60_000)
+        stopAuto("Back to press to talk: nothing was said for ten minutes.");
+    }, 15_000);
+    return () => clearInterval(timer);
+  });
   // A hidden tab stops listening; it keeps speaking.
   useEffect(() => {
-    const hide = () => document.visibilityState === "hidden" && rec.current?.stop();
+    const hide = () => {
+      if (document.visibilityState !== "hidden") return;
+      rec.current?.stop();
+      if (ear.current) stopAuto("Back to press to talk: the tab was hidden.");
+    };
     document.addEventListener("visibilitychange", hide);
     return () => document.removeEventListener("visibilitychange", hide);
-  }, []);
+  });
+  // Listening in another tab stops automatic mode here too.
+  useEffect(() => {
+    const c = channel.current;
+    if (!c) return;
+    const other = (e: MessageEvent) => {
+      if (e.data === "listening" && ear.current)
+        stopAuto("Back to press to talk: another tab listens.");
+    };
+    c.addEventListener("message", other);
+    return () => c.removeEventListener("message", other);
+  });
+  useEffect(() => () => ear.current?.stop(), []);
 
   return {
     canSpeak,
@@ -256,6 +359,10 @@ export function useSpeech(
     ...(voice ? { voice: voice.name } : {}),
     setVoice: (name) => save({ ...settings, voice: name }),
     mic: settings.mic,
+    auto,
+    setAuto: (on) => (on ? void startAuto() : stopAuto()),
+    ...(autoNote ? { autoNote } : {}),
+    simpleDetector: simple,
     listening,
     interim,
     where: whereLine("browser", browser, onDeviceOnly && localHearing === true),

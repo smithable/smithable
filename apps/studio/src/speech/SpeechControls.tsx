@@ -3,6 +3,7 @@
 // voice. The first press of the mic says where the voice goes before the browser asks for it.
 import { useRef, useState } from "react";
 import { cx } from "../ui";
+import { SpeechTest } from "./SpeechTest";
 import type { Speech } from "./useSpeech";
 
 const BUTTON =
@@ -101,6 +102,23 @@ export function SpeechControls({ speech }: { speech: Speech }) {
             ))}
           </select>
         )}
+        {speech.canHear && (
+          <button
+            type="button"
+            className={cx(
+              "h-8 rounded-md border border-line px-2 text-xs",
+              speech.auto && "border-accent text-accent",
+            )}
+            aria-pressed={speech.auto}
+            title="Listens by itself while Smith is silent; a headset works best"
+            onClick={() => {
+              if (!speech.told) setShowWhere(true);
+              speech.setAuto(!speech.auto);
+            }}
+          >
+            Automatic
+          </button>
+        )}
         {speech.speaking && (
           <button
             type="button"
@@ -112,6 +130,20 @@ export function SpeechControls({ speech }: { speech: Speech }) {
         )}
       </div>
       {showWhere && <p className="text-xs text-quiet">{speech.where}</p>}
+      {speech.auto && (
+        <p className="text-xs text-quiet">
+          Listening while Smith is silent; a headset works best.
+          {speech.simpleDetector && " A simpler voice detector is in use."}
+        </p>
+      )}
+      {speech.autoNote && (
+        <p role="status" className="text-xs text-quiet">
+          {speech.autoNote}
+        </p>
+      )}
+      {new URLSearchParams(window.location.search).has("speech-test") && (
+        <SpeechTest {...(speech.voice ? { voice: speech.voice } : {})} />
+      )}
       {speech.interim && (
         <p aria-live="polite" className="text-xs text-quiet italic">
           {speech.interim}

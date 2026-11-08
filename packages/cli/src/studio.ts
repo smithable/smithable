@@ -101,7 +101,9 @@ const STUDIO = existsSync(join(PACKAGED, "index.html"))
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript",
+  ".mjs": "text/javascript",
   ".css": "text/css",
+  ".wasm": "application/wasm",
   ".svg": "image/svg+xml",
 };
 
@@ -1609,6 +1611,12 @@ export async function studio(
       // The Studio app itself; unknown paths get index.html (a single-page app).
       const path = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
       let file = join(STUDIO, path);
+      // The voice detector's files are not here (a local Studio fetches them from the docs site,
+      // smith-speech.md §4.2): a plain 404 sends the page on to the next place at once.
+      if (url.pathname.startsWith("/vad/") && !existsSync(file)) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        return res.end("Not here.");
+      }
       if (!existsSync(file) || !statSync(file).isFile()) file = join(STUDIO, "index.html");
       res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" });
       res.end(readFileSync(file));
