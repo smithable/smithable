@@ -407,7 +407,7 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           <p role="status" className="bg-warning px-4 py-2 text-center text-sm text-warning-foreground">
             This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
-        )}${live ? '\n        {viewer && <Live model={pageModels[pageOf(pathname) ?? ""]} />}' : ""}
+        )}${live ? '\n        {viewer && <Live key={viewer.id} model={pageModels[pageOf(pathname) ?? ""]} />}' : ""}
         ${
           landings.length ||
           sites.length ||

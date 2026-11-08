@@ -15755,7 +15755,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
-        {viewer && <Live model={pageModels[pageOf(pathname) ?? ""]} />}
+        {viewer && <Live key={viewer.id} model={pageModels[pageOf(pathname) ?? ""]} />}
         {landingRoutes.includes(pathname) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
@@ -16523,7 +16523,10 @@ export const Route = createFileRoute("/events")({
         const session = await auth.api.getSession({ headers });
         if (!session) return new Response("Sign in first.", { status: 401 });
         const id = session.session.id;
-        return openStream(session.user.id, async () => (await auth.api.getSession({ headers }))?.session.id === id);
+        // Read from the database each time, without lengthening the session: an open tab is not use.
+        const alive = async () =>
+          (await auth.api.getSession({ headers, query: { disableCookieCache: true, disableRefresh: true } }))?.session.id === id;
+        return openStream(session.user.id, alive, request.signal);
       },
     },
   },
@@ -17833,7 +17836,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Landing.tsx": "76c38edd kit",
   "src/kit/LegalPage.tsx": "54e683db kit",
-  "src/kit/Live.tsx": "5082eb8e kit",
+  "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -17860,7 +17863,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "a49b92ad kit",
+  "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -17892,7 +17895,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "338366d8 generated",
+  "src/routes/__root.tsx": "f40e387f generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/appointments/$id.tsx": "05b6e945 generated",
@@ -17902,7 +17905,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/barbers/index.tsx": "a23dac2a generated",
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
-  "src/routes/events.ts": "022b2321 generated",
+  "src/routes/events.ts": "cdf9dd08 generated",
   "src/routes/files/$model.$field.ts": "47918d6e kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
@@ -27460,7 +27463,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
-        {viewer && <Live model={pageModels[pageOf(pathname) ?? ""]} />}
+        {viewer && <Live key={viewer.id} model={pageModels[pageOf(pathname) ?? ""]} />}
         {landingRoutes.includes(pathname) || siteRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
@@ -29709,7 +29712,10 @@ export const Route = createFileRoute("/events")({
         const session = await auth.api.getSession({ headers });
         if (!session) return new Response("Sign in first.", { status: 401 });
         const id = session.session.id;
-        return openStream(session.user.id, async () => (await auth.api.getSession({ headers }))?.session.id === id);
+        // Read from the database each time, without lengthening the session: an open tab is not use.
+        const alive = async () =>
+          (await auth.api.getSession({ headers, query: { disableCookieCache: true, disableRefresh: true } }))?.session.id === id;
+        return openStream(session.user.id, alive, request.signal);
       },
     },
   },
@@ -32205,7 +32211,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/Inspector.tsx": "5bd2746f kit",
   "src/kit/Landing.tsx": "76c38edd kit",
   "src/kit/LegalPage.tsx": "54e683db kit",
-  "src/kit/Live.tsx": "5082eb8e kit",
+  "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
@@ -32239,7 +32245,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "a49b92ad kit",
+  "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -32273,7 +32279,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "65b1f83a generated",
   "src/routes/[_dev]/clock.ts": "a43168cd generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "0c2427b4 generated",
+  "src/routes/__root.tsx": "ed76d161 generated",
   "src/routes/about/index.tsx": "52b48987 generated",
   "src/routes/admin/activity.tsx": "f5a0628c generated",
   "src/routes/admin/bookings/$id.tsx": "3343f459 generated",
@@ -32305,7 +32311,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/$id.tsx": "3af3b04e generated",
   "src/routes/class-types/index.tsx": "ec46d5f6 generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
-  "src/routes/events.ts": "ce2d3597 generated",
+  "src/routes/events.ts": "98860b46 generated",
   "src/routes/files/$model.$field.ts": "47918d6e kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
@@ -48706,7 +48712,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
-        {viewer && <Live model={pageModels[pageOf(pathname) ?? ""]} />}
+        {viewer && <Live key={viewer.id} model={pageModels[pageOf(pathname) ?? ""]} />}
         {landingRoutes.includes(pathname) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
@@ -49063,7 +49069,10 @@ export const Route = createFileRoute("/events")({
         const session = await auth.api.getSession({ headers });
         if (!session) return new Response("Sign in first.", { status: 401 });
         const id = session.session.id;
-        return openStream(session.user.id, async () => (await auth.api.getSession({ headers }))?.session.id === id);
+        // Read from the database each time, without lengthening the session: an open tab is not use.
+        const alive = async () =>
+          (await auth.api.getSession({ headers, query: { disableCookieCache: true, disableRefresh: true } }))?.session.id === id;
+        return openStream(session.user.id, alive, request.signal);
       },
     },
   },
@@ -50525,7 +50534,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/Inspector.tsx": "5bd2746f kit",
   "src/kit/Landing.tsx": "76c38edd kit",
   "src/kit/LegalPage.tsx": "54e683db kit",
-  "src/kit/Live.tsx": "5082eb8e kit",
+  "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -50558,7 +50567,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "a49b92ad kit",
+  "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -50592,13 +50601,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/[_dev]/ask.ts": "e054fda4 generated",
   "src/routes/[_dev]/clock.ts": "a43168cd generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "940e9767 generated",
+  "src/routes/__root.tsx": "43f38496 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/clients/$id.tsx": "ccab8f93 generated",
   "src/routes/clients/index.tsx": "0a7b2e0e generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
-  "src/routes/events.ts": "860754d1 generated",
+  "src/routes/events.ts": "2a5e5b78 generated",
   "src/routes/files/$model.$field.ts": "47918d6e kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
@@ -56971,7 +56980,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
-        {viewer && <Live model={pageModels[pageOf(pathname) ?? ""]} />}
+        {viewer && <Live key={viewer.id} model={pageModels[pageOf(pathname) ?? ""]} />}
         {landingRoutes.includes(pathname) ? (
           children
         ) : !viewer && visitorRoutes.some((r) => pathname === r || pathname.startsWith(\`\${r}/\`)) ? (
@@ -57368,7 +57377,10 @@ export const Route = createFileRoute("/events")({
         const session = await auth.api.getSession({ headers });
         if (!session) return new Response("Sign in first.", { status: 401 });
         const id = session.session.id;
-        return openStream(session.user.id, async () => (await auth.api.getSession({ headers }))?.session.id === id);
+        // Read from the database each time, without lengthening the session: an open tab is not use.
+        const alive = async () =>
+          (await auth.api.getSession({ headers, query: { disableCookieCache: true, disableRefresh: true } }))?.session.id === id;
+        return openStream(session.user.id, alive, request.signal);
       },
     },
   },
@@ -59152,7 +59164,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Filters.tsx": "59b93574 kit",
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Landing.tsx": "76c38edd kit",
-  "src/kit/Live.tsx": "5082eb8e kit",
+  "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -59181,7 +59193,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "a49b92ad kit",
+  "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -59213,13 +59225,13 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "621ae5e1 generated",
+  "src/routes/__root.tsx": "4b6e15bc generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/dishes/$id.tsx": "ae74c5c1 generated",
   "src/routes/dishes/index.tsx": "31d7f594 generated",
   "src/routes/dishes/new.tsx": "7aa588df generated",
-  "src/routes/events.ts": "82ce3089 generated",
+  "src/routes/events.ts": "e5bcb4f0 generated",
   "src/routes/files/$model.$field.ts": "47918d6e kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
@@ -86734,7 +86746,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             This is a demo: sign in as anyone and try things; the data is reset every hour.
           </p>
         )}
-        {viewer && <Live model={pageModels[pageOf(pathname) ?? ""]} />}
+        {viewer && <Live key={viewer.id} model={pageModels[pageOf(pathname) ?? ""]} />}
         <AppShell appName={app.name} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename} onTime={saveTime} settings={<NoticeSound />}>
           {children}
         </AppShell>
@@ -87265,7 +87277,10 @@ export const Route = createFileRoute("/events")({
         const session = await auth.api.getSession({ headers });
         if (!session) return new Response("Sign in first.", { status: 401 });
         const id = session.session.id;
-        return openStream(session.user.id, async () => (await auth.api.getSession({ headers }))?.session.id === id);
+        // Read from the database each time, without lengthening the session: an open tab is not use.
+        const alive = async () =>
+          (await auth.api.getSession({ headers, query: { disableCookieCache: true, disableRefresh: true } }))?.session.id === id;
+        return openStream(session.user.id, alive, request.signal);
       },
     },
   },
@@ -88410,7 +88425,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Filters.tsx": "59b93574 kit",
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Inspector.tsx": "5bd2746f kit",
-  "src/kit/Live.tsx": "5082eb8e kit",
+  "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
   "src/kit/MoreOnScroll.tsx": "e8964e55 kit",
@@ -88441,7 +88456,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "a49b92ad kit",
+  "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -88475,13 +88490,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/[_dev]/ask.ts": "3e2813c1 generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "39bbf4ec generated",
+  "src/routes/__root.tsx": "05dab5c3 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/cases/$id.tsx": "74f8aab9 generated",
   "src/routes/cases/index.tsx": "854d0e70 generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
-  "src/routes/events.ts": "861e4204 generated",
+  "src/routes/events.ts": "f683a575 generated",
   "src/routes/files/$model.$field.ts": "47918d6e kit",
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",

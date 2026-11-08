@@ -3,7 +3,7 @@
 // the streams they have open: the entry's name, the model, the record's id, the title line and
 // the link, nothing else. The mail is queued as before; this rides along. One process holds the
 // streams, so the fan-out is in it (the hosted service runs one process per app).
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "#/db";
 import { outgoingMail, user } from "#/db/schema";
 import type { Viewer } from "./access";
@@ -85,15 +85,26 @@ export function liveLater(
 
 async function announce(pending: Live["pending"]): Promise<void> {
   for (const { mail, to, event } of pending) {
-    if (
-      !db.select({ id: outgoingMail.id }).from(outgoingMail).where(eq(outgoingMail.id, mail)).get()
-    )
-      continue;
+    // The mail row proves the change committed: the same row, not only its id, since SQLite gives
+    // a rolled-back row's id to the next one.
+    const committed = db
+      .select({ id: outgoingMail.id })
+      .from(outgoingMail)
+      .where(
+        and(
+          eq(outgoingMail.id, mail),
+          eq(outgoingMail.entry, event.entry),
+          eq(outgoingMail.recordId, event.id),
+          eq(outgoingMail.to, to.email),
+        ),
+      )
+      .get();
+    if (!committed) continue;
     // A role's people come with their id; an address the record names, by its user.
     const person = db
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
-      .where(to.id ? eq(user.id, to.id) : eq(user.email, to.email))
+      .where(to.id ? eq(user.id, to.id) : sql`lower(${user.email}) = ${to.email.toLowerCase()}`)
       .get();
     if (!person) continue;
     const streams = live.streams.get(person.id);
@@ -103,13 +114,17 @@ async function announce(pending: Live["pending"]): Promise<void> {
     if (!read || !(await read(viewer, event.id))) continue;
     const text = `event: notice\ndata: ${JSON.stringify(event)}\n\n`;
     for (const stream of [...streams])
-      if (await stream.alive()) stream.send(text);
+      if (await stream.alive().catch(() => false)) stream.send(text);
       else stream.close();
   }
 }
 
-/** The person's stream of events (`/events`): open while the session is. */
-export function openStream(personId: string, alive: () => Promise<boolean>): Response {
+/** The person's stream of events (`/events`): open while the session is and the page listens. */
+export function openStream(
+  personId: string,
+  alive: () => Promise<boolean>,
+  signal: AbortSignal,
+): Response {
   const encoder = new TextEncoder();
   let stream: Stream | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -127,6 +142,8 @@ export function openStream(personId: string, alive: () => Promise<boolean>): Res
       };
       stream = {
         send: (text) => {
+          // A page that reads nothing (gone, or too slow) is not buffered for: it is closed.
+          if ((controller.desiredSize ?? 0) < -50) return close();
           try {
             controller.enqueue(encoder.encode(text));
           } catch {
@@ -138,14 +155,23 @@ export function openStream(personId: string, alive: () => Promise<boolean>): Res
       };
       const list = live.streams.get(personId) ?? [];
       list.push(stream);
-      while (list.length > STREAMS) list.shift()?.close();
+      // A sixth closes the oldest, which is told so: its page does not reconnect and take another.
+      while (list.length > STREAMS) {
+        const oldest = list.shift();
+        oldest?.send("event: replaced\ndata: {}\n\n");
+        oldest?.close();
+      }
       live.streams.set(personId, list);
       stream.send(": open\n\n");
       // Once a minute: the session is checked, and a comment keeps proxies from closing it.
       timer = setInterval(() => {
-        void alive().then((on) => (on ? stream?.send(": ping\n\n") : close()));
+        alive().then(
+          (on) => (on ? stream?.send(": ping\n\n") : close()),
+          () => close(),
+        );
       }, 60_000);
       timer.unref?.();
+      signal.addEventListener("abort", close, { once: true });
     },
     cancel() {
       stream?.close();

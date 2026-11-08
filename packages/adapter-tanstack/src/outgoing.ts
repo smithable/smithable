@@ -76,7 +76,10 @@ export const Route = createFileRoute("/events")({
         const session = await auth.api.getSession({ headers });
         if (!session) return new Response("Sign in first.", { status: 401 });
         const id = session.session.id;
-        return openStream(session.user.id, async () => (await auth.api.getSession({ headers }))?.session.id === id);
+        // Read from the database each time, without lengthening the session: an open tab is not use.
+        const alive = async () =>
+          (await auth.api.getSession({ headers, query: { disableCookieCache: true, disableRefresh: true } }))?.session.id === id;
+        return openStream(session.user.id, alive, request.signal);
       },
     },
   },

@@ -67,6 +67,8 @@ export function Live({ model }: { model?: string }) {
       if (opened) void router.invalidate();
       opened = true;
     });
+    // A sixth tab took this one's place: it stops, rather than taking another's back.
+    source.addEventListener("replaced", () => source.close());
     source.addEventListener("notice", (e) => {
       const notice = JSON.parse((e as MessageEvent<string>).data) as Notice;
       setNotices((all) =>
