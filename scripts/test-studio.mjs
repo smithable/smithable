@@ -1567,7 +1567,11 @@ try {
       if (await trace.getByText(/ tokens/).count())
         throw new Error("Changes shows a model's tokens");
       // What it verified, under Smith's line for it: applied, data, what was not tested.
-      const verified = page.getByRole("list", { name: "Thread" }).locator("[data-verified]");
+      // Smith's thread can be on screen twice (his window and his floating panel): the first.
+      const verified = page
+        .getByRole("list", { name: "Thread" })
+        .locator("[data-verified]")
+        .first();
       await verified
         .getByText(/^Change applied\. Data preserved\. /)
         .waitFor({ timeout: 30000 * P });
