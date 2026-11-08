@@ -779,7 +779,9 @@ function Thread({
   return (
     <ol aria-label="Thread" className="space-y-3">
       {lines.map((line) => (
-        <li key={`${line.at}|${line.reply}`} className="space-y-1">
+        // A change's own id: two lines alike in the same second must not share a key, or the
+        // verified line is drawn under the wrong one.
+        <li key={`${"id" in line ? line.id : ""}|${line.at}|${line.reply}`} className="space-y-1">
           {line.request && <p className={MINE}>{line.request}</p>}
           <p className={SMITHS}>{line.reply}</p>
           {"id" in line && line.id === newest && verified[newest] && (
