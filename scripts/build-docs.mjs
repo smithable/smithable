@@ -19,6 +19,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { Marked } from "marked";
 import { commandsPage } from "./commands-page.mjs";
 import { operationsPage } from "./operations-page.mjs";
+import { vadAssets } from "./vad-assets.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const out = resolve(process.argv[2] ?? join(root, "site"));
@@ -541,6 +542,14 @@ mkdirSync(join(out, dirname(schemaPath)), { recursive: true });
 // The brand's files (the logo, the icons, the smithy picture), served as they are: smithable.ai's
 // start page and the docs' own header use them from here.
 cpSync(join(root, "docs/site/brand"), join(out, "brand"), { recursive: true });
+// The voice detector's large files, which a local Studio fetches from here when automatic mode
+// starts (smith-speech.md §4.2), by version, so a new version never changes an old folder.
+{
+  const vad = vadAssets();
+  mkdirSync(join(out, "vad", vad.version), { recursive: true });
+  for (const [name, file] of Object.entries(vad.files))
+    copyFileSync(file.path, join(out, "vad", vad.version, name));
+}
 for (const page of PAGES) {
   // A heading's id by its text: the next unused one of that text, so repeated headings keep
   // GitHub's -1, -2 suffixes.

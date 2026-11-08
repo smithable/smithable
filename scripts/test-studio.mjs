@@ -2120,6 +2120,41 @@ try {
       await sound.click();
     },
   );
+  await step(
+    "automatic mode loads Silero from the docs site's files, checked by their hashes (A 235 step 2)",
+    async () => {
+      // Its own browser, with a stand-in microphone; docs.smithable.ai answered from the site
+      // just built (pnpm site), as the published one will.
+      const ears = await chromium.launch({
+        args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+      });
+      try {
+        const listener = await ears.newPage();
+        await listener.route("https://docs.smithable.ai/vad/**", (route) => {
+          const path = new URL(route.request().url()).pathname;
+          route.fulfill({
+            body: readFileSync(join(repo, "site", path)),
+            headers: { "access-control-allow-origin": "*" },
+          });
+        });
+        await listener.goto(`http://localhost:${port}/`);
+        await listener
+          .locator("[data-speech], [data-speech-off]")
+          .first()
+          .waitFor({ timeout: 30000 * P });
+        const auto = listener.getByRole("button", { name: "Automatic" });
+        if (!(await auto.count())) return; // no recognition in this browser
+        await auto.click();
+        await listener.getByText("Listening while Smith is silent").waitFor({ timeout: 30000 * P });
+        if (await listener.getByText("A simpler voice detector is in use.").count())
+          throw new Error("Silero's files did not load: the simple detector runs");
+        await auto.click();
+        await listener.getByText("Listening while Smith is silent").waitFor({ state: "detached" });
+      } finally {
+        await ears.close();
+      }
+    },
+  );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     await sub("Look");
