@@ -544,7 +544,7 @@ the audit log.
 
 ## 9. Build order
 
-1. **Core (Fable).** The section, its validation, the built-in `Payment` model in the IR, the
+1. **Core (Fable).** Built (fable/payments-core): the built-in models are the IR's `builtInModels` (`Payment` and its refund lines, `PaymentRefund`), the moves core's `PAYMENT_MOVES`, and a pay-to-create model is marked `heldByPayment`. The section, its validation, the built-in `Payment` model in the IR, the
    held state on `when: created` and the refusal of a visitor's API create (§4.7), the Payment's
    states and their moves (§4.3), the currencies a section accepts, the payments entry as an
    outgoing `when`, the `{pay}` placeholder, the operations, the summary words, the schema, the context file's key, the spec

@@ -19,6 +19,7 @@ import {
   pageAccess,
   pageModel,
   partSections,
+  paymentText,
   plural,
   type RoleIR,
   type SpecIR,
@@ -566,6 +567,20 @@ export function summarize(
       title: humanize(t.name),
       sentences: [
         timerText(t, (name) => {
+          const model = modelNamed(name);
+          return model ? one(model) : humanize(name).toLowerCase();
+        }),
+      ],
+    });
+  }
+
+  // What a record is paid for (payments.md §3.6): one sentence or two each.
+  for (const p of ir.payments ?? []) {
+    sections.push({
+      concept: `payment:${p.name}`,
+      title: humanize(p.name),
+      sentences: [
+        paymentText(p, ir.models, (name) => {
           const model = modelNamed(name);
           return model ? one(model) : humanize(name).toLowerCase();
         }),

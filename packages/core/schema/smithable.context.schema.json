@@ -99,6 +99,24 @@
         }
       },
       "description": "Where a model may run: the policy, and with custom the models allowed."
+    },
+    "payments": {
+      "type": "object",
+      "description": "Who takes the payments of the spec's payments section; its keys are settings, never in a file.",
+      "required": [
+        "provider"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "stripe",
+            "mollie",
+            "fake"
+          ],
+          "description": "stripe, mollie, or fake (the app's own page, for development and tests)."
+        }
+      }
     }
   }
 }

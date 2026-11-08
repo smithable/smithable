@@ -1,4 +1,9 @@
-import { ANALYTICS, type AnalyticsProvider, EXACT_VERSION } from "../context-file.js";
+import {
+  ANALYTICS,
+  type AnalyticsProvider,
+  EXACT_VERSION,
+  PAYMENT_PROVIDERS,
+} from "../context-file.js";
 import { type AnyOperation, type Operation, OperationError } from "../operation.js";
 
 /** An npm package name, e.g. chart.js or @turf/turf. */
@@ -84,4 +89,49 @@ const setAnalytics: Operation<{ provider: string; id?: string }> = {
   },
 };
 
-export const contextOperations: AnyOperation[] = [setPackage, setAnalytics];
+/**
+ * The payment provider (docs/design/payments.md §3.5): one per app; "none" leaves the app on
+ * `fake` in development and preview. Choosing a real one the first time says whose part is what (§7b).
+ */
+const setPaymentProvider: Operation<{ provider: string }> = {
+  name: "setPaymentProvider",
+  summary: `Take the app's payments through ${PAYMENT_PROVIDERS.join(", ")} ("none" takes the choice away; development and preview then use fake).`,
+  schema: {
+    type: "object",
+    required: ["provider"],
+    additionalProperties: false,
+    properties: { provider: { enum: [...PAYMENT_PROVIDERS, "none"] } },
+  },
+  positional: ["provider"],
+  describe: ({ provider }) =>
+    provider === "none" ? "Name no payment provider" : `Take payments through ${provider}`,
+  destructive: () => false,
+  apply(editors, { provider }) {
+    const context = editors.context;
+    const before = context.has(["payments", "provider"])
+      ? context.get(["payments", "provider"])
+      : undefined;
+    if (provider === "none") {
+      if (!context.has(["payments"]))
+        throw new OperationError("smithable.context.yml names no payment provider.");
+      context.remove(["payments"]);
+      return [];
+    }
+    if (!(PAYMENT_PROVIDERS as readonly string[]).includes(provider))
+      throw new OperationError(
+        `There is no payment provider "${provider}"; there are ${PAYMENT_PROVIDERS.join(", ")}.`,
+      );
+    if (context.has(["payments"])) context.remove(["payments"]);
+    context.add([], "payments", { provider });
+    const real = (p: unknown) => p === "stripe" || p === "mollie";
+    return real(provider) && !real(before)
+      ? [
+          {
+            note: `you are the merchant and ${provider}'s customer: the account, the payment methods, prices, VAT, terms of sale, refunds and disputes are yours, and card data is the provider's, never to be taken into the app (in a field, a form, a message or a file)`,
+          },
+        ]
+      : [];
+  },
+};
+
+export const contextOperations: AnyOperation[] = [setPackage, setAnalytics, setPaymentProvider];

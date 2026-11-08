@@ -12,6 +12,7 @@ import { modelsSection } from "./sections/models.js";
 import { navigationSection } from "./sections/navigation.js";
 import { outgoingSection } from "./sections/outgoing.js";
 import { pagesSection } from "./sections/pages.js";
+import { paymentModels, paymentsSection } from "./sections/payments.js";
 import { queriesSection } from "./sections/queries.js";
 import { timersSection } from "./sections/timers.js";
 import { didYouMean } from "./suggest.js";
@@ -26,6 +27,7 @@ export const SECTIONS: readonly SpecSection[] = [
   actionsSection,
   queriesSection,
   timersSection,
+  paymentsSection,
   outgoingSection,
   incomingSection,
   pagesSection,
@@ -130,6 +132,7 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
   }
   unfilled(ctx, parsed);
   triggersReachable(ctx, parsed);
+  withPayments(ctx, parsed);
   ctx.checkReferences(options.roles ? [] : ["role"]);
 
   if (hasErrors(ctx.diagnostics)) return done();
@@ -193,6 +196,30 @@ function firstLine(message: string): string {
 }
 
 /**
+ * What a `payments` section brings (docs/design/payments.md §3): the built-in Payment models, and
+ * a pay-to-create model marked held, for the adapter's held column and its refusal of a visitor's
+ * API create (§4.7). A pay-to-create model whose records an incoming call makes is warned about:
+ * those records skip the pay step, created unheld and unpaid.
+ */
+function withPayments(ctx: ParseContext, parsed: Partial<SpecIR>): void {
+  const payments = parsed.payments ?? [];
+  if (!payments.length) return;
+  parsed.builtInModels = paymentModels();
+  for (const p of payments) {
+    if (p.when !== "created") continue;
+    const model = parsed.models?.find((m) => m.name === p.on);
+    if (model) model.heldByPayment = true;
+    for (const i of parsed.incoming ?? [])
+      if (i.create === p.on)
+        ctx.warning(
+          ctx.at(`payment:${p.name}`),
+          "payment-skipped",
+          `${p.on} is paid to be created, but the incoming call "${i.name}" makes ${p.on} records too: those are created unpaid, without the pay step.`,
+        );
+  }
+}
+
+/**
  * A custom action's `triggers` (docs/design/intents.md §6) name the outgoing entries its work
  * sets off, not a way to fire one: the entry on the action itself, or a record entry on a model
  * its code writes (any model's, when it has no `touches`). An entry on a standard action or a
@@ -226,7 +253,7 @@ function triggersReachable(ctx: ParseContext, parsed: Partial<SpecIR>): void {
         ctx.error(
           at,
           "invalid-action",
-          `${label}: ${name} fires when ${"action" in when ? `the action ${when.action} runs` : `the timer ${when.timer} comes`}, which code does not set off.`,
+          `${label}: ${name} fires when ${"action" in when ? `the action ${when.action} runs` : "timer" in when ? `the timer ${when.timer} comes` : `a payment of ${when.payment} succeeds`}, which code does not set off.`,
         );
     }
   }
@@ -245,6 +272,8 @@ function unfilled(ctx: ParseContext, parsed: Partial<SpecIR>): void {
     for (const add of action.add ?? [])
       for (const v of add.values) given.add(`${add.model}.${v.field}`);
   }
+  for (const p of parsed.payments ?? [])
+    for (const v of p.paid?.set ?? []) given.add(`${p.on}.${v.field}`);
   for (const entry of parsed.incoming ?? []) {
     if (!entry.create) continue;
     for (const v of entry.set) given.add(`${entry.create}.${v.field}`);

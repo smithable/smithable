@@ -55,6 +55,8 @@ export function namesFor(
       return ir.outgoing.map((o) => [o.name, humanize(o.name)]);
     case "timer":
       return ir.timers.map((t) => [t.name, humanize(t.name)]);
+    case "payment":
+      return ir.payments.map((p) => [p.name, humanize(p.name)]);
     case "incoming":
       return ir.incoming.map((i) => [i.name, humanize(i.name)]);
     case "section": {
