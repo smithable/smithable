@@ -1926,7 +1926,7 @@ try {
       const entry = trace
         .locator(":scope > li", { has: page.getByRole("button", { name: /^Undo: / }) })
         .first();
-      await entry.locator("button[aria-expanded]").click();
+      await entry.locator("button[aria-expanded]").first().click(); // the line, before its verified line
       // What its undo puts back is said, the files and whether the records go back too.
       await entry.locator("[data-undo-restores]").waitFor({ timeout: 60000 * P });
       await entry.getByLabel("Milestone name").fill("First look");
