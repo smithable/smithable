@@ -135,6 +135,8 @@ export interface Project {
   };
   /** Where Smith's requests may go, in words, one per model the AI policy allows (U6). */
   ai?: string[];
+  /** Where Smith may hear and speak (smith-speech.md §3); empty: speech is off. */
+  speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
   /** A described app being made: until it is gone, `files` and `name` are a placeholder's. */
   making?: Making;
   /** Requests typed while the app was made, made in order once it is in place. */

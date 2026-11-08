@@ -26,6 +26,7 @@ import {
   proposalOutcome,
   proposeFor,
   providersFor,
+  speechProviders,
   usageLine,
 } from "./ask.js";
 import { BETA, readBeta } from "./beta.js";
@@ -842,6 +843,8 @@ export async function studio(
       ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
       // Where Smith's requests may go, for his AI notice (legal-1.0 U6).
       ai: aiDestinations(),
+      // Where Smith may hear and speak, from the same policy (smith-speech.md §3).
+      speech: speechProviders(),
       ...(notice ? { notice } : {}),
       ...(making ? { making } : {}),
       ...(waiting.length ? { waiting } : {}),
