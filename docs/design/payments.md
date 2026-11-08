@@ -395,6 +395,12 @@ use either. A self-hosted app uses what its owner chooses.
 business: the owner turns them on in their provider account, not in the spec. The pay button
 names them only as the provider module can say in general ("card or the provider's other
 methods"); whether a module reads the account's methods to say more is to check in step 3.
+Which methods a provider offers is the provider's list, not ours: Klarna is offered through both
+first providers in the countries they serve (to check per country); Swish, a Swedish method run
+through the payer's bank, is not offered by either as far as known (to check), so a Swedish app
+that needs Swish takes a Swedish provider as a third module later, through the same interface;
+nothing in the spec changes for it. Enabling a method is done in the owner's provider account,
+and the hosted page shows it the next time someone pays.
 
 **One interface in the kit** (`src/kit/payments/`):
 
@@ -465,6 +471,38 @@ never in a repository; nothing in this repository names the accounts.
 - No Payment line edited or deleted by hand, like the audit log's.
 - A demo (`DEMO_VISITORS=1`) uses `fake` only, whatever the context file says: its visitors'
   copies must never reach a real provider.
+
+## 7b. The owner's part, and what the app says
+
+The owner is the merchant, and the app says so where it matters (Johan, 2026-11-08: push the
+responsibility for card handling and the rest to the app's owner as far as possible, and say it
+plainly).
+
+- **The owner's part:** the account with the provider and what the provider asks of them
+  (identity, business, payouts); the payment methods they turn on; their prices, VAT and
+  invoices; their terms of sale, refund policy and consumer rights; disputes and chargebacks at
+  the provider; the amount the spec computes being the right amount; and keeping their provider
+  keys secret. Smithable's part is the flow in the app (§4) and the words below.
+- **Said when payments are turned on.** `setPaymentProvider` and Studio's settings, the first
+  time a real provider is chosen, show one notice: that the owner is the merchant and the
+  provider's customer, that card data is the provider's and must never be taken into the app
+  (not in a field, a form, a message or a file), and the list above in one sentence each; the
+  hosted service shows the same on the Connections page where the keys are set, and the hosted
+  terms name it. The notice is ours; it does not replace the owner's own terms with their
+  customers.
+- **Said in the app, by the kit.** When the spec has a `payments` section, every place of the
+  kit where a person writes to the app's people carries one line of the kit's words: the contact
+  block, the thread's reply box, the support page's message form, and the assistant's box:
+  "Never send card numbers here; payments go through the payment provider's page." The
+  assistant's prompt tells the model to refuse card data and point to the pay button. The
+  owner's own page texts are theirs to write; the line is the kit's and comes with the section.
+- **Said on the legal pages.** The generated privacy page names the provider and what it
+  gets, and the app card does (§5); the kit's terms-of-sale text is not generated: the owner
+  writes theirs, and the record page's Pay button can link to it (`payments.<name>.terms` in the
+  content file, a page or an address), shown beside the button where set.
+- **What the owner cannot turn off:** the provider's hosted page (no card form in the app), the
+  amount check, the refund roles, the Payment lines. Those are the app's guarantees to the
+  payer, not settings.
 
 ## 8. Growing the DSL: the five questions
 
