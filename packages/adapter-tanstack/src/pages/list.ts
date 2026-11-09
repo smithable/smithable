@@ -20,6 +20,7 @@ import {
 import { actionNames, askedFields, askOptions } from "../actions.js";
 import { hasSignIn } from "../auth.js";
 import { savedToggle, trashNames } from "../data.js";
+import { importNames } from "../import-module.js";
 import {
   addressOwned,
   attr,
@@ -763,6 +764,11 @@ export function listParts(
     !within &&
     (many.length > 0 || onRows.length > 0 || merges.length > 0 || Boolean(auth && hasSignIn(auth)));
   if (selecting && page.export !== false) view.add("#/kit/csv", "csvName", "csvOf", "download");
+  // Import from a file (A 238), on a list of its own.
+  if (!within)
+    view
+      .add("#/kit/ImportDialog", "ImportDialog")
+      .add(importNames(model).module, importNames(model).run, importNames(model).undo);
   if (selecting) {
     view
       .add("react", "useState")
@@ -883,7 +889,14 @@ ${actions.length || offered.length || selecting || filtering?.mine || filtering?
     <Link to=${attr(join(page.route, "new"))} className={buttonVariants()}>
       {w.newOne(${JSON.stringify(n.label.toLowerCase())})}
     </Link>
-  );${actions
+  );${
+    within
+      ? ""
+      : `
+  const importButton = canCreate && (
+    <ImportDialog ui={${n.ui}} run={(data) => ${importNames(model).run}({ data })} undo={(id) => ${importNames(model).undo}({ data: id })} />
+  );`
+  }${actions
     .map(
       (a) => `
   const ${a.name}Button = allows(${actionNames(a).access}, viewer) && (
@@ -897,7 +910,7 @@ ${actions.length || offered.length || selecting || filtering?.mine || filtering?
     <>
       <PageHeader${within ? "" : `\n        page=${attr(page.id)}`}
         ${within ? `title={${n.ui}.pluralLabel}` : t.pageHeader(page.id)}
-        actions={${actions.length ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}{newButton}</>` : "newButton"}}
+        actions={${actions.length || !within ? `<>${actions.map((a) => `{${a.name}Button}`).join("")}${within ? "" : "{importButton}"}{newButton}</>` : "newButton"}}
       />
 ${
   searchable && search

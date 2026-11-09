@@ -76,6 +76,8 @@ The `full` job's gate takes `TEST_APPS_PORT=8600` and `TEST_STUDIO_PORT=8610`. E
 
 ## When the machine is off
 
+A pull request that touches the kit, the templates or the generator needs a fix file (`fixes/README.md`) or the label `no-fix-file`. Label it first, then run the failed check again: the rule reads the pull request's labels as they are when it runs (A 243), so the rerun passes.
+
 A queued job waits for the runner for up to 24 hours, then fails as "no runner". The scheduled check of main simply runs when the machine is back; a labelled pull request's check waits with it. `~/repos/stop` stops sessions, not the runner: a gate it holds finishes; the runner's queue drains when the machine is on.
 
 ## Removing the runner

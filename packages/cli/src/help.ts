@@ -280,6 +280,15 @@ export const COMMANDS: Command[] = [
     options: ["dir"],
   },
   {
+    name: "import",
+    usage: "import <model> <file.csv>",
+    text: [
+      "Add records from a CSV file to the app's own data: the first line names the columns, matched",
+      "to fields by name or label; --dry-run shows what would go in and every problem first",
+      '(the importRecords operation; "smithable op importRecords --help" for --map).',
+    ],
+  },
+  {
     name: "op",
     usage: "op <name> …",
     text: [

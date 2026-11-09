@@ -4,10 +4,13 @@
 // dry run shows exactly what would land. References come out as titles for the host to look up.
 
 import type { ContentIR } from "./content.js";
+import { parseCsv } from "./csv.js";
 import type { FieldIR, ModelIR } from "./ir.js";
 import { isUpload } from "./ir.js";
 import { humanize } from "./naming.js";
 import { convertValue } from "./values.js";
+
+export { parseCsv };
 
 /** At most this many records in one import. */
 export const IMPORT_MAX = 10_000;
@@ -29,45 +32,6 @@ export interface ImportRecords {
   ignored: string[];
   rows: Record<string, ImportValue>[];
   refusals: ImportRefusal[];
-}
-
-/** The rows of a CSV file (RFC 4180: quotes, doubled quotes, line breaks in quotes; ";" too). */
-export function parseCsv(text: string): string[][] {
-  const body = text.replace(/^﻿/, "");
-  const firstLine = body.slice(0, body.search(/\r?\n|$/));
-  // A spreadsheet set to a decimal comma writes ";" between columns.
-  const separator =
-    (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ";" : ",";
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let quoted = false;
-  for (let i = 0; i < body.length; i++) {
-    const c = body[i];
-    if (quoted) {
-      if (c === '"' && body[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else if (c === '"') quoted = false;
-      else cell += c;
-    } else if (c === '"') quoted = true;
-    else if (c === separator) {
-      row.push(cell);
-      cell = "";
-    } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && body[i + 1] === "\n") i++;
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else cell += c;
-  }
-  if (cell !== "" || row.length) {
-    row.push(cell);
-    rows.push(row);
-  }
-  // Blank lines (a trailing newline, an empty row at the end) are no records.
-  return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
 
 /** A name compared loosely: "Credit limit", "credit_limit" and "creditLimit" are one. */

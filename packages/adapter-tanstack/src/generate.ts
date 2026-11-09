@@ -23,7 +23,7 @@ import {
   standardActionModule,
   standardActionServer,
 } from "./actions.js";
-import { apiModule, apiRoutes, askModule, mcpModule, mcpRoute } from "./api.js";
+import { apiModule, apiParts, apiRoutes, askModule, mcpModule, mcpRoute } from "./api.js";
 import {
   authModule,
   hasInvitations,
@@ -42,6 +42,7 @@ import { doorModule, doorRoutes, peopleModule, samplePeople } from "./dev-door.j
 import { examplesTest } from "./examples.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
+import { importFunctions, importModels, importModule } from "./import-module.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
@@ -1052,6 +1053,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         : []),
       ...ir.models.flatMap((model) => {
         const base = `src/generated/${kebab(model.name)}`;
+        const importing = importModels(
+          ir,
+          hasKeys(ir, auth) ? apiParts(ir, auth, t).models.map((m) => m.model.name) : [],
+        ).includes(model);
         const test = hasFormulas(model) ? formulasTestSource(model) : undefined;
         return [
           generated(`${base}.ts`, modelModule(model, t, ir, auth, ux)),
@@ -1061,6 +1066,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             ? [generated(`${base}.name.ts`, nameModule(ir, model, t, ux))]
             : []),
           generated(`${base}.server.ts`, dataModule(model, t, ir, auth, ux)),
+          // Import from a file, and a JSON list in the API (A 238).
+          ...(importing
+            ? [
+                generated(`${base}.import.server.ts`, importModule(ir, model, t)),
+                generated(`${base}.import.ts`, importFunctions(model)),
+              ]
+            : []),
           ...(hasFormulas(model)
             ? [generated(`${base}.formulas.ts`, formulasModuleSource(model, ir))]
             : []),
