@@ -35,6 +35,8 @@ export interface Recipient {
   email?: string | null;
   /** A user's own language, in an app of several (docs/design/languages.md §3.3). */
   language?: string | null;
+  /** A number on the record, for a text (notifications.md §5); a user's own is looked up. */
+  phone?: string | null;
 }
 
 /** What happened to which record, and how the mail shows it. */

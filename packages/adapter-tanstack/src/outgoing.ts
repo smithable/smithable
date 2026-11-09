@@ -187,15 +187,22 @@ export function outgoingModule(
       const rows = `tx.select({ v: ${n.table}.${column} }).from(${n.table}).where(${where}).all()`;
       if (each.kind === "field" && each.via === "email")
         return `${rows}.map((x) => ({ email: x.v as string | null }))`;
+      // A phone field on each (an sms, notifications.md §5).
+      if (each.kind === "field" && each.via === "phone")
+        return `${rows}.map((x) => ({ phone: x.v as string | null }))`;
       return `((ids) => (ids.length ? ${people("inArray(schema.user.id, ids)")} : []))(${rows}.map((x) => x.v).filter((v) => v != null).map(String))`;
     }
     const [first, second] = recipient.path;
     if (!second)
       return recipient.via === "email"
         ? `[{ email: r.${first} as string | null }]`
-        : `r.${first}Id == null ? [] : ${people(`eq(schema.user.id, String(r.${first}Id))`)}`;
+        : recipient.via === "phone"
+          ? `[{ phone: r.${first} as string | null }]`
+          : `r.${first}Id == null ? [] : ${people(`eq(schema.user.id, String(r.${first}Id))`)}`;
     const ref = model.fields.find((f) => f.name === first);
     const target = modelNamed(ir, ref?.type.kind === "relation" ? ref.type.model : "");
+    if (recipient.via === "phone")
+      return `[{ phone: ${value(target, second, `r.${first}Id`)} as string | null }]`;
     return recipient.via === "email"
       ? `[{ email: ${value(target, second, `r.${first}Id`)} as string | null }]`
       : `((id) => (id == null ? [] : ${people("eq(schema.user.id, String(id))")}))(${value(target, `${second}Id`, `r.${first}Id`)})`;
