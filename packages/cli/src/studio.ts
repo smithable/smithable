@@ -1610,7 +1610,9 @@ export async function studio(
         const done = git(dir, there ? ["checkout", branch] : ["checkout", "-b", branch, ref]);
         if (!done.ok) return json({ ok: false, message: done.out.trim() }, 500);
         restored(packages);
-        return json({ ok: true, branch });
+        // The owner's branch from an earlier held version, when the service has held a newer one.
+        const newer = there && !git(dir, ["merge-base", "--is-ancestor", ref, branch]).ok;
+        return json({ ok: true, branch, ...(newer ? { newer: true } : {}) });
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
         const { change, check, confirm } = await body();
