@@ -16,6 +16,10 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 - Backup data containing symbolic links is refused. New CLI backups use a versioned file inventory and completion marker; restores verify file hashes before changing data and prefer complete versioned backups. Legacy backups remain explicitly selectable with a verification warning. These checks detect accidental corruption, not a malicious storage provider.
 
+### Fixes
+
+- The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
+
 ### The app's API
 
 - User references accept the string identifiers returned by reads, including updates through the API and assistant conversions. Ordinary model references retain integer identifiers; generated OpenAPI descriptions distinguish the two.
