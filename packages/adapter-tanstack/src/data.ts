@@ -956,6 +956,8 @@ export function dataModule(
       ? ["count"]
       : []),
     ...(access.create.public && signedIn ? ["isNull"] : []),
+    // A record held for its payment is hidden from every read (payments.md §3.2).
+    ...(model.heldByPayment ? ["isNull"] : []),
     ...(access.create.public && addressOwned(model) ? ["gt"] : []),
     ...(model.ownerKind === "through" ? ["or"] : []),
     ...(capacity ? ["ne"] : []),
@@ -2065,7 +2067,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
   readable(viewer: Viewer | null) {${
     model.trash || held.length
       ? `
-${model.trash ? "    // What is in the trash is gone to every reader (docs/design/trash.md).\n" : ""}${held.length ? "    // A record waiting for its required file to be approved is its owner's and the reviewers' only (docs/design/file-review.md).\n" : ""}    return and(${model.trash ? `isNull(${n.table}.deletedAt), ` : ""}${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer));
+${model.trash ? "    // What is in the trash is gone to every reader (docs/design/trash.md).\n" : ""}${held.length ? "    // A record waiting for its required file to be approved is its owner's and the reviewers' only (docs/design/file-review.md).\n" : ""}${model.heldByPayment ? "    // A record held for its payment is not there yet for anyone (payments.md §3.2).\n" : ""}    return and(${model.trash ? `isNull(${n.table}.deletedAt), ` : ""}${model.heldByPayment ? `isNull(${n.table}.payHeldAt), ` : ""}${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer));
   },${
     held.length
       ? `
