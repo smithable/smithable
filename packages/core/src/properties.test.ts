@@ -74,7 +74,7 @@ const anyText = fc.oneof(
   fc.jsonValue({ maxDepth: 4 }).map((v) => stringify(v)),
 );
 /** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
-const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
+const SCALE = Number(import.meta.env.FC_SCALE) || 1;
 // More with FC_RUNS=3000 to hunt, FC_SEED for other cases; a gate tries the same few hundred.
 const runs = {
   numRuns: Number(import.meta.env.FC_RUNS ?? 150 * SCALE),

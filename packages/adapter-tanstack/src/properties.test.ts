@@ -139,7 +139,7 @@ function argsFor(
  * failure prints them) tries others or one again, FC_RUNS more of them.
  */
 /** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
-const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
+const SCALE = Number(import.meta.env.FC_SCALE) || 1;
 const fcOptions = (runs: number) => ({
   numRuns: Number(import.meta.env.FC_RUNS ?? runs * SCALE),
   seed: Number(import.meta.env.FC_SEED ?? 1),

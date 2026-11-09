@@ -7,7 +7,7 @@ import { describe, expect, test } from "vitest";
 import { matchRequest, refusalOf } from "./phrases.js";
 
 /** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
-const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
+const SCALE = Number(import.meta.env.FC_SCALE) || 1;
 
 const raw = import.meta.glob("../../../examples/*/smithable*.yml", {
   query: "?raw",

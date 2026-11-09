@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { readDescription } from "./read-description.js";
 
 /** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
-const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
+const SCALE = Number(import.meta.env.FC_SCALE) || 1;
 
 const WORDS = `a an the and or for to of with my our we I people customers members visitors
   booking bookings class classes shop products orders invoice invoices team staff only me

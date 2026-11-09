@@ -42,7 +42,7 @@ jobs:
         run: |
           seed=${INPUT_SEED:-$(date -u +%Y%m%d)}; scale=${INPUT_SCALE:-100}
           # Numbers only: they become part of a command.
-          [[ $seed =~ ^[0-9]{1,10}$ && $scale =~ ^[0-9]{1,4}$ ]] || { echo "seed and scale are whole numbers"; exit 1; }
+          [[ $seed =~ ^[0-9]{1,9}$ && $scale =~ ^[1-9][0-9]{0,3}$ ]] || { echo "seed and scale are whole numbers"; exit 1; }
           echo "seed=$seed" >> "$GITHUB_OUTPUT"
           echo "scale=$scale" >> "$GITHUB_OUTPUT"
         env:
@@ -54,7 +54,8 @@ jobs:
             pnpm build && FC_SEED=${{ steps.seed.outputs.seed }} FC_SCALE=${{ steps.seed.outputs.scale }}
             pnpm exec vitest run properties 2>&1 | tee "$RUNNER_TEMP/properties.log"; exit ${PIPESTATUS[0]}
           TMPDIR: ${{ runner.temp }}
-      - if: failure()
+      # Also when the job ran out of time (cancelled): the log is what the issue needs.
+      - if: ${{ !success() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: properties-log
@@ -65,7 +66,7 @@ jobs:
   # token that writes issues.
   report:
     needs: properties
-    if: failure() && needs.properties.result == 'failure'
+    if: always() && (needs.properties.result == 'failure' || needs.properties.result == 'cancelled')
     runs-on: ubuntu-latest
     permissions: { issues: write }
     steps:
@@ -73,7 +74,8 @@ jobs:
         with: { name: properties-log }
         continue-on-error: true
       - run: |
-          week=$(date -u +%G-W%V)
+          # The week of the seed (a date), not of when the report runs: a Sunday night run may end on Monday.
+          week=$(date -u -d "$SEED" +%G-W%V 2>/dev/null || date -u +%G-W%V)
           title="Weekly properties: a failure in $week"
           {
             echo "The weekly long run of the properties failed on ${GITHUB_SHA:0:12}: [the run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
@@ -82,7 +84,8 @@ jobs:
             echo
             echo '```'
             if [ -f properties.log ]; then
-              grep -E -A40 "Property failed|FAIL |Counterexample|seed:|path:" properties.log | head -200
+              # A fence in the output would end the block early.
+              grep -E -A40 "Property failed|FAIL |Counterexample|seed:|path:" properties.log | head -200 | sed 's/```/` ` `/g'
             else
               echo "No log: the run failed before the tests (see the run)."
             fi
