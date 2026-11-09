@@ -700,6 +700,9 @@ export const w = {
     `Visits are counted with ${provider}, which sets no cookie and keeps no personal data.`,
   legalAnalyticsConsent: (provider: string) =>
     `Visits are counted with ${provider} only after you accept it in the cookie bar. You can change your choice under Cookie settings at the bottom of the page.`,
+  legalSmsTitle: "Texts to your phone",
+  legalSms: (labels: string[]) =>
+    `If you give your mobile number under your name, confirm it with the code texted to it and turn texts on, the app texts you about new ${labels.join(", ")}. A number you give with a record of your own may get a text about that record, sent when someone working in the app acts on it. The texts go through the SMS provider the app's owner chose. Your number is used for nothing else; removing it under your name ends the texts.`,
   legalPushTitle: "Notifications in your browser",
   legalPush: (labels: string[]) =>
     `If you turn notifications on under your name, the app tells your browser of new ${labels.join(", ")} it may show you. The title and a link go, encrypted, through your browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), which cannot read them. Turning them off, or signing out in that browser, ends them.`,
@@ -934,6 +937,8 @@ export const w = {
     mailCodes: "Mail: sign-in codes.",
     mail: (text: string) => `Mail: ${text}`,
     call: (to: string, text: string) => `A call to ${to}: ${text}`,
+    sms: (text: string) =>
+      `A text: ${text}. The title line goes through the SMS provider the owner sets (SMS_PROVIDER), to people who confirmed their number and turned it on, or to a number on the record when someone working in the app acts on it.`,
     push: (text: string) =>
       `A browser push: ${text}. The title line and the link go, encrypted, through the browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), to those who turned it on.`,
     callsIn: (text: string) => `Calls in: ${text}`,

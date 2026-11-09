@@ -664,6 +664,9 @@ export const w = {
     `Besök räknas med ${provider}, som inte sätter någon kaka och inte sparar personuppgifter.`,
   legalAnalyticsConsent: (provider: string) =>
     `Besök räknas med ${provider} först när du godkänt det i kakrutan. Du kan ändra ditt val under Kakinställningar längst ner på sidan.`,
+  legalSmsTitle: "Sms till din telefon",
+  legalSms: (labels: string[]) =>
+    `Om du anger ditt mobilnummer under ditt namn, bekräftar det med koden som sms:as till det och slår på sms, sms:ar appen dig om nya ${labels.join(", ")}. Ett nummer du anger med en egen post kan få ett sms om den posten, när någon som arbetar i appen gör något med den. Sms:en går via den sms-leverantör appens ägare har valt. Ditt nummer används inte till något annat; att ta bort det under ditt namn avslutar sms:en.`,
   legalPushTitle: "Aviseringar i din webbläsare",
   legalPush: (labels: string[]) =>
     `Om du slår på aviseringar under ditt namn talar appen om för din webbläsare när det finns nya ${labels.join(", ")} den får visa dig. Rubriken och en länk går krypterade via webbläsarens egen aviseringstjänst (Googles, Apples, Mozillas eller Microsofts), som inte kan läsa dem. Att slå av dem, eller logga ut i den webbläsaren, avslutar dem.`,
@@ -889,6 +892,8 @@ export const w = {
     mailCodes: "E-post: inloggningskoder.",
     mail: (text: string) => `E-post: ${text}`,
     call: (to: string, text: string) => `Ett anrop till ${to}: ${text}`,
+    sms: (text: string) =>
+      `Ett sms: ${text}. Rubrikraden går via den sms-leverantör ägaren anger (SMS_PROVIDER), till dem som har bekräftat sitt nummer och slagit på det, eller till ett nummer på posten när någon som arbetar i appen gör något med den.`,
     push: (text: string) =>
       `En webbläsaravisering: ${text}. Rubrikraden och länken går krypterade via webbläsarens egen avisering (Googles, Apples, Mozillas eller Microsofts) till dem som har slagit på den.`,
     callsIn: (text: string) => `Inkommande anrop: ${text}`,

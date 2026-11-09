@@ -184,6 +184,8 @@ export interface CardFacts {
     mail: CardSent[];
     /** Browser pushes (notifications.md §4): the title line and the link, through the browsers' push services. */
     push: CardSent[];
+    /** Texts (notifications.md §5), through the owner's SMS provider. */
+    sms: CardSent[];
     calls: CardSent[];
     incoming: { name: string; creates?: string; custom: boolean; mail: boolean; text: string }[];
     analytics?: { provider: string; cookies: boolean };
@@ -498,6 +500,7 @@ export function appCard(input: CardInput): CardFacts {
   // Texts are named here with their step (notifications.md §9); a target is a call.
   const mail = ir.outgoing.filter((o) => channelsOf(o)?.includes("mail"));
   const push = ir.outgoing.filter((o) => channelsOf(o)?.includes("push"));
+  const sms = ir.outgoing.filter((o) => channelsOf(o)?.includes("sms"));
   const calls = ir.outgoing.filter((o) => !channelsOf(o));
   const legal = ir.pages.find((p) => p.pattern.kind === "legal");
   const hosting = legal
@@ -562,6 +565,7 @@ export function appCard(input: CardInput): CardFacts {
       signInCodes: signIn?.providers.includes("email") ?? false,
       mail: mail.map(sent),
       push: push.map(sent),
+      sms: sms.map(sent),
       calls: calls.map(sent),
       incoming: ir.incoming.map((i) => ({
         name: i.name,

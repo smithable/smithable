@@ -27,6 +27,8 @@ export interface LegalFacts {
   mailAbout: string[];
   /** Kinds of record a browser push is about, for those who turn it on (notifications.md §4). */
   pushAbout?: string[];
+  /** Kinds of record a text is about (notifications.md §5). */
+  smsAbout?: string[];
   /** The maker's own words under the generated text. */
   more?: { title?: string; text?: string };
 }
@@ -101,6 +103,11 @@ export function LegalPage({ facts, title }: { facts: LegalFacts; title: string }
         <Part title={w.legalMailTitle}>
           {facts.signIn && <p>{w.legalMailSignIn}</p>}
           {facts.mailAbout.length > 0 && <p>{w.legalMailEvents(facts.mailAbout)}</p>}
+        </Part>
+      )}
+      {facts.smsAbout && (
+        <Part title={w.legalSmsTitle}>
+          <p>{w.legalSms(facts.smsAbout)}</p>
         </Part>
       )}
       {facts.pushAbout && (

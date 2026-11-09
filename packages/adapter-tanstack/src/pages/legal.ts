@@ -10,7 +10,7 @@ import {
   personalFields,
   type SpecIR,
 } from "@smithable/core";
-import { pushEntries } from "../outgoing.js";
+import { pushEntries, smsEntries } from "../outgoing.js";
 import type { GenContext } from "../shared.js";
 import {
   code,
@@ -90,6 +90,22 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
           .map((m) => t.modelPluralLabel(m).toLowerCase()),
       ),
     ],
+    // Texts (notifications.md §5): what they are about.
+    ...(smsEntries(ir, auth).length
+      ? {
+          smsAbout: [
+            ...new Set(
+              smsEntries(ir, auth).flatMap((o) =>
+                "model" in o.when
+                  ? ir.models
+                      .filter((m) => "model" in o.when && m.name === o.when.model)
+                      .map((m) => t.modelPluralLabel(m).toLowerCase())
+                  : [],
+              ),
+            ),
+          ],
+        }
+      : {}),
     // Browser push (notifications.md §4): what it is about, named with the services it goes through.
     ...(pushEntries(ir, auth).length
       ? {
