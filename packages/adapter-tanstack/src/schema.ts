@@ -49,7 +49,9 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
   const imports = new Set(["integer", "sqliteTable"]);
   if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
   if (pushEntries(ir, auth).length || smsEntries(ir, auth).length) imports.add("uniqueIndex");
-  const tables = ir.models.map((model) => {
+  // The built-in Payment and its refund lines (payments.md §3.3): tables like a model's, written
+  // only by the kit.
+  const tables = [...ir.models, ...(ir.builtInModels ?? [])].map((model) => {
     const n = tableNames(model);
     // Where each unique field is unique (docs/design/uniqueness.md): among one owner's records
     // or in the whole app; a number counting up is unique by its nature (orders.md §4).
@@ -156,7 +158,13 @@ ${columns.join("\n")}
   updatedAt: integer({ mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),${trash}
+    .$onUpdate(() => new Date()),${trash}${
+      model.heldByPayment
+        ? `
+  /** Held for its payment since (payments.md §3.2): shown nowhere, counted where counting protects. */
+  payHeldAt: integer({ mode: "timestamp_ms" }),`
+        : ""
+    }
 }`;
     return extras.length
       ? `${perOwner ? "// Values unique per owner are unique among one owner's records (docs/design/uniqueness.md).\n" : ""}export const ${n.table} = sqliteTable(
