@@ -144,11 +144,16 @@
     }
   });
 
-  /** "Was this helpful?": counted by the site's visit counter, once an answer, nothing else sent. */
+  /** "Was this helpful?": counted by the endpoint, once an answer, nothing else sent. */
   const thumb = () => {
     const said = el("span");
     const vote = (helpful) => () => {
-      new Image().src = `https://${host}/v?site=docs-ask&p=${helpful ? "/helpful" : "/not-helpful"}`;
+      // Counted by the endpoint itself, in the day's row; nothing else goes with it.
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ helpful }),
+      }).catch(() => {});
       const thanks = el("span", { className: "thanks", textContent: "Thank you.", tabIndex: -1 });
       said.replaceWith(thanks);
       thanks.focus();
