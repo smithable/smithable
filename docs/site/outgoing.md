@@ -74,7 +74,7 @@ outgoing:
   orderPlaced:
     when: Order created
     to: [mail, push]                 # a mail, and a notification on the staff's browsers and phones
-    recipient: staff
+    recipient: staff                 # a role: every user who has it
 ```
 
 - **Who turns it on.** Each person, for themselves: under their name in the menu, **Notifications** lists the entries with `push` that reach them, each off until they turn it on. The first one turned on in a browser asks the browser's permission. On a phone and a laptop, they turn it on in each. Signing out in a browser, or turning the last entry off there, stops it there, so a shared tablet does not keep showing notifications to the next person.
@@ -94,9 +94,9 @@ outgoing:
     recipient: phone                 # a phone field of the record: the customer's number
 ```
 
-- **Whom it reaches.** A `phone` field of the record, or one a reference away (`customer.phone`), or people who sign in and gave their own number: under their name in the menu, **Texts to your phone** takes the number, confirms it with a texted code (three codes a day, one a minute), then has a toggle for each text that reaches them. A number must be in international form (`+46…`); another is not sent, and Activity says why. `to: [mail, sms]` needs a recipient both can reach: a person, not an email or a phone field.
-- **What it says.** A person gets the title line and a link; a number on a record, whose owner has no account, gets the title line alone.
-- **Your provider, your cost.** Texts go through your SMS provider: `SMS_PROVIDER` (`46elks` for now), `SMS_KEY`, `SMS_SECRET` and `SMS_FROM`. Each one is paid to them, so no starter texts anyone. `SMS_MAX_PER_DAY` caps a day's texts (50 unless set), and ten a day hold per number. Without the settings nothing leaves the machine: each text is written to `data/sms/outbox`, which is how you see them while building.
+- **Whom it reaches.** A `phone` field of the record, or one a reference away (`customer.phone`), or people who sign in and gave their own number: under their name in the menu, **Texts to your phone** takes the number, confirms it with a texted code (three codes a day, one a minute), then has a toggle for each text that reaches them. A number must be in international form (`+46…`); another is not sent, and Activity says why. `to: [mail, sms]` needs a recipient both can reach: a person, not an email or a phone field. To mail `customer.email` and text `customer.phone`, write two entries.
+- **What it says.** The title line, the entry's subject in `smithable.content.yml`, as for push: a person gets it with a link; a number on a record, whose owner has no account, gets the title line alone.
+- **Your provider, your cost.** Texts go through your SMS provider: `SMS_PROVIDER` (`46elks` for now), `SMS_KEY`, `SMS_SECRET` and `SMS_FROM`. Each one is paid to them, so none of the starters sends a text. `SMS_MAX_PER_DAY` caps a day's texts (50 unless set), and ten a day hold per number. Without the settings nothing leaves the machine: each text is written to `data/sms/outbox`, which is how you see them while building.
 - **Never a stranger's number from a stranger.** A number on the record is texted only from a signed-in person's change, never a visitor's or a timer's: the order is ready, and the customer gets a text. `smithable validate` warns about a phone recipient on a model visitors may create.
 - **Never twice by accident.** A text the provider may have taken (no answer in time) is not sent again by itself: Activity marks it unknown, and **Send again** is your choice.
 
