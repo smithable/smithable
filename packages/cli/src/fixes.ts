@@ -19,6 +19,11 @@ export interface Fix {
   severity: (typeof SEVERITIES)[number];
   /** What could have happened, in the notice's words, or "none". */
   exposure: string;
+  /**
+   * What the app's owner must do themselves, in one plain sentence (rotate a key, tell their
+   * visitors); none when the rebuild is all (fixes-reach-apps.md §4: mailed with the impact).
+   */
+  ownerAction?: string;
   /** The engine commit that brought the bug, or "unknown". */
   introduced: string;
   /** Any one holding makes an app affected (OR). */
@@ -42,7 +47,16 @@ export const FEATURES: Record<string, string> = {
   "theme:<preset>": "the app's theme preset",
 };
 
-const KEYS = ["id", "title", "severity", "exposure", "introduced", "affects", "migration"];
+const KEYS = [
+  "id",
+  "title",
+  "severity",
+  "exposure",
+  "owner_action",
+  "introduced",
+  "affects",
+  "migration",
+];
 
 /** A fix file read and checked: the fix, or what is wrong with it. */
 export function readFix(name: string, text: string): { fix: Fix } | { errors: string[] } {
@@ -66,6 +80,10 @@ export function readFix(name: string, text: string): { fix: Fix } | { errors: st
     errors.push(`${name}: "severity" is ${SEVERITIES.join(", ")}`);
   if (!MIGRATIONS.includes(raw.migration as Fix["migration"]))
     errors.push(`${name}: "migration" is ${MIGRATIONS.join(", ")}`);
+  if ("owner_action" in raw && (typeof raw.owner_action !== "string" || !text_("owner_action")))
+    errors.push(`${name}: "owner_action" is one plain sentence, or left out when there is none`);
+  if (text_("owner_action").includes("\n"))
+    errors.push(`${name}: "owner_action" is one sentence on one line`);
   if (text_("introduced") && !/^(?:unknown|[0-9a-f]{7,40})$/.test(text_("introduced")))
     errors.push(`${name}: "introduced" is an engine commit or "unknown"`);
   const affects = (raw.affects ?? {}) as Record<string, unknown>;
@@ -95,6 +113,7 @@ export function readFix(name: string, text: string): { fix: Fix } | { errors: st
       title: text_("title"),
       severity: raw.severity as Fix["severity"],
       exposure: text_("exposure"),
+      ...(text_("owner_action") ? { ownerAction: text_("owner_action") } : {}),
       introduced: text_("introduced"),
       affects: lists,
       migration: raw.migration as Fix["migration"],
