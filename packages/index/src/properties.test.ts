@@ -6,6 +6,9 @@ import fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { matchRequest, refusalOf } from "./phrases.js";
 
+/** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
+const SCALE = Number(import.meta.env.FC_SCALE) || 1;
+
 const raw = import.meta.glob("../../../examples/*/smithable*.yml", {
   query: "?raw",
   import: "default",
@@ -48,30 +51,36 @@ describe.each(examples)("%s", (example) => {
     fc.string({ maxLength: 80 }),
   );
 
-  test("a request is read or not, never a crash; its operations apply or say why", () => {
-    fc.assert(
-      fc.property(request, (text) => {
-        const refused = refusalOf(ir, text, roles, auth);
-        if (refused) expect(refused.refusal.length).toBeGreaterThan(0);
-        const matched = matchRequest(ir, text, roles, auth);
-        if (!matched) return;
-        let files: { spec: string; auth?: string } = {
-          spec,
-          ...(authText ? { auth: authText } : {}),
-        };
-        for (const { op, args } of matched.operations) {
-          const result = applyOperation(files, op, args);
-          if (!result.ok) {
-            expect(result.message.length, `"${text}" (${matched.rule}): ${op}`).toBeGreaterThan(0);
-            return;
+  test(
+    "a request is read or not, never a crash; its operations apply or say why",
+    () => {
+      fc.assert(
+        fc.property(request, (text) => {
+          const refused = refusalOf(ir, text, roles, auth);
+          if (refused) expect(refused.refusal.length).toBeGreaterThan(0);
+          const matched = matchRequest(ir, text, roles, auth);
+          if (!matched) return;
+          let files: { spec: string; auth?: string } = {
+            spec,
+            ...(authText ? { auth: authText } : {}),
+          };
+          for (const { op, args } of matched.operations) {
+            const result = applyOperation(files, op, args);
+            if (!result.ok) {
+              expect(result.message.length, `"${text}" (${matched.rule}): ${op}`).toBeGreaterThan(
+                0,
+              );
+              return;
+            }
+            files = { ...files, ...result.files };
           }
-          files = { ...files, ...result.files };
-        }
-      }),
-      {
-        numRuns: Number(import.meta.env.FC_RUNS ?? 300),
-        seed: Number(import.meta.env.FC_SEED ?? 1),
-      },
-    );
-  }, 60_000);
+        }),
+        {
+          numRuns: Number(import.meta.env.FC_RUNS ?? 300 * SCALE),
+          seed: Number(import.meta.env.FC_SEED ?? 1),
+        },
+      );
+    },
+    60_000 * SCALE,
+  );
 });

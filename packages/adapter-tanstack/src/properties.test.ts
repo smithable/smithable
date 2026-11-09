@@ -138,8 +138,10 @@ function argsFor(
  * The runs, and a fixed seed, so a gate always tries the same cases: FC_SEED (with FC_PATH, as a
  * failure prints them) tries others or one again, FC_RUNS more of them.
  */
+/** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
+const SCALE = Number(import.meta.env.FC_SCALE) || 1;
 const fcOptions = (runs: number) => ({
-  numRuns: Number(import.meta.env.FC_RUNS ?? runs),
+  numRuns: Number(import.meta.env.FC_RUNS ?? runs * SCALE),
   seed: Number(import.meta.env.FC_SEED ?? 1),
   ...(import.meta.env.FC_PATH ? { path: import.meta.env.FC_PATH } : {}),
 });
@@ -160,35 +162,41 @@ describe.each(examples)("%s", (example) => {
   };
   const before = generate(start);
 
-  test("random operations: applied or refused, never a crash; the app generated the same each time", () => {
-    let applied = 0;
-    fc.assert(
-      fc.property(steps, (seq) => {
-        let files = start;
-        for (const numbers of seq) {
-          let i = 0;
-          const pick = () => numbers[i++ % numbers.length] as number;
-          const op = OPERATIONS[pick() % OPERATIONS.length] as (typeof OPERATIONS)[number];
-          const { ir, auth } = irOf(files);
-          const args = argsFor(op, ir, names(ir, auth), pick);
-          const result = applyOperation(files, op.name, args as never);
-          if (!result.ok) {
-            expect(result.message.length, `${op.name} refused without a reason`).toBeGreaterThan(0);
-            continue;
+  test(
+    "random operations: applied or refused, never a crash; the app generated the same each time",
+    () => {
+      let applied = 0;
+      fc.assert(
+        fc.property(steps, (seq) => {
+          let files = start;
+          for (const numbers of seq) {
+            let i = 0;
+            const pick = () => numbers[i++ % numbers.length] as number;
+            const op = OPERATIONS[pick() % OPERATIONS.length] as (typeof OPERATIONS)[number];
+            const { ir, auth } = irOf(files);
+            const args = argsFor(op, ir, names(ir, auth), pick);
+            const result = applyOperation(files, op.name, args as never);
+            if (!result.ok) {
+              expect(result.message.length, `${op.name} refused without a reason`).toBeGreaterThan(
+                0,
+              );
+              continue;
+            }
+            applied++;
+            files = { ...files, ...result.files };
           }
-          applied++;
-          files = { ...files, ...result.files };
-        }
-        if (files !== start) expect(generate(files)).toEqual(generate(files));
-      }),
-      // More with FC_RUNS=400 to hunt; a gate's few dozen keep the suite quick.
-      fcOptions(40),
-    );
-    // Some sequences change something, or the property tests nothing.
-    expect(applied).toBeGreaterThan(0);
-    // Nothing an operation did reached the files it started from.
-    expect(generate(start)).toEqual(before);
-  }, 180_000);
+          if (files !== start) expect(generate(files)).toEqual(generate(files));
+        }),
+        // More with FC_RUNS=400 to hunt; a gate's few dozen keep the suite quick.
+        fcOptions(40),
+      );
+      // Some sequences change something, or the property tests nothing.
+      expect(applied).toBeGreaterThan(0);
+      // Nothing an operation did reached the files it started from.
+      expect(generate(start)).toEqual(before);
+    },
+    180_000 * SCALE,
+  );
 });
 
 test("a hero shortcut to the review page gets its shield icon (found by this test, 2026-10-12)", () => {
