@@ -1557,6 +1557,74 @@ async function kioskFlow(dir, base) {
  * is cancelled online; the shop's day shows the barber's column. The shop is open around the
  * clock here, so the flow does not depend on the hour it runs at (the hours are unit tests).
  */
+/**
+ * Import from a file (A 238): an admin imports orders from a CSV, a customer named by its title;
+ * the preview names the refused rows by line and column, the rows that fit go in, and Undo takes
+ * them back.
+ */
+async function importFlow(dir, base) {
+  const one = (sql) => {
+    const code = `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).get()))`;
+    return JSON.parse(
+      spawnSync("node", ["-e", code], { cwd: dir, encoding: "utf8" }).stdout || "null",
+    );
+  };
+  const customer = one(
+    "select name from customers where deleted_at is null order by id limit 1",
+  ).name;
+  const csv = [
+    "Number,Customer,Status,Total",
+    `IMP-1,${customer},Placed,"12,50"`,
+    `IMP-2,${customer},draft,5`,
+    "IMP-3,No Such Company,draft,5",
+    `IMP-4,${customer},shipped,abc`,
+  ].join("\n");
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/orders`);
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: /Import orders/ });
+    await dialog.getByLabel("A CSV file").setInputFiles({
+      name: "orders.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(csv),
+    });
+    await dialog.getByText("2 records will be added.").waitFor({ timeout: 20000 * P });
+    for (const line of [
+      'Line 4, Customer: No record named "No Such Company".',
+      "Line 5, Total: Not a number.",
+    ])
+      await dialog.getByText(line).waitFor();
+    await dialog.getByRole("button", { name: "Import 2 records" }).click();
+    await dialog.getByText("2 records were added.").waitFor({ timeout: 20000 * P });
+    const added = one(
+      "select count(*) as n from orders where number like 'IMP-%' and deleted_at is null",
+    ).n;
+    if (added !== 2) throw new Error(`${added} orders were added, not 2`);
+    const placed = one("select status, total from orders where number = 'IMP-1'");
+    if (placed.status !== "placed" || placed.total !== 1250)
+      throw new Error(`IMP-1 was stored as ${JSON.stringify(placed)}`);
+    await dialog.getByRole("button", { name: "Undo the import" }).click();
+    await dialog.getByText("2 records were taken back.").waitFor({ timeout: 20000 * P });
+    const left = one(
+      "select count(*) as n from orders where number like 'IMP-%' and deleted_at is null",
+    ).n;
+    if (left !== 0) throw new Error(`${left} imported orders are still there after the undo`);
+    console.log(
+      "  ✓ crm: orders imported from a CSV (a customer by its name, a choice by its label, a decimal comma); the preview names the refused rows by line and column; Undo takes the import back to the trash",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ crm import: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("crm import");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function barbersFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   writeFileSync(
@@ -8521,6 +8589,7 @@ test("the session cookie's name and attributes", async () => {
         await kioskLandingFlow(dir, base);
       }
       if (example === "barbers") await barbersFlow(dir, base);
+      if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);

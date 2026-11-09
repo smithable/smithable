@@ -1,6 +1,7 @@
 // Smithable app kit: the audit log as administrators read it (docs/design/logging.md §3.3):
 // who did what to which record and when, newest first, filtered by person, record, what was done
 // and time. A deleted record or a removed user can be forgotten in the log from its line.
+import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import type { Forgotten } from "./audit.server";
 import { formatValue } from "./format";
@@ -22,6 +23,8 @@ export interface ActivityLine {
   forget?: Forgotten;
   /** A mail or a call that was given up, for "Send again". */
   resend?: { mail: number } | { call: number };
+  /** An import of the viewer's own, less than a day old: "Undo the import" (A 238). */
+  undo?: { model: string; id: number };
 }
 
 /** An action's name as its button reads it: markSent → mark sent. */
@@ -48,6 +51,7 @@ export function ActivityLog({
   onFilter,
   onForget,
   onResend,
+  onUndoImport,
 }: {
   lines: ActivityLine[];
   app: AppUi;
@@ -61,7 +65,10 @@ export function ActivityLog({
   onFilter?: (next: ActivityFilters) => void;
   onForget?: (target: Forgotten) => Promise<unknown>;
   onResend?: (again: { mail: number } | { call: number }) => Promise<unknown>;
+  /** Takes an import back; says what was undone (or why not). */
+  onUndoImport?: (line: { model: string; id: number }) => Promise<string>;
 }) {
+  const [undone, setUndone] = useState<{ id: number; text: string }>();
   const set = (key: keyof ActivityFilters, value: string) =>
     onFilter?.({ ...filters, [key]: value || undefined });
   const select = "h-control rounded-md border border-input bg-background px-2 text-sm";
@@ -200,6 +207,25 @@ export function ActivityLog({
                 >
                   {w.sendAgain}
                 </Button>
+              )}
+              {line.undo && onUndoImport && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ml-auto h-7"
+                  onClick={async () => {
+                    if (!line.undo) return;
+                    const text = await onUndoImport(line.undo).catch((e: Error) => e.message);
+                    setUndone({ id: line.id, text });
+                  }}
+                >
+                  {w.importUndo}
+                </Button>
+              )}
+              {undone?.id === line.id && (
+                <span role="status" className="w-full text-muted-foreground">
+                  {undone.text}
+                </span>
               )}
               {line.forget && onForget && (
                 <Button

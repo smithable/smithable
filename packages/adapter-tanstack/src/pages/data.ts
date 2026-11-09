@@ -2,6 +2,7 @@
 // The overview lists each model with how many records the viewer may read; each model's list,
 // new and record routes are the crud page's generators, drawn inside the data page (Within), so
 // every read and write goes through the model's data functions and their access rules.
+
 import {
   type AssistantCaller,
   assistantOffer,
@@ -14,6 +15,7 @@ import {
   titleField,
 } from "@smithable/core";
 import { hasSignIn, roleLabels } from "../auth.js";
+import { importModels, importNames } from "../import-module.js";
 import { hasKeys } from "../keys.js";
 import { nameColumns, nameFunction } from "../names.js";
 import { outgoingOf } from "../outgoing.js";
@@ -262,6 +264,8 @@ export function activityRoute(page: PageIR, { ir }: Pick<GenContext, "ir">): str
   const mails = outgoingOf(ir).length > 0;
   // The targets outgoing calls go to: Activity filtered to one is its deliveries (integrations.md §4.1).
   const targets = [...new Set(outgoingOf(ir).flatMap((o) => (o.to === "mail" ? [] : [o.to])))];
+  // The models a list page imports into (A 238): their imports can be undone from their line.
+  const imports = importModels(ir);
   return `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq, gte, lt${targets.length ? ", sql" : ""} } from "drizzle-orm";
@@ -277,7 +281,7 @@ import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
 import { count, optional, type Search, text } from "#/kit/params";
-${mails ? 'import { sendAgain } from "#/kit/outgoing.server";\n' : ""}import { w } from "#/kit/words";
+${mails ? 'import { sendAgain } from "#/kit/outgoing.server";\n' : ""}${imports.map((m) => `import { ${importNames(m).undoRows} } from "${importNames(m).server}";\n`).join("")}import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The activity's filters, from the address. */
@@ -313,7 +317,10 @@ const getActivity = createServerFn()
       .orderBy(desc(auditLog.id))
       .limit(200)
       .all();
-    const { lines, people } = describeActivity(rows);
+    const described = describeActivity(rows);
+    const people = described.people;
+    // Undo is the importer's: on other people's imports it is not offered.
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -332,7 +339,23 @@ const resend = createServerFn({ method: "POST" })
 `
     : ""
 }
-export const Route = createFileRoute(${JSON.stringify(route)})({
+${
+  imports.length
+    ? `
+/** Takes an import back from its line (A 238): its importer, within a day. */
+const undoImport = createServerFn({ method: "POST" })
+  .validator(z.object({ model: z.string(), id: z.number().int() }))
+  .handler(async ({ data }) => {
+    const viewer = await currentViewer();
+    switch (data.model) {
+${imports.map((m) => `      case ${JSON.stringify(m.name)}:\n        return ${importNames(m).undoRows}(viewer, data.id);`).join("\n")}
+      default:
+        throw new AccessDenied(viewer !== null);
+    }
+  });
+`
+    : ""
+}export const Route = createFileRoute(${JSON.stringify(route)})({
 ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  validateSearch: filters,
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => getActivity({ data: deps }),
@@ -359,6 +382,15 @@ function ActivityPage() {
           await forget({ data: target });
           await router.invalidate();
         }}${
+          imports.length
+            ? `
+        onUndoImport={async (line) => {
+          const done = await undoImport({ data: line });
+          await router.invalidate();
+          return w.importUndone(done.undone, done.kept);
+        }}`
+            : ""
+        }${
           mails
             ? `
         onResend={async (again) => {
@@ -469,7 +501,10 @@ ${
           : undefined,
       fields: r.fields,
       // As text: what touches security, by name and value.
-      details: r.details ? Object.fromEntries(Object.entries(r.details).map(([k, v]) => [k, String(v)])) : null,
+      // An import's ids are for its undo, not to read.
+      details: r.details ? Object.fromEntries(Object.entries(r.details).filter(([k]) => !(r.action === "imported" && k === "ids")).map(([k, v]) => [k, String(v)])) : null,
+      // An import less than a day old (A 238): its importer may take it back from here.
+      undo: r.action === "imported" && r.model && Date.now() - r.at.getTime() < 24 * 60 * 60 * 1000 ? { model: r.model, id: r.id, who: r.who } : undefined,
       forget:
         gone && r.action === "deleted" && r.model
           ? { model: r.model, record: r.recordId as number }

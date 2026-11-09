@@ -482,6 +482,40 @@ export const w = {
   noticesMore: (n: number) => `and ${n} more`,
   noticeSoundOffer: "Play a sound for these?",
   noticeSound: "A sound with each notice",
+  importIt: "Import",
+  importTitle: (plural: string) => `Import ${plural.toLowerCase()} from a file`,
+  importFile: "A CSV file",
+  importHint:
+    "A CSV file with the columns' names on its first line. A spreadsheet saves one: Save as, then CSV.",
+  importColumns: "Columns:",
+  importIgnored: (columns: string) => `Left out (no field of that name): ${columns}.`,
+  importWillAdd: (n: number) =>
+    n === 1 ? "1 record will be added." : `${n} records will be added.`,
+  importAdded: (n: number) => (n === 1 ? "1 record was added." : `${n} records were added.`),
+  importRefusedRows: (n: number) => (n === 1 ? "1 problem:" : `${n} problems:`),
+  importRefusals: "Problems",
+  importLine: (line: number, column?: string) =>
+    line === 0 ? "The file:" : `Line ${line}${column ? `, ${column}` : ""}:`,
+  importMore: (n: number) => `and ${n} more`,
+  importGo: (n: number) => (n === 1 ? "Import 1 record" : `Import ${n} records`),
+  importUndo: "Undo the import",
+  importUndone: (n: number, kept: string[]) =>
+    `${n === 1 ? "1 record was taken back" : `${n} records were taken back`}.${kept.length ? ` Changed since, so kept: ${kept.join(", ")}.` : ""}`,
+  importCannotFill: (label: string) => `"${label}" cannot be filled from a file.`,
+  importTwoColumns: (label: string) => `Two columns fill "${label}".`,
+  importNoColumn: (label: string) => `No column fills "${label}", which every record needs.`,
+  importTooMany: (n: number, max: number) =>
+    `The file has ${n} records; at most ${max} go in one import.`,
+  importNotOneOf: (choices: string) => `Not one of: ${choices}.`,
+  importSeveral: (title: string) => `Several records are named "${title}".`,
+  importNoSuch: (title: string) => `No record named "${title}".`,
+  importNotYesNo: "Not yes or no.",
+  importNotDate: "Not a date.",
+  importNotNumber: "Not a number.",
+  importRowFailed: "This row could not be added.",
+  importUndoGone: "There is no such import.",
+  importListTooLong: (max: number) => `At most ${max} records in one list.`,
+  importUndoLate: "An import can be taken back for a day; this one is older.",
   yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */
   alreadyHas: (label: string, field: string) =>

@@ -123,6 +123,22 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
     io.out(text);
     return 0;
   }
+  // Records from a CSV file (A 238): the importRecords operation, as one would say it.
+  if (command === "import") {
+    if (!args[0] || !args[1]) {
+      io.err(
+        "import takes the kind of record and the file: smithable import Customer customers.csv\n",
+      );
+      return 2;
+    }
+    return op(
+      values.dir ?? ".",
+      io,
+      "importRecords",
+      [args[0], "--from", args[1], ...operationWords(argv).slice(3)],
+      { yes: values.yes === true, verify: "change" },
+    );
+  }
   if (command === "op") {
     const depth = values.verify ?? "change";
     if (!(DEPTHS as readonly string[]).includes(depth)) {
@@ -522,11 +538,14 @@ const CONFIG = {
 } as const;
 
 function parse(argv: string[]) {
-  // An operation's own arguments may be given by name (--output, --intent): `op` takes them as
-  // words, so its options are not refused here (operationWords picks them out).
+  // An operation's own arguments may be given by name (--output, --intent): `op` (and `import`,
+  // importRecords said shortly) takes them as words, so its options are not refused here
+  // (operationWords picks them out).
   const loose = parseArgs({ ...CONFIG, args: argv, strict: false });
   return (
-    loose.positionals[0] === "op" ? loose : parseArgs({ ...CONFIG, args: argv })
+    ["op", "import"].includes(String(loose.positionals[0]))
+      ? loose
+      : parseArgs({ ...CONFIG, args: argv })
   ) as ReturnType<typeof parseArgs<typeof CONFIG>>;
 }
 
