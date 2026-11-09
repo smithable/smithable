@@ -648,8 +648,8 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);${pushes.length ? "\n    if (entry.push) queuePush(tx, viewer, happening, to);\n    if (entry.mail === false) continue;" : ""}
-    queueMail(tx, viewer, happening, to, entry.when === "created");`
+    const to = entry.to(tx, record);${pushes.length ? "\n    if (entry.push) queuePush(tx, viewer, happening, to);" : ""}
+    ${pushes.length ? "if (entry.mail !== false) " : ""}queueMail(tx, viewer, happening, to, entry.when === "created");`
         : ""
     }
   }

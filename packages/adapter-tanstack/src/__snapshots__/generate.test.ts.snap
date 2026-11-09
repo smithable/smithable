@@ -58140,8 +58140,7 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
     const to = entry.to(tx, record);
     if (entry.push) queuePush(tx, viewer, happening, to);
-    if (entry.mail === false) continue;
-    queueMail(tx, viewer, happening, to, entry.when === "created");
+    if (entry.mail !== false) queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 
@@ -61887,7 +61886,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "916eed82 generated",
   "src/generated/order.ts": "db4c9478 generated",
-  "src/generated/outgoing.server.ts": "e64ea29f generated",
+  "src/generated/outgoing.server.ts": "74dab84f generated",
   "src/generated/pages.ts": "7d21451f generated",
   "src/generated/push.ts": "cb2657f6 generated",
   "src/generated/roles.ts": "6b44c69a generated",
