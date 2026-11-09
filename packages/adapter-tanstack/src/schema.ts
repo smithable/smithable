@@ -49,9 +49,7 @@ export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): st
   const imports = new Set(["integer", "sqliteTable"]);
   if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
   if (pushEntries(ir, auth).length || smsEntries(ir, auth).length) imports.add("uniqueIndex");
-  // The built-in Payment and its refund lines (payments.md §3.3): tables like a model's, written
-  // only by the kit.
-  const tables = [...ir.models, ...(ir.builtInModels ?? [])].map((model) => {
+  const tables = ir.models.map((model) => {
     const n = tableNames(model);
     // Where each unique field is unique (docs/design/uniqueness.md): among one owner's records
     // or in the whole app; a number counting up is unique by its nature (orders.md §4).
@@ -239,7 +237,7 @@ export const ${n.table}Reads = sqliteTable(
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
   for (const used of ["index", "integer", "text"]) imports.add(used);
-  if (ir.timers.length || ir.incoming.length) imports.add("uniqueIndex");
+  if (ir.timers.length || ir.incoming.length || ir.payments.length) imports.add("uniqueIndex");
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   const documents = ir.models.some((m) => m.fields.some(storesFiles));
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
@@ -247,7 +245,7 @@ export const ${n.table}Reads = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(pushEntries(ir, auth).length || smsEntries(ir, auth).length ? [CHOICES_TABLE] : []), ...(pushEntries(ir, auth).length ? PUSH_TABLES : []), ...(smsEntries(ir, auth).length ? SMS_TABLES : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(pushEntries(ir, auth).length || smsEntries(ir, auth).length ? [CHOICES_TABLE] : []), ...(pushEntries(ir, auth).length ? PUSH_TABLES : []), ...(pushEntries(ir, auth).length || ir.payments.length ? [APP_KEYS_TABLE] : []), ...(ir.payments.length ? PAYMENT_TABLES : []), ...(smsEntries(ir, auth).length ? SMS_TABLES : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length || ir.payments.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -476,9 +474,56 @@ const PUSH_TABLES = [
   },
   (t) => [index("outgoing_push_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );`,
-  `export const appKeys = sqliteTable("app_keys", {
+];
+
+/** The app's own keys when the settings give none (push's key pair, the fake provider's secret), kept with the data. */
+const APP_KEYS_TABLE = `export const appKeys = sqliteTable("app_keys", {
   name: text().primaryKey(),
   value: text().notNull(),
+});`;
+
+/**
+ * Payments (docs/design/payments.md §3.3, §4.4): each payment asked of the provider for a record,
+ * and its refund lines. Written only by the kit; the paid record is kept as its id, a plain value,
+ * so the line stays when a held record is released.
+ */
+const PAYMENT_TABLES = [
+  `export const payments = sqliteTable(
+  "payments",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    /** The payments entry's name and the paid record's id. */
+    entry: text().notNull(),
+    record: integer().notNull(),
+    /** In hundredths of the currency, as asked of the provider. */
+    amount: integer().notNull(),
+    currency: text().notNull(),
+    status: text({ enum: ["pending", "paid", "failed", "refunding", "refunded"] }).notNull().default("pending"),
+    provider: text().notNull(),
+    providerMode: text({ enum: ["test", "live"] }).notNull(),
+    providerAccount: text(),
+    /** The provider's own id for the payment, and its checkout page while it waits. */
+    reference: text(),
+    checkoutUrl: text(),
+    /** What went wrong, in the app's words. */
+    note: text(),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    paidAt: integer({ mode: "timestamp_ms" }),
+    refundedAt: integer({ mode: "timestamp_ms" }),
+  },
+  (t) => [index("payments_record").on(t.entry, t.record), index("payments_status").on(t.status, t.createdAt)],
+);`,
+  `export const paymentRefunds = sqliteTable("payment_refunds", {
+  id: integer().primaryKey({ autoIncrement: true }),
+  paymentId: integer()
+    .notNull()
+    .references(() => payments.id),
+  amount: integer().notNull(),
+  reference: text(),
+  status: text({ enum: ["asked", "done", "refused"] }).notNull().default("asked"),
+  /** Who asked; none for the app itself or the provider's dashboard. */
+  by: text(),
+  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });`,
 ];
 
