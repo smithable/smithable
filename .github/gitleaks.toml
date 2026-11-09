@@ -4,8 +4,12 @@
 useDefault = true
 
 [allowlist]
-description = "Placeholder secrets in the test and benchmark scripts"
+description = "Placeholder secrets in the test and benchmark scripts, and an RFC's published example keys"
 regexes = [
   '''(test|bench|container-test)-secret-0123456789''',
   '''smithable-secret-key-0123456789''',
+  # RFC 8291 Appendix A's published example (the auth secret and the server's private key),
+  # which packages/adapter-tanstack/src/push-crypto.test.ts encrypts with to match the RFC.
+  '''BTBZMqHH6r4Tts7J_aSIgg''',
+  '''yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw''',
 ]
