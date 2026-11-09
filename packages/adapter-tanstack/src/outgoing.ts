@@ -49,6 +49,15 @@ export function pushEntries(ir: SpecIR, auth: AuthIR | undefined): OutgoingIR[] 
 }
 
 /**
+ * Texts (notifications.md §5): the entries that text, in an app with sign-in (a person turns a
+ * text on under their name; a number on a record is texted only from a signed-in person's change).
+ */
+export function smsEntries(ir: SpecIR, auth: AuthIR | undefined): OutgoingIR[] {
+  if (!auth || !hasSignIn(auth)) return [];
+  return ir.outgoing.filter((o) => channelsOf(o)?.includes("sms"));
+}
+
+/**
  * Live in the app (notifications.md §3): the models whose records' mail is also an event for the
  * recipients who have the app open. Only with sign-in (the stream is a signed-in person's), and
  * only mail about one record (a list mail on a clock, and a call to a target, name no person).
