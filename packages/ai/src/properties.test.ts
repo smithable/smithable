@@ -19,17 +19,21 @@ const description = fc.oneof(
   fc.string({ maxLength: 300, unit: "grapheme" }),
 );
 
-test("a description is read or not, never a crash", () => {
-  fc.assert(
-    fc.property(description, (text) => {
-      const reading = readDescription(text);
-      expect(typeof reading.read).toBe("boolean");
-      for (const list of [reading.things, reading.maybe, reading.fields, reading.leftover])
-        expect(Array.isArray(list)).toBe(true);
-    }),
-    {
-      numRuns: Number(import.meta.env.FC_RUNS ?? 500 * SCALE),
-      seed: Number(import.meta.env.FC_SEED ?? 1),
-    },
-  );
-}, 5_000 * SCALE);
+test(
+  "a description is read or not, never a crash",
+  () => {
+    fc.assert(
+      fc.property(description, (text) => {
+        const reading = readDescription(text);
+        expect(typeof reading.read).toBe("boolean");
+        for (const list of [reading.things, reading.maybe, reading.fields, reading.leftover])
+          expect(Array.isArray(list)).toBe(true);
+      }),
+      {
+        numRuns: Number(import.meta.env.FC_RUNS ?? 500 * SCALE),
+        seed: Number(import.meta.env.FC_SEED ?? 1),
+      },
+    );
+  },
+  5_000 * SCALE,
+);

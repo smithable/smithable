@@ -188,7 +188,7 @@ function places(doc: unknown): { in: Node; key: string | number }[] {
 
 function mutate(doc: unknown, m: MutationValue): void {
   // A fresh copy each time: fast-check's constants are one object, and two places holding it make a cycle.
-  m = { ...m, value: structuredClone(m.value) };
+  m = { ...m, value: JSON.parse(JSON.stringify(m.value)) };
   const all = places(doc);
   if (!all.length) return;
   const one = all[m.at % all.length] as { in: Node; key: string | number };
