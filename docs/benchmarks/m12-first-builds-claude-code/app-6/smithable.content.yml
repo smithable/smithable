@@ -2,20 +2,26 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: Work posted by your union, text: "Every opening is checked and posted by union staff, so you know the job meets the agreement." }, { title: Apply in minutes, text: "Sign in, add a short note and your resume, and your application goes straight to the staff." }, { title: Follow every application, text: "See whether you have been shortlisted, hired or passed over, all in one place." }]
-      title: How it works
+      items: [{ title: Work from union employers, text: "Every opening is posted by the hall, from contractors who work with the local." }, { title: Apply in minutes, text: "Sign in with your email, pick a job and send your details and resume." }, { title: Follow your applications, text: "See whether you have been shortlisted, accepted or declined, all in one place." }]
     faq:
-      items: [{ question: Who can apply?, answer: Anyone with an account can apply; staff may ask for your member number when they review it. }, { question: Can I see jobs without signing in?, answer: "Yes, all open jobs are listed for everyone. You only sign in to apply." }, { question: Who sees my application?, answer: Only you and the union staff who handle job placements. }, { question: Can I apply to the same job twice?, answer: "No, one application per job. You can change yours while it is under review." }]
-      title: Questions
+      items: [{ question: Who can apply?, answer: Members of the local in good standing. Sign in with your email and add your member number to your application. }, { question: Can I apply to more than one job?, answer: "Yes, apply to as many openings as you like, once per job." }, { question: How will I hear back?, answer: "The status of each application changes on your My applications page, and the hall will call you on the number you give." }]
     hero:
-      title: Find your next job through the union
-      subtitle: Openings from employers we work with, posted by union staff and open to members to apply.
+      title: Union jobs, posted by your hall
+      subtitle: Browse open positions from union employers and apply when you find the right one.
       button: See open jobs
       secondButton: My applications
       image:
         src: images/hero.webp
         alt: A shared workspace with people working at long tables, seen from a distance
         generated: true
+    openJobs:
+      title: Open now
+  jobs:
+    title: Jobs
+  myApplications:
+    title: My applications
+  applications:
+    title: Applications
 logo:
   src: images/logo.webp
   alt: A map pin

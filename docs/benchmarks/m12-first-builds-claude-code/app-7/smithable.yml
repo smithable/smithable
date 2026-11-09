@@ -1,24 +1,27 @@
 smithable: 0.1
 app:
-  name: Club Football
-  description: "The football club's site: our teams, their players, the fixtures coming up and the results."
-  currency: EUR
-  timezone: Europe/Helsinki
+  name: Club Pitch
+  description: The football club's public site with its teams, players, fixtures and results.
+  timezone: Europe/London
+  clock: 24h
+  date: day-month
+  week: monday
 models:
   Team:
     fields:
-      name: string!
-      category: senior | youth | women | veterans
+      name: string! unique
+      ageGroup: senior | youth | junior | veterans
+      league: string
       coach: string
-      about: text
       photo: picture
+      about: text
       players: Player[]
       matches: Match[]
   Player:
     fields:
       name: string!
       team: Team!
-      number:
+      shirtNumber:
         type: int
         min: 1
         max: 99
@@ -29,29 +32,27 @@ models:
     fields:
       team: Team!
       opponent: string!
-      kickoff: datetime!
-      venue: home | away | neutral
+      kickoffAt: datetime!
+      venue: home | away
       ground: string
       competition: string
       status: scheduled | played | postponed | cancelled
-      goalsFor:
+      ourScore:
         type: int
         min: 0
-      goalsAgainst:
+      theirScore:
         type: int
         min: 0
       report: text
-    namedBy: [team, opponent, kickoff]
+    namedBy: [team, opponent, kickoffAt]
 pages:
   matches:
     crud: Match
-    search: [opponent, competition, ground]
-    filters: [team, status, venue, kickoff]
-    actions: [recordResult, postpone]
+    filters: [team, status, venue, kickoffAt]
+    search: [opponent, competition]
+    actions: [recordResult]
   teams:
     crud: Team
-    search: [name, coach]
-    filters: [category]
   players:
     crud: Player
     search: [name]
@@ -62,14 +63,12 @@ pages:
       hero:
         button: matches
         secondButton: teams
-      upcoming:
+      fixtures:
         records: Match
-        view: table
         where:
           status: scheduled
       results:
         records: Match
-        view: table
         where:
           status: played
       ourTeams:
@@ -85,14 +84,6 @@ actions:
       status: [scheduled, postponed]
     set:
       status: played
-      goalsFor:
-      goalsAgainst:
+      ourScore:
+      theirScore:
     intent: Enter the final score once a match has been played.
-  postpone:
-    on: Match
-    when:
-      status: scheduled
-    set:
-      status: postponed
-    intent: Mark a match as postponed.
-navigation: [matches, teams, players]

@@ -6,20 +6,20 @@ roles:
   admin: all
   staff:
     description: Reception. Runs the day, the sessions and who comes to them, and reads the messages.
-    pages: [sessions, bookings, messages]
+    pages: [schedule, sessions, bookings, messages]
     read: [Session, Booking, Message]
     create: [Session, Booking]
     write: [Session, Booking]
     delete: [Booking]
   member:
     description: A student who books classes.
-    pages: [my-bookings]
+    pages: [schedule, my-bookings]
     create: [Booking]
 assistant:
   for: signed-in
 public:
   pages: [home, schedule, privacy]
-  read: [Instructor, Session, ClassType]
+  read: [ClassType, Instructor, Session]
   create: [Message]
 defaultRole: member
 admins: [johan@smithable.ai]

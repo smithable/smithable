@@ -2,11 +2,14 @@ smithableContent: 0.1
 pages:
   home:
     faq:
-      items: [{ question: Do I need experience to join a class?, answer: "No. Classes marked for beginners or all levels welcome you on your very first day, and teachers offer variations as you go." }, { question: How do I book a place?, answer: "Open the schedule, pick a class and press Book. You sign in with your email address, and your place is kept for you." }, { question: Can I cancel a booking?, answer: "Yes, you can cancel from My bookings any time before the class starts, which frees the place for someone else." }, { question: What should I bring?, answer: Comfortable clothes and some water. Mats and props are ready for you at the studio. }]
+      items: [{ question: Do I need experience to join a class?, answer: "Not at all. Classes marked for all levels or beginners welcome you on your very first day, and teachers offer options for every body." }, { question: How do I book a place?, answer: "Open the schedule, pick a class and press Book. You sign in with your email address, and your place is saved straight away." }, { question: Can I cancel a booking?, answer: "Yes, from My bookings, any time until the class starts, so someone else can take your place." }, { question: What should I bring?, answer: Comfortable clothes and a bottle of water. Mats and props are ready for you at the studio. }]
     hero:
+      title: Find your flow, one breath at a time
+      subtitle: Small classes with caring teachers. See the week's schedule and book your mat online in a moment.
+      button: See the schedule
       image:
         src: images/hero.webp
-        alt: A yoga class stretching on mats in a bright studio
+        alt: An empty yoga studio with wooden floors, mats laid out and tall windows in morning light
         generated: true
 logo:
   src: images/logo.webp

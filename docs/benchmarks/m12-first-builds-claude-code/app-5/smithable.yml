@@ -1,13 +1,13 @@
 smithable: 0.1
 app:
-  name: Crumb & Count
-  description: Keeps track of the bakery's ingredients, their suppliers and how much of each is in stock.
+  name: Bakery Stock
+  description: Keeps track of a small bakery's ingredients, their suppliers and how much of each is in stock.
   currency: EUR
-  timezone: Europe/Stockholm
+  timezone: Europe/Helsinki
 models:
   Supplier:
     fields:
-      name: string! unique
+      name: string!
       contactPerson: string
       email: email
       phone: phone
@@ -17,18 +17,25 @@ models:
   Ingredient:
     fields:
       name: string! unique
-      unit: kg | g | l | ml | pieces
-      inStock: decimal! = 0
-      reorderAt: decimal
-      storage: dry | chilled | frozen
+      category: flour | sugar | dairy | eggs | fats | yeast | flavorings | fruitAndNuts | packaging | other
       supplier: Supplier
-      costPerUnit: money
+      unit: kg | g | l | ml | pieces | packs
+      inStock:
+        type: decimal!
+        min: 0
+        default: 0
+      reorderLevel:
+        type: decimal
+        min: 0
+      unitPrice: money
+      storage: dry | fridge | freezer
+      lastCountedOn: date = TODAY()
       notes: text
 pages:
   ingredients:
     crud: Ingredient
     search: [name, notes]
-    filters: [storage, supplier, inStock]
+    filters: [category, supplier, storage, inStock]
   suppliers:
     crud: Supplier
     search: [name, contactPerson, email]

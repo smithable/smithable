@@ -1,42 +1,40 @@
 smithable: 0.1
 app:
-  name: Family Kitchen
-  description: The family's recipes in one place, with their ingredients and the shopping lists for the week.
+  name: Family Cookbook
+  description: The family's recipes with their ingredients, and the shopping lists made from them.
+  currency: EUR
   timezone: Europe/Stockholm
 models:
   Recipe:
     fields:
       name: string!
+      picture: picture
       summary: text
       category: main | starter | side | dessert | baking | breakfast | drink
-      servings:
-        type: int
-        min: 1
-        max: 50
-        default: 4
+      servings: int = 4
       minutes: int
-      picture: picture
       instructions: markdown
+      source: url
       favorite: bool
       ingredients: Ingredient[]
   Ingredient:
     fields:
       recipe: Recipe!
       name: string!
-      amount: string
+      quantity: string
       note: string
   ShoppingList:
     fields:
       name: string!
-      neededBy: date
+      shopOn: date = TODAY()
       status: open | done
       items: ShoppingItem[]
   ShoppingItem:
     fields:
       list: ShoppingList!
       name: string!
-      amount: string
-      forRecipe: Recipe
+      quantity: string
+      recipe: Recipe
       bought: bool
 pages:
   recipes:
@@ -44,9 +42,8 @@ pages:
     search: [name, summary]
     filters: [category, favorite]
   shoppingLists:
-    route: /shopping-lists
     crud: ShoppingList
-    filters: [status]
+    filters: [status, shopOn]
     defaultFilter:
       status: open
     actions: [markDone]
@@ -59,4 +56,4 @@ actions:
       status: open
     set:
       status: done
-    intent: Close a shopping list once the shopping is done.
+    intent: Close a shopping list once everything on it is bought.
