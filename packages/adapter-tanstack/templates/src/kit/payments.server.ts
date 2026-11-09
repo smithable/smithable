@@ -6,7 +6,7 @@
 // record, how much, what a payment sets and tells) is the generated payments module's.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, like, lt } from "drizzle-orm";
 import { db } from "#/db";
 import { appKeys, incomingSeen, payments } from "#/db/schema";
 import { PAYMENT_ENTRIES, PAYMENTS_PROVIDER } from "#/generated/payments.server";
@@ -21,6 +21,7 @@ export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type Payment = typeof payments.$inferSelect;
 
 const MINUTE = 60_000;
+const DAY = 24 * 60 * MINUTE;
 
 /** What the generated module says of each payments entry: how its record is unheld, set and released. */
 export interface PaymentEntry {
@@ -123,7 +124,7 @@ const proofOf = (id: number) =>
   createHmac("sha256", kept("payments-browser")).update(String(id)).digest("hex");
 export function bindBrowser(id: number) {
   setCookie(cookieOf(id), proofOf(id), {
-    path: "/payments",
+    path: "/",
     httpOnly: true,
     sameSite: "lax",
     secure: !import.meta.env.DEV,
@@ -375,6 +376,12 @@ export function paymentState(id: number) {
  * provider says it was paid (recorded as its event would be) or is still being paid.
  */
 export async function releaseExpired(now = Date.now()): Promise<number> {
+  // The providers' event ids are kept a month (they retry for days); the Payment's state guards after.
+  db.delete(incomingSeen)
+    .where(
+      and(like(incomingSeen.name, "payments-%"), lt(incomingSeen.at, new Date(now - 30 * DAY))),
+    )
+    .run();
   const chosen = provider();
   const due = db
     .select()
