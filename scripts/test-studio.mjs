@@ -3092,11 +3092,20 @@ try {
           body: JSON.stringify({ id: "no-such-fix" }),
         });
         if (unknown.status !== 404) throw new Error(`an unknown fix answered ${unknown.status}`);
+        // Replaced by a newer rebuild: the ref goes, the owner's branch opens as they left it (A 247).
+        g("checkout", start);
+        g("update-ref", "-d", "refs/smithable/fix/demo");
+        await page.goto(`http://localhost:${port}/?fix=demo`);
+        await page
+          .getByText("Its fix was since replaced by a newer one")
+          .waitFor({ timeout: 30000 * P });
+        if (g("rev-parse", "--abbrev-ref", "HEAD") !== "fix/demo")
+          throw new Error("the owner's branch did not open after its ref was gone");
       } finally {
         // Back where the rest of the test left the project.
         g("checkout", start);
         g("branch", "-D", "fix/demo");
-        g("update-ref", "-d", "refs/smithable/fix/demo");
+        spawnSync("git", ["update-ref", "-d", "refs/smithable/fix/demo"], { cwd: dir });
         await page.goto(`http://localhost:${port}/`);
       }
     },
