@@ -10871,6 +10871,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -11067,6 +11069,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -14997,13 +15001,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -18575,6 +18575,8 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -18684,7 +18686,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3818e56e generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "fac1c733 generated",
+  "src/generated/outgoing.server.ts": "822284a5 generated",
   "src/generated/pages.ts": "efdc3236 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/service.import.server.ts": "b222252e generated",
@@ -18733,7 +18735,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "21fe0424 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
   "src/kit/csv-read.ts": "324bc527 kit",
@@ -18746,17 +18748,19 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "3b57db47 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "3d42ce9f kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -26323,13 +26327,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -33603,6 +33603,8 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -33760,7 +33762,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "08286028 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "875a6cd5 generated",
+  "src/generated/outgoing.server.ts": "b3b41ca7 generated",
   "src/generated/pages.ts": "c08f710d generated",
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
@@ -33823,7 +33825,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "21fe0424 kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
@@ -33838,17 +33840,19 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "3b57db47 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "3d42ce9f kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -43304,6 +43308,8 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -43487,6 +43493,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -50073,13 +50081,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -52594,6 +52598,8 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -52713,7 +52719,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.server.ts": "986ecf22 generated",
   "src/generated/invoice.ts": "f4863bb7 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "11bc8997 generated",
+  "src/generated/outgoing.server.ts": "d19f0751 generated",
   "src/generated/pages.ts": "97850e87 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "97fb8041 generated",
@@ -52759,7 +52765,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "21fe0424 kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
@@ -52774,17 +52780,19 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "3b57db47 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "3d42ce9f kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -58024,13 +58032,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -61577,6 +61581,8 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -61697,7 +61703,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "916eed82 generated",
   "src/generated/order.ts": "db4c9478 generated",
-  "src/generated/outgoing.server.ts": "14522d6c generated",
+  "src/generated/outgoing.server.ts": "f3253856 generated",
   "src/generated/pages.ts": "7d21451f generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "590f79d5 generated",
@@ -61742,7 +61748,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "21fe0424 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
   "src/kit/csv-read.ts": "324bc527 kit",
@@ -61756,17 +61762,19 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "3b57db47 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "3d42ce9f kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -66961,6 +66969,8 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/review-mail.server.ts",
@@ -67124,6 +67134,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
@@ -71004,6 +71016,8 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -71147,6 +71161,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -83899,6 +83915,8 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
   "kit: src/kit/security.ts",
@@ -84104,6 +84122,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
   "src/kit/security.ts": "08a2e43d kit",
@@ -88348,13 +88368,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -91794,6 +91810,8 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -91896,7 +91914,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "65d3ca48 generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "0dc0e782 generated",
+  "src/generated/outgoing.server.ts": "8956b93c generated",
   "src/generated/pages.ts": "f7a896bd generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
@@ -91945,7 +91963,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "21fe0424 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
   "src/kit/csv-read.ts": "324bc527 kit",
@@ -91959,17 +91977,19 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "3b57db47 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "3d42ce9f kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "cad4c5d4 kit",
+  "src/kit/push.server.ts": "715bae06 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",

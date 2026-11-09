@@ -106,10 +106,12 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  // Push and text come with the kit's later steps (docs/design/notifications.md §9): until then
-  // an entry goes by its mail, and one without mail is left out rather than made a call to a
-  // target named push or sms.
-  const ir = { ...spec, outgoing: spec.outgoing.filter((o) => o.to === "mail" || !o.channels) };
+  // Texts come with the kit's next step (docs/design/notifications.md §9): until then an entry
+  // that only texts is left out, rather than made a call to a target named sms.
+  const ir = {
+    ...spec,
+    outgoing: spec.outgoing.filter((o) => !o.channels || o.channels.some((c) => c !== "sms")),
+  };
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent()),

@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 
 // The kit's push-crypto.server.ts, as the generated apps get it (a path the build does not follow).
 type Keys = { publicKey: string; privateKey: string };
-const path: string = "../templates/src/kit/push-crypto.server.ts";
+const path: string = "../../adapter-tanstack/templates/src/kit/push-crypto.server.ts";
 const { encryptPush, newPushKeys, vapidHeader } = (await import(path)) as {
   encryptPush(
     s: { p256dh: string; auth: string },
