@@ -3096,9 +3096,7 @@ try {
         g("checkout", start);
         g("update-ref", "-d", "refs/smithable/fix/demo");
         await page.goto(`http://localhost:${port}/?fix=demo`);
-        await page
-          .getByText("Its held version is no longer kept")
-          .waitFor({ timeout: 30000 * P });
+        await page.getByText("Its held version is no longer kept").waitFor({ timeout: 30000 * P });
         if (g("rev-parse", "--abbrev-ref", "HEAD") !== "fix/demo")
           throw new Error("the owner's branch did not open after its ref was gone");
       } finally {
