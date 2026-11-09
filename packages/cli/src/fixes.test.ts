@@ -155,11 +155,23 @@ test("a destructive migration says what it loses, in words, never a value", () =
       }),
     },
   };
-  expect(migrationConsequences(before, after).map((c) => c.says)).toEqual([
+  expect(migrationConsequences(before, after)?.map((c) => c.says)).toEqual([
+    "The table tips is removed, with all its records.",
     "The column note of orders is removed, with its values.",
     "The column total of orders changes from integer to text: values that do not convert are lost.",
     "The column code of orders becomes required: records without a value stop the update.",
-    "The table tips is removed, with all its records.",
   ]);
-  expect(migrationConsequences(after, after)).toEqual([]);
+  // Nothing found is not "loses nothing": none, so the service keeps it held.
+  expect(migrationConsequences(after, after)).toBeUndefined();
+  const unique = {
+    tables: {
+      orders: {
+        ...after.tables.orders,
+        indexes: { orders_code: { name: "orders_code", columns: ["code"], isUnique: true } },
+      },
+    },
+  };
+  expect(migrationConsequences(after, unique)?.map((c) => c.says)).toEqual([
+    "orders's code must now be unique: records that share a value stop the update.",
+  ]);
 });

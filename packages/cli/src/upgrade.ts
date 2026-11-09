@@ -128,5 +128,10 @@ function schemaLosses(drizzle: string, before: Set<string>) {
   const newest = snapshots.at(-1);
   if (!old || !newest || old === newest) return undefined;
   const read = (f: string) => JSON.parse(readFileSync(join(meta, f), "utf8")) as SchemaSnapshot;
-  return migrationConsequences(read(old), read(newest));
+  // A snapshot that cannot be read: nothing to say, so the service keeps the update held.
+  try {
+    return migrationConsequences(read(old), read(newest));
+  } catch {
+    return undefined;
+  }
 }
