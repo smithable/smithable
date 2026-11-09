@@ -54,6 +54,7 @@ import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
+import { manifest, pushModule, SERVICE_WORKER } from "./push.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
@@ -745,6 +746,14 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("smithable.lock", smithableLock(ir, options)),
       generated("README.md", readme(ir, false, auth)),
       generated("public/favicon.svg", favicon(ir)),
+      // Browser push (notifications.md §4): the worker, the manifest and the server functions.
+      ...(pushEntries(ir, auth).length
+        ? [
+            generated("public/sw.js", SERVICE_WORKER),
+            generated("public/manifest.webmanifest", manifest(ir)),
+            generated("src/generated/push.ts", pushModule(ir, auth)),
+          ]
+        : []),
       generated("src/generated/app.ts", appModule(ir)),
       // Always: a page or section of your own keeps its file after it leaves the spec.
       generated("src/generated/custom.ts", CUSTOM_PROPS),
@@ -922,7 +931,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       },
       {
         // Browser push (notifications.md §4): the sender, its cryptography and the choices.
-        files: ["src/kit/push.server.ts", "src/kit/push-crypto.server.ts"],
+        files: [
+          "src/kit/push.server.ts",
+          "src/kit/push-crypto.server.ts",
+          "src/kit/PushChoices.tsx",
+        ],
         used: ({ ir, auth }) => pushEntries(ir, auth).length > 0,
       },
       {

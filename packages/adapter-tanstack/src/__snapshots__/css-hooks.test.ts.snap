@@ -186,6 +186,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/PictureInput.tsx": [
     "data-part="picture"",
   ],
+  "src/kit/PushChoices.tsx": [
+    "data-kit="push-choices"",
+  ],
   "src/kit/RecordSummary.tsx": [
     "data-kit="record-summary"",
   ],

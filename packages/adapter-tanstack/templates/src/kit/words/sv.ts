@@ -460,6 +460,10 @@ export const w = {
   noticesMore: (n: number) => `och ${n} till`,
   noticeSoundOffer: "Spela ett ljud för dessa?",
   noticeSound: "Ett ljud vid varje notis",
+  notifications: "Aviseringar",
+  notificationsHelp: "I den här webbläsaren, även när appen är stängd. Slå på de du vill ha.",
+  pushRefused:
+    "Webbläsaren tillät inte aviseringar. Tillåt dem i dess inställningar för den här webbplatsen.",
   importIt: "Importera",
   importTitle: (plural: string) => `Importera ${plural.toLowerCase()} från en fil`,
   importFile: "En CSV-fil",
