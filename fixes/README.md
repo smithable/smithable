@@ -7,6 +7,7 @@ id: upload-receipts            # the file's name; lowercase words joined by hyph
 title: One plain sentence of what was wrong.
 severity: security             # urgent (people's data or access at risk now), security, or fix
 exposure: What could have happened, in the owner's notice's words, or "none".
+owner_action: Rotate the app's API keys.  # optional: what the owner must do themselves, one sentence; left out when the rebuild is all
 introduced: unknown            # the engine commit that brought it, or unknown
 affects:                       # any one holding makes an app affected
   kit: [src/kit/Upload.tsx]    # kit files, as the app's paths

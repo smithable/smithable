@@ -50,6 +50,21 @@ test("every fix file this engine carries is valid, and a broken one says what is
   });
 });
 
+test("a fix may say what the owner must do themselves, in one sentence", () => {
+  const base =
+    "title: T.\nseverity: urgent\nexposure: Keys could have been read.\nintroduced: unknown\naffects:\n  features: [any]\nmigration: none\n";
+  expect(
+    readFix("keys.yml", `id: keys\n${base}owner_action: Rotate the app's API keys.\n`),
+  ).toMatchObject({
+    fix: { id: "keys", ownerAction: "Rotate the app's API keys." },
+  });
+  // Left out: nothing for the owner to do.
+  expect(readFix("keys.yml", `id: keys\n${base}`)).not.toHaveProperty("fix.ownerAction");
+  expect(readFix("keys.yml", `id: keys\n${base}owner_action: ""\n`)).toEqual({
+    errors: ['keys.yml: "owner_action" is one plain sentence, or left out when there is none'],
+  });
+});
+
 test("a fix affects an app by its kit files, packages or features, read from the spec alone", () => {
   const barbers = project("barbers");
   const crm = project("crm");
