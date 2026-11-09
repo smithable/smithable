@@ -516,6 +516,7 @@ export const w = {
   importUndoGone: "There is no such import.",
   importListTooLong: (max: number) => `At most ${max} records in one list.`,
   importUndoneAlready: "This import was taken back already.",
+  importListEmpty: "An empty list adds nothing: give one record, or a list of them.",
   importUndoLate: "An import can be taken back for a day; this one is older.",
   yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */

@@ -8613,7 +8613,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && [].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ([] as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -10283,7 +10283,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && [].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ([] as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -11055,7 +11055,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -11078,7 +11078,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
@@ -11090,7 +11090,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "72e51f25 generated",
-  "src/routes/admin/activity.tsx": "cf2e5e45 generated",
+  "src/routes/admin/activity.tsx": "225b605d generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
   "src/routes/admin/index.tsx": "247d3d7b generated",
   "src/routes/admin/notes/$id.tsx": "087fdc58 generated",
@@ -11127,7 +11127,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "9eb77c47 generated",
-  "src/routes/team/activity.tsx": "f89fb2bd generated",
+  "src/routes/team/activity.tsx": "f071bc95 generated",
   "src/routes/team/index.tsx": "1f7fedb9 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
@@ -18743,7 +18743,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
@@ -18768,7 +18768,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
@@ -29078,7 +29078,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["ClassType","Instructor","Session","Booking","Post","Message"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && (["ClassType","Instructor","Session","Booking","Post","Message"] as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -33835,7 +33835,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
@@ -33861,7 +33861,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
@@ -33874,7 +33874,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "ed76d161 generated",
   "src/routes/about/index.tsx": "52b48987 generated",
-  "src/routes/admin/activity.tsx": "f87fd75b generated",
+  "src/routes/admin/activity.tsx": "dc7f9a31 generated",
   "src/routes/admin/bookings/$id.tsx": "3343f459 generated",
   "src/routes/admin/bookings/index.tsx": "3cede361 generated",
   "src/routes/admin/bookings/new.tsx": "9b91aaca generated",
@@ -42621,7 +42621,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["Customer","Order","FollowUp"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && (["Customer","Order","FollowUp"] as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -43476,7 +43476,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -43496,7 +43496,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
@@ -43528,7 +43528,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/trash.tsx": "80862bb0 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "1155ec62 generated",
-  "src/routes/team/activity.tsx": "0ded99f8 generated",
+  "src/routes/team/activity.tsx": "7c53973c generated",
   "src/routes/team/index.tsx": "d125d34a generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
@@ -52771,7 +52771,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
@@ -52797,7 +52797,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
@@ -60908,7 +60908,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["Dish","Order","Stop"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && (["Dish","Order","Stop"] as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -61753,7 +61753,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
@@ -61778,7 +61778,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
@@ -61809,7 +61809,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/$id.tsx": "7d3c395b generated",
   "src/routes/stops/index.tsx": "8122a4c9 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
-  "src/routes/team/activity.tsx": "52e88761 generated",
+  "src/routes/team/activity.tsx": "2c5e20dd generated",
   "src/routes/team/index.tsx": "968fd9c5 generated",
   "src/routes/where/index.tsx": "55545172 generated",
   "src/start.ts": "6b874d2d kit",
@@ -67113,7 +67113,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -67136,7 +67136,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
@@ -71136,7 +71136,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -71156,7 +71156,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
@@ -82987,7 +82987,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["Component","Incident","IncidentUpdate","Maintenance"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && (["Component","Incident","IncidentUpdate","Maintenance"] as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -84092,7 +84092,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -84113,7 +84113,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
@@ -84156,7 +84156,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
-  "src/routes/team/activity.tsx": "bee6cde8 generated",
+  "src/routes/team/activity.tsx": "ded514ba generated",
   "src/routes/team/index.tsx": "985b893e generated",
   "src/routes/updates/$id.tsx": "68a6081c generated",
   "src/routes/updates/index.tsx": "11c7f442 generated",
@@ -91219,7 +91219,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["SupportCase"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && (["SupportCase"] as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -91956,7 +91956,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
@@ -91982,7 +91982,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "72d5f862 kit",
+  "src/kit/words/en.ts": "05d2614e kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",
@@ -92008,7 +92008,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e52e206e generated",
-  "src/routes/team/activity.tsx": "2d417ef8 generated",
+  "src/routes/team/activity.tsx": "468cb15a generated",
   "src/routes/team/index.tsx": "a945c0f8 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",

@@ -189,6 +189,7 @@ export async function importItems(
   create: (item: unknown) => Promise<{ id: number }>,
 ): Promise<{ results: ({ id: number } | { error: string })[]; undo?: number }> {
   if (items.length > 1000) throw new BadInput(w.importListTooLong(1000));
+  if (!items.length) throw new BadInput(w.importListEmpty);
   const results: ({ id: number } | { error: string })[] = [];
   const ids: number[] = [];
   for (const item of items)

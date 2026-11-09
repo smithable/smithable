@@ -322,7 +322,7 @@ const getActivity = createServerFn()
     // Undo is the importer's: on other people's imports it is not offered.
     // Undo is the importer's, and here only for the models a list page imports into (an API
     // import is taken back through the API).
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ${JSON.stringify(imports.map((m) => m.name))}.includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && (${JSON.stringify(imports.map((m) => m.name))} as string[]).includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));

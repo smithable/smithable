@@ -493,6 +493,7 @@ export const w = {
   importUndoGone: "Det finns ingen sådan import.",
   importListTooLong: (max: number) => `Högst ${max} poster i en lista.`,
   importUndoneAlready: "Den här importen är redan tagen tillbaka.",
+  importListEmpty: "En tom lista lägger inte till något: ge en post, eller en lista av dem.",
   importUndoLate: "En import kan tas tillbaka i ett dygn; den här är äldre.",
   yourNameHelp: "Namnet andra ser i appen.",
   alreadyHas: (_label: string, field: string) =>
