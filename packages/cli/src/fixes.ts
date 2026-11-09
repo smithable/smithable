@@ -288,3 +288,83 @@ export function migrationKind(sql: string[]): Fix["migration"] {
       !/\b(?:UNIQUE|PRIMARY KEY|REFERENCES|CHECK|CONSTRAINT)\b/i.test(s));
   return statements.every(adds) ? "additive" : "destructive";
 }
+
+/** A schema as drizzle-kit keeps it after each migration (drizzle/meta/NNNN_snapshot.json). */
+export interface SchemaSnapshot {
+  tables: Record<
+    string,
+    {
+      name: string;
+      columns: Record<string, { name: string; type: string; notNull?: boolean; default?: unknown }>;
+      indexes?: Record<string, { name: string; columns: string[]; isUnique?: boolean }>;
+      foreignKeys?: Record<string, { name: string; columnsFrom: string[]; tableTo: string }>;
+    }
+  >;
+}
+
+/**
+ * What a destructive migration loses or may refuse, one plain line each (fixes-reach-apps §5
+ * "Data"): the tables and columns that go, a column whose type changes, a column that becomes
+ * required, a new rule (unique, a reference) old records may break. Words only, never a value.
+ * None (undefined) when the comparison finds nothing to say, so the service keeps the update
+ * held rather than read it as losing nothing; with more than 40 lines it holds it too.
+ */
+export function migrationConsequences(
+  before: SchemaSnapshot,
+  after: SchemaSnapshot,
+): { about: "records"; says: string }[] | undefined {
+  const lines: string[] = [];
+  const then = new Map(Object.values(before.tables).map((t) => [t.name, t]));
+  const now = new Map(Object.values(after.tables).map((t) => [t.name, t]));
+  for (const table of then.values())
+    if (!now.has(table.name))
+      lines.push(`The table ${table.name} is removed, with all its records.`);
+  for (const later of now.values()) {
+    const table = then.get(later.name);
+    if (!table) continue;
+    for (const column of Object.values(table.columns)) {
+      const next = later.columns[column.name];
+      if (!next) {
+        lines.push(`The column ${column.name} of ${table.name} is removed, with its values.`);
+        continue;
+      }
+      if (next.type !== column.type)
+        lines.push(
+          `The column ${column.name} of ${table.name} changes from ${column.type} to ${next.type}: values that do not convert are lost.`,
+        );
+      if (next.notNull && !column.notNull)
+        lines.push(
+          `The column ${column.name} of ${table.name} becomes required: records without a value stop the update.`,
+        );
+    }
+    for (const next of Object.values(later.columns))
+      if (!table.columns[next.name] && next.notNull && next.default === undefined)
+        lines.push(
+          `A required column ${next.name} is added to ${table.name} with no value to give its records: they stop the update.`,
+        );
+    const uniques = (t: typeof table) =>
+      new Set(
+        Object.values(t.indexes ?? {})
+          .filter((i) => i.isUnique)
+          .map((i) => i.columns.join(", ")),
+      );
+    const was = uniques(table);
+    for (const columns of uniques(later))
+      if (!was.has(columns))
+        lines.push(
+          `${table.name}'s ${columns} must now be unique: records that share a value stop the update.`,
+        );
+    const refs = (t: typeof table) =>
+      new Set(
+        Object.values(t.foreignKeys ?? {}).map((f) => `${f.columnsFrom.join(", ")} → ${f.tableTo}`),
+      );
+    const had = refs(table);
+    for (const ref of refs(later))
+      if (!had.has(ref))
+        lines.push(
+          `${table.name}'s ${ref.replace(" → ", " now refers to ")}: records that refer to nothing there stop the update.`,
+        );
+  }
+  if (!lines.length) return undefined;
+  return lines.map((says) => ({ about: "records" as const, says: says.slice(0, 500) }));
+}
