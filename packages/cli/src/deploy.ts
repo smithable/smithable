@@ -25,6 +25,10 @@ const PROVIDER_KEYS = [
   "SMTP_USER",
   "SMTP_PASSWORD",
   "MAIL_FROM",
+  // Browser push (notifications.md §4): the app's VAPID pair, else one it makes and keeps.
+  "PUSH_VAPID_PUBLIC_KEY",
+  "PUSH_VAPID_PRIVATE_KEY",
+  "PUSH_VAPID_SUBJECT",
 ];
 
 /**

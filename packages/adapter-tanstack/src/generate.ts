@@ -47,13 +47,14 @@ import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
-import { liveModels, liveRoute, outgoingModule } from "./outgoing.js";
+import { liveModels, liveRoute, outgoingModule, pushEntries } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
+import { manifest, pushModule, SERVICE_WORKER } from "./push.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
@@ -106,10 +107,12 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  // Push and text come with the kit's later steps (docs/design/notifications.md §9): until then
-  // an entry goes by its mail, and one without mail is left out rather than made a call to a
-  // target named push or sms.
-  const ir = { ...spec, outgoing: spec.outgoing.filter((o) => o.to === "mail" || !o.channels) };
+  // Texts come with the kit's next step (docs/design/notifications.md §9): until then an entry
+  // that only texts is left out, rather than made a call to a target named sms.
+  const ir = {
+    ...spec,
+    outgoing: spec.outgoing.filter((o) => !o.channels || o.channels.some((c) => c !== "sms")),
+  };
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent()),
@@ -367,9 +370,11 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
     if (!shown) return;
 `,
     ],
+    // The recipients are the group's (above); the mail and the push are sent inside its language.
+    ["    const to = entry.to(tx, record);\n", ""],
     [
-      '      entry.to(tx, record),\n      entry.when === "created",\n    );',
-      '      to,\n      entry.when === "created",\n    );\n      });',
+      /(\n {4}(?:if \(entry\.mail !== false\) )?queueMail\(tx, viewer, happening, to, entry\.when === "created"\);)/,
+      "$1\n      });",
     ],
     [
       /^import /m,
@@ -639,7 +644,7 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}${licensesReadme()}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme(ir, auth)}${limitsReadme(ir, auth)}${stylesReadme()}${licensesReadme()}
 ## Project structure
 
 ${structure}`;
@@ -686,10 +691,10 @@ For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: f
 }
 
 /** How the app sends mail, for the README. */
-function mailReadme(): string {
+function mailReadme(ir: SpecIR, auth?: AuthIR): string {
   return `## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.${auth && pushEntries(ir, auth).length ? "\n\nBrowser push (`to: push`) needs no settings: the app makes a key pair at its first start and keeps it with its data, so a backup keeps everyone's subscriptions. To give your own, set `PUSH_VAPID_PUBLIC_KEY` and `PUSH_VAPID_PRIVATE_KEY` (and `PUSH_VAPID_SUBJECT`, the contact the push services may write to; `MAIL_FROM` otherwise). A new pair ends every subscription: people turn notifications on again under their name." : ""}
 
 `;
 }
@@ -743,6 +748,14 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("smithable.lock", smithableLock(ir, options)),
       generated("README.md", readme(ir, false, auth)),
       generated("public/favicon.svg", favicon(ir)),
+      // Browser push (notifications.md §4): the worker, the manifest and the server functions.
+      ...(pushEntries(ir, auth).length
+        ? [
+            generated("public/sw.js", SERVICE_WORKER),
+            generated("public/manifest.webmanifest", manifest(ir)),
+            generated("src/generated/push.ts", pushModule(ir, auth)),
+          ]
+        : []),
       generated("src/generated/app.ts", appModule(ir)),
       // Always: a page or section of your own keeps its file after it leaves the spec.
       generated("src/generated/custom.ts", CUSTOM_PROPS),
@@ -917,6 +930,15 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         // Live in the app (notifications.md §3): the stream, the banner, the chime.
         files: ["src/kit/live.server.ts", "src/kit/Live.tsx"],
         used: ({ ir, auth }) => liveModels(ir, auth).length > 0,
+      },
+      {
+        // Browser push (notifications.md §4): the sender, its cryptography and the choices.
+        files: [
+          "src/kit/push.server.ts",
+          "src/kit/push-crypto.server.ts",
+          "src/kit/PushChoices.tsx",
+        ],
+        used: ({ ir, auth }) => pushEntries(ir, auth).length > 0,
       },
       {
         // "Contact the owner" on a record's page (marketplace.md §2.4).

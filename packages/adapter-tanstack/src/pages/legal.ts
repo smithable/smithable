@@ -1,6 +1,7 @@
 // The privacy page (docs/design/legal-page.md): one route rendering the kit's LegalPage from
 // facts taken from the spec, the auth file and the context file at generation time, so the page
 // says what the app does now. The operator's details are the content file's.
+
 import {
   type AuthIR,
   isUpload,
@@ -9,6 +10,7 @@ import {
   personalFields,
   type SpecIR,
 } from "@smithable/core";
+import { pushEntries } from "../outgoing.js";
 import type { GenContext } from "../shared.js";
 import {
   code,
@@ -88,6 +90,22 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
           .map((m) => t.modelPluralLabel(m).toLowerCase()),
       ),
     ],
+    // Browser push (notifications.md §4): what it is about, named with the services it goes through.
+    ...(pushEntries(ir, auth).length
+      ? {
+          pushAbout: [
+            ...new Set(
+              pushEntries(ir, auth).flatMap((o) =>
+                "model" in o.when
+                  ? ir.models
+                      .filter((m) => "model" in o.when && m.name === o.when.model)
+                      .map((m) => t.modelPluralLabel(m).toLowerCase())
+                  : [],
+              ),
+            ),
+          ],
+        }
+      : {}),
   };
 }
 

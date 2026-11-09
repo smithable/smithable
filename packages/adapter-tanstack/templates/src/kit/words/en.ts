@@ -482,6 +482,9 @@ export const w = {
   noticesMore: (n: number) => `and ${n} more`,
   noticeSoundOffer: "Play a sound for these?",
   noticeSound: "A sound with each notice",
+  notifications: "Notifications",
+  notificationsHelp: "In this browser, also when the app is closed. Turn on each you want.",
+  pushRefused: "The browser did not allow notifications. Allow them in its settings for this site.",
   importIt: "Import",
   importTitle: (plural: string) => `Import ${plural.toLowerCase()} from a file`,
   importFile: "A CSV file",
@@ -675,6 +678,9 @@ export const w = {
     `Visits are counted with ${provider}, which sets no cookie and keeps no personal data.`,
   legalAnalyticsConsent: (provider: string) =>
     `Visits are counted with ${provider} only after you accept it in the cookie bar. You can change your choice under Cookie settings at the bottom of the page.`,
+  legalPushTitle: "Notifications in your browser",
+  legalPush: (labels: string[]) =>
+    `If you turn notifications on under your name, the app tells your browser of new ${labels.join(", ")} it may show you. The title and a link go, encrypted, through your browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), which cannot read them. Turning them off, or signing out in that browser, ends them.`,
   legalMailTitle: "Mail",
   legalMailSignIn: "The app sends mail for signing in and for invitations.",
   legalMailEvents: (labels: string[]) =>
@@ -906,6 +912,8 @@ export const w = {
     mailCodes: "Mail: sign-in codes.",
     mail: (text: string) => `Mail: ${text}`,
     call: (to: string, text: string) => `A call to ${to}: ${text}`,
+    push: (text: string) =>
+      `A browser push: ${text}. The title line and the link go, encrypted, through the browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), to those who turned it on.`,
     callsIn: (text: string) => `Calls in: ${text}`,
     sentNone: "The text alone goes.",
     sentAll: "The fields its record page shows go.",
