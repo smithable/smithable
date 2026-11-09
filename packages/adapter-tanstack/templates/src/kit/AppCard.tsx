@@ -101,6 +101,8 @@ export interface CardFacts {
   outside: {
     signInCodes: boolean;
     mail: CardSent[];
+    /** Browser pushes: the title line and the link, through the browsers' push services. */
+    push?: CardSent[];
     calls: CardSent[];
     incoming: { name: string; creates?: string; custom: boolean; mail: boolean; text: string }[];
     analytics?: { provider: string; cookies: boolean };
