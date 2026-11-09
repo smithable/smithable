@@ -15,7 +15,7 @@ import { undo } from "./undo.js";
 vi.mock("./generate.js", () => ({ generate: vi.fn(async () => 0) }));
 
 /** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
-const SCALE = Number(import.meta.env.FC_SCALE) || 1;
+const SCALE = Number(process.env.FC_SCALE) || 1;
 
 const roots: string[] = [];
 afterEach(() => {
@@ -88,8 +88,8 @@ test(
         expect(git(dir, ["status", "--porcelain"]).out.trim()).toBe("");
       }),
       {
-        numRuns: Number(import.meta.env.FC_RUNS ?? 6 * SCALE),
-        seed: Number(import.meta.env.FC_SEED ?? 1),
+        numRuns: Number(process.env.FC_RUNS ?? 6 * SCALE),
+        seed: Number(process.env.FC_SEED ?? 1),
       },
     );
     // Some changes went in, or the property tests nothing.
