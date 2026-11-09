@@ -115,6 +115,18 @@ curl -s "https://status.example.com/api/v1/incidents.csv?status=resolved&sort=-d
 
 The first line has the fields' labels as the app shows them; amounts are decimals (`12.50`), dates ISO, times ISO in the app's time zone with their offset (`2026-11-03T09:00:00+02:00`), a reference is its record's title and a choice its label; pictures and documents are left out. The file is UTF-8 with a byte-order mark, so a spreadsheet reads the letters right; a cell that starts like a formula (`=`, `+`, `-`, `@`) is written with a `'` in front, so it stays text. In the app itself, "Export CSV" under a list saves the list as it is filtered, and the selection bar's Export CSV saves only the chosen records; neither needs the API.
 
+### Many at once
+
+`POST /api/v1/<models>` also takes a list, of at most a thousand records, each as one record is given (a reference is the other record's id). Each one is checked and added on its own, as the key's role may (unlike a file's import, which adds all or none), and the answer says for each, in order, its new id or why it was refused:
+
+```sh
+curl -s -X POST https://crm.example.com/api/v1/customers -H "Authorization: Bearer $KEY" \
+  -H "Content-Type: application/json" -d '[{"name":"Nordvik AB"},{"name":""}]'
+# {"results":[{"id":41},{"error":"name: …"}],"undo":"/api/v1/customers/imports/7"}
+```
+
+An empty list is refused. For a day, `DELETE` on the `undo` address takes the records it added back, once, and only with the key that added them: a kind of record with a trash moves them there, and one without deletes those nobody has changed since. The app's own [Import](import.md) reads a spreadsheet's file instead.
+
 ### The trash
 
 A model with `trash: true` keeps a deleted record for thirty days ([design/trash.md](../design/trash.md)). `DELETE /api/v1/<models>/{id}` moves it to the trash (204, as for any delete). Reading it then answers `410 Gone`, with when it was deleted, by whom, when it goes for good and where to restore it:
