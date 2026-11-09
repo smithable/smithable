@@ -702,8 +702,7 @@ export const w = {
   paymentPaid: (amount: string) => `Betalt ${amount}. Tack!`,
   paymentWaiting: "Väntar på att betalningen bekräftas",
   paymentReceiptLater: "Betaltjänstens kvitto berättar när den är klar.",
-  paymentHeldUntil: (until: Date) =>
-    `Din plats hålls till ${until.toLocaleTimeString("sv", { hour: "2-digit", minute: "2-digit" })}.`,
+  paymentHeldUntil: (time: string) => `Din plats hålls till ${time}.`,
   paymentRefunded: "Betalningen har återbetalats.",
   paymentNotMade: "Betalningen gjordes inte, och inget drogs.",
   paymentFake: "Testbetalning: inga pengar flyttas",

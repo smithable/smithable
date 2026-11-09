@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { moneyText } from "./format";
+import { clockText, whenAt } from "./time-text";
 import { w } from "./words";
 
 export interface PaymentShown {
@@ -38,6 +39,7 @@ export function PaymentBack({
     return () => clearTimeout(timer);
   }, [payment.status, asked, refresh]);
   const amount = moneyText(payment.amount, payment.currency);
+  const until = whenAt(payment.heldUntil);
   return (
     <main className="mx-auto max-w-lg p-5">
       <Card data-kit="payment-back" className="space-y-4 p-card" aria-live="polite">
@@ -52,7 +54,7 @@ export function PaymentBack({
             </h1>
             {asked >= 20 && <p>{w.paymentReceiptLater}</p>}
             <p className="text-sm text-muted-foreground">
-              {w.paymentHeldUntil(new Date(payment.heldUntil))}
+              {w.paymentHeldUntil(clockText(until.hour, until.minute))}
             </p>
             <Button
               onClick={async () => {
