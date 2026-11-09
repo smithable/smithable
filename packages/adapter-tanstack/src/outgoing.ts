@@ -58,7 +58,9 @@ export function liveModels(ir: SpecIR, auth: AuthIR | undefined): string[] {
   return [
     ...new Set(
       ir.outgoing.flatMap((o) =>
-        o.to === "mail" && !o.list && "model" in o.when ? [o.when.model] : [],
+        (o.to === "mail" || channelsOf(o)?.includes("push")) && !o.list && "model" in o.when
+          ? [o.when.model]
+          : [],
       ),
     ),
   ].sort();

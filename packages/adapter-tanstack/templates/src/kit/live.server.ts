@@ -88,6 +88,8 @@ export function liveLater(
 }
 
 async function announce(pending: Live["pending"]): Promise<void> {
+  // An entry that both mails and pushes gives two proofs for one person: one notice.
+  const told = new Set<string>();
   for (const { proof, to, event } of pending) {
     // The outbox row proves the change committed: the same row, not only its id, since SQLite
     // gives a rolled-back row's id to the next one. A mail's, or a push's (an entry that only
@@ -117,6 +119,9 @@ async function announce(pending: Live["pending"]): Promise<void> {
       .where(to.id ? eq(user.id, to.id) : sql`lower(${user.email}) = ${to.email.toLowerCase()}`)
       .get();
     if (!person) continue;
+    const once = `${person.id}|${event.entry}|${event.id}`;
+    if (told.has(once)) continue;
+    told.add(once);
     const streams = live.streams.get(person.id);
     if (!streams?.length) continue;
     const viewer: Viewer = { ...person, role: person.role ?? "" };

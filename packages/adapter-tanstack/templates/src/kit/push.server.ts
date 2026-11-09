@@ -67,7 +67,8 @@ function subject(): string {
   const { PUSH_VAPID_SUBJECT, MAIL_FROM, BETTER_AUTH_URL } = process.env;
   if (PUSH_VAPID_SUBJECT) return PUSH_VAPID_SUBJECT;
   if (MAIL_FROM) return `mailto:${MAIL_FROM.replace(/^.*<([^>]+)>.*$/, "$1")}`;
-  return BETTER_AUTH_URL ?? "mailto:app@localhost";
+  // A contact is mailto: or https: (RFC 8292); an app on plain http has none of its own.
+  return BETTER_AUTH_URL?.startsWith("https:") ? BETTER_AUTH_URL : "mailto:app@localhost";
 }
 
 /**
@@ -128,6 +129,16 @@ export function queuePush(
   if (wanted) sendSoon();
 }
 
+/** Why a browser's push address may not be used: not https, the app itself, a private network. */
+async function endpointRefusal(endpoint: string): Promise<string | undefined> {
+  try {
+    if (new URL(endpoint).protocol !== "https:") return "it is not https";
+  } catch {
+    return "it is not an address";
+  }
+  return refusedAddress(endpoint);
+}
+
 /** The pushes due, to each browser of each person: true when one was tried. */
 async function sendPushes(now: number): Promise<number> {
   if (state.smithablePushSending) return 0;
@@ -168,8 +179,21 @@ async function sendOne(row: typeof outgoingPush.$inferSelect, now: number): Prom
     .where(eq(user.id, row.userId))
     .get();
   const read = row.model ? state.smithablePushReaders?.[row.model] : undefined;
+  // Still turned on: turning it off stops what is queued too, also a retry or Send again.
+  const on = db
+    .select({ id: notificationChoices.id })
+    .from(notificationChoices)
+    .where(
+      and(
+        eq(notificationChoices.userId, row.userId),
+        eq(notificationChoices.entry, row.entry),
+        eq(notificationChoices.channel, "push"),
+      ),
+    )
+    .get();
   const may =
     person &&
+    on &&
     (row.recordId === null ||
       !read ||
       (await read({ ...person, role: person.role ?? "" }, row.recordId)));
@@ -182,10 +206,7 @@ async function sendOne(row: typeof outgoingPush.$inferSelect, now: number): Prom
   const keys = devices.length ? pushKeys() : undefined;
   for (const device of devices) {
     if (delivered.has(device.id) || !keys) continue;
-    const refused =
-      new URL(device.endpoint).protocol !== "https:"
-        ? "it is not https"
-        : await refusedAddress(device.endpoint);
+    const refused = await endpointRefusal(device.endpoint);
     if (refused) {
       errors.push(`a browser's push address was refused: ${refused}`);
       continue;
@@ -202,7 +223,9 @@ async function sendOne(row: typeof outgoingPush.$inferSelect, now: number): Prom
         },
         encryptPush(device, message),
       );
-      if (status === 404 || status === 410) {
+      // Gone (404, 410), or refused for a key it was not made with (401, 403: the app's pair
+      // was replaced): the browser makes a new one when the person turns it on again.
+      if (status === 404 || status === 410 || status === 401 || status === 403) {
         // The browser dropped it (a person turned it off there, or it expired): gone here too.
         db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, device.id)).run();
         continue;
@@ -278,15 +301,24 @@ export function pushChoices(viewer: Viewer, offered: string[]) {
  * Turns an entry on or off for the person, keeping this browser's subscription with it: the
  * first one on subscribes it, the last one off removes it (a shared tablet keeps nothing).
  */
-export function setPushChoice(
+export async function setPushChoice(
   viewer: Viewer,
   offered: string[],
   entry: string,
   on: boolean,
   browser?: BrowserSubscription,
-): { on: string[] } {
+): Promise<{ on: string[] }> {
   if (!offered.includes(entry)) throw new Error("No such notification.");
-  if (browser && !/^https:\/\//.test(browser.endpoint)) throw new Error("A push address is https.");
+  // Checked when it is given as well as at each push: a browser's address, never the app's own
+  // or a private network's, and keys of a browser's sizes (a P-256 point, a 16-byte secret).
+  const refused = browser && (await endpointRefusal(browser.endpoint));
+  if (refused) throw new Error(`This push address cannot be used: ${refused}.`);
+  if (
+    browser &&
+    (Buffer.from(browser.p256dh, "base64url").length !== 65 ||
+      Buffer.from(browser.auth, "base64url").length !== 16)
+  )
+    throw new Error("This browser's push keys are not as a browser gives them.");
   db.transaction((tx) => {
     if (on) {
       tx.insert(notificationChoices)

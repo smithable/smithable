@@ -37,7 +37,16 @@ const b64 = (buffer: ArrayBuffer | null) =>
 /** This browser's subscription, made (asking the browser) when `make` and none is there yet. */
 async function thisBrowser(publicKey?: string): Promise<PushSubscription | null> {
   const registration = await navigator.serviceWorker.register("/sw.js");
-  const kept = await registration.pushManager.getSubscription();
+  let kept = await registration.pushManager.getSubscription();
+  // Made with an earlier key pair of the app's: no longer good, so made again.
+  if (
+    kept &&
+    publicKey &&
+    b64(kept.options.applicationServerKey as ArrayBuffer | null) !== publicKey
+  ) {
+    await kept.unsubscribe();
+    kept = null;
+  }
   if (kept || !publicKey) return kept;
   if ((await Notification.requestPermission()) !== "granted") return null;
   const key = Uint8Array.from(atob(publicKey.replace(/-/g, "+").replace(/_/g, "/")), (c) =>
@@ -71,7 +80,18 @@ export function PushChoices({ api }: { api: PushApi }) {
   const [list, setList] = useState<Awaited<ReturnType<PushApi["list"]>>>();
   const [problem, setProblem] = useState<string>();
   useEffect(() => {
-    if (supported()) void api.list().then(setList, () => undefined);
+    if (!supported()) return;
+    void (async () => {
+      const found = await api.list();
+      // On here only where this browser is subscribed: another browser of the person's turns
+      // them on for itself.
+      const here = await (
+        await navigator.serviceWorker.getRegistration("/sw.js")
+      )?.pushManager.getSubscription();
+      setList(
+        here ? found : { ...found, entries: found.entries.map((e) => ({ ...e, on: false })) },
+      );
+    })().catch(() => undefined);
   }, [api]);
   if (!list?.entries.length) return null;
   const toggle = async (entry: string, on: boolean) => {

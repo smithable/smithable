@@ -24,7 +24,11 @@ export interface PushKeys {
 export function newPushKeys(): PushKeys {
   const ecdh = createECDH("prime256v1");
   ecdh.generateKeys();
-  return { publicKey: b64(ecdh.getPublicKey()), privateKey: b64(ecdh.getPrivateKey()) };
+  // The private key as 32 bytes: one in 256 is shorter without its leading zero.
+  return {
+    publicKey: b64(ecdh.getPublicKey()),
+    privateKey: b64(Buffer.concat([Buffer.alloc(32), ecdh.getPrivateKey()]).subarray(-32)),
+  };
 }
 
 /** A browser's subscription, as PushManager.subscribe gives it. */
