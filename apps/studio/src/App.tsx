@@ -116,6 +116,24 @@ export function App() {
     notice?: boolean;
   }>();
   const [reporting, setReporting] = useState(false);
+  // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
+  const [fixLine, setFixLine] = useState<string>();
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("fix");
+    if (!id) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("fix");
+    window.history.replaceState(null, "", url);
+    api.openFix(id).then(
+      (r) =>
+        setFixLine(
+          r.ok
+            ? `You are on the fix ${id} (the branch ${r.branch}): repair src/custom/ until the app works, then publish.`
+            : (r.message ?? "The fix could not be opened."),
+        ),
+      (e: Error) => setFixLine(e.message),
+    );
+  }, []);
   // Leave feedback (A 242): open with what was said to Smith, if anything; this session's changes.
   const [feedback, setFeedback] = useState<string>();
   const [sessionStart] = useState(() => new Date().toISOString());
@@ -1172,6 +1190,14 @@ export function App() {
             )}
           </div>
         </header>
+        {fixLine && (
+          <p
+            role="status"
+            className="border-b border-line bg-accent-soft px-4 py-1.5 text-xs whitespace-pre-wrap"
+          >
+            {fixLine}
+          </p>
+        )}
         {wakingNow && (
           // A hosted workspace waking (B 58): a bar that goes by itself once it answers.
           <div role="status" className="border-b border-line bg-accent-soft px-4 py-1.5 text-xs">
