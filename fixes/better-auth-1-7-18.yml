@@ -1,0 +1,8 @@
+id: better-auth-1-7-18
+title: The sign-in library the app is built on had published security fixes the app did not have yet.
+severity: security
+exposure: Sign-in with another service could have accepted an address that service had not verified, and a session that was ended could have kept working for a while.
+introduced: unknown
+affects:
+  stack: [better-auth]
+migration: none
