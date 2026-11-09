@@ -1698,6 +1698,187 @@ async function kioskFlow(dir, base) {
 }
 
 /**
+ * Payments with the fake provider (payments.md §6, A 241): the test's own payments entry pays for
+ * an order to be placed. Paid: the order shows and staff hear of it only then; declined: the order
+ * is gone; cancelled and left: released by the hold timer; the provider's word twice is acted on
+ * once; a wrong amount is recorded and the order stays held; an unsigned call is refused.
+ */
+async function kioskPaymentFlow(dir, base) {
+  const spec = join(dir, "smithable.yml");
+  const original = readFileSync(spec, "utf8");
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const subjects = (before) =>
+    mails()
+      .slice(before)
+      .map((m) => /^Subject: (.*)$/im.exec(readFileSync(join(outbox, m), "utf8"))?.[1] ?? "");
+  const one = (sql) =>
+    JSON.parse(
+      spawnSync(
+        "node",
+        [
+          "-e",
+          `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).get() ?? null))`,
+        ],
+        { cwd: dir, encoding: "utf8" },
+      ).stdout,
+    );
+  const waitFor = async (what, ok) => {
+    for (let i = 0; i < 150 * P; i++) {
+      if (await ok()) return;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    throw new Error(`no ${what}`);
+  };
+  writeFileSync(
+    spec,
+    original
+      .replace(
+        /\n {6}total: \{ type: money, formula: SUM\(lines\.amount\) \}\n/,
+        "\n      total: { type: money, formula: SUM(lines.amount) }\n      paid: bool\n",
+      )
+      .replace(
+        /\noutgoing:\n/,
+        '\npayments:\n  orderPayment: { on: Order, amount: total, when: created, paid: { set: { paid: true } }, description: "Order {number}" }\n\noutgoing:\n',
+      ),
+  );
+  const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+  if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+  // Orders up to the provider's page; the Payment's id from its address.
+  const orderUpTo = async (name) => {
+    await open(page, `${base}/`);
+    await page.getByRole("button", { name: "Add Fish soup" }).click();
+    await page.getByRole("button", { name: "Order", exact: true }).click();
+    await page.getByLabel(/^Name/).fill(name);
+    await page.getByLabel(/^Phone/).fill("+358 40 555 6666");
+    await page.getByRole("button", { name: /^Pay / }).click();
+    await page.waitForURL(/\/payments\/fake\/\d+$/, { timeout: 30000 * P });
+    await page.getByText("Test payment: no money moves").waitFor();
+    return Number(/\/payments\/fake\/(\d+)$/.exec(page.url())[1]);
+  };
+  const orderOf = (payment) =>
+    one(
+      `select o.id, o.paid, o.pay_held_at held from payments p left join orders o on o.id = p.record where p.id = ${payment}`,
+    );
+  const event = async (body, signature) =>
+    (
+      await fetch(`${base}/incoming/payments-fake`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-fake-signature": signature },
+        body,
+      })
+    ).status;
+  const signed = (fields) => {
+    const body = JSON.stringify({ mode: "test", currency: "EUR", ...fields });
+    const secret = one("select value from app_keys where name = 'payments-fake'").value;
+    return [body, createHmac("sha256", secret).update(body).digest("hex")];
+  };
+  try {
+    // The dev server takes the new spec a moment after the change.
+    await waitFor("the pay button", async () => {
+      await open(page, `${base}/`);
+      if (!(await page.getByRole("button", { name: "Add Fish soup" }).isEnabled())) return false;
+      await page.getByRole("button", { name: "Add Fish soup" }).click();
+      await page.getByRole("button", { name: "Order", exact: true }).click();
+      return page.getByRole("button", { name: /^Pay / }).isVisible();
+    });
+    // Paid: held while the payer is at the provider's page (staff see nothing yet), shown and
+    // told once the provider's word has come.
+    let before = mails().length;
+    const paid = await orderUpTo("Paula Paid");
+    if (!orderOf(paid)?.held) throw new Error("the order is not held while it is paid");
+    const staff = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await signInAs(staff, base, "admin");
+    await open(staff, `${base}/orders`);
+    if (await staff.getByText("Paula Paid").count()) throw new Error("staff see an unpaid order");
+    if (subjects(before).includes("A new order"))
+      throw new Error("staff were told of an unpaid order");
+    await page.getByRole("button", { name: "Approve" }).click();
+    await page.getByText(/^Paid .+\. Thank you!$/).waitFor({ timeout: 15000 * P });
+    const done = orderOf(paid);
+    if (done.held || done.paid !== 1) throw new Error(`the paid order is ${JSON.stringify(done)}`);
+    await waitFor("mail to staff of the paid order", () =>
+      subjects(before).includes("A new order"),
+    );
+    await open(staff, `${base}/orders`);
+    await staff.getByText("Paula Paid").first().waitFor();
+    // Declined: the Payment failed and the order gone, its place freed.
+    const declined = await orderUpTo("Dina Declined");
+    await page.getByRole("button", { name: "Decline" }).click();
+    await page
+      .getByText("The payment was not made, and nothing was charged.")
+      .waitFor({ timeout: 15000 * P });
+    if (orderOf(declined)?.id) throw new Error("a declined order stays");
+    // Cancelled and left: the back page offers Pay again; after the hold, the timer releases it.
+    const left = await orderUpTo("Lars Left");
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByText("Waiting for the payment to be confirmed").waitFor({ timeout: 15000 * P });
+    await page.getByRole("button", { name: /^Pay / }).waitFor();
+    write(dir, `update payments set created_at = created_at - 7200000 where id = ${left}`);
+    await waitFor("the hold timer", () => !orderOf(left)?.id);
+    const gone = one(`select status, note from payments where id = ${left}`);
+    if (gone.status !== "failed" || gone.note !== "not paid in time")
+      throw new Error(`a released Payment is ${JSON.stringify(gone)}`);
+    // The provider's word twice: acted on once.
+    const twice = await orderUpTo("Tove Twice");
+    const { amount } = one(`select amount from payments where id = ${twice}`);
+    before = mails().length;
+    const [body, signature] = signed({ id: "event-twice", payment: twice, kind: "paid", amount });
+    for (const _ of [1, 2]) {
+      const status = await event(body, signature);
+      if (status !== 200) throw new Error(`the same event answered ${status}`);
+    }
+    const [again, againSigned] = signed({
+      id: "event-twice-2",
+      payment: twice,
+      kind: "paid",
+      amount,
+    });
+    if ((await event(again, againSigned)) !== 200) throw new Error("a second success was refused");
+    const lines = one(
+      `select count(*) n from audit_log where action = 'paid' and record_id = ${orderOf(twice).id}`,
+    );
+    if (lines.n !== 1) throw new Error(`a payment told twice was recorded ${lines.n} times`);
+    await waitFor("mail to staff", () => subjects(before).includes("A new order"));
+    if (subjects(before).filter((s) => s === "A new order").length !== 1)
+      throw new Error("staff were told twice of one order");
+    // A wrong amount: recorded with its note, the order still held and unpaid.
+    const wrong = await orderUpTo("Walt Wrong");
+    const asked = one(`select amount from payments where id = ${wrong}`).amount;
+    const [less, lessSigned] = signed({
+      id: "event-wrong",
+      payment: wrong,
+      kind: "paid",
+      amount: asked - 100,
+    });
+    if ((await event(less, lessSigned)) !== 200) throw new Error("a wrong amount was not answered");
+    const differs = one(`select status, note from payments where id = ${wrong}`);
+    if (differs.status !== "paid" || differs.note !== "amount differs")
+      throw new Error(`a wrong amount left ${JSON.stringify(differs)}`);
+    if (!orderOf(wrong).held) throw new Error("an order paid the wrong amount was let out");
+    // Not the provider's: refused.
+    const [forged] = signed({ id: "event-forged", payment: wrong, kind: "paid", amount: asked });
+    if ((await event(forged, "0".repeat(64))) !== 401)
+      throw new Error("an unsigned event was taken");
+    console.log(
+      "  ✓ kiosk payments (fake): an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount keeps it held; a forged call is refused",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ kiosk payments: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("kiosk payment flow");
+  } finally {
+    await browser.close();
+    writeFileSync(spec, original);
+    const back = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+    if (back.status !== 0) failures.push(`kiosk payments put back: ${back.stdout}${back.stderr}`);
+  }
+}
+
+/**
  * The barbers starter (appointments.md §8 step 3): a customer books the earliest free time with a
  * barber and sees it gone; a booking within 12 hours says to contact the shop, one further ahead
  * is cancelled online; the shop's day shows the barber's column. The shop is open around the
@@ -8677,7 +8858,10 @@ test("the session cookie's name and attributes", async () => {
       ...receiver?.env,
       DEV_DOOR_SECRET: DOOR_SECRET,
       // The kiosk's staff get a push (notifications.md §4) from a push service on this machine.
-      ...(example === "kiosk" ? { NODE_EXTRA_CA_CERTS: pushCertificate().cert } : {}),
+      // And its payments step's hold timer looks every two seconds (payments.md §4.5).
+      ...(example === "kiosk"
+        ? { NODE_EXTRA_CA_CERTS: pushCertificate().cert, PAYMENTS_HOLD_CHECK_SECONDS: "2" }
+        : {}),
     });
     try {
       const base = `http://localhost:${port + 100}`;
@@ -8735,6 +8919,7 @@ test("the session cookie's name and attributes", async () => {
       if (example === "kiosk") {
         await kioskFlow(dir, base);
         await kioskLandingFlow(dir, base);
+        await kioskPaymentFlow(dir, base);
       }
       if (example === "barbers") await barbersFlow(dir, base);
       if (example === "crm") await importFlow(dir, base);

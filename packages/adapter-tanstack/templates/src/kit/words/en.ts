@@ -736,6 +736,20 @@ export const w = {
   orderClosed: (opens?: string) => (opens ? `Closed, opens ${opens}` : "Closed"),
   orderSoldOut: (label: string) => `Sold out: ${label}`,
   orderEmpty: "Nothing chosen yet.",
+  /** Payments (payments.md §3.4, §4.2). */
+  payAmount: (amount: string) => `Pay ${amount}`,
+  paymentPaid: (amount: string) => `Paid ${amount}. Thank you!`,
+  paymentWaiting: "Waiting for the payment to be confirmed",
+  paymentReceiptLater: "The payment provider's receipt will tell you when it is done.",
+  paymentHeldUntil: (until: Date) =>
+    `Your place is held until ${until.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}.`,
+  paymentRefunded: "The payment was refunded.",
+  paymentNotMade: "The payment was not made, and nothing was charged.",
+  paymentFake: "Test payment: no money moves",
+  paymentApprove: "Approve",
+  paymentDecline: "Decline",
+  paymentUnavailable: "Payment is not possible right now. Please try again.",
+  paymentGone: "This payment is no longer open.",
   /** A chart's bar for a quarter: "Q3 2026". */
   quarterOf: (quarter: number, year: string) => `Q${quarter} ${year}`,
   /** A list's totals row (intents.md §5): "Total of 12". */

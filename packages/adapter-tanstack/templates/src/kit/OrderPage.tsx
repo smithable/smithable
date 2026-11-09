@@ -46,11 +46,13 @@ interface OrderPageProps<S extends z.ZodType> {
   place: (
     values: z.output<S>,
     lines: { id: number; quantity: number }[],
-  ) => Promise<{ number: unknown }>;
+  ) => Promise<{ number: unknown; pay?: string }>;
+  /** Paid to be placed (payments.md §4.1): the button pays, and the provider's page follows. */
+  pays?: boolean;
 }
 
 export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
-  const { title, menu, sections, app, ui, schema, place } = props;
+  const { title, menu, sections, app, ui, schema, place, pays } = props;
   const [chosen, setChosen] = useState<Record<number, number>>({});
   const [step, setStep] = useState<"choose" | "details">("choose");
   const [placed, setPlaced] = useState<{ number: string; lines: [Choice, number][] }>();
@@ -120,7 +122,7 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
             ui={ui}
             app={app}
             schema={schema}
-            submitLabel={w.orderPlace}
+            submitLabel={pays ? w.payAmount(money(total)) : w.orderPlace}
             onCancel={() => setStep("choose")}
             onSubmit={async (values) => {
               setProblem(undefined);
@@ -129,6 +131,10 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
                   values,
                   lines.map(([c, quantity]) => ({ id: c.id, quantity })),
                 );
+                if (made.pay) {
+                  window.location.assign(made.pay);
+                  return;
+                }
                 setPlaced({ number: String(made.number), lines });
               } catch (error) {
                 const message = (error as Error).message;

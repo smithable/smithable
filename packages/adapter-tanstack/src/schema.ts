@@ -498,6 +498,8 @@ const PAYMENT_TABLES = [
     /** In hundredths of the currency, as asked of the provider. */
     amount: integer().notNull(),
     currency: text().notNull(),
+    /** What the payer sees on the provider's page. */
+    description: text(),
     status: text({ enum: ["pending", "paid", "failed", "refunding", "refunded"] }).notNull().default("pending"),
     provider: text().notNull(),
     providerMode: text({ enum: ["test", "live"] }).notNull(),

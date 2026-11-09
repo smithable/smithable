@@ -25,6 +25,7 @@ import { hasSignIn } from "../auth.js";
 import { cancelNames, isMessageModel, reserveElement, savedToggle, trashNames } from "../data.js";
 import { hasKeys } from "../keys.js";
 import { nameFunction } from "../names.js";
+import { payToCreate } from "../payments.js";
 import {
   addable,
   addressOwnedForm,
@@ -287,7 +288,11 @@ export function newRoute(
   )?.pattern as { address: string; title: string } | undefined;
   const create = articles
     ? `await ${n.create}({ data: { ...values, ${articles.address}: values.${articles.address} || addressFrom(values.${articles.title}) } });`
-    : `await ${n.create}({ data: values });`;
+    : payToCreate(ir, model)
+      ? // Paid to be created (payments.md §4.1): on to the provider's page.
+        `const made = await ${n.create}({ data: values });
+          if (made.pay) return window.location.assign(made.pay);`
+      : `await ${n.create}({ data: values });`;
   return `${HEADER}import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { app } from "#/generated/app";
 import { pageAccess } from "#/generated/pages";

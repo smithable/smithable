@@ -47,6 +47,7 @@ import {
   occupying,
 } from "./occupies.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
+import { payToCreate } from "./payments.js";
 import {
   addable,
   addressOwned,
@@ -437,7 +438,16 @@ export const ${n.get} = createServerFn()
 ${options}${ownerOptions}
 export const ${n.create} = createServerFn({ method: "POST" })
   .validator(${n.schema})
-  .handler(async ({ data }) => ${n.data}.create(await writer(), data));
+  .handler(async ({ data }) => ${
+    payToCreate(ir, model)
+      ? `{
+    // Paid to be created (payments.md §4.1): written held, then on to the provider's page.
+    const made = await ${n.data}.create(await writer(), data${ir.pages.some((p) => p.pattern.kind === "order" && p.pattern.into === model.name) ? ", undefined" : ""}, true);
+    const { payFor } = await import("#/kit/payments.server");
+    return { ...made, pay: made.payHeldAt ? await payFor(${JSON.stringify(payToCreate(ir, model)?.name)}, made.id) : undefined };
+  }`
+      : `${n.data}.create(await writer(), data)`
+  });
 
 export const ${n.update} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: ${n.schema} }))
@@ -1307,8 +1317,51 @@ ${updateBody}
           tx.insert(${nl.table}).values({ ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)}${signedIn && !line.ownedBy ? ", ownerId: personOf(viewer)" : ""} }).run();
         }`;
   })();
-  const insertAudited = `const made = tx.insert(${n.table}).values(${createValues}).returning().get();${orderLines}
-        audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${queue("made.id", "undefined", "made")}${tell('"created"', "made")}
+  // Pay to create (payments.md §3.2, §4.1): the record is written held, with its pending Payment,
+  // the amount read here on the server; its "created" waits for the payment. An amount of zero
+  // needs none: the record is not held.
+  const payEntry = payToCreate(ir, model);
+  // What the payer sees at the provider: the entry's text with the record's fields, or its title.
+  const describe = (text: string | undefined, row: string) => {
+    const value = (name: string) => {
+      const field = model.fields.find((x) => x.name === name);
+      if (!field || field.type.kind === "relation") return undefined;
+      const read = `${row}.${dataKey(field)}`;
+      return field.type.kind === "scalar" && field.type.name === "money"
+        ? `\${(Number(${read} ?? 0) / 100).toFixed(2)}`
+        : `\${String(${read} ?? "")}`;
+    };
+    if (!text)
+      return titleKey && titleKey !== "id"
+        ? `String(${row}.${titleKey} ?? "")`
+        : `String(${row}.id)`;
+    const filled = text.replace(
+      /\{([A-Za-z][A-Za-z0-9]*)\}/g,
+      (all, name: string) => value(name) ?? all,
+    );
+    return `\`${filled.replace(/`/g, "\\`")}\``;
+  };
+  const payAmount = payEntry && model.fields.find((f) => f.name === payEntry.amount);
+  const paying =
+    payEntry && payAmount
+      ? `
+        if (pay) {
+          const priced = ${
+            payAmount.formula
+              ? `${compute(`(tx.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, made.id)${aggregatedLists(model).length ? `, with: { ${aggregatedLists(model).map(liveList).join(", ")} }` : ""} }).sync() ?? made)`)}`
+              : "made"
+          };
+          const amount = Number(priced.${dataKey(payAmount)} ?? 0);
+          if (amount > 0) askPayment(tx, ${JSON.stringify(payEntry.name)}, made.id, amount, ${JSON.stringify(ir.app.currency ?? "EUR")}, ${describe(payEntry.description, "priced")});
+          else made.payHeldAt = tx.update(${n.table}).set({ payHeldAt: null }).where(eq(${n.table}.id, made.id)).returning().get().payHeldAt;
+        }`
+      : "";
+  const insertAudited = `const made = tx.insert(${n.table}).values(${payEntry ? `{ ...${createValues}, payHeldAt: pay ? new Date() : null }` : createValues}).returning().get();${orderLines}
+        audit(tx, viewer, { action: "created", model: "${model.name}", record: made.id });${queue("made.id", "undefined", "made")}${paying}${
+          payEntry && mails
+            ? `\n        if (!made.payHeldAt)${tell('"created"', "made").replace("\n        ", " ")}`
+            : tell('"created"', "made")
+        }
         return made;`;
   const favorites = hasFavorites(model, ir, auth) ? `${n.table}Favorites` : undefined;
   // Read marks for a record whose page shows a conversation (conversation.md §2): when each person
@@ -1773,7 +1826,7 @@ ${(composedName(model) || lined) && referenced ? 'import { sortRows } from "#/ki
   )
   .join(
     "",
-  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}import { afterChange, afterDelete } from "./hooks";
+  )}${longTitle(model) ? 'import { titleOf } from "#/kit/format";\n' : ""}${mails ? `${OUTGOING_IMPORT}\n` : ""}${filteredBy || ((referenced || paged) && titleColumn !== "id") || (paged && (searched.length || nameSearch.some((c) => c.includes("contains(")))) ? `import { contains } from "#/kit/search";\n` : ""}${paged || ruled || orderPage || filteredBy ? 'import { BadInput } from "#/kit/refusal";\n' : ""}${ruled ? 'import { fits } from "#/kit/model";\n' : ""}${paged ? 'import { aggregate, type Filterable, nearest, sortOf, whereOf, wordsOf } from "#/kit/where";\n' : ""}${ruled ? 'import { w } from "#/kit/words";\n' : ""}${pictures.length ? `import { ${[...(singles.length || pictureLists.length ? ["deletePicture"] : []), ...(docSingles.length || docLists.length ? ["deleteFile"] : [])].join(", ")} } from "#/kit/uploads";\n` : ""}${model.fields.some(isUpload) ? 'import { acceptFiles, cleanUploads, keepsUpload } from "#/kit/receipts.server";\n' : ""}${model.review && signedIn ? 'import { tellReviewers } from "#/kit/review-mail.server";\n' : ""}${capacity?.closes || capacity?.cancelUntil ? 'import { now } from "#/kit/now";\n' : ""}${payEntry ? 'import { askPayment } from "#/kit/payments.server";\n' : ""}import { afterChange, afterDelete } from "./hooks";
 ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[...others]
   .map((m) => `import { ${names(m, t).data} } from "./${kebab(m.name)}.server";`)
   .join("\n")}${others.size ? "\n" : ""}${[...labelledKinds]
@@ -2595,7 +2648,7 @@ ${
 
 `
     : ""
-}  async create(viewer: Viewer | null, values: ${n.settableValues}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}) {
+}  async create(viewer: Viewer | null, values: ${n.settableValues}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}${payEntry ? ", pay = false" : ""}) {
     check(${n.access}.create, viewer);
 ${
   access.create.public
@@ -2615,7 +2668,7 @@ ${
     } catch (error) {
       throw ${capacity || occ ? "error instanceof Conflict ? error : " : ""}refusal(error);
     }
-    await afterChange("afterCreate", "${model.name}", row, viewer);
+    ${payEntry ? "if (!row.payHeldAt) " : ""}await afterChange("afterCreate", "${model.name}", row, viewer);
     return row;
   },
 

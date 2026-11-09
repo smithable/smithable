@@ -54,6 +54,7 @@ import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
+import { PAYMENTS_FUNCTIONS, paymentRoutes, paymentsServerModule } from "./payments.js";
 import { manifest, pushModule, SERVICE_WORKER, smsModule } from "./push.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
@@ -767,6 +768,19 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       ...(smsEntries(ir, auth).length
         ? [generated("src/generated/sms.ts", smsModule(ir, auth))]
         : []),
+      // Payments (payments.md §4): the app's part of the flow, its pages, the provider's address.
+      ...(ir.payments.length
+        ? [
+            generated(
+              "src/generated/payments.server.ts",
+              paymentsServerModule(ir, options.paymentProvider ?? "fake"),
+            ),
+            generated("src/generated/payments.ts", PAYMENTS_FUNCTIONS),
+            ...paymentRoutes(options.paymentProvider ?? "fake").map((r) =>
+              generated(r.path, r.content),
+            ),
+          ]
+        : []),
       generated("src/generated/app.ts", appModule(ir)),
       // Always: a page or section of your own keeps its file after it leaves the spec.
       generated("src/generated/custom.ts", CUSTOM_PROPS),
@@ -950,6 +964,15 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/kit/PushChoices.tsx",
         ],
         used: ({ ir, auth }) => pushEntries(ir, auth).length > 0,
+      },
+      {
+        // Payments (payments.md): the flow, the return page, the fake provider's page.
+        files: [
+          "src/kit/payments.server.ts",
+          "src/kit/PaymentBack.tsx",
+          "src/kit/FakeCheckout.tsx",
+        ],
+        used: ({ ir }) => ir.payments.length > 0,
       },
       {
         // Texts (notifications.md §5): the sender, the person's number and choices.
