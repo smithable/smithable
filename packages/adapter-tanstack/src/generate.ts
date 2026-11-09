@@ -47,14 +47,14 @@ import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
-import { liveModels, liveRoute, outgoingModule, pushEntries } from "./outgoing.js";
+import { liveModels, liveRoute, outgoingModule, pushEntries, smsEntries } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
-import { manifest, pushModule, SERVICE_WORKER } from "./push.js";
+import { manifest, pushModule, SERVICE_WORKER, smsModule } from "./push.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
@@ -107,12 +107,7 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  // Texts come with the kit's next step (docs/design/notifications.md §9): until then an entry
-  // that only texts is left out, rather than made a call to a target named sms.
-  const ir = {
-    ...spec,
-    outgoing: spec.outgoing.filter((o) => !o.channels || o.channels.some((c) => c !== "sms")),
-  };
+  const ir = spec;
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent()),
@@ -756,6 +751,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             generated("src/generated/push.ts", pushModule(ir, auth)),
           ]
         : []),
+      // Texts (notifications.md §5): the server functions of the person's number and choices.
+      ...(smsEntries(ir, auth).length
+        ? [generated("src/generated/sms.ts", smsModule(ir, auth))]
+        : []),
       generated("src/generated/app.ts", appModule(ir)),
       // Always: a page or section of your own keeps its file after it leaves the spec.
       generated("src/generated/custom.ts", CUSTOM_PROPS),
@@ -939,6 +938,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/kit/PushChoices.tsx",
         ],
         used: ({ ir, auth }) => pushEntries(ir, auth).length > 0,
+      },
+      {
+        // Texts (notifications.md §5): the sender, the person's number and choices.
+        files: ["src/kit/sms.server.ts", "src/kit/SmsChoices.tsx"],
+        used: ({ ir, auth }) => smsEntries(ir, auth).length > 0,
       },
       {
         // "Contact the owner" on a record's page (marketplace.md §2.4).

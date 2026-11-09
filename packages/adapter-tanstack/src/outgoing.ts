@@ -279,10 +279,12 @@ export function outgoingModule(
     return formatted(f, fieldUi(target, f, t, ir, ux), read);
   };
   // Entries that tell people (mail, push) and calls to a named target.
-  const told = (o: OutgoingIR) => o.to === "mail" || Boolean(channelsOf(o)?.includes("push"));
+  const told = (o: OutgoingIR) =>
+    o.to === "mail" || Boolean(channelsOf(o)?.some((c) => c === "push" || c === "sms"));
   const mails = entries.filter(told);
   const calls = entries.filter((o) => !told(o));
   const pushes = entries.filter((o) => channelsOf(o)?.includes("push"));
+  const texts = entries.filter((o) => channelsOf(o)?.includes("sms"));
   const mailsAfter = after.some((o) => o.to === "mail");
   const callsAfter = after.some((o) => o.to !== "mail");
   const modelsOf = (list: RecordOutgoing[]) =>
@@ -396,7 +398,7 @@ ${apiFields(model)
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
     when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
-    ${told(o) ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}${channelsOf(o)?.includes("push") ? "\n    push: true," : ""}${told(o) && !channelsOf(o)?.includes("mail") ? "\n    mail: false," : ""}
+    ${told(o) ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}${channelsOf(o)?.includes("push") ? "\n    push: true," : ""}${channelsOf(o)?.includes("sms") ? "\n    sms: true," : ""}${told(o) && !channelsOf(o)?.includes("mail") ? "\n    mail: false," : ""}
   },`;
   });
   // A custom action's entries: the mail shows its input and output by their labels.
@@ -443,7 +445,7 @@ ${apiFields(model)
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
 
 type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
@@ -577,10 +579,11 @@ const ENTRIES: {
   /** The texts' placeholders one reference away, read with the record. */
   more?: (tx: Tx, r: Row) => Record<string, string>;
   to?: (tx: Tx, r: Row) => Recipient[];${
-    pushes.length
+    pushes.length || texts.length
       ? `
-  /** Pushed to the browsers of those who turned it on (notifications.md §4); not mailed when its mail is false. */
+  /** Pushed to the browsers of those who turned it on (notifications.md §4), texted (§5); not mailed when its mail is false. */
   push?: true;
+  sms?: true;
   mail?: false;`
       : ""
   }`
@@ -664,8 +667,8 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
     const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
-    const to = entry.to(tx, record);${pushes.length ? "\n    if (entry.push) queuePush(tx, viewer, happening, to);" : ""}
-    ${pushes.length ? "if (entry.mail !== false) " : ""}queueMail(tx, viewer, happening, to, entry.when === "created");`
+    const to = entry.to(tx, record);${pushes.length ? "\n    if (entry.push) queuePush(tx, viewer, happening, to);" : ""}${texts.length ? "\n    if (entry.sms) queueSms(tx, viewer, happening, to);" : ""}
+    ${pushes.length || texts.length ? "if (entry.mail !== false) " : ""}queueMail(tx, viewer, happening, to, entry.when === "created");`
         : ""
     }
   }

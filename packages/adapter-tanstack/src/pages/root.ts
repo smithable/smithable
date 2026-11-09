@@ -14,7 +14,7 @@ import {
 } from "@smithable/core";
 import { analyticsConstants } from "../analytics.js";
 import { hasSignIn } from "../auth.js";
-import { liveModels, pushEntries } from "../outgoing.js";
+import { liveModels, pushEntries, smsEntries } from "../outgoing.js";
 import {
   adminPage,
   HEADER,
@@ -172,9 +172,12 @@ export function rootRoute(
   const live = liveModels(ir, auth).length > 0;
   // Browser push (notifications.md §4): the Notifications part under the person's name.
   const pushing = pushEntries(ir, auth).length > 0;
+  // Texts (notifications.md §5): the person's number and their texts, under their name too.
+  const texting = smsEntries(ir, auth).length > 0;
   const parts = [
     ...(live ? ["<NoticeSound />"] : []),
     ...(pushing ? ["<PushChoices api={PUSH} />"] : []),
+    ...(texting ? ["<SmsChoices api={SMS} />"] : []),
   ];
   const settings = parts.length
     ? ` settings={${parts.length > 1 ? `<>${parts.join("")}</>` : parts[0]}}`
@@ -261,7 +264,7 @@ import { useEffect, useState } from "react";
 ${icons.length ? `import { ${icons.join(", ")} } from "lucide-react";\n` : ""}import { app } from "#/generated/app";
 ${ir.pages.length ? 'import { pageAccess } from "#/generated/pages";\n' : ""}import { currentViewer } from "#/lib/viewer.server";
 ${hasAppearance(modes) ? 'import { APPEARANCE_SCRIPT } from "#/kit/appearance";\n' : ""}import { AppShell, ErrorNotice, type MenuUi } from "#/kit/AppShell";${asking ? `\nimport { Ask, forgetAsked } from "#/kit/Ask";\nimport { turnsOf } from "#/kit/ask";\nimport { field } from "#/kit/params";\nimport { ask, asks${confirming ? ", confirm" : ""} } from "#/generated/ask.server";\nimport { aiFacts } from "#/kit/assistant.server";` : ""}${confirming ? '\nimport { getRequestHeaders } from "@tanstack/react-start/server";' : ""}${visitorPages.length || sitePages.length ? '\nimport { LandingLayout } from "#/kit/Landing";\nimport { site } from "#/generated/site";' : ""}\nimport { ${workspace.length ? "allows, " : ""}isRefusal } from "#/kit/access";
-import { Consent } from "#/kit/Consent";${live ? '\nimport { Live, NoticeSound } from "#/kit/Live";' : ""}${pushing ? '\nimport { forgetThisBrowser, PushChoices } from "#/kit/PushChoices";\nimport { forgetPushBrowser, pushNotifications, setPushNotification } from "#/generated/push";' : ""}
+import { Consent } from "#/kit/Consent";${live ? '\nimport { Live, NoticeSound } from "#/kit/Live";' : ""}${pushing ? '\nimport { forgetThisBrowser, PushChoices } from "#/kit/PushChoices";\nimport { forgetPushBrowser, pushNotifications, setPushNotification } from "#/generated/push";' : ""}${texting ? '\nimport { SmsChoices } from "#/kit/SmsChoices";\nimport { confirmSmsCode, removeSmsPhone, sendSmsCode, setSmsNotification, smsNotifications } from "#/generated/sms";' : ""}
 ${signIn ? 'import { clockFrom, type Person, rememberPerson } from "#/kit/time-text";\nimport { saveMyTime } from "#/generated/my-time";\n' : 'import { clockFrom } from "#/kit/time-text";\n'}${analytics ? 'import { type Analytics, startAnalytics } from "#/kit/consent";\n' : ""}import { pageHeaders } from "#/kit/security";${reviews.length ? '\nimport { waitingCount } from "#/generated/review.server";' : ""}
 import { w } from "#/kit/words";${t.translated ? '\nimport { language } from "#/kit/words";\nimport { Alternates, LanguageSwitch } from "#/kit/Languages";' : ""}
 ${signIn ? 'import { authClient } from "#/lib/auth-client";\n' : ""}import appCss from "#/styles.css?url";
@@ -272,7 +275,7 @@ const menus: MenuUi[] = [
 ${menus.join("\n")}
 ];
 ${landings.length || sites.length ? `\nconst landingRoutes = ${literal(landings)};\n` : ""}${sites.length ? `/** Public articles: their list and each article have the site's frame. */\nconst siteRoutes = ${literal(sites)};\n` : ""}${visitorPages.length ? `/** Public pages that visitors see in the site's frame (signed in, the app's). */\nconst visitorRoutes = ${literal(visitorPages)};\n` : ""}${sitePages.length ? `/** Pages in the site's frame for everyone (their frame in smithable.ux.yml). */\nconst sitePageRoutes = ${literal(sitePages)};\n` : ""}${barePages.length ? `/** Pages with no frame: no menu, no header. */\nconst bareRoutes = ${literal(barePages)};\n` : ""}${workspace.length ? `/** The workspace's pages, in the menu's order: the site frame links to the first the viewer may open. */\nconst workspacePages = [\n  ${workspace.join(",\n  ")},\n] as const;\n` : ""}
-${analytics ? `${analyticsConstants(analytics)}\n` : ""}${live ? `/** The kind of record each page shows: its lists load again when a notice is about one. */\nconst pageModels: Record<string, string> = ${literal(pageModels)};\n\n` : ""}${pushing ? `/** The Notifications part's server functions. */\nconst PUSH = { list: () => pushNotifications(), set: (data: Parameters<typeof setPushNotification>[0]["data"]) => setPushNotification({ data }), forget: (data: { endpoint: string }) => forgetPushBrowser({ data }) };\n\n` : ""}/** Each page's route and name, longest route first. */
+${analytics ? `${analyticsConstants(analytics)}\n` : ""}${live ? `/** The kind of record each page shows: its lists load again when a notice is about one. */\nconst pageModels: Record<string, string> = ${literal(pageModels)};\n\n` : ""}${texting ? `/** The Texts part's server functions. */\nconst SMS = { list: () => smsNotifications(), sendCode: (data: { phone: string }) => sendSmsCode({ data }), confirm: (data: { code: string }) => confirmSmsCode({ data }), remove: () => removeSmsPhone(), set: (data: { entry: string; on: boolean }) => setSmsNotification({ data }) };\n\n` : ""}${pushing ? `/** The Notifications part's server functions. */\nconst PUSH = { list: () => pushNotifications(), set: (data: Parameters<typeof setPushNotification>[0]["data"]) => setPushNotification({ data }), forget: (data: { endpoint: string }) => forgetPushBrowser({ data }) };\n\n` : ""}/** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = ${literal(pageRoutes)};
 
 /** The page a path is on, e.g. "customers" for /customers/12 (see data-page, src/custom/styles.css). */
