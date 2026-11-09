@@ -126,7 +126,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > pa
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -155,7 +155,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > pa
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -10958,7 +10958,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "6c385d35 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "b305f785 generated",
+  "package.json": "649a2f18 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
@@ -11262,7 +11262,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -11291,7 +11291,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -18645,7 +18645,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "2c5fce83 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "f2b19b0a generated",
+  "package.json": "91fecba7 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",
@@ -18935,7 +18935,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -18964,7 +18964,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -33706,7 +33706,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "d340ff4f generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "5259e0bd generated",
+  "package.json": "8be94ef0 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
@@ -34066,7 +34066,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -34095,7 +34095,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > pa
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -43371,7 +43371,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "fb4f1863 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "5876bafa generated",
+  "package.json": "644c54d7 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
@@ -43662,7 +43662,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -43691,7 +43691,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -52660,7 +52660,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "72d2f14e generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "063895b1 generated",
+  "package.json": "04fa8fd4 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
@@ -52967,7 +52967,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -52996,7 +52996,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -61840,7 +61840,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "98218519 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "bef25f19 generated",
+  "package.json": "41eac71c generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e09d9afd generated",
@@ -62144,7 +62144,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -62173,7 +62173,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -67232,7 +67232,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "ea84412d generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "81dc0602 generated",
+  "package.json": "4b3453df generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
@@ -67503,7 +67503,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -67532,7 +67532,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -71263,7 +71263,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "f19f8273 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "273580f8 generated",
+  "package.json": "6df1f589 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "57bda269 generated",
@@ -71520,7 +71520,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -71549,7 +71549,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -84186,7 +84186,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "80efd3a6 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "aaa9db01 generated",
+  "package.json": "3bf33fe4 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e4b054e8 generated",
@@ -84505,7 +84505,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
     "@fontsource/zilla-slab": "5.3.0",
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -84534,7 +84534,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
     "drizzle-kit": "0.31.11",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.7",
     "vitest": "5.0.5"
   }
 }
@@ -92062,7 +92062,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
   "README.md": "cdec4528 generated",
   "drizzle.config.ts": "0987fb48 kit",
-  "package.json": "68b1a692 generated",
+  "package.json": "0d2751af generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",

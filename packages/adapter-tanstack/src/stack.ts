@@ -8,7 +8,7 @@ export const STACK_PROFILE = {
   dependencies: {
     "@tailwindcss/vite": "4.3.4",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-start": "1.169.5",
     "better-auth": "1.7.15",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
@@ -87,7 +87,7 @@ export const STACK_PROFILE = {
     "drizzle-kit": "0.31.11",
     tsx: "4.23.15",
     typescript: "6.0.3",
-    vite: "8.3.5",
+    vite: "8.3.7",
     vitest: "5.0.5",
   },
 } as const;
