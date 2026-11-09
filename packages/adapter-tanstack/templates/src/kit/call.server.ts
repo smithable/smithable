@@ -81,7 +81,8 @@ export async function post(
     const answer = await viaProxy(url, {
       method: "POST",
       headers,
-      body,
+      // A push's bytes go as they are (fetch takes them; its types name fewer kinds).
+      body: body as BodyInit,
       redirect: "manual",
       signal: AbortSignal.timeout(10_000),
     });
