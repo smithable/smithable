@@ -121,6 +121,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/LegalPage.tsx": [
     "data-kit="legal"",
   ],
+  "src/kit/Live.tsx": [
+    "data-kit="live-notice"",
+  ],
   "src/kit/MergeDialog.tsx": [
     "data-part="combine-notice"",
     "data-kit="merge-dialog"",

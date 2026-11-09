@@ -154,6 +154,7 @@ export {
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
+  channelsOf,
   DUE_WITHIN,
   FILES_MAX,
   isFile,

@@ -825,6 +825,13 @@ export interface TimerIR {
   schedule: TimerScheduleIR;
 }
 
+/** A built-in channel of an outgoing entry: a mail, a browser push, a text message. */
+export type Channel = "mail" | "push" | "sms";
+
+/** An entry's built-in channels; an IR made without them reads `to: "mail"` as mail. */
+export const channelsOf = (o: Pick<OutgoingIR, "to" | "channels">): Channel[] | undefined =>
+  o.channels ?? (o.to === "mail" ? ["mail"] : undefined);
+
 export interface OutgoingIR {
   name: string;
   /**
@@ -848,9 +855,19 @@ export interface OutgoingIR {
   where?: Condition;
   /** For `<Model> changed`: only a change of one of these stored fields counts. */
   fields?: string[];
-  /** "mail", or the name of a target (camelCase) whose address and secret are settings. */
+  /**
+   * The name of a target (camelCase) whose address and secret are settings; or, when the entry
+   * goes by built-in channels, the first of `channels` ("mail" whenever mail is one of them, so
+   * `to === "mail"` still finds every entry that mails).
+   */
   to: string;
-  /** For mail: who gets it. */
+  /**
+   * The built-in channels the entry goes by, in the order mail, push, sms
+   * (docs/design/notifications.md §4): present for every entry whose `to` is a channel or a
+   * list of them (`to: mail` gives ["mail"]), absent for a target.
+   */
+  channels?: Channel[];
+  /** For the built-in channels: who gets it, reached by every one of them. */
   recipient?: RecipientIR;
   /**
    * The fields the mail lists under its text and a call's record carries, in this order; "none"
@@ -901,10 +918,11 @@ export type RecipientIR =
   /** Every user with the role. */
   | { kind: "role"; role: string }
   /**
-   * An address on the record: an `email` field or a field that refers to User, on the record
-   * itself (one name) or one reference away (two: `customer.email`).
+   * An address on the record: an `email` field, a `phone` field (for sms) or a field that
+   * refers to User, on the record itself (one name) or one reference away (two:
+   * `customer.email`).
    */
-  | { kind: "field"; path: string[]; via: "email" | "user" }
+  | { kind: "field"; path: string[]; via: "email" | "phone" | "user" }
   /**
    * Each record of a list field of the record (`bookings.owner`, `bookings.contact`): its
    * owner, or an address on it. `model` is the list's model.
@@ -913,7 +931,7 @@ export type RecipientIR =
       kind: "list";
       list: string;
       model: string;
-      each: { kind: "owner" } | { kind: "field"; field: string; via: "email" | "user" };
+      each: { kind: "owner" } | { kind: "field"; field: string; via: "email" | "phone" | "user" };
     };
 
 export interface MenuIR {

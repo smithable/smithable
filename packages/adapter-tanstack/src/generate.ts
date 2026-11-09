@@ -46,7 +46,7 @@ import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
-import { outgoingModule } from "./outgoing.js";
+import { liveModels, liveRoute, outgoingModule } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { activityModule, hasInspector } from "./pages/data.js";
@@ -104,7 +104,11 @@ function wordsIfUsed(content: string): string {
 }
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
-export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
+export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
+  // Push and text come with the kit's later steps (docs/design/notifications.md §9): until then
+  // an entry goes by its mail, and one without mail is left out rather than made a call to a
+  // target named push or sms.
+  const ir = { ...spec, outgoing: spec.outgoing.filter((o) => o.to === "mail" || !o.channels) };
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent()),
@@ -765,6 +769,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             ),
           ]
         : []),
+      ...(liveModels(ir, auth).length
+        ? [generated("src/routes/events.ts", liveRoute(ir, t, liveModels(ir, auth)))]
+        : []),
       generated(
         "src/routes/__root.tsx",
         rootRoute(
@@ -904,6 +911,11 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/kit/tell.server.ts",
         ],
         used: ({ ir }) => ir.outgoing.length > 0,
+      },
+      {
+        // Live in the app (notifications.md §3): the stream, the banner, the chime.
+        files: ["src/kit/live.server.ts", "src/kit/Live.tsx"],
+        used: ({ ir, auth }) => liveModels(ir, auth).length > 0,
       },
       {
         // "Contact the owner" on a record's page (marketplace.md §2.4).
