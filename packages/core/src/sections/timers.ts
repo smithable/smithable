@@ -438,7 +438,7 @@ const EVERY_WORDS: Record<TimerEvery, string> = {
  * content file's labels.
  */
 /** "a session", "an invoice": a "u" that sounds like "you" takes "a". */
-const article = (word: string) =>
+export const article = (word: string) =>
   `${/^[aeiou]/i.test(word) && !/^u(ni|s[eu])/i.test(word) ? "an" : "a"} ${word}`;
 
 /** A clock schedule in words, lowercase: "every day at 06:30", "at 06:00 on the 25th of every month". */

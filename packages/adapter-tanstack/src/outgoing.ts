@@ -350,7 +350,10 @@ ${apiFields(model)
         ? o.when.event
         : "action" in o.when
           ? o.when.action
-          : `timer:${o.when.timer}`;
+          : "timer" in o.when
+            ? `timer:${o.when.timer}`
+            : // Fired by the kit's payments flow (payments.md §4.3), step 2.
+              `payment:${o.when.payment}`;
     const fits = conditions(o);
     // The texts' placeholders (outgoing-templates.md §3): a hop is read with the record, and
     // {before.<field>} wants the record before the change shown too.

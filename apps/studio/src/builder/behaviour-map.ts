@@ -194,7 +194,15 @@ export function behaviourOf(ir: SpecIR): { nodes: BehaviourNode[]; edges: Behavi
         target: `outgoing:${o.name}`,
         label: "returned",
       });
-    else
+    else if ("payment" in w) {
+      models.add(w.model);
+      edges.push({
+        id: `when:${o.name}`,
+        source: `model:${w.model}`,
+        target: `outgoing:${o.name}`,
+        label: "paid",
+      });
+    } else
       edges.push({
         id: `when:${o.name}`,
         source: `timer:${w.timer}`,

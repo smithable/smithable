@@ -1293,6 +1293,80 @@
         }
       }
     },
+    "payments": {
+      "type": "object",
+      "description": "What a record is paid for on the payment provider's own page: how much, when, what a payment changes, and who may refund (docs/design/payments.md). The provider is named in smithable.context.yml.",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "on",
+          "amount",
+          "when"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "on": {
+            "type": "string",
+            "description": "The model whose record is paid for; one entry each."
+          },
+          "amount": {
+            "type": "string",
+            "description": "A money field of the record, stored or computed."
+          },
+          "when": {
+            "oneOf": [
+              {
+                "const": "created",
+                "description": "Pay to create: the record is held until it is paid."
+              },
+              {
+                "type": "object",
+                "description": "Pay is offered on records that fit, as an action's when, e.g. { status: [sent, overdue] }."
+              }
+            ]
+          },
+          "paid": {
+            "type": "object",
+            "description": "What a successful payment does to the record.",
+            "additionalProperties": false,
+            "properties": {
+              "set": {
+                "type": "object",
+                "description": "Stored fields of the record and their values when the payment succeeds: literals or formulas, as an action's set."
+              }
+            }
+          },
+          "refund": {
+            "type": "object",
+            "description": "Who may refund in the app, and on which records; without it, refunds are made at the provider.",
+            "required": [
+              "by"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "by": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The roles that may refund in the app (admins always may)."
+              },
+              "when": {
+                "type": "object",
+                "description": "Only records that fit, e.g. { status: declined }."
+              }
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "What the payer sees on the provider's page, with {field} placeholders; the record's title when left out."
+          }
+        }
+      }
+    },
     "outgoing": {
       "type": "object",
       "description": "Who is told when something happens to a record: a mail, a browser push or a text to the owner, a role or an address on the record; or a signed call to a named target.",

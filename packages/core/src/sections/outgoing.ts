@@ -26,6 +26,7 @@ import type {
   ModelIR,
   OutgoingIR,
   OutgoingListIR,
+  PaymentIR,
   QueryIR,
   RecipientIR,
   SpecIR,
@@ -71,6 +72,7 @@ function readWhen(
   models: ModelIR[],
   actions: ActionIR[],
   timers: TimerIR[] = [],
+  payments: PaymentIR[] = [],
 ): { when: When } | { clock: string } | { problem: string; hint?: string } {
   const event = WHEN.exec(text.trim());
   if (event) {
@@ -104,9 +106,17 @@ function readWhen(
     if (!timer.on) return { clock: timer.name };
     return { when: { model: timer.on, timer: timer.name } };
   }
+  // A payments entry (payments.md §4.3): a payment of it succeeded, on the paid record. Its name
+  // cannot be an action's or a timer's (the payments section refuses that).
+  const payment = payments.find((p) => p.name === text.trim());
+  if (payment) return { when: { model: payment.on, payment: payment.name } };
   return {
-    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted", the name of an action or the name of a timer; "${text}" is none of them.`,
-    hint: didYouMean(text.trim(), [...actions.map((a) => a.name), ...timers.map((t) => t.name)]),
+    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted", the name of an action, a timer or a payment; "${text}" is none of them.`,
+    hint: didYouMean(text.trim(), [
+      ...actions.map((a) => a.name),
+      ...timers.map((t) => t.name),
+      ...payments.map((p) => p.name),
+    ]),
   };
 }
 
@@ -574,7 +584,9 @@ export function outgoingText(
         ? `When a ${name} is ${EVENT_WORDS[o.when.event]}${o.where ? ` and ${conditionText(o.where)}` : ""}`
         : "timer" in o.when
           ? `When the timer “${humanize(o.when.timer)}” comes for a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`
-          : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
+          : "payment" in o.when
+            ? `When a ${name} is paid (“${humanize(o.when.payment)}”)${o.where ? ` and ${conditionText(o.where)}` : ""}`
+            : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
   return `${what}: ${to}${bodyText(o)}.`;
 }
 
@@ -871,7 +883,7 @@ const addOutgoing: Operation<
       throw new OperationError(nameRule("outgoing", outgoing));
     if (ir.outgoing.some((o) => o.name === outgoing))
       throw new OperationError(`"${outgoing}" exists already under outgoing.`);
-    const read = readWhen(when, ir.models, ir.actions, ir.timers);
+    const read = readWhen(when, ir.models, ir.actions, ir.timers, ir.payments);
     if ("problem" in read)
       throw new OperationError(`${read.problem}${read.hint ? ` ${read.hint}` : ""}`);
     const t = readTo(toArg(to));
@@ -1255,7 +1267,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       }
       const whenText = readString(ctx, whenEntry.value, `"when" of ${where}`);
       if (whenText === undefined) continue;
-      const read = readWhen(whenText, models, actions, parsed.timers ?? []);
+      const read = readWhen(whenText, models, actions, parsed.timers ?? [], parsed.payments ?? []);
       if ("problem" in read) {
         ctx.error(
           whenEntry.value,

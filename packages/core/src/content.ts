@@ -918,7 +918,7 @@ function checkOutgoingTexts(
     const where = `"${key}" of outgoing "${name}"`;
     for (const path of new Set(placeholdersOf(value.value))) {
       // A link or a name reveals nothing of the record, nor do a list mail's count and day; the rest does.
-      const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by"];
+      const quiet = entry.list ? ["link", "by", "count", "date"] : ["link", "by", "pay"];
       if (!quiet.includes(path)) any = true;
       const problem = placeholderProblem(path, entry, ir, auth);
       if (!problem) continue;
@@ -1041,6 +1041,7 @@ export function placeholderProblem(
     "title",
     "link",
     "by",
+    ...(ir.payments?.some((p) => p.on === model.name) ? ["pay"] : []),
     ...(changed ? ["before.<field>"] : []),
   ];
   const unknown = (of: { name: string; fields: { name: string }[] }, name: string) =>
@@ -1058,6 +1059,13 @@ export function placeholderProblem(
   };
   if (second === undefined) {
     if (first === "title" || first === "link") return undefined;
+    // The pay link (payments.md §4.1): a page with the amount and Pay, for a record paid for.
+    if (first === "pay")
+      return ir.payments?.some((p) => p.on === model.name)
+        ? undefined
+        : bad(
+            `"{pay}" is the address where a ${model.name} is paid, and no entry under "payments" is on ${model.name}.`,
+          );
     if (first === "by") {
       const r = entry.recipient;
       if (r && (r.kind === "field" || (r.kind === "list" && r.each.kind === "field")))

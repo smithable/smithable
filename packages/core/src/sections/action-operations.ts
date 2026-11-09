@@ -39,7 +39,7 @@ function typed(of: ModelIR, field: string, value: Value): Value {
     return Number(value);
   return value;
 }
-const typedAll = (of: ModelIR, values: Record<string, Value>) =>
+export const typedAll = (of: ModelIR, values: Record<string, Value>) =>
   Object.fromEntries(Object.entries(values).map(([k, v]) => [k, typed(of, k, v)]));
 
 /** A custom action's contract (docs/design/intents.md §6), as addAction and setAction take it. */

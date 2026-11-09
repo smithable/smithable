@@ -7,3 +7,9 @@ GYD HKD HNL HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW 
 MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR
 RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SOS SRD SSP STN SVC SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS UAH
 UGX USD UYU UZS VED VES VND VUV WST XAF XCD XCG XOF XPF YER ZAR ZMW ZWG`.split(/\s+/);
+
+/**
+ * The codes whose smallest unit is a thousandth (ISO 4217 minor units 3): an amount stored in
+ * hundredths cannot hold it, so a `payments` section refuses them (docs/design/payments.md §3.4).
+ */
+export const THREE_DECIMAL_CURRENCIES = ["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"];
