@@ -117,7 +117,7 @@ The first line has the fields' labels as the app shows them; amounts are decimal
 
 ### Many at once
 
-`POST /api/v1/<models>` also takes a list, of at most a thousand records, each as one record is given (a reference is the other record's id). Each one is checked and added on its own, as the key's role may (unlike a file's import, which adds all or none), and the answer says for each, in order, its new id or why it was refused:
+`POST /api/v1/<models>` also takes a list, of at most a thousand records, each as one record is given (a reference is the other record's id). Each one is checked and added on its own, as the key's role may, and the answer says for each, in order, its new id or why it was refused:
 
 ```sh
 curl -s -X POST https://crm.example.com/api/v1/customers -H "Authorization: Bearer $KEY" \
