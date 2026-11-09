@@ -281,7 +281,7 @@ import { ActivityLog } from "#/kit/ActivityLog";
 import { PageHeader } from "#/kit/AppShell";
 import { forgetInLog } from "#/kit/audit.server";
 import { count, optional, type Search, text } from "#/kit/params";
-${mails ? 'import { sendAgain } from "#/kit/outgoing.server";\n' : ""}${imports.map((m) => `import { ${importNames(m).undoRows} } from "${importNames(m).server}";\n`).join("")}import { w } from "#/kit/words";
+${mails ? 'import { sendAgain } from "#/kit/outgoing.server";\n' : ""}${imports.map((m) => `import { ${importNames(m).undoRows} } from "${importNames(m).server}";\n`).join("")}${imports.length ? 'import { getRequestHeaders } from "@tanstack/react-start/server";\nimport { writeAllowed } from "#/kit/limit";\n' : ""}import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
 /** The activity's filters, from the address. */
@@ -320,7 +320,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ${JSON.stringify(imports.map((m) => m.name))}.includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -347,6 +349,7 @@ const undoImport = createServerFn({ method: "POST" })
   .validator(z.object({ model: z.string(), id: z.number().int() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
     switch (data.model) {
 ${imports.map((m) => `      case ${JSON.stringify(m.name)}:\n        return ${importNames(m).undoRows}(viewer, data.id);`).join("\n")}
       default:

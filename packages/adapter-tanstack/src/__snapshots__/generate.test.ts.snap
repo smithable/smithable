@@ -5337,6 +5337,7 @@ export function importNotesRows(viewer: Viewer | null, file: string, rows: strin
     viewer,
     ui: noteUi,
     access: noteAccess.create,
+    remove: noteAccess.delete,
     schema: noteSchema,
     create: (who, values) => noteData.create(who, values),
     lookup,
@@ -5388,7 +5389,8 @@ export const importNotes = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -6104,6 +6106,7 @@ export function importProjectsRows(viewer: Viewer | null, file: string, rows: st
     viewer,
     ui: projectUi,
     access: projectAccess.create,
+    remove: projectAccess.delete,
     schema: projectSchema,
     create: (who, values) => projectData.create(who, values),
     lookup,
@@ -6155,7 +6158,8 @@ export const importProjects = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -6844,6 +6848,7 @@ export function importTasksRows(viewer: Viewer | null, file: string, rows: strin
     viewer,
     ui: taskUi,
     access: taskAccess.create,
+    remove: taskAccess.delete,
     schema: taskSchema,
     create: (who, values) => taskData.create(who, values),
     lookup,
@@ -6895,7 +6900,8 @@ export const importTasks = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -8605,7 +8611,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && [].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -10273,7 +10281,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && [].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -10980,20 +10990,20 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/keys.test.ts": "2a71c746 generated",
   "src/generated/mcp.server.ts": "5ece0f35 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/note.import.server.ts": "a46593be generated",
-  "src/generated/note.import.ts": "68bc0600 generated",
+  "src/generated/note.import.server.ts": "7b3f75d9 generated",
+  "src/generated/note.import.ts": "13466794 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
   "src/generated/note.server.ts": "8ced31a0 generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "3984a4bc generated",
-  "src/generated/project.import.server.ts": "aa2846de generated",
-  "src/generated/project.import.ts": "9dc4ea8d generated",
+  "src/generated/project.import.server.ts": "a327a846 generated",
+  "src/generated/project.import.ts": "972cb779 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
   "src/generated/project.server.ts": "25d8c228 generated",
   "src/generated/project.ts": "1c4b37f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
-  "src/generated/task.import.server.ts": "e224680f generated",
-  "src/generated/task.import.ts": "1a574db7 generated",
+  "src/generated/task.import.server.ts": "6df64d29 generated",
+  "src/generated/task.import.ts": "1c316273 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
   "src/generated/task.server.ts": "02577e61 generated",
   "src/generated/task.ts": "3e2082e7 generated",
@@ -11045,8 +11055,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
@@ -11068,7 +11078,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
@@ -11080,7 +11090,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "72e51f25 generated",
-  "src/routes/admin/activity.tsx": "9a9245bf generated",
+  "src/routes/admin/activity.tsx": "cf2e5e45 generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
   "src/routes/admin/index.tsx": "247d3d7b generated",
   "src/routes/admin/notes/$id.tsx": "087fdc58 generated",
@@ -11117,7 +11127,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/mcp.ts": "911cee15 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "9eb77c47 generated",
-  "src/routes/team/activity.tsx": "3d6335ff generated",
+  "src/routes/team/activity.tsx": "f89fb2bd generated",
   "src/routes/team/index.tsx": "1f7fedb9 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
@@ -12670,6 +12680,7 @@ export function importAppointmentsRows(viewer: Viewer | null, file: string, rows
     viewer,
     ui: appointmentUi,
     access: appointmentAccess.create,
+    remove: appointmentAccess.delete,
     schema: appointmentSchema,
     create: (who, values) => appointmentData.create(who, values),
     lookup,
@@ -12721,7 +12732,8 @@ export const importAppointments = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -13306,6 +13318,7 @@ export function importBarbersRows(viewer: Viewer | null, file: string, rows: str
     viewer,
     ui: barberUi,
     access: barberAccess.create,
+    remove: barberAccess.delete,
     schema: barberSchema,
     create: (who, values) => barberData.create(who, values),
     lookup,
@@ -13357,7 +13370,8 @@ export const importBarbers = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -15072,6 +15086,7 @@ export function importServicesRows(viewer: Viewer | null, file: string, rows: st
     viewer,
     ui: serviceUi,
     access: serviceAccess.create,
+    remove: serviceAccess.delete,
     schema: serviceSchema,
     create: (who, values) => serviceData.create(who, values),
     lookup,
@@ -15123,7 +15138,8 @@ export const importServices = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -15615,6 +15631,7 @@ export function importTimeOffsRows(viewer: Viewer | null, file: string, rows: st
     viewer,
     ui: timeOffUi,
     access: timeOffAccess.create,
+    remove: timeOffAccess.delete,
     schema: timeOffSchema,
     create: (who, values) => timeOffData.create(who, values),
     lookup,
@@ -15666,7 +15683,8 @@ export const importTimeOffs = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -18650,13 +18668,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/actions/confirm.ts": "a55f9024 generated",
   "src/generated/activity.server.ts": "67591829 generated",
   "src/generated/app.ts": "97916622 generated",
-  "src/generated/appointment.import.server.ts": "85576126 generated",
-  "src/generated/appointment.import.ts": "efa38a85 generated",
+  "src/generated/appointment.import.server.ts": "eee34c8a generated",
+  "src/generated/appointment.import.ts": "bd211139 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
   "src/generated/appointment.server.ts": "1a3f2e0e generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
-  "src/generated/barber.import.server.ts": "d6a51d29 generated",
-  "src/generated/barber.import.ts": "3b8da206 generated",
+  "src/generated/barber.import.server.ts": "ba93731a generated",
+  "src/generated/barber.import.ts": "76b4b2ca generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
   "src/generated/barber.server.ts": "fd7d1002 generated",
   "src/generated/barber.ts": "dcdf162d generated",
@@ -18669,14 +18687,14 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/outgoing.server.ts": "fac1c733 generated",
   "src/generated/pages.ts": "efdc3236 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
-  "src/generated/service.import.server.ts": "b3964f6c generated",
-  "src/generated/service.import.ts": "bfe2e6d3 generated",
+  "src/generated/service.import.server.ts": "b222252e generated",
+  "src/generated/service.import.ts": "647b7017 generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
   "src/generated/service.server.ts": "204666aa generated",
   "src/generated/service.ts": "dd2b9287 generated",
   "src/generated/site.ts": "97fb8041 generated",
-  "src/generated/time-off.import.server.ts": "650eb1a5 generated",
-  "src/generated/time-off.import.ts": "e2c75ebf generated",
+  "src/generated/time-off.import.server.ts": "2d8ccb72 generated",
+  "src/generated/time-off.import.ts": "b7017dfb generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
   "src/generated/time-off.server.ts": "d7b61f75 generated",
   "src/generated/time-off.ts": "94851289 generated",
@@ -18725,8 +18743,8 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/format.ts": "b9e92275 kit",
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -18750,7 +18768,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
@@ -21584,6 +21602,7 @@ export function importBookingsRows(viewer: Viewer | null, file: string, rows: st
     viewer,
     ui: bookingUi,
     access: bookingAccess.create,
+    remove: bookingAccess.delete,
     schema: bookingSchema,
     create: (who, values) => bookingData.create(who, values),
     lookup,
@@ -21635,7 +21654,8 @@ export const importBookings = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -22963,6 +22983,7 @@ export function importClassTypesRows(viewer: Viewer | null, file: string, rows: 
     viewer,
     ui: classTypeUi,
     access: classTypeAccess.create,
+    remove: classTypeAccess.delete,
     schema: classTypeSchema,
     create: (who, values) => classTypeData.create(who, values),
     lookup,
@@ -23014,7 +23035,8 @@ export const importClassTypes = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -24576,6 +24598,7 @@ export function importInstructorsRows(viewer: Viewer | null, file: string, rows:
     viewer,
     ui: instructorUi,
     access: instructorAccess.create,
+    remove: instructorAccess.delete,
     schema: instructorSchema,
     create: (who, values) => instructorData.create(who, values),
     lookup,
@@ -24627,7 +24650,8 @@ export const importInstructors = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -25379,6 +25403,7 @@ export function importMessagesRows(viewer: Viewer | null, file: string, rows: st
     viewer,
     ui: messageUi,
     access: messageAccess.create,
+    remove: messageAccess.delete,
     schema: messageSchema,
     create: (who, values) => messageData.create(who, values),
     lookup,
@@ -25430,7 +25455,8 @@ export const importMessages = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -26391,6 +26417,7 @@ export function importPostsRows(viewer: Viewer | null, file: string, rows: strin
     viewer,
     ui: postUi,
     access: postAccess.create,
+    remove: postAccess.delete,
     schema: postSchema,
     create: (who, values) => postData.create(who, values),
     lookup,
@@ -26442,7 +26469,8 @@ export const importPosts = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -27195,6 +27223,7 @@ export function importSessionsRows(viewer: Viewer | null, file: string, rows: st
     viewer,
     ui: sessionUi,
     access: sessionAccess.create,
+    remove: sessionAccess.delete,
     schema: sessionSchema,
     create: (who, values) => sessionData.create(who, values),
     lookup,
@@ -27246,7 +27275,8 @@ export const importSessions = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -29005,6 +29035,8 @@ import { undoSessionsImport } from "#/generated/session.import.server";
 import { undoBookingsImport } from "#/generated/booking.import.server";
 import { undoPostsImport } from "#/generated/post.import.server";
 import { undoMessagesImport } from "#/generated/message.import.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -29044,7 +29076,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["ClassType","Instructor","Session","Booking","Post","Message"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -29065,6 +29099,7 @@ const undoImport = createServerFn({ method: "POST" })
   .validator(z.object({ model: z.string(), id: z.number().int() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
     switch (data.model) {
       case "ClassType":
         return undoClassTypesImport(viewer, data.id);
@@ -33695,16 +33730,16 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
   "src/generated/ask.server.ts": "62d77470 generated",
-  "src/generated/booking.import.server.ts": "a543612b generated",
-  "src/generated/booking.import.ts": "04ca9c9f generated",
+  "src/generated/booking.import.server.ts": "5dd23f09 generated",
+  "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
   "src/generated/booking.server.ts": "88d7bb91 generated",
   "src/generated/booking.ts": "fc39a336 generated",
   "src/generated/card.server.ts": "841bb693 generated",
   "src/generated/card.ts": "5cab12e4 generated",
-  "src/generated/class-type.import.server.ts": "8f88c6e4 generated",
-  "src/generated/class-type.import.ts": "79fbbddd generated",
+  "src/generated/class-type.import.server.ts": "e71ffddd generated",
+  "src/generated/class-type.import.ts": "584de0f9 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
   "src/generated/class-type.server.ts": "7766d47e generated",
   "src/generated/class-type.ts": "ada91c5e generated",
@@ -33714,28 +33749,28 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/home-estimate-calculator.formulas.ts": "d1c9ac2f generated",
   "src/generated/home-estimate-calculator.ts": "bbc3bd53 generated",
   "src/generated/hooks.ts": "dad75c4a generated",
-  "src/generated/instructor.import.server.ts": "55b462a4 generated",
-  "src/generated/instructor.import.ts": "466f5681 generated",
+  "src/generated/instructor.import.server.ts": "fccf980a generated",
+  "src/generated/instructor.import.ts": "73c07c95 generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
   "src/generated/instructor.server.ts": "8cd9a171 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
-  "src/generated/message.import.server.ts": "32a7f438 generated",
-  "src/generated/message.import.ts": "fcb03d3b generated",
+  "src/generated/message.import.server.ts": "529f366e generated",
+  "src/generated/message.import.ts": "63ded8df generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
   "src/generated/message.server.ts": "08286028 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "875a6cd5 generated",
   "src/generated/pages.ts": "c08f710d generated",
-  "src/generated/post.import.server.ts": "459d79b5 generated",
-  "src/generated/post.import.ts": "9a1902f2 generated",
+  "src/generated/post.import.server.ts": "779addc6 generated",
+  "src/generated/post.import.ts": "d5299966 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
   "src/generated/post.server.ts": "3ff4cc3d generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
-  "src/generated/session.import.server.ts": "92bffbfc generated",
-  "src/generated/session.import.ts": "ecf1e8e4 generated",
+  "src/generated/session.import.server.ts": "913e06cb generated",
+  "src/generated/session.import.ts": "4b3e59f0 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
   "src/generated/session.server.ts": "319c7a5d generated",
@@ -33800,8 +33835,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -33826,7 +33861,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
@@ -33839,7 +33874,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "ed76d161 generated",
   "src/routes/about/index.tsx": "52b48987 generated",
-  "src/routes/admin/activity.tsx": "38238d31 generated",
+  "src/routes/admin/activity.tsx": "f87fd75b generated",
   "src/routes/admin/bookings/$id.tsx": "3343f459 generated",
   "src/routes/admin/bookings/index.tsx": "3cede361 generated",
   "src/routes/admin/bookings/new.tsx": "9b91aaca generated",
@@ -36380,6 +36415,7 @@ export function importCustomersRows(viewer: Viewer | null, file: string, rows: s
     viewer,
     ui: customerUi,
     access: customerAccess.create,
+    remove: customerAccess.delete,
     schema: customerSchema,
     create: (who, values) => customerData.create(who, values),
     lookup,
@@ -36431,7 +36467,8 @@ export const importCustomers = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -37957,6 +37994,7 @@ export function importFollowUpsRows(viewer: Viewer | null, file: string, rows: s
     viewer,
     ui: followUpUi,
     access: followUpAccess.create,
+    remove: followUpAccess.delete,
     schema: followUpSchema,
     create: (who, values) => followUpData.create(who, values),
     lookup,
@@ -38008,7 +38046,8 @@ export const importFollowUps = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -39045,6 +39084,7 @@ export function importOrdersRows(viewer: Viewer | null, file: string, rows: stri
     viewer,
     ui: orderUi,
     access: orderAccess.create,
+    remove: orderAccess.delete,
     schema: orderSchema,
     create: (who, values) => orderData.create(who, values),
     lookup,
@@ -39096,7 +39136,8 @@ export const importOrders = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -42537,6 +42578,8 @@ import { count, optional, type Search, text } from "#/kit/params";
 import { undoCustomersImport } from "#/generated/customer.import.server";
 import { undoOrdersImport } from "#/generated/order.import.server";
 import { undoFollowUpsImport } from "#/generated/follow-up.import.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -42576,7 +42619,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["Customer","Order","FollowUp"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -42593,6 +42638,7 @@ const undoImport = createServerFn({ method: "POST" })
   .validator(z.object({ model: z.string(), id: z.number().int() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
     switch (data.model) {
       case "Customer":
         return undoCustomersImport(viewer, data.id);
@@ -43354,15 +43400,15 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/card.server.ts": "e0eb2dd3 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
-  "src/generated/customer.import.server.ts": "f332debe generated",
-  "src/generated/customer.import.ts": "92114c04 generated",
+  "src/generated/customer.import.server.ts": "6460f913 generated",
+  "src/generated/customer.import.ts": "53f4b1d0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
   "src/generated/customer.server.ts": "9e76aa35 generated",
   "src/generated/customer.ts": "8c21bca9 generated",
   "src/generated/dev-door.server.ts": "c6582e43 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
-  "src/generated/follow-up.import.server.ts": "9ce11ca6 generated",
-  "src/generated/follow-up.import.ts": "1fa1ce7b generated",
+  "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
+  "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
   "src/generated/follow-up.server.ts": "8e4926e6 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
@@ -43370,8 +43416,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order.formulas.test.ts": "e73715fb generated",
   "src/generated/order.formulas.ts": "f74d6edc generated",
-  "src/generated/order.import.server.ts": "7630b9cf generated",
-  "src/generated/order.import.ts": "3299e330 generated",
+  "src/generated/order.import.server.ts": "afc9f15e generated",
+  "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "906a5fce generated",
   "src/generated/order.server.ts": "1462e1a4 generated",
   "src/generated/order.ts": "739e757f generated",
@@ -43430,8 +43476,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
@@ -43450,7 +43496,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
@@ -43482,7 +43528,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/orders/trash.tsx": "80862bb0 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "1155ec62 generated",
-  "src/routes/team/activity.tsx": "7ec32e9f generated",
+  "src/routes/team/activity.tsx": "0ded99f8 generated",
   "src/routes/team/index.tsx": "d125d34a generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
@@ -46896,6 +46942,7 @@ export function importClientsRows(viewer: Viewer | null, file: string, rows: str
     viewer,
     ui: clientUi,
     access: clientAccess.create,
+    remove: clientAccess.delete,
     schema: clientSchema,
     create: (who, values) => clientData.create(who, values),
     lookup,
@@ -46947,7 +46994,8 @@ export const importClients = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -48368,6 +48416,7 @@ export function importInvoicesRows(viewer: Viewer | null, file: string, rows: st
     viewer,
     ui: invoiceUi,
     access: invoiceAccess.create,
+    remove: invoiceAccess.delete,
     schema: invoiceSchema,
     create: (who, values) => invoiceData.create(who, values),
     lookup,
@@ -48419,7 +48468,8 @@ export const importInvoices = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -52643,8 +52693,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/card.server.ts": "0999e6dd generated",
   "src/generated/card.ts": "5cab12e4 generated",
-  "src/generated/client.import.server.ts": "d702dc20 generated",
-  "src/generated/client.import.ts": "37538095 generated",
+  "src/generated/client.import.server.ts": "254b9c3a generated",
+  "src/generated/client.import.ts": "343dac71 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
   "src/generated/client.server.ts": "6a86c3ab generated",
   "src/generated/client.ts": "ef4091ce generated",
@@ -52657,8 +52707,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.server.ts": "778cad93 generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
-  "src/generated/invoice.import.server.ts": "02706409 generated",
-  "src/generated/invoice.import.ts": "7b79743f generated",
+  "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
+  "src/generated/invoice.import.ts": "92bad053 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
   "src/generated/invoice.server.ts": "986ecf22 generated",
   "src/generated/invoice.ts": "f4863bb7 generated",
@@ -52721,8 +52771,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -52747,7 +52797,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
@@ -56077,6 +56127,7 @@ export function importDishesRows(viewer: Viewer | null, file: string, rows: stri
     viewer,
     ui: dishUi,
     access: dishAccess.create,
+    remove: dishAccess.delete,
     schema: dishSchema,
     create: (who, values) => dishData.create(who, values),
     lookup,
@@ -56128,7 +56179,8 @@ export const importDishes = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -56808,6 +56860,7 @@ export function importOrdersRows(viewer: Viewer | null, file: string, rows: stri
     viewer,
     ui: orderUi,
     access: orderAccess.create,
+    remove: orderAccess.delete,
     schema: orderSchema,
     create: (who, values) => orderData.create(who, values),
     lookup,
@@ -56859,7 +56912,8 @@ export const importOrders = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -58073,6 +58127,7 @@ export function importStopsRows(viewer: Viewer | null, file: string, rows: strin
     viewer,
     ui: stopUi,
     access: stopAccess.create,
+    remove: stopAccess.delete,
     schema: stopSchema,
     create: (who, values) => stopData.create(who, values),
     lookup,
@@ -58124,7 +58179,8 @@ export const importStops = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -60806,6 +60862,8 @@ import { sendAgain } from "#/kit/outgoing.server";
 import { undoDishesImport } from "#/generated/dish.import.server";
 import { undoOrdersImport } from "#/generated/order.import.server";
 import { undoStopsImport } from "#/generated/stop.import.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -60848,7 +60906,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["Dish","Order","Stop"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -60869,6 +60929,7 @@ const undoImport = createServerFn({ method: "POST" })
   .validator(z.object({ model: z.string(), id: z.number().int() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
     switch (data.model) {
       case "Dish":
         return undoDishesImport(viewer, data.id);
@@ -61619,8 +61680,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "45e8136d generated",
-  "src/generated/dish.import.server.ts": "ed8b40ec generated",
-  "src/generated/dish.import.ts": "4a9d2b2e generated",
+  "src/generated/dish.import.server.ts": "aee46d8b generated",
+  "src/generated/dish.import.ts": "44be2252 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
   "src/generated/dish.server.ts": "87dbb61d generated",
   "src/generated/dish.ts": "3b947d71 generated",
@@ -61631,8 +61692,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order-line.server.ts": "ff9ba6cc generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
-  "src/generated/order.import.server.ts": "3680a0bf generated",
-  "src/generated/order.import.ts": "3299e330 generated",
+  "src/generated/order.import.server.ts": "c25ea634 generated",
+  "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "916eed82 generated",
   "src/generated/order.ts": "db4c9478 generated",
@@ -61640,8 +61701,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/pages.ts": "7d21451f generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "590f79d5 generated",
-  "src/generated/stop.import.server.ts": "a331627b generated",
-  "src/generated/stop.import.ts": "b3ef79fc generated",
+  "src/generated/stop.import.server.ts": "5aca6a4a generated",
+  "src/generated/stop.import.ts": "1d2a5d38 generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
   "src/generated/stop.server.ts": "55e3c3f4 generated",
   "src/generated/stop.ts": "c04abc46 generated",
@@ -61692,8 +61753,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/hours.ts": "fac9ba0f kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -61717,7 +61778,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
@@ -61748,7 +61809,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/$id.tsx": "7d3c395b generated",
   "src/routes/stops/index.tsx": "8122a4c9 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
-  "src/routes/team/activity.tsx": "a447f0b6 generated",
+  "src/routes/team/activity.tsx": "52e88761 generated",
   "src/routes/team/index.tsx": "968fd9c5 generated",
   "src/routes/where/index.tsx": "55545172 generated",
   "src/start.ts": "6b874d2d kit",
@@ -63524,6 +63585,7 @@ export function importItemsRows(viewer: Viewer | null, file: string, rows: strin
     viewer,
     ui: itemUi,
     access: itemAccess.create,
+    remove: itemAccess.delete,
     schema: itemSchema,
     create: (who, values) => itemData.create(who, values),
     lookup,
@@ -63575,7 +63637,8 @@ export const importItems = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -66991,8 +67054,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "bf1566a8 generated",
   "src/generated/hooks.ts": "e268b462 generated",
-  "src/generated/item.import.server.ts": "29c328d0 generated",
-  "src/generated/item.import.ts": "611fb2ad generated",
+  "src/generated/item.import.server.ts": "0fe6563a generated",
+  "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
   "src/generated/item.server.ts": "4d1567da generated",
   "src/generated/item.ts": "9051834d generated",
@@ -67050,8 +67113,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
@@ -67073,7 +67136,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
@@ -68769,6 +68832,7 @@ export function importItemsRows(viewer: Viewer | null, file: string, rows: strin
     viewer,
     ui: itemUi,
     access: itemAccess.create,
+    remove: itemAccess.delete,
     schema: itemSchema,
     create: (who, values) => itemData.create(who, values),
     lookup,
@@ -68820,7 +68884,8 @@ export const importItems = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -71019,8 +71084,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "8d9bb3d1 generated",
   "src/generated/hooks.ts": "e268b462 generated",
   "src/generated/item.formulas.ts": "8ef8c196 generated",
-  "src/generated/item.import.server.ts": "29c328d0 generated",
-  "src/generated/item.import.ts": "611fb2ad generated",
+  "src/generated/item.import.server.ts": "0fe6563a generated",
+  "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
   "src/generated/item.server.ts": "f0a6ec3e generated",
   "src/generated/item.ts": "380eeeef generated",
@@ -71071,8 +71136,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
@@ -71091,7 +71156,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
@@ -75012,6 +75077,7 @@ export function importComponentsRows(viewer: Viewer | null, file: string, rows: 
     viewer,
     ui: componentUi,
     access: componentAccess.create,
+    remove: componentAccess.delete,
     schema: componentSchema,
     create: (who, values) => componentData.create(who, values),
     lookup,
@@ -75063,7 +75129,8 @@ export const importComponents = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -76442,6 +76509,7 @@ export function importIncidentsRows(viewer: Viewer | null, file: string, rows: s
     viewer,
     ui: incidentUi,
     access: incidentAccess.create,
+    remove: incidentAccess.delete,
     schema: incidentSchema,
     create: (who, values) => incidentData.create(who, values),
     lookup,
@@ -76493,7 +76561,8 @@ export const importIncidents = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -77265,6 +77334,7 @@ export function importIncidentUpdatesRows(viewer: Viewer | null, file: string, r
     viewer,
     ui: incidentUpdateUi,
     access: incidentUpdateAccess.create,
+    remove: incidentUpdateAccess.delete,
     schema: incidentUpdateSchema,
     create: (who, values) => incidentUpdateData.create(who, values),
     lookup,
@@ -77316,7 +77386,8 @@ export const importIncidentUpdates = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -78176,6 +78247,7 @@ export function importMaintenancesRows(viewer: Viewer | null, file: string, rows
     viewer,
     ui: maintenanceUi,
     access: maintenanceAccess.create,
+    remove: maintenanceAccess.delete,
     schema: maintenanceSchema,
     create: (who, values) => maintenanceData.create(who, values),
     lookup,
@@ -78227,7 +78299,8 @@ export const importMaintenances = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -82871,6 +82944,8 @@ import { undoComponentsImport } from "#/generated/component.import.server";
 import { undoIncidentsImport } from "#/generated/incident.import.server";
 import { undoIncidentUpdatesImport } from "#/generated/incident-update.import.server";
 import { undoMaintenancesImport } from "#/generated/maintenance.import.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -82910,7 +82985,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["Component","Incident","IncidentUpdate","Maintenance"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -82927,6 +83004,7 @@ const undoImport = createServerFn({ method: "POST" })
   .validator(z.object({ model: z.string(), id: z.number().int() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
     switch (data.model) {
       case "Component":
         return undoComponentsImport(viewer, data.id);
@@ -83931,28 +84009,28 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/ask.server.ts": "712a64ca generated",
   "src/generated/card.server.ts": "dc0db367 generated",
   "src/generated/card.ts": "5cab12e4 generated",
-  "src/generated/component.import.server.ts": "70ffd988 generated",
-  "src/generated/component.import.ts": "c009003f generated",
+  "src/generated/component.import.server.ts": "25ae311e generated",
+  "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
   "src/generated/component.server.ts": "1e364781 generated",
   "src/generated/component.ts": "59b2f88c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "62de424a generated",
   "src/generated/hooks.ts": "a654df5e generated",
-  "src/generated/incident-update.import.server.ts": "9bdf3d28 generated",
-  "src/generated/incident-update.import.ts": "7e8203e8 generated",
+  "src/generated/incident-update.import.server.ts": "05597fda generated",
+  "src/generated/incident-update.import.ts": "2512bea4 generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
   "src/generated/incident-update.server.ts": "59a3de82 generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
-  "src/generated/incident.import.server.ts": "f62bb4b4 generated",
-  "src/generated/incident.import.ts": "7d5363ae generated",
+  "src/generated/incident.import.server.ts": "f466f13d generated",
+  "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
   "src/generated/incident.server.ts": "a02e68bf generated",
   "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "9390b2d5 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",
-  "src/generated/maintenance.import.server.ts": "683d8c7f generated",
-  "src/generated/maintenance.import.ts": "cd5e89b7 generated",
+  "src/generated/maintenance.import.server.ts": "7f9a3b5d generated",
+  "src/generated/maintenance.import.ts": "d0b5690b generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
   "src/generated/maintenance.server.ts": "3c7f0824 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
@@ -84014,8 +84092,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
@@ -84035,7 +84113,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
@@ -84078,7 +84156,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
-  "src/routes/team/activity.tsx": "532e44f6 generated",
+  "src/routes/team/activity.tsx": "bee6cde8 generated",
   "src/routes/team/index.tsx": "985b893e generated",
   "src/routes/updates/$id.tsx": "68a6081c generated",
   "src/routes/updates/index.tsx": "11c7f442 generated",
@@ -88343,6 +88421,7 @@ export function importSupportCasesRows(viewer: Viewer | null, file: string, rows
     viewer,
     ui: supportCaseUi,
     access: supportCaseAccess.create,
+    remove: supportCaseAccess.delete,
     schema: supportCaseSchema,
     create: (who, values) => supportCaseData.create(who, values),
     lookup,
@@ -88394,7 +88473,8 @@ export const importSupportCases = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )
@@ -91096,6 +91176,8 @@ import { forgetInLog } from "#/kit/audit.server";
 import { count, optional, type Search, text } from "#/kit/params";
 import { sendAgain } from "#/kit/outgoing.server";
 import { undoSupportCasesImport } from "#/generated/support-case.import.server";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { writeAllowed } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -91135,7 +91217,9 @@ const getActivity = createServerFn()
     const described = describeActivity(rows);
     const people = described.people;
     // Undo is the importer's: on other people's imports it is not offered.
-    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
+    // Undo is the importer's, and here only for the models a list page imports into (an API
+    // import is taken back through the API).
+    const lines = described.lines.map(({ undo, ...line }) => (undo && undo.who === viewer.id && ["SupportCase"].includes(undo.model) ? { ...line, undo: { model: undo.model, id: undo.id } } : line));
     const actions = db.selectDistinct({ action: auditLog.action }).from(auditLog).all().map((a) => a.action).sort();
     // The models by label, for the filter (the labels live on the server with the lines).
     const models = Object.entries(LABELS).map(([name, label]) => ({ name, label }));
@@ -91156,6 +91240,7 @@ const undoImport = createServerFn({ method: "POST" })
   .validator(z.object({ model: z.string(), id: z.number().int() }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
+    writeAllowed(viewer, getRequestHeaders());
     switch (data.model) {
       case "SupportCase":
         return undoSupportCasesImport(viewer, data.id);
@@ -91814,8 +91899,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/outgoing.server.ts": "0dc0e782 generated",
   "src/generated/pages.ts": "f7a896bd generated",
   "src/generated/roles.ts": "19b94e12 generated",
-  "src/generated/support-case.import.server.ts": "81cbe867 generated",
-  "src/generated/support-case.import.ts": "1d26a294 generated",
+  "src/generated/support-case.import.server.ts": "1d171fe5 generated",
+  "src/generated/support-case.import.ts": "84512c28 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
   "src/generated/support-case.server.ts": "6c03aa90 generated",
   "src/generated/support-case.ts": "3f9c46df generated",
@@ -91871,8 +91956,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/formats.ts": "2257fcc1 kit",
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/grounded.ts": "5513d9ac kit",
-  "src/kit/import.server.ts": "93017e56 kit",
-  "src/kit/import.ts": "79e46c46 kit",
+  "src/kit/import.server.ts": "4adfa938 kit",
+  "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
   "src/kit/live.server.ts": "9f4fd8f7 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
@@ -91897,7 +91982,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "2dac1ae0 kit",
+  "src/kit/words/en.ts": "72d5f862 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",
@@ -91923,7 +92008,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e52e206e generated",
-  "src/routes/team/activity.tsx": "446f5ad0 generated",
+  "src/routes/team/activity.tsx": "2d417ef8 generated",
   "src/routes/team/index.tsx": "a945c0f8 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",

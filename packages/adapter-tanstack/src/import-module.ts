@@ -91,6 +91,7 @@ export function ${i.rows}(viewer: Viewer | null, file: string, rows: string[][],
     viewer,
     ui: ${n.ui},
     access: ${n.access}.create,
+    remove: ${n.access}.delete,
     schema: ${n.schema},
     create: (who, values) => ${n.data}.create(who, values),
     lookup,
@@ -143,7 +144,8 @@ export const ${i.run} = createServerFn({ method: "POST" })
   .validator(
     z.object({
       file: z.string().max(500),
-      rows: z.array(z.array(z.string())).max(IMPORT_MAX + 1),
+      // A cell, a row and the file bounded: the rows, their columns and each cell's length.
+      rows: z.array(z.array(z.string().max(10_000)).max(200)).max(IMPORT_MAX + 1),
       dryRun: z.boolean(),
     }),
   )

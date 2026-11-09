@@ -4,17 +4,20 @@
 // is one line in the activity log (who, the file's name, how many; the new records' ids for the
 // undo, never their values), and for 24 hours its importer can take it back: into the trash where
 // the model has one, otherwise only the records nobody has changed since, the rest named.
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "#/db";
 import { auditLog } from "#/db/schema";
 import { AccessDenied, allows, Conflict, type Rule, type Viewer } from "./access";
 import { audit } from "./audit.server";
 import { convertCell, type ImportRefusal, type Lookup, planImport } from "./import";
+import { log } from "./log.server";
 import type { ModelUi } from "./model";
 import { BadInput } from "./refusal";
 import { w } from "./words";
 
 const DAY = 24 * 60 * 60 * 1000;
+/** Ids in one statement: under SQLite's limit on a statement's values. */
+const PART = 500;
 
 export interface ImportAnswer {
   columns: { column: string; field: string }[];
@@ -47,6 +50,8 @@ export async function importRows(o: {
   viewer: Viewer | null;
   ui: ModelUi;
   access: Rule;
+  /** Who may delete: the undo is offered only to an importer who may. */
+  remove: Rule;
   schema: {
     safeParse(
       values: unknown,
@@ -110,7 +115,7 @@ export async function importRows(o: {
       model: o.ui.model,
       details: { file: o.file.slice(0, 200), records: ids.length, ids },
     });
-    if (id !== undefined) answer.undo = id;
+    if (id !== undefined && allows(o.remove, o.viewer)) answer.undo = id;
   }
   return answer;
 }
@@ -131,26 +136,45 @@ export async function undoImport(o: {
     .from(auditLog)
     .where(and(eq(auditLog.id, o.id), eq(auditLog.action, "imported")))
     .get();
-  if (!line || line.model !== o.ui.model) throw new BadInput(w.importUndoGone);
-  if (!o.viewer || line.who !== o.viewer.id) throw new AccessDenied(Boolean(o.viewer));
+  // Someone else's import, or none: the same answer, so nothing is learned of others' imports.
+  if (!o.viewer) throw new AccessDenied(false);
+  if (!line || line.who !== o.viewer.id || line.model !== o.ui.model)
+    throw new BadInput(w.importUndoGone);
   if (Date.now() - line.at.getTime() > DAY) throw new BadInput(w.importUndoLate);
+  // Once: what was restored after an undo is not taken again by a second one.
+  const before = db
+    .select({ id: auditLog.id })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, "import undone"),
+        sql`json_extract(${auditLog.details}, '$.import') = ${o.id}`,
+      ),
+    )
+    .get();
+  if (before) throw new BadInput(w.importUndoneAlready);
   const details = (line.details ?? {}) as { ids?: number[]; file?: string };
-  const rows = o.rows(details.ids ?? []);
+  // In parts, within SQLite's limit on a statement's values.
+  const parts = (ids: number[]) =>
+    Array.from({ length: Math.ceil(ids.length / PART) }, (_, i) =>
+      ids.slice(i * PART, (i + 1) * PART),
+    );
+  const rows = parts(Array.isArray(details.ids) ? details.ids : []).flatMap((ids) => o.rows(ids));
   // Changed since it was imported: a second after it was made, or later.
   const changed = rows.filter((r) => r.updatedAt.getTime() - r.createdAt.getTime() > 1000);
   const gone = o.trash ? rows : rows.filter((r) => !changed.includes(r));
-  if (gone.length)
-    await o.removeMany(
-      o.viewer,
-      gone.map((r) => r.id),
-    );
+  let undone = 0;
+  for (const ids of parts(gone.map((r) => r.id))) {
+    const result = (await o.removeMany(o.viewer, ids)) as { deleted?: number } | undefined;
+    undone += typeof result?.deleted === "number" ? result.deleted : ids.length;
+  }
   const kept = o.trash ? [] : changed.map((r) => r.title);
   audit(db, o.viewer, {
     action: "import undone",
     model: o.ui.model,
-    details: { file: details.file, undone: gone.length, kept: kept.length },
+    details: { import: o.id, file: details.file, undone, kept: kept.length },
   });
-  return { undone: gone.length, changed: changed.length, kept };
+  return { undone, changed: changed.length, kept };
 }
 
 /**
@@ -182,7 +206,12 @@ export async function importItems(
         error instanceof Conflict
       )
         results.push({ error: error.message });
-      else throw error;
+      // Anything else is the app's own failure: said as such, and the import goes on, so what
+      // went in is still on one line to undo.
+      else {
+        log.error("An imported record could not be added", { error });
+        results.push({ error: w.importRowFailed });
+      }
     }
   const undo = ids.length
     ? audit(db, viewer, {

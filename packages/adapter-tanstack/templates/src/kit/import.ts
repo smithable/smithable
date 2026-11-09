@@ -39,7 +39,7 @@ export function planImport(model: ModelUi, header: string[], rows: number): Impo
   header.forEach((raw, at) => {
     const column = raw.trim();
     const field = model.fields.find((f) =>
-      [f.label, f.name, f.relation?.key].some((n) => n && loose(n) === loose(column)),
+      [f.label, f.name].some((n) => n && loose(n) === loose(column)),
     );
     if (!field) {
       if (column) plan.ignored.push(column);
@@ -135,12 +135,20 @@ export function convertCell(
       return date ? { value: date } : { problem: w.importNotDate };
     }
     case "datetime": {
-      const [, day = "", time = "00:00"] =
-        /^(.+?)(?:[ T](\d{1,2}[:.]\d{2}(?::\d{2})?))?$/.exec(text) ?? [];
+      // An instant with its zone (2026-11-09T14:30:00Z, …+01:00) is that instant.
+      if (/^\d{4}-\d{2}-\d{2}T[\d:.]+(Z|[+-]\d{2}:?\d{2})$/i.test(text)) {
+        const at = new Date(text);
+        return Number.isNaN(at.getTime()) ? { problem: w.importNotDate } : { value: at };
+      }
+      // Otherwise a date and a time in the app's zone: 9.11.2026 14:30, 11/9/2026 2:30 PM, seconds left out.
+      const [, day = "", h = "0", m = "0", half] =
+        /^(.+?)(?:[ T](\d{1,2})[:.](\d{2})(?:[:.]\d{2})?\s*([ap])?\.?m?\.?)?$/i.exec(text) ?? [];
       const date = plainDate(day);
-      if (!date) return { problem: w.importNotDate };
-      const [h = "0", m = "0"] = time.split(/[:.]/);
-      return { value: fromInput(field, `${date}T${h.padStart(2, "0")}:${m}`, timeZone) };
+      let hour = Number(h);
+      if (half) hour = (hour % 12) + (half.toLowerCase() === "p" ? 12 : 0);
+      if (!date || hour > 23 || Number(m) > 59 || (half && Number(h) > 12))
+        return { problem: w.importNotDate };
+      return { value: fromInput(field, `${date}T${String(hour).padStart(2, "0")}:${m}`, timeZone) };
     }
     case "int":
     case "decimal":

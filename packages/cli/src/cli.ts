@@ -135,7 +135,8 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
       values.dir ?? ".",
       io,
       "importRecords",
-      [args[0], "--from", args[1], ...operationWords(argv).slice(3)],
+      // After "import <model> <file>", wherever --dir and the like stand.
+      [args[0], "--from", args[1], ...operationWords(argv.slice(argv.indexOf(args[1]) + 1))],
       { yes: values.yes === true, verify: "change" },
     );
   }

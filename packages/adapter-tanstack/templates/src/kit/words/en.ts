@@ -515,6 +515,7 @@ export const w = {
   importRowFailed: "This row could not be added.",
   importUndoGone: "There is no such import.",
   importListTooLong: (max: number) => `At most ${max} records in one list.`,
+  importUndoneAlready: "This import was taken back already.",
   importUndoLate: "An import can be taken back for a day; this one is older.",
   yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */
