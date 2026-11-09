@@ -3550,6 +3550,8 @@ export const CARDS: Record<string, CardFacts> = {
     outside: {
       signInCodes: true,
       mail: [],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [],
       aiPolicy: "best-available",
@@ -10981,7 +10983,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/api.server.ts": "b737b4b9 generated",
   "src/generated/app.ts": "547ab03a generated",
   "src/generated/ask.server.ts": "6328982e generated",
-  "src/generated/card.server.ts": "f9be0ef5 generated",
+  "src/generated/card.server.ts": "9b4d94be generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "4ab97120 generated",
@@ -11014,7 +11016,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -11070,7 +11072,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
@@ -11078,7 +11080,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
@@ -14208,6 +14210,8 @@ export const CARDS: Record<string, CardFacts> = {
           text: "When “Confirm” runs on a appointment: mails its owner.",
         },
       ],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [],
       aiPolicy: "best-available",
@@ -14997,13 +15001,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -18678,13 +18678,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/barber.schema.ts": "cb113b73 generated",
   "src/generated/barber.server.ts": "fd7d1002 generated",
   "src/generated/barber.ts": "dcdf162d generated",
-  "src/generated/card.server.ts": "369714c9 generated",
+  "src/generated/card.server.ts": "86f8f526 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "3818e56e generated",
   "src/generated/hooks.ts": "199beb1e generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "fac1c733 generated",
+  "src/generated/outgoing.server.ts": "822284a5 generated",
   "src/generated/pages.ts": "efdc3236 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/service.import.server.ts": "b222252e generated",
@@ -18702,7 +18702,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -18715,7 +18715,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Landing.tsx": "76c38edd kit",
-  "src/kit/LegalPage.tsx": "54e683db kit",
+  "src/kit/LegalPage.tsx": "c9b9495d kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
@@ -18733,7 +18733,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "9a3805d8 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
   "src/kit/csv-read.ts": "324bc527 kit",
@@ -18746,13 +18746,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -18760,7 +18760,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/slots.ts": "911e04a7 kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
@@ -18768,7 +18768,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
@@ -22916,6 +22916,8 @@ export const CARDS: Record<string, CardFacts> = {
           text: "Every day at 06:30: the day's bookings (session, attendee) to the administrators by mail; nothing to send is skipped.",
         },
       ],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [],
       aiPolicy: "best-available",
@@ -26323,13 +26325,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -33736,7 +33734,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.schema.ts": "de61c042 generated",
   "src/generated/booking.server.ts": "88d7bb91 generated",
   "src/generated/booking.ts": "fc39a336 generated",
-  "src/generated/card.server.ts": "841bb693 generated",
+  "src/generated/card.server.ts": "72496fa8 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/class-type.import.server.ts": "e71ffddd generated",
   "src/generated/class-type.import.ts": "584de0f9 generated",
@@ -33760,7 +33758,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "08286028 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "875a6cd5 generated",
+  "src/generated/outgoing.server.ts": "b3b41ca7 generated",
   "src/generated/pages.ts": "c08f710d generated",
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
@@ -33783,7 +33781,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -33800,7 +33798,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Inspector.tsx": "5bd2746f kit",
   "src/kit/Landing.tsx": "76c38edd kit",
-  "src/kit/LegalPage.tsx": "54e683db kit",
+  "src/kit/LegalPage.tsx": "c9b9495d kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
@@ -33823,7 +33821,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "9a3805d8 kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
@@ -33838,13 +33836,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -33852,7 +33850,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
@@ -33861,7 +33859,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
@@ -36326,6 +36324,8 @@ export const CARDS: Record<string, CardFacts> = {
     outside: {
       signInCodes: true,
       mail: [],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [],
       aiPolicy: "best-available",
@@ -43397,7 +43397,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
   "src/generated/ask.server.ts": "163927b1 generated",
-  "src/generated/card.server.ts": "e0eb2dd3 generated",
+  "src/generated/card.server.ts": "a5f24452 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.import.server.ts": "6460f913 generated",
@@ -43431,7 +43431,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -43489,14 +43489,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
@@ -46875,6 +46875,8 @@ export const CARDS: Record<string, CardFacts> = {
           text: "When “Mark sent” runs on a invoice: mails client's email.",
         },
       ],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [],
       aiPolicy: "best-available",
@@ -50073,13 +50075,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -52691,7 +52689,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "9b6e7123 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
-  "src/generated/card.server.ts": "0999e6dd generated",
+  "src/generated/card.server.ts": "5992cd52 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/client.import.server.ts": "254b9c3a generated",
   "src/generated/client.import.ts": "343dac71 generated",
@@ -52713,7 +52711,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice.server.ts": "986ecf22 generated",
   "src/generated/invoice.ts": "f4863bb7 generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "11bc8997 generated",
+  "src/generated/outgoing.server.ts": "d19f0751 generated",
   "src/generated/pages.ts": "97850e87 generated",
   "src/generated/roles.ts": "d284ad2a generated",
   "src/generated/site.ts": "97fb8041 generated",
@@ -52722,7 +52720,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -52737,7 +52735,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Inspector.tsx": "5bd2746f kit",
   "src/kit/Landing.tsx": "76c38edd kit",
-  "src/kit/LegalPage.tsx": "54e683db kit",
+  "src/kit/LegalPage.tsx": "c9b9495d kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
@@ -52759,7 +52757,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "9a3805d8 kit",
   "src/kit/clock.ts": "0fb76fbc kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
@@ -52774,13 +52772,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -52788,7 +52786,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
@@ -52797,7 +52795,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
@@ -52883,6 +52881,8 @@ Sign-up is closed (see \`selfSignUp\` under \`signIn\` in \`smithable.auth.yml\`
 ## Mail
 
 Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+
+Browser push (\`to: push\`) needs no settings: the app makes a key pair at its first start and keeps it with its data, so a backup keeps everyone's subscriptions. To give your own, set \`PUSH_VAPID_PUBLIC_KEY\` and \`PUSH_VAPID_PRIVATE_KEY\` (and \`PUSH_VAPID_SUBJECT\`, the contact the push services may write to; \`MAIL_FROM\` otherwise). A new pair ends every subscription: people turn notifications on again under their name.
 
 ## Limits
 
@@ -53011,6 +53011,53 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 "
 `;
 
+exports[`../../../examples/kiosk/smithable.yml > file list and generated code > public/manifest.webmanifest 1`] = `
+"{
+  "name": "Kiosken",
+  "short_name": "Kiosken",
+  "start_url": "/",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+"
+`;
+
+exports[`../../../examples/kiosk/smithable.yml > file list and generated code > public/sw.js 1`] = `
+"// Generated by Smithable: the app's service worker for browser push (notifications.md §4).
+// It shows a push (the title line) and, on a click, opens its link: the app's own pages only.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {}
+  event.waitUntil(
+    self.registration.showNotification(String(data.title || ""), {
+      data: { link: String(data.link || "/") },
+      icon: "/favicon.svg",
+    }),
+  );
+});
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const link = new URL(event.notification.data?.link || "/", self.location.origin);
+  if (link.origin !== self.location.origin) return;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((open) => {
+      const tab = open.find((c) => c.url.startsWith(self.location.origin));
+      if (tab) return tab.navigate(link.href).then((c) => (c || tab).focus());
+      return self.clients.openWindow(link.href);
+    }),
+  );
+});
+"
+`;
+
 exports[`../../../examples/kiosk/smithable.yml > file list and generated code > smithable.lock 1`] = `
 "{
   "smithable": "0.0.0",
@@ -53024,7 +53071,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 exports[`../../../examples/kiosk/smithable.yml > file list and generated code > src/db/schema.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { Picture } from "#/kit/uploads";
 
 export const user = sqliteTable("user", {
@@ -53198,6 +53245,64 @@ export const outgoingCall = sqliteTable(
   },
   (t) => [index("outgoing_call_due").on(t.sentAt, t.failedAt, t.nextAt)],
 );
+
+export const notificationChoices = sqliteTable(
+  "notification_choices",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The outgoing entry's name, and the channel the person turned it on for. */
+    entry: text().notNull(),
+    channel: text({ enum: ["push", "sms"] }).notNull(),
+  },
+  (t) => [uniqueIndex("notification_choices_one").on(t.userId, t.entry, t.channel)],
+);
+
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    endpoint: text().notNull(),
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    usedAt: integer({ mode: "timestamp_ms" }),
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint").on(t.endpoint), index("push_subscriptions_user").on(t.userId)],
+);
+
+export const outgoingPush = sqliteTable(
+  "outgoing_push",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    entry: text().notNull(),
+    model: text(),
+    recordId: integer(),
+    userId: text().notNull(),
+    /** The title line and the link: nothing else of the record. */
+    title: text().notNull(),
+    link: text(),
+    /** The subscriptions that have it, so a retry does not push twice to a device. */
+    delivered: text({ mode: "json" }).$type<number[]>().notNull().default([]),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    failedAt: integer({ mode: "timestamp_ms" }),
+    error: text(),
+  },
+  (t) => [index("outgoing_push_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);
+
+export const appKeys = sqliteTable("app_keys", {
+  name: text().primaryKey(),
+  value: text().notNull(),
+});
 
 export const sequences = sqliteTable("sequences", {
   /** "Order.number", or "Order.number:<owner id>" where the number is unique per owner. */
@@ -55322,7 +55427,7 @@ export const CARDS: Record<string, CardFacts> = {
           name: "orderPlaced",
           to: "mail",
           fields: "all",
-          text: "When a order is added: mails every admin.",
+          text: "When a order is added: mails and pushes to every staff.",
         },
         {
           name: "orderAccepted",
@@ -55337,6 +55442,15 @@ export const CARDS: Record<string, CardFacts> = {
           text: "When “Ready” runs on a order: mails email.",
         },
       ],
+      push: [
+        {
+          name: "orderPlaced",
+          to: "mail",
+          fields: "all",
+          text: "When a order is added: mails and pushes to every staff.",
+        },
+      ],
+      sms: [],
       calls: [
         {
           name: "toKitchen",
@@ -57867,6 +57981,7 @@ import type { Viewer } from "#/kit/access";
 import { formatValue } from "#/kit/format";
 import { blank, changedBefore, counts, fillText, picked } from "#/kit/outgoing";
 import { type Happening, linkTo, queueCall, queueMail, type Recipient, shownFields } from "#/kit/outgoing.server";
+import { pushReaders, queuePush } from "#/kit/push.server";
 
 type Tx = Pick<typeof db, "select" | "insert">;
 type Row = Record<string, unknown>;
@@ -57968,6 +58083,10 @@ const ENTRIES: {
   /** The texts' placeholders one reference away, read with the record. */
   more?: (tx: Tx, r: Row) => Record<string, string>;
   to?: (tx: Tx, r: Row) => Recipient[];
+  /** Pushed to the browsers of those who turned it on (notifications.md §4), texted (§5); not mailed when its mail is false. */
+  push?: true;
+  sms?: true;
+  mail?: false;
   /** A target whose address and secret are settings (OUTGOING_<TARGET>_URL, _SECRET). */
   target?: string;
 }[] = [
@@ -57975,7 +58094,8 @@ const ENTRIES: {
     name: "orderPlaced",
     model: "Order",
     when: "created",
-    to: (tx, _r) => people(tx, eq(schema.user.role, "admin")),
+    to: (tx, _r) => people(tx, eq(schema.user.role, "staff")),
+    push: true,
   },
   {
     name: "orderAccepted",
@@ -58024,15 +58144,17 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    if (entry.push) queuePush(tx, viewer, happening, to);
+    if (entry.mail !== false) queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
+
+// A push is sent only to someone who may still read the record (push.server.ts checks at each send).
+pushReaders({
+  "Order": async (viewer, id) => (await import("./order.server")).orderData.canRead(viewer, id),
+});
 "
 `;
 
@@ -58079,6 +58201,65 @@ export function pageHead(page: keyof typeof pageUi, lead?: string) {
   const described = ui.description ? [{ name: "description", content: ui.description }] : [];
   return { meta: [{ title }, ...described] };
 }
+"
+`;
+
+exports[`../../../examples/kiosk/smithable.yml > file list and generated code > src/generated/push.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// Browser push (notifications.md §4): what the Notifications part under the person's name calls.
+import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { AccessDenied, type Viewer } from "#/kit/access";
+import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** The entries that push, and the role an entry for a role reaches. */
+const ENTRIES: { entry: string; label: string; role?: string }[] = [{ entry: "orderPlaced", label: "Order placed", role: "staff" }];
+
+/** The entries this person may turn on. */
+const offered = (viewer: Viewer) => ENTRIES.filter((e) => !e.role || e.role === viewer.role);
+
+async function signedIn() {
+  const viewer = await currentViewer();
+  if (!viewer) throw new AccessDenied(false);
+  return viewer;
+}
+
+/** The person's notifications: each entry offered, whether it is on, and the key to subscribe with. */
+export const pushNotifications = createServerFn().handler(async () => {
+  const { pushChoices } = await import("#/kit/push.server");
+  const viewer = await signedIn();
+  // On the hosted service at its strict level the push services are not let through: none offered.
+  const mine = process.env.SMITHABLE_HOSTED_LEVEL === "strict" ? [] : offered(viewer);
+  const { publicKey, on } = pushChoices(viewer, mine.map((e) => e.entry));
+  return { publicKey, entries: mine.map(({ entry, label }) => ({ entry, label, on: on.includes(entry) })) };
+});
+
+const browser = z.object({
+  endpoint: z.string().url().max(2000),
+  p256dh: z.string().max(200),
+  auth: z.string().max(100),
+});
+
+/** Turns one on or off, with this browser's subscription. */
+export const setPushNotification = createServerFn({ method: "POST" })
+  .validator(z.object({ entry: z.string(), on: z.boolean(), browser: browser.optional() }))
+  .handler(async ({ data }) => {
+    const { setPushChoice } = await import("#/kit/push.server");
+    const viewer = await signedIn();
+    writeAllowed(viewer, getRequestHeaders());
+    return setPushChoice(viewer, offered(viewer).map((e) => e.entry), data.entry, data.on, data.browser);
+  });
+
+/** This browser stops getting pushes: signing out here. */
+export const forgetPushBrowser = createServerFn({ method: "POST" })
+  .validator(z.object({ endpoint: z.string().max(2000) }))
+  .handler(async ({ data }) => {
+    const { dropPushBrowser } = await import("#/kit/push.server");
+    const viewer = await currentViewer();
+    if (viewer) dropPushBrowser(viewer, data.endpoint);
+  });
 "
 `;
 
@@ -59320,6 +59501,8 @@ import { site } from "#/generated/site";
 import { isRefusal } from "#/kit/access";
 import { Consent } from "#/kit/Consent";
 import { Live, NoticeSound } from "#/kit/Live";
+import { forgetThisBrowser, PushChoices } from "#/kit/PushChoices";
+import { forgetPushBrowser, pushNotifications, setPushNotification } from "#/generated/push";
 import { clockFrom, type Person, rememberPerson } from "#/kit/time-text";
 import { saveMyTime } from "#/generated/my-time";
 import { pageHeaders } from "#/kit/security";
@@ -59380,6 +59563,9 @@ const visitorRoutes = ["/", "/stops", "/sign-in"];
 /** The kind of record each page shows: its lists load again when a notice is about one. */
 const pageModels: Record<string, string> = { orders: "Order", dishes: "Dish", stops: "Stop" };
 
+/** The Notifications part's server functions. */
+const PUSH = { list: () => pushNotifications(), set: (data: Parameters<typeof setPushNotification>[0]["data"]) => setPushNotification({ data }), forget: (data: { endpoint: string }) => forgetPushBrowser({ data }) };
+
 /** Each page's route and name, longest route first. */
 const pageRoutes: [string, string][] = [
   ["/dishes", "dishes"],
@@ -59417,6 +59603,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
   }),
@@ -59442,6 +59629,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   useEffect(() => setHydrated(true), []);
   const router = useRouter();
   const signOut = async () => {
+    // This browser's pushes end with the session (notifications.md §4).
+    await forgetThisBrowser(PUSH);
     await authClient.signOut();
     rememberPerson();
     await router.invalidate();
@@ -59483,7 +59672,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <div className="mx-auto max-w-6xl px-5 py-10">{children}</div>
           </LandingLayout>
         ) : (
-          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["menu"] }} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename} onTime={saveTime} settings={<NoticeSound />}>
+          <AppShell appName={app.name} home={{ to: "/", access: pageAccess["menu"] }} menus={menus} viewer={viewer} onSignOut={signOut} onRename={rename} onTime={saveTime} settings={<><NoticeSound /><PushChoices api={PUSH} /></>}>
             {children}
           </AppShell>
         )}
@@ -61459,6 +61648,8 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: playwright.config.ts",
   "scaffold: pnpm-workspace.yaml",
   "generated: public/favicon.svg",
+  "generated: public/manifest.webmanifest",
+  "generated: public/sw.js",
   "kit: server.mjs",
   "generated: smithable.lock",
   "kit: src/components/ui/badge.tsx",
@@ -61509,6 +61700,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "generated: src/generated/order.ts",
   "generated: src/generated/outgoing.server.ts",
   "generated: src/generated/pages.ts",
+  "generated: src/generated/push.ts",
   "generated: src/generated/roles.ts",
   "generated: src/generated/site.ts",
   "generated: src/generated/stop.import.server.ts",
@@ -61541,6 +61733,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/OrderPage.tsx",
   "kit: src/kit/Overflow.tsx",
   "kit: src/kit/PictureInput.tsx",
+  "kit: src/kit/PushChoices.tsx",
   "kit: src/kit/RecordSummary.tsx",
   "kit: src/kit/SearchBox.tsx",
   "kit: src/kit/SelectionBar.tsx",
@@ -61577,6 +61770,8 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
   "kit: src/kit/person-time.server.ts",
+  "kit: src/kit/push-crypto.server.ts",
+  "kit: src/kit/push.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -61643,12 +61838,14 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "f818169d generated",
+  "README.md": "98218519 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "bef25f19 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e09d9afd generated",
+  "public/manifest.webmanifest": "5ed0ee91 generated",
+  "public/sw.js": "107e85e9 generated",
   "server.mjs": "2d895962 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
@@ -61659,7 +61856,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/custom/hooks.ts": "4247261f custom",
   "src/custom/styles.css": "87d7c518 custom",
   "src/db/index.ts": "ba378d34 kit",
-  "src/db/schema.ts": "29e0487a generated",
+  "src/db/schema.ts": "4038e81d generated",
   "src/db/seed.ts": "21dc41c6 generated",
   "src/generated/access.test.ts": "03cd3e4d generated",
   "src/generated/actions/accept.server.ts": "978806c7 generated",
@@ -61676,7 +61873,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/actions/sold-out.ts": "d324a1d9 generated",
   "src/generated/activity.server.ts": "07693d7e generated",
   "src/generated/app.ts": "26d2d3d8 generated",
-  "src/generated/card.server.ts": "ad7e8a35 generated",
+  "src/generated/card.server.ts": "ac4195c6 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "45e8136d generated",
@@ -61697,8 +61894,9 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.schema.ts": "cf6bfc1f generated",
   "src/generated/order.server.ts": "916eed82 generated",
   "src/generated/order.ts": "db4c9478 generated",
-  "src/generated/outgoing.server.ts": "14522d6c generated",
+  "src/generated/outgoing.server.ts": "4615ff1f generated",
   "src/generated/pages.ts": "7d21451f generated",
+  "src/generated/push.ts": "22b841d2 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "590f79d5 generated",
   "src/generated/stop.import.server.ts": "5aca6a4a generated",
@@ -61712,7 +61910,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -61731,6 +61929,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/OrderPage.tsx": "d98ce74d kit",
   "src/kit/Overflow.tsx": "fb5e87dc kit",
   "src/kit/PictureInput.tsx": "4938e8b3 kit",
+  "src/kit/PushChoices.tsx": "e596b5d5 kit",
   "src/kit/RecordSummary.tsx": "f0415723 kit",
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SelectionBar.tsx": "add259cf kit",
@@ -61742,7 +61941,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "9a3805d8 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
   "src/kit/csv-read.ts": "324bc527 kit",
@@ -61756,21 +61955,23 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
+  "src/kit/push-crypto.server.ts": "5d88f4a0 kit",
+  "src/kit/push.server.ts": "38f4b235 kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/sequence.server.ts": "89a0dd0d kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
@@ -61778,7 +61979,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "c46877ec kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
@@ -61788,7 +61989,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/[_dev]/act.ts": "255511bc generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
-  "src/routes/__root.tsx": "4b6e15bc generated",
+  "src/routes/__root.tsx": "3cfd0626 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/dishes/$id.tsx": "ae74c5c1 generated",
@@ -63226,6 +63427,8 @@ export const CARDS: Record<string, CardFacts> = {
     outside: {
       signInCodes: true,
       mail: [],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [],
       aiPolicy: "best-available",
@@ -67049,7 +67252,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/activity.server.ts": "c6b9630b generated",
   "src/generated/app.ts": "5c3013b9 generated",
   "src/generated/ask.server.ts": "1b72c788 generated",
-  "src/generated/card.server.ts": "27ab8e66 generated",
+  "src/generated/card.server.ts": "f87d436f generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "bf1566a8 generated",
@@ -67069,7 +67272,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -67128,7 +67331,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/review-mail.server.ts": "653c32e5 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
@@ -67136,7 +67339,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
@@ -68479,6 +68682,8 @@ export const CARDS: Record<string, CardFacts> = {
     outside: {
       signInCodes: true,
       mail: [],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [],
       aiPolicy: "best-available",
@@ -71078,7 +71283,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
   "src/generated/ask.server.ts": "994f1f1e generated",
-  "src/generated/card.server.ts": "c2573405 generated",
+  "src/generated/card.server.ts": "57b7eaca generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "8d9bb3d1 generated",
@@ -71096,7 +71301,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -71149,14 +71354,14 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
@@ -75002,6 +75207,8 @@ export const CARDS: Record<string, CardFacts> = {
     outside: {
       signInCodes: true,
       mail: [],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [
         {
@@ -84007,7 +84214,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "712a64ca generated",
-  "src/generated/card.server.ts": "dc0db367 generated",
+  "src/generated/card.server.ts": "944abfcc generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
@@ -84044,7 +84251,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -84106,14 +84313,14 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
@@ -86887,6 +87094,8 @@ export const CARDS: Record<string, CardFacts> = {
           text: "When a message is added and sender is agent: mails support case's customer email.",
         },
       ],
+      push: [],
+      sms: [],
       calls: [],
       incoming: [
         {
@@ -88348,13 +88557,9 @@ export function outgoing(tx: Tx, viewer: Viewer | null, model: string, what: str
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);
+    queueMail(tx, viewer, happening, to, entry.when === "created");
   }
 }
 "
@@ -91887,7 +92092,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
   "src/generated/ask.server.ts": "ff0b751f generated",
-  "src/generated/card.server.ts": "0ec553c3 generated",
+  "src/generated/card.server.ts": "eb1c3b3c generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "3782a982 generated",
@@ -91896,7 +92101,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/message.server.ts": "65d3ca48 generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
-  "src/generated/outgoing.server.ts": "0dc0e782 generated",
+  "src/generated/outgoing.server.ts": "8956b93c generated",
   "src/generated/pages.ts": "f7a896bd generated",
   "src/generated/roles.ts": "19b94e12 generated",
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
@@ -91912,7 +92117,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
-  "src/kit/AppCard.tsx": "14b9058b kit",
+  "src/kit/AppCard.tsx": "b93da61b kit",
   "src/kit/AppLink.tsx": "841a9af0 kit",
   "src/kit/AppShell.tsx": "36a7f7e9 kit",
   "src/kit/AppearancePicker.tsx": "0cd564d2 kit",
@@ -91945,7 +92150,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/assistant.server.ts": "bfbc217b kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
-  "src/kit/call.server.ts": "2103c69d kit",
+  "src/kit/call.server.ts": "9a3805d8 kit",
   "src/kit/consent.ts": "d0c2966f kit",
   "src/kit/contact-href.ts": "16ebbb07 kit",
   "src/kit/csv-read.ts": "324bc527 kit",
@@ -91959,13 +92164,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "6f8372f7 kit",
-  "src/kit/live.server.ts": "9f4fd8f7 kit",
+  "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "4d4f4f8e kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
   "src/kit/origin.ts": "f45ae6cf kit",
-  "src/kit/outgoing.server.ts": "949c1438 kit",
+  "src/kit/outgoing.server.ts": "8e8824f3 kit",
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
@@ -91973,7 +92178,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
-  "src/kit/security.ts": "08a2e43d kit",
+  "src/kit/security.ts": "b6f52acc kit",
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
@@ -91982,7 +92187,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "05d2614e kit",
+  "src/kit/words/en.ts": "bdbf73a8 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",

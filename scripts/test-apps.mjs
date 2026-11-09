@@ -5,7 +5,7 @@
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 
 import { spawn, spawnSync } from "node:child_process";
-import { createHash, createHmac } from "node:crypto";
+import { createDecipheriv, createECDH, createHash, createHmac, hkdfSync } from "node:crypto";
 import {
   appendFileSync,
   chmodSync,
@@ -18,6 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createServer, request } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 import { createRequire } from "node:module";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
@@ -1467,6 +1468,85 @@ async function kioskLandingFlow(dir, base) {
   }
 }
 
+/** A certificate for localhost, made once a run, for the stand-in push service. */
+let certificate;
+function pushCertificate() {
+  if (certificate) return certificate;
+  const at = mkdtempSync(join(tmpdir(), "smithable-push-"));
+  certificate = { key: join(at, "key.pem"), cert: join(at, "cert.pem") };
+  run(
+    "openssl",
+    [
+      "req",
+      "-x509",
+      "-newkey",
+      "ec",
+      "-pkeyopt",
+      "ec_paramgen_curve:prime256v1",
+      "-nodes",
+      "-days",
+      "1",
+      "-subj",
+      "/CN=localhost",
+      "-addext",
+      "subjectAltName=DNS:localhost,IP:127.0.0.1",
+      "-keyout",
+      certificate.key,
+      "-out",
+      certificate.cert,
+    ],
+    at,
+  );
+  return certificate;
+}
+
+/**
+ * A push service on this machine (notifications.md §4): takes one push, as a browser's push
+ * service would, and decrypts it with the browser's own key, as the browser would (RFC 8291).
+ */
+async function pushService() {
+  const browser = createECDH("prime256v1");
+  browser.generateKeys();
+  const auth = Buffer.from("0123456789abcdef");
+  const got = [];
+  const server = createHttpsServer(
+    { key: readFileSync(pushCertificate().key), cert: readFileSync(pushCertificate().cert) },
+    (req, res) => {
+      const parts = [];
+      req.on("data", (c) => parts.push(c));
+      req.on("end", () => {
+        const body = Buffer.concat(parts);
+        const salt = body.subarray(0, 16);
+        const sender = body.subarray(21, 86);
+        const info = Buffer.concat([
+          Buffer.from("WebPush: info\0"),
+          browser.getPublicKey(),
+          sender,
+        ]);
+        const ikm = Buffer.from(hkdfSync("sha256", browser.computeSecret(sender), auth, info, 32));
+        const key = (label, n) =>
+          Buffer.from(
+            hkdfSync("sha256", ikm, salt, Buffer.from(`Content-Encoding: ${label}\0`), n),
+          );
+        const sealed = body.subarray(86);
+        const decipher = createDecipheriv("aes-128-gcm", key("aes128gcm", 16), key("nonce", 12));
+        decipher.setAuthTag(sealed.subarray(-16));
+        const plain = Buffer.concat([decipher.update(sealed.subarray(0, -16)), decipher.final()]);
+        got.push({ headers: req.headers, message: JSON.parse(plain.subarray(0, -1).toString()) });
+        res.writeHead(201).end();
+      });
+    },
+  );
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  return {
+    endpoint: `https://localhost:${server.address().port}/push/staff`,
+    p256dh: browser.getPublicKey().toString("base64url"),
+    auth: auth.toString("base64url"),
+    got,
+    close: () => server.close(),
+  };
+}
+
 async function kioskFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
   const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
@@ -1485,11 +1565,22 @@ async function kioskFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   writeFileSync(
     spec,
-    readFileSync(spec, "utf8").replace(
-      /hours: \{ mon-thu[^}]*\}/,
-      'hours: { mon-sun: "00:00-24:00" }',
-    ),
+    readFileSync(spec, "utf8")
+      .replace(/hours: \{ mon-thu[^}]*\}/, 'hours: { mon-sun: "00:00-24:00" }')
+      // Texts (notifications.md §5), the test's own: new orders to staff, an accepted order to
+      // the customer's number. No starter texts (each one costs the owner).
+      .replace(
+        /\noutgoing:\n/,
+        "\noutgoing:\n  orderPlacedText: { when: Order created, to: sms, recipient: staff }\n  orderAcceptedText: { when: accept, to: sms, recipient: phone }\n",
+      ),
   );
+  const texts = join(dir, "data", "sms", "outbox");
+  const textsNow = () =>
+    existsSync(texts)
+      ? readdirSync(texts)
+          .sort()
+          .map((f) => readFileSync(join(texts, f), "utf8"))
+      : [];
   const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
   if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
   const browser = await chromium.launch();
@@ -1500,6 +1591,33 @@ async function kioskFlow(dir, base) {
       await open(page, `${base}/`);
       return page.getByRole("button", { name: "Add Fish soup" }).isEnabled();
     });
+    // The staff who hear of orders: one signs in once (which makes them) and turns the push on in
+    // a browser a push service on this machine stands in for.
+    const staffPage = await browser.newPage();
+    await signInAs(staffPage, base, "staff");
+    await staffPage.close();
+    const push = await pushService();
+    const staffId = JSON.parse(
+      spawnSync(
+        "node",
+        [
+          "-e",
+          `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare("select id from user where role = 'staff'").get()))`,
+        ],
+        { cwd: dir, encoding: "utf8" },
+      ).stdout,
+    ).id;
+    // Their confirmed number and the text turned on, as Texts under their name would leave them.
+    write(
+      dir,
+      `insert into user_phones (user_id, phone, confirmed_at, code_tries) values ('${staffId}', '+358401234567', ${Date.now()}, 0);
+       insert into notification_choices (user_id, entry, channel) values ('${staffId}', 'orderPlacedText', 'sms');`,
+    );
+    write(
+      dir,
+      `insert into notification_choices (user_id, entry, channel) values ('${staffId}', 'orderPlaced', 'push');
+       insert into push_subscriptions (user_id, endpoint, p256dh, auth, created_at) values ('${staffId}', '${push.endpoint}', '${push.p256dh}', '${push.auth}', ${Date.now()});`,
+    );
     let before = mails().length;
     const add = page.getByRole("button", { name: "Add Fish soup" });
     await add.click();
@@ -1512,6 +1630,26 @@ async function kioskFlow(dir, base) {
     await page.getByRole("button", { name: "Send the order" }).click();
     await page.getByText("Order 11 is in.").waitFor({ timeout: 15000 * P });
     await waitFor("mail to staff", () => subjects(before).includes("A new order"));
+    // And the text to staff's confirmed number: the title line and the link, written to the file
+    // outbox (no SMS settings).
+    await waitFor("a text to staff", () =>
+      textsNow().some((t) => t.startsWith("To: +358401234567")),
+    );
+    const toStaff = textsNow().find((t) => t.startsWith("To: +358401234567")) ?? "";
+    // The entry's title line (its own subject unsaid: "Order: <title>") and the link.
+    if (!/^Order: .+ http\S*\/orders\/\d+$/m.test(toStaff))
+      throw new Error(`the text to staff said ${JSON.stringify(toStaff)}`);
+    // And the push: the title line and the link, signed with the app's key.
+    await waitFor("a push to staff", () => push.got.length > 0);
+    push.close();
+    const [pushed] = push.got;
+    if (pushed.message.title !== "A new order" || !/^\/orders\/\d+$/.test(pushed.message.link))
+      throw new Error(`the push said ${JSON.stringify(pushed.message)}`);
+    if (
+      !String(pushed.headers.authorization).startsWith("vapid t=") ||
+      pushed.headers["content-encoding"] !== "aes128gcm"
+    )
+      throw new Error(`the push came with ${JSON.stringify(pushed.headers)}`);
     // Sold out while in the basket: the server refuses it in words.
     await open(page, `${base}/`);
     await page.getByRole("button", { name: "Add Coffee" }).click();
@@ -1538,8 +1676,16 @@ async function kioskFlow(dir, base) {
     await waitFor("mail to the customer", () =>
       subjects(before).includes("Your order is being made"),
     );
+    // And a text to the number the customer gave, from staff's action: the title line alone (a
+    // customer has no account to open the link with).
+    await waitFor("a text to the customer", () =>
+      textsNow().some((t) => t.startsWith("To: +358401112222")),
+    );
+    const toCustomer = textsNow().find((t) => t.startsWith("To: +358401112222")) ?? "";
+    if (/\/orders\//.test(toCustomer))
+      throw new Error(`the customer's text has a link: ${JSON.stringify(toCustomer)}`);
     console.log(
-      "  ✓ kiosk: a visitor orders two fish soups and gets number 11, staff are mailed; a dish sold out in the basket is refused in words; Accept mails the customer",
+      "  ✓ kiosk: a visitor orders two fish soups and gets number 11, staff are mailed, pushed (decrypted as a browser would) and texted; a dish sold out in the basket is refused in words; Accept mails and texts the customer",
     );
   } catch (error) {
     console.log(
@@ -8530,6 +8676,8 @@ test("the session cookie's name and attributes", async () => {
     stop = await serve(dir, port + 100, "dev", {
       ...receiver?.env,
       DEV_DOOR_SECRET: DOOR_SECRET,
+      // The kiosk's staff get a push (notifications.md §4) from a push service on this machine.
+      ...(example === "kiosk" ? { NODE_EXTRA_CA_CERTS: pushCertificate().cert } : {}),
     });
     try {
       const base = `http://localhost:${port + 100}`;

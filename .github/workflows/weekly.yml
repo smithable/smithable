@@ -2,6 +2,8 @@
 # times its usual cases and a new seed each week, on the self-hosted runner in a turn of the
 # machine's gate queue, like main's full check. A failure keeps the seed and the case in that
 # week's issue, so it can be run again: FC_SEED=<seed> FC_SCALE=<scale> pnpm exec vitest run properties.
+# Then eight random sequences of changes on starters, each app type-checked after them
+# (scripts/random-typecheck.mjs --seed <seed>).
 name: Weekly properties
 
 on:
@@ -51,8 +53,10 @@ jobs:
       - run: SESSION=ci GATE_AHEAD_MAX=99 scripts/gate.sh
         env:
           GATE_RUN: >-
-            pnpm build && FC_SEED=${{ steps.seed.outputs.seed }} FC_SCALE=${{ steps.seed.outputs.scale }}
-            pnpm exec vitest run properties 2>&1 | tee "$RUNNER_TEMP/properties.log"; exit ${PIPESTATUS[0]}
+            pnpm build && { FC_SEED=${{ steps.seed.outputs.seed }} FC_SCALE=${{ steps.seed.outputs.scale }}
+            pnpm exec vitest run properties; p=$?;
+            node scripts/random-typecheck.mjs --seed ${{ steps.seed.outputs.seed }} --runs 8; t=$?;
+            exit $(( p || t )); } 2>&1 | tee "$RUNNER_TEMP/properties.log"; exit ${PIPESTATUS[0]}
           TMPDIR: ${{ runner.temp }}
       # Also when the job ran out of time (cancelled): the log is what the issue needs.
       - if: ${{ !success() }}
@@ -85,7 +89,7 @@ jobs:
             echo '```'
             if [ -f properties.log ]; then
               # A fence in the output would end the block early.
-              grep -E -A40 "Property failed|FAIL |Counterexample|seed:|path:" properties.log | head -200 | sed 's/```/` ` `/g'
+              grep -E -A40 "Property failed|FAIL |Counterexample|seed:|path:|Type check after random" properties.log | head -200 | sed 's/```/` ` `/g'
             else
               echo "No log: the run failed before the tests (see the run)."
             fi

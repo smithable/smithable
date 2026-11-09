@@ -23,6 +23,8 @@ export function pageHeaders(
       `img-src 'self' data:${more(allow.img)}`,
       "font-src 'self'",
       `connect-src 'self'${more(allow.connect)}`,
+      // The app's own service worker (browser push), and no other.
+      "worker-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

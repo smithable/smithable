@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { STACK_PROFILE } from "@smithable/adapter-tanstack";
 import { migrateSpec, writeActionGrants, writeNamedBy, writeUniqueScopes } from "@smithable/core";
-import { migrationKind } from "./fixes.js";
+import { migrationConsequences, migrationKind, type SchemaSnapshot } from "./fixes.js";
 import { generate, projectProfile } from "./generate.js";
 import { discardChanges, ensureRepository, git, uncommitted, uncommittedRefusal } from "./git.js";
 import type { Io } from "./io.js";
@@ -91,12 +91,14 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
       .filter((f) => !before.has(f))
       .map((f) => readFileSync(join(drizzle, f), "utf8")),
   );
+  // What a destructive one loses, from drizzle-kit's snapshots before and after it (A 246).
+  const consequences = migration === "destructive" ? schemaLosses(drizzle, before) : undefined;
   git(dir, ["add", "-A"]);
   git(dir, [
     "commit",
     "-q",
     "-m",
-    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied, titles: titles.written, unique: scopes.written, grants: grants.written, migration })}\n`,
+    `smithable: Upgrade to stack profile ${STACK_PROFILE.id}\n\nSmithable-Upgrade: ${JSON.stringify({ from, to: STACK_PROFILE.id, smithable: VERSION, spec: migrated.applied, titles: titles.written, unique: scopes.written, grants: grants.written, migration, ...(consequences ? { consequences } : {}) })}\n`,
   ]);
   io.out(
     `Upgraded from stack profile ${from} to ${STACK_PROFILE.id}; the type check and tests pass. Undo with: smithable undo\n${
@@ -108,4 +110,28 @@ export async function upgrade(dir: string, io: Io): Promise<number> {
     }`,
   );
   return 0;
+}
+
+/**
+ * The losses of the migrations the upgrade added: drizzle-kit's snapshot from before them against
+ * the newest; none to say (undefined) when either is missing, so the service keeps it held.
+ */
+function schemaLosses(drizzle: string, before: Set<string>) {
+  const meta = join(drizzle, "meta");
+  if (!existsSync(meta)) return undefined;
+  const snapshots = readdirSync(meta)
+    .filter((f) => /^\d{4}_snapshot\.json$/.test(f))
+    .sort();
+  const kept = [...before].map((f) => f.slice(0, 4)).sort();
+  const last = kept.at(-1);
+  const old = last && snapshots.find((f) => f.startsWith(last));
+  const newest = snapshots.at(-1);
+  if (!old || !newest || old === newest) return undefined;
+  const read = (f: string) => JSON.parse(readFileSync(join(meta, f), "utf8")) as SchemaSnapshot;
+  // A snapshot that cannot be read: nothing to say, so the service keeps the update held.
+  try {
+    return migrationConsequences(read(old), read(newest));
+  } catch {
+    return undefined;
+  }
 }

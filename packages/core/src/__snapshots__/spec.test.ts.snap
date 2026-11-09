@@ -3597,11 +3597,12 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
     {
       "channels": [
         "mail",
+        "push",
       ],
       "name": "orderPlaced",
       "recipient": {
         "kind": "role",
-        "role": "admin",
+        "role": "staff",
       },
       "to": "mail",
       "when": {

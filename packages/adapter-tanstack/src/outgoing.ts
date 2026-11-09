@@ -5,6 +5,7 @@ import {
   type AuthIR,
   type ContentIR,
   camel,
+  channelsOf,
   type FieldIR,
   humanize,
   isUpload,
@@ -39,6 +40,24 @@ import {
 } from "./shared.js";
 
 /**
+ * Browser push (notifications.md §4): the entries that push, in an app with sign-in (a push goes
+ * to a person who turned it on under their name).
+ */
+export function pushEntries(ir: SpecIR, auth: AuthIR | undefined): OutgoingIR[] {
+  if (!auth || !hasSignIn(auth)) return [];
+  return ir.outgoing.filter((o) => channelsOf(o)?.includes("push"));
+}
+
+/**
+ * Texts (notifications.md §5): the entries that text, in an app with sign-in (a person turns a
+ * text on under their name; a number on a record is texted only from a signed-in person's change).
+ */
+export function smsEntries(ir: SpecIR, auth: AuthIR | undefined): OutgoingIR[] {
+  if (!auth || !hasSignIn(auth)) return [];
+  return ir.outgoing.filter((o) => channelsOf(o)?.includes("sms"));
+}
+
+/**
  * Live in the app (notifications.md §3): the models whose records' mail is also an event for the
  * recipients who have the app open. Only with sign-in (the stream is a signed-in person's), and
  * only mail about one record (a list mail on a clock, and a call to a target, name no person).
@@ -48,7 +67,9 @@ export function liveModels(ir: SpecIR, auth: AuthIR | undefined): string[] {
   return [
     ...new Set(
       ir.outgoing.flatMap((o) =>
-        o.to === "mail" && !o.list && "model" in o.when ? [o.when.model] : [],
+        (o.to === "mail" || channelsOf(o)?.includes("push")) && !o.list && "model" in o.when
+          ? [o.when.model]
+          : [],
       ),
     ),
   ].sort();
@@ -175,15 +196,22 @@ export function outgoingModule(
       const rows = `tx.select({ v: ${n.table}.${column} }).from(${n.table}).where(${where}).all()`;
       if (each.kind === "field" && each.via === "email")
         return `${rows}.map((x) => ({ email: x.v as string | null }))`;
+      // A phone field on each (an sms, notifications.md §5).
+      if (each.kind === "field" && each.via === "phone")
+        return `${rows}.map((x) => ({ phone: x.v as string | null }))`;
       return `((ids) => (ids.length ? ${people("inArray(schema.user.id, ids)")} : []))(${rows}.map((x) => x.v).filter((v) => v != null).map(String))`;
     }
     const [first, second] = recipient.path;
     if (!second)
       return recipient.via === "email"
         ? `[{ email: r.${first} as string | null }]`
-        : `r.${first}Id == null ? [] : ${people(`eq(schema.user.id, String(r.${first}Id))`)}`;
+        : recipient.via === "phone"
+          ? `[{ phone: r.${first} as string | null }]`
+          : `r.${first}Id == null ? [] : ${people(`eq(schema.user.id, String(r.${first}Id))`)}`;
     const ref = model.fields.find((f) => f.name === first);
     const target = modelNamed(ir, ref?.type.kind === "relation" ? ref.type.model : "");
+    if (recipient.via === "phone")
+      return `[{ phone: ${value(target, second, `r.${first}Id`)} as string | null }]`;
     return recipient.via === "email"
       ? `[{ email: ${value(target, second, `r.${first}Id`)} as string | null }]`
       : `((id) => (id == null ? [] : ${people("eq(schema.user.id, String(id))")}))(${value(target, `${second}Id`, `r.${first}Id`)})`;
@@ -250,8 +278,13 @@ export function outgoingModule(
     const read = value(target, f.type.kind === "relation" ? `${second}Id` : second, `r.${first}Id`);
     return formatted(f, fieldUi(target, f, t, ir, ux), read);
   };
-  const mails = entries.filter((o) => o.to === "mail");
-  const calls = entries.filter((o) => o.to !== "mail");
+  // Entries that tell people (mail, push) and calls to a named target.
+  const told = (o: OutgoingIR) =>
+    o.to === "mail" || Boolean(channelsOf(o)?.some((c) => c === "push" || c === "sms"));
+  const mails = entries.filter(told);
+  const calls = entries.filter((o) => !told(o));
+  const pushes = entries.filter((o) => channelsOf(o)?.includes("push"));
+  const texts = entries.filter((o) => channelsOf(o)?.includes("sms"));
   const mailsAfter = after.some((o) => o.to === "mail");
   const callsAfter = after.some((o) => o.to !== "mail");
   const modelsOf = (list: RecordOutgoing[]) =>
@@ -357,8 +390,7 @@ ${apiFields(model)
     const fits = conditions(o);
     // The texts' placeholders (outgoing-templates.md §3): a hop is read with the record, and
     // {before.<field>} wants the record before the change shown too.
-    const paths =
-      o.to === "mail" ? placeholdersOf(`${words?.subject ?? ""} ${words?.text ?? ""}`) : [];
+    const paths = told(o) ? placeholdersOf(`${words?.subject ?? ""} ${words?.text ?? ""}`) : [];
     const hops = [...new Set(paths.filter((p) => p.includes(".") && !p.startsWith("before.")))]
       .map((p) => [p, hop(model, p)] as const)
       .filter((x): x is readonly [string, string] => x[1] !== undefined);
@@ -366,7 +398,7 @@ ${apiFields(model)
     name: ${JSON.stringify(o.name)},
     model: ${JSON.stringify(o.when.model)},
     when: ${JSON.stringify(when)},${fits ? `\n    fits: ${fits},` : ""}${o.fields?.length ? `\n    fields: ${JSON.stringify(o.fields.map((f) => keyOf(model, f)))},` : ""}${words?.subject ? `\n    subject: ${JSON.stringify(words.subject)},` : ""}${words?.text ? `\n    text: ${JSON.stringify(words.text)},` : ""}${o.show ? `\n    show: ${JSON.stringify(o.show)},` : ""}${o.previous ? "\n    previous: true," : ""}${paths.some((p) => p.startsWith("before.")) ? "\n    before: true," : ""}${hops.length ? `\n    more: (tx, r) => ({ ${hops.map(([path, code]) => `${JSON.stringify(path)}: ${code}`).join(", ")} }),` : ""}
-    ${o.to === "mail" ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}
+    ${told(o) ? toCode(recipients(model, o.recipient)) : `target: ${JSON.stringify(o.to)},`}${channelsOf(o)?.includes("push") ? "\n    push: true," : ""}${channelsOf(o)?.includes("sms") ? "\n    sms: true," : ""}${told(o) && !channelsOf(o)?.includes("mail") ? "\n    mail: false," : ""}
   },`;
   });
   // A custom action's entries: the mail shows its input and output by their labels.
@@ -413,7 +445,7 @@ ${apiFields(model)
   ];
   return `${HEADER}${imports}${drizzle.length ? `import { ${drizzle.join(", ")} } from "drizzle-orm";\n` : ""}${ones ? 'import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";\n' : ""}import type { db } from "#/db";
 ${tables.size || users || named || threaded ? `${SCHEMA_IMPORT}\n` : ""}${body.includes("formatValue(") || threaded ? 'import { app } from "#/generated/app";\n' : ""}import type { Viewer } from "#/kit/access";
-${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}
+${body.includes("formatValue(") || body.includes("titleOf(") ? `import { ${[...(body.includes("formatValue(") ? ["formatValue"] : []), ...(body.includes("titleOf(") ? ["titleOf"] : [])].join(", ")} } from "#/kit/format";\n` : ""}${entries.length ? `import { ${[...(mails.length ? ["blank"] : []), ...(calls.length ? ["changedBefore"] : []), "counts", ...(mails.length ? ["fillText"] : []), ...(calls.length ? ["picked"] : [])].join(", ")} } from "#/kit/outgoing";\n` : ""}${[...composedUsed].map((m) => `import { ${nameFunction(m)} } from "./${kebab(m.name)}.name";\n`).join("")}import { ${[...(mails.length ? ["type Happening", "linkTo"] : []), ...(calls.length || callsAfter ? ["queueCall"] : []), ...(mails.length || mailsAfter ? ["queueMail", "type Recipient"] : []), ...(mails.length ? ["shownFields"] : []), ...(threaded ? ["type Thread"] : [])].join(", ")} } from "#/kit/outgoing.server";${listed.length ? '\nimport { dayWords, listText } from "#/kit/outgoing.server";' : ""}${pushes.length ? '\nimport { pushReaders, queuePush } from "#/kit/push.server";' : ""}${texts.length ? '\nimport { queueSms } from "#/kit/sms.server";' : ""}
 
 type Tx = Pick<typeof db, "select" | "insert"${composedUsed.size ? ' | "query"' : ""}>;
 type Row = Record<string, unknown>;
@@ -546,7 +578,15 @@ const ENTRIES: {
   before?: true;
   /** The texts' placeholders one reference away, read with the record. */
   more?: (tx: Tx, r: Row) => Record<string, string>;
-  to?: (tx: Tx, r: Row) => Recipient[];`
+  to?: (tx: Tx, r: Row) => Recipient[];${
+    pushes.length || texts.length
+      ? `
+  /** Pushed to the browsers of those who turned it on (notifications.md §4), texted (§5); not mailed when its mail is false. */
+  push?: true;
+  sms?: true;
+  mail?: false;`
+      : ""
+  }`
       : ""
   }${calls.length ? "\n  /** A target whose address and secret are settings (OUTGOING_<TARGET>_URL, _SECRET). */\n  target?: string;" : ""}
 }[] = [
@@ -626,18 +666,28 @@ export function outgoing(tx: Tx, ${mails.length ? "viewer" : "_viewer"}: Viewer 
     // The texts' placeholders (outgoing-templates.md §3): the record's values as its page shows them, its title and address, who made the change, and what a field was.
     const fill = (text: string, oneLine = false) =>
       fillText(text, (path) => path === "title" ? title : path === "link" ? linkTo(rest.link) : path === "by" ? (viewer && !viewer.system ? viewer.name : "") : path.startsWith("before.") ? blank(prior?.values[path.slice(7)]) : blank(more?.[path] ?? values[path]), oneLine);
-    queueMail(
-      tx,
-      viewer,
-      { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number },
-      entry.to(tx, record),
-      entry.when === "created",
-    );`
+    const happening: Happening = { ...rest, subject: entry.subject ? fill(entry.subject, true) : rest.subject, ...(entry.text ? { text: fill(entry.text) } : {}), fields: shownFields(labels, values, prior?.values, entry.show, entry.previous), entry: entry.name, model, record: record.id as number };
+    const to = entry.to(tx, record);${pushes.length ? "\n    if (entry.push) queuePush(tx, viewer, happening, to);" : ""}${texts.length ? "\n    if (entry.sms) queueSms(tx, viewer, happening, to);" : ""}
+    ${pushes.length || texts.length ? "if (entry.mail !== false) " : ""}queueMail(tx, viewer, happening, to, entry.when === "created");`
         : ""
     }
   }
 }
+${
+  pushes.length
+    ? `
+// A push is sent only to someone who may still read the record (push.server.ts checks at each send).
+pushReaders({
+${modelsOf(pushes)
+  .map(
+    (m) =>
+      `  ${JSON.stringify(m.name)}: async (viewer, id) => (await import("./${kebab(m.name)}.server")).${names(m, t).data}.canRead(viewer, id),`,
+  )
+  .join("\n")}
+});
 `
+    : ""
+}`
     : ""
 }${
   after.length

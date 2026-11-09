@@ -40,7 +40,7 @@ import {
   hasGenerationReceipt,
   startGeneration,
 } from "./generation-job.js";
-import { git, ownRepository, trailer } from "./git.js";
+import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
@@ -1584,6 +1584,42 @@ export async function studio(
         return json({
           ok: code === 0,
           ...(verification ? { verification } : { output: err.join("").trim() }),
+        });
+      }
+      // A held fix (fixes-reach-apps §5, A 245): the upgraded version the service kept as
+      // refs/smithable/fix/<id> when the app's own code no longer fit it, opened on a branch of its
+      // own (made once, kept after) to repair src/custom/ and publish as any change.
+      if (req.method === "POST" && url.pathname === "/api/fix/open") {
+        const { id } = await body();
+        if (typeof id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))
+          return json({ ok: false, message: "There is no such fix." }, 400);
+        const ref = `refs/smithable/fix/${id}`;
+        const branch = `fix/${id}`;
+        const held = git(dir, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]).ok;
+        const there = git(dir, ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`]).ok;
+        // The service removes a held version's ref once a newer rebuild replaces it (A 247); the
+        // owner's branch stays, and opens as they left it, saying so.
+        if (!held && !there)
+          return json(
+            { ok: false, message: `This project has no held version for the fix ${id}.` },
+            404,
+          );
+        if (git(dir, ["rev-parse", "--abbrev-ref", "HEAD"]).out.trim() === branch)
+          return json({ ok: true, branch, ...(held ? {} : { replaced: true }) });
+        const dirty = uncommittedRefusal(dir, "before the fix is opened");
+        if (dirty) return json({ ok: false, message: dirty }, 409);
+        const packages = installed();
+        // The branch as the owner left it when it is there already; else made at the held version.
+        const done = git(dir, there ? ["checkout", branch] : ["checkout", "-b", branch, ref]);
+        if (!done.ok) return json({ ok: false, message: done.out.trim() }, 500);
+        restored(packages);
+        // The owner's branch from an earlier held version, when the service has held a newer one.
+        const newer = there && held && !git(dir, ["merge-base", "--is-ancestor", ref, branch]).ok;
+        return json({
+          ok: true,
+          branch,
+          ...(newer ? { newer: true } : {}),
+          ...(held ? {} : { replaced: true }),
         });
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {

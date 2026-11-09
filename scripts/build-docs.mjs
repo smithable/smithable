@@ -469,6 +469,30 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 .search li a[aria-selected="true"],.search li a:hover{background:var(--code)}
 .search mark{background:none;color:var(--accent);font-weight:600}
 .search li.none{padding:.4rem .6rem;color:var(--muted);font-size:.9rem}
+header .ask{font:inherit;font-size:.9rem;font-weight:600;color:var(--accent);background:none;border:1px solid var(--line);border-radius:999px;padding:.25rem .85rem;cursor:pointer;white-space:nowrap}
+header .ask[aria-expanded=true]{background:var(--code)}
+.ask-panel{position:fixed;right:1rem;bottom:1rem;z-index:20;width:min(26rem,calc(100vw - 2rem));max-height:min(36rem,calc(100vh - 2rem));display:flex;flex-direction:column;gap:.6rem;background:var(--bg);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgb(0 0 0/.18);padding:.9rem 1rem;font-size:.95rem}
+.ask-panel[hidden]{display:none}
+.ask-panel .top{display:flex;align-items:center;justify-content:space-between}
+.ask-panel h2{margin:0;font-size:1.05rem;border:0;padding:0}
+.ask-panel .close{font:inherit;font-size:1.3rem;line-height:1;background:none;border:0;color:var(--muted);cursor:pointer;padding:.1rem .3rem}
+.ask-panel .notice{margin:0;font-size:.78rem;color:var(--muted);background:var(--code);border-radius:8px;padding:.4rem .6rem}
+.ask-panel .turns{list-style:none;margin:0;padding:0;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.9rem}
+.ask-panel .turns p{margin:.2rem 0}
+.ask-panel .q{font-weight:600}
+.ask-panel .status{color:var(--muted);font-style:italic}
+.ask-panel .parts{margin:.3rem 0 0;padding-left:1.1rem;font-size:.88rem}
+.ask-panel .parts .line{color:var(--muted)}
+.ask-panel .thumb{font-size:.82rem;color:var(--muted)}
+.ask-panel .thumb button,.ask-panel .prompts button,.ask-panel .again{font:inherit;font-size:.85rem;background:none;border:1px solid var(--line);border-radius:999px;padding:.15rem .7rem;color:var(--fg);cursor:pointer}
+.ask-panel .prompts{display:flex;flex-wrap:wrap;gap:.4rem}
+.ask-panel .prompts[hidden],.ask-panel .again[hidden]{display:none}
+.ask-panel form{display:flex;gap:.5rem;align-items:flex-end}
+.ask-panel textarea{flex:1;font:inherit;resize:none;border:1px solid var(--line);border-radius:8px;padding:.4rem .6rem;background:var(--bg);color:var(--fg)}
+.ask-panel form button{font:inherit;font-weight:600;background:var(--accent);color:var(--bg);border:0;border-radius:999px;padding:.35rem .9rem;cursor:pointer}
+.ask-panel form button:disabled,.ask-panel textarea:disabled{opacity:.55;cursor:default}
+.ask-panel .again{align-self:flex-start}
+@media (max-width:40rem){.ask-panel{right:.5rem;left:.5rem;bottom:.5rem;width:auto}}
 @media (max-width:40rem){header{flex-wrap:wrap;row-gap:.6rem}header .gh{display:none}.search{order:9;width:100%}.search input{width:100%;padding:.35rem .85rem}.search ol{left:1rem;right:1rem;width:auto}}
 `;
 
@@ -532,10 +556,11 @@ const html = (page, body) => {
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <script src="/count.js" defer></script>
 <script src="/search.js" defer></script>
+<script src="/ask.js" defer></script>
 <style>${CSS}</style>
 </head>
 <body>
-<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><form class="search" role="search" hidden><input type="search" placeholder="Search" aria-label="Search the docs" autocomplete="off"><ol></ol></form><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><a class="try" href="https://smithable.ai/#prompt">Try it</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
+<header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><form class="search" role="search" hidden><input type="search" placeholder="Search" aria-label="Search the docs" autocomplete="off"><ol></ol></form><button type="button" class="ask" hidden>Ask Smith</button><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><a class="try" href="https://smithable.ai/#prompt">Try it</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
 <div class="layout${toc ? " toc" : ""}"><nav class="side" aria-label="Pages">${menu(page)}</nav>${toc}<main>
 ${body}</main></div>
 <footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
@@ -648,6 +673,8 @@ writeFileSync(join(out, "search.json"), JSON.stringify(index));
 // The page scripts are files, not inline, so the site's CSP can stay at script-src 'self'.
 copyFileSync(join(root, "scripts/docs-count.js"), join(out, "count.js"));
 copyFileSync(join(root, "scripts/docs-search.js"), join(out, "search.js"));
+// The Ask Smith panel (site-assistant.md §2): the header's button opens it; served as /ask.js.
+copyFileSync(join(root, "scripts/docs-ask.js"), join(out, "ask.js"));
 for (const [i, each] of schemas.entries())
   writeFileSync(join(out, schemaPaths[i]), `${JSON.stringify(each, null, 2)}\n`);
 writeFileSync(

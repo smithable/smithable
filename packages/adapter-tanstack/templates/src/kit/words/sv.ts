@@ -460,6 +460,33 @@ export const w = {
   noticesMore: (n: number) => `och ${n} till`,
   noticeSoundOffer: "Spela ett ljud för dessa?",
   noticeSound: "Ett ljud vid varje notis",
+  smsNotWhole: "Numret är inte i internationell form: + och landskoden, sedan numret.",
+  smsNoProvider: (name: string) =>
+    `SMS_PROVIDER anger ${name}, som appen inte kan skicka via (46elks).`,
+  smsNoSettings: "SMS_KEY, SMS_SECRET och SMS_FROM behövs bredvid SMS_PROVIDER.",
+  smsRefused: (status: number) => `Sms-leverantören svarade ${status}.`,
+  smsTurnedOff: "Avslaget innan det skickades.",
+  smsOverLimit: "Över dagens gräns för sms: Skicka igen fungerar i morgon.",
+  smsUnknown:
+    "Sms-leverantören svarade inte: den kan ha skickat det. Försöks inte igen av sig själv.",
+  smsCode: (code: string) => `Din kod: ${code}. Den bekräftar det här numret för appens sms.`,
+  smsCodesLimit: "Tre koder om dagen, en i minuten: försök igen senare.",
+  smsCodeGone: "Koden har gått ut. Be om en ny.",
+  smsNoSuch: "Inget sådant sms.",
+  smsConfirmFirst: "Bekräfta ditt nummer först.",
+  smsTitle: "Sms till din telefon",
+  smsHelp: "Varje sms gäller ditt arbete i appen. Ditt nummer används inte till något annat.",
+  smsPhone: "Ditt mobilnummer",
+  smsSendCode: "Sms:a mig en kod",
+  smsCodeSent: "En kod är på väg. Skriv den här.",
+  smsCodeLabel: "Koden",
+  smsConfirm: "Bekräfta",
+  smsWrongCode: "Det är inte koden.",
+  smsRemove: "Ta bort mitt nummer",
+  notifications: "Aviseringar",
+  notificationsHelp: "I den här webbläsaren, även när appen är stängd. Slå på de du vill ha.",
+  pushRefused:
+    "Webbläsaren tillät inte aviseringar. Tillåt dem i dess inställningar för den här webbplatsen.",
   importIt: "Importera",
   importTitle: (plural: string) => `Importera ${plural.toLowerCase()} från en fil`,
   importFile: "En CSV-fil",
@@ -638,6 +665,12 @@ export const w = {
     `Besök räknas med ${provider}, som inte sätter någon kaka och inte sparar personuppgifter.`,
   legalAnalyticsConsent: (provider: string) =>
     `Besök räknas med ${provider} först när du godkänt det i kakrutan. Du kan ändra ditt val under Kakinställningar längst ner på sidan.`,
+  legalSmsTitle: "Sms till din telefon",
+  legalSms: (labels: string[]) =>
+    `Om du anger ditt mobilnummer under ditt namn, bekräftar det med koden som sms:as till det och slår på sms, sms:ar appen dig om nya ${labels.join(", ")}. Ett nummer du anger med en egen post kan få ett sms om den posten, när någon som arbetar i appen gör något med den. Sms:en går via den sms-leverantör appens ägare har valt. Ditt nummer används inte till något annat; att ta bort det under ditt namn avslutar sms:en.`,
+  legalPushTitle: "Aviseringar i din webbläsare",
+  legalPush: (labels: string[]) =>
+    `Om du slår på aviseringar under ditt namn talar appen om för din webbläsare när det finns nya ${labels.join(", ")} den får visa dig. Rubriken och en länk går krypterade via webbläsarens egen aviseringstjänst (Googles, Apples, Mozillas eller Microsofts), som inte kan läsa dem. Att slå av dem, eller logga ut i den webbläsaren, avslutar dem.`,
   legalMailTitle: "E-post",
   legalMailSignIn: "Appen skickar e-post för inloggning och inbjudningar.",
   legalMailEvents: (labels: string[]) =>
@@ -860,6 +893,10 @@ export const w = {
     mailCodes: "E-post: inloggningskoder.",
     mail: (text: string) => `E-post: ${text}`,
     call: (to: string, text: string) => `Ett anrop till ${to}: ${text}`,
+    sms: (text: string) =>
+      `Ett sms: ${text}. Rubrikraden går via den sms-leverantör ägaren anger (SMS_PROVIDER), till dem som har bekräftat sitt nummer och slagit på det, eller till ett nummer på posten när någon som arbetar i appen gör något med den.`,
+    push: (text: string) =>
+      `En webbläsaravisering: ${text}. Rubrikraden och länken går krypterade via webbläsarens egen avisering (Googles, Apples, Mozillas eller Microsofts) till dem som har slagit på den.`,
     callsIn: (text: string) => `Inkommande anrop: ${text}`,
     sentNone: "Bara texten skickas.",
     sentAll: "Fälten som postens sida visar skickas.",
