@@ -5,7 +5,7 @@
 // through the owner's provider (SMS_PROVIDER, 46elks first) or, without settings, writes each
 // text under DATA_DIR as the mail is. A day's texts are capped for the app and for each number;
 // a text the provider may have taken (no answer) is never sent again by itself.
-import { createHash, randomInt } from "node:crypto";
+import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { and, asc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
@@ -82,7 +82,7 @@ export function queueSms(
     } else if (person.phone) {
       // A number on the record: only from a signed-in person's change (or the app's own work),
       // never a visitor's, who could have typed anyone's.
-      if (!viewer) continue;
+      if (!viewer || viewer.system) continue;
       number = wholeNumber(person.phone);
       if (!number) {
         audit(tx as typeof db, viewer, {
@@ -188,8 +188,11 @@ const sentToday = (now: number, to?: string) =>
     .from(outgoingSms)
     .where(
       and(
-        gte(outgoingSms.createdAt, new Date(now - DAY)),
-        or(sql`${outgoingSms.sentAt} is not null`, eq(outgoingSms.unknown, true)),
+        // When it went (or may have): a text queued long before still counts on the day it goes.
+        or(
+          gte(outgoingSms.sentAt, new Date(now - DAY)),
+          and(eq(outgoingSms.unknown, true), gte(outgoingSms.failedAt, new Date(now - DAY))),
+        ),
         to ? eq(outgoingSms.to, to) : undefined,
       ),
     )
@@ -210,6 +213,13 @@ async function sendOne(row: typeof outgoingSms.$inferSelect, now: number): Promi
       record: row.recordId ?? undefined,
       details: { outgoing: row.entry, sms: row.id, ...details },
     });
+  // A user's own number: still theirs (a number changed or removed since is not texted), and
+  // confirmed for anything but its own code.
+  if (row.userId) {
+    const kept = db.select().from(userPhones).where(eq(userPhones.userId, row.userId)).get();
+    if (!kept || kept.phone !== row.to || (row.entry !== CODE_ENTRY && !kept.confirmedAt))
+      return void set({ failedAt: new Date(now), error: w.smsTurnedOff });
+  }
   // Still turned on, for a user's own number (turning it off stops what is queued too).
   if (row.userId && row.entry !== CODE_ENTRY) {
     const on = db
@@ -229,42 +239,64 @@ async function sendOne(row: typeof outgoingSms.$inferSelect, now: number): Promi
     set({ failedAt: new Date(now), error: w.smsOverLimit });
     return void line("text not sent", { error: w.smsOverLimit });
   }
+  // Marked unknown before the provider is asked: a stop between its taking the text and this
+  // record would otherwise send it again at the next start. A clear answer takes it back.
+  set({ failedAt: new Date(now), unknown: true, error: w.smsUnknown });
   const result = await deliver(row.to, row.text, row.id);
+  // A code's text is not kept once it has gone: only its hash is.
+  const text = row.entry === CODE_ENTRY ? { text: w.smsCode("······") } : {};
   if (result === "sent") {
-    set({ sentAt: new Date(now), error: null });
+    set({ sentAt: new Date(now), failedAt: null, unknown: false, error: null, ...text });
     return void line("texted", {});
   }
   if (result === "unknown") {
-    set({ failedAt: new Date(now), unknown: true, error: w.smsUnknown });
+    set({ ...text });
     return void line("text unknown", { error: w.smsUnknown });
   }
   if (!result.retry || now - row.createdAt.getTime() >= DAY) {
-    set({ failedAt: new Date(now), error: result.error });
+    set({ failedAt: new Date(now), unknown: false, error: result.error, ...text });
     return void line("text not sent", { error: result.error });
   }
-  set({ nextAt: new Date(now + pauseAfter(tries)), error: result.error });
+  set({
+    failedAt: null,
+    unknown: false,
+    nextAt: new Date(now + pauseAfter(tries)),
+    error: result.error,
+  });
 }
 
 state.smithableSmsLane = sendTexts;
-state.smithableSmsAgain = (id) =>
-  db
-    .update(outgoingSms)
-    .set({
-      failedAt: null,
-      unknown: false,
-      error: null,
-      tries: 0,
-      createdAt: new Date(),
-      nextAt: new Date(),
-    })
+// Send again: a new row, so the one given up (perhaps billed, when unknown) still counts in the
+// day's caps. Not a code: a code is asked for again under the person's name.
+state.smithableSmsAgain = (id) => {
+  const row = db
+    .select()
+    .from(outgoingSms)
     .where(and(eq(outgoingSms.id, id), isNull(outgoingSms.sentAt)))
-    .run().changes > 0;
+    .get();
+  if (!row || row.entry === CODE_ENTRY || !row.failedAt) return false;
+  db.insert(outgoingSms)
+    .values({
+      entry: row.entry,
+      model: row.model,
+      recordId: row.recordId,
+      userId: row.userId,
+      to: row.to,
+      text: row.text,
+    })
+    .run();
+  return true;
+};
 
 // ── The person's own number and choices (under their name) ────────────────────────────────────
 
 /** The entry a confirmation code goes out as: not a choice, never turned off. */
 const CODE_ENTRY = "phone code";
-const hash = (code: string) => createHash("sha256").update(code).digest("hex");
+/** A code's hash, the person's id as its salt. */
+const hash = (userId: string, code: string) =>
+  createHash("sha256").update(`${userId}:${code}`).digest("hex");
+/** Codes a person may ask for: three a day, one a minute (each costs the owner, and goes to any number). */
+const CODES_A_DAY = 3;
 
 /** The person's number, whether it is confirmed, and the text entries they turned on. */
 export function smsChoices(viewer: Viewer, offered: string[]) {
@@ -286,13 +318,38 @@ export function smsChoices(viewer: Viewer, offered: string[]) {
 export function sendPhoneCode(viewer: Viewer, given: string): void {
   const phone = wholeNumber(given);
   if (!phone) throw new BadInput(w.smsNotWhole);
+  const codes = db
+    .select({ at: outgoingSms.createdAt })
+    .from(outgoingSms)
+    .where(
+      and(
+        eq(outgoingSms.userId, viewer.id),
+        eq(outgoingSms.entry, CODE_ENTRY),
+        gte(outgoingSms.createdAt, new Date(Date.now() - DAY)),
+      ),
+    )
+    .all();
+  if (codes.length >= CODES_A_DAY || codes.some((c) => Date.now() - c.at.getTime() < MINUTE))
+    throw new BadInput(w.smsCodesLimit);
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  // A new number starts with no texts on: each is turned on again for it.
+  const before = db
+    .select({ phone: userPhones.phone })
+    .from(userPhones)
+    .where(eq(userPhones.userId, viewer.id))
+    .get();
   db.transaction((tx) => {
+    if (before && before.phone !== phone)
+      tx.delete(notificationChoices)
+        .where(
+          and(eq(notificationChoices.userId, viewer.id), eq(notificationChoices.channel, "sms")),
+        )
+        .run();
     tx.insert(userPhones)
       .values({
         userId: viewer.id,
         phone,
-        codeHash: hash(code),
+        codeHash: hash(viewer.id, code),
         codeUntil: new Date(Date.now() + 10 * MINUTE),
         codeTries: 0,
       })
@@ -301,7 +358,7 @@ export function sendPhoneCode(viewer: Viewer, given: string): void {
         set: {
           phone,
           confirmedAt: null,
-          codeHash: hash(code),
+          codeHash: hash(viewer.id, code),
           codeUntil: new Date(Date.now() + 10 * MINUTE),
           codeTries: 0,
         },
@@ -324,7 +381,8 @@ export function confirmPhone(viewer: Viewer, code: string): boolean {
     kept.codeTries >= 5
   )
     throw new BadInput(w.smsCodeGone);
-  if (hash(code.trim()) !== kept.codeHash) {
+  // Compared in constant time (both are hex digests of one length).
+  if (!timingSafeEqual(Buffer.from(hash(viewer.id, code.trim())), Buffer.from(kept.codeHash))) {
     db.update(userPhones)
       .set({ codeTries: kept.codeTries + 1 })
       .where(eq(userPhones.userId, viewer.id))

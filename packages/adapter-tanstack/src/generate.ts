@@ -107,7 +107,19 @@ function wordsIfUsed(content: string): string {
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
 export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
-  const ir = spec;
+  // Push and texts go to people who sign in (notifications.md §4, §5): without sign-in an entry
+  // keeps its other channels, and one that only pushed or texted is left out.
+  const ir =
+    options.auth && hasSignIn(options.auth)
+      ? spec
+      : {
+          ...spec,
+          outgoing: spec.outgoing.flatMap((o) => {
+            if (!o.channels) return [o];
+            const channels = o.channels.filter((c) => c === "mail");
+            return channels.length ? [{ ...o, channels, to: "mail" }] : [];
+          }),
+        };
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent()),

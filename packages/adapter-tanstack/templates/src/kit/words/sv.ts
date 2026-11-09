@@ -470,6 +470,7 @@ export const w = {
   smsUnknown:
     "Sms-leverantören svarade inte: den kan ha skickat det. Försöks inte igen av sig själv.",
   smsCode: (code: string) => `Din kod: ${code}. Den bekräftar det här numret för appens sms.`,
+  smsCodesLimit: "Tre koder om dagen, en i minuten: försök igen senare.",
   smsCodeGone: "Koden har gått ut. Be om en ny.",
   smsNoSuch: "Inget sådant sms.",
   smsConfirmFirst: "Bekräfta ditt nummer först.",

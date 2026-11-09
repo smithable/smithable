@@ -492,6 +492,7 @@ export const w = {
   smsOverLimit: "Over the day's limit of texts: Send again works tomorrow.",
   smsUnknown: "The text provider did not answer: it may have sent it. Not tried again by itself.",
   smsCode: (code: string) => `Your code: ${code}. It confirms this number for the app's texts.`,
+  smsCodesLimit: "Three codes a day, one a minute: try again later.",
   smsCodeGone: "The code has run out. Ask for a new one.",
   smsNoSuch: "No such text.",
   smsConfirmFirst: "Confirm your number first.",
