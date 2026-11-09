@@ -128,7 +128,9 @@ export function App() {
       (r) =>
         setFixLine(
           r.ok
-            ? `You are on the fix ${id} (the branch ${r.branch}): repair src/custom/ until the app works, then publish.${r.newer ? ` A newer held version came since you began: merge refs/smithable/fix/${id} into this branch, or delete the branch and open the fix again.` : ""}`
+            ? r.replaced
+              ? `You are on the branch ${r.branch}, as you left it. Its held version is no longer kept, most likely because a newer fix replaced it: publish what you repaired here, or delete the branch once you no longer need its changes.`
+              : `You are on the fix ${id} (the branch ${r.branch}): repair src/custom/ until the app works, then publish.${r.newer ? ` A newer held version came since you began: merge refs/smithable/fix/${id} into this branch, or delete the branch and open the fix again.` : ""}`
             : (r.message ?? "The fix could not be opened."),
         ),
       (e: Error) => setFixLine(e.message),
