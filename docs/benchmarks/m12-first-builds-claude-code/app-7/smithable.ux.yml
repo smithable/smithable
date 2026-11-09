@@ -2,15 +2,17 @@ smithableUx: 0.1
 pages:
   matches:
     table:
-      sort: kickoff
-      columns: [kickoff, team, opponent, venue, status, goalsFor, goalsAgainst]
-  teams:
-    table:
-      view: cards
+      columns: [kickoffAt, team, opponent, venue, status, ourScore, theirScore]
+      sort: -kickoffAt
   players:
     table:
       view: cards
-      sort: number
+    record:
+      subtitle: team
+      detail: [position, shirtNumber]
+  teams:
+    table:
+      view: cards
 tones:
   Match.status:
     played: success
@@ -20,4 +22,4 @@ theme:
   preset: modern
   brand:
     primary: "#15803d"
-    font: Outfit
+    font: Archivo Narrow

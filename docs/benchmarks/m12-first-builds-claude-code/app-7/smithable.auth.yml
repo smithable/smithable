@@ -4,7 +4,7 @@ signIn:
 defaultAccess: private
 roles:
   admin: all
-  member: { pages: all, create: all }
+  member: { pages: all }
 assistant:
   for: signed-in
 public:

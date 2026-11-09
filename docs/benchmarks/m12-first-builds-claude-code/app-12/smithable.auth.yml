@@ -7,12 +7,13 @@ roles:
   admin: all
   staff:
     description: Writes outages and their updates.
-    create: [Incident, IncidentUpdate]
-    write: [Incident, IncidentUpdate]
+    pages: [overview, incidents, updates]
+    create: all
+    write: all
 assistant:
   for: signed-in
 public:
   pages: [home, privacy]
-  read: [Component, { Incident: { where: { status: [investigating, identified, monitoring, resolved] } } }, IncidentUpdate]
+  read: [Component, Incident, IncidentUpdate]
 defaultRole: staff
 admins: [johan@smithable.ai]

@@ -7,20 +7,19 @@ roles:
   staff:
     description: Union staff who post jobs and handle applications.
     pages: all
-    create: all
-    read: [Application]
+    create: [Job]
+    read: [Job, Application]
     write: [Job, Application]
     delete: [Job]
-    actions: all
   member:
-    description: Union members who look for work and apply.
-    pages: [home, jobs, myApplications]
+    description: Union members who browse jobs and apply.
+    pages: [jobs, myApplications]
     create: [Application]
-    actions: none
+    read: [Job]
 assistant:
   for: signed-in
+defaultRole: member
 public:
   pages: [home, jobs, privacy]
-  read: [{ Job: { where: { status: open } } }]
-defaultRole: member
+  read: [{ Job: { where: { open: true } } }]
 admins: [johan@smithable.ai]

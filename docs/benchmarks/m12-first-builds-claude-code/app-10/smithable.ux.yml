@@ -3,13 +3,9 @@ pages:
   recipes:
     table:
       view: cards
+      sort: name
     record:
       pictures: aside
-    icon: book
-  shoppingLists:
-    table:
-      sort: neededBy
-    icon: cart
 tones:
   ShoppingList.status:
     done: success

@@ -1,26 +1,15 @@
 smithableContent: 0.1
-actions:
-  markReturned:
-    label: Mark returned
 pages:
-  myTools:
-    title: My tools
-  loans:
-    title: Lent out
   home:
+    features:
+      items: [{ title: "Borrow, don't buy", text: Need a drill for one afternoon? Find one a few doors away instead of buying a new one. }, { title: Share what sits in your shed, text: "List the ladder, hedge trimmer or pressure washer you rarely use and let neighbors put it to work." }, { title: Keep track of every loan, text: "Note when a tool goes out and when it is due back, and mark it returned with one click." }, { title: Get to know your street, text: Every loan is a reason to say hello to someone who lives nearby. }]
+    faq:
+      items: [{ question: Does it cost anything?, answer: No. Neighbors lend their tools for free. }, { question: How do I borrow a tool?, answer: "Sign in, open the tool and send its owner a message to agree on a time, then record the loan." }, { question: What if a tool breaks?, answer: Talk it over with the owner. Most neighbors agree on a fair fix or a replacement. }]
     hero:
-      title: Borrow it from next door
-      subtitle: Why buy a drill you'll use twice a year? See what your neighbors are willing to lend, and share what sits in your own shed.
-      button: Browse tools
-      secondButton: Lend a tool
       image:
         src: images/hero.webp
         alt: A carpenter's workshop with a workbench, hand tools on the wall and sawdust in the light from a window
         generated: true
-    features:
-      items: [{ title: See what's nearby, text: "Look through the tools neighbors have listed, with photos, condition and where to pick them up." }, { title: Ask the owner, text: Send a short note from the tool's page to agree on when to collect it and when to bring it back. }, { title: Keep track of what's out, text: Lenders note who has which tool and mark it returned when it comes home. }]
-    faq:
-      items: [{ question: Does it cost anything?, answer: "No. Lending happens between neighbors, free of charge." }, { question: Who can see my name and address?, answer: Visitors only see the tools. Your details stay private until you reply to someone's request. }, { question: What if a tool breaks?, answer: "Talk it over with the owner. Write any quirks in the description, so borrowers know before they ask." }]
 logo:
   src: images/logo.webp
   alt: A toolbox

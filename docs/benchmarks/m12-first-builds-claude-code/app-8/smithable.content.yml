@@ -2,9 +2,9 @@ smithableContent: 0.1
 pages:
   home:
     features:
-      items: [{ title: A full programme, text: "Browse every talk by day, room and track, and plan which sessions you want to catch." }, { title: Meet the speakers, text: "Read about the people on stage, where they work and what they will talk about." }, { title: Register in a minute, text: "Sign in with your email, pick your ticket and tell us about any dietary needs." }]
+      items: [{ title: The full programme, text: "Browse every talk by day and time, with the room and how long it runs." }, { title: Meet the speakers, text: Read about the people on stage and see everything each of them presents. }, { title: Save your seat, text: Register for the talks you want and see how many places are left. }]
     faq:
-      items: [{ question: How do I register?, answer: Sign in with your email address and fill in your registration. You can change it later. }, { question: Can I cancel my registration?, answer: "Yes. Open your registration and press Cancel registration, so your place can go to someone else." }, { question: Is there a student ticket?, answer: Yes. Choose the student ticket when you register. }]
+      items: [{ question: Do I need an account to register?, answer: Yes. Sign in with your email address and you can register for talks in a few clicks. }, { question: Can I cancel a registration?, answer: "You can cancel from My registrations at any time before the talk starts, freeing your seat for someone else." }, { question: What happens when a talk is full?, answer: Registration closes once all places are taken. Keep an eye on the schedule in case a seat frees up. }]
     hero:
       image:
         src: images/hero.webp

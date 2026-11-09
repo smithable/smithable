@@ -1,7 +1,7 @@
 smithable: 0.1
 app:
-  name: Podium Conference
-  description: Programme, speakers and attendee registration for a conference.
+  name: Conference Hub
+  description: Programme, speakers and talk registration for a conference.
   currency: EUR
   timezone: Europe/Stockholm
 models:
@@ -15,64 +15,60 @@ models:
   Talk:
     fields:
       title: string!
-      abstract: markdown
+      summary: text
       speaker: Speaker!
       startsAt: datetime!
       durationMinutes: int! = 45
       room: string
-      track: keynote | technical | business | workshop
+      capacity: int! = 100
+      registrations: Registration[]
+      placesLeft:
+        type: int
+        formula: capacity - COUNT(registrations)
   Registration:
     fields:
-      fullName: string!
-      email: email! unique
-      company: string
-      ticket: standard | student | speaker
-      dietaryNeeds: text
-      status: confirmed | cancelled
-    namedBy: fullName
+      talk: Talk! unique
+      attendee: User
+    namedBy: talk
+    ownedBy: attendee
+    capacity:
+      per: talk
+      max: talk.capacity
+      closes: talk.startsAt
+      cancelUntil: talk.startsAt
 pages:
+  schedule:
+    calendar:
+      model: Talk
+      starts: startsAt
+  my-registrations:
+    crud: Registration
+  talks:
+    crud: Talk
+    filters: [speaker, startsAt]
+    defaultFilter:
+      startsAt: upcoming
+  speakers:
+    crud: Speaker
+  registrations:
+    crud: Registration
+    filters: [talk]
   home:
     route: /
     landing:
       hero:
-        button: my-registration
-        secondButton: programme
-      speakersShown:
-        records: Speaker
+        button: schedule
+        secondButton: speakers
       features:
+      speakersList:
+        records: Speaker
       faq:
       callToAction:
-        button: my-registration
+        button: schedule
       footer:
-  programme:
-    calendar:
-      model: Talk
-      starts: startsAt
-  talks:
-    crud: Talk
-    filters: [speaker, track, startsAt]
-  speakers:
-    crud: Speaker
-  my-registration:
-    crud: Registration
-    mine: true
-  registrations:
-    crud: Registration
-    filters: [ticket, status]
-    search: [fullName, email, company]
   privacy:
     route: /privacy
     legal: privacy
-actions:
-  cancelRegistration:
-    on: Registration
-    when:
-      status: confirmed
-    set:
-      status: cancelled
-    intent: The attendee no longer comes to the conference.
-navigation:
-  main: [home, programme, talks, speakers, my-registration, registrations, privacy]
-  conference: [programme, talks, speakers]
-  registration: [my-registration, registrations]
-  website: [home]
+  admin:
+    data: all
+navigation: [schedule, speakers, my-registrations, talks, registrations, home, admin]

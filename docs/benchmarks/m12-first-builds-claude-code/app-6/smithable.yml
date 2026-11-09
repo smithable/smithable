@@ -1,21 +1,22 @@
 smithable: 0.1
 app:
-  name: Union Jobs
-  description: Job posts from the local union, where members find work and apply.
+  name: Local 214 Jobs
+  description: "The union's job board: staff post openings and members apply for them."
   currency: USD
-  timezone: America/New_York
+  timezone: America/Chicago
 models:
   Job:
     fields:
       title: string!
       employer: string!
+      trade: carpentry | electrical | plumbing | laborer | operator | other
+      type: fullTime | partTime | temporary | apprenticeship
       location: string
-      trade: string
-      jobType: fullTime | partTime | temporary | apprenticeship
       pay: string
       description: text!
+      startsOn: date
       closesOn: date
-      status: open | closed
+      open: bool = true
       applications: Application[]
   Application:
     fields:
@@ -23,36 +24,38 @@ models:
         type: Job!
         unique: owner
       name: string!
-      email: email!
-      phone: phone
+      phone: phone!
       memberNumber: string
       message: text
       resume: file
       status:
-        type: submitted | shortlisted | hired | declined
+        type: submitted | shortlisted | accepted | declined
         by: app
 pages:
   jobs:
-    route: /
     crud: Job
-    search: [title, employer, location, trade, description]
-    filters: [jobType, status, closesOn]
+    search: [title, employer, location, description]
+    filters: [trade, type, open, closesOn]
     defaultFilter:
-      status: open
-    sortable: [closesOn, createdAt]
-    actions: [closeJob, reopenJob]
+      open: true
+    actions: [closeJob]
   myApplications:
     crud: Application
     mine: true
   applications:
     crud: Application
+    search: [name, memberNumber]
     filters: [job, status]
   home:
-    route: /welcome
+    route: /
     landing:
       hero:
         button: jobs
         secondButton: myApplications
+      openJobs:
+        records: Job
+        where:
+          open: true
       features:
       faq:
       footer:
@@ -62,33 +65,27 @@ pages:
   team:
     users: manage
 actions:
-  closeJob:
-    on: Job
-    when:
-      status: open
-    set:
-      status: closed
-  reopenJob:
-    on: Job
-    when:
-      status: closed
-    set:
-      status: open
   shortlist:
     on: Application
     when:
       status: submitted
     set:
       status: shortlisted
-  hire:
+  accept:
     on: Application
     when:
       status: [submitted, shortlisted]
     set:
-      status: hired
+      status: accepted
   decline:
     on: Application
     when:
       status: [submitted, shortlisted]
     set:
       status: declined
+  closeJob:
+    on: Job
+    when:
+      open: true
+    set:
+      open: false
