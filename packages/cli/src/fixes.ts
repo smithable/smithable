@@ -288,3 +288,46 @@ export function migrationKind(sql: string[]): Fix["migration"] {
       !/\b(?:UNIQUE|PRIMARY KEY|REFERENCES|CHECK|CONSTRAINT)\b/i.test(s));
   return statements.every(adds) ? "additive" : "destructive";
 }
+
+/** A schema as drizzle-kit keeps it after each migration (drizzle/meta/NNNN_snapshot.json). */
+export interface SchemaSnapshot {
+  tables: Record<
+    string,
+    { name: string; columns: Record<string, { name: string; type: string; notNull?: boolean }> }
+  >;
+}
+
+/**
+ * What a destructive migration loses, one plain line each (fixes-reach-apps §5 "Data"): the
+ * tables and columns that go, the columns whose type changes and those that become required.
+ * Words only, never a value. The service asks the owner to confirm with these lines; with more
+ * than 40 it treats the change as unknown and keeps the update held.
+ */
+export function migrationConsequences(
+  before: SchemaSnapshot,
+  after: SchemaSnapshot,
+): { about: "records"; says: string }[] {
+  const lines: string[] = [];
+  const now = new Map(Object.values(after.tables).map((t) => [t.name, t]));
+  for (const table of Object.values(before.tables)) {
+    const later = now.get(table.name);
+    if (!later) {
+      lines.push(`The table ${table.name} is removed, with all its records.`);
+      continue;
+    }
+    for (const column of Object.values(table.columns)) {
+      const next = later.columns[column.name];
+      if (!next)
+        lines.push(`The column ${column.name} of ${table.name} is removed, with its values.`);
+      else if (next.type !== column.type)
+        lines.push(
+          `The column ${column.name} of ${table.name} changes from ${column.type} to ${next.type}: values that do not convert are lost.`,
+        );
+      else if (next.notNull && !column.notNull)
+        lines.push(
+          `The column ${column.name} of ${table.name} becomes required: records without a value stop the update.`,
+        );
+    }
+  }
+  return lines.map((says) => ({ about: "records" as const, says: says.slice(0, 500) }));
+}
