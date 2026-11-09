@@ -3,6 +3,7 @@
 import { isMap, LineCounter, parseDocument } from "yaml";
 import { ParseContext } from "./context.js";
 import type { Diagnostic } from "./diagnostics.js";
+import type { SpecIR } from "./ir.js";
 import { checkJson } from "./plugin.js";
 import type { JsonSchema } from "./section.js";
 import { rejectYamlFeatures } from "./spec.js";
@@ -31,6 +32,13 @@ export interface AnalyticsSetting {
   provider: AnalyticsProvider;
   id: string;
 }
+
+/**
+ * The payment providers an app may name (docs/design/payments.md §3.5, §5): one per app. `fake`
+ * is the app's own page, for development, tests and previews.
+ */
+export const PAYMENT_PROVIDERS = ["stripe", "mollie", "fake"] as const;
+export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 /** An exact version like 4.4.1 (a prerelease tag allowed); what `packages` may hold. */
 export const EXACT_VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
@@ -69,6 +77,19 @@ export const CONTEXT_SCHEMA: JsonSchema = {
       properties: {
         policy: { enum: ["local-only", "eu-only", "best-available", "custom"] },
         allow: strings,
+      },
+    },
+    payments: {
+      type: "object",
+      description:
+        "Who takes the payments of the spec's payments section; its keys are settings, never in a file.",
+      required: ["provider"],
+      additionalProperties: false,
+      properties: {
+        provider: {
+          enum: [...PAYMENT_PROVIDERS],
+          description: "stripe, mollie, or fake (the app's own page, for development and tests).",
+        },
       },
     },
   },
@@ -124,4 +145,33 @@ export function analyticsOf(text: string | undefined): AnalyticsSetting | undefi
   return provider && provider in ANALYTICS && typeof id === "string"
     ? { provider: provider as AnalyticsProvider, id }
     : undefined;
+}
+
+/** The payment provider a valid smithable.context.yml names, if any. */
+export function paymentProviderOf(text: string | undefined): PaymentProvider | undefined {
+  if (!text) return undefined;
+  const provider = (parseDocument(text).toJSON()?.payments as { provider?: unknown } | undefined)
+    ?.provider;
+  return PAYMENT_PROVIDERS.find((p) => p === provider);
+}
+
+/**
+ * A note, never an error, when the spec takes payments and the context file names no provider
+ * (payments.md §3.5): the app works with `fake` until a release, which needs a real one.
+ */
+export function paymentsProviderNote(
+  ir: Pick<SpecIR, "payments">,
+  context: { path: string; text?: string },
+): Diagnostic | undefined {
+  if (!ir.payments.length || paymentProviderOf(context.text)) return undefined;
+  return {
+    severity: "note",
+    code: "payments-no-provider",
+    message:
+      "The app takes payments and smithable.context.yml names no provider: development and preview use fake; a release needs a provider.",
+    hint: "smithable op setPaymentProvider stripe (or mollie).",
+    file: context.path,
+    line: 1,
+    column: 1,
+  };
 }

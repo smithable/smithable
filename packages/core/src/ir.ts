@@ -16,6 +16,14 @@ export interface SpecIR {
   outgoing: OutgoingIR[];
   /** Addresses other services call, each making a record or handing the call to code (integrations.md §3). */
   incoming: IncomingIR[];
+  /** What a record is paid for on a payment provider's page (docs/design/payments.md §3). */
+  payments: PaymentIR[];
+  /**
+   * Models the app has without the spec writing them, written only by the kit: `Payment` and
+   * `PaymentRefund` when there is a `payments` section (payments.md §3.3). Not in `models`, so
+   * no section's check or operation takes them for the maker's own.
+   */
+  builtInModels?: ModelIR[];
   queries: QueryIR[];
   pages: PageIR[];
   navigation: MenuIR[];
@@ -130,6 +138,12 @@ export interface ModelIR extends SemanticText {
    * the record; an optional one only the file.
    */
   review?: string[];
+  /**
+   * Its records are paid to be created (a payments entry with `when: created`, payments.md
+   * §3.2): written held until the provider's word comes. The adapter adds the held column and
+   * refuses a visitor's API create (§4.7).
+   */
+  heldByPayment?: true;
 }
 
 export interface CapacityIR {
@@ -811,6 +825,13 @@ export interface TimerIR {
   schedule: TimerScheduleIR;
 }
 
+/** A built-in channel of an outgoing entry: a mail, a browser push, a text message. */
+export type Channel = "mail" | "push" | "sms";
+
+/** An entry's built-in channels; an IR made without them reads `to: "mail"` as mail. */
+export const channelsOf = (o: Pick<OutgoingIR, "to" | "channels">): Channel[] | undefined =>
+  o.channels ?? (o.to === "mail" ? ["mail"] : undefined);
+
 export interface OutgoingIR {
   name: string;
   /**
@@ -824,6 +845,8 @@ export interface OutgoingIR {
     | { model: string; event: "created" | "changed" | "deleted" }
     | { model: string; action: string }
     | { model: string; timer: string; clock?: true }
+    /** A payment of the payments entry `payment` succeeded, on the paid record (payments.md §4.3). */
+    | { model: string; payment: string }
     | { custom: string };
   /**
    * Only for records that fit: a creation or deletion when the record fits, a change when the
@@ -832,9 +855,19 @@ export interface OutgoingIR {
   where?: Condition;
   /** For `<Model> changed`: only a change of one of these stored fields counts. */
   fields?: string[];
-  /** "mail", or the name of a target (camelCase) whose address and secret are settings. */
+  /**
+   * The name of a target (camelCase) whose address and secret are settings; or, when the entry
+   * goes by built-in channels, the first of `channels` ("mail" whenever mail is one of them, so
+   * `to === "mail"` still finds every entry that mails).
+   */
   to: string;
-  /** For mail: who gets it. */
+  /**
+   * The built-in channels the entry goes by, in the order mail, push, sms
+   * (docs/design/notifications.md §4): present for every entry whose `to` is a channel or a
+   * list of them (`to: mail` gives ["mail"]), absent for a target.
+   */
+  channels?: Channel[];
+  /** For the built-in channels: who gets it, reached by every one of them. */
   recipient?: RecipientIR;
   /**
    * The fields the mail lists under its text and a call's record carries, in this order; "none"
@@ -885,10 +918,11 @@ export type RecipientIR =
   /** Every user with the role. */
   | { kind: "role"; role: string }
   /**
-   * An address on the record: an `email` field or a field that refers to User, on the record
-   * itself (one name) or one reference away (two: `customer.email`).
+   * An address on the record: an `email` field, a `phone` field (for sms) or a field that
+   * refers to User, on the record itself (one name) or one reference away (two:
+   * `customer.email`).
    */
-  | { kind: "field"; path: string[]; via: "email" | "user" }
+  | { kind: "field"; path: string[]; via: "email" | "phone" | "user" }
   /**
    * Each record of a list field of the record (`bookings.owner`, `bookings.contact`): its
    * owner, or an address on it. `model` is the list's model.
@@ -897,7 +931,7 @@ export type RecipientIR =
       kind: "list";
       list: string;
       model: string;
-      each: { kind: "owner" } | { kind: "field"; field: string; via: "email" | "user" };
+      each: { kind: "owner" } | { kind: "field"; field: string; via: "email" | "phone" | "user" };
     };
 
 export interface MenuIR {
@@ -1003,3 +1037,81 @@ export const FILES_MAX = 10;
 
 /** A field whose value is an uploaded file: a picture or a document, one or several. */
 export const isUpload = (f: FieldIR): boolean => storesPictures(f) || storesFiles(f);
+
+// Payments (docs/design/payments.md §3, §4.3).
+
+/** A payments entry: what a record of `on` is paid for, how much, when, and what follows. */
+export interface PaymentIR {
+  name: string;
+  /** The model whose record is paid for. */
+  on: string;
+  /** A money field of `on`, stored or computed, read on the server when the payment starts. */
+  amount: string;
+  /** `created`: pay to create (the record is held until paid); or a condition on the record. */
+  when: "created" | Condition;
+  /** What a successful payment sets on the record, as a standard action's `set` (nothing asked). */
+  paid?: { set: ActionValueIR[] };
+  /** Who may refund in the app (admins always may) and, optionally, on which records. */
+  refund?: { by: string[]; when?: Condition };
+  /** What the payer sees on the provider's page, with `{path}` placeholders; unsaid, the record's title. */
+  description?: string;
+}
+
+export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunding", "refunded"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+/** Who moves a Payment: the provider's verified word, the app itself (a timer, its own refund), or a person. */
+export type PaymentMover = "provider" | "app" | "person";
+
+/**
+ * The only moves of a Payment's status (payments.md §4.3), for the kit and the tests alike; any
+ * other event changes nothing. `paid.set` is applied only on the first move of a pending one to paid.
+ */
+export const PAYMENT_MOVES: readonly {
+  from: PaymentStatus;
+  to: PaymentStatus;
+  by: readonly PaymentMover[];
+  why: string;
+}[] = [
+  { from: "pending", to: "paid", by: ["provider"], why: "the provider's success, amounts equal" },
+  {
+    from: "pending",
+    to: "failed",
+    by: ["provider", "app"],
+    why: "the provider's failure or expiry; the hold timer; an unfinished checkout replaced",
+  },
+  {
+    from: "failed",
+    to: "paid",
+    by: ["provider"],
+    why: "a success after the Payment was given up: recorded, then refunded by the app",
+  },
+  {
+    from: "paid",
+    to: "refunding",
+    by: ["person", "app"],
+    why: "a refund asked in the app (by the app itself only for a payment after the hold)",
+  },
+  {
+    from: "paid",
+    to: "refunded",
+    by: ["provider"],
+    why: "the provider's word that the whole amount went back",
+  },
+  {
+    from: "refunding",
+    to: "refunded",
+    by: ["provider"],
+    why: "the provider's word that the whole amount went back",
+  },
+  {
+    from: "refunding",
+    to: "paid",
+    by: ["provider"],
+    why: "the provider's refusal of the refund, noted",
+  },
+];
+
+/** Whether a Payment may move from one status to another, and by whom. */
+export const paymentMoves = (from: PaymentStatus, to: PaymentStatus, by: PaymentMover): boolean =>
+  PAYMENT_MOVES.some((m) => m.from === from && m.to === to && m.by.includes(by));

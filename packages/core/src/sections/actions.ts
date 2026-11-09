@@ -1529,7 +1529,7 @@ function readWith(
  * The values of `set`, or of one record in `add`: a literal the field accepts, a formula worked
  * out on the record the action runs on (as a default is), or nothing, to ask the person for it.
  */
-function readValues(
+export function readValues(
   ctx: ParseContext,
   entry: Entry,
   target: ModelIR,

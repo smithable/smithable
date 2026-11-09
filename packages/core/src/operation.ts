@@ -96,7 +96,7 @@ export interface Note {
  * a choice value of a field, a landing section of a page. `label` is how Builder asks for it.
  */
 export type ArgRef = { label?: string } & (
-  | { ref: "model" | "page" | "menu" | "outgoing" | "incoming" | "timer" }
+  | { ref: "model" | "page" | "menu" | "outgoing" | "incoming" | "timer" | "payment" }
   | { ref: "role" }
   /** What a grant names: pages, models or custom actions, by the argument `what` names. */
   | { ref: "grantNames"; what: string }
@@ -119,6 +119,7 @@ const REF_HINTS: Record<ArgRef["ref"], string> = {
   outgoing: "An entry under outgoing, e.g. bookingMade.",
   incoming: "An entry under incoming, e.g. monitorDown.",
   timer: "A timer, e.g. remind.",
+  payment: "An entry under payments, e.g. orderPayment.",
 };
 
 /** What a form says under an argument that names something, when its schema says nothing. */

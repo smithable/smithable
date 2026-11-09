@@ -77,6 +77,7 @@ test("the reports.md §2.2 example: a clock timer's entry carries a list and rea
       name: "todaysBookings",
       when: { model: "Booking", timer: "morning", clock: true },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "role", role: "admin" },
       list: {
         model: "Booking",
@@ -90,6 +91,7 @@ test("the reports.md §2.2 example: a clock timer's entry carries a list and rea
       name: "weekAhead",
       when: { model: "Booking", timer: "morning", clock: true },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "role", role: "staff" },
       list: {
         model: "Booking",
@@ -105,6 +107,7 @@ test("the reports.md §2.2 example: a clock timer's entry carries a list and rea
       name: "atRisk",
       when: { model: "Booking", timer: "monthly", clock: true },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "role", role: "staff" },
       list: { model: "Booking", query: "churnRisk", limit: 10, columns: ["session", "status"] },
       empty: "skip",

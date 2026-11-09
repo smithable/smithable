@@ -136,7 +136,9 @@ is: in the generated schema, written only by the kit, never edited by hand. Its 
 | `amount` | money, as asked of the provider |
 | `currency` | the app's currency when it was asked |
 | `status` | `pending`, `paid`, `failed`, `refunding`, `refunded` (the moves between them in §4.3) |
-| `provider` | the provider's name from the context file (`stripe`, `mollie`, `fake`), test or live mode, and the provider's account id where it gives one |
+| `provider` | the provider's name from the context file (`stripe`, `mollie`, `fake`) |
+| `providerMode` | `test` or `live`: the provider's mode the payment was made in |
+| `providerAccount` | the provider's account id, where it gives one (optional) |
 | `reference` | the provider's own id for the payment |
 | `note` | what went wrong, in the app's words (declined, amount differs, paid twice, paid after the hold, the record no longer asks, refund refused, disputed) |
 | `createdAt`, `paidAt`, `refundedAt` | when |
@@ -195,7 +197,7 @@ payments: { provider: mollie }       # stripe | mollie | fake
   `when`, `paid.set` and the description; removing one the entry uses is refused until the entry
   changes. `removePayment` keeps the Payment lines there are (the table stays until the section
   is gone and the owner removes it with a migration, as for any model's data), and says so.
-- **Summary:** "An order is paid when it is placed, on the payment provider's page; a paid order
+- **Summary:** "An order is paid when it is added, on the payment provider's page; a paid order
   becomes paid: yes. Admins may refund a declined order." / "An invoice can be paid while it is
   sent or overdue; a paid invoice becomes paid."
 - **Validation:**
@@ -544,11 +546,14 @@ the audit log.
 
 ## 9. Build order
 
-1. **Core (Fable).** The section, its validation, the built-in `Payment` model in the IR, the
+1. **Core (Fable).** Built in #1081. The section, its validation, the built-in `Payment` model in the IR, the
    held state on `when: created` and the refusal of a visitor's API create (§4.7), the Payment's
    states and their moves (§4.3), the currencies a section accepts, the payments entry as an
    outgoing `when`, the `{pay}` placeholder, the operations, the summary words, the schema, the context file's key, the spec
-   reference, ARCHITECTURE §6.3 and §3.4.
+   reference, ARCHITECTURE §6.3 and §3.4. As built: the built-in models are the IR's `builtInModels` (`Payment`
+   and its refund lines, `PaymentRefund`), the moves are core's `PAYMENT_MOVES`, and a pay-to-create
+   model is marked `heldByPayment`, which the adapter consumes in step 2 (the held column, the
+   refused API create).
 2. **The kit (A).** The provider interface, `fake`, the checkout flow, the return page, the
    payments address, the hold timer, the Payment list and page, the refund button, the words,
    the privacy page's and the app card's lines; `test:apps` steps on kiosk with `fake`.

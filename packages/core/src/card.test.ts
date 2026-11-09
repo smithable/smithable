@@ -310,6 +310,10 @@ const SHOWN = [
   "smithable.context.yml:ai.policy",
 ];
 const LEFT_OUT: Record<string, string> = {
+  "smithable.yml:payments.**":
+    "what a record is paid for: the card's payments part comes with the kit (payments.md §5, step 2)",
+  "smithable.context.yml:payments.**":
+    "the payment provider: on the card with the kit (payments.md §5)",
   "smithable.yml:smithable": "the file's format version",
   "smithable.auth.yml:smithableAuth": "the file's format version",
   "smithable.context.yml:smithableContext": "the file's format version",

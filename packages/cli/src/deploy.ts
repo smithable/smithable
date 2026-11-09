@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { validateAuth, validateSpec } from "@smithable/core";
+import { channelsOf, validateAuth, validateSpec } from "@smithable/core";
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import {
@@ -232,7 +232,7 @@ function targets(dir: string): string[] {
   const path = join(dir, "smithable.yml");
   if (!existsSync(path)) return [];
   const { ir } = validateSpec({ path, text: readFileSync(path, "utf8") });
-  return [...new Set((ir?.outgoing ?? []).map((o) => o.to).filter((to) => to !== "mail"))];
+  return [...new Set((ir?.outgoing ?? []).filter((o) => !channelsOf(o)).map((o) => o.to))];
 }
 
 /** Each target's settings: OUTGOING_<TARGET>_URL and OUTGOING_<TARGET>_SECRET. */
