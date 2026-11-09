@@ -372,7 +372,10 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
     ],
     // The recipients are the group's (above); the mail and the push are sent inside its language.
     ["    const to = entry.to(tx, record);\n", ""],
-    [/(\n {4}(?:if \(entry\.mail !== false\) )?queueMail\(tx, viewer, happening, to, entry\.when === "created"\);)/, "$1\n      });"],
+    [
+      /(\n {4}(?:if \(entry\.mail !== false\) )?queueMail\(tx, viewer, happening, to, entry\.when === "created"\);)/,
+      "$1\n      });",
+    ],
     [
       /^import /m,
       'import { speaking } from "#/kit/language.server";\nimport { language } from "#/kit/words";\nimport ',
