@@ -93,6 +93,14 @@ const PAGES = [
     group: "Build",
   },
   {
+    src: "docs/site/import.md",
+    out: "import.html",
+    description:
+      "Bring records in from a spreadsheet: a list page's Import reads a CSV file, shows every problem by line and column before anything goes in, and can be undone for a day.",
+    nav: "Import",
+    group: "Build",
+  },
+  {
     src: "docs/site/ask.md",
     out: "ask.html",
     description:
