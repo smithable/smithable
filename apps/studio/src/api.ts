@@ -345,6 +345,9 @@ export const api = {
   /** The language's empty texts drafted by the configured model (smithable translate). */
   translate: (language: string) => changing(call<Result>("/api/translate", { language })),
   undo: () => changing(call<Result>("/api/undo", {})),
+  /** Opens a held fix's version on its own branch (A 245). */
+  openFix: (id: string) =>
+    call<{ ok: boolean; branch?: string; newer?: true; message?: string }>("/api/fix/open", { id }),
   /** One change undone by its id (studio-v3.md §3): an earlier one as a new change, or refused. */
   undoChange: (change: string, confirm = false) =>
     changing(call<Result>("/api/undo", { change, confirm })),
