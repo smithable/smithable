@@ -36,6 +36,8 @@ interface ShellProps {
   onRename?: (name: string) => Promise<void>;
   /** Keeps the person's own time zone and clock. */
   onTime?: (time: Person) => Promise<void>;
+  /** More of the person's own settings, under their name (the chime of live notices). */
+  settings?: React.ReactNode;
   /** A number beside a menu entry, by its route: the files waiting on the review page. */
   counts?: Record<string, number>;
   /**
@@ -262,6 +264,7 @@ function Navigation({
   onSignOut,
   onRename,
   onTime,
+  settings,
   counts,
   onNavigate,
   active,
@@ -328,6 +331,7 @@ function Navigation({
                   email={viewer.email}
                   onRename={onRename}
                   onTime={onTime}
+                  settings={settings}
                 />
               ) : (
                 <p className="truncate font-semibold" title={viewer.email}>
@@ -362,12 +366,14 @@ function YourName({
   email,
   onRename,
   onTime,
+  settings,
 }: {
   name: string;
   email: string;
   onRename: (name: string) => Promise<void>;
   /** Keeps the person's own time zone and clock. */
   onTime?: (time: Person) => Promise<void>;
+  settings?: React.ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   // Drawn twice, in the sidebar and in the phone's menu: each its own id.
@@ -479,6 +485,7 @@ function YourName({
                 </div>
               </>
             )}
+            {opened && settings}
             {failure && (
               <p role="alert" className="text-sm text-destructive">
                 {failure}

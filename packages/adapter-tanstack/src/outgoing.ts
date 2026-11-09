@@ -2,6 +2,7 @@
 // transaction, works out which entries count, whom they mail and what the mail shows, and queues
 // it through src/kit/outgoing.server.ts. The data functions and actions call it.
 import {
+  type AuthIR,
   type ContentIR,
   camel,
   type FieldIR,
@@ -20,6 +21,7 @@ import {
   type UxIR,
 } from "@smithable/core";
 import { apiFields, readCode } from "./api.js";
+import { hasSignIn } from "./auth.js";
 import { fieldUi } from "./data.js";
 import { nameColumns, nameFunction } from "./names.js";
 import {
@@ -35,6 +37,55 @@ import {
   shownTitle,
   type Texts,
 } from "./shared.js";
+
+/**
+ * Live in the app (notifications.md §3): the models whose records' mail is also an event for the
+ * recipients who have the app open. Only with sign-in (the stream is a signed-in person's), and
+ * only mail about one record (a list mail on a clock, and a call to a target, name no person).
+ */
+export function liveModels(ir: SpecIR, auth: AuthIR | undefined): string[] {
+  if (!auth || !hasSignIn(auth)) return [];
+  return [
+    ...new Set(
+      ir.outgoing.flatMap((o) =>
+        o.to === "mail" && !o.list && "model" in o.when ? [o.when.model] : [],
+      ),
+    ),
+  ].sort();
+}
+
+/** The person's stream of events, `/events`: the session's, checked as it goes. */
+export function liveRoute(ir: SpecIR, t: Texts, models: string[]): string {
+  const used = models.map((m) => names(modelNamed(ir, m), t));
+  return `${HEADER}// Live in the app (notifications.md §3): the signed-in person's events, while the session is on.
+import { createFileRoute } from "@tanstack/react-router";
+${used.map((n, i) => `import { ${n.data} } from "#/generated/${kebab(models[i] as string)}.server";`).join("\n")}
+import { liveReaders, openStream } from "#/kit/live.server";
+import { auth } from "#/lib/auth";
+
+// Whether a person may read a record, by model: the read rule its page applies.
+liveReaders({
+${used.map((n, i) => `  ${JSON.stringify(models[i])}: (viewer, id) => ${n.data}.canRead(viewer, id),`).join("\n")}
+});
+
+export const Route = createFileRoute("/events")({
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        const headers = request.headers;
+        const session = await auth.api.getSession({ headers });
+        if (!session) return new Response("Sign in first.", { status: 401 });
+        const id = session.session.id;
+        // Read from the database each time, without lengthening the session: an open tab is not use.
+        const alive = async () =>
+          (await auth.api.getSession({ headers, query: { disableCookieCache: true, disableRefresh: true } }))?.session.id === id;
+        return openStream(session.user.id, alive, request.signal);
+      },
+    },
+  },
+});
+`;
+}
 
 /**
  * The entries of the outgoing section a record's change fires: mail, and calls to named targets.

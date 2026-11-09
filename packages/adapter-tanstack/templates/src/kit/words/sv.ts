@@ -457,6 +457,9 @@ export const w = {
   asTheApp: "Som appen",
   clock12: "12-timmars",
   clock24: "24-timmars",
+  noticesMore: (n: number) => `och ${n} till`,
+  noticeSoundOffer: "Spela ett ljud för dessa?",
+  noticeSound: "Ett ljud vid varje notis",
   yourNameHelp: "Namnet andra ser i appen.",
   alreadyHas: (_label: string, field: string) =>
     `Det finns redan en post med samma ${field.toLowerCase()}.`,

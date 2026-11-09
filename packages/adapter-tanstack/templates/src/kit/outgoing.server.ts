@@ -149,6 +149,15 @@ export function dayWords(day: string): string {
   return dayText(day);
 }
 
+/** Live in the app (live.server.ts), where the app has it: told of each mail queued. */
+const hooks = globalThis as {
+  smithableOnQueued?: (
+    mail: number,
+    to: { id?: string | null; email: string },
+    happening: Happening,
+  ) => void;
+};
+
 /**
  * Queues the mail to each recipient with an address, in the change's transaction. The person
  * whose change it is is not told about their own change; a confirmation of what they created is
@@ -177,7 +186,8 @@ export function queueMail(
     if (!own && viewer && (person.id === viewer.id || key === viewer.email.toLowerCase())) continue;
     sent.add(key);
     const id = thread ? messageId() : undefined;
-    tx.insert(outgoingMail)
+    const queued = tx
+      .insert(outgoingMail)
       .values({
         entry: happening.entry,
         model: happening.model,
@@ -194,7 +204,13 @@ export function queueMail(
             }
           : {}),
       })
-      .run();
+      .run() as { lastInsertRowid?: number | bigint } | undefined;
+    if (queued?.lastInsertRowid !== undefined)
+      hooks.smithableOnQueued?.(
+        Number(queued.lastInsertRowid),
+        { id: person.id, email },
+        happening,
+      );
     if (thread && id) thread.keep(id);
   }
   if (sent.size) sendSoon();
