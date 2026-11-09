@@ -749,6 +749,8 @@ export const w = {
   paymentDecline: "Decline",
   paymentUnavailable: "Payment is not possible right now. Please try again.",
   paymentGone: "This payment is no longer open.",
+  paymentUnmatched:
+    "The payment came, but not as asked, so nothing was ordered. It will be refunded.",
   /** A chart's bar for a quarter: "Q3 2026". */
   quarterOf: (quarter: number, year: string) => `Q${quarter} ${year}`,
   /** A list's totals row (intents.md §5): "Total of 12". */

@@ -6,7 +6,7 @@
 // record, how much, what a payment sets and tells) is the generated payments module's.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
-import { and, eq, like, lt } from "drizzle-orm";
+import { and, eq, inArray, like, lt } from "drizzle-orm";
 import { db } from "#/db";
 import { appKeys, incomingSeen, payments } from "#/db/schema";
 import { PAYMENT_ENTRIES, PAYMENTS_PROVIDER } from "#/generated/payments.server";
@@ -63,6 +63,8 @@ export interface Provider {
     description: string;
     back: string;
     expiresAt: Date;
+    /** The same for every try of one Payment's checkout, so a retried request makes no second session. */
+    idempotencyKey: string;
   }) => Promise<{ reference: string; url: string; account?: string }>;
   verifyEvent: (request: Request, body: string) => Promise<PaymentEvent | null>;
   /** Asked by the hold timer before a held record is released; "open" lets it go. */
@@ -94,7 +96,11 @@ export const fake: Provider = {
   async verifyEvent(request, body) {
     if (!same(request.headers.get("x-fake-signature") ?? "", fakeSign(body))) return null;
     const event = JSON.parse(body) as PaymentEvent;
-    return typeof event.id === "string" && Number.isInteger(event.payment) ? event : null;
+    return typeof event.id === "string" &&
+      Number.isInteger(event.payment) &&
+      (event.kind === "paid" || event.kind === "failed")
+      ? event
+      : null;
   },
 };
 
@@ -112,8 +118,10 @@ function kept(name: string): string {
 export const fakeSign = (body: string) =>
   createHmac("sha256", kept("payments-fake")).update(body).digest("hex");
 
-const same = (a: string, b: string) =>
-  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const same = (a: string, b: string) => {
+  const [x, y] = [Buffer.from(a), Buffer.from(b)];
+  return x.length === y.length && timingSafeEqual(x, y);
+};
 
 /**
  * The browser that started a payment (§4.2): a cookie bound to the Payment, so its return page
@@ -127,7 +135,7 @@ export function bindBrowser(id: number) {
     path: "/",
     httpOnly: true,
     sameSite: "lax",
-    secure: !import.meta.env.DEV,
+    secure: Boolean(process.env.BETTER_AUTH_URL?.startsWith("https:")),
     maxAge: 24 * 60 * 60,
   });
 }
@@ -258,6 +266,7 @@ export async function checkout(id: number): Promise<string> {
       description: payment.description ?? "",
       back: `/payments/${payment.id}/back`,
       expiresAt: new Date(payment.createdAt.getTime() + holdMinutes() * MINUTE),
+      idempotencyKey: `payment-${payment.id}-checkout`,
     });
     db.update(payments)
       .set({
@@ -270,7 +279,11 @@ export async function checkout(id: number): Promise<string> {
     return made.url;
   } catch (error) {
     log.error("A payment's checkout could not be made", { payment: id, error });
-    db.transaction((tx) => fail(tx, payment, "the provider could not be reached"));
+    // Given up only while no checkout of it was made: one that is open may still be paid.
+    if (
+      !db.select({ url: payments.checkoutUrl }).from(payments).where(eq(payments.id, id)).get()?.url
+    )
+      db.transaction((tx) => fail(tx, payment, "the provider could not be reached"));
     throw new BadInput(w.paymentUnavailable);
   }
 }
@@ -345,6 +358,9 @@ export function applyEvent(event: PaymentEvent, from: Provider): "done" | "seen"
       record: payment.record,
       details: { payment: payment.id, ...(note ? { note } : {}) },
     });
+    // A held record whose money does not match stays out: released, its place freed; the money
+    // is the payer's, refunded from the Payments page (§4.3).
+    if (note && entry?.created) entry.release(tx, payment.record);
     if (!note && entry && !entry.paid(tx, payment.record)) {
       tx.update(payments)
         .set({ note: "the record no longer asks" })
@@ -366,6 +382,7 @@ export function paymentState(id: number) {
     amount: payment.amount,
     currency: payment.currency,
     status: payment.status,
+    note: payment.note,
     description: payment.description ?? "",
     heldUntil: new Date(payment.createdAt.getTime() + holdMinutes() * MINUTE).toISOString(),
   };
@@ -389,12 +406,15 @@ export async function releaseExpired(now = Date.now()): Promise<number> {
     .where(
       and(
         eq(payments.status, "pending"),
+        inArray(
+          payments.entry,
+          Object.keys(PAYMENT_ENTRIES).filter((name) => PAYMENT_ENTRIES[name]?.created),
+        ),
         lt(payments.createdAt, new Date(now - holdMinutes() * MINUTE)),
       ),
     )
     .limit(50)
-    .all()
-    .filter((p) => PAYMENT_ENTRIES[p.entry]?.created);
+    .all();
   let released = 0;
   for (const payment of due) {
     if (chosen?.status && payment.reference && chosen.name === payment.provider) {

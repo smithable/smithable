@@ -1335,11 +1335,10 @@ ${updateBody}
       return titleKey && titleKey !== "id"
         ? `String(${row}.${titleKey} ?? "")`
         : `String(${row}.id)`;
-    const filled = text.replace(
-      /\{([A-Za-z][A-Za-z0-9]*)\}/g,
-      (all, name: string) => value(name) ?? all,
-    );
-    return `\`${filled.replace(/`/g, "\\`")}\``;
+    const filled = text
+      .replace(/[\\`$]/g, (c) => `\\${c}`)
+      .replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (all, name: string) => value(name) ?? all);
+    return `\`${filled}\``;
   };
   const payAmount = payEntry && model.fields.find((f) => f.name === payEntry.amount);
   const paying =
@@ -1351,8 +1350,9 @@ ${updateBody}
               ? `${compute(`(tx.query.${n.tableKey}.findFirst({ where: eq(${n.table}.id, made.id)${aggregatedLists(model).length ? `, with: { ${aggregatedLists(model).map(liveList).join(", ")} }` : ""} }).sync() ?? made)`)}`
               : "made"
           };
-          const amount = Number(priced.${dataKey(payAmount)} ?? 0);
-          if (amount > 0) askPayment(tx, ${JSON.stringify(payEntry.name)}, made.id, amount, ${JSON.stringify(ir.app.currency ?? "EUR")}, ${describe(payEntry.description, "priced")});
+          const amount = Math.round(Number(priced.${dataKey(payAmount)} ?? 0));
+          // Nothing to pay only at exactly zero; a negative or unreadable amount is refused there.
+          if (amount !== 0) askPayment(tx, ${JSON.stringify(payEntry.name)}, made.id, amount, ${JSON.stringify(ir.app.currency ?? "EUR")}, ${describe(payEntry.description, "priced")});
           else made.payHeldAt = tx.update(${n.table}).set({ payHeldAt: null }).where(eq(${n.table}.id, made.id)).returning().get().payHeldAt;
         }`
       : "";
@@ -2118,7 +2118,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
   }${writeChecks}
   /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
   readable(viewer: Viewer | null) {${
-    model.trash || held.length
+    model.trash || held.length || model.heldByPayment
       ? `
 ${model.trash ? "    // What is in the trash is gone to every reader (docs/design/trash.md).\n" : ""}${held.length ? "    // A record waiting for its required file to be approved is its owner's and the reviewers' only (docs/design/file-review.md).\n" : ""}${model.heldByPayment ? "    // A record held for its payment is not there yet for anyone (payments.md §3.2).\n" : ""}    return and(${model.trash ? `isNull(${n.table}.deletedAt), ` : ""}${model.heldByPayment ? `isNull(${n.table}.payHeldAt), ` : ""}${held.length ? `${self}.unheld(viewer), ` : ""}${self}.scoped(viewer));
   },${
@@ -2649,7 +2649,7 @@ ${
 `
     : ""
 }  async create(viewer: Viewer | null, values: ${n.settableValues}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}${payEntry ? ", pay = false" : ""}) {
-    check(${n.access}.create, viewer);
+    check(${n.access}.create, viewer);${payEntry ? "\n    // A visitor makes one only by paying: no other way in skips it (payments.md §4.7).\n    if (viewer === null && !pay) throw new AccessDenied(false);" : ""}
 ${
   access.create.public
     ? `    // Visitors add these without an account: at most ${VISITOR_ROWS.toLocaleString("en")} of theirs, so a flood stops here.

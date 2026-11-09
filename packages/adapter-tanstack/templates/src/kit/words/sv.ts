@@ -710,6 +710,7 @@ export const w = {
   paymentDecline: "Avböj",
   paymentUnavailable: "Betalning går inte just nu. Försök igen.",
   paymentGone: "Den här betalningen är inte längre öppen.",
+  paymentUnmatched: "Betalningen kom, men inte som begärt, så inget beställdes. Den återbetalas.",
   quarterOf: (quarter: number, year: string) => `K${quarter} ${year}`,
   totalsRow: (count: number) => `Summa av ${count}`,
   orderTotal: "Totalt",

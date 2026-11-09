@@ -43,22 +43,29 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
           (f) => `tx.delete(${tableRef(m)}).where(eq(${tableRef(m)}.${dataKey(f)}, record)).run();`,
         ),
     );
+    const changes = [...(model.heldByPayment ? ["payHeldAt: null"] : []), ...set];
     return `  ${p.name}: {
     model: ${JSON.stringify(model.name)},
     created: ${created},
     paid(tx, record) {
       const before = tx.select().from(${table}).where(eq(${table}.id, record)).get();
       if (!before) return false;
-      ${tells ? "const row = " : ""}tx
+      ${
+        changes.length
+          ? `${tells ? "const row = " : ""}tx
         .update(${table})
-        .set({ ${[...(model.heldByPayment ? ["payHeldAt: null"] : []), ...set].join(", ")} })
+        .set({ ${changes.join(", ")} })
         .where(eq(${table}.id, record))
-        ${tells ? ".returning()\n        .get();" : ".run();"}${
-          tells
-            ? `${created ? `\n      // Its own "created" was waiting for the payment (payments.md §3.2).\n      outgoing(tx, APP, ${JSON.stringify(model.name)}, "created", row);` : ""}
-      outgoing(tx, APP, ${JSON.stringify(model.name)}, ${JSON.stringify(`payment:${p.name}`)}, row, before);`
+        ${tells ? ".returning()\n        .get();" : ".run();"}`
+          : tells
+            ? "// Nothing to set: the Payment line says it is paid.\n      const row = before;"
             : ""
-        }
+      }${
+        tells
+          ? `${created ? `\n      // Its own "created" was waiting for the payment (payments.md §3.2).\n      outgoing(tx, APP, ${JSON.stringify(model.name)}, "created", row);` : ""}
+      outgoing(tx, APP, ${JSON.stringify(model.name)}, ${JSON.stringify(`payment:${p.name}`)}, row, before);`
+          : ""
+      }
       return true;
     },
     release(${created ? "tx, record" : "_tx, _record"}) {${
@@ -126,8 +133,9 @@ async function bound(payment: number) {
 export const paymentBack = createServerFn()
   .validator(id)
   .handler(async ({ data }) => {
-    const { status, amount, currency, heldUntil, description } = await bound(data);
-    return { status, amount, currency, heldUntil, description };
+    const { status, amount, currency, heldUntil, description, note } = await bound(data);
+    // Money that came for nothing (the wrong amount, after the hold): said so, not "paid".
+    return { status, amount, currency, heldUntil, description, unmatched: status === "paid" && Boolean(note) };
   });
 
 /** Pay again after coming back: the same checkout while it is open. */

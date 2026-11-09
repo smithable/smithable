@@ -2,7 +2,7 @@
 // It shows the Payment's state as the app knows it: paid once the provider's word has come, and
 // until then a wait that asks again for a minute. The address marks nothing paid by itself.
 import { CircleCheck, CircleX, Clock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { moneyText } from "./format";
@@ -15,6 +15,8 @@ export interface PaymentShown {
   currency: string;
   heldUntil: string;
   description: string;
+  /** Paid, but not as asked (the wrong amount, after the hold): the record was not made. */
+  unmatched?: boolean;
 }
 
 export function PaymentBack({
@@ -29,21 +31,27 @@ export function PaymentBack({
   const [payment, setPayment] = useState(first);
   const [asked, setAsked] = useState(0);
   const [problem, setProblem] = useState<string>();
+  const ask = useRef(refresh);
+  ask.current = refresh;
   // Asks again every three seconds for a minute while the provider's word has not come.
   useEffect(() => {
     if (payment.status !== "pending" || asked >= 20) return;
     const timer = setTimeout(async () => {
-      setPayment(await refresh());
+      setPayment(await ask.current());
       setAsked((n) => n + 1);
     }, 3000);
     return () => clearTimeout(timer);
-  }, [payment.status, asked, refresh]);
+  }, [payment.status, asked]);
   const amount = moneyText(payment.amount, payment.currency);
   const until = whenAt(payment.heldUntil);
   return (
     <main className="mx-auto max-w-lg p-5">
       <Card data-kit="payment-back" className="space-y-4 p-card" aria-live="polite">
-        {payment.status === "paid" || payment.status === "refunding" ? (
+        {payment.unmatched ? (
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <CircleX aria-hidden className="size-6 text-destructive" /> {w.paymentUnmatched}
+          </h1>
+        ) : payment.status === "paid" || payment.status === "refunding" ? (
           <h1 className="flex items-center gap-2 text-xl font-semibold">
             <CircleCheck aria-hidden className="size-6 text-primary" /> {w.paymentPaid(amount)}
           </h1>

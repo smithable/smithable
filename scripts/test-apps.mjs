@@ -1701,7 +1701,7 @@ async function kioskFlow(dir, base) {
  * Payments with the fake provider (payments.md §6, A 241): the test's own payments entry pays for
  * an order to be placed. Paid: the order shows and staff hear of it only then; declined: the order
  * is gone; cancelled and left: released by the hold timer; the provider's word twice is acted on
- * once; a wrong amount is recorded and the order stays held; an unsigned call is refused.
+ * once; a wrong amount is recorded and the order released; an unsigned call is refused.
  */
 async function kioskPaymentFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
@@ -1844,7 +1844,7 @@ async function kioskPaymentFlow(dir, base) {
     await waitFor("mail to staff", () => subjects(before).includes("A new order"));
     if (subjects(before).filter((s) => s === "A new order").length !== 1)
       throw new Error("staff were told twice of one order");
-    // A wrong amount: recorded with its note, the order still held and unpaid.
+    // A wrong amount: recorded with its note, the order released, never let out unpaid.
     const wrong = await orderUpTo("Walt Wrong");
     const asked = one(`select amount from payments where id = ${wrong}`).amount;
     const [less, lessSigned] = signed({
@@ -1857,13 +1857,13 @@ async function kioskPaymentFlow(dir, base) {
     const differs = one(`select status, note from payments where id = ${wrong}`);
     if (differs.status !== "paid" || differs.note !== "amount differs")
       throw new Error(`a wrong amount left ${JSON.stringify(differs)}`);
-    if (!orderOf(wrong).held) throw new Error("an order paid the wrong amount was let out");
+    if (orderOf(wrong)?.id) throw new Error("an order paid the wrong amount stays");
     // Not the provider's: refused.
     const [forged] = signed({ id: "event-forged", payment: wrong, kind: "paid", amount: asked });
     if ((await event(forged, "0".repeat(64))) !== 401)
       throw new Error("an unsigned event was taken");
     console.log(
-      "  ✓ kiosk payments (fake): an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount keeps it held; a forged call is refused",
+      "  ✓ kiosk payments (fake): an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount releases it; a forged call is refused",
     );
   } catch (error) {
     console.log(
