@@ -1629,7 +1629,7 @@ async function kioskFlow(dir, base) {
     await page.getByLabel(/^Email/).fill("pia@archipelago.example");
     await page.getByRole("button", { name: "Send the order" }).click();
     await page.getByText("Order 11 is in.").waitFor({ timeout: 15000 * P });
-    await waitFor("mail to staff", () => subjects(before).includes("A new order"));
+    await waitFor("mail to staff", () => subjects(before).includes("New order 11"));
     // And the text to staff's confirmed number: the title line and the link, written to the file
     // outbox (no SMS settings).
     await waitFor("a text to staff", () =>
@@ -1643,7 +1643,7 @@ async function kioskFlow(dir, base) {
     await waitFor("a push to staff", () => push.got.length > 0);
     push.close();
     const [pushed] = push.got;
-    if (pushed.message.title !== "A new order" || !/^\/orders\/\d+$/.test(pushed.message.link))
+    if (pushed.message.title !== "New order 11" || !/^\/orders\/\d+$/.test(pushed.message.link))
       throw new Error(`the push said ${JSON.stringify(pushed.message)}`);
     if (
       !String(pushed.headers.authorization).startsWith("vapid t=") ||
