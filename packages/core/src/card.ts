@@ -14,6 +14,7 @@ import { ANALYTICS, type AnalyticsProvider } from "./context-file.js";
 import { explainAccess } from "./explain-access.js";
 import {
   type Condition,
+  channelsOf,
   type FieldIR,
   isUpload,
   type ModelIR,
@@ -492,7 +493,9 @@ export function appCard(input: CardInput): CardFacts {
       customIncoming.length +
       ir.queries.length >
     0;
-  const mail = ir.outgoing.filter((o) => o.to === "mail");
+  // Push and text are named here with their step (notifications.md §9); a target is a call.
+  const mail = ir.outgoing.filter((o) => channelsOf(o)?.includes("mail"));
+  const calls = ir.outgoing.filter((o) => !channelsOf(o));
   const legal = ir.pages.find((p) => p.pattern.kind === "legal");
   const hosting = legal
     ? (pick((c) => c.pages[legal.id]?.sections?.operator?.hosting) as string | undefined)
@@ -555,7 +558,7 @@ export function appCard(input: CardInput): CardFacts {
     outside: {
       signInCodes: signIn?.providers.includes("email") ?? false,
       mail: mail.map(sent),
-      calls: ir.outgoing.filter((o) => o.to !== "mail").map(sent),
+      calls: calls.map(sent),
       incoming: ir.incoming.map((i) => ({
         name: i.name,
         ...(i.create ? { creates: pluralLabel(i.create) } : {}),
@@ -586,7 +589,7 @@ export function appCard(input: CardInput): CardFacts {
     responsible: {
       mailServer: mail.length > 0 || (signIn?.providers.includes("email") ?? false),
       incomingSecrets: ir.incoming.map((i) => i.name),
-      callTargets: [...new Set(ir.outgoing.filter((o) => o.to !== "mail").map((o) => o.to))],
+      callTargets: [...new Set(calls.map((o) => o.to))],
       assistantModel: auth.assistant !== undefined,
       apiKeys: auth.api !== undefined,
       privacy: {
