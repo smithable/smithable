@@ -22,6 +22,7 @@ import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { samplePeople } from "./dev-door.js";
 import { INCOMING_SEEN_TABLE, MAIL_THREADS_TABLE } from "./incoming.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
+import { pushEntries } from "./outgoing.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
@@ -47,6 +48,7 @@ import { TIMER_RUNS_TABLE } from "./timers.js";
 export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): string {
   const imports = new Set(["integer", "sqliteTable"]);
   if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
+  if (pushEntries(ir, auth).length) imports.add("uniqueIndex");
   const tables = ir.models.map((model) => {
     const n = tableNames(model);
     // Where each unique field is unique (docs/design/uniqueness.md): among one owner's records
@@ -237,7 +239,7 @@ export const ${n.table}Reads = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(pushEntries(ir, auth).length ? PUSH_TABLES : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -367,6 +369,69 @@ const OUTGOING_TABLE = `export const outgoingMail = sqliteTable(
  * Calls to named targets (docs/design/integrations.md §4.1), signed with the target's secret:
  * written by the change's own transaction, sent after it by src/kit/outgoing.server.ts.
  */
+/**
+ * Browser push (docs/design/notifications.md §4): each browser a person turned push on in, which
+ * entries they turned on, the pushes to send (one row per person and entry, which devices have
+ * it), and the app's own key pair when the settings give none (kept with the data, so a backup
+ * keeps the subscriptions valid).
+ */
+const PUSH_TABLES = [
+  `export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    endpoint: text().notNull(),
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    usedAt: integer({ mode: "timestamp_ms" }),
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint").on(t.endpoint), index("push_subscriptions_user").on(t.userId)],
+);`,
+  `export const notificationChoices = sqliteTable(
+  "notification_choices",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The outgoing entry's name, and the channel the person turned it on for. */
+    entry: text().notNull(),
+    channel: text({ enum: ["push", "sms"] }).notNull(),
+  },
+  (t) => [uniqueIndex("notification_choices_one").on(t.userId, t.entry, t.channel)],
+);`,
+  `export const outgoingPush = sqliteTable(
+  "outgoing_push",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    entry: text().notNull(),
+    model: text(),
+    recordId: integer(),
+    userId: text().notNull(),
+    /** The title line and the link: nothing else of the record. */
+    title: text().notNull(),
+    link: text(),
+    /** The subscriptions that have it, so a retry does not push twice to a device. */
+    delivered: text({ mode: "json" }).$type<number[]>().notNull().default([]),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    failedAt: integer({ mode: "timestamp_ms" }),
+    error: text(),
+  },
+  (t) => [index("outgoing_push_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);`,
+  `export const appKeys = sqliteTable("app_keys", {
+  name: text().primaryKey(),
+  value: text().notNull(),
+});`,
+];
+
 const OUTGOING_CALL_TABLE = `export const outgoingCall = sqliteTable(
   "outgoing_call",
   {

@@ -1,6 +1,19 @@
 import { createDecipheriv, createECDH, createPublicKey, hkdfSync, verify } from "node:crypto";
 import { expect, test } from "vitest";
-import { encryptPush, newPushKeys, vapidHeader } from "../templates/src/kit/push-crypto.server";
+
+// The kit's push-crypto.server.ts, as the generated apps get it (a path the build does not follow).
+type Keys = { publicKey: string; privateKey: string };
+const path: string = "../templates/src/kit/push-crypto.server.ts";
+const { encryptPush, newPushKeys, vapidHeader } = (await import(path)) as {
+  encryptPush(
+    s: { p256dh: string; auth: string },
+    text: Uint8Array,
+    sender?: Keys,
+    salt?: Uint8Array,
+  ): Buffer;
+  newPushKeys(): Keys;
+  vapidHeader(endpoint: string, keys: Keys, subject: string, now?: number): string;
+};
 
 const bytes = (text: string) => Buffer.from(text, "base64url");
 

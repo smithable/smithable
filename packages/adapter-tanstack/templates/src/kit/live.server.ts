@@ -32,7 +32,11 @@ interface Stream {
 interface Live {
   streams: Map<string, Stream[]>;
   /** Waiting for their change to commit: the mail row that proves it, and whom to tell. */
-  pending: { mail: number; to: { id?: string | null; email: string }; event: LiveEvent }[];
+  pending: {
+    proof: { table: "mail" | "push"; id: number };
+    to: { id?: string | null; email: string };
+    event: LiveEvent;
+  }[];
   soon?: ReturnType<typeof setTimeout>;
   readers?: Readers;
 }
@@ -42,12 +46,12 @@ const live = everyInstance.smithableLive;
 
 // The outbox tells of each mail it queues; a record's mail is an event for its recipient.
 (globalThis as { smithableOnQueued?: unknown }).smithableOnQueued = (
-  mail: number,
+  proof: { table: "mail" | "push"; id: number },
   to: { id?: string | null; email: string },
   happening: Happening,
 ) => {
   if (happening.model && happening.record !== null)
-    liveLater(mail, to, {
+    liveLater(proof, to, {
       entry: happening.entry,
       model: happening.model,
       id: happening.record,
@@ -70,12 +74,12 @@ export function liveReaders(readers: Readers): void {
  * never announced.
  */
 export function liveLater(
-  mail: number,
+  proof: { table: "mail" | "push"; id: number },
   to: { id?: string | null; email: string },
   event: LiveEvent,
 ): void {
   if (!live.streams.size) return;
-  live.pending.push({ mail, to, event });
+  live.pending.push({ proof, to, event });
   live.soon ??= setTimeout(() => {
     live.soon = undefined;
     const pending = live.pending.splice(0);
@@ -84,21 +88,27 @@ export function liveLater(
 }
 
 async function announce(pending: Live["pending"]): Promise<void> {
-  for (const { mail, to, event } of pending) {
-    // The mail row proves the change committed: the same row, not only its id, since SQLite gives
-    // a rolled-back row's id to the next one.
-    const committed = db
-      .select({ id: outgoingMail.id })
-      .from(outgoingMail)
-      .where(
-        and(
-          eq(outgoingMail.id, mail),
-          eq(outgoingMail.entry, event.entry),
-          eq(outgoingMail.recordId, event.id),
-          eq(outgoingMail.to, to.email),
-        ),
-      )
-      .get();
+  for (const { proof, to, event } of pending) {
+    // The outbox row proves the change committed: the same row, not only its id, since SQLite
+    // gives a rolled-back row's id to the next one. A mail's, or a push's (an entry that only
+    // pushes; its table is there only in an app that pushes, so it is asked by name).
+    const committed =
+      proof.table === "mail"
+        ? db
+            .select({ id: outgoingMail.id })
+            .from(outgoingMail)
+            .where(
+              and(
+                eq(outgoingMail.id, proof.id),
+                eq(outgoingMail.entry, event.entry),
+                eq(outgoingMail.recordId, event.id),
+                eq(outgoingMail.to, to.email),
+              ),
+            )
+            .get()
+        : db.get<{ id: number }>(
+            sql`select id from outgoing_push where id = ${proof.id} and entry = ${event.entry} and record_id = ${event.id} and user_id = ${to.id ?? ""}`,
+          );
     if (!committed) continue;
     // A role's people come with their id; an address the record names, by its user.
     const person = db

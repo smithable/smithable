@@ -5,6 +5,7 @@ import {
   type AuthIR,
   type ContentIR,
   camel,
+  channelsOf,
   type FieldIR,
   humanize,
   isUpload,
@@ -37,6 +38,15 @@ import {
   shownTitle,
   type Texts,
 } from "./shared.js";
+
+/**
+ * Browser push (notifications.md §4): the entries that push, in an app with sign-in (a push goes
+ * to a person who turned it on under their name).
+ */
+export function pushEntries(ir: SpecIR, auth: AuthIR | undefined): OutgoingIR[] {
+  if (!auth || !hasSignIn(auth)) return [];
+  return ir.outgoing.filter((o) => channelsOf(o)?.includes("push"));
+}
 
 /**
  * Live in the app (notifications.md §3): the models whose records' mail is also an event for the

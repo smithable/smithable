@@ -71,7 +71,8 @@ export function proxied(
 export async function post(
   url: string,
   headers: Record<string, string>,
-  body: string,
+  /** Text for a call; bytes for a push (an encrypted message). */
+  body: string | Uint8Array,
   lookup: LookupFunction = guardedLookup(import.meta.env.DEV ? () => false : privateAddress),
   viaProxy: typeof fetch = fetch,
 ): Promise<number> {
