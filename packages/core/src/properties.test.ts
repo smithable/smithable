@@ -73,9 +73,11 @@ const anyText = fc.oneof(
   fc.string({ maxLength: 200 }),
   fc.jsonValue({ maxDepth: 4 }).map((v) => stringify(v)),
 );
+/** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
+const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
 // More with FC_RUNS=3000 to hunt, FC_SEED for other cases; a gate tries the same few hundred.
 const runs = {
-  numRuns: Number(import.meta.env.FC_RUNS ?? 150),
+  numRuns: Number(import.meta.env.FC_RUNS ?? 150 * SCALE),
   seed: Number(import.meta.env.FC_SEED ?? 1),
 };
 
@@ -93,7 +95,7 @@ describe.each(examples)("%s", (example) => {
       runs,
     );
     // Hundreds of runs over a whole spec: seconds on a loaded machine, so not vitest's five.
-  }, 60_000);
+  }, 60_000 * SCALE);
 
   test.each(["auth", "ux", "content", "context"])(
     "an edited %s file never crashes its validator",
@@ -132,9 +134,9 @@ test("any text or YAML as any file: a reason, never a crash", () => {
     }),
     // Found by this test: an alias with no anchor crashed the context file's validator.
     {
-      numRuns: Number(import.meta.env.FC_RUNS ?? 300),
+      numRuns: Number(import.meta.env.FC_RUNS ?? 300 * SCALE),
       seed: Number(import.meta.env.FC_SEED ?? 1),
       examples: [["*!"], ["a: *x"]],
     },
   );
-});
+}, 60_000 * SCALE);

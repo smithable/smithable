@@ -199,8 +199,12 @@ if [ -z "${TEST_PATIENCE:-}" ]; then
   echo "gate.sh: load $load on $cores cores: the checks wait ${TEST_PATIENCE} times as long (TEST_PATIENCE=$TEST_PATIENCE)."
 fi
 
-# The plan, then the run. Arguments go to pnpm check as before, which runs everything.
-if [ $# -eq 0 ]; then
+# The plan, then the run. Arguments go to pnpm check as before, which runs everything. GATE_RUN
+# runs another command in the gate's turn instead (the weekly long run of the properties, ci.md).
+if [ -n "${GATE_RUN:-}" ]; then
+  echo "gate.sh: running $GATE_RUN in the gate's turn."
+  bash -c "$GATE_RUN"
+elif [ $# -eq 0 ]; then
   p=$(plan)
   apps=${p#apps=}; apps=${apps%% studio=*}
   studio=${p#*studio=}; studio=${studio%% visual=*}

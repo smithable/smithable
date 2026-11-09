@@ -138,8 +138,10 @@ function argsFor(
  * The runs, and a fixed seed, so a gate always tries the same cases: FC_SEED (with FC_PATH, as a
  * failure prints them) tries others or one again, FC_RUNS more of them.
  */
+/** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
+const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
 const fcOptions = (runs: number) => ({
-  numRuns: Number(import.meta.env.FC_RUNS ?? runs),
+  numRuns: Number(import.meta.env.FC_RUNS ?? runs * SCALE),
   seed: Number(import.meta.env.FC_SEED ?? 1),
   ...(import.meta.env.FC_PATH ? { path: import.meta.env.FC_PATH } : {}),
 });
@@ -188,7 +190,7 @@ describe.each(examples)("%s", (example) => {
     expect(applied).toBeGreaterThan(0);
     // Nothing an operation did reached the files it started from.
     expect(generate(start)).toEqual(before);
-  }, 180_000);
+  }, 180_000 * SCALE);
 });
 
 test("a hero shortcut to the review page gets its shield icon (found by this test, 2026-10-12)", () => {

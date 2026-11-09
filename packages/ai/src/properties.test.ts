@@ -4,6 +4,9 @@ import fc from "fast-check";
 import { expect, test } from "vitest";
 import { readDescription } from "./read-description.js";
 
+/** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
+const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
+
 const WORDS = `a an the and or for to of with my our we I people customers members visitors
   booking bookings class classes shop products orders invoice invoices team staff only me
   sign up signs in public anyone list lists price photos photo who handles status page
@@ -24,6 +27,9 @@ test("a description is read or not, never a crash", () => {
       for (const list of [reading.things, reading.maybe, reading.fields, reading.leftover])
         expect(Array.isArray(list)).toBe(true);
     }),
-    { numRuns: Number(import.meta.env.FC_RUNS ?? 500), seed: Number(import.meta.env.FC_SEED ?? 1) },
+    {
+      numRuns: Number(import.meta.env.FC_RUNS ?? 500 * SCALE),
+      seed: Number(import.meta.env.FC_SEED ?? 1),
+    },
   );
-});
+}, 5_000 * SCALE);

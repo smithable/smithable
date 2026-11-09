@@ -6,6 +6,9 @@ import fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { matchRequest, refusalOf } from "./phrases.js";
 
+/** The weekly long run multiplies every property's cases (and their time) by FC_SCALE. */
+const SCALE = Number(import.meta.env.FC_SCALE ?? 1);
+
 const raw = import.meta.glob("../../../examples/*/smithable*.yml", {
   query: "?raw",
   import: "default",
@@ -69,9 +72,9 @@ describe.each(examples)("%s", (example) => {
         }
       }),
       {
-        numRuns: Number(import.meta.env.FC_RUNS ?? 300),
+        numRuns: Number(import.meta.env.FC_RUNS ?? 300 * SCALE),
         seed: Number(import.meta.env.FC_SEED ?? 1),
       },
     );
-  }, 60_000);
+  }, 60_000 * SCALE);
 });
