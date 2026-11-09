@@ -1565,11 +1565,22 @@ async function kioskFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   writeFileSync(
     spec,
-    readFileSync(spec, "utf8").replace(
-      /hours: \{ mon-thu[^}]*\}/,
-      'hours: { mon-sun: "00:00-24:00" }',
-    ),
+    readFileSync(spec, "utf8")
+      .replace(/hours: \{ mon-thu[^}]*\}/, 'hours: { mon-sun: "00:00-24:00" }')
+      // Texts (notifications.md §5), the test's own: new orders to staff, an accepted order to
+      // the customer's number. No starter texts (each one costs the owner).
+      .replace(
+        /\noutgoing:\n/,
+        "\noutgoing:\n  orderPlacedText: { when: Order created, to: sms, recipient: staff }\n  orderAcceptedText: { when: accept, to: sms, recipient: phone }\n",
+      ),
   );
+  const texts = join(dir, "data", "sms", "outbox");
+  const textsNow = () =>
+    existsSync(texts)
+      ? readdirSync(texts)
+          .sort()
+          .map((f) => readFileSync(join(texts, f), "utf8"))
+      : [];
   const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
   if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
   const browser = await chromium.launch();
@@ -1596,6 +1607,12 @@ async function kioskFlow(dir, base) {
         { cwd: dir, encoding: "utf8" },
       ).stdout,
     ).id;
+    // Their confirmed number and the text turned on, as Texts under their name would leave them.
+    write(
+      dir,
+      `insert into user_phones (user_id, phone, confirmed_at, code_tries) values ('${staffId}', '+358401234567', ${Date.now()}, 0);
+       insert into notification_choices (user_id, entry, channel) values ('${staffId}', 'orderPlacedText', 'sms');`,
+    );
     write(
       dir,
       `insert into notification_choices (user_id, entry, channel) values ('${staffId}', 'orderPlaced', 'push');
@@ -1613,6 +1630,15 @@ async function kioskFlow(dir, base) {
     await page.getByRole("button", { name: "Send the order" }).click();
     await page.getByText("Order 11 is in.").waitFor({ timeout: 15000 * P });
     await waitFor("mail to staff", () => subjects(before).includes("A new order"));
+    // And the text to staff's confirmed number: the title line and the link, written to the file
+    // outbox (no SMS settings).
+    await waitFor("a text to staff", () =>
+      textsNow().some((t) => t.startsWith("To: +358401234567")),
+    );
+    const toStaff = textsNow().find((t) => t.startsWith("To: +358401234567")) ?? "";
+    // The entry's title line (its own subject unsaid: "Order: <title>") and the link.
+    if (!/^Order: .+ http\S*\/orders\/\d+$/m.test(toStaff))
+      throw new Error(`the text to staff said ${JSON.stringify(toStaff)}`);
     // And the push: the title line and the link, signed with the app's key.
     await waitFor("a push to staff", () => push.got.length > 0);
     push.close();
@@ -1650,8 +1676,16 @@ async function kioskFlow(dir, base) {
     await waitFor("mail to the customer", () =>
       subjects(before).includes("Your order is being made"),
     );
+    // And a text to the number the customer gave, from staff's action: the title line alone (a
+    // customer has no account to open the link with).
+    await waitFor("a text to the customer", () =>
+      textsNow().some((t) => t.startsWith("To: +358401112222")),
+    );
+    const toCustomer = textsNow().find((t) => t.startsWith("To: +358401112222")) ?? "";
+    if (/\/orders\//.test(toCustomer))
+      throw new Error(`the customer's text has a link: ${JSON.stringify(toCustomer)}`);
     console.log(
-      "  ✓ kiosk: a visitor orders two fish soups and gets number 11, staff are mailed and pushed (decrypted as a browser would); a dish sold out in the basket is refused in words; Accept mails the customer",
+      "  ✓ kiosk: a visitor orders two fish soups and gets number 11, staff are mailed, pushed (decrypted as a browser would) and texted; a dish sold out in the basket is refused in words; Accept mails and texts the customer",
     );
   } catch (error) {
     console.log(

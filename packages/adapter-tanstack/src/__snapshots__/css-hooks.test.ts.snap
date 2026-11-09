@@ -217,6 +217,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-part="time"",
     "data-kit="cancel-own"",
   ],
+  "src/kit/SmsChoices.tsx": [
+    "data-kit="sms-choices"",
+  ],
   "src/kit/SplitDialog.tsx": [
     "data-kit="split-button"",
     "data-part="split-notice"",

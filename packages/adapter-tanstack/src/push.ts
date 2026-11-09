@@ -2,7 +2,7 @@
 // a push, the web app manifest (an iPhone shows pushes only for an app on its home screen), and
 // the server functions the Notifications part under the person's name calls.
 import { type AuthIR, humanize, type SpecIR } from "@smithable/core";
-import { pushEntries } from "./outgoing.js";
+import { pushEntries, smsEntries } from "./outgoing.js";
 import { HEADER, literal } from "./shared.js";
 
 /** The service worker: shows a push and opens its link, the app's own pages only. */
@@ -84,7 +84,8 @@ async function signedIn() {
 export const pushNotifications = createServerFn().handler(async () => {
   const { pushChoices } = await import("#/kit/push.server");
   const viewer = await signedIn();
-  const mine = offered(viewer);
+  // On the hosted service at its strict level the push services are not let through: none offered.
+  const mine = process.env.SMITHABLE_HOSTED_LEVEL === "strict" ? [] : offered(viewer);
   const { publicKey, on } = pushChoices(viewer, mine.map((e) => e.entry));
   return { publicKey, entries: mine.map(({ entry, label }) => ({ entry, label, on: on.includes(entry) })) };
 });
@@ -112,6 +113,80 @@ export const forgetPushBrowser = createServerFn({ method: "POST" })
     const { dropPushBrowser } = await import("#/kit/push.server");
     const viewer = await currentViewer();
     if (viewer) dropPushBrowser(viewer, data.endpoint);
+  });
+`;
+}
+
+/**
+ * The server functions of Texts under the person's name (notifications.md §5): their number,
+ * confirmed by a code texted to it, and which text entries are on (an entry for a role, to that
+ * role's people; any other to everyone signed in).
+ */
+export function smsModule(ir: SpecIR, auth: AuthIR): string {
+  const entries = smsEntries(ir, auth).map((o) => ({
+    entry: o.name,
+    label: humanize(o.name),
+    ...(o.recipient?.kind === "role" ? { role: o.recipient.role } : {}),
+  }));
+  return `${HEADER}// Texts (notifications.md §5): what Texts under the person's name calls.
+import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { AccessDenied, type Viewer } from "#/kit/access";
+import { writeAllowed } from "#/kit/limit";
+import { currentViewer } from "#/lib/viewer.server";
+
+/** The entries that text, and the role an entry for a role reaches. */
+const ENTRIES: { entry: string; label: string; role?: string }[] = ${literal(entries)};
+
+const offered = (viewer: Viewer) => ENTRIES.filter((e) => !e.role || e.role === viewer.role);
+
+async function writer() {
+  const viewer = await currentViewer();
+  if (!viewer) throw new AccessDenied(false);
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
+/** The person's number, whether it is confirmed, and each entry offered with whether it is on. */
+export const smsNotifications = createServerFn().handler(async () => {
+  const { smsChoices } = await import("#/kit/sms.server");
+  const viewer = await currentViewer();
+  if (!viewer) throw new AccessDenied(false);
+  const mine = offered(viewer);
+  const { phone, confirmed, on } = smsChoices(viewer, mine.map((e) => e.entry));
+  return { phone, confirmed, entries: mine.map(({ entry, label }) => ({ entry, label, on: on.includes(entry) })) };
+});
+
+/** Texts a code to the number given. */
+export const sendSmsCode = createServerFn({ method: "POST" })
+  .validator(z.object({ phone: z.string().max(40) }))
+  .handler(async ({ data }) => {
+    const { sendPhoneCode } = await import("#/kit/sms.server");
+    sendPhoneCode(await writer(), data.phone);
+  });
+
+/** The code typed back: true when it confirms the number. */
+export const confirmSmsCode = createServerFn({ method: "POST" })
+  .validator(z.object({ code: z.string().max(12) }))
+  .handler(async ({ data }) => {
+    const { confirmPhone } = await import("#/kit/sms.server");
+    return confirmPhone(await writer(), data.code);
+  });
+
+/** Removes the person's number and every text they turned on. */
+export const removeSmsPhone = createServerFn({ method: "POST" }).handler(async () => {
+  const { removePhone } = await import("#/kit/sms.server");
+  removePhone(await writer());
+});
+
+/** Turns a text entry on or off. */
+export const setSmsNotification = createServerFn({ method: "POST" })
+  .validator(z.object({ entry: z.string(), on: z.boolean() }))
+  .handler(async ({ data }) => {
+    const { setSmsChoice } = await import("#/kit/sms.server");
+    const viewer = await writer();
+    return setSmsChoice(viewer, offered(viewer).map((e) => e.entry), data.entry, data.on);
   });
 `;
 }

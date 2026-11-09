@@ -29,6 +29,12 @@ const PROVIDER_KEYS = [
   "PUSH_VAPID_PUBLIC_KEY",
   "PUSH_VAPID_PRIVATE_KEY",
   "PUSH_VAPID_SUBJECT",
+  // Texts (notifications.md §5): the owner's SMS provider, its keys, the sender and the day's cap.
+  "SMS_PROVIDER",
+  "SMS_KEY",
+  "SMS_SECRET",
+  "SMS_FROM",
+  "SMS_MAX_PER_DAY",
 ];
 
 /**

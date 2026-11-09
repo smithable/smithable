@@ -496,7 +496,7 @@ pages:
   expect(schema).not.toContain("recordId: integer().notNull()");
 });
 
-test("push is sent through the kit (notifications.md §4); an entry that only texts waits for step 2", () => {
+test("push and texts are sent through the kit (notifications.md §4, §5)", () => {
   const placed = ir.outgoing.find((o) => o.name === "orderPlaced");
   if (!placed) throw new Error("orderPlaced");
   const spec: SpecIR = {
@@ -515,7 +515,9 @@ test("push is sent through the kit (notifications.md §4); an entry that only te
   expect(module).toMatch(/name: "orderBoth",[\s\S]*?push: true,\n\s*\},/);
   expect(module).toContain("if (entry.push) queuePush(tx, viewer, happening, to);");
   expect(module).toContain("pushReaders({");
-  expect(module).not.toContain("orderTexted");
+  // Texted only: a text, and no mail (notifications.md §5).
+  expect(module).toMatch(/name: "orderTexted",[\s\S]*?sms: true,\n\s*mail: false,/);
+  expect(module).toContain("if (entry.sms) queueSms(tx, viewer, happening, to);");
   const all = files.map((f) => f.content).join("\n");
   expect(all).not.toContain("OUTGOING_PUSH");
   expect(files.some((f) => f.path === "src/kit/push.server.ts")).toBe(true);

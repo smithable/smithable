@@ -482,6 +482,29 @@ export const w = {
   noticesMore: (n: number) => `and ${n} more`,
   noticeSoundOffer: "Play a sound for these?",
   noticeSound: "A sound with each notice",
+  smsNotWhole:
+    "The number is not in the international form: + and the country's code, then the number.",
+  smsNoProvider: (name: string) =>
+    `SMS_PROVIDER names ${name}, which this app cannot send through (46elks).`,
+  smsNoSettings: "SMS_KEY, SMS_SECRET and SMS_FROM are needed beside SMS_PROVIDER.",
+  smsRefused: (status: number) => `The text provider answered ${status}.`,
+  smsTurnedOff: "Turned off before it was sent.",
+  smsOverLimit: "Over the day's limit of texts: Send again works tomorrow.",
+  smsUnknown: "The text provider did not answer: it may have sent it. Not tried again by itself.",
+  smsCode: (code: string) => `Your code: ${code}. It confirms this number for the app's texts.`,
+  smsCodesLimit: "Three codes a day, one a minute: try again later.",
+  smsCodeGone: "The code has run out. Ask for a new one.",
+  smsNoSuch: "No such text.",
+  smsConfirmFirst: "Confirm your number first.",
+  smsTitle: "Texts to your phone",
+  smsHelp: "Each text is about your work in the app. Your number is used for nothing else.",
+  smsPhone: "Your mobile number",
+  smsSendCode: "Text me a code",
+  smsCodeSent: "A code is on its way. Type it here.",
+  smsCodeLabel: "The code",
+  smsConfirm: "Confirm",
+  smsWrongCode: "That is not the code.",
+  smsRemove: "Remove my number",
   notifications: "Notifications",
   notificationsHelp: "In this browser, also when the app is closed. Turn on each you want.",
   pushRefused: "The browser did not allow notifications. Allow them in its settings for this site.",
@@ -678,6 +701,9 @@ export const w = {
     `Visits are counted with ${provider}, which sets no cookie and keeps no personal data.`,
   legalAnalyticsConsent: (provider: string) =>
     `Visits are counted with ${provider} only after you accept it in the cookie bar. You can change your choice under Cookie settings at the bottom of the page.`,
+  legalSmsTitle: "Texts to your phone",
+  legalSms: (labels: string[]) =>
+    `If you give your mobile number under your name, confirm it with the code texted to it and turn texts on, the app texts you about new ${labels.join(", ")}. A number you give with a record of your own may get a text about that record, sent when someone working in the app acts on it. The texts go through the SMS provider the app's owner chose. Your number is used for nothing else; removing it under your name ends the texts.`,
   legalPushTitle: "Notifications in your browser",
   legalPush: (labels: string[]) =>
     `If you turn notifications on under your name, the app tells your browser of new ${labels.join(", ")} it may show you. The title and a link go, encrypted, through your browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), which cannot read them. Turning them off, or signing out in that browser, ends them.`,
@@ -912,6 +938,8 @@ export const w = {
     mailCodes: "Mail: sign-in codes.",
     mail: (text: string) => `Mail: ${text}`,
     call: (to: string, text: string) => `A call to ${to}: ${text}`,
+    sms: (text: string) =>
+      `A text: ${text}. The title line goes through the SMS provider the owner sets (SMS_PROVIDER), to people who confirmed their number and turned it on, or to a number on the record when someone working in the app acts on it.`,
     push: (text: string) =>
       `A browser push: ${text}. The title line and the link go, encrypted, through the browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), to those who turned it on.`,
     callsIn: (text: string) => `Calls in: ${text}`,
