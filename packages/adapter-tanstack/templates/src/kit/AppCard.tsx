@@ -265,6 +265,8 @@ export function AppCard({ cards, main }: { cards: Record<string, CardFacts>; mai
   const talks: string[] = [];
   if (outside.signInCodes) talks.push(c.mailCodes);
   for (const m of outside.mail) talks.push(`${c.mail(m.text)}${sent(m.fields)}`);
+  // A push carries the title line and the link alone, encrypted, through the browser's service.
+  for (const p of outside.push ?? []) talks.push(c.push(p.text));
   for (const x of outside.calls) talks.push(`${c.call(x.to, x.text)}${sent(x.fields)}`);
   for (const i of outside.incoming) talks.push(c.callsIn(i.text));
   if (access.api) talks.push(c.apiTalks);

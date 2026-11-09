@@ -642,7 +642,7 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}${licensesReadme()}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme(ir, auth)}${limitsReadme(ir, auth)}${stylesReadme()}${licensesReadme()}
 ## Project structure
 
 ${structure}`;
@@ -689,10 +689,10 @@ For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: f
 }
 
 /** How the app sends mail, for the README. */
-function mailReadme(): string {
+function mailReadme(ir: SpecIR, auth?: AuthIR): string {
   return `## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.${auth && pushEntries(ir, auth).length ? "\n\nBrowser push (\`to: push\`) needs no settings: the app makes a key pair at its first start and keeps it with its data, so a backup keeps everyone's subscriptions. To give your own, set \`PUSH_VAPID_PUBLIC_KEY\` and \`PUSH_VAPID_PRIVATE_KEY\` (and \`PUSH_VAPID_SUBJECT\`, the contact the push services may write to; \`MAIL_FROM\` otherwise). A new pair ends every subscription: people turn notifications on again under their name." : ""}
 
 `;
 }
