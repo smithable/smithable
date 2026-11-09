@@ -156,6 +156,9 @@ const hooks = globalThis as {
   /** Push's lane in the outbox, and its Send again (push.server.ts). */
   smithablePushLane?: (now: number) => Promise<number>;
   smithablePushAgain?: (id: number) => boolean;
+  /** Texts' lane and Send again (sms.server.ts). */
+  smithableSmsLane?: (now: number) => Promise<number>;
+  smithableSmsAgain?: (id: number) => boolean;
   smithableOnQueued?: (
     proof: { table: "mail" | "push"; id: number },
     to: { id?: string | null; email: string },
@@ -301,6 +304,7 @@ export async function sendDue(now = Date.now()): Promise<number> {
     drainCalls(now),
     // Pushes, where the app has them (src/kit/push.server.ts gives its lane when loaded).
     hooks.smithablePushLane?.(now) ?? Promise.resolve(0),
+    hooks.smithableSmsLane?.(now) ?? Promise.resolve(0),
   ]);
   const failure = results.find((r) => r.status === "rejected");
   if (failure?.status === "rejected") throw failure.reason;
@@ -630,11 +634,15 @@ async function sendCalls(now: number): Promise<{ done: number; more: boolean }> 
  */
 export function sendAgain(
   viewer: Viewer | null,
-  again: { mail: number } | { call: number } | { push: number },
+  again: { mail: number } | { call: number } | { push: number } | { sms: number },
 ): void {
   if (viewer?.role !== "admin") throw new AccessDenied(viewer !== null);
   if ("push" in again) {
     if (hooks.smithablePushAgain?.(again.push)) sendSoon();
+    return;
+  }
+  if ("sms" in again) {
+    if (hooks.smithableSmsAgain?.(again.sms)) sendSoon();
     return;
   }
   const fresh = {
