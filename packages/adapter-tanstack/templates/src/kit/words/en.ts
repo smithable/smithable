@@ -755,18 +755,21 @@ export const w = {
   paymentGone: "This payment is no longer open.",
   refundRefused:
     "The payment provider refused the refund. Try again later, or refund at the provider.",
+  refundPending: "The payment provider has not answered yet. The refund is asked again by itself.",
   payments: "Payments",
   allPayments: "All payments",
   refund: "Refund",
   refundAsk: (amount: string) => `Refund ${amount} to the payer?`,
   paymentStatus: (status: string) =>
-    ({
-      pending: "Waiting",
-      paid: "Paid",
-      failed: "Not paid",
-      refunding: "Being refunded",
-      refunded: "Refunded",
-    })[status] ?? status,
+    (
+      ({
+        pending: "Waiting",
+        paid: "Paid",
+        failed: "Not paid",
+        refunding: "Being refunded",
+        refunded: "Refunded",
+      }) as Record<string, string>
+    )[status] ?? status,
   paymentUnmatched:
     "The payment came, but not as asked, so nothing was ordered. It will be refunded.",
   /** A chart's bar for a quarter: "Q3 2026". */

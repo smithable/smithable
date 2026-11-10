@@ -105,6 +105,9 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
       tx.delete(${table}).where(eq(${table}.id, record)).run();`
         : ""
     }
+    },
+    read(tx, record) {
+      return tx.select().from(${table}).where(eq(${table}.id, record)).get();
     },${
       created && model.heldByPayment
         ? `

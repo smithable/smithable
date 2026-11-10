@@ -6,7 +6,7 @@
 // record, how much, what a payment sets and tells) is the generated payments module's.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
-import { and, count, desc, eq, gt, inArray, isNull, like, lt } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNull, like, lt, notInArray, or } from "drizzle-orm";
 import { db } from "#/db";
 import { appKeys, incomingSeen, paymentRefunds, payments } from "#/db/schema";
 import { app } from "#/generated/app";
@@ -43,6 +43,8 @@ export interface PaymentEntry {
   paid: (tx: Tx, record: number, amount: number) => true | string;
   /** Removes a held record nobody paid for, its place freed. */
   release: (tx: Tx, record: number) => void;
+  /** The record as stored, read in a transaction (a refund's condition checked again there). */
+  read: (tx: Tx, record: number) => Record<string, unknown> | undefined;
   /** After a held record's payment is recorded: the app's own afterCreate, which waited for it. */
   after?: (record: number) => Promise<void>;
 }
@@ -127,7 +129,7 @@ export const fake: Provider = {
   async refund({ idempotencyKey }) {
     // How a test sees a provider refuse: PAYMENTS_FAKE_REFUSE_REFUNDS=on.
     if (process.env.PAYMENTS_FAKE_REFUSE_REFUNDS === "on")
-      throw new Error("the fake provider refuses refunds");
+      throw new ProviderRefused("the fake provider refuses refunds");
     return { reference: `fake_${idempotencyKey}`, done: true };
   },
 };
@@ -296,14 +298,24 @@ export async function checkout(id: number): Promise<string> {
       expiresAt: new Date(payment.createdAt.getTime() + holdMinutes() * MINUTE),
       idempotencyKey: `payment-${payment.id}-checkout`,
     });
-    db.update(payments)
+    // Two clicks at once: the first checkout kept is the one both go to.
+    const kept = db
+      .update(payments)
       .set({
         reference: made.reference,
         checkoutUrl: made.url,
         providerAccount: made.account ?? null,
       })
-      .where(and(eq(payments.id, id), eq(payments.status, "pending")))
+      .where(and(eq(payments.id, id), eq(payments.status, "pending"), isNull(payments.checkoutUrl)))
       .run();
+    if (!kept.changes) {
+      const first = db
+        .select({ url: payments.checkoutUrl })
+        .from(payments)
+        .where(eq(payments.id, id))
+        .get()?.url;
+      if (first) return first;
+    }
     return made.url;
   } catch (error) {
     log.error("A payment's checkout could not be made", { payment: id, error });
@@ -418,12 +430,14 @@ function recordEvent(
 }
 
 /**
- * A refund the provider made or refused (§4.4): a line of its own under the Payment (one made in
- * the provider's dashboard too, with its amount), and the Payment refunded once the whole amount
- * is back; a refusal returns it to paid with the reason.
+ * A refund the provider made or refused (§4.4), as a line under the Payment: the line the app
+ * asked for (by its reference, or the one still waiting for its reference when the provider's call
+ * comes first), or a line of its own for one made in the provider's dashboard, with its amount.
+ * The Payment is refunded once the whole amount is back. A refusal concerns the line it names; it
+ * returns the Payment to paid only when that line was the one in flight.
  */
 function refunded(tx: Tx, payment: Payment, event: PaymentEvent) {
-  const line = event.refund
+  const byReference = event.refund
     ? tx
         .select()
         .from(paymentRefunds)
@@ -432,128 +446,209 @@ function refunded(tx: Tx, payment: Payment, event: PaymentEvent) {
         )
         .get()
     : undefined;
+  const inFlight = tx
+    .select()
+    .from(paymentRefunds)
+    .where(
+      and(
+        eq(paymentRefunds.paymentId, payment.id),
+        eq(paymentRefunds.status, "asked"),
+        isNull(paymentRefunds.reference),
+      ),
+    )
+    .get();
+  const line = byReference ?? inFlight;
   if (event.kind === "refund-refused") {
-    if (line)
-      tx.update(paymentRefunds)
-        .set({ status: "refused" })
-        .where(eq(paymentRefunds.id, line.id))
-        .run();
+    if (!line || line.status !== "asked") return;
+    tx.update(paymentRefunds)
+      .set({
+        status: "refused",
+        reference: event.refund ?? line.reference,
+        note: event.reason ?? null,
+      })
+      .where(eq(paymentRefunds.id, line.id))
+      .run();
     if (payment.status === "refunding")
-      tx.update(payments)
-        .set({ status: "paid", note: `refund refused${event.reason ? `: ${event.reason}` : ""}` })
-        .where(eq(payments.id, payment.id))
-        .run();
+      tx.update(payments).set({ status: "paid" }).where(eq(payments.id, payment.id)).run();
     return;
   }
   if (payment.status !== "paid" && payment.status !== "refunding") return;
+  if (line?.status === "done") return;
   if (line)
-    tx.update(paymentRefunds).set({ status: "done" }).where(eq(paymentRefunds.id, line.id)).run();
+    tx.update(paymentRefunds)
+      .set({ status: "done", reference: event.refund ?? line.reference })
+      .where(eq(paymentRefunds.id, line.id))
+      .run();
   else
     tx.insert(paymentRefunds)
       .values({
         paymentId: payment.id,
-        amount: event.amount ?? payment.amount,
+        amount: event.amount ?? payment.amount - refundedOf(tx, payment.id),
         reference: event.refund ?? null,
         status: "done",
       })
       .run();
-  const back = tx
-    .select({ amount: paymentRefunds.amount })
-    .from(paymentRefunds)
-    .where(and(eq(paymentRefunds.paymentId, payment.id), eq(paymentRefunds.status, "done")))
-    .all()
-    .reduce((sum, r) => sum + r.amount, 0);
-  if (back >= payment.amount)
-    tx.update(payments)
-      .set({ status: "refunded", refundedAt: new Date() })
-      .where(eq(payments.id, payment.id))
-      .run();
+  const back = refundedOf(tx, payment.id);
+  tx.update(payments)
+    .set(
+      back >= payment.amount
+        ? { status: "refunded", refundedAt: new Date() }
+        : // Part of it back (a partial refund in the dashboard): still paid, the rest refundable.
+          { status: "paid" },
+    )
+    .where(eq(payments.id, payment.id))
+    .run();
   audit(tx, APP, {
     action: "refunded",
     model: PAYMENT_ENTRIES[payment.entry]?.model,
     record: payment.record,
-    details: { payment: payment.id, amount: event.amount ?? payment.amount },
+    details: { payment: payment.id, amount: line?.amount ?? event.amount ?? payment.amount },
   });
 }
 
-/** Money that should not have come (paid after the hold, twice, the wrong amount, the record no longer asks). */
-const unasked = (payment: Payment) => payment.status === "paid" && Boolean(payment.note);
+/** What has come back of a Payment so far. */
+const refundedOf = (tx: Tx | typeof db, payment: number) =>
+  tx
+    .select({ amount: paymentRefunds.amount })
+    .from(paymentRefunds)
+    .where(and(eq(paymentRefunds.paymentId, payment), eq(paymentRefunds.status, "done")))
+    .all()
+    .reduce((sum, r) => sum + r.amount, 0);
+
+/** The notes of money that should not have come: refunded to its payer whatever the entry says. */
+export const UNASKED = [
+  "paid after the hold",
+  "amount differs",
+  "the record no longer asks",
+  "the record is gone",
+] as const;
+const unasked = (payment: Payment) =>
+  payment.status === "paid" && (UNASKED as readonly string[]).includes(payment.note ?? "");
+
+/** Admins and the entry's refund roles: who sees a payment's reference and may refund it. */
+const staffOf = (viewer: Viewer | null, entry: string) =>
+  Boolean(viewer && ["admin", ...(PAYMENT_ENTRIES[entry]?.refund?.by ?? [])].includes(viewer.role));
 
 /**
- * Whether a person may refund a Payment (§4.4): admins and the entry's refund roles, while the
- * record fits the entry's refund condition; money that came for nothing to them whatever the entry
- * says.
+ * Whether a person may refund a Payment (§4.4): admins and the entry's refund roles, on a record
+ * they may read (`row`, as their read gave it) that fits the entry's refund condition; money that
+ * came for nothing to them whatever the entry says, also when its record is gone.
  */
 export function mayRefund(viewer: Viewer | null, payment: Payment, row?: Record<string, unknown>) {
-  if (!viewer || payment.status !== "paid") return false;
-  const entry = PAYMENT_ENTRIES[payment.entry];
-  const roles = ["admin", ...(entry?.refund?.by ?? [])];
-  if (!roles.includes(viewer.role)) return false;
+  if (!viewer || payment.status !== "paid" || !staffOf(viewer, payment.entry)) return false;
   if (unasked(payment)) return true;
-  if (!entry?.refund) return false;
-  return !entry.refund.when || (row !== undefined && fits(entry.refund.when, row));
+  const entry = PAYMENT_ENTRIES[payment.entry];
+  if (!entry?.refund || row === undefined) return false;
+  return !entry.refund.when || fits(entry.refund.when, row);
 }
 
+/** A clear refusal by the provider (not an unanswered call, which is asked again with the same key). */
+export class ProviderRefused extends Error {}
+
 /**
- * Refunds a paid Payment in full (§4.4): marked refunding in one transaction with its refund line,
- * then the provider asked with the line's own idempotency key; a refusal returns it to paid with
- * the reason. `by` is the person, or none for the app's own refund of money after the hold.
+ * Refunds what is left of a paid Payment (§4.4): marked refunding in one transaction with its
+ * refund line, the entry's refund condition checked again there, then the provider asked with the
+ * line's own idempotency key. A clear refusal returns it to paid with the reason on the line; an
+ * unanswered call leaves the line asked, and the minute timer asks again with the same key.
+ * `by` is the person, or none for the app's own refund of money after the hold.
  */
 export async function refund(id: number, by: Viewer | null): Promise<void> {
   const asked = db.transaction((tx) => {
     const payment = tx.select().from(payments).where(eq(payments.id, id)).get();
     if (!payment || payment.status !== "paid" || !payment.reference) return undefined;
+    const entry = PAYMENT_ENTRIES[payment.entry];
+    if (by && !unasked(payment) && entry?.refund?.when) {
+      const now = entry.read(tx, payment.record);
+      if (!now || !fits(entry.refund.when, now)) return undefined;
+    }
+    const amount = payment.amount - refundedOf(tx, id);
+    if (amount <= 0) return undefined;
     tx.update(payments).set({ status: "refunding" }).where(eq(payments.id, id)).run();
     const line = tx
       .insert(paymentRefunds)
-      .values({ paymentId: id, amount: payment.amount, by: by?.id ?? null })
+      .values({ paymentId: id, amount, by: by?.id ?? null })
       .returning({ id: paymentRefunds.id })
       .get();
     audit(tx, by ?? APP, {
       action: "refund asked",
-      model: PAYMENT_ENTRIES[payment.entry]?.model,
+      model: entry?.model,
       record: payment.record,
-      details: { payment: id, amount: payment.amount },
+      details: { payment: id, amount },
     });
-    return { payment, line: line.id };
+    return { payment, line: line.id, amount };
   });
   if (!asked) throw new BadInput(w.paymentGone);
-  const { payment, line } = asked;
+  await askRefund(asked.payment, asked.line, asked.amount);
+}
+
+/** Asks the provider for one refund line; the same key every time, so asking again is one refund. */
+async function askRefund(payment: Payment, line: number, amount: number): Promise<void> {
   const chosen = provider();
+  let made: { reference: string; done: boolean };
   try {
     if (!chosen || chosen.name !== payment.provider) throw new Error("the provider is not set up");
-    const made = await chosen.refund({
+    made = await chosen.refund({
       reference: payment.reference as string,
-      amount: payment.amount,
+      amount,
       currency: payment.currency,
       idempotencyKey: `refund-${line}`,
     });
-    db.update(paymentRefunds)
-      .set({ reference: made.reference })
-      .where(eq(paymentRefunds.id, line))
-      .run();
-    if (made.done)
-      applyEvent(
-        {
-          id: `refund:${line}`,
-          payment: id,
-          kind: "refunded",
-          amount: payment.amount,
-          refund: made.reference,
-          mode: payment.providerMode,
-        },
-        chosen,
-      );
   } catch (error) {
-    log.error("A refund was refused", { payment: id, error });
+    if (!(error instanceof ProviderRefused)) {
+      // No clear answer: the line stays asked and the timer asks again.
+      log.error("A refund's provider did not answer", { payment: payment.id, error });
+      throw new BadInput(w.refundPending);
+    }
+    log.warn("A refund was refused", { payment: payment.id, error: error.message });
     db.transaction((tx) => {
-      tx.update(paymentRefunds).set({ status: "refused" }).where(eq(paymentRefunds.id, line)).run();
+      tx.update(paymentRefunds)
+        .set({ status: "refused", note: error.message })
+        .where(and(eq(paymentRefunds.id, line), eq(paymentRefunds.status, "asked")))
+        .run();
       tx.update(payments)
-        .set({ status: "paid", note: payment.note ?? "refund refused" })
-        .where(and(eq(payments.id, id), eq(payments.status, "refunding")))
+        .set({ status: "paid" })
+        .where(and(eq(payments.id, payment.id), eq(payments.status, "refunding")))
         .run();
     });
     throw new BadInput(w.refundRefused);
+  }
+  db.update(paymentRefunds)
+    .set({ reference: made.reference })
+    .where(and(eq(paymentRefunds.id, line), isNull(paymentRefunds.reference)))
+    .run();
+  if (made.done && chosen)
+    applyEvent(
+      {
+        id: `refund:${line}`,
+        payment: payment.id,
+        kind: "refunded",
+        amount,
+        refund: made.reference,
+        mode: payment.providerMode,
+      },
+      chosen,
+    );
+}
+
+/** Refund lines left asked (no answer from the provider): asked again with the same key, each minute for a day. */
+async function askAgain(now: number): Promise<void> {
+  const waiting = db
+    .select()
+    .from(paymentRefunds)
+    .where(
+      and(
+        eq(paymentRefunds.status, "asked"),
+        isNull(paymentRefunds.reference),
+        lt(paymentRefunds.createdAt, new Date(now - MINUTE)),
+        gt(paymentRefunds.createdAt, new Date(now - DAY)),
+      ),
+    )
+    .limit(20)
+    .all();
+  for (const line of waiting) {
+    const payment = db.select().from(payments).where(eq(payments.id, line.paymentId)).get();
+    if (payment?.status === "refunding")
+      await askRefund(payment, line.id, line.amount).catch(() => undefined);
   }
 }
 
@@ -572,22 +667,31 @@ export function paymentsOf(
     .where(and(inArray(payments.entry, entries), eq(payments.record, record)))
     .orderBy(desc(payments.createdAt))
     .all();
-  const staff = Boolean(
-    viewer &&
-      ["admin", ...entries.flatMap((e) => PAYMENT_ENTRIES[e]?.refund?.by ?? [])].includes(
-        viewer.role,
-      ),
+  // Why a refund was refused, for those who see the references.
+  const refusals = new Map(
+    db
+      .select({ payment: paymentRefunds.paymentId, note: paymentRefunds.note })
+      .from(paymentRefunds)
+      .where(
+        and(
+          inArray(
+            paymentRefunds.paymentId,
+            all.map((p) => p.id),
+          ),
+          eq(paymentRefunds.status, "refused"),
+        ),
+      )
+      .orderBy(paymentRefunds.id)
+      .all()
+      .map((r) => [r.payment, r.note]),
   );
+  const sold = (p: Payment) =>
+    (p.status === "paid" || p.status === "refunding") &&
+    !(UNASKED as readonly string[]).includes(p.note ?? "");
   // Pay is offered on a record that fits its entry's condition and is not paid (§4.1).
   const offer = entries.find((e) => {
     const entry = PAYMENT_ENTRIES[e];
-    return (
-      entry?.when &&
-      fits(entry.when, row) &&
-      !all.some(
-        (p) => p.entry === e && (p.status === "paid" || p.status === "refunding") && !p.note,
-      )
-    );
+    return entry?.when && fits(entry.when, row) && !all.some((p) => p.entry === e && sold(p));
   });
   return {
     lines: all.map((p) => ({
@@ -596,7 +700,9 @@ export function paymentsOf(
       currency: p.currency,
       status: p.status,
       at: (p.paidAt ?? p.createdAt).toISOString(),
-      ...(staff ? { reference: p.reference, note: p.note } : {}),
+      ...(staffOf(viewer, p.entry)
+        ? { reference: p.reference, note: p.note ?? refusals.get(p.id) ?? null }
+        : {}),
       refundable: mayRefund(viewer, p, row),
     })),
     pay:
@@ -633,7 +739,7 @@ export async function startPayment(
           eq(payments.entry, entryName),
           eq(payments.record, row.id),
           inArray(payments.status, ["paid", "refunding"]),
-          isNull(payments.note),
+          or(isNull(payments.note), notInArray(payments.note, [...UNASKED])),
         ),
       )
       .get();
@@ -672,13 +778,14 @@ async function refundLate(now: number): Promise<void> {
     .limit(20)
     .all();
   for (const payment of late) {
-    // Refused ones wait: an admin refunds them from the Payments page.
+    // Asked once by the app: an unanswered ask is asked again by askAgain; a refused one waits for
+    // an admin on the Payments page.
     const tried = db
       .select({ n: count() })
       .from(paymentRefunds)
-      .where(and(eq(paymentRefunds.paymentId, payment.id), isNull(paymentRefunds.by)))
+      .where(eq(paymentRefunds.paymentId, payment.id))
       .get();
-    if ((tried?.n ?? 0) >= 5) continue;
+    if ((tried?.n ?? 0) > 0) continue;
     await refund(payment.id, null).catch(() => undefined);
   }
 }
@@ -728,6 +835,7 @@ export async function releaseExpired(now = Date.now()): Promise<number> {
     .limit(50)
     .all();
   await refundLate(now);
+  await askAgain(now);
   let released = 0;
   for (const payment of due) {
     if (chosen?.status && payment.reference && chosen.name === payment.provider) {
@@ -791,10 +899,12 @@ export const seesPayments = (viewer: Viewer | null) =>
 /** The Payments page (§3.3): all of them, newest first, filtered by status, 200 at most. */
 export function allPayments(viewer: Viewer | null, status?: Payment["status"]) {
   if (!seesPayments(viewer)) return null;
+  // Each role sees the entries it may refund; admins all of them.
+  const shown = Object.keys(PAYMENT_ENTRIES).filter((e) => staffOf(viewer, e));
   return db
     .select()
     .from(payments)
-    .where(status ? eq(payments.status, status) : undefined)
+    .where(and(inArray(payments.entry, shown), status ? eq(payments.status, status) : undefined))
     .orderBy(desc(payments.createdAt))
     .limit(200)
     .all()
