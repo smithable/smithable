@@ -123,3 +123,34 @@ test("the parts", () => {
   expect(declaredReason("Fix file: none, because x")).toBeUndefined();
   expect(declaredReason("fix file: None because tests only change")).toBe("tests only change");
 });
+
+test("a security fix is found whatever else the change does, and is not declared away", async () => {
+  const declared = "Fix file: none, because it is only a version bump";
+  const hole = async () => [advisory("<1.7.14", "1.7.14")];
+  // With a kit change beside it.
+  const mixed = input({ engine: [STACK_FILE, KIT], advisories: hole, body: declared });
+  expect((await fixFileRule(mixed)).ok).toBe(false);
+  // As a major step.
+  const major = input({
+    diffOf: () => bumpDiff("1.7.13", "2.0.0"),
+    advisories: hole,
+    body: declared,
+  });
+  expect((await fixFileRule(major)).ok).toBe(false);
+  // An advisory whose range cannot be read counts as one left behind.
+  const odd = input({ advisories: async () => [advisory("^1 || ~1.7", "1.7.14")] });
+  expect((await fixFileRule(odd)).ok).toBe(false);
+});
+
+test("pins named twice are no plain bump; a declaration in a comment or a block is not said", () => {
+  expect(
+    pinBumps(`-    zod: "4.6.7",\n+    zod: "4.6.8",\n-    zod: "3.0.0",\n+    zod: "4.0.0",\n`),
+  ).toBeUndefined();
+  expect(declaredReason("<!-- Fix file: none, because nothing changes here -->")).toBeUndefined();
+  expect(
+    declaredReason("```\nFix file: none, because nothing changes here\n```\n"),
+  ).toBeUndefined();
+  expect(declaredReason("Fix file: none, because ::error::nothing at all")).toBe(
+    ": :error: :nothing at all",
+  );
+});

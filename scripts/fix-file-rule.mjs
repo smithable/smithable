@@ -45,7 +45,8 @@ const { ok, why } = await fixFileRule({
   diffOf: (path) => git("diff", "--unified=0", `${base}...HEAD`, "--", path),
   filesOf: (path) => ({ before: show(`${from}:${path}`), after: show(`HEAD:${path}`) }),
   labelled: process.env.NO_FIX_FILE === "true" || Boolean(now?.labelled),
-  body: now?.body ?? process.env.PR_BODY,
+  // The text as it is now when it could be asked (an emptied text is empty), else the event's.
+  body: now ? now.body : process.env.PR_BODY,
   advisories: async (pins) => {
     const read = await readAdvisories(pins, { token: process.env.GITHUB_TOKEN });
     return read.unread.length ? undefined : read.advisories;
@@ -67,7 +68,7 @@ async function pullNow() {
     const pull = await response.json();
     return {
       labelled: (pull.labels ?? []).some((l) => l.name === "no-fix-file"),
-      body: typeof pull.body === "string" ? pull.body : undefined,
+      body: typeof pull.body === "string" ? pull.body : "",
     };
   } catch {
     return undefined;

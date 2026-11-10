@@ -21,18 +21,32 @@ export interface Bump {
 
 const PIN = /^\s*"?((?:@[\w.-]+\/)?[\w.-]+)"?:\s*"(\d+\.\d+\.\d+[\w.+-]*)",?\s*$/;
 
+/** The pins a diff of the stack profile changes, whatever else it changes: name and old version. */
+export function pinsChanged(diff: string): { name: string; version: string }[] {
+  return diff
+    .split("\n")
+    .filter((l) => l[0] === "-" && !l.startsWith("---"))
+    .flatMap((l) => {
+      const pin = PIN.exec(l.slice(1));
+      return pin ? [{ name: pin[1] as string, version: pin[2] as string }] : [];
+    });
+}
+
 /** The pins a diff of the stack profile bumps, or undefined when it changes anything else. */
 export function pinBumps(diff: string): Bump[] | undefined {
   const from = new Map<string, string>();
   const to = new Map<string, string>();
   for (const line of diff.split("\n")) {
-    if (line.startsWith("---") || line.startsWith("+++")) continue;
+    if (line.startsWith("--- ") || line.startsWith("+++ ")) continue;
     const sign = line[0];
     if (sign !== "-" && sign !== "+") continue;
     if (line.slice(1).trim() === "") continue;
     const pin = PIN.exec(line.slice(1));
     if (!pin) return undefined;
-    (sign === "-" ? from : to).set(pin[1] as string, pin[2] as string);
+    const side = sign === "-" ? from : to;
+    // A name pinned twice cannot be told apart in a diff: not a plain bump.
+    if (side.has(pin[1] as string)) return undefined;
+    side.set(pin[1] as string, pin[2] as string);
   }
   if (from.size !== to.size || !from.size) return undefined;
   const bumps: Bump[] = [];
@@ -61,7 +75,8 @@ export function fixesAdvisory(bump: Bump, advisories: Advisory[], inRange: InRan
     advisory.affects.some(
       (a) =>
         a.name === bump.name &&
-        inRange(bump.from, a.range) === true &&
+        // Unsure counts as affected before and as fixed after: the rule fails closed.
+        inRange(bump.from, a.range) !== false &&
         inRange(bump.to, a.range) !== true,
     ),
   );
@@ -145,8 +160,11 @@ export function commentsOnly(
 
 /** The reason a pull request's text gives for needing no fix file, if it gives one. */
 export function declaredReason(body: string | undefined): string | undefined {
-  const found = /^\s*Fix file:\s*none,?\s+because\s+(.+?)\s*$/im.exec(body ?? "");
-  const reason = found?.[1];
+  // Said in the text, not in a comment or a quoted block.
+  const said = (body ?? "").replace(/<!--[\s\S]*?-->/g, "").replace(/^(```|~~~)[\s\S]*?^\1/gm, "");
+  const found = /^Fix file:\s*none,?\s+because\s+(.+?)\s*$/im.exec(said);
+  // Printed in CI's log: no workflow command (::…) rides along.
+  const reason = found?.[1]?.replace(/::/g, ": :");
   return reason && reason.length >= 10 ? reason : undefined;
 }
 
@@ -172,7 +190,32 @@ export async function fixFileRule(input: RuleInput): Promise<{ ok: boolean; why:
   if (!engine.length) return { ok: true, why: "No kit, template or generator file changed." };
   if (fixes.length) return { ok: true, why: `Fix files: ${fixes.join(", ")}.` };
   const rest = engine.filter((p) => p !== STACK_FILE);
-  const bumps = engine.includes(STACK_FILE) ? pinBumps(input.diffOf(STACK_FILE)) : [];
+  const stack = engine.includes(STACK_FILE) ? input.diffOf(STACK_FILE) : "";
+  // A security fix is found whatever else the change does: no declaration stands in for it.
+  const changedPins = pinsChanged(stack);
+  if (changedPins.length) {
+    const read = await input.advisories(
+      Object.fromEntries(changedPins.map((p) => [p.name, p.version])),
+    );
+    if (!read)
+      return needs(
+        input,
+        "The changed pins' advisories could not be read, so whether this is a security fix is not known.",
+        true,
+      );
+    const after = pinBumps(stack) ?? [];
+    const fixed = changedPins.filter((p) => {
+      const to = after.find((b) => b.name === p.name)?.to ?? "0.0.0-removed";
+      return fixesAdvisory({ name: p.name, from: p.version, to }, read, input.inRange);
+    });
+    if (fixed.length)
+      return needs(
+        input,
+        `The change of ${fixed.map((p) => p.name).join(", ")} leaves a published advisory behind: a security fix needs a fix file.`,
+        true,
+      );
+  }
+  const bumps = stack ? pinBumps(stack) : [];
   const quiet = rest.every((p) => {
     const { before, after } = input.filesOf(p);
     return commentsOnly(p, before, after);
@@ -180,30 +223,12 @@ export async function fixFileRule(input: RuleInput): Promise<{ ok: boolean; why:
   if (bumps && quiet) {
     if (!bumps.length)
       return { ok: true, why: "Only comments and documents of the app's parts changed." };
-    const steps = bumps.every((b) => harmlessStep(b.from, b.to));
-    const advisories = steps
-      ? await input.advisories(Object.fromEntries(bumps.map((b) => [b.name, b.from])))
-      : undefined;
-    const fixed = advisories
-      ? bumps.filter((b) => fixesAdvisory(b, advisories, input.inRange))
-      : [];
-    const said = bumps.map((b) => `${b.name} ${b.from} → ${b.to}`).join(", ");
-    if (steps && advisories && !fixed.length)
+    // The advisories were read above, and none is left behind.
+    if (bumps.every((b) => harmlessStep(b.from, b.to)))
       return {
         ok: true,
-        why: `Only pins bumped by patch or minor, over no published advisory: ${said}.`,
+        why: `Only pins bumped by patch or minor, over no published advisory: ${bumps.map((b) => `${b.name} ${b.from} → ${b.to}`).join(", ")}.`,
       };
-    if (fixed.length)
-      return needs(
-        input,
-        `The bump of ${fixed.map((b) => b.name).join(", ")} leaves a published advisory behind: a security fix needs a fix file.`,
-        true,
-      );
-    if (!advisories && steps)
-      return needs(
-        input,
-        `The advisories of ${said} could not be read, so the bump was not passed by itself.`,
-      );
   }
   return needs(input, undefined);
 }
