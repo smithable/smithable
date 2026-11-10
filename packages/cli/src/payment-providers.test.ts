@@ -184,7 +184,7 @@ test("Mollie: the call names only a payment; what the app acts on is Mollie's an
     "id=tr_1",
     "app-1",
   );
-  expect(calls[0]?.url).toBe("https://api.mollie.com/v2/payments/tr_1?embed=refunds");
+  expect(calls[0]?.url).toBe("https://api.mollie.com/v2/payments/tr_1?embed=refunds,chargebacks");
   expect(events?.map((e) => [e.id, e.kind, e.amount])).toEqual([
     ["tr_1:paid", "paid", 2450],
     ["re_9:refunded", "refunded", 1000],
@@ -275,4 +275,39 @@ test("Mollie: a checkout in its amount format; a refused refund is a clear refus
       idempotencyKey: "refund-1",
     }),
   ).rejects.not.toThrow(kit.ProviderRefused);
+});
+
+test("a dispute is noted: Stripe's from the dispute's payment intent, Mollie's from the payment's chargebacks", async () => {
+  vi.stubEnv("PAYMENTS_SECRET_KEY", "sk_test_abc");
+  vi.stubEnv("PAYMENTS_WEBHOOK_SECRET", "whsec_x");
+  const body = JSON.stringify({
+    id: "evt_9",
+    type: "charge.dispute.created",
+    livemode: false,
+    data: { object: { id: "dp_1", payment_intent: "pi_1", reason: "fraudulent" } },
+  });
+  answers = [{ id: "pi_1", currency: "eur", metadata: { payment: "7", app: "app-1" } }];
+  expect(await kit.stripeProvider.verifyEvent(signed(body, "whsec_x"), body, "app-1")).toEqual([
+    { id: "evt_9", payment: 7, kind: "disputed", mode: "test", reason: "fraudulent" },
+  ]);
+  vi.stubEnv("PAYMENTS_SECRET_KEY", "test_abc");
+  answers = [
+    {
+      id: "tr_1",
+      status: "paid",
+      mode: "test",
+      amount: { currency: "EUR", value: "24.50" },
+      metadata: { payment: 7, app: "app-1" },
+      _embedded: { chargebacks: [{ id: "chb_1", reason: { description: "Unauthorised" } }] },
+    },
+  ];
+  const events = await kit.mollieProvider.verifyEvent(
+    new Request("https://x.example"),
+    "id=tr_1",
+    "app-1",
+  );
+  expect(events?.map((e) => [e.id, e.kind])).toEqual([
+    ["tr_1:paid", "paid"],
+    ["chb_1:chargeback", "disputed"],
+  ]);
 });
