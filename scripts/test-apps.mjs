@@ -1756,6 +1756,8 @@ async function kioskPaymentFlow(dir, base) {
     await page.getByRole("button", { name: /^Pay / }).click();
     await page.waitForURL(/\/payments\/fake\/\d+$/, { timeout: 30000 * P });
     await page.getByText("Test payment: no money moves").waitFor();
+    // Its buttons answer once the page is running, not when it is first drawn.
+    await hydrated(page);
     return Number(/\/payments\/fake\/(\d+)$/.exec(page.url())[1]);
   };
   const orderOf = (payment) =>
