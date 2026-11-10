@@ -1797,7 +1797,7 @@ async function kioskPaymentFlow(dir, base) {
     await signInAs(staff, base, "admin");
     await open(staff, `${base}/orders`);
     if (await staff.getByText("Paula Paid").count()) throw new Error("staff see an unpaid order");
-    if (subjects(before).includes("A new order"))
+    if (subjects(before).some((s) => s.startsWith("New order ")))
       throw new Error("staff were told of an unpaid order");
     step = "approve and come back paid";
     await page.getByRole("button", { name: "Approve" }).click();
@@ -1807,7 +1807,7 @@ async function kioskPaymentFlow(dir, base) {
     const done = orderOf(paid);
     if (done.held || done.paid !== 1) throw new Error(`the paid order is ${JSON.stringify(done)}`);
     await waitFor("mail to staff of the paid order", () =>
-      subjects(before).includes("A new order"),
+      subjects(before).some((s) => s.startsWith("New order ")),
     );
     step = "staff see the paid order";
     await open(staff, `${base}/orders`);
@@ -1852,8 +1852,8 @@ async function kioskPaymentFlow(dir, base) {
       `select count(*) n from audit_log where action = 'paid' and record_id = ${orderOf(twice).id}`,
     );
     if (lines.n !== 1) throw new Error(`a payment told twice was recorded ${lines.n} times`);
-    await waitFor("mail to staff", () => subjects(before).includes("A new order"));
-    if (subjects(before).filter((s) => s === "A new order").length !== 1)
+    await waitFor("mail to staff", () => subjects(before).some((s) => s.startsWith("New order ")));
+    if (subjects(before).filter((s) => s.startsWith("New order ")).length !== 1)
       throw new Error("staff were told twice of one order");
     // A wrong amount: recorded with its note, the order released, never let out unpaid.
     step = "a wrong amount";
@@ -6422,6 +6422,110 @@ async function onboardingFlow(base) {
   }
 }
 
+/**
+ * Paying for an existing record (payments.md §4.1, §4.4; A 241 step 2b): the test's own payments
+ * entry on a sent invoice. Pay on its page leads to the fake provider; once paid the invoice is
+ * marked paid and offers no Pay; its owner refunds it, and the Payment is refunded. A draft asks
+ * for nothing.
+ */
+async function invoicePaymentFlow(dir, base) {
+  const spec = join(dir, "smithable.yml");
+  const original = readFileSync(spec, "utf8");
+  writeFileSync(
+    spec,
+    original.replace(
+      /\nactions:\n/,
+      '\npayments:\n  invoicePayment: { on: Invoice, amount: total, when: { status: [sent, overdue] }, paid: { set: { status: paid } }, refund: { by: [member] }, description: "Invoice {number}" }\n\nactions:\n',
+    ),
+  );
+  const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  page.on("dialog", (dialog) => dialog.accept());
+  let step = "generate";
+  try {
+    if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
+    step = "the invoice";
+    await signInAs(page, base, "member");
+    const [me] = query(
+      dir,
+      "select id from user where role = 'member' and id != 'other-user' order by created_at desc limit 1",
+    );
+    write(
+      dir,
+      `insert into clients (name, email, owner_id, created_at, updated_at)
+         values ('Paying Client', 'payer@client.example.com', '${me.id}', 0, 0);
+       insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
+         values ('PAY-001', last_insert_rowid(), '2026-11-01', '2026-12-01', 'sent', '${me.id}', 0, 0);
+       insert into invoice_lines (invoice_id, description, quantity, unit_price, owner_id, created_at, updated_at)
+         values ((select id from invoices where number = 'PAY-001'), 'Design work', 1, 12000, '${me.id}', 0, 0);
+       insert into invoices (number, client_id, issued_on, due_on, status, owner_id, created_at, updated_at)
+         values ('PAY-002', (select id from clients where name = 'Paying Client'), '2026-11-01', '2026-12-01', 'draft', '${me.id}', 0, 0);`,
+    );
+    const [sent] = query(dir, "select id from invoices where number = 'PAY-001'");
+    const [draft] = query(dir, "select id from invoices where number = 'PAY-002'");
+    step = "pay on the invoice's page";
+    // The dev server takes the new spec a moment after the change.
+    for (let i = 0; ; i++) {
+      await open(page, `${base}/invoices/${sent.id}`);
+      if (await page.getByRole("button", { name: /^Pay / }).count()) break;
+      if (i === 30 * P) throw new Error("no Pay on a sent invoice");
+      await page.waitForTimeout(1000);
+    }
+    await hydrated(page);
+    await page.getByRole("button", { name: /^Pay .*120/ }).click();
+    await page.waitForURL(/\/payments\/fake\/\d+$/, { timeout: 30000 * P });
+    await page.getByText("Invoice PAY-001").waitFor();
+    await hydrated(page);
+    await page.getByRole("button", { name: "Approve" }).click();
+    await page
+      .getByRole("heading", { name: /^Paid .+ Thank you!$/ })
+      .waitFor({ timeout: 15000 * P });
+    const [after] = query(dir, `select status from invoices where id = ${sent.id}`);
+    if (after.status !== "paid") throw new Error(`a paid invoice is ${after.status}`);
+    step = "refund";
+    await open(page, `${base}/invoices/${sent.id}`);
+    await hydrated(page);
+    if (await page.getByRole("button", { name: /^Pay / }).count())
+      throw new Error("a paid invoice still offers Pay");
+    await page.getByRole("button", { name: "Refund" }).click();
+    await page
+      .locator('[data-part="payment"]')
+      .getByText("Refunded")
+      .waitFor({ timeout: 15000 * P });
+    const [payment] = query(dir, `select status from payments where record = ${sent.id}`);
+    const [line] = query(dir, 'select status, "by" from payment_refunds order by id desc limit 1');
+    if (payment.status !== "refunded" || line.status !== "done" || line.by !== me.id)
+      throw new Error(`refunded: ${JSON.stringify({ payment, line })}`);
+    step = "the Payments page";
+    await page.getByRole("link", { name: "All payments" }).click();
+    await page.waitForURL(/\/payments\/?$/);
+    await page
+      .locator('[data-part="payment"]')
+      .getByText("Invoice PAY-001")
+      .waitFor({ timeout: 15000 * P });
+    await page.locator('[data-part="payment"]').getByText("Refunded").first().waitFor();
+    step = "a draft asks for nothing";
+    await open(page, `${base}/invoices/${draft.id}`);
+    await hydrated(page);
+    if (await page.getByRole("button", { name: /^Pay / }).count())
+      throw new Error("a draft invoice offers Pay");
+    console.log(
+      "  ✓ browser: a sent invoice is paid on its page through the fake provider and marked paid; its owner refunds it and finds it on the Payments page; a draft asks for nothing",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ invoice payments (${step}): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("invoice payment flow");
+  } finally {
+    await browser.close();
+    writeFileSync(spec, original);
+    const back = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+    if (back.status !== 0) failures.push(`invoice payments put back: ${back.stdout}${back.stderr}`);
+  }
+}
+
 /** In the invoicing app, a member never sees another user's invoices, even by their id. */
 async function isolationFlow(dir, base) {
   write(
@@ -8952,6 +9056,7 @@ test("the session cookie's name and attributes", async () => {
         await addChildFlow(base);
         await onboardingFlow(base);
         await isolationFlow(dir, base);
+        await invoicePaymentFlow(dir, base);
       }
     } finally {
       stop();

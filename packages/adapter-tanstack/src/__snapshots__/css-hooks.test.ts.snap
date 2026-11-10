@@ -189,11 +189,19 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/PaymentBack.tsx": [
     "data-kit="payment-back"",
   ],
+  "src/kit/PaymentsPage.tsx": [
+    "data-kit="payments"",
+    "data-part="payment"",
+  ],
   "src/kit/PictureInput.tsx": [
     "data-part="picture"",
   ],
   "src/kit/PushChoices.tsx": [
     "data-kit="push-choices"",
+  ],
+  "src/kit/RecordPayments.tsx": [
+    "data-kit="record-payments"",
+    "data-part="payment"",
   ],
   "src/kit/RecordSummary.tsx": [
     "data-kit="record-summary"",

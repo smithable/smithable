@@ -523,6 +523,8 @@ const PAYMENT_TABLES = [
   amount: integer().notNull(),
   reference: text(),
   status: text({ enum: ["asked", "done", "refused"] }).notNull().default("asked"),
+  /** Why the provider refused it, in its words. */
+  note: text(),
   /** Who asked; none for the app itself or the provider's dashboard. */
   by: text(),
   createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),

@@ -47,7 +47,7 @@ import {
   occupying,
 } from "./occupies.js";
 import { OUTGOING_IMPORT, toldAbout } from "./outgoing.js";
-import { payToCreate } from "./payments.js";
+import { describeCode, payToCreate } from "./payments.js";
 import {
   addable,
   addressOwned,
@@ -324,9 +324,18 @@ export const ${reserveNames(model).places} = createServerFn()
 /** Takes a place in one step: the other fields have their defaults. */
 export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data: id }) =>
+  .handler(async ({ data: id }) =>${
+    payToCreate(ir, model)
+      ? ` {
+    // A place paid for (payments.md §4.1): held, then on to the provider's page.
+    const made = await ${n.data}.create(await writer(), { ${capacity.per}Id: id } as ${n.values}${ir.pages.some((p) => p.pattern.kind === "order" && p.pattern.into === model.name) ? ", undefined" : ""}, true);
+    const { payFor } = await import("#/kit/payments.server");
+    return { ...made, pay: made.payHeldAt ? await payFor(${JSON.stringify(payToCreate(ir, model)?.name)}, made.id) : undefined };
+  });`
+      : `
     ${n.data}.create(await writer(), { ${capacity.per}Id: id } as ${n.values}),
-  );
+  );`
+  }
 `
       : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
@@ -429,6 +438,10 @@ export const ${n.get} = createServerFn()
       }
       canWrite: allows(${n.access}.write, viewer${hasSignIn(auth) ? `, ${ownerOf(model, n)}` : ""}),
       canDelete: allows(${n.access}.delete, viewer${hasSignIn(auth) ? `, ${ownerOf(model, n)}` : ""}),${
+        ir.payments.some((p) => p.on === model.name)
+          ? `\n      // Its payments, and Pay where it asks for one (payments.md §3.3, §4.1).\n      payments: (await import("#/kit/payments.server")).paymentsOf(viewer, ${JSON.stringify(model.name)}, id, row),`
+          : ""
+      }${
         adds.length
           ? `\n      // Who may add to its related lists from here ("Add line" on an invoice).\n      canAdd: { ${adds.map((a) => `${a.list.name}: allows(${names(a.target, t).access}.create, viewer)`).join(", ")} },`
           : ""
@@ -1322,24 +1335,8 @@ ${updateBody}
   // needs none: the record is not held.
   const payEntry = payToCreate(ir, model);
   // What the payer sees at the provider: the entry's text with the record's fields, or its title.
-  const describe = (text: string | undefined, row: string) => {
-    const value = (name: string) => {
-      const field = model.fields.find((x) => x.name === name);
-      if (!field || field.type.kind === "relation") return undefined;
-      const read = `${row}.${dataKey(field)}`;
-      return field.type.kind === "scalar" && field.type.name === "money"
-        ? `\${(Number(${read} ?? 0) / 100).toFixed(2)}`
-        : `\${String(${read} ?? "")}`;
-    };
-    if (!text)
-      return titleKey && titleKey !== "id"
-        ? `String(${row}.${titleKey} ?? "")`
-        : `String(${row}.id)`;
-    const filled = text
-      .replace(/[\\`$]/g, (c) => `\\${c}`)
-      .replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (all, name: string) => value(name) ?? all);
-    return `\`${filled}\``;
-  };
+  const describe = (text: string | undefined, row: string) =>
+    describeCode(model, text, row, titleKey);
   const payAmount = payEntry && model.fields.find((f) => f.name === payEntry.amount);
   const paying =
     payEntry && payAmount

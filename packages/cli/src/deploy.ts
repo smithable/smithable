@@ -35,6 +35,11 @@ const PROVIDER_KEYS = [
   "SMS_SECRET",
   "SMS_FROM",
   "SMS_MAX_PER_DAY",
+  // Payments (payments.md §3.5): the provider's keys, and how long a place waits for its payment.
+  "PAYMENTS_SECRET_KEY",
+  "PAYMENTS_WEBHOOK_SECRET",
+  "PAYMENTS_PUBLIC_KEY",
+  "PAYMENTS_HOLD_MINUTES",
 ];
 
 /**

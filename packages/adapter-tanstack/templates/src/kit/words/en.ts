@@ -702,6 +702,9 @@ export const w = {
     `Visits are counted with ${provider}, which sets no cookie and keeps no personal data.`,
   legalAnalyticsConsent: (provider: string) =>
     `Visits are counted with ${provider} only after you accept it in the cookie bar. You can change your choice under Cookie settings at the bottom of the page.`,
+  legalPayTitle: "Payments",
+  legalPay: (labels: string[]) =>
+    `Payments for ${labels.join(", ")} are made on the payment provider's own page, which the app's owner chose; the provider has its own privacy terms. The app keeps the amount, whether it was paid or refunded, and the provider's reference for it, never your card or bank details.`,
   legalSmsTitle: "Texts to your phone",
   legalSms: (labels: string[]) =>
     `If you give your mobile number under your name, confirm it with the code texted to it and turn texts on, the app texts you about new ${labels.join(", ")}. A number you give with a record of your own may get a text about that record, sent when someone working in the app acts on it. The texts go through the SMS provider the app's owner chose. Your number is used for nothing else; removing it under your name ends the texts.`,
@@ -750,6 +753,23 @@ export const w = {
   paymentDecline: "Decline",
   paymentUnavailable: "Payment is not possible right now. Please try again.",
   paymentGone: "This payment is no longer open.",
+  refundRefused:
+    "The payment provider refused the refund. Try again later, or refund at the provider.",
+  refundPending: "The payment provider has not answered yet. The refund is asked again by itself.",
+  payments: "Payments",
+  allPayments: "All payments",
+  refund: "Refund",
+  refundAsk: (amount: string) => `Refund ${amount} to the payer?`,
+  paymentStatus: (status: string) =>
+    (
+      ({
+        pending: "Waiting",
+        paid: "Paid",
+        failed: "Not paid",
+        refunding: "Being refunded",
+        refunded: "Refunded",
+      }) as Record<string, string>
+    )[status] ?? status,
   paymentUnmatched:
     "The payment came, but not as asked, so nothing was ordered. It will be refunded.",
   /** A chart's bar for a quarter: "Q3 2026". */
@@ -959,6 +979,8 @@ export const w = {
     push: (text: string) =>
       `A browser push: ${text}. The title line and the link go, encrypted, through the browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), to those who turned it on.`,
     callsIn: (text: string) => `Calls in: ${text}`,
+    payments: (on: string) =>
+      `Payments for ${on}: made on the payment provider's page (the one the owner sets, PAYMENTS_SECRET_KEY), recorded by its signed word. The app keeps the amount, the state and the provider's reference, never card or bank details.`,
     sentNone: "The text alone goes.",
     sentAll: "The fields its record page shows go.",
     sentFields: (fields: string) => `Fields that go: ${fields}.`,

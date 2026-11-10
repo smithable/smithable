@@ -186,6 +186,8 @@ export interface CardFacts {
     push: CardSent[];
     /** Texts (notifications.md §5), through the owner's SMS provider. */
     sms: CardSent[];
+    /** Payments (payments.md): what is paid for on the payment provider's page. */
+    payments?: { on: string }[];
     calls: CardSent[];
     incoming: { name: string; creates?: string; custom: boolean; mail: boolean; text: string }[];
     analytics?: { provider: string; cookies: boolean };
@@ -566,6 +568,9 @@ export function appCard(input: CardInput): CardFacts {
       mail: mail.map(sent),
       push: push.map(sent),
       sms: sms.map(sent),
+      ...(ir.payments.length
+        ? { payments: ir.payments.map((p) => ({ on: pluralLabel(p.on) })) }
+        : {}),
       calls: calls.map(sent),
       incoming: ir.incoming.map((i) => ({
         name: i.name,

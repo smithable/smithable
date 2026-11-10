@@ -159,7 +159,17 @@ export function Reserve({
         </AppLink>
       ) : places.canBook && !full ? (
         <>
-          <Button type="button" disabled={busy} onClick={() => run(() => book({ data: id }))}>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              run(async () => {
+                // A place paid for goes on to the provider's page (payments.md §4.1).
+                const made = (await book({ data: id })) as { pay?: string } | undefined;
+                if (made?.pay) window.location.assign(made.pay);
+              })
+            }
+          >
             {busy ? w.booking : <span {...mark("book")}>{bookLabel}</span>}
           </Button>
           {places.closesAt && note(w.bookUntil(deadline(places.closesAt, timeZone)))}

@@ -29,6 +29,8 @@ export interface LegalFacts {
   pushAbout?: string[];
   /** Kinds of record a text is about (notifications.md §5). */
   smsAbout?: string[];
+  /** Kinds of record paid for on the payment provider's page (payments.md). */
+  payAbout?: string[];
   /** The maker's own words under the generated text. */
   more?: { title?: string; text?: string };
 }
@@ -103,6 +105,11 @@ export function LegalPage({ facts, title }: { facts: LegalFacts; title: string }
         <Part title={w.legalMailTitle}>
           {facts.signIn && <p>{w.legalMailSignIn}</p>}
           {facts.mailAbout.length > 0 && <p>{w.legalMailEvents(facts.mailAbout)}</p>}
+        </Part>
+      )}
+      {facts.payAbout && (
+        <Part title={w.legalPayTitle}>
+          <p>{w.legalPay(facts.payAbout)}</p>
         </Part>
       )}
       {facts.smsAbout && (
