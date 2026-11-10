@@ -88,6 +88,7 @@ The ten starters, with pictures: [docs.smithable.ai/starters](https://docs.smith
 
 ## Other projects by us
 
+- [sampleusers](https://github.com/smithable/sampleusers): simulated users that try a product the way people would and check it against its own docs, with evidence; Smithable is its first real user, checked every night.
 - [sassato](https://github.com/smithable/sassato): a local task and state coordinator for coding agents and people. Each worker gets a durable role and recovers its tasks, decisions, inbox and work in progress after a session reset; one SQLite file, no server.
 
 ## License
