@@ -8,15 +8,16 @@ type Provider = {
   ready(): boolean;
   mode(): string;
   createCheckout(asked: Record<string, unknown>): Promise<{ reference: string; url: string }>;
-  verifyEvent(request: Request, body: string): Promise<Event[] | null>;
+  verifyEvent(request: Request, body: string, app: string): Promise<Event[] | null>;
   refund(asked: Record<string, unknown>): Promise<{ reference: string; done: boolean }>;
 };
 const path: string = "../../adapter-tanstack/templates/src/kit/payments-providers.server.ts";
 const kit = (await import(path)) as {
   stripeProvider: Provider;
   mollieProvider: Provider;
-  inMinor(hundredths: number, currency: string): number;
-  fromMinor(minor: number, currency: string): number;
+  stripeMinor(hundredths: number, currency: string): number;
+  fromStripe(minor: number, currency: string): number;
+  mollieAmount(hundredths: number, currency: string): { currency: string; value: string };
   ProviderRefused: new (message: string) => Error;
 };
 
@@ -48,10 +49,15 @@ const signed = (body: string, secret: string, at = Math.floor(Date.now() / 1000)
   });
 
 test("amounts go to a provider in its currency's smallest unit; a currency without decimals takes whole ones", () => {
-  expect(kit.inMinor(2450, "EUR")).toBe(2450);
-  expect(kit.inMinor(150000, "JPY")).toBe(1500);
-  expect(() => kit.inMinor(150050, "JPY")).toThrow(kit.ProviderRefused);
-  expect(kit.fromMinor(1500, "JPY")).toBe(150000);
+  expect(kit.stripeMinor(2450, "EUR")).toBe(2450);
+  expect(kit.stripeMinor(150000, "JPY")).toBe(1500);
+  expect(() => kit.stripeMinor(150050, "JPY")).toThrow(kit.ProviderRefused);
+  expect(kit.fromStripe(1500, "JPY")).toBe(150000);
+  // Stripe writes ISK with two decimals (whole krónur only), whatever Intl says.
+  expect(kit.stripeMinor(150000, "ISK")).toBe(150000);
+  expect(() => kit.stripeMinor(150050, "ISK")).toThrow(kit.ProviderRefused);
+  expect(kit.mollieAmount(2450, "EUR")).toEqual({ currency: "EUR", value: "24.50" });
+  expect(kit.mollieAmount(150000, "JPY")).toEqual({ currency: "JPY", value: "1500" });
 });
 
 test("Stripe: a checkout of one line, the Payment's id in its metadata, back to the app's address", async () => {
@@ -62,6 +68,8 @@ test("Stripe: a checkout of one line, the Payment's id in its metadata, back to 
   answers = [{ id: "cs_test_1", url: "https://checkout.stripe.com/c/pay/cs_test_1" }];
   const made = await kit.stripeProvider.createCheckout({
     payment: 7,
+    app: "app-1",
+    createdAt: new Date(),
     amount: 2450,
     currency: "EUR",
     description: "Order 12",
@@ -97,11 +105,11 @@ test("Stripe: a signed completed checkout is a payment; a wrong or old signature
         payment_status: "paid",
         amount_total: 2450,
         currency: "eur",
-        metadata: { payment: "7" },
+        metadata: { payment: "7", app: "app-1" },
       },
     },
   });
-  expect(await kit.stripeProvider.verifyEvent(signed(body, "whsec_x"), body)).toEqual([
+  expect(await kit.stripeProvider.verifyEvent(signed(body, "whsec_x"), body, "app-1")).toEqual([
     {
       id: "evt_1",
       payment: 7,
@@ -112,12 +120,18 @@ test("Stripe: a signed completed checkout is a payment; a wrong or old signature
       mode: "test",
     },
   ]);
-  expect(await kit.stripeProvider.verifyEvent(signed(body, "whsec_other"), body)).toBeNull();
+  expect(
+    await kit.stripeProvider.verifyEvent(signed(body, "whsec_other"), body, "app-1"),
+  ).toBeNull();
   const old = Math.floor(Date.now() / 1000) - 600;
-  expect(await kit.stripeProvider.verifyEvent(signed(body, "whsec_x", old), body)).toBeNull();
+  expect(
+    await kit.stripeProvider.verifyEvent(signed(body, "whsec_x", old), body, "app-1"),
+  ).toBeNull();
   // Paid later (a method that settles after): nothing until Stripe says so.
   const unpaid = body.replace('"payment_status":"paid"', '"payment_status":"unpaid"');
-  expect(await kit.stripeProvider.verifyEvent(signed(unpaid, "whsec_x"), unpaid)).toEqual([]);
+  expect(await kit.stripeProvider.verifyEvent(signed(unpaid, "whsec_x"), unpaid, "app-1")).toEqual(
+    [],
+  );
 });
 
 test("Stripe: a refund event reads the intent's refunds, a dashboard's partial one too", async () => {
@@ -130,7 +144,7 @@ test("Stripe: a refund event reads the intent's refunds, a dashboard's partial o
     data: { object: { id: "ch_1", payment_intent: "pi_1" } },
   });
   answers = [
-    { id: "pi_1", currency: "eur", metadata: { payment: "7" } },
+    { id: "pi_1", currency: "eur", metadata: { payment: "7", app: "app-1" } },
     {
       data: [
         { id: "re_1", status: "succeeded", amount: 1000 },
@@ -139,7 +153,7 @@ test("Stripe: a refund event reads the intent's refunds, a dashboard's partial o
       ],
     },
   ];
-  const events = await kit.stripeProvider.verifyEvent(signed(body, "whsec_x"), body);
+  const events = await kit.stripeProvider.verifyEvent(signed(body, "whsec_x"), body, "app-1");
   expect(events?.map((e) => [e.id, e.kind, e.amount, e.refund])).toEqual([
     ["re_1:succeeded", "refunded", 1000, "re_1"],
     ["re_3:failed", "refund-refused", 450, "re_3"],
@@ -155,26 +169,49 @@ test("Mollie: the call names only a payment; what the app acts on is Mollie's an
       status: "paid",
       mode: "test",
       amount: { currency: "EUR", value: "24.50" },
-      metadata: { payment: 7 },
+      metadata: { payment: 7, app: "app-1" },
       _embedded: {
         refunds: [{ id: "re_9", status: "refunded", amount: { currency: "EUR", value: "10.00" } }],
       },
     },
   ];
-  const events = await kit.mollieProvider.verifyEvent(new Request("https://x.example"), "id=tr_1");
+  const events = await kit.mollieProvider.verifyEvent(
+    new Request("https://x.example"),
+    "id=tr_1",
+    "app-1",
+  );
   expect(calls[0]?.url).toBe("https://api.mollie.com/v2/payments/tr_1?embed=refunds");
   expect(events?.map((e) => [e.id, e.kind, e.amount])).toEqual([
     ["tr_1:paid", "paid", 2450],
     ["re_9:refunded", "refunded", 1000],
   ]);
   // Not an id of Mollie's, or a payment not of this account: nothing, answered 200.
-  expect(await kit.mollieProvider.verifyEvent(new Request("https://x.example"), "id=../x")).toEqual(
-    [],
-  );
+  expect(
+    await kit.mollieProvider.verifyEvent(new Request("https://x.example"), "id=../x", "app-1"),
+  ).toEqual([]);
   answers = [{ __status: 404, detail: "No payment exists with token tr_2." }];
-  expect(await kit.mollieProvider.verifyEvent(new Request("https://x.example"), "id=tr_2")).toEqual(
-    [],
-  );
+  // A refused key is no "not ours": an error, so Mollie calls again (not dropped with a 200).
+  const refusedKey = async () => {
+    answers = [{ __status: 401, detail: "Missing authentication" }];
+    return kit.mollieProvider.verifyEvent(new Request("https://x.example"), "id=tr_3", "app-1");
+  };
+  await expect(refusedKey()).rejects.toThrow();
+  // Another app on the same account: nothing for this one.
+  answers = [
+    {
+      id: "tr_4",
+      status: "paid",
+      mode: "test",
+      amount: { currency: "EUR", value: "1.00" },
+      metadata: { payment: 7, app: "app-2" },
+    },
+  ];
+  expect(
+    await kit.mollieProvider.verifyEvent(new Request("https://x.example"), "id=tr_4", "app-1"),
+  ).toEqual([]);
+  expect(
+    await kit.mollieProvider.verifyEvent(new Request("https://x.example"), "id=tr_2", "app-1"),
+  ).toEqual([]);
 });
 
 test("Mollie: a checkout in its amount format; a refused refund is a clear refusal", async () => {
@@ -185,6 +222,8 @@ test("Mollie: a checkout in its amount format; a refused refund is a clear refus
   ];
   await kit.mollieProvider.createCheckout({
     payment: 7,
+    app: "app-1",
+    createdAt: new Date(),
     amount: 2450,
     currency: "EUR",
     description: "Order 12",
@@ -197,7 +236,21 @@ test("Mollie: a checkout in its amount format; a refused refund is a clear refus
     webhookUrl: "https://kiosk.example.com/incoming/payments-mollie",
     metadata: { payment: 7 },
   });
+  // Asked again after an hour, a refund an earlier try made is that refund, not a second.
   answers = [
+    { _embedded: { refunds: [{ id: "re_5", status: "pending", metadata: { key: "refund-1" } }] } },
+  ];
+  expect(
+    await kit.mollieProvider.refund({
+      reference: "tr_1",
+      amount: 2450,
+      currency: "EUR",
+      idempotencyKey: "refund-1",
+    }),
+  ).toEqual({ reference: "re_5", done: false });
+  expect(calls.at(-1)?.init.method).toBe("GET");
+  answers = [
+    { _embedded: { refunds: [] } },
     { __status: 422, detail: "The amount is higher than the amount that can be refunded." },
   ];
   await expect(
@@ -209,7 +262,7 @@ test("Mollie: a checkout in its amount format; a refused refund is a clear refus
     }),
   ).rejects.toThrow(kit.ProviderRefused);
   // No answer (a 5xx): not a refusal, asked again with the same key.
-  answers = [{ __status: 503 }];
+  answers = [{ _embedded: { refunds: [] } }, { __status: 503 }];
   await expect(
     kit.mollieProvider.refund({
       reference: "tr_1",

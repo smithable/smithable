@@ -83,10 +83,14 @@ export interface Provider {
   ready: () => boolean;
   createCheckout: (asked: {
     payment: number;
+    /** The app's own id, in the provider's metadata: one account may serve several apps. */
+    app: string;
     amount: number;
     currency: string;
     description: string;
     back: string;
+    /** When the Payment was asked: every try of one checkout asks from it, never from now. */
+    createdAt: Date;
     expiresAt: Date;
     /** The same for every try of one Payment's checkout, so a retried request makes no second session. */
     idempotencyKey: string;
@@ -96,11 +100,11 @@ export interface Provider {
    * nothing of the app's), or null when it is not the provider's. A provider whose calls carry only
    * an id asks for the payment and gives what it found (Mollie).
    */
-  verifyEvent: (request: Request, body: string) => Promise<PaymentEvent[] | null>;
+  verifyEvent: (request: Request, body: string, app: string) => Promise<PaymentEvent[] | null>;
   /** Closes an open checkout before its held record is released, where the provider can. */
   close?: (reference: string) => Promise<void>;
-  /** Asked by the hold timer before a held record is released; "open" lets it go. */
-  status?: (reference: string) => Promise<"paid" | "open" | "processing">;
+  /** Asked by the hold timer before a held record is released: open (closed first), or closed. */
+  status?: (reference: string) => Promise<"paid" | "open" | "processing" | "closed">;
   /** A refund of a paid payment: done when the provider says so at once, else its call says so later. */
   refund: (asked: {
     reference: string;
@@ -160,6 +164,9 @@ function kept(name: string): string {
   return (db.select().from(appKeys).where(eq(appKeys.name, name)).get() as { value: string }).value;
 }
 
+/** The app's own id at its provider (metadata and idempotency keys): an account may serve several apps. */
+export const appId = () => `app-${kept("payments-app").slice(0, 16)}`;
+
 export const fakeSign = (body: string) =>
   createHmac("sha256", kept("payments-fake")).update(body).digest("hex");
 
@@ -214,7 +221,7 @@ export async function receive(request: Request, name: string): Promise<Response>
   if (body.length > 64 * 1024) return answer(413);
   let events: PaymentEvent[] | null;
   try {
-    events = await chosen.verifyEvent(request, body);
+    events = await chosen.verifyEvent(request, body, appId());
   } catch (error) {
     // The provider could not be asked (a provider that verifies by asking): it calls again.
     log.error("A payments call could not be verified now", { provider: name, error });
@@ -317,7 +324,9 @@ export async function checkout(id: number): Promise<string> {
       // The fake's page is the app's own; a provider sends the payer back to the app's address.
       back: `${chosen.name === "fake" ? "" : appAddress()}/payments/${payment.id}/back`,
       expiresAt: new Date(payment.createdAt.getTime() + holdMinutes() * MINUTE),
-      idempotencyKey: `payment-${payment.id}-checkout`,
+      idempotencyKey: `${appId()}-payment-${payment.id}-checkout`,
+      app: appId(),
+      createdAt: payment.createdAt,
     });
     // Two clicks at once: the first checkout kept is the one both go to.
     const kept = db
@@ -611,7 +620,7 @@ async function askRefund(payment: Payment, line: number, amount: number): Promis
       reference: payment.reference as string,
       amount,
       currency: payment.currency,
-      idempotencyKey: `refund-${line}`,
+      idempotencyKey: `${appId()}-refund-${line}`,
     });
   } catch (error) {
     if (!(error instanceof ProviderRefused)) {
@@ -860,10 +869,14 @@ export async function releaseExpired(now = Date.now()): Promise<number> {
   for (const payment of due) {
     if (chosen?.status && payment.reference && chosen.name === payment.provider) {
       try {
-        const state = await chosen.status(payment.reference);
-        if (state === "processing") continue;
-        // Closed at the provider first, so it cannot be paid after the place is gone.
-        if (state === "open" && chosen.close) await chosen.close(payment.reference);
+        let state = await chosen.status(payment.reference);
+        // Closed at the provider first, so it cannot be paid after the place is gone; then asked
+        // again, since it may have been paid between the two (a refused close says so).
+        if (state === "open" && chosen.close) {
+          await chosen.close(payment.reference).catch(() => undefined);
+          state = await chosen.status(payment.reference);
+        }
+        if (state === "processing" || state === "open") continue;
         if (state === "paid") {
           applyEvent(
             {
