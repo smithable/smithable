@@ -64,7 +64,7 @@ export interface PaymentEvent {
   /** The Payment's id, from the provider's metadata. */
   payment: number;
   reference?: string;
-  kind: "paid" | "failed" | "refunded" | "refund-refused";
+  kind: "paid" | "failed" | "refunded" | "refund-refused" | "disputed";
   /** In hundredths, as the Payment's; for a refund, the amount that went back. */
   amount?: number;
   /** A refund's own reference at the provider. */
@@ -141,7 +141,7 @@ export const fake: Provider = {
     const event = JSON.parse(body) as PaymentEvent;
     return typeof event.id === "string" &&
       Number.isInteger(event.payment) &&
-      ["paid", "failed", "refunded", "refund-refused"].includes(event.kind)
+      ["paid", "failed", "refunded", "refund-refused", "disputed"].includes(event.kind)
       ? [event]
       : null;
   },
@@ -424,6 +424,19 @@ function recordEvent(
     const entry = PAYMENT_ENTRIES[payment.entry];
     if (event.kind === "failed") {
       fail(tx, payment, event.reason ?? "declined");
+      return "done";
+    }
+    if (event.kind === "disputed") {
+      // The payer's bank reverses it (§4.4): noted on the Payment and in Activity; the record is
+      // not changed, and acting on it is the owner's, at the provider.
+      if (!payment.note)
+        tx.update(payments).set({ note: "disputed" }).where(eq(payments.id, payment.id)).run();
+      audit(tx, APP, {
+        action: "payment disputed",
+        model: entry?.model,
+        record: payment.record,
+        details: { payment: payment.id, ...(event.reason ? { reason: event.reason } : {}) },
+      });
       return "done";
     }
     if (event.kind === "refunded" || event.kind === "refund-refused") {

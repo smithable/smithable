@@ -275,6 +275,24 @@ export const stripeProvider: Provider = {
             reason: event.type === "checkout.session.expired" ? "not paid in time" : "declined",
           },
         ];
+      case "charge.dispute.created": {
+        // A dispute names its payment intent; the intent's metadata names the app and the Payment.
+        const intent = idIn(object.payment_intent);
+        if (!intent) return [];
+        const found = await stripe("GET", `/v1/payment_intents/${encodeURIComponent(intent)}`);
+        const meta = (found.metadata ?? {}) as Record<string, string>;
+        const disputed = idOf(meta.payment);
+        if (meta.app !== app || !Number.isInteger(disputed)) return [];
+        return [
+          {
+            id: event.id,
+            payment: disputed,
+            kind: "disputed",
+            mode,
+            ...(object.reason ? { reason: String(object.reason) } : {}),
+          },
+        ];
+      }
       case "charge.refunded":
       case "refund.created":
       case "refund.updated":
@@ -410,7 +428,7 @@ export const mollieProvider: Provider = {
     if (!/^tr_[A-Za-z0-9]+$/.test(id)) return [];
     let found: Record<string, unknown>;
     try {
-      found = await mollie("GET", `/payments/${id}?embed=refunds`);
+      found = await mollie("GET", `/payments/${id}?embed=refunds,chargebacks`);
     } catch (error) {
       // Not a payment of this account: nothing to act on. A refused key is an error (Mollie calls again).
       if (error instanceof ProviderRefused && error.status === 404) return [];
@@ -462,6 +480,21 @@ export const mollieProvider: Provider = {
         ...(state !== "refunded" ? { reason: state } : {}),
       });
     }
+    // A chargeback (the payer's bank reversed it): noted once per chargeback.
+    const chargebacks =
+      (found._embedded as { chargebacks?: Record<string, unknown>[] } | undefined)?.chargebacks ??
+      [];
+    for (const c of chargebacks)
+      events.push({
+        id: `${c.id}:chargeback`,
+        payment,
+        reference: id,
+        kind: "disputed",
+        mode,
+        ...((c.reason as { description?: string } | undefined)?.description
+          ? { reason: String((c.reason as { description: string }).description) }
+          : {}),
+      });
     return events;
   },
   async status(reference) {
