@@ -1,6 +1,12 @@
 # Fix files
 
-One file per fix that changes what a built app does (smithable-cloud docs/design/fixes-reach-apps.md §3): `fixes/<id>.yml`, added in the pull request that fixes it, so the service can tell which hosted apps are affected and offer them the rebuild. CI fails a pull request that touches the kit, the templates or the generator without one, unless it carries the label `no-fix-file` (a change no built app shows: a comment, a test, a new feature off by default).
+One file per fix that changes what a built app does (smithable-cloud docs/design/fixes-reach-apps.md §3): `fixes/<id>.yml`, added in the pull request that fixes it, so the service can tell which hosted apps are affected and offer them the rebuild. CI fails a pull request that touches the kit, the templates or the generator without one (`scripts/fix-file-rule.mjs`, the rule in `packages/cli/src/fix-file-rule.ts`), except:
+
+- **By itself**, with no model, and the check's log says which part passed it:
+  - the change only bumps pins of the stack profile (`packages/adapter-tanstack/src/stack.ts`) by patch, or by minor from 1.0 on, and GitHub's advisory lists show no published advisory the bump leaves behind. If one does, the bump is a security fix and needs a fix file; if the lists cannot be read, the bump is not passed by itself;
+  - or the change touches only comments in the kit's, templates' or generator's files, and documents (tests, snapshots and generated `*.gen.ts` files never count).
+- **Declared** in the pull request's text, on a line of its own: `Fix file: none, because <reason>` (a reason of ten characters or more), for a change no built app shows: a new feature off by default, a refactor with the same output. The second reviewers are asked to check the reason against the diff. A security fix cannot be declared away.
+- The label `no-fix-file`, for people, as before.
 
 ```yaml
 id: upload-receipts            # the file's name; lowercase words joined by hyphens

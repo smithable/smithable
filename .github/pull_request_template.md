@@ -3,4 +3,5 @@
 - [ ] For a change to the engine, the examples or the scripts `check` runs: `pnpm check` passes locally (lint, build, unit tests, every example app, Studio in a browser). While the repository is private, CI runs only lint, build, units and site (unless the pull request has the `full-ci` label), so this local run is the gate.
 - [ ] `docs/spec/v0.1.md` updated for a change to the spec grammar; `docs/ARCHITECTURE.md` for an architecture decision; `pnpm schema` run after a schema change
 - [ ] Generated apps still depend on no Smithable package, and generation stays byte-identical for the same input
+- [ ] A kit, template or generator change has a fix file (`fixes/<id>.yml`), or a line in this text: `Fix file: none, because <reason>` (fixes/README.md); plain pin bumps and comment-only changes pass by themselves
 - [ ] Commits are signed off (`git commit -s`, the DCO in .github/CONTRIBUTING.md)
