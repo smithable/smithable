@@ -750,6 +750,19 @@ export const w = {
   paymentDecline: "Decline",
   paymentUnavailable: "Payment is not possible right now. Please try again.",
   paymentGone: "This payment is no longer open.",
+  refundRefused:
+    "The payment provider refused the refund. Try again later, or refund at the provider.",
+  payments: "Payments",
+  refund: "Refund",
+  refundAsk: (amount: string) => `Refund ${amount} to the payer?`,
+  paymentStatus: (status: string) =>
+    ({
+      pending: "Waiting",
+      paid: "Paid",
+      failed: "Not paid",
+      refunding: "Being refunded",
+      refunded: "Refunded",
+    })[status] ?? status,
   paymentUnmatched:
     "The payment came, but not as asked, so nothing was ordered. It will be refunded.",
   /** A chart's bar for a quarter: "Q3 2026". */

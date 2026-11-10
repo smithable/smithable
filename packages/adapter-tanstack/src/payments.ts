@@ -1,7 +1,16 @@
-import { type FieldIR, kebab, type ModelIR, type SpecIR } from "@smithable/core";
-import { formulaCompiler, formulasName } from "./formulas.js";
+import { type FieldIR, kebab, type ModelIR, type SpecIR, titleField } from "@smithable/core";
+import { aggregatedLists, formulaCompiler, formulasName, withFormulasName } from "./formulas.js";
 import { toldAbout } from "./outgoing.js";
-import { dataKey, HEADER, modelNamed, SCHEMA_IMPORT, tableRef } from "./shared.js";
+import {
+  dataKey,
+  HEADER,
+  modelNamed,
+  names,
+  SCHEMA_IMPORT,
+  type Texts,
+  tableNames,
+  tableRef,
+} from "./shared.js";
 
 /**
  * Payments (docs/design/payments.md): the app's own part of the kit's flow. For each payments
@@ -12,7 +21,9 @@ import { dataKey, HEADER, modelNamed, SCHEMA_IMPORT, tableRef } from "./shared.j
  */
 export function paymentsServerModule(ir: SpecIR, provider: string): string {
   const formulas = new Set<ModelIR>();
+  const withFormulas = new Set<ModelIR>();
   let usesF = false;
+  let usesFits = false;
   const told = new Set<string>();
   const entries = ir.payments.map((p) => {
     const model = modelNamed(ir, p.on);
@@ -44,12 +55,31 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
         ),
     );
     const changes = [...(model.heldByPayment ? ["payHeldAt: null"] : []), ...set];
+    const amount = model.fields.find((f) => f.name === p.amount) as FieldIR;
+    const when = p.when === "created" ? undefined : p.when;
+    // Paying for an existing record: it must still ask, for the amount paid (§4.3, §4.6).
+    const lists = aggregatedLists(model);
+    if (when) {
+      usesFits = true;
+      if (amount.formula) withFormulas.add(model);
+    }
+    const asks = when
+      ? `
+      if (!fits(${JSON.stringify(when)}, before)) return "the record no longer asks";
+      const now = ${
+        amount.formula
+          ? `${withFormulasName(model)}(tx.query.${tableNames(model).table}.findFirst({ where: eq(${table}.id, record)${lists.length ? `, with: { ${lists.map((l) => `${l}: true`).join(", ")} }` : ""} }).sync() ?? before)`
+          : "before"
+      };
+      if (Math.round(Number(now.${dataKey(amount)} ?? 0)) !== amount) return "amount differs";`
+      : "";
     return `  ${p.name}: {
     model: ${JSON.stringify(model.name)},
     created: ${created},
-    paid(tx, record) {
+    amount: ${JSON.stringify(dataKey(amount))},${when ? `\n    when: ${JSON.stringify(when)},` : ""}${p.refund ? `\n    refund: ${JSON.stringify(p.refund)},` : ""}
+    paid(tx, record${when ? ", amount" : ""}) {
       const before = tx.select().from(${table}).where(eq(${table}.id, record)).get();
-      if (!before) return false;
+      if (!before) return "the record is gone";${asks}
       ${
         changes.length
           ? `${tells ? "const row = " : ""}tx
@@ -78,15 +108,16 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
     },
   },`;
   });
-  const formulaImports = [...formulas].map(
-    (m) => `import { ${formulasName(m)} } from "./${kebab(m.name)}.formulas";`,
+  const formulaImports = [...new Set([...formulas, ...withFormulas])].map(
+    (m) =>
+      `import { ${[...(formulas.has(m) ? [formulasName(m)] : []), ...(withFormulas.has(m) ? [withFormulasName(m)] : [])].join(", ")} } from "./${kebab(m.name)}.formulas";`,
   );
   const releases = ir.payments.some(
     (p) => p.when === "created" && modelNamed(ir, p.on).heldByPayment,
   );
   return `${HEADER}import { ${releases ? "and, eq, isNotNull" : "eq"} } from "drizzle-orm";
 ${SCHEMA_IMPORT}
-${told.size ? 'import type { Viewer } from "#/kit/access";\n' : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}import type { PaymentEntry } from "#/kit/payments.server";
+${told.size ? 'import type { Viewer } from "#/kit/access";\n' : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${usesFits ? 'import { fits } from "#/kit/model";\n' : ""}import type { PaymentEntry } from "#/kit/payments.server";
 ${told.size ? 'import { outgoing } from "./outgoing.server";\n' : ""}${formulaImports.join("\n")}${formulaImports.length ? "\n" : ""}
 /** The provider smithable.context.yml names; the fake when it names none (a release then takes no payments). */
 export const PAYMENTS_PROVIDER = ${JSON.stringify(provider)};
@@ -112,15 +143,68 @@ export const payToCreate = (ir: SpecIR, model: ModelIR) =>
  * src/generated/payments.ts: the server functions of the return page and the fake provider's
  * page. Each answers the browser that started the payment only (a cookie bound to the Payment).
  */
-export const PAYMENTS_FUNCTIONS = `${HEADER}// Payments (payments.md §4.1–4.2): the return page and the fake provider's page.
+export function paymentsFunctions(ir: SpecIR, t: Texts): string {
+  // Each entry's record, read as the viewer may (its access and its condition of reading), and
+  // what the payer sees at the provider.
+  const readers = ir.payments.map((p) => {
+    const model = modelNamed(ir, p.on);
+    const n = names(model, t);
+    return `  ${p.name}: async (viewer, id) => (await import("${n.module}.server")).${n.data}.get(viewer, id),`;
+  });
+  const describers = ir.payments.map((p) => {
+    const model = modelNamed(ir, p.on);
+    return `  ${p.name}: (row) => ${describeCode(model, p.description, "row", titleField(model))},`;
+  });
+  return `${HEADER}// Payments (payments.md §4.1–4.2, §4.4): Pay and Refund, the return page and the fake provider's page.
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { AccessDenied } from "#/kit/access";
+import { AccessDenied, type Viewer } from "#/kit/access";
 import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 
 const id = z.number().int().positive();
+
+type Row = Record<string, unknown> & { id: number };
+const READ: Record<string, (viewer: Viewer | null, id: number) => Promise<Row | null>> = {
+${readers.join("\n")}
+};
+// biome-ignore lint/suspicious/noExplicitAny: a record's fields, as its data module reads them
+const DESCRIBE: Record<string, (row: any) => string> = {
+${describers.join("\n")}
+};
+
+async function writer() {
+  const viewer = await currentViewer();
+  writeAllowed(viewer, getRequestHeaders());
+  return viewer;
+}
+
+/** Pay on an existing record that asks for it (§4.1): on to the provider's page. */
+export const payRecord = createServerFn({ method: "POST" })
+  .validator(z.object({ entry: z.string().max(80), id }))
+  .handler(async ({ data }) => {
+    const viewer = await writer();
+    const read = READ[data.entry];
+    const row = read && (await read(viewer, data.id));
+    if (!row) throw new AccessDenied(viewer !== null);
+    const { startPayment } = await import("#/kit/payments.server");
+    return startPayment(data.entry, row, DESCRIBE[data.entry]?.(row) ?? "");
+  });
+
+/** Refund a paid payment in full (§4.4), for admins and the entry's refund roles. */
+export const refundPayment = createServerFn({ method: "POST" })
+  .validator(id)
+  .handler(async ({ data }) => {
+    const viewer = await writer();
+    const { mayRefund, paymentRow, refund } = await import("#/kit/payments.server");
+    const payment = paymentRow(data);
+    // The record as the viewer may read it, for the entry's refund condition; money that came for
+    // nothing may be refunded when the record is gone.
+    const row = payment && (await READ[payment.entry]?.(viewer, payment.record));
+    if (!payment || !mayRefund(viewer, payment, row ?? undefined)) throw new AccessDenied(viewer !== null);
+    await refund(data, viewer);
+  });
 
 async function bound(payment: number) {
   const { boundBrowser, paymentState } = await import("#/kit/payments.server");
@@ -179,6 +263,7 @@ export const fakeEvent = createServerFn({ method: "POST" })
     return { body, signature: fakeSign(body) };
   });
 `;
+}
 
 /** The routes: the return page, the fake provider's page, and the provider's address. */
 export function paymentRoutes(provider: string): { path: string; content: string }[] {
@@ -249,4 +334,30 @@ export const Route = createFileRoute("/incoming/payments-${provider}")({
 `,
     },
   ];
+}
+
+/**
+ * What the payer sees at the provider, as code over `row`: the entry's text with the record's
+ * fields, or its title. Literal text is escaped, so a description cannot break the code.
+ */
+export function describeCode(
+  model: ModelIR,
+  text: string | undefined,
+  row: string,
+  titleKey: string | undefined,
+): string {
+  const value = (name: string) => {
+    const field = model.fields.find((x) => x.name === name);
+    if (!field || field.type.kind === "relation") return undefined;
+    const read = `${row}.${dataKey(field)}`;
+    return field.type.kind === "scalar" && field.type.name === "money"
+      ? `\${(Number(${read} ?? 0) / 100).toFixed(2)}`
+      : `\${String(${read} ?? "")}`;
+  };
+  if (!text)
+    return titleKey && titleKey !== "id" ? `String(${row}.${titleKey} ?? "")` : `String(${row}.id)`;
+  const filled = text
+    .replace(/[\\`$]/g, (c) => `\\${c}`)
+    .replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (all, name: string) => value(name) ?? all);
+  return `\`${filled}\``;
 }

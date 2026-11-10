@@ -6,13 +6,15 @@
 // record, how much, what a payment sets and tells) is the generated payments module's.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
-import { and, eq, inArray, like, lt } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNull, like, lt } from "drizzle-orm";
 import { db } from "#/db";
-import { appKeys, incomingSeen, payments } from "#/db/schema";
+import { appKeys, incomingSeen, paymentRefunds, payments } from "#/db/schema";
+import { app } from "#/generated/app";
 import { PAYMENT_ENTRIES, PAYMENTS_PROVIDER } from "#/generated/payments.server";
 import type { Viewer } from "./access";
 import { audit } from "./audit.server";
 import { log } from "./log.server";
+import { type Condition, fits } from "./model";
 import { BadInput } from "./refusal";
 import { w } from "./words";
 
@@ -28,8 +30,17 @@ export interface PaymentEntry {
   model: string;
   /** Pay to create: the record is held until paid. */
   created: boolean;
-  /** The successful payment's work on the record, in the event's transaction: false when there is no record. */
-  paid: (tx: Tx, record: number) => boolean;
+  /** Pay for an existing record: the condition it must fit (§3.2). */
+  when?: Condition;
+  /** The record's amount field (its key in a row), read on the server. */
+  amount: string;
+  /** Who may refund in the app besides admins, and on which records (§4.4); none without `refund`. */
+  refund?: { by: readonly string[]; when?: Condition };
+  /**
+   * The successful payment's work on the record, in the event's transaction: true, or why it was
+   * not done (the record is gone, it no longer asks, or its amount is no longer the one paid).
+   */
+  paid: (tx: Tx, record: number, amount: number) => true | string;
   /** Removes a held record nobody paid for, its place freed. */
   release: (tx: Tx, record: number) => void;
 }
@@ -41,9 +52,11 @@ export interface PaymentEvent {
   /** The Payment's id, from the provider's metadata. */
   payment: number;
   reference?: string;
-  kind: "paid" | "failed";
-  /** In hundredths, as the Payment's. */
+  kind: "paid" | "failed" | "refunded" | "refund-refused";
+  /** In hundredths, as the Payment's; for a refund, the amount that went back. */
   amount?: number;
+  /** A refund's own reference at the provider. */
+  refund?: string;
   currency?: string;
   mode: "test" | "live";
   account?: string;
@@ -69,6 +82,13 @@ export interface Provider {
   verifyEvent: (request: Request, body: string) => Promise<PaymentEvent | null>;
   /** Asked by the hold timer before a held record is released; "open" lets it go. */
   status?: (reference: string) => Promise<"paid" | "open" | "processing">;
+  /** A refund of a paid payment: done when the provider says so at once, else its call says so later. */
+  refund: (asked: {
+    reference: string;
+    amount: number;
+    currency: string;
+    idempotencyKey: string;
+  }) => Promise<{ reference: string; done: boolean }>;
 }
 
 /** The app itself, as the provider's word and the hold timer act: no role's grants apply. */
@@ -98,9 +118,15 @@ export const fake: Provider = {
     const event = JSON.parse(body) as PaymentEvent;
     return typeof event.id === "string" &&
       Number.isInteger(event.payment) &&
-      (event.kind === "paid" || event.kind === "failed")
+      ["paid", "failed", "refunded", "refund-refused"].includes(event.kind)
       ? event
       : null;
+  },
+  async refund({ idempotencyKey }) {
+    // How a test sees a provider refuse: PAYMENTS_FAKE_REFUSE_REFUNDS=on.
+    if (process.env.PAYMENTS_FAKE_REFUSE_REFUNDS === "on")
+      throw new Error("the fake provider refuses refunds");
+    return { reference: `fake_${idempotencyKey}`, done: true };
   },
 };
 
@@ -340,6 +366,10 @@ export function applyEvent(event: PaymentEvent, from: Provider): "done" | "seen"
       fail(tx, payment, event.reason ?? "declined");
       return "done";
     }
+    if (event.kind === "refunded" || event.kind === "refund-refused") {
+      refunded(tx, payment, event);
+      return "done";
+    }
     if (payment.status !== "pending" && payment.status !== "failed") return "done";
     const same =
       event.amount === payment.amount &&
@@ -361,14 +391,277 @@ export function applyEvent(event: PaymentEvent, from: Provider): "done" | "seen"
     // A held record whose money does not match stays out: released, its place freed; the money
     // is the payer's, refunded from the Payments page (§4.3).
     if (note && entry?.created) entry.release(tx, payment.record);
-    if (!note && entry && !entry.paid(tx, payment.record)) {
-      tx.update(payments)
-        .set({ note: "the record no longer asks" })
-        .where(eq(payments.id, payment.id))
-        .run();
-    }
+    const done = note || !entry ? true : entry.paid(tx, payment.record, payment.amount);
+    if (done !== true)
+      tx.update(payments).set({ note: done }).where(eq(payments.id, payment.id)).run();
     return "done";
   });
+}
+
+/**
+ * A refund the provider made or refused (§4.4): a line of its own under the Payment (one made in
+ * the provider's dashboard too, with its amount), and the Payment refunded once the whole amount
+ * is back; a refusal returns it to paid with the reason.
+ */
+function refunded(tx: Tx, payment: Payment, event: PaymentEvent) {
+  const line = event.refund
+    ? tx
+        .select()
+        .from(paymentRefunds)
+        .where(
+          and(eq(paymentRefunds.paymentId, payment.id), eq(paymentRefunds.reference, event.refund)),
+        )
+        .get()
+    : undefined;
+  if (event.kind === "refund-refused") {
+    if (line)
+      tx.update(paymentRefunds)
+        .set({ status: "refused" })
+        .where(eq(paymentRefunds.id, line.id))
+        .run();
+    if (payment.status === "refunding")
+      tx.update(payments)
+        .set({ status: "paid", note: `refund refused${event.reason ? `: ${event.reason}` : ""}` })
+        .where(eq(payments.id, payment.id))
+        .run();
+    return;
+  }
+  if (payment.status !== "paid" && payment.status !== "refunding") return;
+  if (line)
+    tx.update(paymentRefunds).set({ status: "done" }).where(eq(paymentRefunds.id, line.id)).run();
+  else
+    tx.insert(paymentRefunds)
+      .values({
+        paymentId: payment.id,
+        amount: event.amount ?? payment.amount,
+        reference: event.refund ?? null,
+        status: "done",
+      })
+      .run();
+  const back = tx
+    .select({ amount: paymentRefunds.amount })
+    .from(paymentRefunds)
+    .where(and(eq(paymentRefunds.paymentId, payment.id), eq(paymentRefunds.status, "done")))
+    .all()
+    .reduce((sum, r) => sum + r.amount, 0);
+  if (back >= payment.amount)
+    tx.update(payments)
+      .set({ status: "refunded", refundedAt: new Date() })
+      .where(eq(payments.id, payment.id))
+      .run();
+  audit(tx, APP, {
+    action: "refunded",
+    model: PAYMENT_ENTRIES[payment.entry]?.model,
+    record: payment.record,
+    details: { payment: payment.id, amount: event.amount ?? payment.amount },
+  });
+}
+
+/** Money that should not have come (paid after the hold, twice, the wrong amount, the record no longer asks). */
+const unasked = (payment: Payment) => payment.status === "paid" && Boolean(payment.note);
+
+/**
+ * Whether a person may refund a Payment (§4.4): admins and the entry's refund roles, while the
+ * record fits the entry's refund condition; money that came for nothing to them whatever the entry
+ * says.
+ */
+export function mayRefund(viewer: Viewer | null, payment: Payment, row?: Record<string, unknown>) {
+  if (!viewer || payment.status !== "paid") return false;
+  const entry = PAYMENT_ENTRIES[payment.entry];
+  const roles = ["admin", ...(entry?.refund?.by ?? [])];
+  if (!roles.includes(viewer.role)) return false;
+  if (unasked(payment)) return true;
+  if (!entry?.refund) return false;
+  return !entry.refund.when || (row !== undefined && fits(entry.refund.when, row));
+}
+
+/**
+ * Refunds a paid Payment in full (§4.4): marked refunding in one transaction with its refund line,
+ * then the provider asked with the line's own idempotency key; a refusal returns it to paid with
+ * the reason. `by` is the person, or none for the app's own refund of money after the hold.
+ */
+export async function refund(id: number, by: Viewer | null): Promise<void> {
+  const asked = db.transaction((tx) => {
+    const payment = tx.select().from(payments).where(eq(payments.id, id)).get();
+    if (!payment || payment.status !== "paid" || !payment.reference) return undefined;
+    tx.update(payments).set({ status: "refunding" }).where(eq(payments.id, id)).run();
+    const line = tx
+      .insert(paymentRefunds)
+      .values({ paymentId: id, amount: payment.amount, by: by?.id ?? null })
+      .returning({ id: paymentRefunds.id })
+      .get();
+    audit(tx, by ?? APP, {
+      action: "refund asked",
+      model: PAYMENT_ENTRIES[payment.entry]?.model,
+      record: payment.record,
+      details: { payment: id, amount: payment.amount },
+    });
+    return { payment, line: line.id };
+  });
+  if (!asked) throw new BadInput(w.paymentGone);
+  const { payment, line } = asked;
+  const chosen = provider();
+  try {
+    if (!chosen || chosen.name !== payment.provider) throw new Error("the provider is not set up");
+    const made = await chosen.refund({
+      reference: payment.reference as string,
+      amount: payment.amount,
+      currency: payment.currency,
+      idempotencyKey: `refund-${line}`,
+    });
+    db.update(paymentRefunds)
+      .set({ reference: made.reference })
+      .where(eq(paymentRefunds.id, line))
+      .run();
+    if (made.done)
+      applyEvent(
+        {
+          id: `refund:${line}`,
+          payment: id,
+          kind: "refunded",
+          amount: payment.amount,
+          refund: made.reference,
+          mode: payment.providerMode,
+        },
+        chosen,
+      );
+  } catch (error) {
+    log.error("A refund was refused", { payment: id, error });
+    db.transaction((tx) => {
+      tx.update(paymentRefunds).set({ status: "refused" }).where(eq(paymentRefunds.id, line)).run();
+      tx.update(payments)
+        .set({ status: "paid", note: payment.note ?? "refund refused" })
+        .where(and(eq(payments.id, id), eq(payments.status, "refunding")))
+        .run();
+    });
+    throw new BadInput(w.refundRefused);
+  }
+}
+
+/** A record's Payments as its page lists them (§3.3): the provider's reference to those who may refund. */
+export function paymentsOf(
+  viewer: Viewer | null,
+  model: string,
+  record: number,
+  row: Record<string, unknown>,
+) {
+  const entries = Object.keys(PAYMENT_ENTRIES).filter((e) => PAYMENT_ENTRIES[e]?.model === model);
+  if (!entries.length) return { lines: [], pay: null };
+  const all = db
+    .select()
+    .from(payments)
+    .where(and(inArray(payments.entry, entries), eq(payments.record, record)))
+    .orderBy(desc(payments.createdAt))
+    .all();
+  const staff = Boolean(
+    viewer &&
+      ["admin", ...entries.flatMap((e) => PAYMENT_ENTRIES[e]?.refund?.by ?? [])].includes(
+        viewer.role,
+      ),
+  );
+  // Pay is offered on a record that fits its entry's condition and is not paid (§4.1).
+  const offer = entries.find((e) => {
+    const entry = PAYMENT_ENTRIES[e];
+    return (
+      entry?.when &&
+      fits(entry.when, row) &&
+      !all.some(
+        (p) => p.entry === e && (p.status === "paid" || p.status === "refunding") && !p.note,
+      )
+    );
+  });
+  return {
+    lines: all.map((p) => ({
+      id: p.id,
+      amount: p.amount,
+      currency: p.currency,
+      status: p.status,
+      at: (p.paidAt ?? p.createdAt).toISOString(),
+      ...(staff ? { reference: p.reference, note: p.note } : {}),
+      refundable: mayRefund(viewer, p, row),
+    })),
+    pay:
+      offer && provider()
+        ? {
+            entry: offer,
+            amount: Math.round(Number(row[PAYMENT_ENTRIES[offer]?.amount ?? ""] ?? 0)),
+          }
+        : null,
+  };
+}
+
+/**
+ * Starts paying for an existing record (§4.1): the record read as the viewer may (the caller
+ * passes it), checked against its entry's condition and that it is not paid, its amount read here,
+ * the pending Payment written (or the one there found), bound to this browser, and the provider's
+ * page asked.
+ */
+export async function startPayment(
+  entryName: string,
+  row: Record<string, unknown> & { id: number },
+  description: string,
+): Promise<string> {
+  const entry = PAYMENT_ENTRIES[entryName];
+  if (!entry?.when || !fits(entry.when, row)) throw new BadInput(w.paymentGone);
+  const amount = Math.round(Number(row[entry.amount] ?? 0));
+  if (!(amount > 0)) throw new BadInput(w.paymentGone);
+  const id = db.transaction((tx) => {
+    const paid = tx
+      .select({ id: payments.id })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.entry, entryName),
+          eq(payments.record, row.id),
+          inArray(payments.status, ["paid", "refunding"]),
+          isNull(payments.note),
+        ),
+      )
+      .get();
+    if (paid) throw new BadInput(w.paymentGone);
+    // A pending one for another amount (the record changed since) is given up for a new one.
+    const pending = tx
+      .select()
+      .from(payments)
+      .where(
+        and(
+          eq(payments.entry, entryName),
+          eq(payments.record, row.id),
+          eq(payments.status, "pending"),
+        ),
+      )
+      .get();
+    if (pending && pending.amount !== amount) fail(tx, pending, "left unfinished");
+    return askPayment(tx, entryName, row.id, amount, app.currency, description);
+  });
+  bindBrowser(id);
+  return checkout(id);
+}
+
+/** Money that came after its record was released is refunded by the app itself, retried each minute for a day (§4.3). */
+async function refundLate(now: number): Promise<void> {
+  const late = db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.status, "paid"),
+        eq(payments.note, "paid after the hold"),
+        gt(payments.paidAt, new Date(now - DAY)),
+      ),
+    )
+    .limit(20)
+    .all();
+  for (const payment of late) {
+    // Refused ones wait: an admin refunds them from the Payments page.
+    const tried = db
+      .select({ n: count() })
+      .from(paymentRefunds)
+      .where(and(eq(paymentRefunds.paymentId, payment.id), isNull(paymentRefunds.by)))
+      .get();
+    if ((tried?.n ?? 0) >= 5) continue;
+    await refund(payment.id, null).catch(() => undefined);
+  }
 }
 
 /** A Payment as its return page shows it: the state, and the record's id for a reader. */
@@ -415,6 +708,7 @@ export async function releaseExpired(now = Date.now()): Promise<number> {
     )
     .limit(50)
     .all();
+  await refundLate(now);
   let released = 0;
   for (const payment of due) {
     if (chosen?.status && payment.reference && chosen.name === payment.provider) {
@@ -461,3 +755,7 @@ if (import.meta.env.SSR) {
   }, every);
   state.smithablePaymentsTimer.unref?.();
 }
+
+/** A Payment as stored, for a refund's checks. */
+export const paymentRow = (id: number): Payment | undefined =>
+  db.select().from(payments).where(eq(payments.id, id)).get();

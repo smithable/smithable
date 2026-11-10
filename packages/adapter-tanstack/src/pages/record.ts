@@ -722,7 +722,9 @@ export function detailRoute(
   if (inlines) imports.set("#/kit/InlineRows", ["InlineRows"]);
   if (totals) imports.set("#/kit/format", [...(imports.get("#/kit/format") ?? []), "formatValue"]);
   // A copy opens the new record instead of reloading this one: it needs no router.
-  const router = favorite || trash || threads || inlines || offered.some((a) => !a.copy);
+  // A record paid for (payments.md §3.3): its payments box, and Pay and Refund.
+  const paid = ir.payments.some((p) => p.on === model.name);
+  const router = favorite || trash || threads || inlines || paid || offered.some((a) => !a.copy);
   // The record's own lines in the audit log (docs/design/logging.md §3.3), for administrators.
   const history = Boolean(auth && hasSignIn(auth) && !within);
   const keys = history && auth ? hasKeys(ir, auth) : false;
@@ -790,7 +792,7 @@ ${[...imports].map(([module, fns]) => `import { ${[...new Set(fns)].sort().join(
 ${options ? `${options.imports.join("\n")}\n` : ""}${offered.length || merges.length || splits.length ? `import { ${[...(offered.length && model.ownerKind === "address" ? ["addressOwner"] : []), "allows"].join(", ")} } from "#/kit/access";\n` : ""}import { guardPage } from "#/kit/page-guard";${offered.length ? '\nimport { ActionButton } from "#/kit/ActionButton";' : ""}
 ${history ? 'import { ActivityLog } from "#/kit/ActivityLog";\n' : ""}import { ${within ? "" : "BackTo, "}LastChange, PageHeader } from "#/kit/AppShell";
 import { ModelForm } from "#/kit/ModelForm";
-${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
+${paid ? `import { payRecord, refundPayment } from "#/generated/payments";\nimport { RecordPayments } from "#/kit/RecordPayments";\n` : ""}${buttons.length > 3 ? 'import { Overflow } from "#/kit/Overflow";\n' : ""}import { w } from "#/kit/words";
 ${history && !contact ? 'import { currentViewer } from "#/lib/viewer.server";\n' : ""}${tables || favorite ? `import { ${[...(tables ? ["ModelTable"] : []), ...(favorite ? ["SaveButton"] : [])].join(", ")} } from "#/kit/ModelTable";\n` : ""}${contact ? contact.imports : ""}
 ${contact ? contact.fn : ""}${
   history
@@ -841,7 +843,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}  loader: async ({ params }) =
 });
 
 function ${component}() {
-  const { row, canWrite, canDelete${sections.some((s) => s.includes("canAdd?.")) ? ", canAdd" : ""}${model.review ? ", review" : ""}${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""}${rowOptions.length ? ", rowOptions" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
+  const { row, canWrite, canDelete${sections.some((s) => s.includes("canAdd?.")) ? ", canAdd" : ""}${model.review ? ", review" : ""}${trash ? ", trashed" : ""}${options ? ", options" : ""}${favorite ? ", saved" : ""}${history ? ", history" : ""}${rowOptions.length ? ", rowOptions" : ""}${paid ? ", payments" : ""} } = Route.useLoaderData();${viewer ? "\n  const { viewer } = Route.useRouteContext();" : ""}
   const navigate = useNavigate();${router ? "\n  const router = useRouter();" : ""}
   const back = () => navigate({ to: ${JSON.stringify(page.route)} });${
     favorite
@@ -895,6 +897,20 @@ function ${component}() {
       <LastChange at={history?.[0]?.at ?? row.updatedAt} who={history?.[0]?.who} app={app} />`
           : `
       <LastChange at={row.updatedAt} app={app} />`
+      }${
+        paid
+          ? `
+      {payments && (
+        <RecordPayments
+          payments={payments}
+          currency={app.currency}
+          timeZone={app.timeZone}
+          pay={(entry) => payRecord({ data: { entry, id: row.id } })}
+          refund={(payment) => refundPayment({ data: payment })}
+          changed={() => router.invalidate()}
+        />
+      )}`
+          : ""
       }${
         model.review
           ? `

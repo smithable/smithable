@@ -54,7 +54,7 @@ import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
-import { PAYMENTS_FUNCTIONS, paymentRoutes, paymentsServerModule } from "./payments.js";
+import { paymentRoutes, paymentsFunctions, paymentsServerModule } from "./payments.js";
 import { manifest, pushModule, SERVICE_WORKER, smsModule } from "./push.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
@@ -775,7 +775,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               "src/generated/payments.server.ts",
               paymentsServerModule(ir, options.paymentProvider ?? "fake"),
             ),
-            generated("src/generated/payments.ts", PAYMENTS_FUNCTIONS),
+            generated("src/generated/payments.ts", paymentsFunctions(ir, t)),
             ...paymentRoutes(options.paymentProvider ?? "fake").map((r) =>
               generated(r.path, r.content),
             ),
@@ -971,6 +971,7 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/kit/payments.server.ts",
           "src/kit/PaymentBack.tsx",
           "src/kit/FakeCheckout.tsx",
+          "src/kit/RecordPayments.tsx",
         ],
         used: ({ ir }) => ir.payments.length > 0,
       },

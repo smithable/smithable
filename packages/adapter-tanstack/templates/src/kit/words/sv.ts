@@ -711,6 +711,19 @@ export const w = {
   paymentDecline: "Avböj",
   paymentUnavailable: "Betalning går inte just nu. Försök igen.",
   paymentGone: "Den här betalningen är inte längre öppen.",
+  refundRefused:
+    "Betaltjänsten nekade återbetalningen. Försök igen senare, eller återbetala hos betaltjänsten.",
+  payments: "Betalningar",
+  refund: "Återbetala",
+  refundAsk: (amount: string) => `Återbetala ${amount} till betalaren?`,
+  paymentStatus: (status: string) =>
+    ({
+      pending: "Väntar",
+      paid: "Betald",
+      failed: "Inte betald",
+      refunding: "Återbetalas",
+      refunded: "Återbetald",
+    })[status] ?? status,
   paymentUnmatched: "Betalningen kom, men inte som begärt, så inget beställdes. Den återbetalas.",
   quarterOf: (quarter: number, year: string) => `K${quarter} ${year}`,
   totalsRow: (count: number) => `Summa av ${count}`,
