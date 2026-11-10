@@ -1797,7 +1797,7 @@ async function kioskPaymentFlow(dir, base) {
     await signInAs(staff, base, "admin");
     await open(staff, `${base}/orders`);
     if (await staff.getByText("Paula Paid").count()) throw new Error("staff see an unpaid order");
-    if (subjects(before).includes("A new order"))
+    if (subjects(before).some((s) => s.startsWith("New order ")))
       throw new Error("staff were told of an unpaid order");
     step = "approve and come back paid";
     await page.getByRole("button", { name: "Approve" }).click();
@@ -1807,7 +1807,7 @@ async function kioskPaymentFlow(dir, base) {
     const done = orderOf(paid);
     if (done.held || done.paid !== 1) throw new Error(`the paid order is ${JSON.stringify(done)}`);
     await waitFor("mail to staff of the paid order", () =>
-      subjects(before).includes("A new order"),
+      subjects(before).some((s) => s.startsWith("New order ")),
     );
     step = "staff see the paid order";
     await open(staff, `${base}/orders`);
@@ -1852,8 +1852,8 @@ async function kioskPaymentFlow(dir, base) {
       `select count(*) n from audit_log where action = 'paid' and record_id = ${orderOf(twice).id}`,
     );
     if (lines.n !== 1) throw new Error(`a payment told twice was recorded ${lines.n} times`);
-    await waitFor("mail to staff", () => subjects(before).includes("A new order"));
-    if (subjects(before).filter((s) => s === "A new order").length !== 1)
+    await waitFor("mail to staff", () => subjects(before).some((s) => s.startsWith("New order ")));
+    if (subjects(before).filter((s) => s.startsWith("New order ")).length !== 1)
       throw new Error("staff were told twice of one order");
     // A wrong amount: recorded with its note, the order released, never let out unpaid.
     step = "a wrong amount";
