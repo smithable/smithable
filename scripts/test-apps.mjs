@@ -1083,7 +1083,12 @@ async function outgoingFlow(dir, base) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const panel = page.getByRole("dialog");
   const outbox = join(dir, "data", "mail", "outbox");
-  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const mails = () =>
+    existsSync(outbox)
+      ? readdirSync(outbox)
+          .filter((f) => !f.startsWith("."))
+          .sort()
+      : [];
   /** The next mail after `count`, with its To, Subject and body. */
   const next = async (count, what) => {
     for (let i = 0; i < 100 * P && mails().length <= count; i++) await page.waitForTimeout(100);
@@ -1229,7 +1234,12 @@ async function visitorMailFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const outbox = join(dir, "data", "mail", "outbox");
-  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const mails = () =>
+    existsSync(outbox)
+      ? readdirSync(outbox)
+          .filter((f) => !f.startsWith("."))
+          .sort()
+      : [];
   let added = 0;
   try {
     ok(smithable(dir, "op", "addOutgoing", "messageIn", "Message created", "--recipient", "admin"));
@@ -1549,7 +1559,12 @@ async function pushService() {
 
 async function kioskFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
-  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const mails = () =>
+    existsSync(outbox)
+      ? readdirSync(outbox)
+          .filter((f) => !f.startsWith("."))
+          .sort()
+      : [];
   const read = (file) => readFileSync(join(outbox, file), "utf8");
   const subjects = (before) =>
     mails()
@@ -1578,6 +1593,7 @@ async function kioskFlow(dir, base) {
   const textsNow = () =>
     existsSync(texts)
       ? readdirSync(texts)
+          .filter((f) => !f.startsWith("."))
           .sort()
           .map((f) => readFileSync(join(texts, f), "utf8"))
       : [];
@@ -1707,7 +1723,12 @@ async function kioskPaymentFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   const original = readFileSync(spec, "utf8");
   const outbox = join(dir, "data", "mail", "outbox");
-  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const mails = () =>
+    existsSync(outbox)
+      ? readdirSync(outbox)
+          .filter((f) => !f.startsWith("."))
+          .sort()
+      : [];
   const subjects = (before) =>
     mails()
       .slice(before)
@@ -2110,7 +2131,12 @@ async function barbersFlow(dir, base) {
 
 async function supportFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
-  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const mails = () =>
+    existsSync(outbox)
+      ? readdirSync(outbox)
+          .filter((f) => !f.startsWith("."))
+          .sort()
+      : [];
   const read = (file) => readFileSync(join(outbox, file), "utf8");
   const header = (raw, name) =>
     new RegExp(`^${name}: (.*(?:\\n[ \\t].*)*)`, "im")
@@ -2346,7 +2372,12 @@ async function mailThreadFlow(dir, base) {
     if (r.code !== 0) throw new Error(r.out);
   };
   const outbox = join(dir, "data", "mail", "outbox");
-  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const mails = () =>
+    existsSync(outbox)
+      ? readdirSync(outbox)
+          .filter((f) => !f.startsWith("."))
+          .sort()
+      : [];
   const header = (raw, name) =>
     new RegExp(`^${name}: (.*(?:\\n[ \\t].*)*)`, "im")
       .exec(raw.split("\n\n")[0] ?? "")?.[1]
@@ -2788,7 +2819,8 @@ async function callFlow(dir, base, receiver) {
     // the call waits out its timeout and is tried again later.
     receiver.state.slow = true;
     const outbox = join(dir, "data", "mail", "outbox");
-    const mails = () => (existsSync(outbox) ? readdirSync(outbox).length : 0);
+    const mails = () =>
+      existsSync(outbox) ? readdirSync(outbox).filter((f) => !f.startsWith(".")).length : 0;
     const before = mails();
     const [other] = query(
       dir,
@@ -3506,7 +3538,9 @@ async function contactFlow(dir, base) {
     const address = page.url();
     await signInAs(page, base, "sales");
     await open(page, address);
-    const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
+    const before = existsSync(outbox)
+      ? readdirSync(outbox).filter((f) => !f.startsWith(".")).length
+      : 0;
     await page.getByRole("textbox", { name: "Message" }).fill("Is the spring order still on?");
     // The contact form's Send (a thread's reply box on the page has one too).
     await page.locator('[data-kit="contact-owner"]').getByRole("button", { name: "Send" }).click();
@@ -3515,7 +3549,9 @@ async function contactFlow(dir, base) {
       .waitFor({ timeout: 10000 * P });
     if ((await page.content()).includes("dev-admin@"))
       throw new Error("the page shows the owner's address");
-    const mails = readdirSync(outbox).sort();
+    const mails = readdirSync(outbox)
+      .filter((f) => !f.startsWith("."))
+      .sort();
     if (mails.length !== before + 1) throw new Error("no mail was sent");
     // Mail bodies are quoted-printable: soft line breaks joined, so the text reads whole.
     const mail = readFileSync(join(outbox, mails.at(-1)), "utf8").replace(/=\r?\n/g, "");
@@ -3636,9 +3672,9 @@ async function reviewFlow(dir, base) {
     for (let i = 0; ; i++) {
       const told =
         existsSync(outbox) &&
-        readdirSync(outbox).some((f) =>
-          /await(s)? review in Torget/.test(readFileSync(join(outbox, f), "utf8")),
-        );
+        readdirSync(outbox)
+          .filter((f) => !f.startsWith("."))
+          .some((f) => /await(s)? review in Torget/.test(readFileSync(join(outbox, f), "utf8")));
       if (told) break;
       if (i === 50 * P) throw new Error("no reviewer was told by mail");
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -3809,13 +3845,17 @@ async function marketplaceFlow(dir, base) {
     await open(page, `${base}/?q=Test%20lamp`);
     await page.getByRole("button", { name: "Test lamp" }).filter({ visible: true }).first().click();
     await page.waitForURL(/\/\d+$/);
-    const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
+    const before = existsSync(outbox)
+      ? readdirSync(outbox).filter((f) => !f.startsWith(".")).length
+      : 0;
     await page.getByRole("textbox", { name: "Message" }).fill("Is the lamp still for sale?");
     await page.getByRole("button", { name: "Send" }).click();
     await page
       .getByText("Your message is in the preview's outbox, not sent: the preview sends no mail.")
       .waitFor({ timeout: 10000 * P });
-    const mails = readdirSync(outbox).sort();
+    const mails = readdirSync(outbox)
+      .filter((f) => !f.startsWith("."))
+      .sort();
     if (mails.length !== before + 1) throw new Error("no mail was sent");
     const mail = readFileSync(join(outbox, mails.at(-1)), "utf8").replace(/=\r?\n/g, "");
     for (const part of [/^To: dev-member@/m, /^Reply-To: .*dev-admin@/m, /Test lamp/])
@@ -4994,13 +5034,19 @@ async function inputSecurityFlow(dir, base) {
             body: JSON.stringify(body),
           });
         const outbox = join(dir, "data", "mail", "outbox");
-        let mailed = existsSync(outbox) ? readdirSync(outbox).length : 0;
+        let mailed = existsSync(outbox)
+          ? readdirSync(outbox).filter((f) => !f.startsWith(".")).length
+          : 0;
         const codeFor = async (email) => {
           const sent = await post("/email-otp/send-verification-otp", { email, type: "sign-in" });
           if (!sent.ok) throw new Error(`asking for a code gave ${sent.status}`);
           let code;
           for (let i = 0; !code && i < 50 * P * P; i++) {
-            const mails = existsSync(outbox) ? readdirSync(outbox).sort() : [];
+            const mails = existsSync(outbox)
+              ? readdirSync(outbox)
+                  .filter((f) => !f.startsWith("."))
+                  .sort()
+              : [];
             if (mails.length > mailed)
               code = /\b(\d{3}) ?(\d{3})\b/
                 .exec(readFileSync(join(outbox, mails.at(-1)), "utf8"))
@@ -5036,14 +5082,20 @@ async function inputSecurityFlow(dir, base) {
           last = await codeFor(limited);
         }
         await new Promise((r) => setTimeout(r, 4000));
-        const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
+        const before = existsSync(outbox)
+          ? readdirSync(outbox).filter((f) => !f.startsWith(".")).length
+          : 0;
         const refused = await post("/email-otp/send-verification-otp", {
           email: limited,
           type: "sign-in",
         });
         if (!refused.ok) throw new Error(`a code past the limit was answered ${refused.status}`);
         await new Promise((r) => setTimeout(r, 2000 * P));
-        if ((existsSync(outbox) ? readdirSync(outbox).length : 0) !== before)
+        if (
+          (existsSync(outbox)
+            ? readdirSync(outbox).filter((f) => !f.startsWith(".")).length
+            : 0) !== before
+        )
           throw new Error("a code past the limit was mailed");
         const kept = await post("/sign-in/email-otp", { email: limited, otp: last });
         if (!kept.ok)

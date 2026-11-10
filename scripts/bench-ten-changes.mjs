@@ -438,7 +438,9 @@ const REQUESTS = [
       'Marking order 1002 shipped produces a mail to customer 2\'s address with "1002" in it, seen in the outbox.',
     check: async ({ page, base, dir }) => {
       const outbox = join(dir, "data", "mail", "outbox");
-      const before = existsSync(outbox) ? readdirSync(outbox).length : 0;
+      const before = existsSync(outbox)
+        ? readdirSync(outbox).filter((f) => !f.startsWith(".")).length
+        : 0;
       if (!(await openRecord(page, base, ORDERS_PAGE, "1002"))) return false;
       if (await openEdit(page)) {
         await fillAndSave(page, { Status: "placed" });
@@ -448,7 +450,11 @@ const REQUESTS = [
       if (!(await button.count())) return false;
       await button.click();
       await page.waitForTimeout(3000);
-      const files = existsSync(outbox) ? readdirSync(outbox).sort() : [];
+      const files = existsSync(outbox)
+        ? readdirSync(outbox)
+            .filter((f) => !f.startsWith("."))
+            .sort()
+        : [];
       if (files.length <= before) return false;
       const mail = readFileSync(join(outbox, files[files.length - 1]), "utf8");
       return mail.includes("ops@harbourfreight.example") && mail.includes("1002");

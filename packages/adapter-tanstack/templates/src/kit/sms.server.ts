@@ -6,7 +6,7 @@
 // text under DATA_DIR as the mail is. A day's texts are capped for the app and for each number;
 // a text the provider may have taken (no answer) is never sent again by itself.
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { and, asc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "#/db";
@@ -128,7 +128,10 @@ async function deliver(
     // As the mail without SMTP settings: what development and the tests look at.
     const outbox = join(dataDir, "sms", "outbox");
     mkdirSync(outbox, { recursive: true });
-    writeFileSync(join(outbox, `${String(id).padStart(6, "0")}.txt`), `To: ${to}\n\n${text}\n`);
+    // Hidden while written, then renamed into place: a reader never takes half a text.
+    const name = `${String(id).padStart(6, "0")}.txt`;
+    writeFileSync(join(outbox, `.${name}.tmp`), `To: ${to}\n\n${text}\n`);
+    renameSync(join(outbox, `.${name}.tmp`), join(outbox, name));
     return "sent";
   }
   if (SMS_PROVIDER !== "46elks") return { error: w.smsNoProvider(SMS_PROVIDER), retry: false };
