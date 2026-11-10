@@ -298,13 +298,16 @@ export function NoCode({
               if (path.length !== 2 || typeof name !== "string") return undefined;
               if (area === "models") return <ImportRecords model={name} run={run} />;
               // A part's own code (what-it-does.md §3): its files under src/custom, as the index found them.
-              const codeOf = (concept: string) =>
+              // Its own kind of file only (an action's under actions/), not code that uses it.
+              const codeOf = (concept: string, folder: string) =>
                 project.concepts
                   .find((c) => c.concept === concept)
                   ?.files.map((f) => f.path)
-                  .filter((p) => p.startsWith("src/custom/")) ?? [];
+                  .filter((p) => p.startsWith(`src/custom/${folder}/`)) ?? [];
               if (area === "queries")
-                return <CodeFiles files={codeOf(`query:${name}`)} dir={project.localDir} />;
+                return (
+                  <CodeFiles files={codeOf(`query:${name}`, "queries")} dir={project.localDir} />
+                );
               if (area === "incoming" && spec.ir?.incoming.find((i) => i.name === name)?.custom)
                 return (
                   <CodeFiles
@@ -326,14 +329,14 @@ export function NoCode({
                       }}
                     />
                     <ExamplesTable examples={custom.examples ?? []} />
-                    <CodeFiles files={codeOf(`action:${name}`)} dir={project.localDir} />
+                    <CodeFiles files={codeOf(`action:${name}`, "actions")} dir={project.localDir} />
                   </div>
                 );
               if (area === "pages")
                 return (
                   <OwnCode
                     page={name}
-                    files={codeOf(`page:${name}`)}
+                    files={codeOf(`page:${name}`, "pages")}
                     dir={project.localDir}
                     own={Boolean(
                       project.concepts

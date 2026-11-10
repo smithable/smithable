@@ -2356,7 +2356,7 @@ try {
       .first()
       .waitFor({ timeout: 60000 * P });
     // Once it is, its file with a link that opens it in the person's editor (what-it-does.md §3).
-    const code = page
+    const code = customers
       .locator('[data-part="code-files"]')
       .filter({ hasText: "src/custom/pages/customers.tsx" });
     await code.first().waitFor({ timeout: 60000 * P });
