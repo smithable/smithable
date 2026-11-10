@@ -485,6 +485,7 @@ export const w = {
   smsRemove: "Ta bort mitt nummer",
   notifications: "Aviseringar",
   notificationsHelp: "I den här webbläsaren, även när appen är stängd. Slå på de du vill ha.",
+  pushUnavailable: "Den här webbläsaren kan inte ta emot aviseringar från appen.",
   pushRefused:
     "Webbläsaren tillät inte aviseringar. Tillåt dem i dess inställningar för den här webbplatsen.",
   importIt: "Importera",

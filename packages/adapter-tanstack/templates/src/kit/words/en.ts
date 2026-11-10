@@ -507,6 +507,7 @@ export const w = {
   smsRemove: "Remove my number",
   notifications: "Notifications",
   notificationsHelp: "In this browser, also when the app is closed. Turn on each you want.",
+  pushUnavailable: "This browser cannot take notifications from this app.",
   pushRefused: "The browser did not allow notifications. Allow them in its settings for this site.",
   importIt: "Import",
   importTitle: (plural: string) => `Import ${plural.toLowerCase()} from a file`,

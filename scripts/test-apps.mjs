@@ -1796,7 +1796,9 @@ async function kioskPaymentFlow(dir, base) {
     if (subjects(before).includes("A new order"))
       throw new Error("staff were told of an unpaid order");
     await page.getByRole("button", { name: "Approve" }).click();
-    await page.getByText(/^Paid .+\. Thank you!$/).waitFor({ timeout: 15000 * P });
+    await page
+      .getByRole("heading", { name: /^Paid .+ Thank you!$/ })
+      .waitFor({ timeout: 15000 * P });
     const done = orderOf(paid);
     if (done.held || done.paid !== 1) throw new Error(`the paid order is ${JSON.stringify(done)}`);
     await waitFor("mail to staff of the paid order", () =>
