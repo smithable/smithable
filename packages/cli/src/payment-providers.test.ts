@@ -58,6 +58,10 @@ test("amounts go to a provider in its currency's smallest unit; a currency witho
   expect(() => kit.stripeMinor(150050, "ISK")).toThrow(kit.ProviderRefused);
   expect(kit.mollieAmount(2450, "EUR")).toEqual({ currency: "EUR", value: "24.50" });
   expect(kit.mollieAmount(150000, "JPY")).toEqual({ currency: "JPY", value: "1500" });
+  expect(kit.mollieAmount(150000, "isk")).toEqual({ currency: "ISK", value: "1500.00" });
+  expect(() => kit.mollieAmount(150050, "TWD")).toThrow(kit.ProviderRefused);
+  // Three decimals: the app stores hundredths, so it takes none of them.
+  expect(() => kit.stripeMinor(1000, "KWD")).toThrow(kit.ProviderRefused);
 });
 
 test("Stripe: a checkout of one line, the Payment's id in its metadata, back to the app's address", async () => {
@@ -88,9 +92,9 @@ test("Stripe: a checkout of one line, the Payment's id in its metadata, back to 
   expect(sent.get("metadata[payment]")).toBe("7");
   expect(sent.get("payment_intent_data[metadata][payment]")).toBe("7");
   expect(sent.get("success_url")).toBe("https://kiosk.example.com/payments/7/back");
-  expect((calls[0]?.init.headers as Record<string, string> | undefined)?.["Idempotency-Key"]).toBe(
-    "payment-7-checkout",
-  );
+  expect(
+    (calls[0]?.init.headers as Record<string, string> | undefined)?.["Idempotency-Key"],
+  ).toMatch(/^payment-7-checkout-\d+$/);
 });
 
 test("Stripe: a signed completed checkout is a payment; a wrong or old signature is refused", async () => {

@@ -46,6 +46,8 @@ const STRIPE_WHOLE = [
   "XPF",
 ];
 const STRIPE_WHOLE_IN_HUNDREDTHS = ["ISK", "HUF", "TWD", "UGX"];
+/** Currencies of three decimals: the app stores hundredths, so it takes none of them (§3.4). */
+const THREE_DECIMALS = ["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"];
 
 const refuse = (hundredths: number, currency: string) =>
   new ProviderRefused(`an amount of ${hundredths / 100} cannot be paid in ${currency}`);
@@ -53,6 +55,7 @@ const refuse = (hundredths: number, currency: string) =>
 /** Hundredths (as the app stores money, §3.4) in Stripe's smallest unit for the currency. */
 export function stripeMinor(hundredths: number, currency: string): number {
   const c = currency.toUpperCase();
+  if (THREE_DECIMALS.includes(c)) throw refuse(hundredths, c);
   if (STRIPE_WHOLE.includes(c)) {
     if (hundredths % 100) throw refuse(hundredths, c);
     return hundredths / 100;
@@ -65,17 +68,19 @@ export function stripeMinor(hundredths: number, currency: string): number {
 export const fromStripe = (minor: number, currency: string) =>
   STRIPE_WHOLE.includes(currency.toUpperCase()) ? minor * 100 : minor;
 
-/** A currency's decimals as Mollie writes its amounts ("10.00", "1500"): the currency's own. */
-const mollieDecimals = (currency: string) =>
-  new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions()
-    .maximumFractionDigits as number;
-
-/** Mollie's amount: the currency and the value as text with its decimals. */
+/**
+ * Mollie's amount: the currency in capitals and the value as text with the decimals Mollie wants:
+ * none for JPY, two for the rest, whole for ISK and TWD (written "10.00"), whatever Intl says.
+ */
 export function mollieAmount(hundredths: number, currency: string) {
-  const decimals = mollieDecimals(currency);
-  if (decimals === 0 && hundredths % 100) throw refuse(hundredths, currency);
-  if (decimals > 2) throw refuse(hundredths, currency);
-  return { currency, value: (hundredths / 100).toFixed(decimals) };
+  const c = currency.toUpperCase();
+  if (THREE_DECIMALS.includes(c)) throw refuse(hundredths, c);
+  if (c === "JPY") {
+    if (hundredths % 100) throw refuse(hundredths, c);
+    return { currency: c, value: String(hundredths / 100) };
+  }
+  if ((c === "ISK" || c === "TWD") && hundredths % 100) throw refuse(hundredths, c);
+  return { currency: c, value: (hundredths / 100).toFixed(2) };
 }
 const fromMollie = (amount: { value: string; currency: string } | undefined) =>
   amount ? Math.round(Number(amount.value) * 100) : undefined;
@@ -179,10 +184,15 @@ export const stripeProvider: Provider = {
   }) {
     // From the Payment's own time, so every try of one checkout asks the same (Stripe refuses a
     // key with other parameters); Stripe takes 30 minutes to 24 hours.
+    // At least 31 minutes ahead (Stripe takes 30 minutes to 24 hours), in ten-minute steps: a try
+    // soon after an earlier one asks the same, a much later one (the first answer lost) anew.
     const from = createdAt.getTime();
+    const step = 10 * MINUTE;
     const expires = Math.min(
-      Math.max(expiresAt.getTime(), from + 31 * MINUTE),
-      from + 23 * 60 * MINUTE,
+      Math.ceil(
+        Math.max(expiresAt.getTime(), from + 31 * MINUTE, Date.now() + 31 * MINUTE) / step,
+      ) * step,
+      Date.now() + 23 * 60 * MINUTE,
     );
     const session = await stripe(
       "POST",
@@ -205,7 +215,8 @@ export const stripeProvider: Provider = {
         payment_intent_data: { metadata: { payment, app } },
         expires_at: Math.floor(expires / 1000),
       },
-      idempotencyKey,
+      // The key names the expiry: the same request under it each time.
+      `${idempotencyKey}-${Math.floor(expires / 1000)}`,
     );
     return { reference: String(session.id), url: String(session.url) };
   },
@@ -279,8 +290,7 @@ export const stripeProvider: Provider = {
   },
   async status(reference) {
     const session = await stripe("GET", `/v1/checkout/sessions/${encodeURIComponent(reference)}`);
-    if (session.payment_status === "paid" || session.payment_status === "no_payment_required")
-      return "paid";
+    if (session.payment_status === "paid") return "paid";
     if (session.status === "open") return "open";
     // Complete but not yet paid: a method that settles later.
     return session.status === "complete" ? "processing" : "closed";
@@ -466,7 +476,10 @@ export const mollieProvider: Provider = {
   },
   async refund({ reference, amount, currency, idempotencyKey }) {
     // One made by an earlier try (its answer lost, and Mollie's key kept an hour only): that one.
-    const listed = await mollie("GET", `/payments/${encodeURIComponent(reference)}/refunds`);
+    const listed = await mollie(
+      "GET",
+      `/payments/${encodeURIComponent(reference)}/refunds?limit=250`,
+    );
     const earlier = (
       (listed._embedded as { refunds?: Record<string, unknown>[] } | undefined)?.refunds ?? []
     ).find((r) => (r.metadata as Record<string, unknown> | null)?.key === idempotencyKey);
