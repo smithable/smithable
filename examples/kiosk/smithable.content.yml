@@ -27,7 +27,7 @@ pages:
 
 outgoing:
   orderPlaced:
-    subject: A new order
+    subject: "New order {number}"
     text: A new order has come in. Open the orders page to accept it, or decline it and say why.
   orderAccepted:
     subject: Your order is being made

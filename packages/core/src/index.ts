@@ -115,8 +115,13 @@ export {
   type AnalyticsSetting,
   analyticsOf,
   CONTEXT_SCHEMA,
+  PAYMENT_PROVIDERS,
+  type PaymentProvider,
+  paymentProviderOf,
+  paymentsProviderNote,
   validateContext,
 } from "./context-file.js";
+export { THREE_DECIMAL_CURRENCIES } from "./currencies.js";
 export { type DiffTable, dataDiffSql, restoreOrder } from "./data-diff.js";
 export type { Diagnostic, Fix, Severity } from "./diagnostics.js";
 export { fixCommand, formatDiagnostic, hasErrors } from "./diagnostics.js";
@@ -149,6 +154,7 @@ export {
 export type * from "./ir.js";
 export {
   ACCESS_OPERATIONS,
+  channelsOf,
   DUE_WITHIN,
   FILES_MAX,
   isFile,
@@ -158,7 +164,10 @@ export {
   isUpload,
   mergeAsked,
   mergedFields,
+  PAYMENT_MOVES,
+  PAYMENT_STATUSES,
   PICTURES_MAX,
+  paymentMoves,
   SCALAR_TYPES,
   SECTION_KINDS,
   storageOf,
@@ -289,6 +298,12 @@ export { partText, readNamePart } from "./sections/name-parts.js";
 export { type NameKind, nameProblem, RESERVED_WORDS } from "./sections/names.js";
 export { notSendable, outgoingText } from "./sections/outgoing.js";
 export { searchableFields } from "./sections/pages.js";
+export {
+  PAYMENT_MODEL,
+  PAYMENT_REFUND_MODEL,
+  paymentModels,
+  paymentText,
+} from "./sections/payments.js";
 export { personaFor, sampleRoles } from "./sections/people-operations.js";
 export { EDITABLE_FILES, type EditableFile, emptyFile } from "./sections/spec-operations.js";
 export { cronText, timerText } from "./sections/timers.js";

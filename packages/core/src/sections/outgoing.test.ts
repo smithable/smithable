@@ -66,6 +66,7 @@ test("outgoing reads an event or an action, a condition, and every kind of recip
       name: "made",
       when: { model: "Booking", event: "created" },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "owner" },
     },
     {
@@ -73,24 +74,28 @@ test("outgoing reads an event or an action, a condition, and every kind of recip
       when: { model: "Booking", event: "changed" },
       where: { status: "confirmed" },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "field", path: ["customer", "email"], via: "email" },
     },
     {
       name: "gone",
       when: { model: "Booking", event: "deleted" },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "role", role: "staff" },
     },
     {
       name: "told",
       when: { model: "Booking", action: "confirm" },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "field", path: ["contact"], via: "email" },
     },
     {
       name: "managed",
       when: { model: "Booking", event: "created" },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "field", path: ["customer", "manager"], via: "user" },
     },
     { name: "feed", when: { model: "Booking", event: "created" }, to: "statusFeed" },
@@ -126,6 +131,7 @@ test("a list field's records, each told; and which fields' change counts", () =>
     when: { model: "Customer", event: "changed" },
     fields: ["name", "email"],
     to: "mail",
+    channels: ["mail"],
     recipient: { kind: "list", list: "bookings", model: "Booking", each: { kind: "owner" } },
   });
   expect(contacts?.recipient).toEqual({
@@ -245,7 +251,7 @@ test("what outgoing refuses, each with its reason", () => {
   expect(messages("  x:\n    when: Booking created\n    to: mail\n    recipient: title\n")).toEqual(
     [
       expect.stringContaining(
-        "Booking.title is neither an email field nor a field that refers to User",
+        "Booking.title is not an email field, a phone field or a field that refers to User",
       ),
     ],
   );
@@ -363,6 +369,7 @@ test("a custom action's entry: after it returns, a call or a role's mail, and no
       name: "importMailed",
       when: { custom: "importBookings" },
       to: "mail",
+      channels: ["mail"],
       recipient: { kind: "role", role: "staff" },
     },
   ]);

@@ -495,3 +495,31 @@ pages:
   const schema = files.find((f) => f.path === "src/db/schema.ts")?.content ?? "";
   expect(schema).not.toContain("recordId: integer().notNull()");
 });
+
+test("push and texts are sent through the kit (notifications.md §4, §5)", () => {
+  const placed = ir.outgoing.find((o) => o.name === "orderPlaced");
+  if (!placed) throw new Error("orderPlaced");
+  const spec: SpecIR = {
+    ...ir,
+    outgoing: [
+      { ...placed, name: "orderPushed", to: "push", channels: ["push"] },
+      { ...placed, name: "orderBoth", to: "mail", channels: ["mail", "push"] },
+      { ...placed, name: "orderTexted", to: "sms", channels: ["sms"] },
+    ],
+  };
+  const files = generateApp(spec, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const module = files.find((f) => f.path === "src/generated/outgoing.server.ts")?.content ?? "";
+  // Pushed only: a push, and no mail.
+  expect(module).toMatch(/name: "orderPushed",[\s\S]*?push: true,\n\s*mail: false,/);
+  // Both: pushed and mailed.
+  expect(module).toMatch(/name: "orderBoth",[\s\S]*?push: true,\n\s*\},/);
+  expect(module).toContain("if (entry.push) queuePush(tx, viewer, happening, to);");
+  expect(module).toContain("pushReaders({");
+  // Texted only: a text, and no mail (notifications.md §5).
+  expect(module).toMatch(/name: "orderTexted",[\s\S]*?sms: true,\n\s*mail: false,/);
+  expect(module).toContain("if (entry.sms) queueSms(tx, viewer, happening, to);");
+  const all = files.map((f) => f.content).join("\n");
+  expect(all).not.toContain("OUTGOING_PUSH");
+  expect(files.some((f) => f.path === "src/kit/push.server.ts")).toBe(true);
+  expect(all).toContain('sqliteTable(\n  "push_subscriptions"');
+});

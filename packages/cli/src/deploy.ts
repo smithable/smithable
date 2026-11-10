@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { validateAuth, validateSpec } from "@smithable/core";
+import { channelsOf, validateAuth, validateSpec } from "@smithable/core";
 import { appName } from "./build.js";
 import type { Io } from "./io.js";
 import {
@@ -25,6 +25,16 @@ const PROVIDER_KEYS = [
   "SMTP_USER",
   "SMTP_PASSWORD",
   "MAIL_FROM",
+  // Browser push (notifications.md §4): the app's VAPID pair, else one it makes and keeps.
+  "PUSH_VAPID_PUBLIC_KEY",
+  "PUSH_VAPID_PRIVATE_KEY",
+  "PUSH_VAPID_SUBJECT",
+  // Texts (notifications.md §5): the owner's SMS provider, its keys, the sender and the day's cap.
+  "SMS_PROVIDER",
+  "SMS_KEY",
+  "SMS_SECRET",
+  "SMS_FROM",
+  "SMS_MAX_PER_DAY",
 ];
 
 /**
@@ -232,7 +242,7 @@ function targets(dir: string): string[] {
   const path = join(dir, "smithable.yml");
   if (!existsSync(path)) return [];
   const { ir } = validateSpec({ path, text: readFileSync(path, "utf8") });
-  return [...new Set((ir?.outgoing ?? []).map((o) => o.to).filter((to) => to !== "mail"))];
+  return [...new Set((ir?.outgoing ?? []).filter((o) => !channelsOf(o)).map((o) => o.to))];
 }
 
 /** Each target's settings: OUTGOING_<TARGET>_URL and OUTGOING_<TARGET>_SECRET. */

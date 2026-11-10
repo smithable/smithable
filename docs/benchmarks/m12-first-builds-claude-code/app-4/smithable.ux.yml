@@ -1,14 +1,7 @@
 smithableUx: 0.1
-pages:
-  tools:
-    table:
-      view: cards
-  loans:
-    table:
-      columns: [tool, borrowerName, lentOn, dueOn, status]
 tones:
   Loan.status:
-    out: warning
+    borrowed: warning
     returned: success
 theme:
   preset: workbench

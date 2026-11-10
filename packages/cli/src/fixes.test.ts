@@ -2,7 +2,14 @@ import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { run } from "./cli.js";
-import { affects, allFixes, type Fix, migrationKind, readFix } from "./fixes.js";
+import {
+  affects,
+  allFixes,
+  type Fix,
+  migrationConsequences,
+  migrationKind,
+  readFix,
+} from "./fixes.js";
 import { tempDir } from "./test-dir.js";
 import { captureIo } from "./test-io.js";
 
@@ -47,6 +54,21 @@ test("every fix file this engine carries is valid, and a broken one says what is
     ),
   ).toEqual({
     errors: ["none.yml: affects names no kit file, feature or package"],
+  });
+});
+
+test("a fix may say what the owner must do themselves, in one sentence", () => {
+  const base =
+    "title: T.\nseverity: urgent\nexposure: Keys could have been read.\nintroduced: unknown\naffects:\n  features: [any]\nmigration: none\n";
+  expect(
+    readFix("keys.yml", `id: keys\n${base}owner_action: Rotate the app's API keys.\n`),
+  ).toMatchObject({
+    fix: { id: "keys", ownerAction: "Rotate the app's API keys." },
+  });
+  // Left out: nothing for the owner to do.
+  expect(readFix("keys.yml", `id: keys\n${base}`)).not.toHaveProperty("fix.ownerAction");
+  expect(readFix("keys.yml", `id: keys\n${base}owner_action: ""\n`)).toEqual({
+    errors: ['keys.yml: "owner_action" is one plain sentence, or left out when there is none'],
   });
 });
 
@@ -106,4 +128,50 @@ test("a migration only adds, or the build before it may not run on it", () => {
       "PRAGMA foreign_keys=OFF;--> statement-breakpoint\nCREATE TABLE `__new_customer` (`id` integer);",
     ]),
   ).toBe("destructive");
+});
+
+test("a destructive migration says what it loses, in words, never a value", () => {
+  const table = (name: string, columns: Record<string, { type: string; notNull?: boolean }>) => ({
+    name,
+    columns: Object.fromEntries(Object.entries(columns).map(([c, v]) => [c, { name: c, ...v }])),
+  });
+  const before = {
+    tables: {
+      orders: table("orders", {
+        id: { type: "integer" },
+        note: { type: "text" },
+        total: { type: "integer" },
+        code: { type: "text" },
+      }),
+      tips: table("tips", { id: { type: "integer" } }),
+    },
+  };
+  const after = {
+    tables: {
+      orders: table("orders", {
+        id: { type: "integer" },
+        total: { type: "text" },
+        code: { type: "text", notNull: true },
+      }),
+    },
+  };
+  expect(migrationConsequences(before, after)?.map((c) => c.says)).toEqual([
+    "The table tips is removed, with all its records.",
+    "The column note of orders is removed, with its values.",
+    "The column total of orders changes from integer to text: values that do not convert are lost.",
+    "The column code of orders becomes required: records without a value stop the update.",
+  ]);
+  // Nothing found is not "loses nothing": none, so the service keeps it held.
+  expect(migrationConsequences(after, after)).toBeUndefined();
+  const unique = {
+    tables: {
+      orders: {
+        ...after.tables.orders,
+        indexes: { orders_code: { name: "orders_code", columns: ["code"], isUnique: true } },
+      },
+    },
+  };
+  expect(migrationConsequences(after, unique)?.map((c) => c.says)).toEqual([
+    "orders's code must now be unique: records that share a value stop the update.",
+  ]);
 });

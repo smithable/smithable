@@ -247,6 +247,7 @@ exports[`valid specs > ../../../examples/api/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -589,6 +590,9 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "appointmentRequested",
       "recipient": {
         "kind": "role",
@@ -601,6 +605,9 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "appointmentMade",
       "recipient": {
         "kind": "owner",
@@ -612,6 +619,9 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "appointmentConfirmed",
       "recipient": {
         "kind": "owner",
@@ -779,6 +789,7 @@ exports[`valid specs > ../../../examples/barbers/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -1190,6 +1201,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "reminder",
       "recipient": {
         "kind": "owner",
@@ -1201,6 +1215,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "bookingMade",
       "recipient": {
         "kind": "owner",
@@ -1212,6 +1229,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "bookingChanged",
       "recipient": {
         "kind": "owner",
@@ -1223,6 +1243,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "bookingCancelled",
       "recipient": {
         "kind": "owner",
@@ -1234,6 +1257,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "fields": [
         "startsAt",
       ],
@@ -1259,6 +1285,9 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "empty": "skip",
       "list": {
         "columns": [
@@ -1832,6 +1861,7 @@ exports[`valid specs > ../../../examples/booking/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [
@@ -2446,6 +2476,7 @@ exports[`valid specs > ../../../examples/crm/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -2834,6 +2865,9 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "invoiceSent",
       "recipient": {
         "kind": "field",
@@ -3098,6 +3132,7 @@ exports[`valid specs > ../../../examples/invoicing/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [
@@ -3560,10 +3595,14 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+        "push",
+      ],
       "name": "orderPlaced",
       "recipient": {
         "kind": "role",
-        "role": "admin",
+        "role": "staff",
       },
       "to": "mail",
       "when": {
@@ -3572,6 +3611,9 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "orderAccepted",
       "recipient": {
         "kind": "field",
@@ -3587,6 +3629,9 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "orderReady",
       "recipient": {
         "kind": "field",
@@ -3813,6 +3858,7 @@ exports[`valid specs > ../../../examples/kiosk/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -4093,6 +4139,7 @@ exports[`valid specs > ../../../examples/marketplace/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -4245,6 +4292,7 @@ exports[`valid specs > ../../../examples/records/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -4937,6 +4985,7 @@ exports[`valid specs > ../../../examples/status/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -5255,6 +5304,9 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
   ],
   "outgoing": [
     {
+      "channels": [
+        "mail",
+      ],
       "name": "caseReceived",
       "recipient": {
         "kind": "field",
@@ -5270,6 +5322,9 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
       },
     },
     {
+      "channels": [
+        "mail",
+      ],
       "name": "replySent",
       "recipient": {
         "kind": "field",
@@ -5342,6 +5397,7 @@ exports[`valid specs > ../../../examples/support/smithable.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -5474,6 +5530,7 @@ exports[`valid specs > ./__fixtures__/valid/actions.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -5675,6 +5732,7 @@ exports[`valid specs > ./__fixtures__/valid/fields.yml 1`] = `
   ],
   "outgoing": [],
   "pages": [],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -5961,6 +6019,7 @@ exports[`valid specs > ./__fixtures__/valid/formulas.yml 1`] = `
   ],
   "outgoing": [],
   "pages": [],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -6239,6 +6298,7 @@ exports[`valid specs > ./__fixtures__/valid/lists.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -6349,6 +6409,7 @@ exports[`valid specs > ./__fixtures__/valid/menus.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -6372,6 +6433,7 @@ exports[`valid specs > ./__fixtures__/valid/minimal.yml 1`] = `
   ],
   "outgoing": [],
   "pages": [],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -6626,6 +6688,7 @@ exports[`valid specs > ./__fixtures__/valid/page-patterns.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [
     {
       "custom": true,
@@ -6785,6 +6848,7 @@ exports[`valid specs > ./__fixtures__/valid/relations.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],
@@ -7164,6 +7228,7 @@ exports[`valid specs > ./__fixtures__/valid/standard-actions.yml 1`] = `
       ],
     },
   ],
+  "payments": [],
   "queries": [],
   "specVersion": "0.1",
   "timers": [],

@@ -2,6 +2,7 @@
 // model the auth file's `api` block offers: list (pages of at most 100), get, create, change and
 // delete under /api/v1/<models>, its standard actions on a record, and an OpenAPI description.
 // Every call is a key's, through the model's data functions, so a key may do what its role may.
+
 import {
   type AssistantCaller,
   type AuthIR,
@@ -26,6 +27,7 @@ import {
   type Voice,
 } from "@smithable/core";
 import { actionNames, askedFields, askedKeys } from "./actions.js";
+import { importNames } from "./import-module.js";
 import {
   addressOwned,
   dataKey,
@@ -68,7 +70,11 @@ export function apiParts(ir: SpecIR, auth: AuthIR, t: Texts) {
         Boolean(a.custom && a.rows && offered.rowsActions.includes(a.name)),
     ),
     /** What a call without a key may do (api-only.md §3.4): read and add, never more. */
-    visitors: offered.visitors,
+    // A visitor's create would skip paying on a model paid to be created (payments.md §4.7).
+    visitors: {
+      ...offered.visitors,
+      create: offered.visitors.create.filter((name) => !modelNamed(ir, name).heldByPayment),
+    },
   };
 }
 
@@ -562,6 +568,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${[...new Set([reads, adds])].sort().join(", ")} } from "#/kit/api.server";
+import { importItems } from "#/kit/import.server";
 import { whereFromQuery } from "#/kit/where";
 
 export const Route = createFileRoute("/api/v1/${path}/")({
@@ -605,12 +612,35 @@ export const Route = createFileRoute("/api/v1/${path}/")({
           };
         }),
       POST: ({ request }) =>
-        ${adds}(request, async (viewer, body) => ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never)), 201),
+        ${adds}(request, async (viewer, body) => {
+          // A list is an import (A 238): every item checked, each one's id or refusal, one line to undo it by.
+          if (Array.isArray(body)) {
+            const { results, undo } = await importItems(viewer, ${JSON.stringify(model.name)}, body, (item) => ${n.data}.create(viewer, ${camelName}FromApi(item) as never));
+            return { results, ...(undo !== undefined ? { undo: \`/api/v1/${path}/imports/\${undo}\` } : {}) };
+          }
+          return ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never));
+        }, 201),
     },
   },
 });
 `;
     // The same list as CSV, for a spreadsheet: every record that fits, at most 10,000.
+    // An import taken back (A 238): by the key that made it, within a day.
+    files[`src/routes/api/v1/${path}/imports.$id.ts`] =
+      `${HEADER}// An import of ${n.pluralLabel.toLowerCase()} taken back, by the key that made it, within a day (A 238).
+import { createFileRoute } from "@tanstack/react-router";
+import { ${importNames(model).undoRows} } from "${importNames(model).server}";
+import { apiCall } from "#/kit/api.server";
+
+export const Route = createFileRoute("/api/v1/${path}/imports/$id")({
+  server: {
+    handlers: {
+      DELETE: ({ request, params }) =>
+        apiCall(request, (viewer) => ${importNames(model).undoRows}(viewer, Number(params.id))),
+    },
+  },
+});
+`;
     files[`src/routes/api/v1/${path}[.]csv.ts`] =
       `${HEADER}// ${n.pluralLabel} as CSV for programs with a key: the same filters, search and sort as the JSON list.
 import { createFileRoute } from "@tanstack/react-router";

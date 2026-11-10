@@ -1,18 +1,14 @@
 smithableUx: 0.1
+theme:
+  preset: paperwork
 pages:
-  payments:
-    table:
-      sort: -paidOn
-      totals: [amount]
   invoices:
-    table:
-      columns: [number, client, issuedOn, dueOn, status, total, balance]
-      sort: -issuedOn
     record:
       lists:
         lines: inline
-theme:
-  preset: paperwork
+  payments:
+    table:
+      sort: -paidOn
 tones:
   Invoice.status:
     paid: success

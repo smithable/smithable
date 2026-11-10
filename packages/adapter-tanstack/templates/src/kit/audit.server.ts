@@ -38,9 +38,10 @@ export function audit(
   tx: Writer,
   viewer: Pick<Viewer, "id" | "role"> | null,
   line: AuditLine,
-): void {
+): number | undefined {
   const trace = traceDetails();
-  tx.insert(auditLog)
+  const written = tx
+    .insert(auditLog)
     .values({
       trace: trace?.traceId,
       who: viewer?.id ?? (trace ? "visitor" : "the app"),
@@ -55,7 +56,9 @@ export function audit(
       // A change asked for through Ask says so (assistant.md §7).
       details: trace?.through ? { ...line.details, through: trace.through } : line.details,
     })
-    .run();
+    .run() as { lastInsertRowid?: number | bigint } | undefined;
+  // The line's id, for what refers to it later (an import's undo).
+  return written?.lastInsertRowid === undefined ? undefined : Number(written.lastInsertRowid);
 }
 
 /** Of the keys a change set, those whose value is not what it was: dates and lists by value. */

@@ -3,8 +3,8 @@
   "starter": "support",
   "wordStarter": "booking",
   "questions": [
-    "Who creates tickets?",
-    "Can the person who reported the problem follow the ticket?",
-    "Besides priority and assignee, what should a ticket hold?"
+    "Who opens tickets?",
+    "Can the people who reported a problem follow their ticket in the app?",
+    "What else should a ticket hold besides priority and who handles it?"
   ]
 }

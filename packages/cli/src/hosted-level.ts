@@ -2,7 +2,7 @@
 // Strict, Normal or Relaxed, or a non-EU app, given to the workspace as SMITHABLE_HOSTED_LEVEL. The engine's grammar does not
 // change; the level is read here, in the host, by two checks: validate's warning on a sign-in
 // provider Strict does not allow, and the release check's line naming the level.
-import type { AuthIR, Diagnostic, SpecIR } from "@smithable/core";
+import { type AuthIR, channelsOf, type Diagnostic, type SpecIR } from "@smithable/core";
 
 export type HostedLevel = "strict" | "normal" | "relaxed" | "non-eu";
 
@@ -54,10 +54,10 @@ export function levelLine(level: HostedLevel, ir: SpecIR, auth: AuthIR): string 
   const signIn = providersOf(auth)
     .filter((p) => p !== "email")
     .map((p) => `sign-in with ${OUTSIDE[p as keyof typeof OUTSIDE] ?? p}`);
-  const calls = [...new Set(ir.outgoing.map((o) => o.to).filter((to) => to !== "mail"))].map(
+  const calls = [...new Set(ir.outgoing.filter((o) => !channelsOf(o)).map((o) => o.to))].map(
     (to) => `calls to ${to}`,
   );
-  const mail = ir.outgoing.some((o) => o.to === "mail") ? ["mail"] : [];
+  const mail = ir.outgoing.some((o) => channelsOf(o)?.includes("mail")) ? ["mail"] : [];
   const connections = [...signIn, ...calls, ...mail];
   const which = level === "non-eu" ? "This is a non-EU app" : `This app's level is ${named}`;
   return `${which}; its connections: ${connections.length ? connections.join(", ") : "none"}.`;

@@ -40,7 +40,7 @@ import {
   hasGenerationReceipt,
   startGeneration,
 } from "./generation-job.js";
-import { git, ownRepository, trailer } from "./git.js";
+import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
 import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
@@ -101,7 +101,9 @@ const STUDIO = existsSync(join(PACKAGED, "index.html"))
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript",
+  ".mjs": "text/javascript",
   ".css": "text/css",
+  ".wasm": "application/wasm",
   ".svg": "image/svg+xml",
 };
 
@@ -1584,6 +1586,42 @@ export async function studio(
           ...(verification ? { verification } : { output: err.join("").trim() }),
         });
       }
+      // A held fix (fixes-reach-apps §5, A 245): the upgraded version the service kept as
+      // refs/smithable/fix/<id> when the app's own code no longer fit it, opened on a branch of its
+      // own (made once, kept after) to repair src/custom/ and publish as any change.
+      if (req.method === "POST" && url.pathname === "/api/fix/open") {
+        const { id } = await body();
+        if (typeof id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))
+          return json({ ok: false, message: "There is no such fix." }, 400);
+        const ref = `refs/smithable/fix/${id}`;
+        const branch = `fix/${id}`;
+        const held = git(dir, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]).ok;
+        const there = git(dir, ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`]).ok;
+        // The service removes a held version's ref once a newer rebuild replaces it (A 247); the
+        // owner's branch stays, and opens as they left it, saying so.
+        if (!held && !there)
+          return json(
+            { ok: false, message: `This project has no held version for the fix ${id}.` },
+            404,
+          );
+        if (git(dir, ["rev-parse", "--abbrev-ref", "HEAD"]).out.trim() === branch)
+          return json({ ok: true, branch, ...(held ? {} : { replaced: true }) });
+        const dirty = uncommittedRefusal(dir, "before the fix is opened");
+        if (dirty) return json({ ok: false, message: dirty }, 409);
+        const packages = installed();
+        // The branch as the owner left it when it is there already; else made at the held version.
+        const done = git(dir, there ? ["checkout", branch] : ["checkout", "-b", branch, ref]);
+        if (!done.ok) return json({ ok: false, message: done.out.trim() }, 500);
+        restored(packages);
+        // The owner's branch from an earlier held version, when the service has held a newer one.
+        const newer = there && held && !git(dir, ["merge-base", "--is-ancestor", ref, branch]).ok;
+        return json({
+          ok: true,
+          branch,
+          ...(newer ? { newer: true } : {}),
+          ...(held ? {} : { replaced: true }),
+        });
+      }
       if (req.method === "POST" && url.pathname === "/api/undo") {
         const { change, check, confirm } = await body();
         const packages = installed();
@@ -1609,6 +1647,12 @@ export async function studio(
       // The Studio app itself; unknown paths get index.html (a single-page app).
       const path = normalize(url.pathname).replace(/^(\.\.[/\\])+/, "");
       let file = join(STUDIO, path);
+      // The voice detector's files are not here (a local Studio fetches them from the docs site,
+      // smith-speech.md §4.2): a plain 404 sends the page on to the next place at once.
+      if (url.pathname.startsWith("/vad/") && !existsSync(file)) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        return res.end("Not here.");
+      }
       if (!existsSync(file) || !statSync(file).isFile()) file = join(STUDIO, "index.html");
       res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" });
       res.end(readFileSync(file));

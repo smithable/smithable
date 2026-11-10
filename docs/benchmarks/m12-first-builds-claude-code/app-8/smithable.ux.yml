@@ -1,18 +1,13 @@
 smithableUx: 0.1
 pages:
+  schedule:
+    calendar:
+      colorBy: speaker
   talks:
     table:
       sort: startsAt
-  programme:
-    calendar:
-      colorBy: track
   speakers:
     table:
       view: cards
-      mark: picture
-tones:
-  Registration.status:
-    confirmed: success
-    cancelled: danger
 theme:
   preset: modern

@@ -32,7 +32,10 @@ writeModule(
   "TEMPLATES",
   walk(templates)
     .sort()
-    .map((file) => [relative(templates, file), readFileSync(file, "utf8")]),
+    .map((file) => [relative(templates, file), readFileSync(file, "utf8")])
+    // The one CSV reader, core's, in every app as well (docs: A 238).
+    .concat([["src/kit/csv-read.ts", readFileSync(join(repo, "packages/core/src/csv.ts"), "utf8")]])
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
   "packages/adapter-tanstack/templates",
 );
 

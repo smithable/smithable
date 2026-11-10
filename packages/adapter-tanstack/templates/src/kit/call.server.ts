@@ -71,7 +71,8 @@ export function proxied(
 export async function post(
   url: string,
   headers: Record<string, string>,
-  body: string,
+  /** Text for a call; bytes for a push (an encrypted message). */
+  body: string | Uint8Array,
   lookup: LookupFunction = guardedLookup(import.meta.env.DEV ? () => false : privateAddress),
   viaProxy: typeof fetch = fetch,
 ): Promise<number> {
@@ -80,7 +81,8 @@ export async function post(
     const answer = await viaProxy(url, {
       method: "POST",
       headers,
-      body,
+      // A push's bytes go as they are (fetch takes them; its types name fewer kinds).
+      body: body as BodyInit,
       redirect: "manual",
       signal: AbortSignal.timeout(10_000),
     });

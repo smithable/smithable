@@ -21,17 +21,19 @@ import {
 import type { YamlEditor, YamlValue } from "../edit.js";
 import type {
   ActionIR,
+  Channel,
   Condition,
   ModelIR,
   OutgoingIR,
   OutgoingListIR,
+  PaymentIR,
   QueryIR,
   RecipientIR,
   SpecIR,
   StandardActionIR,
   TimerIR,
 } from "../ir.js";
-import { DUE_WITHIN, type FieldIR, isUpload } from "../ir.js";
+import { channelsOf, DUE_WITHIN, type FieldIR, isUpload } from "../ir.js";
 import { capitalize, humanize, plural } from "../naming.js";
 import {
   type AnyOperation,
@@ -49,9 +51,9 @@ import { clockText, resolveDatePath } from "./timers.js";
 
 /**
  * Outgoing: something happens to a record and the app tells someone (docs/design/integrations.md
- * §4). A mail to the record's owner, a role or an address on the record; later a signed call to a
- * named target. The spec says when and whom; the adapter writes the call in the change's
- * transaction and sends it afterwards.
+ * §4). A mail, a browser push or a text to the record's owner, a role or an address on the record
+ * (docs/design/notifications.md), or a signed call to a named target. The spec says when and
+ * whom; the adapter writes the call in the change's transaction and sends it afterwards.
  */
 
 const EVENTS = ["created", "changed", "deleted"] as const;
@@ -70,6 +72,7 @@ function readWhen(
   models: ModelIR[],
   actions: ActionIR[],
   timers: TimerIR[] = [],
+  payments: PaymentIR[] = [],
 ): { when: When } | { clock: string } | { problem: string; hint?: string } {
   const event = WHEN.exec(text.trim());
   if (event) {
@@ -103,15 +106,25 @@ function readWhen(
     if (!timer.on) return { clock: timer.name };
     return { when: { model: timer.on, timer: timer.name } };
   }
+  // A payments entry (payments.md §4.3): a payment of it succeeded, on the paid record. Its name
+  // cannot be an action's or a timer's (the payments section refuses that).
+  const payment = payments.find((p) => p.name === text.trim());
+  if (payment) return { when: { model: payment.on, payment: payment.name } };
   return {
-    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted", the name of an action or the name of a timer; "${text}" is none of them.`,
-    hint: didYouMean(text.trim(), [...actions.map((a) => a.name), ...timers.map((t) => t.name)]),
+    problem: `"when" is "<Model> created", "<Model> changed", "<Model> deleted", the name of an action, a timer or a payment; "${text}" is none of them.`,
+    hint: didYouMean(text.trim(), [
+      ...actions.map((a) => a.name),
+      ...timers.map((t) => t.name),
+      ...payments.map((p) => p.name),
+    ]),
   };
 }
 
 /**
- * The mail's recipient: owner, a role, an address on the record (one reference away at most), or
- * the records of a list field and then the owner or an address of each (`bookings.owner`).
+ * The recipient: owner, a role, an address on the record (an email or phone field, or a field that
+ * refers to User; one reference away at most), or the records of a list field and then the owner
+ * or an address of each (`bookings.owner`). Whether the entry's channels reach it is
+ * `reachProblem`'s.
  */
 function readRecipient(
   text: string,
@@ -120,10 +133,11 @@ function readRecipient(
 ): { recipient: RecipientIR; role?: string } | { problem: string } {
   if (text === "owner") return { recipient: { kind: "owner" } };
   const path = text.split(".");
-  const addressOf = (of: ModelIR, name: string): "email" | "user" | undefined => {
+  const addressOf = (of: ModelIR, name: string): "email" | "phone" | "user" | undefined => {
     const f = of.fields.find((x) => x.name === name);
     if (!f) return undefined;
-    if (f.type.kind === "scalar" && f.type.name === "email") return "email";
+    if (f.type.kind === "scalar" && (f.type.name === "email" || f.type.name === "phone"))
+      return f.type.name;
     if (f.type.kind === "relation" && !f.type.many && f.type.model === "User") return "user";
     return undefined;
   };
@@ -132,7 +146,7 @@ function readRecipient(
     if (via) return { recipient: { kind: "field", path, via } };
     if (model.fields.some((f) => f.name === text))
       return {
-        problem: `${model.name}.${text} is neither an email field nor a field that refers to User, so it holds no address.`,
+        problem: `${model.name}.${text} is not an email field, a phone field or a field that refers to User, so it holds no address.`,
       };
     if (!FIELD_NAME_PATTERN.test(text))
       return {
@@ -159,7 +173,7 @@ function readRecipient(
       const via = other ? addressOf(other, second) : undefined;
       if (!via)
         return {
-          problem: `${type.model}.${second} is not owner, an email field or a field that refers to User, so "${text}" tells nobody.`,
+          problem: `${type.model}.${second} is not owner, an email field, a phone field or a field that refers to User, so "${text}" tells nobody.`,
         };
       return {
         recipient: {
@@ -173,7 +187,7 @@ function readRecipient(
     const via = other ? addressOf(other, second) : undefined;
     if (!via)
       return {
-        problem: `${type.model}.${second} is not an email field or a field that refers to User, so "${text}" holds no address.`,
+        problem: `${type.model}.${second} is not an email field, a phone field or a field that refers to User, so "${text}" holds no address.`,
       };
     return { recipient: { kind: "field", path, via } };
   }
@@ -190,6 +204,82 @@ function recipientText(r: RecipientIR): string {
         ? r.path.join(".")
         : `${r.list}.${r.each.kind === "owner" ? "owner" : r.each.field}`;
 }
+
+/** The built-in channels (notifications.md §4), in the order an entry's `channels` keeps them. */
+const CHANNELS: readonly Channel[] = ["mail", "push", "sms"];
+const isChannel = (s: string): s is Channel => (CHANNELS as readonly string[]).includes(s);
+
+/**
+ * `to`: a channel, a list of channels, or a target's name, which stands alone; says what is wrong
+ * otherwise.
+ */
+function readTo(
+  to: string | string[],
+): { channels: Channel[] } | { target: string } | { problem: string } {
+  if (!Array.isArray(to))
+    return isChannel(to)
+      ? { channels: [to] }
+      : FIELD_NAME_PATTERN.test(to)
+        ? { target: to }
+        : { problem: nameRule("outgoing", to) };
+  if (!to.length) return { problem: `"to" lists no channel: mail, push or sms.` };
+  const other = to.find((c) => !isChannel(c));
+  if (other !== undefined)
+    return {
+      problem: `"to" lists channels (mail, push, sms), and "${other}" is none; a target is named alone (to: ${other}).`,
+    };
+  const twice = to.find((c, i) => to.indexOf(c) !== i);
+  if (twice) return { problem: `"to" lists ${twice} twice.` };
+  return { channels: CHANNELS.filter((c) => to.includes(c)) };
+}
+
+/** An operation's `--to`: one name, or channels separated by commas (mail,push). */
+const toArg = (to: string): string | string[] =>
+  to.includes(",") ? to.split(",").map((c) => c.trim()) : to.trim();
+
+/** How the spec writes an entry's `to`: a target, one channel, or the list of them. */
+const toValue = (t: { channels: Channel[] } | { target: string }): YamlValue =>
+  "target" in t ? t.target : t.channels.length === 1 ? (t.channels[0] as Channel) : [...t.channels];
+
+/** "a and b", "a, b and c". */
+const andList = (words: string[]) =>
+  words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : (words[0] ?? "");
+
+/**
+ * What a recipient is reached by: a person (the owner, a role's users, a field that refers to
+ * User) by every channel; an email field by mail; a phone field by sms (notifications.md §2).
+ */
+const REACHES: Record<Channel, string> = {
+  mail: "owner, a role, an email field or a field that refers to User",
+  push: "a person with an account: owner, a role or a field that refers to User",
+  sms: "owner, a role, a phone field or a field that refers to User",
+};
+function reachProblem(r: RecipientIR, channels: Channel[]): string | undefined {
+  const via =
+    r.kind === "field" ? r.via : r.kind === "list" && r.each.kind === "field" ? r.each.via : "user";
+  if (via === "user") return undefined;
+  const c = channels.find((x) => (via === "email" ? x !== "mail" : x !== "sms"));
+  return (
+    c &&
+    `${c} cannot reach ${via === "email" ? "an email field" : "a phone field"}; it reaches ${REACHES[c]}.`
+  );
+}
+
+/** A lone push or sms without a recipient may be a target of the old name (notifications.md §9). */
+const renameHint = (c: Channel) =>
+  `If ${c} is the name of a target, rename it here and in its settings OUTGOING_${c.toUpperCase()}_URL and OUTGOING_${c.toUpperCase()}_SECRET: ${c} is a built-in channel now.`;
+
+/** An operation's refusal of channels without a recipient; a new entry's may be an old target's. */
+const missingRecipient = (channels: Channel[], added = true) => {
+  const alone = added && channels.length === 1 && channels[0] !== "mail" ? channels[0] : undefined;
+  return `${capital(andList([...channels]))} ${channels.length > 1 ? "need" : "needs"} a recipient: --recipient owner, a role, or a field with an address (email, customer.email).${alone ? ` ${renameHint(alone)}` : ""}`;
+};
+
+/** A list mail goes by mail alone (reports.md §2.2, notifications.md §5). */
+const listMailOnly = (t: { channels: Channel[] } | { target: string }) =>
+  "target" in t
+    ? `goes by mail; a call to a target ("${t.target}") comes later.`
+    : `goes by mail alone: push and sms tell a person about their own record or work, not a list.`;
 
 /**
  * `fields`: the stored fields of the model whose change counts, only for `<Model> changed`; says
@@ -494,7 +584,9 @@ export function outgoingText(
         ? `When a ${name} is ${EVENT_WORDS[o.when.event]}${o.where ? ` and ${conditionText(o.where)}` : ""}`
         : "timer" in o.when
           ? `When the timer “${humanize(o.when.timer)}” comes for a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`
-          : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
+          : "payment" in o.when
+            ? `When a ${name} is paid (“${humanize(o.when.payment)}”)${o.where ? ` and ${conditionText(o.where)}` : ""}`
+            : `When “${humanize(o.when.action)}” runs on a ${name}${o.where ? ` and ${conditionText(o.where)}` : ""}`;
   return `${what}: ${to}${bodyText(o)}.`;
 }
 
@@ -546,20 +638,44 @@ function bodyText(o: OutgoingIR): string {
   return `${shown}${o.previous ? " and what the changed fields were" : ""}`;
 }
 
-/** Whom an entry tells, in words: "mails its owner", "tells statusfeed". */
+const VERBS: Record<Channel, string> = { mail: "mails", push: "pushes to", sms: "texts" };
+
+/**
+ * Whom an entry tells and how, in words: "mails its owner", "mails and pushes to every staff",
+ * "texts phone", "tells statusfeed".
+ */
 function toText(o: OutgoingIR, label?: (model: string) => string): string {
-  return o.to !== "mail"
-    ? `tells ${humanize(o.to).toLowerCase()}`
-    : !o.recipient
-      ? "mails"
-      : o.recipient.kind === "owner"
-        ? "mails its owner"
-        : o.recipient.kind === "role"
-          ? `mails every ${o.recipient.role}`
-          : o.recipient.kind === "list"
-            ? `mails every ${(label ?? ((m: string) => humanize(m).toLowerCase()))(o.recipient.model)}'s ${o.recipient.each.kind === "owner" ? "owner" : humanize(o.recipient.each.field).toLowerCase()}`
-            : `mails ${o.recipient.path.map((p) => humanize(p).toLowerCase()).join("'s ")}`;
+  const channels = channelsOf(o);
+  if (!channels) return `tells ${humanize(o.to).toLowerCase()}`;
+  const verb = andList(channels.map((c) => VERBS[c]));
+  const r = o.recipient;
+  return !r
+    ? verb
+    : r.kind === "owner"
+      ? `${verb} its owner`
+      : r.kind === "role"
+        ? `${verb} every ${r.role}`
+        : r.kind === "list"
+          ? `${verb} every ${(label ?? ((m: string) => humanize(m).toLowerCase()))(r.model)}'s ${r.each.kind === "owner" ? "owner" : humanize(r.each.field).toLowerCase()}`
+          : `${verb} ${r.path.map((p) => humanize(p).toLowerCase()).join("'s ")}`;
 }
+
+/** An operation's `--to` and `--recipient` in words: "mail and push staff", "tell kitchen". */
+function howText(to: string, recipient: string | undefined): string {
+  const t = readTo(toArg(to));
+  return "channels" in t ? `${andList([...t.channels])} ${recipient ?? "someone"}` : `tell ${to}`;
+}
+
+const toArgSchema = {
+  type: "string",
+  description:
+    '"mail" (the default), push or sms, or several separated by commas (mail,push); or the name of a target whose address is a setting.',
+};
+const recipientArgSchema = {
+  type: "string",
+  description:
+    'For mail, push and sms: "owner", a role (admin), a field that refers to User (assignee), an email field of the record (email, for mail) or a phone field (phone, for sms), one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner). For a list mail: a role that reads every record of the model.',
+};
 
 const named = refTo(
   { ref: "outgoing", label: "Which" },
@@ -734,7 +850,7 @@ const addOutgoing: Operation<
 > = {
   name: "addOutgoing",
   summary:
-    "Tell someone when something happens to a record: mail the record's owner, a role or an address on the record when a record is added, changed or deleted, or an action runs (e.g. a confirmation when a booking is made). On a clock timer (every day at 06:30), a list mail: a table of records (--list Booking --columns …) to a role that reads them all.",
+    "Tell someone when something happens to a record: mail, push to or text (--to mail,push) the record's owner, a role or an address on the record when a record is added, changed or deleted, or an action runs (e.g. a confirmation when a booking is made); or call a target. On a clock timer (every day at 06:30), a list mail: a table of records (--list Booking --columns …) to a role that reads them all.",
   schema: {
     type: "object",
     required: ["outgoing", "when"],
@@ -749,21 +865,14 @@ const addOutgoing: Operation<
       fields: fieldsSchema,
       show: showArgSchema,
       previous: previousSchema,
-      to: {
-        type: "string",
-        description: '"mail" (the default), or the name of a target whose address is a setting.',
-      },
-      recipient: {
-        type: "string",
-        description:
-          'For mail: "owner", a role (admin), an email field of the record (email), a field that refers to User (assignee), one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner). For a list mail: a role that reads every record of the model.',
-      },
+      to: toArgSchema,
+      recipient: recipientArgSchema,
       ...LIST_ARGS,
     },
   },
   positional: ["outgoing", "when"],
-  describe: ({ outgoing, when, to, recipient, list, query }) =>
-    `Add ${outgoing}: when ${when}, ${to && to !== "mail" ? `tell ${to}` : `mail ${recipient ?? "someone"}`}${list || query ? ` the ${list ?? query} list` : ""}`,
+  describe: ({ outgoing, when, to = "mail", recipient, list, query }) =>
+    `Add ${outgoing}: when ${when}, ${howText(to, recipient)}${list || query ? ` the ${list ?? query} list` : ""}`,
   destructive: () => false,
   apply(
     { spec, auth },
@@ -774,9 +883,11 @@ const addOutgoing: Operation<
       throw new OperationError(nameRule("outgoing", outgoing));
     if (ir.outgoing.some((o) => o.name === outgoing))
       throw new OperationError(`"${outgoing}" exists already under outgoing.`);
-    const read = readWhen(when, ir.models, ir.actions, ir.timers);
+    const read = readWhen(when, ir.models, ir.actions, ir.timers, ir.payments);
     if ("problem" in read)
       throw new OperationError(`${read.problem}${read.hint ? ` ${read.hint}` : ""}`);
+    const t = readTo(toArg(to));
+    if ("problem" in t) throw new OperationError(capital(t.problem));
     const value: Record<string, YamlValue> = { when };
     if ("clock" in read) {
       // A list mail: the timer has no records, so the entry carries the list instead.
@@ -784,10 +895,8 @@ const addOutgoing: Operation<
         throw new OperationError(
           `The timer "${read.clock}" is on a clock with no records, so "${outgoing}" is a list mail: "fields", "show" and "previous" say nothing for it.`,
         );
-      if (to !== "mail")
-        throw new OperationError(
-          `A list mail goes by mail; a call to a target ("${to}") comes later.`,
-        );
+      if (!("channels" in t) || t.channels.join() !== "mail")
+        throw new OperationError(`A list mail ${listMailOnly(t)}`);
       const { list, empty } = listFromArgs({ ...listArgs, where }, ir);
       const model = ir.models.find((m) => m.name === list.model) as ModelIR;
       if (!recipient)
@@ -813,7 +922,14 @@ const addOutgoing: Operation<
     if (Object.values(listArgs).some((v) => v !== undefined))
       throw new OperationError(capital(notAListMail(when)));
     if ("custom" in read.when) {
-      const r = readCustom(read.when.custom, { where, fields, show, previous, to, recipient });
+      const r = readCustom(read.when.custom, {
+        where,
+        fields,
+        show,
+        previous,
+        channels: "channels" in t,
+        recipient,
+      });
       if (r) throw new OperationError(r);
     }
     const model = ir.models.find(
@@ -825,28 +941,83 @@ const addOutgoing: Operation<
     }
     const body = "custom" in read.when ? {} : readBody({ show, previous }, read.when, model);
     if ("problem" in body) throw new OperationError(body.problem);
-    if (to === "mail") {
-      if (!recipient)
-        throw new OperationError(
-          "Mail needs a recipient: --recipient owner, a role, or a field with an address (email, customer.email).",
-        );
-      if (!("custom" in read.when)) {
-        const r = readRecipient(recipient, model, ir.models);
-        if ("problem" in r) throw new OperationError(r.problem);
-      }
-    } else {
-      if (!FIELD_NAME_PATTERN.test(to)) throw new OperationError(nameRule("outgoing", to));
-      if (recipient)
-        throw new OperationError(`A target has its own address: "recipient" is for mail.`);
-    }
+    if ("channels" in t) {
+      if (!recipient) throw new OperationError(missingRecipient(t.channels));
+      if (!("custom" in read.when)) checkRecipient(recipient, t.channels, model, ir.models);
+    } else if (recipient) throw new OperationError(TARGET_RECIPIENT);
     if (where && Object.keys(where).length) value.where = conditionArgs(where);
     if (fields?.length) value.fields = [...new Set(fields)];
-    value.to = to;
+    value.to = toValue(t);
     if (recipient) value.recipient = recipient;
     if (body.show !== undefined) value.show = body.show;
     if (body.previous) value.previous = true;
     if (spec.has(["outgoing"])) spec.add(["outgoing"], outgoing, value);
     else spec.add([], "outgoing", { [outgoing]: value });
+    return [];
+  },
+};
+
+const TARGET_RECIPIENT = `A target has its own address: "recipient" is for mail, push and sms.`;
+
+/** An operation's recipient for the channels of an entry about a record of `model`, checked. */
+function checkRecipient(
+  recipient: string,
+  channels: Channel[],
+  model: ModelIR,
+  models: ModelIR[],
+): void {
+  const r = readRecipient(recipient, model, models);
+  if ("problem" in r) throw new OperationError(r.problem);
+  const far = reachProblem(r.recipient, channels);
+  if (far) throw new OperationError(capital(far));
+}
+
+const setOutgoingTo: Operation<{ outgoing: string; to: string; recipient?: string }> = {
+  name: "setOutgoingTo",
+  summary:
+    "Change how an outgoing entry tells: its channels (mail, push, sms; several separated by commas) or a target, and with --recipient whom. A target has its own address, so a recipient goes with the change to one.",
+  schema: {
+    type: "object",
+    required: ["outgoing", "to"],
+    additionalProperties: false,
+    properties: { outgoing: named, to: toArgSchema, recipient: recipientArgSchema },
+  },
+  positional: ["outgoing", "to"],
+  describe: ({ outgoing, to, recipient }) =>
+    `Let ${outgoing} ${howText(to, recipient).replace(/ someone$/, "")}`,
+  destructive: () => false,
+  apply({ spec }, { outgoing, to, recipient }, ir) {
+    const o = ir.outgoing.find((x) => x.name === outgoing);
+    if (!o) throw new OperationError(`There is nothing named "${outgoing}" under outgoing.`);
+    const t = readTo(toArg(to));
+    if ("problem" in t) throw new OperationError(capital(t.problem));
+    if (o.list) {
+      if ("channels" in t && t.channels.join() === "mail" && recipient === undefined) return [];
+      throw new OperationError(
+        `"${outgoing}" is a list mail, which goes by mail alone to its role; setOutgoingTo changes an entry about a record or an action.`,
+      );
+    }
+    const at = ["outgoing", outgoing];
+    const put = (key: string, v: YamlValue) =>
+      spec.has([...at, key]) ? spec.set([...at, key], v) : spec.add(at, key, v);
+    if ("target" in t) {
+      if (recipient !== undefined) throw new OperationError(TARGET_RECIPIENT);
+      put("to", t.target);
+      if (spec.has([...at, "recipient"])) spec.remove([...at, "recipient"]);
+      return [];
+    }
+    const whom = recipient ?? (o.recipient ? recipientText(o.recipient) : undefined);
+    if (!whom) throw new OperationError(missingRecipient(t.channels, false));
+    if ("custom" in o.when) {
+      const problem = readCustom(o.when.custom, { channels: true, recipient: whom });
+      if (problem) throw new OperationError(capital(problem));
+    } else {
+      const on = o.when.model;
+      const model = ir.models.find((m) => m.name === on) as ModelIR;
+      checkRecipient(whom, t.channels, model, ir.models);
+    }
+    put("to", toValue(t));
+    if (recipient !== undefined) put("recipient", recipient);
     return [];
   },
 };
@@ -981,11 +1152,17 @@ const setOutgoingBody: Operation<{ outgoing: string; show?: string[]; previous?:
 export const outgoingSection: SpecSection<"outgoing"> = {
   key: "outgoing",
   required: false,
-  operations: [addOutgoing, removeOutgoing, setOutgoingBody, setOutgoingList] as AnyOperation[],
+  operations: [
+    addOutgoing,
+    removeOutgoing,
+    setOutgoingBody,
+    setOutgoingList,
+    setOutgoingTo,
+  ] as AnyOperation[],
   schema: {
     type: "object",
     description:
-      "Who is told when something happens to a record: a mail to the owner, a role or an address on the record; or a signed call to a named target.",
+      "Who is told when something happens to a record: a mail, a browser push or a text to the owner, a role or an address on the record; or a signed call to a named target.",
     propertyNames: { pattern: FIELD_NAME_PATTERN.source },
     additionalProperties: {
       type: "object",
@@ -998,15 +1175,18 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         show: showSchema,
         previous: previousSchema,
         to: {
-          type: "string",
-          pattern: FIELD_NAME_PATTERN.source,
-          description: '"mail", or the name of a target whose address and secret are settings.',
+          anyOf: [
+            { type: "string", pattern: FIELD_NAME_PATTERN.source },
+            { type: "array", items: { enum: [...CHANNELS] }, minItems: 1, uniqueItems: true },
+          ],
+          description:
+            "A channel (mail, push or sms), a list of channels ([mail, push]) that each reach the recipient, or the name of a target whose address and secret are settings (alone; push and sms are not target names).",
         },
         recipient: {
           type: "string",
           pattern: "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)?$",
           description:
-            "For mail: owner, a role, an email field or a field that refers to User, one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner). For a list mail, a role that reads every record of the model.",
+            "For mail, push and sms: owner, a role or a field that refers to User (every channel), an email field (mail) or a phone field (sms), one reference away (customer.email), or a list field and then the owner or an address of each of its records (bookings.owner). For a list mail, a role that reads every record of the model.",
         },
         list: {
           type: "object",
@@ -1087,7 +1267,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       }
       const whenText = readString(ctx, whenEntry.value, `"when" of ${where}`);
       if (whenText === undefined) continue;
-      const read = readWhen(whenText, models, actions, parsed.timers ?? []);
+      const read = readWhen(whenText, models, actions, parsed.timers ?? [], parsed.payments ?? []);
       if ("problem" in read) {
         ctx.error(
           whenEntry.value,
@@ -1121,15 +1301,24 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       ) as ModelIR;
       // A model's event names the model in the text; a standard action names only the action.
       if ("event" in read.when) ctx.reference("model", read.when.model, whenEntry.value);
+      const toEntry = byKey.get("to");
+      if (!toEntry) {
+        ctx.error(
+          keyNode,
+          "missing-key",
+          `${capital(where)} needs "to": mail, push, sms, a list of them, or a target.`,
+        );
+        continue;
+      }
+      const t = readToNode(ctx, toEntry.value, where);
+      if (!t) continue;
       if ("custom" in read.when) {
         const problem = readCustom(read.when.custom, {
           where: byKey.has("where") ? {} : undefined,
           fields: byKey.has("fields") ? [] : undefined,
           show: byKey.has("show") ? [] : undefined,
           previous: byKey.has("previous") ? true : undefined,
-          to: byKey.has("to")
-            ? readString(ctx, byKey.get("to")?.value, `"to" of ${where}`)
-            : undefined,
+          channels: "channels" in t,
           recipient: byKey.has("recipient")
             ? readString(ctx, byKey.get("recipient")?.value, `"recipient" of ${where}`)
             : undefined,
@@ -1139,22 +1328,10 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           continue;
         }
       }
-      const toEntry = byKey.get("to");
-      if (!toEntry) {
-        ctx.error(keyNode, "missing-key", `${capital(where)} needs "to": mail, or a target.`);
-        continue;
-      }
-      const to = readString(ctx, toEntry.value, `"to" of ${where}`);
-      if (to === undefined) continue;
-      if (!FIELD_NAME_PATTERN.test(to)) {
-        ctx.error(
-          toEntry.value,
-          "invalid-outgoing",
-          `${capital(where)}: ${nameRule("outgoing", to)}`,
-        );
-        continue;
-      }
-      const entry: OutgoingIR = { name: key, when: read.when, to };
+      const entry: OutgoingIR =
+        "channels" in t
+          ? { name: key, when: read.when, to: t.channels[0] as Channel, channels: t.channels }
+          : { name: key, when: read.when, to: t.target };
       const whereEntry = byKey.get("where");
       if (whereEntry) {
         const condition = readCondition(ctx, whereEntry.value, `"where" of ${where}`, model);
@@ -1216,12 +1393,24 @@ export const outgoingSection: SpecSection<"outgoing"> = {
       const recipientText = recipientEntry
         ? readString(ctx, recipientEntry.value, `"recipient" of ${where}`)
         : undefined;
-      if (to === "mail") {
+      if ("channels" in t) {
+        const alone =
+          t.channels.length === 1 && t.channels[0] !== "mail" ? t.channels[0] : undefined;
+        if (!recipientEntry && alone) {
+          // A target of that name, from before push and sms were channels (notifications.md §9).
+          ctx.error(
+            toEntry.value,
+            "reserved-name",
+            `${capital(where)} goes by ${alone}, a built-in channel, so it needs "recipient": owner, a role or a field with an address.`,
+            renameHint(alone),
+          );
+          continue;
+        }
         if (!recipientEntry) {
           ctx.error(
             keyNode,
             "missing-key",
-            `${capital(where)} mails, so it needs "recipient": owner, a role, or a field with an address.`,
+            `${capital(where)} ${t.channels.length === 1 ? "mails" : `goes by ${andList([...t.channels])}`}, so it needs "recipient": owner, a role, or a field with an address.`,
           );
           continue;
         }
@@ -1233,8 +1422,9 @@ export const outgoingSection: SpecSection<"outgoing"> = {
           continue;
         }
         const r = readRecipient(recipientText, model, models);
-        if ("problem" in r) {
-          ctx.error(recipientEntry.value, "invalid-outgoing", `${capital(where)}: ${r.problem}`);
+        const problem = "problem" in r ? r.problem : reachProblem(r.recipient, t.channels);
+        if (problem || "problem" in r) {
+          ctx.error(recipientEntry.value, "invalid-outgoing", `${capital(where)}: ${problem}`);
           continue;
         }
         if (r.role) ctx.reference("role", r.role, recipientEntry.value);
@@ -1243,7 +1433,7 @@ export const outgoingSection: SpecSection<"outgoing"> = {
         ctx.error(
           recipientEntry.keyNode,
           "invalid-outgoing",
-          `${capital(where)} tells ${to}, which has its own address: "recipient" is for mail.`,
+          `${capital(where)} tells ${t.target}, which has its own address: "recipient" is for mail, push and sms.`,
         );
         continue;
       }
@@ -1358,6 +1548,23 @@ export const outgoingSection: SpecSection<"outgoing"> = {
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** An entry's `to` as the spec gives it, checked; said and undefined when wrong. */
+function readToNode(
+  ctx: ParseContext,
+  node: Entry["value"],
+  where: string,
+): { channels: Channel[] } | { target: string } | undefined {
+  const what = `"to" of ${where}`;
+  const given = isSeq(node)
+    ? readNameList(ctx, node, what).map((n) => n.name)
+    : readString(ctx, node, what);
+  if (given === undefined) return undefined;
+  const t = readTo(given);
+  if (!("problem" in t)) return t;
+  ctx.error(node, "invalid-outgoing", `${capital(where)}: ${t.problem}`);
+  return undefined;
+}
+
 /**
  * A clock timer with neither "on" nor "run" is for a list mail; one no entry names does nothing,
  * which is said (a mistyped "run" would otherwise go quiet).
@@ -1445,17 +1652,17 @@ function readListMail(
   const queryEntry = listKeys.get("query");
   if (queryEntry && list.query) ctx.reference("query", list.query, queryEntry.value);
   const toEntry = byKey.get("to");
-  const to = toEntry ? readString(ctx, toEntry.value, `"to" of ${where}`) : undefined;
   if (!toEntry) {
     ctx.error(keyNode, "missing-key", `${capital(where)} needs "to": mail.`);
     return undefined;
   }
-  if (to === undefined) return undefined;
-  if (to !== "mail") {
+  const t = readToNode(ctx, toEntry.value, where);
+  if (!t) return undefined;
+  if (!("channels" in t) || t.channels.join() !== "mail") {
     ctx.error(
       toEntry.value,
       "invalid-outgoing",
-      `${capital(where)} is a list mail, which goes by mail; a call to a target ("${to}") comes later.`,
+      `${capital(where)} is a list mail, which ${listMailOnly(t)}`,
     );
     return undefined;
   }
@@ -1480,6 +1687,7 @@ function readListMail(
     name,
     when: { model: list.model, timer, clock: true },
     to: "mail",
+    channels: ["mail"],
     recipient: { kind: "role", role: r.role },
     list,
     empty: "skip",
@@ -1583,7 +1791,8 @@ function readCustom(
     fields?: string[];
     show?: unknown;
     previous?: unknown;
-    to?: string;
+    /** The entry goes by built-in channels (to a role), not to a target. */
+    channels?: boolean;
     recipient?: string;
   },
 ): string | undefined {
@@ -1591,9 +1800,9 @@ function readCustom(
     return `the custom action "${action}" has no record, so "where" and "fields" say nothing; leave them out.`;
   if (o.show !== undefined || o.previous !== undefined)
     return `the custom action "${action}" has no record, so "show" and "previous" say nothing; leave them out.`;
-  if (o.to === "mail" && o.recipient !== undefined && !/^[a-z][A-Za-z0-9]*$/.test(o.recipient))
+  if (o.channels && o.recipient !== undefined && !/^[a-z][A-Za-z0-9]*$/.test(o.recipient))
     return `the custom action "${action}" has no record, so its mail goes to a role; "${o.recipient}" is not one.`;
-  if (o.to === "mail" && o.recipient === "owner")
+  if (o.channels && o.recipient === "owner")
     return `the custom action "${action}" has no record and so no owner; mail a role instead.`;
   return undefined;
 }

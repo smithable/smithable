@@ -2120,6 +2120,41 @@ try {
       await sound.click();
     },
   );
+  await step(
+    "automatic mode loads Silero from the docs site's files, checked by their hashes (A 235 step 2)",
+    async () => {
+      // Its own browser, with a stand-in microphone; docs.smithable.ai answered from the site
+      // just built (pnpm site), as the published one will.
+      const ears = await chromium.launch({
+        args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+      });
+      try {
+        const listener = await ears.newPage();
+        await listener.route("https://docs.smithable.ai/vad/**", (route) => {
+          const path = new URL(route.request().url()).pathname;
+          route.fulfill({
+            body: readFileSync(join(repo, "site", path)),
+            headers: { "access-control-allow-origin": "*" },
+          });
+        });
+        await listener.goto(`http://localhost:${port}/`);
+        await listener
+          .locator("[data-speech], [data-speech-off]")
+          .first()
+          .waitFor({ timeout: 30000 * P });
+        const auto = listener.getByRole("button", { name: "Automatic" });
+        if (!(await auto.count())) return; // no recognition in this browser
+        await auto.click();
+        await listener.getByText("Listening while Smith is silent").waitFor({ timeout: 30000 * P });
+        if (await listener.getByText("A simpler voice detector is in use.").count())
+          throw new Error("Silero's files did not load: the simple detector runs");
+        await auto.click();
+        await listener.getByText("Listening while Smith is silent").waitFor({ state: "detached" });
+      } finally {
+        await ears.close();
+      }
+    },
+  );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
     await sub("Look");
@@ -3022,6 +3057,55 @@ try {
         await new Promise((r) => setTimeout(r, 1000));
       if (readFileSync(file, "utf8").includes("  sales:"))
         throw new Error("sales was not renamed back");
+    },
+  );
+  await step(
+    "a held fix opens from ?fix=<id> on its own branch, with a line saying what to do; an unknown one is refused (A 245)",
+    async () => {
+      const g = (...args) => spawnSync("git", args, { cwd: dir, encoding: "utf8" }).stdout.trim();
+      const start = g("rev-parse", "--abbrev-ref", "HEAD");
+      // The service's held version: a commit kept as refs/smithable/fix/<id>, not on any branch.
+      const head = g("rev-parse", "HEAD");
+      const held = g(
+        "commit-tree",
+        `${head}^{tree}`,
+        "-p",
+        head,
+        "-m",
+        "smithable: upgrade (held: src/custom/ does not fit)",
+      );
+      g("update-ref", "refs/smithable/fix/demo", held);
+      try {
+        await page.goto(`http://localhost:${port}/?fix=demo`);
+        await page
+          .getByText("You are on the fix demo (the branch fix/demo)")
+          .waitFor({ timeout: 30000 * P });
+        if (g("rev-parse", "--abbrev-ref", "HEAD") !== "fix/demo")
+          throw new Error(
+            `the project is on ${g("rev-parse", "--abbrev-ref", "HEAD")}, not fix/demo`,
+          );
+        if (new URL(page.url()).searchParams.has("fix"))
+          throw new Error("?fix= stays in the address");
+        const unknown = await fetch(`http://localhost:${port}/api/fix/open`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-smithable": "1" },
+          body: JSON.stringify({ id: "no-such-fix" }),
+        });
+        if (unknown.status !== 404) throw new Error(`an unknown fix answered ${unknown.status}`);
+        // Replaced by a newer rebuild: the ref goes, the owner's branch opens as they left it (A 247).
+        g("checkout", start);
+        g("update-ref", "-d", "refs/smithable/fix/demo");
+        await page.goto(`http://localhost:${port}/?fix=demo`);
+        await page.getByText("Its held version is no longer kept").waitFor({ timeout: 30000 * P });
+        if (g("rev-parse", "--abbrev-ref", "HEAD") !== "fix/demo")
+          throw new Error("the owner's branch did not open after its ref was gone");
+      } finally {
+        // Back where the rest of the test left the project.
+        g("checkout", start);
+        g("branch", "-D", "fix/demo");
+        spawnSync("git", ["update-ref", "-d", "refs/smithable/fix/demo"], { cwd: dir });
+        await page.goto(`http://localhost:${port}/`);
+      }
     },
   );
   await step("a message from a window other than the preview is ignored", async () => {

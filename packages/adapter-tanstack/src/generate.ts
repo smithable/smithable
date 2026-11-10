@@ -23,7 +23,7 @@ import {
   standardActionModule,
   standardActionServer,
 } from "./actions.js";
-import { apiModule, apiRoutes, askModule, mcpModule, mcpRoute } from "./api.js";
+import { apiModule, apiParts, apiRoutes, askModule, mcpModule, mcpRoute } from "./api.js";
 import {
   authModule,
   hasInvitations,
@@ -42,17 +42,20 @@ import { doorModule, doorRoutes, peopleModule, samplePeople } from "./dev-door.j
 import { examplesTest } from "./examples.js";
 import { formulasModuleSource, formulasTestSource, hasFormulas } from "./formulas.js";
 import { hooksModule, hooksStub } from "./hooks.js";
+import { importFunctions, importModels, importModule } from "./import-module.js";
 import { incomingRoute, incomingStub } from "./incoming.js";
 import { hasKeys, keysModule, keysTestSource } from "./keys.js";
 import { mergeActionModule, mergeActionServer } from "./merge.js";
 import { named, nameModule } from "./names.js";
-import { outgoingModule } from "./outgoing.js";
+import { liveModels, liveRoute, outgoingModule, pushEntries, smsEntries } from "./outgoing.js";
 import { publicArticles } from "./pages/articles.js";
 import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.js";
 import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
+import { PAYMENTS_FUNCTIONS, paymentRoutes, paymentsServerModule } from "./payments.js";
+import { manifest, pushModule, SERVICE_WORKER, smsModule } from "./push.js";
 import { reviewed, reviewRolesModule, reviewServerModule } from "./review.js";
 import { schemaModule, seedModule } from "./schema.js";
 import {
@@ -104,7 +107,20 @@ function wordsIfUsed(content: string): string {
 }
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */
-export function generateApp(ir: SpecIR, options: GenerateOptions): GeneratedFile[] {
+export function generateApp(spec: SpecIR, options: GenerateOptions): GeneratedFile[] {
+  // Push and texts go to people who sign in (notifications.md §4, §5): without sign-in an entry
+  // keeps its other channels, and one that only pushed or texted is left out.
+  const ir =
+    options.auth && hasSignIn(options.auth)
+      ? spec
+      : {
+          ...spec,
+          outgoing: spec.outgoing.flatMap((o) => {
+            if (!o.channels) return [o];
+            const channels = o.channels.filter((c) => c === "mail");
+            return channels.length ? [{ ...o, channels, to: "mail" }] : [];
+          }),
+        };
   const ctx: GenContext = {
     ir,
     t: texts(options.content ?? emptyContent()),
@@ -362,9 +378,11 @@ if (typeof document !== "undefined") languageFrom(() => shown);`,
     if (!shown) return;
 `,
     ],
+    // The recipients are the group's (above); the mail and the push are sent inside its language.
+    ["    const to = entry.to(tx, record);\n", ""],
     [
-      '      entry.to(tx, record),\n      entry.when === "created",\n    );',
-      '      to,\n      entry.when === "created",\n    );\n      });',
+      /(\n {4}(?:if \(entry\.mail !== false\) )?queueMail\(tx, viewer, happening, to, entry\.when === "created"\);)/,
+      "$1\n      });",
     ],
     [
       /^import /m,
@@ -634,7 +652,7 @@ docker build -t ${name} .
 docker run -p 3000:3000 -v ${name}-data:/data ${name}
 \`\`\`
 
-${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme()}${limitsReadme(ir, auth)}${stylesReadme()}${licensesReadme()}
+${auth ? signInReadme(ir, auth) : ""}${auth && hasInvitations(ir, auth) ? usersReadme(ir, auth, detached) : ""}${mailReadme(ir, auth)}${limitsReadme(ir, auth)}${stylesReadme()}${licensesReadme()}
 ## Project structure
 
 ${structure}`;
@@ -681,10 +699,10 @@ For example \`[data-kit="model-form"] [data-part="actions"] { justify-content: f
 }
 
 /** How the app sends mail, for the README. */
-function mailReadme(): string {
+function mailReadme(ir: SpecIR, auth?: AuthIR): string {
   return `## Mail
 
-Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.
+Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from \`src/kit/mail.ts\`. It reads SMTP settings from the environment: \`SMTP_URL\` (\`smtp://user:password@host:587\`, or \`smtps://\` for TLS from the start) or \`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\` and \`SMTP_PASSWORD\`, plus \`MAIL_FROM\` (the sender). Any provider works; give its SPF, DKIM and DMARC records to the sender's domain so the mail arrives. Without settings nothing is sent: mails are written to \`data/mail/outbox\` as \`.eml\` files, which is what development and tests look at.${auth && pushEntries(ir, auth).length ? "\n\nBrowser push (`to: push`) needs no settings: the app makes a key pair at its first start and keeps it with its data, so a backup keeps everyone's subscriptions. To give your own, set `PUSH_VAPID_PUBLIC_KEY` and `PUSH_VAPID_PRIVATE_KEY` (and `PUSH_VAPID_SUBJECT`, the contact the push services may write to; `MAIL_FROM` otherwise). A new pair ends every subscription: people turn notifications on again under their name." : ""}${auth && smsEntries(ir, auth).length ? "\n\nTexts (`to: sms`) go through your SMS provider: `SMS_PROVIDER` (`46elks`), `SMS_KEY`, `SMS_SECRET` and `SMS_FROM` (the sender name or number). `SMS_MAX_PER_DAY` caps the texts a day (50 unless set), and each number gets at most ten a day. Each text costs you at your provider. Without settings nothing is sent: texts are written to `data/sms/outbox`, as mails are. A text the provider may have taken (no answer) is not sent again by itself; Send again on the activity page is a person's choice." : ""}
 
 `;
 }
@@ -738,6 +756,31 @@ const SECTION_GENERATORS: SectionGenerator[] = [
       generated("smithable.lock", smithableLock(ir, options)),
       generated("README.md", readme(ir, false, auth)),
       generated("public/favicon.svg", favicon(ir)),
+      // Browser push (notifications.md §4): the worker, the manifest and the server functions.
+      ...(pushEntries(ir, auth).length
+        ? [
+            generated("public/sw.js", SERVICE_WORKER),
+            generated("public/manifest.webmanifest", manifest(ir)),
+            generated("src/generated/push.ts", pushModule(ir, auth)),
+          ]
+        : []),
+      // Texts (notifications.md §5): the server functions of the person's number and choices.
+      ...(smsEntries(ir, auth).length
+        ? [generated("src/generated/sms.ts", smsModule(ir, auth))]
+        : []),
+      // Payments (payments.md §4): the app's part of the flow, its pages, the provider's address.
+      ...(ir.payments.length
+        ? [
+            generated(
+              "src/generated/payments.server.ts",
+              paymentsServerModule(ir, options.paymentProvider ?? "fake"),
+            ),
+            generated("src/generated/payments.ts", PAYMENTS_FUNCTIONS),
+            ...paymentRoutes(options.paymentProvider ?? "fake").map((r) =>
+              generated(r.path, r.content),
+            ),
+          ]
+        : []),
       generated("src/generated/app.ts", appModule(ir)),
       // Always: a page or section of your own keeps its file after it leaves the spec.
       generated("src/generated/custom.ts", CUSTOM_PROPS),
@@ -764,6 +807,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
               outgoingModule(ir, t, ux, options.content),
             ),
           ]
+        : []),
+      ...(liveModels(ir, auth).length
+        ? [generated("src/routes/events.ts", liveRoute(ir, t, liveModels(ir, auth)))]
         : []),
       generated(
         "src/routes/__root.tsx",
@@ -906,6 +952,34 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         used: ({ ir }) => ir.outgoing.length > 0,
       },
       {
+        // Live in the app (notifications.md §3): the stream, the banner, the chime.
+        files: ["src/kit/live.server.ts", "src/kit/Live.tsx"],
+        used: ({ ir, auth }) => liveModels(ir, auth).length > 0,
+      },
+      {
+        // Browser push (notifications.md §4): the sender, its cryptography and the choices.
+        files: [
+          "src/kit/push.server.ts",
+          "src/kit/push-crypto.server.ts",
+          "src/kit/PushChoices.tsx",
+        ],
+        used: ({ ir, auth }) => pushEntries(ir, auth).length > 0,
+      },
+      {
+        // Payments (payments.md): the flow, the return page, the fake provider's page.
+        files: [
+          "src/kit/payments.server.ts",
+          "src/kit/PaymentBack.tsx",
+          "src/kit/FakeCheckout.tsx",
+        ],
+        used: ({ ir }) => ir.payments.length > 0,
+      },
+      {
+        // Texts (notifications.md §5): the sender, the person's number and choices.
+        files: ["src/kit/sms.server.ts", "src/kit/SmsChoices.tsx"],
+        used: ({ ir, auth }) => smsEntries(ir, auth).length > 0,
+      },
+      {
         // "Contact the owner" on a record's page (marketplace.md §2.4).
         files: ["src/kit/ContactOwner.tsx"],
         used: ({ ir, auth }) => hasSignIn(auth) && ir.pages.some((p) => p.contact),
@@ -1040,6 +1114,10 @@ const SECTION_GENERATORS: SectionGenerator[] = [
         : []),
       ...ir.models.flatMap((model) => {
         const base = `src/generated/${kebab(model.name)}`;
+        const importing = importModels(
+          ir,
+          hasKeys(ir, auth) ? apiParts(ir, auth, t).models.map((m) => m.model.name) : [],
+        ).includes(model);
         const test = hasFormulas(model) ? formulasTestSource(model) : undefined;
         return [
           generated(`${base}.ts`, modelModule(model, t, ir, auth, ux)),
@@ -1049,6 +1127,13 @@ const SECTION_GENERATORS: SectionGenerator[] = [
             ? [generated(`${base}.name.ts`, nameModule(ir, model, t, ux))]
             : []),
           generated(`${base}.server.ts`, dataModule(model, t, ir, auth, ux)),
+          // Import from a file, and a JSON list in the API (A 238).
+          ...(importing
+            ? [
+                generated(`${base}.import.server.ts`, importModule(ir, model, t)),
+                generated(`${base}.import.ts`, importFunctions(model)),
+              ]
+            : []),
           ...(hasFormulas(model)
             ? [generated(`${base}.formulas.ts`, formulasModuleSource(model, ir))]
             : []),

@@ -83,6 +83,8 @@ export interface GenerateOptions {
   packages?: Record<string, string>;
   /** The counter of visits smithable.context.yml names (docs/design/analytics.md). */
   analytics?: AnalyticsSetting;
+  /** The payment provider smithable.context.yml names (docs/design/payments.md §3.5); the fake unsaid. */
+  paymentProvider?: "stripe" | "mollie" | "fake";
   /** The project's sample records (samples/<Model>.yml), seeded instead of generated ones. */
   samples?: SamplesIR;
   /** The project's sample users (samples/people.yml): development users the door acts as. */

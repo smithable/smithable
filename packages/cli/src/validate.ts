@@ -16,6 +16,7 @@ import {
   type PersonIR,
   pageModel,
   parseTheme,
+  paymentsProviderNote,
   recordPicture,
   recordSummary,
   type SamplesIR,
@@ -226,6 +227,12 @@ export function loadSpec(
     print(problems);
     if (problems.length) return failed(contextPath, problems);
   }
+  // A note, not a failure: payments work with fake until a release (payments.md §3.5).
+  const providerNote = paymentsProviderNote(ir, {
+    path: contextPath,
+    text: existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined,
+  });
+  if (providerNote) print([providerNote]);
   return {
     ir,
     auth,

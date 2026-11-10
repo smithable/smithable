@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import coreCsv from "../../core/src/csv.ts?raw";
 import { TEMPLATES } from "./templates.gen.js";
 
 const files: Record<string, string> = {
@@ -21,6 +22,8 @@ test("templates.gen.ts is in sync with packages/adapter-tanstack/templates/", ()
     const key = relPath === "gitignore" ? ".gitignore" : relPath;
     expectedTemplates[key] = content;
   }
+  // The one CSV reader is core's, copied in by scripts/embed.mjs (A 238).
+  expectedTemplates["src/kit/csv-read.ts"] = coreCsv;
 
   expect(Object.keys(TEMPLATES).sort()).toEqual(Object.keys(expectedTemplates).sort());
 

@@ -2,15 +2,15 @@ smithableContent: 0.1
 pages:
   home:
     hero:
-      title: One club, every match
-      subtitle: Fixtures, results, teams and squads, all in one place.
-      button: See the fixtures
+      title: Welcome to the club
+      subtitle: Follow our teams, meet the players and catch every fixture and result in one place.
+      button: Fixtures & results
       image:
         src: images/hero.webp
         alt: People playing badminton and stretching in a sports hall with a wooden floor
         generated: true
-    upcoming:
-      title: Coming up
+    fixtures:
+      title: Upcoming fixtures
     results:
       title: Latest results
     ourTeams:

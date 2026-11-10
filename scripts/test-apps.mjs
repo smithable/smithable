@@ -5,7 +5,7 @@
 // Run after `pnpm build`: `pnpm test:apps [example…]`.
 
 import { spawn, spawnSync } from "node:child_process";
-import { createHash, createHmac } from "node:crypto";
+import { createDecipheriv, createECDH, createHash, createHmac, hkdfSync } from "node:crypto";
 import {
   appendFileSync,
   chmodSync,
@@ -18,6 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createServer, request } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 import { createRequire } from "node:module";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
@@ -1467,6 +1468,85 @@ async function kioskLandingFlow(dir, base) {
   }
 }
 
+/** A certificate for localhost, made once a run, for the stand-in push service. */
+let certificate;
+function pushCertificate() {
+  if (certificate) return certificate;
+  const at = mkdtempSync(join(tmpdir(), "smithable-push-"));
+  certificate = { key: join(at, "key.pem"), cert: join(at, "cert.pem") };
+  run(
+    "openssl",
+    [
+      "req",
+      "-x509",
+      "-newkey",
+      "ec",
+      "-pkeyopt",
+      "ec_paramgen_curve:prime256v1",
+      "-nodes",
+      "-days",
+      "1",
+      "-subj",
+      "/CN=localhost",
+      "-addext",
+      "subjectAltName=DNS:localhost,IP:127.0.0.1",
+      "-keyout",
+      certificate.key,
+      "-out",
+      certificate.cert,
+    ],
+    at,
+  );
+  return certificate;
+}
+
+/**
+ * A push service on this machine (notifications.md §4): takes one push, as a browser's push
+ * service would, and decrypts it with the browser's own key, as the browser would (RFC 8291).
+ */
+async function pushService() {
+  const browser = createECDH("prime256v1");
+  browser.generateKeys();
+  const auth = Buffer.from("0123456789abcdef");
+  const got = [];
+  const server = createHttpsServer(
+    { key: readFileSync(pushCertificate().key), cert: readFileSync(pushCertificate().cert) },
+    (req, res) => {
+      const parts = [];
+      req.on("data", (c) => parts.push(c));
+      req.on("end", () => {
+        const body = Buffer.concat(parts);
+        const salt = body.subarray(0, 16);
+        const sender = body.subarray(21, 86);
+        const info = Buffer.concat([
+          Buffer.from("WebPush: info\0"),
+          browser.getPublicKey(),
+          sender,
+        ]);
+        const ikm = Buffer.from(hkdfSync("sha256", browser.computeSecret(sender), auth, info, 32));
+        const key = (label, n) =>
+          Buffer.from(
+            hkdfSync("sha256", ikm, salt, Buffer.from(`Content-Encoding: ${label}\0`), n),
+          );
+        const sealed = body.subarray(86);
+        const decipher = createDecipheriv("aes-128-gcm", key("aes128gcm", 16), key("nonce", 12));
+        decipher.setAuthTag(sealed.subarray(-16));
+        const plain = Buffer.concat([decipher.update(sealed.subarray(0, -16)), decipher.final()]);
+        got.push({ headers: req.headers, message: JSON.parse(plain.subarray(0, -1).toString()) });
+        res.writeHead(201).end();
+      });
+    },
+  );
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  return {
+    endpoint: `https://localhost:${server.address().port}/push/staff`,
+    p256dh: browser.getPublicKey().toString("base64url"),
+    auth: auth.toString("base64url"),
+    got,
+    close: () => server.close(),
+  };
+}
+
 async function kioskFlow(dir, base) {
   const outbox = join(dir, "data", "mail", "outbox");
   const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
@@ -1485,11 +1565,22 @@ async function kioskFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   writeFileSync(
     spec,
-    readFileSync(spec, "utf8").replace(
-      /hours: \{ mon-thu[^}]*\}/,
-      'hours: { mon-sun: "00:00-24:00" }',
-    ),
+    readFileSync(spec, "utf8")
+      .replace(/hours: \{ mon-thu[^}]*\}/, 'hours: { mon-sun: "00:00-24:00" }')
+      // Texts (notifications.md §5), the test's own: new orders to staff, an accepted order to
+      // the customer's number. No starter texts (each one costs the owner).
+      .replace(
+        /\noutgoing:\n/,
+        "\noutgoing:\n  orderPlacedText: { when: Order created, to: sms, recipient: staff }\n  orderAcceptedText: { when: accept, to: sms, recipient: phone }\n",
+      ),
   );
+  const texts = join(dir, "data", "sms", "outbox");
+  const textsNow = () =>
+    existsSync(texts)
+      ? readdirSync(texts)
+          .sort()
+          .map((f) => readFileSync(join(texts, f), "utf8"))
+      : [];
   const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
   if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
   const browser = await chromium.launch();
@@ -1500,6 +1591,33 @@ async function kioskFlow(dir, base) {
       await open(page, `${base}/`);
       return page.getByRole("button", { name: "Add Fish soup" }).isEnabled();
     });
+    // The staff who hear of orders: one signs in once (which makes them) and turns the push on in
+    // a browser a push service on this machine stands in for.
+    const staffPage = await browser.newPage();
+    await signInAs(staffPage, base, "staff");
+    await staffPage.close();
+    const push = await pushService();
+    const staffId = JSON.parse(
+      spawnSync(
+        "node",
+        [
+          "-e",
+          `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare("select id from user where role = 'staff'").get()))`,
+        ],
+        { cwd: dir, encoding: "utf8" },
+      ).stdout,
+    ).id;
+    // Their confirmed number and the text turned on, as Texts under their name would leave them.
+    write(
+      dir,
+      `insert into user_phones (user_id, phone, confirmed_at, code_tries) values ('${staffId}', '+358401234567', ${Date.now()}, 0);
+       insert into notification_choices (user_id, entry, channel) values ('${staffId}', 'orderPlacedText', 'sms');`,
+    );
+    write(
+      dir,
+      `insert into notification_choices (user_id, entry, channel) values ('${staffId}', 'orderPlaced', 'push');
+       insert into push_subscriptions (user_id, endpoint, p256dh, auth, created_at) values ('${staffId}', '${push.endpoint}', '${push.p256dh}', '${push.auth}', ${Date.now()});`,
+    );
     let before = mails().length;
     const add = page.getByRole("button", { name: "Add Fish soup" });
     await add.click();
@@ -1511,7 +1629,27 @@ async function kioskFlow(dir, base) {
     await page.getByLabel(/^Email/).fill("pia@archipelago.example");
     await page.getByRole("button", { name: "Send the order" }).click();
     await page.getByText("Order 11 is in.").waitFor({ timeout: 15000 * P });
-    await waitFor("mail to staff", () => subjects(before).includes("A new order"));
+    await waitFor("mail to staff", () => subjects(before).includes("New order 11"));
+    // And the text to staff's confirmed number: the title line and the link, written to the file
+    // outbox (no SMS settings).
+    await waitFor("a text to staff", () =>
+      textsNow().some((t) => t.startsWith("To: +358401234567")),
+    );
+    const toStaff = textsNow().find((t) => t.startsWith("To: +358401234567")) ?? "";
+    // The entry's title line (its own subject unsaid: "Order: <title>") and the link.
+    if (!/^Order: .+ http\S*\/orders\/\d+$/m.test(toStaff))
+      throw new Error(`the text to staff said ${JSON.stringify(toStaff)}`);
+    // And the push: the title line and the link, signed with the app's key.
+    await waitFor("a push to staff", () => push.got.length > 0);
+    push.close();
+    const [pushed] = push.got;
+    if (pushed.message.title !== "New order 11" || !/^\/orders\/\d+$/.test(pushed.message.link))
+      throw new Error(`the push said ${JSON.stringify(pushed.message)}`);
+    if (
+      !String(pushed.headers.authorization).startsWith("vapid t=") ||
+      pushed.headers["content-encoding"] !== "aes128gcm"
+    )
+      throw new Error(`the push came with ${JSON.stringify(pushed.headers)}`);
     // Sold out while in the basket: the server refuses it in words.
     await open(page, `${base}/`);
     await page.getByRole("button", { name: "Add Coffee" }).click();
@@ -1538,8 +1676,16 @@ async function kioskFlow(dir, base) {
     await waitFor("mail to the customer", () =>
       subjects(before).includes("Your order is being made"),
     );
+    // And a text to the number the customer gave, from staff's action: the title line alone (a
+    // customer has no account to open the link with).
+    await waitFor("a text to the customer", () =>
+      textsNow().some((t) => t.startsWith("To: +358401112222")),
+    );
+    const toCustomer = textsNow().find((t) => t.startsWith("To: +358401112222")) ?? "";
+    if (/\/orders\//.test(toCustomer))
+      throw new Error(`the customer's text has a link: ${JSON.stringify(toCustomer)}`);
     console.log(
-      "  ✓ kiosk: a visitor orders two fish soups and gets number 11, staff are mailed; a dish sold out in the basket is refused in words; Accept mails the customer",
+      "  ✓ kiosk: a visitor orders two fish soups and gets number 11, staff are mailed, pushed (decrypted as a browser would) and texted; a dish sold out in the basket is refused in words; Accept mails and texts the customer",
     );
   } catch (error) {
     console.log(
@@ -1552,11 +1698,272 @@ async function kioskFlow(dir, base) {
 }
 
 /**
+ * Payments with the fake provider (payments.md §6, A 241): the test's own payments entry pays for
+ * an order to be placed. Paid: the order shows and staff hear of it only then; declined: the order
+ * is gone; cancelled and left: released by the hold timer; the provider's word twice is acted on
+ * once; a wrong amount is recorded and the order released; an unsigned call is refused.
+ */
+async function kioskPaymentFlow(dir, base) {
+  const spec = join(dir, "smithable.yml");
+  const original = readFileSync(spec, "utf8");
+  const outbox = join(dir, "data", "mail", "outbox");
+  const mails = () => (existsSync(outbox) ? readdirSync(outbox).sort() : []);
+  const subjects = (before) =>
+    mails()
+      .slice(before)
+      .map((m) => /^Subject: (.*)$/im.exec(readFileSync(join(outbox, m), "utf8"))?.[1] ?? "");
+  const one = (sql) =>
+    JSON.parse(
+      spawnSync(
+        "node",
+        [
+          "-e",
+          `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).get() ?? null))`,
+        ],
+        { cwd: dir, encoding: "utf8" },
+      ).stdout,
+    );
+  const waitFor = async (what, ok) => {
+    for (let i = 0; i < 150 * P; i++) {
+      if (await ok()) return;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    throw new Error(`no ${what}`);
+  };
+  writeFileSync(
+    spec,
+    original
+      .replace(
+        /\n {6}total: \{ type: money, formula: SUM\(lines\.amount\) \}\n/,
+        "\n      total: { type: money, formula: SUM(lines.amount) }\n      paid: bool\n",
+      )
+      .replace(
+        /\noutgoing:\n/,
+        '\npayments:\n  orderPayment: { on: Order, amount: total, when: created, paid: { set: { paid: true } }, description: "Order {number}" }\n\noutgoing:\n',
+      ),
+  );
+  const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+  if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
+  // Orders up to the provider's page; the Payment's id from its address.
+  const orderUpTo = async (name) => {
+    await open(page, `${base}/`);
+    await page.getByRole("button", { name: "Add Fish soup" }).click();
+    await page.getByRole("button", { name: "Order", exact: true }).click();
+    await page.getByLabel(/^Name/).fill(name);
+    await page.getByLabel(/^Phone/).fill("+358 40 555 6666");
+    await page.getByRole("button", { name: /^Pay / }).click();
+    await page.waitForURL(/\/payments\/fake\/\d+$/, { timeout: 30000 * P });
+    await page.getByText("Test payment: no money moves").waitFor();
+    // Its buttons answer once the page is running, not when it is first drawn.
+    await hydrated(page);
+    return Number(/\/payments\/fake\/(\d+)$/.exec(page.url())[1]);
+  };
+  const orderOf = (payment) =>
+    one(
+      `select o.id, o.paid, o.pay_held_at held from payments p left join orders o on o.id = p.record where p.id = ${payment}`,
+    );
+  const event = async (body, signature) =>
+    (
+      await fetch(`${base}/incoming/payments-fake`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-fake-signature": signature },
+        body,
+      })
+    ).status;
+  const signed = (fields) => {
+    const body = JSON.stringify({ mode: "test", currency: "EUR", ...fields });
+    const secret = one("select value from app_keys where name = 'payments-fake'").value;
+    return [body, createHmac("sha256", secret).update(body).digest("hex")];
+  };
+  let step = "the pay button";
+  try {
+    // The dev server takes the new spec a moment after the change.
+    await waitFor("the pay button", async () => {
+      await open(page, `${base}/`);
+      if (!(await page.getByRole("button", { name: "Add Fish soup" }).isEnabled())) return false;
+      await page.getByRole("button", { name: "Add Fish soup" }).click();
+      await page.getByRole("button", { name: "Order", exact: true }).click();
+      return page.getByRole("button", { name: /^Pay / }).isVisible();
+    });
+    // Paid: held while the payer is at the provider's page (staff see nothing yet), shown and
+    // told once the provider's word has come.
+    let before = mails().length;
+    const paid = await orderUpTo("Paula Paid");
+    if (!orderOf(paid)?.held) throw new Error("the order is not held while it is paid");
+    step = "staff do not see an unpaid order";
+    const staff = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await signInAs(staff, base, "admin");
+    await open(staff, `${base}/orders`);
+    if (await staff.getByText("Paula Paid").count()) throw new Error("staff see an unpaid order");
+    if (subjects(before).includes("A new order"))
+      throw new Error("staff were told of an unpaid order");
+    step = "approve and come back paid";
+    await page.getByRole("button", { name: "Approve" }).click();
+    await page
+      .getByRole("heading", { name: /^Paid .+ Thank you!$/ })
+      .waitFor({ timeout: 15000 * P });
+    const done = orderOf(paid);
+    if (done.held || done.paid !== 1) throw new Error(`the paid order is ${JSON.stringify(done)}`);
+    await waitFor("mail to staff of the paid order", () =>
+      subjects(before).includes("A new order"),
+    );
+    step = "staff see the paid order";
+    await open(staff, `${base}/orders`);
+    await staff.getByRole("row", { name: /Paula Paid/ }).waitFor({ timeout: 15000 * P });
+    // Declined: the Payment failed and the order gone, its place freed.
+    step = "decline";
+    const declined = await orderUpTo("Dina Declined");
+    await page.getByRole("button", { name: "Decline" }).click();
+    await page
+      .getByText("The payment was not made, and nothing was charged.")
+      .waitFor({ timeout: 15000 * P });
+    if (orderOf(declined)?.id) throw new Error("a declined order stays");
+    // Cancelled and left: the back page offers Pay again; after the hold, the timer releases it.
+    step = "cancel and the hold timer";
+    const left = await orderUpTo("Lars Left");
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByText("Waiting for the payment to be confirmed").waitFor({ timeout: 15000 * P });
+    await page.getByRole("button", { name: /^Pay / }).waitFor();
+    write(dir, `update payments set created_at = created_at - 7200000 where id = ${left}`);
+    await waitFor("the hold timer", () => !orderOf(left)?.id);
+    const gone = one(`select status, note from payments where id = ${left}`);
+    if (gone.status !== "failed" || gone.note !== "not paid in time")
+      throw new Error(`a released Payment is ${JSON.stringify(gone)}`);
+    // The provider's word twice: acted on once.
+    step = "the word twice";
+    const twice = await orderUpTo("Tove Twice");
+    const { amount } = one(`select amount from payments where id = ${twice}`);
+    before = mails().length;
+    const [body, signature] = signed({ id: "event-twice", payment: twice, kind: "paid", amount });
+    for (const _ of [1, 2]) {
+      const status = await event(body, signature);
+      if (status !== 200) throw new Error(`the same event answered ${status}`);
+    }
+    const [again, againSigned] = signed({
+      id: "event-twice-2",
+      payment: twice,
+      kind: "paid",
+      amount,
+    });
+    if ((await event(again, againSigned)) !== 200) throw new Error("a second success was refused");
+    const lines = one(
+      `select count(*) n from audit_log where action = 'paid' and record_id = ${orderOf(twice).id}`,
+    );
+    if (lines.n !== 1) throw new Error(`a payment told twice was recorded ${lines.n} times`);
+    await waitFor("mail to staff", () => subjects(before).includes("A new order"));
+    if (subjects(before).filter((s) => s === "A new order").length !== 1)
+      throw new Error("staff were told twice of one order");
+    // A wrong amount: recorded with its note, the order released, never let out unpaid.
+    step = "a wrong amount";
+    const wrong = await orderUpTo("Walt Wrong");
+    const asked = one(`select amount from payments where id = ${wrong}`).amount;
+    const [less, lessSigned] = signed({
+      id: "event-wrong",
+      payment: wrong,
+      kind: "paid",
+      amount: asked - 100,
+    });
+    if ((await event(less, lessSigned)) !== 200) throw new Error("a wrong amount was not answered");
+    const differs = one(`select status, note from payments where id = ${wrong}`);
+    if (differs.status !== "paid" || differs.note !== "amount differs")
+      throw new Error(`a wrong amount left ${JSON.stringify(differs)}`);
+    if (orderOf(wrong)?.id) throw new Error("an order paid the wrong amount stays");
+    // Not the provider's: refused.
+    const [forged] = signed({ id: "event-forged", payment: wrong, kind: "paid", amount: asked });
+    if ((await event(forged, "0".repeat(64))) !== 401)
+      throw new Error("an unsigned event was taken");
+    console.log(
+      "  ✓ kiosk payments (fake): an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount releases it; a forged call is refused",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ kiosk payments (${step}): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("kiosk payment flow");
+  } finally {
+    await browser.close();
+    writeFileSync(spec, original);
+    const back = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
+    if (back.status !== 0) failures.push(`kiosk payments put back: ${back.stdout}${back.stderr}`);
+  }
+}
+
+/**
  * The barbers starter (appointments.md §8 step 3): a customer books the earliest free time with a
  * barber and sees it gone; a booking within 12 hours says to contact the shop, one further ahead
  * is cancelled online; the shop's day shows the barber's column. The shop is open around the
  * clock here, so the flow does not depend on the hour it runs at (the hours are unit tests).
  */
+/**
+ * Import from a file (A 238): an admin imports orders from a CSV, a customer named by its title;
+ * the preview names the refused rows by line and column, the rows that fit go in, and Undo takes
+ * them back.
+ */
+async function importFlow(dir, base) {
+  const one = (sql) => {
+    const code = `const D=require("better-sqlite3");console.log(JSON.stringify(new D("data/db/app.db").prepare(${JSON.stringify(sql)}).get()))`;
+    return JSON.parse(
+      spawnSync("node", ["-e", code], { cwd: dir, encoding: "utf8" }).stdout || "null",
+    );
+  };
+  const customer = one(
+    "select name from customers where deleted_at is null order by id limit 1",
+  ).name;
+  const csv = [
+    "Number,Customer,Status,Total",
+    `IMP-1,${customer},Placed,"12,50"`,
+    `IMP-2,${customer},draft,5`,
+    "IMP-3,No Such Company,draft,5",
+    `IMP-4,${customer},shipped,abc`,
+  ].join("\n");
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  try {
+    await signInAs(page, base, "admin");
+    await open(page, `${base}/orders`);
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: /Import orders/ });
+    await dialog.getByLabel("A CSV file").setInputFiles({
+      name: "orders.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(csv),
+    });
+    await dialog.getByText("2 records will be added.").waitFor({ timeout: 20000 * P });
+    for (const line of [
+      'Line 4, Customer: No record named "No Such Company".',
+      "Line 5, Total: Not a number.",
+    ])
+      await dialog.getByText(line).waitFor();
+    await dialog.getByRole("button", { name: "Import 2 records" }).click();
+    await dialog.getByText("2 records were added.").waitFor({ timeout: 20000 * P });
+    const added = one(
+      "select count(*) as n from orders where number like 'IMP-%' and deleted_at is null",
+    ).n;
+    if (added !== 2) throw new Error(`${added} orders were added, not 2`);
+    const placed = one("select status, total from orders where number = 'IMP-1'");
+    if (placed.status !== "placed" || placed.total !== 1250)
+      throw new Error(`IMP-1 was stored as ${JSON.stringify(placed)}`);
+    await dialog.getByRole("button", { name: "Undo the import" }).click();
+    await dialog.getByText("2 records were taken back.").waitFor({ timeout: 20000 * P });
+    const left = one(
+      "select count(*) as n from orders where number like 'IMP-%' and deleted_at is null",
+    ).n;
+    if (left !== 0) throw new Error(`${left} imported orders are still there after the undo`);
+    console.log(
+      "  ✓ crm: orders imported from a CSV (a customer by its name, a choice by its label, a decimal comma); the preview names the refused rows by line and column; Undo takes the import back to the trash",
+    );
+  } catch (error) {
+    console.log(
+      `  ✗ crm import: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+    );
+    failures.push("crm import");
+  } finally {
+    await browser.close();
+  }
+}
+
 async function barbersFlow(dir, base) {
   const spec = join(dir, "smithable.yml");
   writeFileSync(
@@ -1614,12 +2021,40 @@ async function barbersFlow(dir, base) {
     // The save moves on to the new appointment's page: let that navigation finish first.
     await page.waitForLoadState("networkidle");
   };
+  // Live (notifications.md §3): the shop, its list open in another browser, hears of the booking.
+  const shop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   try {
+    const shopPage = await shop.newPage();
+    await signInAs(shopPage, base, "admin");
+    const streaming = shopPage.waitForResponse((r) => new URL(r.url()).pathname === "/events", {
+      timeout: 20000 * P,
+    });
+    await open(shopPage, `${base}/appointments`);
+    await streaming;
     await signInAs(page, base, "member");
     await form();
     const earliest = await times.first().textContent();
     await times.first().click();
     await book("Pia Wall");
+    // The entry's title line (the content file's subject), and the list loaded again.
+    await shopPage
+      .locator('[data-kit="live-notice"]', { hasText: "A new appointment to confirm" })
+      .waitFor({ timeout: 20000 * P })
+      .catch(async () => {
+        throw new Error(
+          `the shop saw no live notice of the booking (on ${shopPage.url()}: ${(await shopPage.locator("body").innerText()).slice(0, 200).replace(/\s+/g, " ")})`,
+        );
+      });
+    await shopPage
+      .getByRole("main")
+      .getByText("Pia Wall", { exact: true })
+      // The table's row (the phone's card of it is hidden at this width).
+      .filter({ visible: true })
+      .first()
+      .waitFor({ timeout: 20000 * P })
+      .catch(() => {
+        throw new Error("the shop's list did not load again with the booking");
+      });
     // Taken: Elin's earliest time is not offered again.
     await form();
     if ((await times.first().textContent()) === earliest)
@@ -1661,7 +2096,7 @@ async function barbersFlow(dir, base) {
       .getByText("Pia Wall", { exact: true })
       .waitFor({ timeout: 15000 * P });
     console.log(
-      `  ✓ barbers: the earliest time with Elin (${earliest}) is booked and no longer offered; a booking days ahead is cancelled online, one within 12 hours says to contact the shop; the shop's day shows it in Elin's column`,
+      `  ✓ barbers: the earliest time with Elin (${earliest}) is booked and no longer offered; a booking days ahead is cancelled online, one within 12 hours says to contact the shop; the shop's day shows it in Elin's column; the shop, with its list open, saw the booking live and the list refresh`,
     );
   } catch (error) {
     console.log(
@@ -8434,6 +8869,11 @@ test("the session cookie's name and attributes", async () => {
     stop = await serve(dir, port + 100, "dev", {
       ...receiver?.env,
       DEV_DOOR_SECRET: DOOR_SECRET,
+      // The kiosk's staff get a push (notifications.md §4) from a push service on this machine.
+      // And its payments step's hold timer looks every two seconds (payments.md §4.5).
+      ...(example === "kiosk"
+        ? { NODE_EXTRA_CA_CERTS: pushCertificate().cert, PAYMENTS_HOLD_CHECK_SECONDS: "2" }
+        : {}),
     });
     try {
       const base = `http://localhost:${port + 100}`;
@@ -8491,8 +8931,10 @@ test("the session cookie's name and attributes", async () => {
       if (example === "kiosk") {
         await kioskFlow(dir, base);
         await kioskLandingFlow(dir, base);
+        await kioskPaymentFlow(dir, base);
       }
       if (example === "barbers") await barbersFlow(dir, base);
+      if (example === "crm") await importFlow(dir, base);
       if (example === "status") await statusFlow(base);
       if (example === "status") await sessionFlow(base);
       if (receiver) await callFlow(dir, base, receiver);

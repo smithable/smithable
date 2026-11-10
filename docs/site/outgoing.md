@@ -1,6 +1,6 @@
 # Tell people and other systems
 
-When something happens in an app, it can say so: a mail to a person, or a call to another system. You write what should happen in `smithable.yml`. The app keeps each message in an outbox, sends it after the change is saved, and tries again when it can't get through.
+When something happens in an app, it can say so: a mail, a notification or a text to a person, or a call to another system. You write what should happen in `smithable.yml`. The app keeps each message in an outbox, sends it after the change is saved, and tries again when it can't get through.
 
 ## 1. Mail a person
 
@@ -64,6 +64,41 @@ outgoing:
 ```
 
 The list takes the same keys as a dashboard's list. `within` is `today`, `tomorrow`, or a number of days or weeks, in the app's time zone. The [spec reference](../spec/v0.1.md) has the rest.
+
+### Push to their browsers and phones
+
+`to` takes a channel or a list of them, each reaching the same recipient:
+
+```yaml
+outgoing:
+  orderPlaced:
+    when: Order created
+    to: [mail, push]                 # a mail, and a notification on the staff's browsers and phones
+    recipient: staff                 # a role: every user who has it
+```
+
+- **Who turns it on.** Each person, for themselves: under their name in the menu, **Notifications** lists the entries with `push` that reach them, each off until they turn it on. The first one turned on in a browser asks the browser's permission. On a phone and a laptop, they turn it on in each. Signing out in a browser, or turning the last entry off there, stops it there, so a shared tablet does not keep showing notifications to the next person.
+- **Whom it reaches.** People who sign in: the owner, a role's users, or a field that refers to a user. Never an email or a phone field, since there is no browser to reach. An app without sign-in has no push.
+- **What it shows** is the title line (the subject from `smithable.content.yml`) and a link to the record. A locked screen shows it to whoever is near, so `smithable validate` warns when a push's subject names an email, a phone, a user or who made the change.
+- **On iPhone and iPad** a notification reaches only an app added to the home screen.
+- **Keys.** The app makes its own push keys and keeps them, so nothing has to be set; `PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY` and `PUSH_VAPID_SUBJECT` are optional settings that set them instead. New keys end every subscription, and people turn push on again.
+- **On smithable.ai** push is not offered at the Strict level, since the browsers' push services (Google's, Apple's, Mozilla's, Microsoft's) are run by companies outside the EU.
+
+### A text message
+
+```yaml
+outgoing:
+  orderReadyText:
+    when: ready                      # the order's "ready" button
+    to: sms
+    recipient: phone                 # a phone field of the record: the customer's number
+```
+
+- **Whom it reaches.** A `phone` field of the record, or one a reference away (`customer.phone`), or people who sign in and gave their own number: under their name in the menu, **Texts to your phone** takes the number, confirms it with a texted code (three codes a day, one a minute), then has a toggle for each text that reaches them. A number must be in international form (`+46…`); another is not sent, and Activity says why. `to: [mail, sms]` needs a recipient both can reach: a person, not an email or a phone field. To mail `customer.email` and text `customer.phone`, write two entries.
+- **What it says.** The title line, the entry's subject in `smithable.content.yml`, as for push: a person gets it with a link; a number on a record, whose owner has no account, gets the title line alone.
+- **Your provider, your cost.** Texts go through your SMS provider: `SMS_PROVIDER` (`46elks` for now), `SMS_KEY`, `SMS_SECRET` and `SMS_FROM`. Each one is paid to them, so none of the starters sends a text. `SMS_MAX_PER_DAY` caps a day's texts (50 unless set), and ten a day hold per number. Without the settings nothing leaves the machine: each text is written to `data/sms/outbox`, which is how you see them while building.
+- **Never a stranger's number from a stranger.** A number on the record is texted only from a signed-in person's change, never a visitor's or a timer's: the order is ready, and the customer gets a text. `smithable validate` warns about a phone recipient on a model visitors may create.
+- **Never twice by accident.** A text the provider may have taken (no answer in time) is not sent again by itself: Activity marks it unknown, and **Send again** is your choice.
 
 ## 2. Call another system
 

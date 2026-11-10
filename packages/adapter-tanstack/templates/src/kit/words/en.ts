@@ -479,6 +479,72 @@ export const w = {
   asTheApp: "As the app",
   clock12: "12-hour",
   clock24: "24-hour",
+  noticesMore: (n: number) => `and ${n} more`,
+  noticeSoundOffer: "Play a sound for these?",
+  noticeSound: "A sound with each notice",
+  smsNotWhole:
+    "The number is not in the international form: + and the country's code, then the number.",
+  smsNoProvider: (name: string) =>
+    `SMS_PROVIDER names ${name}, which this app cannot send through (46elks).`,
+  smsNoSettings: "SMS_KEY, SMS_SECRET and SMS_FROM are needed beside SMS_PROVIDER.",
+  smsRefused: (status: number) => `The text provider answered ${status}.`,
+  smsTurnedOff: "Turned off before it was sent.",
+  smsOverLimit: "Over the day's limit of texts: Send again works tomorrow.",
+  smsUnknown: "The text provider did not answer: it may have sent it. Not tried again by itself.",
+  smsCode: (code: string) => `Your code: ${code}. It confirms this number for the app's texts.`,
+  smsCodesLimit: "Three codes a day, one a minute: try again later.",
+  smsCodeGone: "The code has run out. Ask for a new one.",
+  smsNoSuch: "No such text.",
+  smsConfirmFirst: "Confirm your number first.",
+  smsTitle: "Texts to your phone",
+  smsHelp: "Each text is about your work in the app. Your number is used for nothing else.",
+  smsPhone: "Your mobile number",
+  smsSendCode: "Text me a code",
+  smsCodeSent: "A code is on its way. Type it here.",
+  smsCodeLabel: "The code",
+  smsConfirm: "Confirm",
+  smsWrongCode: "That is not the code.",
+  smsRemove: "Remove my number",
+  notifications: "Notifications",
+  notificationsHelp: "In this browser, also when the app is closed. Turn on each you want.",
+  pushUnavailable: "This browser cannot take notifications from this app.",
+  pushRefused: "The browser did not allow notifications. Allow them in its settings for this site.",
+  importIt: "Import",
+  importTitle: (plural: string) => `Import ${plural.toLowerCase()} from a file`,
+  importFile: "A CSV file",
+  importHint:
+    "A CSV file with the columns' names on its first line. A spreadsheet saves one: Save as, then CSV.",
+  importColumns: "Columns:",
+  importIgnored: (columns: string) => `Left out (no field of that name): ${columns}.`,
+  importWillAdd: (n: number) =>
+    n === 1 ? "1 record will be added." : `${n} records will be added.`,
+  importAdded: (n: number) => (n === 1 ? "1 record was added." : `${n} records were added.`),
+  importRefusedRows: (n: number) => (n === 1 ? "1 problem:" : `${n} problems:`),
+  importRefusals: "Problems",
+  importLine: (line: number, column?: string) =>
+    line === 0 ? "The file:" : `Line ${line}${column ? `, ${column}` : ""}:`,
+  importMore: (n: number) => `and ${n} more`,
+  importGo: (n: number) => (n === 1 ? "Import 1 record" : `Import ${n} records`),
+  importUndo: "Undo the import",
+  importUndone: (n: number, kept: string[]) =>
+    `${n === 1 ? "1 record was taken back" : `${n} records were taken back`}.${kept.length ? ` Changed since, so kept: ${kept.join(", ")}.` : ""}`,
+  importCannotFill: (label: string) => `"${label}" cannot be filled from a file.`,
+  importTwoColumns: (label: string) => `Two columns fill "${label}".`,
+  importNoColumn: (label: string) => `No column fills "${label}", which every record needs.`,
+  importTooMany: (n: number, max: number) =>
+    `The file has ${n} records; at most ${max} go in one import.`,
+  importNotOneOf: (choices: string) => `Not one of: ${choices}.`,
+  importSeveral: (title: string) => `Several records are named "${title}".`,
+  importNoSuch: (title: string) => `No record named "${title}".`,
+  importNotYesNo: "Not yes or no.",
+  importNotDate: "Not a date.",
+  importNotNumber: "Not a number.",
+  importRowFailed: "This row could not be added.",
+  importUndoGone: "There is no such import.",
+  importListTooLong: (max: number) => `At most ${max} records in one list.`,
+  importUndoneAlready: "This import was taken back already.",
+  importListEmpty: "An empty list adds nothing: give one record, or a list of them.",
+  importUndoLate: "An import can be taken back for a day; this one is older.",
   yourNameHelp: "The name others see in this app.",
   /** A unique field's value taken. */
   alreadyHas: (label: string, field: string) =>
@@ -636,6 +702,12 @@ export const w = {
     `Visits are counted with ${provider}, which sets no cookie and keeps no personal data.`,
   legalAnalyticsConsent: (provider: string) =>
     `Visits are counted with ${provider} only after you accept it in the cookie bar. You can change your choice under Cookie settings at the bottom of the page.`,
+  legalSmsTitle: "Texts to your phone",
+  legalSms: (labels: string[]) =>
+    `If you give your mobile number under your name, confirm it with the code texted to it and turn texts on, the app texts you about new ${labels.join(", ")}. A number you give with a record of your own may get a text about that record, sent when someone working in the app acts on it. The texts go through the SMS provider the app's owner chose. Your number is used for nothing else; removing it under your name ends the texts.`,
+  legalPushTitle: "Notifications in your browser",
+  legalPush: (labels: string[]) =>
+    `If you turn notifications on under your name, the app tells your browser of new ${labels.join(", ")} it may show you. The title and a link go, encrypted, through your browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), which cannot read them. Turning them off, or signing out in that browser, ends them.`,
   legalMailTitle: "Mail",
   legalMailSignIn: "The app sends mail for signing in and for invitations.",
   legalMailEvents: (labels: string[]) =>
@@ -665,6 +737,21 @@ export const w = {
   orderClosed: (opens?: string) => (opens ? `Closed, opens ${opens}` : "Closed"),
   orderSoldOut: (label: string) => `Sold out: ${label}`,
   orderEmpty: "Nothing chosen yet.",
+  /** Payments (payments.md §3.4, §4.2). */
+  payAmount: (amount: string) => `Pay ${amount}`,
+  paymentPaid: (amount: string) => `Paid ${amount}. Thank you!`,
+  paymentWaiting: "Waiting for the payment to be confirmed",
+  paymentReceiptLater: "The payment provider's receipt will tell you when it is done.",
+  paymentHeldUntil: (time: string) => `Your place is held until ${time}.`,
+  paymentRefunded: "The payment was refunded.",
+  paymentNotMade: "The payment was not made, and nothing was charged.",
+  paymentFake: "Test payment: no money moves",
+  paymentApprove: "Approve",
+  paymentDecline: "Decline",
+  paymentUnavailable: "Payment is not possible right now. Please try again.",
+  paymentGone: "This payment is no longer open.",
+  paymentUnmatched:
+    "The payment came, but not as asked, so nothing was ordered. It will be refunded.",
   /** A chart's bar for a quarter: "Q3 2026". */
   quarterOf: (quarter: number, year: string) => `Q${quarter} ${year}`,
   /** A list's totals row (intents.md §5): "Total of 12". */
@@ -867,6 +954,10 @@ export const w = {
     mailCodes: "Mail: sign-in codes.",
     mail: (text: string) => `Mail: ${text}`,
     call: (to: string, text: string) => `A call to ${to}: ${text}`,
+    sms: (text: string) =>
+      `A text: ${text}. The title line goes through the SMS provider the owner sets (SMS_PROVIDER), to people who confirmed their number and turned it on, or to a number on the record when someone working in the app acts on it.`,
+    push: (text: string) =>
+      `A browser push: ${text}. The title line and the link go, encrypted, through the browser's own push service (Google's, Apple's, Mozilla's or Microsoft's), to those who turned it on.`,
     callsIn: (text: string) => `Calls in: ${text}`,
     sentNone: "The text alone goes.",
     sentAll: "The fields its record page shows go.",

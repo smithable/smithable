@@ -105,7 +105,7 @@ actions:
     intent: "The order cannot be made: say why."
 
 outgoing:
-  orderPlaced:   { when: Order created, to: mail, recipient: admin }
+  orderPlaced:   { when: Order created, to: [mail, push], recipient: staff }   # staff hear of each order (Johan 2026-11-07)
   orderAccepted: { when: accept, to: mail, recipient: email }
   orderReady:    { when: ready, to: mail, recipient: email }
   toKitchen:     { when: Order created, to: kitchen }   # OUTGOING_KITCHEN_URL and _SECRET

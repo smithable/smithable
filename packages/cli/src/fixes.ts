@@ -19,6 +19,11 @@ export interface Fix {
   severity: (typeof SEVERITIES)[number];
   /** What could have happened, in the notice's words, or "none". */
   exposure: string;
+  /**
+   * What the app's owner must do themselves, in one plain sentence (rotate a key, tell their
+   * visitors); none when the rebuild is all (fixes-reach-apps.md §4: mailed with the impact).
+   */
+  ownerAction?: string;
   /** The engine commit that brought the bug, or "unknown". */
   introduced: string;
   /** Any one holding makes an app affected (OR). */
@@ -42,7 +47,16 @@ export const FEATURES: Record<string, string> = {
   "theme:<preset>": "the app's theme preset",
 };
 
-const KEYS = ["id", "title", "severity", "exposure", "introduced", "affects", "migration"];
+const KEYS = [
+  "id",
+  "title",
+  "severity",
+  "exposure",
+  "owner_action",
+  "introduced",
+  "affects",
+  "migration",
+];
 
 /** A fix file read and checked: the fix, or what is wrong with it. */
 export function readFix(name: string, text: string): { fix: Fix } | { errors: string[] } {
@@ -66,6 +80,10 @@ export function readFix(name: string, text: string): { fix: Fix } | { errors: st
     errors.push(`${name}: "severity" is ${SEVERITIES.join(", ")}`);
   if (!MIGRATIONS.includes(raw.migration as Fix["migration"]))
     errors.push(`${name}: "migration" is ${MIGRATIONS.join(", ")}`);
+  if ("owner_action" in raw && (typeof raw.owner_action !== "string" || !text_("owner_action")))
+    errors.push(`${name}: "owner_action" is one plain sentence, or left out when there is none`);
+  if (text_("owner_action").includes("\n"))
+    errors.push(`${name}: "owner_action" is one sentence on one line`);
   if (text_("introduced") && !/^(?:unknown|[0-9a-f]{7,40})$/.test(text_("introduced")))
     errors.push(`${name}: "introduced" is an engine commit or "unknown"`);
   const affects = (raw.affects ?? {}) as Record<string, unknown>;
@@ -95,6 +113,7 @@ export function readFix(name: string, text: string): { fix: Fix } | { errors: st
       title: text_("title"),
       severity: raw.severity as Fix["severity"],
       exposure: text_("exposure"),
+      ...(text_("owner_action") ? { ownerAction: text_("owner_action") } : {}),
       introduced: text_("introduced"),
       affects: lists,
       migration: raw.migration as Fix["migration"],
@@ -268,4 +287,84 @@ export function migrationKind(sql: string[]): Fix["migration"] {
       (!/\bNOT NULL\b/i.test(s) || /\bDEFAULT\b/i.test(s)) &&
       !/\b(?:UNIQUE|PRIMARY KEY|REFERENCES|CHECK|CONSTRAINT)\b/i.test(s));
   return statements.every(adds) ? "additive" : "destructive";
+}
+
+/** A schema as drizzle-kit keeps it after each migration (drizzle/meta/NNNN_snapshot.json). */
+export interface SchemaSnapshot {
+  tables: Record<
+    string,
+    {
+      name: string;
+      columns: Record<string, { name: string; type: string; notNull?: boolean; default?: unknown }>;
+      indexes?: Record<string, { name: string; columns: string[]; isUnique?: boolean }>;
+      foreignKeys?: Record<string, { name: string; columnsFrom: string[]; tableTo: string }>;
+    }
+  >;
+}
+
+/**
+ * What a destructive migration loses or may refuse, one plain line each (fixes-reach-apps §5
+ * "Data"): the tables and columns that go, a column whose type changes, a column that becomes
+ * required, a new rule (unique, a reference) old records may break. Words only, never a value.
+ * None (undefined) when the comparison finds nothing to say, so the service keeps the update
+ * held rather than read it as losing nothing; with more than 40 lines it holds it too.
+ */
+export function migrationConsequences(
+  before: SchemaSnapshot,
+  after: SchemaSnapshot,
+): { about: "records"; says: string }[] | undefined {
+  const lines: string[] = [];
+  const then = new Map(Object.values(before.tables).map((t) => [t.name, t]));
+  const now = new Map(Object.values(after.tables).map((t) => [t.name, t]));
+  for (const table of then.values())
+    if (!now.has(table.name))
+      lines.push(`The table ${table.name} is removed, with all its records.`);
+  for (const later of now.values()) {
+    const table = then.get(later.name);
+    if (!table) continue;
+    for (const column of Object.values(table.columns)) {
+      const next = later.columns[column.name];
+      if (!next) {
+        lines.push(`The column ${column.name} of ${table.name} is removed, with its values.`);
+        continue;
+      }
+      if (next.type !== column.type)
+        lines.push(
+          `The column ${column.name} of ${table.name} changes from ${column.type} to ${next.type}: values that do not convert are lost.`,
+        );
+      if (next.notNull && !column.notNull)
+        lines.push(
+          `The column ${column.name} of ${table.name} becomes required: records without a value stop the update.`,
+        );
+    }
+    for (const next of Object.values(later.columns))
+      if (!table.columns[next.name] && next.notNull && next.default === undefined)
+        lines.push(
+          `A required column ${next.name} is added to ${table.name} with no value to give its records: they stop the update.`,
+        );
+    const uniques = (t: typeof table) =>
+      new Set(
+        Object.values(t.indexes ?? {})
+          .filter((i) => i.isUnique)
+          .map((i) => i.columns.join(", ")),
+      );
+    const was = uniques(table);
+    for (const columns of uniques(later))
+      if (!was.has(columns))
+        lines.push(
+          `${table.name}'s ${columns} must now be unique: records that share a value stop the update.`,
+        );
+    const refs = (t: typeof table) =>
+      new Set(
+        Object.values(t.foreignKeys ?? {}).map((f) => `${f.columnsFrom.join(", ")} → ${f.tableTo}`),
+      );
+    const had = refs(table);
+    for (const ref of refs(later))
+      if (!had.has(ref))
+        lines.push(
+          `${table.name}'s ${ref.replace(" → ", " now refers to ")}: records that refer to nothing there stop the update.`,
+        );
+  }
+  if (!lines.length) return undefined;
+  return lines.map((says) => ({ about: "records" as const, says: says.slice(0, 500) }));
 }

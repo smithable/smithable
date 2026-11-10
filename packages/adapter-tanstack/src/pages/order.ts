@@ -3,6 +3,7 @@
 // price on the server and adds the lines. Opening hours are checked on the server too.
 import { kebab, type ModelIR, type PageIR, type PatternOf, titleField } from "@smithable/core";
 import { fieldUi } from "../data.js";
+import { payToCreate } from "../payments.js";
 import type { GenContext } from "../shared.js";
 import { guard, HEADER, importList, indexPath, literal, names, scalarField } from "../shared.js";
 
@@ -16,6 +17,7 @@ export function orderRoute(
   const into = ir.models.find((m) => m.name === p.into) as ModelIR;
   const nf = names(from, t);
   const ni = names(into, t);
+  const pays = payToCreate(ir, into);
   const title = titleField(from);
   const description = scalarField(from, "text", "markdown");
   const picture = scalarField(from, "picture");
@@ -83,8 +85,16 @@ const placeOrder = createServerFn({ method: "POST" })
     const viewer = await currentViewer();
     writeAllowed(viewer, getRequestHeaders());
     if (HOURS && !openAt(HOURS, new Date(), app.timeZone)) throw new BadInput("closed");
-    const made = await ${ni.data}.create(viewer, data.values as ${ni.values}, data.lines);
-    return { number: made.${p.number}, id: made.id };
+    const made = await ${ni.data}.create(viewer, data.values as ${ni.values}, data.lines${pays ? ", true" : ""});${
+      pays
+        ? `
+    // Paid to be placed (payments.md §4.1): the order waits, held, while its payer is at the provider's page.
+    const { payFor } = await import("#/kit/payments.server");
+    const pay = made.payHeldAt ? await payFor(${JSON.stringify(pays.name)}, made.id) : undefined;
+    return { number: made.${p.number}, id: made.id, pay };`
+        : `
+    return { number: made.${p.number}, id: made.id };`
+    }
   });
 
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
@@ -102,7 +112,7 @@ function OrderRoute() {
       app={app}
       ui={{ ...${ni.ui}, fields: ${ni.ui}.fields.filter((f) => ASK.includes(f.name)) }}
       schema={sent}
-      place={(values, lines) => placeOrder({ data: { values, lines } })}
+      place={(values, lines) => placeOrder({ data: { values, lines } })}${pays ? "\n      pays" : ""}
     />
   );
 }

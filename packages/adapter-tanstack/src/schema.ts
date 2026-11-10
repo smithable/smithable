@@ -22,6 +22,7 @@ import { authTables, hasInvitations, hasSignIn } from "./auth.js";
 import { samplePeople } from "./dev-door.js";
 import { INCOMING_SEEN_TABLE, MAIL_THREADS_TABLE } from "./incoming.js";
 import { hasKeys, KEY_TABLE } from "./keys.js";
+import { pushEntries, smsEntries } from "./outgoing.js";
 import { calendarStart } from "./pages/calendar.js";
 import { sampleRows } from "./sample-data.js";
 import {
@@ -47,6 +48,7 @@ import { TIMER_RUNS_TABLE } from "./timers.js";
 export function schemaModule(ir: SpecIR, auth: AuthIR, ux: UxIR = emptyUx()): string {
   const imports = new Set(["integer", "sqliteTable"]);
   if (hasSignIn(auth)) for (const i of ["index", "text"]) imports.add(i);
+  if (pushEntries(ir, auth).length || smsEntries(ir, auth).length) imports.add("uniqueIndex");
   const tables = ir.models.map((model) => {
     const n = tableNames(model);
     // Where each unique field is unique (docs/design/uniqueness.md): among one owner's records
@@ -154,7 +156,13 @@ ${columns.join("\n")}
   updatedAt: integer({ mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date())
-    .$onUpdate(() => new Date()),${trash}
+    .$onUpdate(() => new Date()),${trash}${
+      model.heldByPayment
+        ? `
+  /** Held for its payment since (payments.md §3.2): shown nowhere, counted where counting protects. */
+  payHeldAt: integer({ mode: "timestamp_ms" }),`
+        : ""
+    }
 }`;
     return extras.length
       ? `${perOwner ? "// Values unique per owner are unique among one owner's records (docs/design/uniqueness.md).\n" : ""}export const ${n.table} = sqliteTable(
@@ -229,7 +237,7 @@ export const ${n.table}Reads = sqliteTable(
   });
   const authBlock = hasSignIn(auth) ? [authTables(auth, hasInvitations(ir, auth))] : [];
   for (const used of ["index", "integer", "text"]) imports.add(used);
-  if (ir.timers.length || ir.incoming.length) imports.add("uniqueIndex");
+  if (ir.timers.length || ir.incoming.length || ir.payments.length) imports.add("uniqueIndex");
   const pictures = ir.models.some((m) => m.fields.some(storesPictures));
   const documents = ir.models.some((m) => m.fields.some(storesFiles));
   const stored = [...(pictures ? ["Picture"] : []), ...(documents ? ["StoredFile"] : [])];
@@ -237,7 +245,7 @@ export const ${n.table}Reads = sqliteTable(
   const orm = [...(relationBlocks.length ? ["relations"] : []), ...(trashed ? ["sql"] : [])];
   return `${HEADER}${orm.length ? `import { ${orm.join(", ")} } from "drizzle-orm";\n` : ""}import { ${[...imports].sort().join(", ")} } from "drizzle-orm/sqlite-core";
 ${stored.length ? `import type { ${stored.join(", ")} } from "#/kit/uploads";\n` : ""}
-${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
+${[...authBlock, AUDIT_TABLE, ...(ir.models.some((m) => m.review) ? [FILE_REVIEW_TABLE] : []), ...(ir.models.some((m) => m.fields.some(isUpload)) ? [UPLOADS_TABLE] : []), ...(hasKeys(ir, auth) ? [KEY_TABLE] : []), ...(ir.outgoing.length ? [OUTGOING_TABLE, OUTGOING_CALL_TABLE] : []), ...(pushEntries(ir, auth).length || smsEntries(ir, auth).length ? [CHOICES_TABLE] : []), ...(pushEntries(ir, auth).length ? PUSH_TABLES : []), ...(pushEntries(ir, auth).length || ir.payments.length ? [APP_KEYS_TABLE] : []), ...(ir.payments.length ? PAYMENT_TABLES : []), ...(smsEntries(ir, auth).length ? SMS_TABLES : []), ...(ir.timers.length ? [TIMER_RUNS_TABLE] : []), ...(ir.incoming.length || ir.payments.length ? [INCOMING_SEEN_TABLE] : []), ...(ir.incoming.some((i) => i.reply) ? [MAIL_THREADS_TABLE] : []), ...(ir.models.some((m) => m.fields.some((f) => f.sequence)) ? [SEQUENCES_TABLE] : []), ...tables, ...relationBlocks].join("\n\n")}
 `;
 }
 
@@ -367,6 +375,160 @@ const OUTGOING_TABLE = `export const outgoingMail = sqliteTable(
  * Calls to named targets (docs/design/integrations.md §4.1), signed with the target's secret:
  * written by the change's own transaction, sent after it by src/kit/outgoing.server.ts.
  */
+/**
+ * Browser push (docs/design/notifications.md §4): each browser a person turned push on in, which
+ * entries they turned on, the pushes to send (one row per person and entry, which devices have
+ * it), and the app's own key pair when the settings give none (kept with the data, so a backup
+ * keeps the subscriptions valid).
+ */
+const CHOICES_TABLE = `export const notificationChoices = sqliteTable(
+  "notification_choices",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The outgoing entry's name, and the channel the person turned it on for. */
+    entry: text().notNull(),
+    channel: text({ enum: ["push", "sms"] }).notNull(),
+  },
+  (t) => [uniqueIndex("notification_choices_one").on(t.userId, t.entry, t.channel)],
+);`;
+
+/**
+ * Texts (docs/design/notifications.md §5): a person's own number, confirmed by a code texted to
+ * it before any other text goes there; and the texts to send, one row per number.
+ */
+const SMS_TABLES = [
+  `export const userPhones = sqliteTable("user_phones", {
+  userId: text()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  phone: text().notNull(),
+  /** When the code texted to it was typed back; until then nothing else is texted there. */
+  confirmedAt: integer({ mode: "timestamp_ms" }),
+  /** The code's hash while one waits, when it stops being good, and the tries left. */
+  codeHash: text(),
+  codeUntil: integer({ mode: "timestamp_ms" }),
+  codeTries: integer().notNull().default(0),
+});`,
+  `export const outgoingSms = sqliteTable(
+  "outgoing_sms",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    entry: text().notNull(),
+    model: text(),
+    recordId: integer(),
+    /** The person's, when it goes to a user; none for a number on a record. */
+    userId: text(),
+    to: text().notNull(),
+    text: text().notNull(),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    failedAt: integer({ mode: "timestamp_ms" }),
+    /** Unknown: the provider may have taken it (no answer); not sent again by itself. */
+    unknown: integer({ mode: "boolean" }).notNull().default(false),
+    error: text(),
+  },
+  (t) => [index("outgoing_sms_due").on(t.sentAt, t.failedAt, t.nextAt), index("outgoing_sms_to").on(t.to, t.createdAt)],
+);`,
+];
+
+const PUSH_TABLES = [
+  `export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    endpoint: text().notNull(),
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    usedAt: integer({ mode: "timestamp_ms" }),
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint").on(t.endpoint), index("push_subscriptions_user").on(t.userId)],
+);`,
+  `export const outgoingPush = sqliteTable(
+  "outgoing_push",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    entry: text().notNull(),
+    model: text(),
+    recordId: integer(),
+    userId: text().notNull(),
+    /** The title line and the link: nothing else of the record. */
+    title: text().notNull(),
+    link: text(),
+    /** The subscriptions that have it, so a retry does not push twice to a device. */
+    delivered: text({ mode: "json" }).$type<number[]>().notNull().default([]),
+    tries: integer().notNull().default(0),
+    nextAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    sentAt: integer({ mode: "timestamp_ms" }),
+    failedAt: integer({ mode: "timestamp_ms" }),
+    error: text(),
+  },
+  (t) => [index("outgoing_push_due").on(t.sentAt, t.failedAt, t.nextAt)],
+);`,
+];
+
+/** The app's own keys when the settings give none (push's key pair, the fake provider's secret), kept with the data. */
+const APP_KEYS_TABLE = `export const appKeys = sqliteTable("app_keys", {
+  name: text().primaryKey(),
+  value: text().notNull(),
+});`;
+
+/**
+ * Payments (docs/design/payments.md §3.3, §4.4): each payment asked of the provider for a record,
+ * and its refund lines. Written only by the kit; the paid record is kept as its id, a plain value,
+ * so the line stays when a held record is released.
+ */
+const PAYMENT_TABLES = [
+  `export const payments = sqliteTable(
+  "payments",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    /** The payments entry's name and the paid record's id. */
+    entry: text().notNull(),
+    record: integer().notNull(),
+    /** In hundredths of the currency, as asked of the provider. */
+    amount: integer().notNull(),
+    currency: text().notNull(),
+    /** What the payer sees on the provider's page. */
+    description: text(),
+    status: text({ enum: ["pending", "paid", "failed", "refunding", "refunded"] }).notNull().default("pending"),
+    provider: text().notNull(),
+    providerMode: text({ enum: ["test", "live"] }).notNull(),
+    providerAccount: text(),
+    /** The provider's own id for the payment, and its checkout page while it waits. */
+    reference: text(),
+    checkoutUrl: text(),
+    /** What went wrong, in the app's words. */
+    note: text(),
+    createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+    paidAt: integer({ mode: "timestamp_ms" }),
+    refundedAt: integer({ mode: "timestamp_ms" }),
+  },
+  (t) => [index("payments_record").on(t.entry, t.record), index("payments_status").on(t.status, t.createdAt)],
+);`,
+  `export const paymentRefunds = sqliteTable("payment_refunds", {
+  id: integer().primaryKey({ autoIncrement: true }),
+  paymentId: integer()
+    .notNull()
+    .references(() => payments.id),
+  amount: integer().notNull(),
+  reference: text(),
+  status: text({ enum: ["asked", "done", "refused"] }).notNull().default("asked"),
+  /** Who asked; none for the app itself or the provider's dashboard. */
+  by: text(),
+  createdAt: integer({ mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
+});`,
+];
+
 const OUTGOING_CALL_TABLE = `export const outgoingCall = sqliteTable(
   "outgoing_call",
   {

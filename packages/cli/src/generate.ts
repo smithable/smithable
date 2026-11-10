@@ -13,7 +13,7 @@ import {
   renameModelSql,
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
-import { analyticsOf, YamlEditor } from "@smithable/core";
+import { analyticsOf, paymentProviderOf, YamlEditor } from "@smithable/core";
 import { cardFiles } from "./card.js";
 import { exec, execQuiet, type Io, lap, tool } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
@@ -99,10 +99,14 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
   const analytics = existsSync(contextPath)
     ? analyticsOf(readFileSync(contextPath, "utf8"))
     : undefined;
+  const paymentProvider = existsSync(contextPath)
+    ? paymentProviderOf(readFileSync(contextPath, "utf8"))
+    : undefined;
   const files = generateApp(ir, {
     smithableVersion: VERSION,
     kitRevision: templateKitRevision,
     ...(analytics ? { analytics } : {}),
+    ...(paymentProvider ? { paymentProvider } : {}),
     ...(Object.keys(packages).length ? { packages } : {}),
     auth,
     ...(plugins?.length ? { plugins } : {}),

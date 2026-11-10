@@ -72,6 +72,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="dashboard"",
     "data-part="quiet"",
   ],
+  "src/kit/FakeCheckout.tsx": [
+    "data-kit="fake-checkout"",
+  ],
   "src/kit/FieldInput.tsx": [
     "data-part="input"",
     "data-field=field.name",
@@ -120,6 +123,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/LegalPage.tsx": [
     "data-kit="legal"",
+  ],
+  "src/kit/Live.tsx": [
+    "data-kit="live-notice"",
   ],
   "src/kit/MergeDialog.tsx": [
     "data-part="combine-notice"",
@@ -180,8 +186,14 @@ exports[`every kit component's hooks, as they are 1`] = `
   "src/kit/Overflow.tsx": [
     "data-part="more-actions"",
   ],
+  "src/kit/PaymentBack.tsx": [
+    "data-kit="payment-back"",
+  ],
   "src/kit/PictureInput.tsx": [
     "data-part="picture"",
+  ],
+  "src/kit/PushChoices.tsx": [
+    "data-kit="push-choices"",
   ],
   "src/kit/RecordSummary.tsx": [
     "data-kit="record-summary"",
@@ -210,6 +222,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="slots"",
     "data-part="time"",
     "data-kit="cancel-own"",
+  ],
+  "src/kit/SmsChoices.tsx": [
+    "data-kit="sms-choices"",
   ],
   "src/kit/SplitDialog.tsx": [
     "data-kit="split-button"",
