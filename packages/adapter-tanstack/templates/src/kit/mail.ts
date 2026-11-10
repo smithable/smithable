@@ -6,7 +6,7 @@
 // mail is written to DATA_DIR/mail/outbox as a .eml file, which is how development and the tests
 // see what would have been sent. In production that also happens, with a warning, so a hook
 // never fails a request over a missing mail setting.
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTransport } from "nodemailer";
 import { log } from "./log.server";
@@ -85,7 +85,11 @@ export async function sendMail(mail: Mail): Promise<void> {
   const id = String(info.messageId)
     .replace(/[^\w.-]/g, "")
     .slice(0, 40);
-  writeFileSync(join(outboxDir(), `${stamp}-${id}.eml`), info.message as Buffer);
+  // Written under a hidden name and renamed into place, so a reader of the folder never takes a
+  // half-written mail (readers take *.eml only).
+  const name = `${stamp}-${id}.eml`;
+  writeFileSync(join(outboxDir(), `.${name}.tmp`), info.message as Buffer);
+  renameSync(join(outboxDir(), `.${name}.tmp`), join(outboxDir(), name));
   if (process.env.NODE_ENV === "production")
     log.warn("A mail was not sent: no SMTP settings (SMTP_URL, or SMTP_HOST and the others)", {
       kept: outboxDir(),
