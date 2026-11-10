@@ -70,7 +70,11 @@ export function apiParts(ir: SpecIR, auth: AuthIR, t: Texts) {
         Boolean(a.custom && a.rows && offered.rowsActions.includes(a.name)),
     ),
     /** What a call without a key may do (api-only.md §3.4): read and add, never more. */
-    visitors: offered.visitors,
+    // A visitor's create would skip paying on a model paid to be created (payments.md §4.7).
+    visitors: {
+      ...offered.visitors,
+      create: offered.visitors.create.filter((name) => !modelNamed(ir, name).heldByPayment),
+    },
   };
 }
 

@@ -1,0 +1,8 @@
+id: push-unavailable-words
+title: Turning on notifications in a browser that cannot keep the app's worker showed a script error instead of the app's words.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/PushChoices.tsx]
+migration: none

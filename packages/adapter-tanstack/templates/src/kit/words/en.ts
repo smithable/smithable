@@ -507,6 +507,7 @@ export const w = {
   smsRemove: "Remove my number",
   notifications: "Notifications",
   notificationsHelp: "In this browser, also when the app is closed. Turn on each you want.",
+  pushUnavailable: "This browser cannot take notifications from this app.",
   pushRefused: "The browser did not allow notifications. Allow them in its settings for this site.",
   importIt: "Import",
   importTitle: (plural: string) => `Import ${plural.toLowerCase()} from a file`,
@@ -736,6 +737,21 @@ export const w = {
   orderClosed: (opens?: string) => (opens ? `Closed, opens ${opens}` : "Closed"),
   orderSoldOut: (label: string) => `Sold out: ${label}`,
   orderEmpty: "Nothing chosen yet.",
+  /** Payments (payments.md §3.4, §4.2). */
+  payAmount: (amount: string) => `Pay ${amount}`,
+  paymentPaid: (amount: string) => `Paid ${amount}. Thank you!`,
+  paymentWaiting: "Waiting for the payment to be confirmed",
+  paymentReceiptLater: "The payment provider's receipt will tell you when it is done.",
+  paymentHeldUntil: (time: string) => `Your place is held until ${time}.`,
+  paymentRefunded: "The payment was refunded.",
+  paymentNotMade: "The payment was not made, and nothing was charged.",
+  paymentFake: "Test payment: no money moves",
+  paymentApprove: "Approve",
+  paymentDecline: "Decline",
+  paymentUnavailable: "Payment is not possible right now. Please try again.",
+  paymentGone: "This payment is no longer open.",
+  paymentUnmatched:
+    "The payment came, but not as asked, so nothing was ordered. It will be refunded.",
   /** A chart's bar for a quarter: "Q3 2026". */
   quarterOf: (quarter: number, year: string) => `Q${quarter} ${year}`,
   /** A list's totals row (intents.md §5): "Total of 12". */

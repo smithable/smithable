@@ -37,6 +37,7 @@ const b64 = (buffer: ArrayBuffer | null) =>
 /** This browser's subscription, made (asking the browser) when `make` and none is there yet. */
 async function thisBrowser(publicKey?: string): Promise<PushSubscription | null> {
   const registration = await navigator.serviceWorker.register("/sw.js");
+  if (!registration?.pushManager) throw new Error("no push here");
   let kept = await registration.pushManager.getSubscription();
   // Made with an earlier key pair of the app's: no longer good, so made again.
   if (
@@ -97,7 +98,14 @@ export function PushChoices({ api }: { api: PushApi }) {
   const toggle = async (entry: string, on: boolean) => {
     setProblem(undefined);
     try {
-      const sub = await thisBrowser(on ? list.publicKey : undefined);
+      // A browser that cannot keep the app's worker (some headless or private windows) says so
+      // in the app's words, not a script error.
+      let sub: PushSubscription | null;
+      try {
+        sub = await thisBrowser(on ? list.publicKey : undefined);
+      } catch {
+        return setProblem(on ? w.pushUnavailable : undefined);
+      }
       if (on && !sub) return setProblem(w.pushRefused);
       const { on: left } = await api.set({
         entry,

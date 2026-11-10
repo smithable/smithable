@@ -72,6 +72,9 @@ exports[`every kit component's hooks, as they are 1`] = `
     "data-kit="dashboard"",
     "data-part="quiet"",
   ],
+  "src/kit/FakeCheckout.tsx": [
+    "data-kit="fake-checkout"",
+  ],
   "src/kit/FieldInput.tsx": [
     "data-part="input"",
     "data-field=field.name",
@@ -182,6 +185,9 @@ exports[`every kit component's hooks, as they are 1`] = `
   ],
   "src/kit/Overflow.tsx": [
     "data-part="more-actions"",
+  ],
+  "src/kit/PaymentBack.tsx": [
+    "data-kit="payment-back"",
   ],
   "src/kit/PictureInput.tsx": [
     "data-part="picture"",
