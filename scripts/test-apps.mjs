@@ -1775,6 +1775,7 @@ async function kioskPaymentFlow(dir, base) {
     const secret = one("select value from app_keys where name = 'payments-fake'").value;
     return [body, createHmac("sha256", secret).update(body).digest("hex")];
   };
+  let step = "the pay button";
   try {
     // The dev server takes the new spec a moment after the change.
     await waitFor("the pay button", async () => {
@@ -1789,12 +1790,14 @@ async function kioskPaymentFlow(dir, base) {
     let before = mails().length;
     const paid = await orderUpTo("Paula Paid");
     if (!orderOf(paid)?.held) throw new Error("the order is not held while it is paid");
+    step = "staff do not see an unpaid order";
     const staff = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await signInAs(staff, base, "admin");
     await open(staff, `${base}/orders`);
     if (await staff.getByText("Paula Paid").count()) throw new Error("staff see an unpaid order");
     if (subjects(before).includes("A new order"))
       throw new Error("staff were told of an unpaid order");
+    step = "approve and come back paid";
     await page.getByRole("button", { name: "Approve" }).click();
     await page
       .getByRole("heading", { name: /^Paid .+ Thank you!$/ })
@@ -1804,9 +1807,11 @@ async function kioskPaymentFlow(dir, base) {
     await waitFor("mail to staff of the paid order", () =>
       subjects(before).includes("A new order"),
     );
+    step = "staff see the paid order";
     await open(staff, `${base}/orders`);
-    await staff.getByText("Paula Paid").first().waitFor();
+    await staff.getByRole("row", { name: /Paula Paid/ }).waitFor({ timeout: 15000 * P });
     // Declined: the Payment failed and the order gone, its place freed.
+    step = "decline";
     const declined = await orderUpTo("Dina Declined");
     await page.getByRole("button", { name: "Decline" }).click();
     await page
@@ -1814,6 +1819,7 @@ async function kioskPaymentFlow(dir, base) {
       .waitFor({ timeout: 15000 * P });
     if (orderOf(declined)?.id) throw new Error("a declined order stays");
     // Cancelled and left: the back page offers Pay again; after the hold, the timer releases it.
+    step = "cancel and the hold timer";
     const left = await orderUpTo("Lars Left");
     await page.getByRole("button", { name: "Cancel" }).click();
     await page.getByText("Waiting for the payment to be confirmed").waitFor({ timeout: 15000 * P });
@@ -1824,6 +1830,7 @@ async function kioskPaymentFlow(dir, base) {
     if (gone.status !== "failed" || gone.note !== "not paid in time")
       throw new Error(`a released Payment is ${JSON.stringify(gone)}`);
     // The provider's word twice: acted on once.
+    step = "the word twice";
     const twice = await orderUpTo("Tove Twice");
     const { amount } = one(`select amount from payments where id = ${twice}`);
     before = mails().length;
@@ -1847,6 +1854,7 @@ async function kioskPaymentFlow(dir, base) {
     if (subjects(before).filter((s) => s === "A new order").length !== 1)
       throw new Error("staff were told twice of one order");
     // A wrong amount: recorded with its note, the order released, never let out unpaid.
+    step = "a wrong amount";
     const wrong = await orderUpTo("Walt Wrong");
     const asked = one(`select amount from payments where id = ${wrong}`).amount;
     const [less, lessSigned] = signed({
@@ -1869,7 +1877,7 @@ async function kioskPaymentFlow(dir, base) {
     );
   } catch (error) {
     console.log(
-      `  ✗ kiosk payments: ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
+      `  ✗ kiosk payments (${step}): ${error.message.split("\n")[0]}\n    at ${page.url()}, see ${await screenshot(page)}`,
     );
     failures.push("kiosk payment flow");
   } finally {
