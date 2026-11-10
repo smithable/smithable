@@ -19,6 +19,7 @@ import {
   importList,
   indexPath,
   literal,
+  modelNamed,
   names,
   type Texts,
 } from "../shared.js";
@@ -90,6 +91,16 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
           .map((m) => t.modelPluralLabel(m).toLowerCase()),
       ),
     ],
+    // Payments (payments.md): what is paid for on the provider's page.
+    ...(ir.payments.length
+      ? {
+          payAbout: [
+            ...new Set(
+              ir.payments.map((p) => t.modelPluralLabel(modelNamed(ir, p.on)).toLowerCase()),
+            ),
+          ],
+        }
+      : {}),
     // Texts (notifications.md §5): what they are about.
     ...(smsEntries(ir, auth).length
       ? {

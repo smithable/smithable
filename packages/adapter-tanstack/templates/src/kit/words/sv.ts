@@ -666,6 +666,9 @@ export const w = {
     `Besök räknas med ${provider}, som inte sätter någon kaka och inte sparar personuppgifter.`,
   legalAnalyticsConsent: (provider: string) =>
     `Besök räknas med ${provider} först när du godkänt det i kakrutan. Du kan ändra ditt val under Kakinställningar längst ner på sidan.`,
+  legalPayTitle: "Betalningar",
+  legalPay: (labels: string[]) =>
+    `Betalningar för ${labels.join(", ")} görs på betaltjänstens egen sida, som appens ägare valt; betaltjänsten har egna villkor för personuppgifter. Appen sparar beloppet, om det betalades eller återbetalades och betaltjänstens referens, aldrig dina kort- eller bankuppgifter.`,
   legalSmsTitle: "Sms till din telefon",
   legalSms: (labels: string[]) =>
     `Om du anger ditt mobilnummer under ditt namn, bekräftar det med koden som sms:as till det och slår på sms, sms:ar appen dig om nya ${labels.join(", ")}. Ett nummer du anger med en egen post kan få ett sms om den posten, när någon som arbetar i appen gör något med den. Sms:en går via den sms-leverantör appens ägare har valt. Ditt nummer används inte till något annat; att ta bort det under ditt namn avslutar sms:en.`,
@@ -714,6 +717,7 @@ export const w = {
   refundRefused:
     "Betaltjänsten nekade återbetalningen. Försök igen senare, eller återbetala hos betaltjänsten.",
   payments: "Betalningar",
+  allPayments: "Alla betalningar",
   refund: "Återbetala",
   refundAsk: (amount: string) => `Återbetala ${amount} till betalaren?`,
   paymentStatus: (status: string) =>
@@ -925,6 +929,8 @@ export const w = {
     push: (text: string) =>
       `En webbläsaravisering: ${text}. Rubrikraden och länken går krypterade via webbläsarens egen avisering (Googles, Apples, Mozillas eller Microsofts) till dem som har slagit på den.`,
     callsIn: (text: string) => `Inkommande anrop: ${text}`,
+    payments: (on: string) =>
+      `Betalningar för ${on}: görs på betaltjänstens sida (den ägaren väljer, PAYMENTS_SECRET_KEY) och registreras på dess signerade besked. Appen sparar beloppet, läget och betaltjänstens referens, aldrig kort- eller bankuppgifter.`,
     sentNone: "Bara texten skickas.",
     sentAll: "Fälten som postens sida visar skickas.",
     sentFields: (fields: string) => `Fält som skickas: ${fields}.`,

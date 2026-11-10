@@ -6497,13 +6497,21 @@ async function invoicePaymentFlow(dir, base) {
     const [line] = query(dir, 'select status, "by" from payment_refunds order by id desc limit 1');
     if (payment.status !== "refunded" || line.status !== "done" || line.by !== me.id)
       throw new Error(`refunded: ${JSON.stringify({ payment, line })}`);
+    step = "the Payments page";
+    await page.getByRole("link", { name: "All payments" }).click();
+    await page.waitForURL(/\/payments\/?$/);
+    await page
+      .locator('[data-part="payment"]')
+      .getByText("Invoice PAY-001")
+      .waitFor({ timeout: 15000 * P });
+    await page.locator('[data-part="payment"]').getByText("Refunded").first().waitFor();
     step = "a draft asks for nothing";
     await open(page, `${base}/invoices/${draft.id}`);
     await hydrated(page);
     if (await page.getByRole("button", { name: /^Pay / }).count())
       throw new Error("a draft invoice offers Pay");
     console.log(
-      "  ✓ browser: a sent invoice is paid on its page through the fake provider and marked paid; its owner refunds it; a draft asks for nothing",
+      "  ✓ browser: a sent invoice is paid on its page through the fake provider and marked paid; its owner refunds it and finds it on the Payments page; a draft asks for nothing",
     );
   } catch (error) {
     console.log(

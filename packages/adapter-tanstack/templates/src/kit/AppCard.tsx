@@ -105,6 +105,7 @@ export interface CardFacts {
     push?: CardSent[];
     /** Texts, through the owner's SMS provider. */
     sms?: CardSent[];
+    payments?: { on: string }[];
     calls: CardSent[];
     incoming: { name: string; creates?: string; custom: boolean; mail: boolean; text: string }[];
     analytics?: { provider: string; cookies: boolean };
@@ -272,6 +273,7 @@ export function AppCard({ cards, main }: { cards: Record<string, CardFacts>; mai
   // A push carries the title line and the link alone, encrypted, through the browser's service.
   for (const p of outside.push ?? []) talks.push(c.push(p.text));
   for (const x of outside.sms ?? []) talks.push(c.sms(x.text));
+  for (const p of outside.payments ?? []) talks.push(c.payments(p.on));
   for (const x of outside.calls) talks.push(`${c.call(x.to, x.text)}${sent(x.fields)}`);
   for (const i of outside.incoming) talks.push(c.callsIn(i.text));
   if (access.api) talks.push(c.apiTalks);

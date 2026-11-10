@@ -43,6 +43,8 @@ export interface PaymentEntry {
   paid: (tx: Tx, record: number, amount: number) => true | string;
   /** Removes a held record nobody paid for, its place freed. */
   release: (tx: Tx, record: number) => void;
+  /** After a held record's payment is recorded: the app's own afterCreate, which waited for it. */
+  after?: (record: number) => Promise<void>;
 }
 
 /** The provider's verified word about a payment, as the kit acts on it. */
@@ -339,6 +341,19 @@ function fail(tx: Tx, payment: Payment, note: string): boolean {
  * PAYMENT_MOVES allow. Any other event changes nothing. Returns what became of it.
  */
 export function applyEvent(event: PaymentEvent, from: Provider): "done" | "seen" | "unknown" {
+  // What runs once the transaction is in: a paid record's afterCreate (custom code, never inside it).
+  const afterwards: (() => Promise<void>)[] = [];
+  const result = recordEvent(event, from, afterwards);
+  for (const work of afterwards)
+    work().catch((error) => log.error("A paid record's afterCreate failed", { error }));
+  return result;
+}
+
+function recordEvent(
+  event: PaymentEvent,
+  from: Provider,
+  afterwards: (() => Promise<void>)[],
+): "done" | "seen" | "unknown" {
   return db.transaction((tx) => {
     const payment = tx.select().from(payments).where(eq(payments.id, event.payment)).get();
     // Only a Payment the app made, at this provider, in this mode and account, with its reference.
@@ -394,6 +409,10 @@ export function applyEvent(event: PaymentEvent, from: Provider): "done" | "seen"
     const done = note || !entry ? true : entry.paid(tx, payment.record, payment.amount);
     if (done !== true)
       tx.update(payments).set({ note: done }).where(eq(payments.id, payment.id)).run();
+    else if (entry?.created && entry.after) {
+      const after = entry.after;
+      afterwards.push(() => after(payment.record));
+    }
     return "done";
   });
 }
@@ -759,3 +778,38 @@ if (import.meta.env.SSR) {
 /** A Payment as stored, for a refund's checks. */
 export const paymentRow = (id: number): Payment | undefined =>
   db.select().from(payments).where(eq(payments.id, id)).get();
+
+/** Whether a person sees the Payments page: admins and the roles any entry lets refund (§3.3). */
+export const seesPayments = (viewer: Viewer | null) =>
+  Boolean(
+    viewer &&
+      ["admin", ...Object.values(PAYMENT_ENTRIES).flatMap((e) => e.refund?.by ?? [])].includes(
+        viewer.role,
+      ),
+  );
+
+/** The Payments page (§3.3): all of them, newest first, filtered by status, 200 at most. */
+export function allPayments(viewer: Viewer | null, status?: Payment["status"]) {
+  if (!seesPayments(viewer)) return null;
+  return db
+    .select()
+    .from(payments)
+    .where(status ? eq(payments.status, status) : undefined)
+    .orderBy(desc(payments.createdAt))
+    .limit(200)
+    .all()
+    .map((p) => ({
+      id: p.id,
+      model: PAYMENT_ENTRIES[p.entry]?.model ?? p.entry,
+      record: p.record,
+      amount: p.amount,
+      currency: p.currency,
+      status: p.status,
+      at: (p.paidAt ?? p.createdAt).toISOString(),
+      reference: p.reference,
+      note: p.note,
+      description: p.description ?? "",
+      // The page has no record to read: a refund that depends on one is made on the record's page.
+      refundable: mayRefund(viewer, p),
+    }));
+}

@@ -105,7 +105,16 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
       tx.delete(${table}).where(eq(${table}.id, record)).run();`
         : ""
     }
-    },
+    },${
+      created && model.heldByPayment
+        ? `
+    async after(record) {
+      // Its own afterCreate waited for the payment, as its "created" mail did.
+      const row = db.select().from(${table}).where(eq(${table}.id, record)).get();
+      if (row) await afterChange("afterCreate", ${JSON.stringify(model.name)}, row, APP);
+    },`
+        : ""
+    }
   },`;
   });
   const formulaImports = [...new Set([...formulas, ...withFormulas])].map(
@@ -117,13 +126,13 @@ export function paymentsServerModule(ir: SpecIR, provider: string): string {
   );
   return `${HEADER}import { ${releases ? "and, eq, isNotNull" : "eq"} } from "drizzle-orm";
 ${SCHEMA_IMPORT}
-${told.size ? 'import type { Viewer } from "#/kit/access";\n' : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${usesFits ? 'import { fits } from "#/kit/model";\n' : ""}import type { PaymentEntry } from "#/kit/payments.server";
-${told.size ? 'import { outgoing } from "./outgoing.server";\n' : ""}${formulaImports.join("\n")}${formulaImports.length ? "\n" : ""}
+${releases ? 'import { db } from "#/db";\n' : ""}${told.size || releases ? 'import type { Viewer } from "#/kit/access";\n' : ""}${usesF ? 'import { F } from "#/kit/formula";\n' : ""}${usesFits ? 'import { fits } from "#/kit/model";\n' : ""}import type { PaymentEntry } from "#/kit/payments.server";
+${releases ? 'import { afterChange } from "./hooks";\n' : ""}${told.size ? 'import { outgoing } from "./outgoing.server";\n' : ""}${formulaImports.join("\n")}${formulaImports.length ? "\n" : ""}
 /** The provider smithable.context.yml names; the fake when it names none (a release then takes no payments). */
 export const PAYMENTS_PROVIDER = ${JSON.stringify(provider)};
 
 ${
-  told.size
+  told.size || releases
     ? `/** The app itself, as a payment is recorded: no role's grants apply. */
 const APP: Viewer = { id: "payments", name: "", email: "", role: "", system: true };
 `
@@ -190,6 +199,16 @@ export const payRecord = createServerFn({ method: "POST" })
     if (!row) throw new AccessDenied(viewer !== null);
     const { startPayment } = await import("#/kit/payments.server");
     return startPayment(data.entry, row, DESCRIBE[data.entry]?.(row) ?? "");
+  });
+
+/** The Payments page's rows, for admins and the refund roles (§3.3). */
+export const listPayments = createServerFn()
+  .validator(z.enum(["pending", "paid", "failed", "refunding", "refunded"]).optional())
+  .handler(async ({ data: status }) => {
+    const { allPayments } = await import("#/kit/payments.server");
+    const rows = allPayments(await currentViewer(), status);
+    if (!rows) throw new AccessDenied(false);
+    return rows;
   });
 
 /** Refund a paid payment in full (§4.4), for admins and the entry's refund roles. */
@@ -268,6 +287,44 @@ export const fakeEvent = createServerFn({ method: "POST" })
 /** The routes: the return page, the fake provider's page, and the provider's address. */
 export function paymentRoutes(provider: string): { path: string; content: string }[] {
   const pages = [
+    {
+      path: "src/routes/payments/index.tsx",
+      content: `${HEADER}import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { app } from "#/generated/app";
+import { listPayments, refundPayment } from "#/generated/payments";
+import { PaymentsPage } from "#/kit/PaymentsPage";
+
+type Status = "pending" | "paid" | "failed" | "refunding" | "refunded";
+const STATES: string[] = ["pending", "paid", "failed", "refunding", "refunded"];
+
+export const Route = createFileRoute("/payments/")({
+  validateSearch: (search: Record<string, unknown>): { status?: Status } =>
+    STATES.includes(String(search.status)) ? { status: search.status as Status } : {},
+  loaderDeps: ({ search }) => search,
+  loader: ({ deps }) => listPayments({ data: deps.status }),
+  head: () => ({ meta: [{ name: "robots", content: "noindex" }] }),
+  component: PaymentsRoute,
+});
+
+function PaymentsRoute() {
+  const { status } = Route.useSearch();
+  const navigate = useNavigate();
+  const router = useRouter();
+  return (
+    <PaymentsPage
+      rows={Route.useLoaderData()}
+      status={status}
+      timeZone={app.timeZone}
+      choose={(next) => navigate({ to: "/payments", search: next ? { status: next as Status } : {} })}
+      refund={async (payment) => {
+        await refundPayment({ data: payment });
+        await router.invalidate();
+      }}
+    />
+  );
+}
+`,
+    },
     {
       path: "src/routes/payments/$id.back.tsx",
       content: `${HEADER}import { createFileRoute } from "@tanstack/react-router";

@@ -59,6 +59,12 @@ export function RecordPayments({
     <Card data-kit="record-payments" className="mb-6 space-y-3 p-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{w.payments}</h2>
+        {/* Those who see the provider's reference may open every payment (the Payments page). */}
+        {lines.some((p) => "reference" in p) && (
+          <a href="/payments" className="text-sm underline">
+            {w.allPayments}
+          </a>
+        )}
         {offer && (
           <Button
             disabled={busy}

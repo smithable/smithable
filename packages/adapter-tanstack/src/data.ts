@@ -324,9 +324,18 @@ export const ${reserveNames(model).places} = createServerFn()
 /** Takes a place in one step: the other fields have their defaults. */
 export const ${reserveNames(model).book} = createServerFn({ method: "POST" })
   .validator(z.number().int())
-  .handler(async ({ data: id }) =>
+  .handler(async ({ data: id }) =>${
+    payToCreate(ir, model)
+      ? ` {
+    // A place paid for (payments.md §4.1): held, then on to the provider's page.
+    const made = await ${n.data}.create(await writer(), { ${capacity.per}Id: id } as ${n.values}${ir.pages.some((p) => p.pattern.kind === "order" && p.pattern.into === model.name) ? ", undefined" : ""}, true);
+    const { payFor } = await import("#/kit/payments.server");
+    return { ...made, pay: made.payHeldAt ? await payFor(${JSON.stringify(payToCreate(ir, model)?.name)}, made.id) : undefined };
+  });`
+      : `
     ${n.data}.create(await writer(), { ${capacity.per}Id: id } as ${n.values}),
-  );
+  );`
+  }
 `
       : "";
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";

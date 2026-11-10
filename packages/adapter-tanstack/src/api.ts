@@ -1388,7 +1388,11 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       return { ...kind.toApi(row as Record<string, any>), ...lists };
     }
     case "add": {
-      const kind = kindOf(args);
+      const kind = kindOf(args);${
+        ir.models.some((m) => m.heldByPayment)
+          ? `\n      // Paid to be made (payments.md §4.7): only on its own page, where it is paid.\n      if (${JSON.stringify(ir.models.filter((m) => m.heldByPayment).map((m) => m.name))}.includes(String(args.kind))) throw new BadInput(\`A \${kind.label} is paid for when it is made, so it is made on its own page.\`);`
+          : ""
+      }
       return kind.toApi(await kind.data.create(viewer, kind.fromApi(args.values ?? {}) as never));
     }
     case "change": {
