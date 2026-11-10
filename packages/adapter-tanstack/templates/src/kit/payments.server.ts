@@ -15,8 +15,16 @@ import type { Viewer } from "./access";
 import { audit } from "./audit.server";
 import { log } from "./log.server";
 import { type Condition, fits } from "./model";
+import {
+  appAddress,
+  mollieProvider,
+  ProviderRefused,
+  stripeProvider,
+} from "./payments-providers.server";
 import { BadInput } from "./refusal";
 import { w } from "./words";
+
+export { ProviderRefused };
 
 /** A transaction, as a record is made inside one. */
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -83,7 +91,14 @@ export interface Provider {
     /** The same for every try of one Payment's checkout, so a retried request makes no second session. */
     idempotencyKey: string;
   }) => Promise<{ reference: string; url: string; account?: string }>;
-  verifyEvent: (request: Request, body: string) => Promise<PaymentEvent | null>;
+  /**
+   * The provider's call verified by its own scheme: the events it carries (none when it is about
+   * nothing of the app's), or null when it is not the provider's. A provider whose calls carry only
+   * an id asks for the payment and gives what it found (Mollie).
+   */
+  verifyEvent: (request: Request, body: string) => Promise<PaymentEvent[] | null>;
+  /** Closes an open checkout before its held record is released, where the provider can. */
+  close?: (reference: string) => Promise<void>;
   /** Asked by the hold timer before a held record is released; "open" lets it go. */
   status?: (reference: string) => Promise<"paid" | "open" | "processing">;
   /** A refund of a paid payment: done when the provider says so at once, else its call says so later. */
@@ -123,7 +138,7 @@ export const fake: Provider = {
     return typeof event.id === "string" &&
       Number.isInteger(event.payment) &&
       ["paid", "failed", "refunded", "refund-refused"].includes(event.kind)
-      ? event
+      ? [event]
       : null;
   },
   async refund({ idempotencyKey }) {
@@ -197,24 +212,25 @@ export async function receive(request: Request, name: string): Promise<Response>
   if (length > 64 * 1024) return answer(413);
   const body = await request.text();
   if (body.length > 64 * 1024) return answer(413);
-  let event: PaymentEvent | null = null;
+  let events: PaymentEvent[] | null;
   try {
-    event = await chosen.verifyEvent(request, body);
-  } catch {
-    event = null;
+    events = await chosen.verifyEvent(request, body);
+  } catch (error) {
+    // The provider could not be asked (a provider that verifies by asking): it calls again.
+    log.error("A payments call could not be verified now", { provider: name, error });
+    return answer(500);
   }
-  if (!event) {
+  if (!events) {
     log.warn("A payments call was refused: not verified", { provider: name });
     return answer(401);
   }
   try {
-    const done = applyEvent(event, chosen);
-    if (done === "unknown") {
-      log.warn("A payments call was refused: not a payment of this app", {
-        provider: name,
-        payment: event.payment,
-      });
-      return answer(401);
+    for (const event of events) {
+      if (applyEvent(event, chosen) === "unknown")
+        log.warn("A payments call named a payment the app did not make", {
+          provider: name,
+          payment: event.payment,
+        });
     }
     return answer(200);
   } catch (error) {
@@ -224,7 +240,11 @@ export async function receive(request: Request, name: string): Promise<Response>
   }
 }
 
-const PROVIDERS: Record<string, Provider> = { fake };
+const PROVIDERS: Record<string, Provider> = {
+  fake,
+  stripe: stripeProvider,
+  mollie: mollieProvider,
+};
 
 /** The app's provider (the context file's), or none when it cannot be used here. */
 export function provider(): Provider | undefined {
@@ -294,7 +314,8 @@ export async function checkout(id: number): Promise<string> {
       amount: payment.amount,
       currency: payment.currency,
       description: payment.description ?? "",
-      back: `/payments/${payment.id}/back`,
+      // The fake's page is the app's own; a provider sends the payer back to the app's address.
+      back: `${chosen.name === "fake" ? "" : appAddress()}/payments/${payment.id}/back`,
       expiresAt: new Date(payment.createdAt.getTime() + holdMinutes() * MINUTE),
       idempotencyKey: `payment-${payment.id}-checkout`,
     });
@@ -543,7 +564,6 @@ export function mayRefund(viewer: Viewer | null, payment: Payment, row?: Record<
 }
 
 /** A clear refusal by the provider (not an unanswered call, which is asked again with the same key). */
-export class ProviderRefused extends Error {}
 
 /**
  * Refunds what is left of a paid Payment (§4.4): marked refunding in one transaction with its
@@ -842,6 +862,8 @@ export async function releaseExpired(now = Date.now()): Promise<number> {
       try {
         const state = await chosen.status(payment.reference);
         if (state === "processing") continue;
+        // Closed at the provider first, so it cannot be paid after the place is gone.
+        if (state === "open" && chosen.close) await chosen.close(payment.reference);
         if (state === "paid") {
           applyEvent(
             {
