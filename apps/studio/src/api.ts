@@ -120,6 +120,11 @@ export interface Project {
   preview: string;
   /** Ephemeral identity of this editor project, supplied by its authenticated host. */
   lookProject?: string;
+  /**
+   * The project's folder on this machine, for "Open in your editor" links to its custom code; only
+   * when Studio runs on the person's own machine (never on a host, whose paths mean nothing there).
+   */
+  localDir?: string;
   /** Where the project's publishing and settings live, when Studio is hosted. */
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */

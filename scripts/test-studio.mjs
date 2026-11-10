@@ -2349,13 +2349,23 @@ try {
     await customers.getByRole("button", { name: "Make this page's code your own" }).click();
     await customers
       // The notice shows until the files' refresh says the page is its own, which under load may come first.
-      .getByText(/the page is now src\/custom\/pages\/customers\.tsx|This page's code is your own/)
+      .getByText(
+        /the page is now src\/custom\/pages\/customers\.tsx|This is code: the app's maker writes it/,
+      )
       // Either says it, and both may show at once.
       .first()
       .waitFor({ timeout: 60000 * P });
-    await page
-      .getByText("This page's code is your own: src/custom/pages/customers.tsx")
-      .waitFor({ timeout: 60000 * P });
+    // Once it is, its file with a link that opens it in the person's editor (what-it-does.md §3).
+    const code = page
+      .locator('[data-part="code-files"]')
+      .filter({ hasText: "src/custom/pages/customers.tsx" });
+    await code.first().waitFor({ timeout: 60000 * P });
+    const link = await code
+      .first()
+      .getByRole("link", { name: "Open in your editor" })
+      .getAttribute("href");
+    if (!/^vscode:\/\/file\/.+\/src\/custom\/pages\/customers\.tsx$/.test(link ?? ""))
+      throw new Error(`the editor link is ${link}`);
   });
   await step(
     "a landing page and a contact section show in the preview, with a theme and background of their own from Look",

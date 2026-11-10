@@ -2,7 +2,7 @@
 // Who can and Content (the texts, with Languages under them). What the preview reports in it
 // lands here: a part picked in Select opens Behavior at it, columns dragged and texts changed in
 // place are made as changes.
-import { formatFormula, humanize, type ModelIR } from "@smithable/core";
+import { formatFormula, humanize, kebab, type ModelIR } from "@smithable/core";
 import { describeChange, type SummarySection, summarize } from "@smithable/index";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Project } from "../api";
@@ -11,7 +11,7 @@ import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Panel, Tabs } from "../ui";
 import { ActionPicture } from "./ActionPicture";
 import type { Run } from "./ChangeForms";
-import { ImportRecords, OwnCode } from "./EntryTools";
+import { CodeFiles, ImportRecords, OwnCode } from "./EntryTools";
 import { ExamplesTable } from "./ExamplesTable";
 import { Languages } from "./Languages";
 import { Look } from "./Look";
@@ -297,6 +297,21 @@ export function NoCode({
                 return <ValueOrigin models={spec.ir.models} concept={picked.concept} />;
               if (path.length !== 2 || typeof name !== "string") return undefined;
               if (area === "models") return <ImportRecords model={name} run={run} />;
+              // A part's own code (what-it-does.md §3): its files under src/custom, as the index found them.
+              const codeOf = (concept: string) =>
+                project.concepts
+                  .find((c) => c.concept === concept)
+                  ?.files.map((f) => f.path)
+                  .filter((p) => p.startsWith("src/custom/")) ?? [];
+              if (area === "queries")
+                return <CodeFiles files={codeOf(`query:${name}`)} dir={project.localDir} />;
+              if (area === "incoming" && spec.ir?.incoming.find((i) => i.name === name)?.custom)
+                return (
+                  <CodeFiles
+                    files={[`src/custom/incoming/${kebab(name)}.ts`]}
+                    dir={project.localDir}
+                  />
+                );
               // A custom action: the picture its contract draws (intents.md §7), and its examples (§6).
               const custom = spec.ir?.actions.find((a) => a.name === name && a.custom);
               if (area === "actions" && spec.ir && custom?.custom)
@@ -311,12 +326,15 @@ export function NoCode({
                       }}
                     />
                     <ExamplesTable examples={custom.examples ?? []} />
+                    <CodeFiles files={codeOf(`action:${name}`)} dir={project.localDir} />
                   </div>
                 );
               if (area === "pages")
                 return (
                   <OwnCode
                     page={name}
+                    files={codeOf(`page:${name}`)}
+                    dir={project.localDir}
                     own={Boolean(
                       project.concepts
                         .find((c) => c.concept === `page:${name}`)
