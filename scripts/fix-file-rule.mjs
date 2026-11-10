@@ -15,6 +15,19 @@ if (!base) {
 }
 // From where the branch left the base, so the base's own later changes are not counted.
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" });
+// Where the branch left the base: the files as they were then.
+const from = git("merge-base", base, "HEAD").trim();
+/** A file at a commit, or undefined where it is not there. */
+const show = (spec) => {
+  try {
+    return execFileSync("git", ["show", spec], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return undefined;
+  }
+};
 const changed = (filter, ...paths) =>
   git("diff", "--name-only", `--diff-filter=${filter}`, `${base}...HEAD`, "--", ...paths)
     .split("\n")
@@ -30,6 +43,7 @@ const { ok, why } = await fixFileRule({
   engine,
   fixes: changed("AM", "fixes/*.yml"),
   diffOf: (path) => git("diff", "--unified=0", `${base}...HEAD`, "--", path),
+  filesOf: (path) => ({ before: show(`${from}:${path}`), after: show(`HEAD:${path}`) }),
   labelled: process.env.NO_FIX_FILE === "true" || Boolean(now?.labelled),
   body: now?.body ?? process.env.PR_BODY,
   advisories: async (pins) => {

@@ -20,10 +20,8 @@ const bumpDiff = (from: string, to: string) => `--- a/${STACK_FILE}
 +    srvx: "1.0.8",
 `;
 const KIT = "packages/adapter-tanstack/templates/src/kit/Upload.tsx";
-const kitDiff = `@@ -3 +3 @@
--  const limit = 10;
-+  const limit = 20;
-`;
+const kitBefore = "export const limit = 10;\n";
+const kitAfter = "export const limit = 20;\n";
 const advisory = (range: string, patched: string): Advisory => ({
   id: "GHSA-test",
   severity: "high",
@@ -35,6 +33,7 @@ const input = (over: Partial<RuleInput>): RuleInput => ({
   engine: [STACK_FILE],
   fixes: [],
   diffOf: () => bumpDiff("1.7.13", "1.7.15"),
+  filesOf: () => ({ before: kitBefore, after: kitAfter }),
   labelled: false,
   body: "",
   advisories: async () => [],
@@ -64,7 +63,7 @@ test("advisories that could not be read pass nothing by themselves", async () =>
 });
 
 test("a kit change passes with a written declaration, and fails without one", async () => {
-  const kit = { engine: [KIT], diffOf: () => kitDiff };
+  const kit = { engine: [KIT] };
   expect((await fixFileRule(input(kit))).ok).toBe(false);
   const declared = await fixFileRule(
     input({
@@ -81,7 +80,6 @@ test("a kit change passes with a written declaration, and fails without one", as
 test("a bump together with a kit change is no plain bump", async () => {
   const both = input({
     engine: [STACK_FILE, KIT],
-    diffOf: (p) => (p === KIT ? kitDiff : bumpDiff("1.7.13", "1.7.15")),
   });
   expect((await fixFileRule(both)).ok).toBe(false);
 });
@@ -90,7 +88,10 @@ test("comments and documents only pass by themselves", async () => {
   const result = await fixFileRule(
     input({
       engine: [KIT, "packages/adapter-tanstack/templates/README.md"],
-      diffOf: () => "@@ -1 +1 @@\n-// old words\n+// new words\n+\n",
+      filesOf: () => ({
+        before: "// old words\nexport const a = 1; /* one */\n",
+        after: "// new words\n\nexport const a = 1; /* the first */\n",
+      }),
     }),
   );
   expect(result).toMatchObject({ ok: true });
@@ -108,7 +109,17 @@ test("the parts", () => {
     { name: "srvx", from: "1.0.7", to: "1.0.8" },
   ]);
   expect(pinBumps(`-  id: "2026-09",\n+  id: "2026-10",\n`)).toBeUndefined();
-  expect(commentsOnly(KIT, kitDiff)).toBe(false);
+  expect(commentsOnly(KIT, kitBefore, kitAfter)).toBe(false);
+  // Code that looks like a comment line is code: a product split over two lines.
+  expect(commentsOnly(KIT, "const t = a\n  * b;\n", "const t = a\n  * c;\n")).toBe(false);
+  // A comment inside a template string is the generator's output: a change (fails closed).
+  expect(commentsOnly(KIT, "const s = `// one`;\n", "const s = `// two`;\n")).toBe(false);
+  expect(commentsOnly(KIT, "const s = `${a /* x */}`;\n", "const s = `${a /* y */}`;\n")).toBe(
+    true,
+  );
+  expect(commentsOnly(KIT, "const u = 'http://a';\n", "const u = 'http://b';\n")).toBe(false);
+  expect(commentsOnly("x.css", "a{}", "a{}")).toBe(false);
+  expect(commentsOnly(KIT, undefined, "export {};")).toBe(false);
   expect(declaredReason("Fix file: none, because x")).toBeUndefined();
   expect(declaredReason("fix file: None because tests only change")).toBe("tests only change");
 });

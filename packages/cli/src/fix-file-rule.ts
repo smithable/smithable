@@ -67,26 +67,80 @@ export function fixesAdvisory(bump: Bump, advisories: Advisory[], inRange: InRan
   );
 }
 
-/** A changed line that only a reader sees: blank, or a comment. */
-const commentLine = (text: string) => {
-  const t = text.trim();
-  return (
-    t === "" ||
-    t.startsWith("//") ||
-    t.startsWith("/*") ||
-    t.startsWith("*") ||
-    t.startsWith("{/*") ||
-    t.startsWith("<!--")
-  );
-};
+/**
+ * A script's code with its comments and blank space taken out: comments outside strings and
+ * template text go, so two versions that differ only in comments come out the same. Code in a
+ * template string (the generator's output) is text here, so a comment there counts as a change:
+ * the rule fails closed.
+ */
+export function withoutComments(code: string): string {
+  let out = "";
+  // Each open template literal: -1 while in its text, else the depth of braces in its ${…}.
+  const templates: number[] = [];
+  let i = 0;
+  while (i < code.length) {
+    const c = code[i] as string;
+    const next = code[i + 1];
+    const top = templates.length - 1;
+    if (top >= 0 && templates[top] === -1) {
+      if (c === "\\") {
+        out += code.slice(i, i + 2);
+        i += 2;
+      } else if (c === "`") {
+        templates.pop();
+        out += c;
+        i++;
+      } else if (c === "$" && next === "{") {
+        templates[top] = 0;
+        out += "${";
+        i += 2;
+      } else {
+        out += c;
+        i++;
+      }
+      continue;
+    }
+    if (c === "/" && next === "/") {
+      while (i < code.length && code[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && next === "*") {
+      const close = code.indexOf("*/", i + 2);
+      i = close < 0 ? code.length : close + 2;
+      out += " ";
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      let j = i + 1;
+      while (j < code.length && code[j] !== c && code[j] !== "\n") j += code[j] === "\\" ? 2 : 1;
+      out += code.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+    if (c === "`") {
+      templates.push(-1);
+      out += c;
+      i++;
+      continue;
+    }
+    if (top >= 0 && c === "{") templates[top] = (templates[top] as number) + 1;
+    if (top >= 0 && c === "}")
+      templates[top] = templates[top] === 0 ? -1 : (templates[top] as number) - 1;
+    out += c;
+    i++;
+  }
+  return out.replace(/\s+/g, " ").trim();
+}
 
-/** A file's diff changes only comments (or the file is a document). */
-export function commentsOnly(path: string, diff: string): boolean {
+/** A file whose change only a reader sees: a document, or a script whose code is the same without comments. */
+export function commentsOnly(
+  path: string,
+  before: string | undefined,
+  after: string | undefined,
+): boolean {
   if (/\.md$/.test(path)) return true;
-  return diff
-    .split("\n")
-    .filter((l) => (l[0] === "+" || l[0] === "-") && !l.startsWith("+++") && !l.startsWith("---"))
-    .every((l) => commentLine(l.slice(1)));
+  if (before === undefined || after === undefined || !/\.(ts|tsx|js|mjs)$/.test(path)) return false;
+  return withoutComments(before) === withoutComments(after);
 }
 
 /** The reason a pull request's text gives for needing no fix file, if it gives one. */
@@ -101,8 +155,10 @@ export interface RuleInput {
   engine: string[];
   /** The fix files it adds or edits. */
   fixes: string[];
-  /** Each engine file's diff from the base. */
+  /** The stack profile's diff from the base. */
   diffOf: (path: string) => string;
+  /** A file as it was at the base and as it is now (undefined where it is not there). */
+  filesOf: (path: string) => { before?: string; after?: string };
   labelled: boolean;
   body: string | undefined;
   /** The published advisories of these pins' packages; undefined when they could not be read. */
@@ -117,7 +173,10 @@ export async function fixFileRule(input: RuleInput): Promise<{ ok: boolean; why:
   if (fixes.length) return { ok: true, why: `Fix files: ${fixes.join(", ")}.` };
   const rest = engine.filter((p) => p !== STACK_FILE);
   const bumps = engine.includes(STACK_FILE) ? pinBumps(input.diffOf(STACK_FILE)) : [];
-  const quiet = rest.every((p) => commentsOnly(p, input.diffOf(p)));
+  const quiet = rest.every((p) => {
+    const { before, after } = input.filesOf(p);
+    return commentsOnly(p, before, after);
+  });
   if (bumps && quiet) {
     if (!bumps.length)
       return { ok: true, why: "Only comments and documents of the app's parts changed." };
