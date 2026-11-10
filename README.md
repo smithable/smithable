@@ -86,6 +86,10 @@ The ten starters, with pictures: [docs.smithable.ai/starters](https://docs.smith
 
 `pnpm check` is the gate: lint, build, unit tests, then every example generated, type-checked, built, served and regenerated, and Studio driven in a real browser. Before a change to the engine, the examples or the scripts it runs, run it locally through `scripts/gate.sh`, which lets only one full gate run on a machine at a time; for docs and tooling, CI's run on the pull request is the gate. `CLAUDE.md` holds the rules that keep the design honest, such as: `smithable.yml` is authoritative, every change goes through operations, generated apps never depend on Smithable, generation is byte-identical, and every change can be undone. How to contribute, and what to read first: [CONTRIBUTING.md](.github/CONTRIBUTING.md); conduct: [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md).
 
+## Other projects by us
+
+- [sassato](https://github.com/smithable/sassato): a local task and state coordinator for coding agents and people. Each worker gets a durable role and recovers its tasks, decisions, inbox and work in progress after a session reset; one SQLite file, no server.
+
 ## License
 
 Smithable is licensed under [Apache-2.0](LICENSE). The app kit and templates that are copied into every generated app are licensed under [0BSD](packages/adapter-tanstack/KIT-LICENSE), so a generated app carries no obligations from this repository. Contributions are accepted with a [DCO sign-off](.github/CONTRIBUTING.md); vulnerabilities go to [security@smithable.ai](.github/SECURITY.md).
