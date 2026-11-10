@@ -83,7 +83,18 @@ export function ImportRecords({ model, run }: { model: string; run: Run }) {
  * A page's code made the person's own (what-it-does.md §3): its component in src/custom/pages,
  * which Smithable then never overwrites, opened in the person's own editor.
  */
-export function OwnCode({ page, own }: { page: string; own: boolean }) {
+export function OwnCode({
+  page,
+  own,
+  files = [],
+  dir,
+}: {
+  page: string;
+  own: boolean;
+  /** Its files under src/custom/pages, once it is the person's own. */
+  files?: string[];
+  dir?: string;
+}) {
   const [said, setSaid] = useState<{ ok: boolean; text: string }>();
   // What the customize said stays in view once the page is the person's own: the files' refresh
   // may say so before the call has answered.
@@ -96,9 +107,7 @@ export function OwnCode({ page, own }: { page: string; own: boolean }) {
     return (
       <div className="space-y-1">
         {status}
-        <p className="text-xs text-quiet">
-          This page's code is your own: src/custom/pages/{page}.tsx, opened in your own editor.
-        </p>
+        <CodeFiles files={files.length ? files : [`src/custom/pages/${page}.tsx`]} dir={dir} />
       </div>
     );
   return (
@@ -130,6 +139,66 @@ export function OwnCode({ page, own }: { page: string; own: boolean }) {
         </a>
       </p>
       {status}
+    </div>
+  );
+}
+
+/** A file of the project opened in the person's editor: VS Code's link, where the folder is known. */
+export const editorLink = (dir: string, path: string) => {
+  const full = `${dir.replace(/[\\/]$/, "")}/${path}`;
+  // A path from the root (/home/…) follows the scheme as it is; a drive (C:/…) after one slash.
+  return `vscode://file${full.startsWith("/") ? "" : "/"}${encodeURI(full)}`;
+};
+
+/**
+ * Custom code where it stands (what-it-does.md §3, step 4): this part is code the app's maker
+ * writes and the app's tests run, a link to the docs, and each of its files with "Open in your
+ * editor" on the person's own machine (the path to copy everywhere).
+ */
+export function CodeFiles({ files, dir }: { files: string[]; dir?: string }) {
+  const [copied, setCopied] = useState<string>();
+  return (
+    <div data-part="code-files" className="space-y-1 rounded-md border border-line p-2">
+      <p className="text-xs text-muted">
+        This is code: the app's maker writes it, and the app's tests run it.{" "}
+        <a
+          href={CUSTOM_CODE_DOCS}
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent underline"
+        >
+          About custom code
+        </a>
+      </p>
+      {files.length ? (
+        <ul className="space-y-1">
+          {files.map((path) => (
+            <li key={path} className="flex flex-wrap items-center gap-2 text-xs">
+              <code className="rounded bg-panel px-1">{path}</code>
+              {dir && (
+                <a href={editorLink(dir, path)} className="text-accent underline">
+                  Open in your editor
+                </a>
+              )}
+              <button
+                type="button"
+                className="h-6 rounded-md border border-line px-2"
+                onClick={async () => {
+                  await navigator.clipboard?.writeText(path).catch(() => undefined);
+                  setCopied(path);
+                }}
+              >
+                {copied === path ? "Copied" : "Copy the path"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-quiet">
+          Its file is made with the app's next build, in src/custom/, which Smithable never
+          overwrites.
+        </p>
+      )}
     </div>
   );
 }

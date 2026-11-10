@@ -846,6 +846,8 @@ export async function studio(
       ...(lookOrigins.length ? { lookProject } : {}),
       preview,
       ...(options.home ? { home: options.home } : {}),
+      // On the person's own machine, where their editor can open the project's files.
+      ...(options.host ? {} : { localDir: resolve(dir) }),
       ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
       // Where Smith's requests may go, for his AI notice (legal-1.0 U6).
       ai: aiDestinations(),
