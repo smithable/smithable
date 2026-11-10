@@ -563,7 +563,7 @@ const html = (page, body) => {
 <header><a class="home" href="https://smithable.ai"><picture><source srcset="/brand/wordmark-dark.svg" media="(prefers-color-scheme: dark)"><img src="/brand/wordmark.svg" alt="Smithable website" height="26" width="125"></picture></a><a class="docs" href="/"${page.out === "index.html" ? ' aria-current="page"' : ""}>docs</a><form class="search" role="search" hidden><input type="search" placeholder="Search" aria-label="Search the docs" autocomplete="off"><ol></ol></form><button type="button" class="ask" hidden>Ask Smith</button><a class="gh" href="https://github.com/smithable/smithable">GitHub</a><a class="try" href="https://smithable.ai/#prompt">Try it</a><details class="drawer"><summary>Menu</summary><nav class="side" aria-label="Pages">${menu(page)}</nav></details></header>
 <div class="layout${toc ? " toc" : ""}"><nav class="side" aria-label="Pages">${menu(page)}</nav>${toc}<main>
 ${body}</main></div>
-<footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a></footer>
+<footer>Smithable · Apache-2.0 · <a href="https://github.com/smithable/smithable">GitHub</a> · <a href="https://smithable.ai">smithable.ai</a><br>Other projects by us: <a href="https://github.com/smithable/sassato">sassato</a>, a local task and state coordinator for coding agents.</footer>
 ${counter(page.out ? `/${page.out === "index.html" ? "" : page.out}` : "/404.html")}
 </body>
 </html>
