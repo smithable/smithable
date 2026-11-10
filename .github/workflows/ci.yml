@@ -119,6 +119,8 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           NO_FIX_FILE: ${{ contains(github.event.pull_request.labels.*.name, 'no-fix-file') }}
+          # A line "Fix file: none, because …" in its text (an env, never in the command line).
+          PR_BODY: ${{ github.event.pull_request.body }}
           # The labels as they are now, for a run started again after labelling (A 243).
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
