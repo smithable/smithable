@@ -256,7 +256,10 @@ const PROVIDERS: Record<string, Provider> = {
 /** The app's provider (the context file's), or none when it cannot be used here. */
 export function provider(): Provider | undefined {
   const chosen = PROVIDERS[PAYMENTS_PROVIDER];
-  return chosen?.ready() ? chosen : undefined;
+  if (chosen?.ready()) return chosen;
+  // A copy that reaches no provider (a hosted staging copy, PAYMENTS_FAKE=on) previews the whole
+  // flow with the fake, which takes no money; a release with its provider's keys never comes here.
+  return process.env.PAYMENTS_FAKE === "on" ? fake : undefined;
 }
 
 /**

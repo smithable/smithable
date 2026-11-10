@@ -376,24 +376,24 @@ function FakeRoute() {
 `,
     },
   ];
-  return [
-    ...pages.filter((p) => provider === "fake" || !p.path.includes("fake")),
-    {
-      path: `src/routes/incoming/payments-${provider}.ts`,
-      content: `${HEADER}import { createFileRoute } from "@tanstack/react-router";
+  // The fake's page and address for every provider: a copy that reaches none (PAYMENTS_FAKE=on, a
+  // staging copy) previews the flow with it; elsewhere they refuse (the fake is not ready there).
+  const incoming = (name: string) => ({
+    path: `src/routes/incoming/payments-${name}.ts`,
+    content: `${HEADER}import { createFileRoute } from "@tanstack/react-router";
 import { receive } from "#/kit/payments.server";
 
 /** The payment provider's calls (payments.md §4.3): verified by its scheme, then applied once. */
-export const Route = createFileRoute("/incoming/payments-${provider}")({
+export const Route = createFileRoute("/incoming/payments-${name}")({
   server: {
     handlers: {
-      POST: ({ request }) => receive(request, ${JSON.stringify(provider)}),
+      POST: ({ request }) => receive(request, ${JSON.stringify(name)}),
     },
   },
 });
 `,
-    },
-  ];
+  });
+  return [...pages, ...[...new Set([provider, "fake"])].map(incoming)];
 }
 
 /**
