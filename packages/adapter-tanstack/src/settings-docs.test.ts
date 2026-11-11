@@ -3,19 +3,22 @@ import selfHost from "../../../docs/site/self-host.md?raw";
 
 // Every setting the app kit and the generated code read from the environment is in self-host.md's
 // table (docs review 2026-11-11, 3.4): a setting added without a line there fails here.
-const sources: Record<string, string> = {
-  ...import.meta.glob(["../templates/**/*.{ts,tsx,mjs}", "!../templates/**/*.test.*"], {
+const all: Record<string, string> = {
+  ...import.meta.glob("../templates/**/*.{ts,tsx,mjs}", {
     query: "?raw",
     import: "default",
     eager: true,
   }),
   // The generator writes reads into generated code (process.env.HOST_PAGE_URL in a page).
-  ...import.meta.glob(["./**/*.ts", "!./**/*.test.ts", "!./**/*.gen.ts"], {
+  ...import.meta.glob("./**/*.ts", {
     query: "?raw",
     import: "default",
     eager: true,
   }),
 };
+const sources = Object.fromEntries(
+  Object.entries(all).filter(([path]) => !/\.(test|gen)\./.test(path)),
+);
 
 /** The names read: process.env.X, process.env["X"], { X, Y } = process.env, env.X where env is it. */
 function readNames(text: string): string[] {
@@ -35,7 +38,9 @@ const documented = [...selfHost.matchAll(/^\| (`[^|]+`) \|/gm)].flatMap((m) =>
   [...(m[1] ?? "").matchAll(/`([A-Z][A-Z0-9_]*(?:<[A-Z]+>[A-Z0-9_]*)?)`/g)].map((n) => n[1] ?? ""),
 );
 const listed = (name: string) =>
-  documented.some((d) => (d.includes("<") ? name.startsWith(d.slice(0, d.indexOf("<"))) : d === name));
+  documented.some((d) =>
+    d.includes("<") ? name.startsWith(d.slice(0, d.indexOf("<"))) : d === name,
+  );
 
 test("every setting the app reads has a line in self-host.md's settings table", () => {
   const read = new Set(Object.values(sources).flatMap(readNames));
