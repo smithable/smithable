@@ -317,3 +317,36 @@ test("comment ranges follow YAML syntax rather than quote-looking plain text", (
     comments,
   );
 });
+
+describe("set replaces a list", () => {
+  const auth = `public:
+  pages: [home, schedule, blog]    # the landing page, the schedule, the blog
+  read:
+    - ClassType
+    - Session
+    - Post: { where: { status: published } }   # published posts only
+  create: [Message]                # the contact form
+`;
+
+  test("a block list becomes a flow list and the next key stays on its line", () => {
+    const e = new YamlEditor(auth);
+    e.set(["public", "read"], ["ClassType", "Session"]);
+    expect(e.text).toBe(`public:
+  pages: [home, schedule, blog]    # the landing page, the schedule, the blog
+  read: [ClassType, Session]
+  create: [Message]                # the contact form
+`);
+  });
+
+  test("a flow list drops the comment that described the old one", () => {
+    const e = new YamlEditor(auth);
+    e.set(["public", "pages"], ["home", "schedule"]);
+    expect(e.text.split("\n")[1]).toBe("  pages: [home, schedule]");
+  });
+
+  test("the same list keeps its comment", () => {
+    const e = new YamlEditor(auth);
+    e.set(["public", "create"], ["Message"]);
+    expect(e.text).toBe(auth);
+  });
+});
