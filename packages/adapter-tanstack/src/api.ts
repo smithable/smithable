@@ -175,7 +175,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     };
     paths[`/api/v1/${path}`] = {
       get: {
-        summary: `${inert(n.pluralLabel)} the key's role may read`,
+        summary: `${n.pluralLabel} the key's role may read`,
         parameters: [
           { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
           { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
@@ -191,12 +191,12 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
             : []),
         ],
         responses: {
-          200: { description: `A page of ${inert(n.pluralLabel.toLowerCase())}` },
+          200: { description: `A page of ${n.pluralLabel.toLowerCase()}` },
           401: problem,
         },
       },
       post: {
-        summary: `Add a ${inert(n.label.toLowerCase())}`,
+        summary: `Add a ${n.label.toLowerCase()}`,
         requestBody: one,
         responses: {
           201: { description: "Added", ...one },
@@ -209,7 +209,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     paths[`/api/v1/${path}/{id}`] = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
       get: {
-        summary: `One ${inert(n.label.toLowerCase())}`,
+        summary: `One ${n.label.toLowerCase()}`,
         responses: {
           200: { description: "The record", ...one },
           404: problem,
@@ -224,7 +224,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
         },
       },
       patch: {
-        summary: `Change a ${inert(n.label.toLowerCase())} (the fields given)`,
+        summary: `Change a ${n.label.toLowerCase()} (the fields given)`,
         requestBody: one,
         responses: {
           200: { description: "Changed", ...one },
@@ -235,9 +235,9 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       },
       delete: {
         summary: model.trash
-          ? `Move a ${inert(n.label.toLowerCase())} to the trash; with permanent=true, remove one in the trash for good`
-          : `Delete a ${inert(n.label.toLowerCase())}`,
-        description: `A ${inert(n.label.toLowerCase())} that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no ${inert(n.label.toLowerCase())} (loose), and whether they can go to the trash together.${
+          ? `Move a ${n.label.toLowerCase()} to the trash; with permanent=true, remove one in the trash for good`
+          : `Delete a ${n.label.toLowerCase()}`,
+        description: `A ${n.label.toLowerCase()} that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no ${n.label.toLowerCase()} (loose), and whether they can go to the trash together.${
           model.trash
             ? " With together=true they are moved to the trash with it, and restored with it."
             : ""
@@ -257,7 +257,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       paths[`/api/v1/${path}/{id}/restore`] = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         post: {
-          summary: `Take a ${inert(n.label.toLowerCase())} out of the trash`,
+          summary: `Take a ${n.label.toLowerCase()} out of the trash`,
           responses: { 200: { description: "Restored", ...one }, 401: problem, 404: problem },
         },
       };
@@ -413,7 +413,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     if (read || add)
       visitorPaths[`/api/v1/${path}`] = {
         ...(read
-          ? { get: { ...(list.get as object), summary: `${inert(n.pluralLabel)} anyone may read` } }
+          ? { get: { ...(list.get as object), summary: `${n.pluralLabel} anyone may read` } }
           : {}),
         ...(add ? { post: list.post } : {}),
       };

@@ -174,7 +174,7 @@ import { ${n.schema} } from "${n.module}.schema";
 import { ${n.access}, ${n.data} } from "${n.module}.server";
 ${cn.data === n.data ? `import { ${n.ui} } from "${n.module}";\n` : `import { ${cn.access}, ${cn.data} } from "${cn.module}.server";\nimport { ${cn.ui} } from "${cn.module}";\n`}import { ${a.access} } from "./${kebab(action.name)}";
 
-/** The ${child.name === model.name ? "records" : cn.pluralLabel.toLowerCase()} of a ${inert(n.label.toLowerCase())} the viewer may see: those on it now, with whose each is. */
+/** The ${child.name === model.name ? "records" : inert(cn.pluralLabel.toLowerCase())} of a ${inert(n.label.toLowerCase())} the viewer may see: those on it now, with whose each is. */
 function childrenOf(viewer: Viewer | null, id: number) {
   return db
     .select({ id: ${cn.table}.id${signedIn ? `, owner: ${cn.table}.${ownerKey(child)}` : ""} })

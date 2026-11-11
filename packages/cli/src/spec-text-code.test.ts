@@ -1,8 +1,8 @@
 // Text in the spec stays text in the generated app: every string value of every example's spec
 // files is given a text built to end a comment, a string or a template literal and start code,
 // as far as validation accepts it; then the app is generated, each TypeScript file is read
-// into tokens, and the marker word must never be code (an identifier), only part of a string,
-// a template's text or a comment.
+// into tokens, and the marker word must never be code (an identifier) or a pragma in a comment,
+// only part of a string, a template's text or a comment. Other files are checked by their kind.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "@babel/parser";
@@ -22,9 +22,12 @@ const EXAMPLES = join(import.meta.dirname, "../../../examples");
 const FILES = ["smithable.yml", "smithable.auth.yml", "smithable.content.yml", "smithable.ux.yml"];
 const MARK = "zq9x";
 // One text that may stand on one line, one with line breaks (for the texts that allow them).
+// Three: one that may stand on one line, one with line breaks (for the texts that allow them),
+// and a short one for the texts with a length limit, which the long ones would not reach.
 const PAYLOADS = [
-  `A */ ${MARK}; /* \` \${${MARK}} \` " ' {${MARK}} </${MARK}> \\ ${MARK}`,
+  `A */ ${MARK}; /* \` \${${MARK}} \` " ' {${MARK}} <${MARK}> </${MARK}> \\ @${MARK} ${MARK}`,
   `A\n${MARK};\n// \` \${${MARK}} */ ${MARK}`,
+  `*/"${MARK}`,
 ];
 
 type Doc = Record<string, unknown>;
@@ -227,28 +230,38 @@ function markerAsCode(path: string, source: string): string[] {
     value?: unknown;
     loc: { start: { line: number } };
   }[];
+  let comments: { value: string; loc: { start: { line: number } } }[];
   try {
-    tokens = parse(source, {
+    const file = parse(source, {
       sourceType: "module",
       plugins: path.endsWith(".tsx") ? ["typescript", "jsx"] : ["typescript"],
       tokens: true,
-    }).tokens as typeof tokens;
+    });
+    tokens = file.tokens as typeof tokens;
+    comments = (file.comments ?? []) as typeof comments;
   } catch (error) {
     return [`does not parse: ${(error as Error).message}`];
   }
-  return tokens
-    .filter((t) => {
-      const label = typeof t.type === "string" ? t.type : t.type.label;
-      return (
-        (label === "name" || label === "jsxName") &&
-        typeof t.value === "string" &&
-        t.value.toLowerCase().includes(MARK)
-      );
-    })
-    .map(
-      (t) =>
-        `line ${t.loc.start.line}: ${source.split("\n")[t.loc.start.line - 1]?.trim().slice(0, 160)}`,
-    );
+  // A pragma (@jsxImportSource, @ts-nocheck) is an instruction to the build, even in a comment.
+  const pragmas = comments
+    .filter((c) => c.value.toLowerCase().includes(`@${MARK}`))
+    .map((c) => `line ${c.loc.start.line}: a pragma in a comment`);
+  return [
+    ...pragmas,
+    ...tokens
+      .filter((t) => {
+        const label = typeof t.type === "string" ? t.type : t.type.label;
+        return (
+          (label === "name" || label === "jsxName") &&
+          typeof t.value === "string" &&
+          t.value.toLowerCase().includes(MARK)
+        );
+      })
+      .map(
+        (t) =>
+          `line ${t.loc.start.line}: ${source.split("\n")[t.loc.start.line - 1]?.trim().slice(0, 160)}`,
+      ),
+  ];
 }
 
 /**
@@ -316,7 +329,7 @@ describe.each(examples)("%s", (example) => {
   );
   const all = Object.keys(docs).flatMap((file) => leaves(file, docs));
 
-  test.each(PAYLOADS.map((p, i) => [i ? "with line breaks" : "on one line", p]))(
+  test.each(PAYLOADS.map((p, i) => [["on one line", "with line breaks", "short"][i], p]))(
     "a text %s stays text in the generated code",
     (_, payload) => {
       const set = accepted(docs, all, payload);

@@ -25,6 +25,24 @@ test("a name, a label or a title is one line; a description may run over several
   expect(codes(content("models:\n  Task:\n    pluralLabel: Tasks */ x /*\n"))).toEqual([]);
 });
 
+test("a choice value called text is a name: its label is one line all the same", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Tasks }\nmodels:\n  Task:\n    fields:\n      kind: text | other\n",
+  }).ir;
+  if (!ir) throw new Error("the spec is valid");
+  const label = (value: string) =>
+    validateContent(
+      {
+        path: "smithable.content.yml",
+        text: `smithableContent: 0.1\nmodels:\n  Task:\n    fields:\n      kind: { values: { text: ${JSON.stringify(value)} } }\n`,
+      },
+      ir,
+    );
+  expect(codes(label("Some text"))).toEqual([]);
+  expect(codes(label("Some\ntext"))).toContain("text-line-break");
+});
+
 test("the rare line breaks, control characters and bidirectional overrides are refused anywhere", () => {
   for (const code of [0x2028, 0x2029, 0x85, 0x1b, 0x202e, 0x2066])
     expect(

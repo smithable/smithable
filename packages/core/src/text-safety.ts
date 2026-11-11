@@ -21,6 +21,27 @@ const LONG_TEXTS = new Set([
   "thanks",
 ]);
 
+/**
+ * The maps whose keys are names (a field, a choice's value, a page): a key there called "text" or
+ * "help" is a name like any other, and what it holds is one line.
+ */
+const NAMED_MAPS = new Set([
+  "actions",
+  "fields",
+  "incoming",
+  "menus",
+  "models",
+  "outgoing",
+  "pages",
+  "payments",
+  "queries",
+  "roles",
+  "sections",
+  "tiles",
+  "timers",
+  "values",
+]);
+
 /** Line breaks only a machine writes: they end a line in code as \n does. */
 const RARE_BREAKS = /[\u2028\u2029\u0085]/;
 /** Characters that turn the order text shows in, so it reads otherwise than it is. */
@@ -62,7 +83,10 @@ export function rejectUnsafeText(ctx: ParseContext, doc: ReturnType<typeof parse
         const parent = path[i];
         if (!isPair(parent)) continue;
         const key = isScalar(parent.key) ? String(parent.key.value) : "";
-        if (LONG_TEXTS.has(key)) return;
+        const holder = path[i - 2];
+        const named =
+          isPair(holder) && isScalar(holder.key) && NAMED_MAPS.has(String(holder.key.value));
+        if (LONG_TEXTS.has(key) && !named) return;
         ctx.error(
           n,
           "text-line-break",

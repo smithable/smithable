@@ -647,14 +647,14 @@ export function dataModule(
     return address ? eq(${n.table}.${owner}, address) : sql\`false\`;
   },
 
-  /** Whose a ${inert(n.label.toLowerCase())} is: whoever signed in with its ${ownerLabel}, proven; the viewer, or no one they can be. */
+  /** Whose a ${inert(n.label.toLowerCase())} is: whoever signed in with its ${inert(ownerLabel)}, proven; the viewer, or no one they can be. */
   whose(viewer: Viewer | null, row: { ${owner}: string | null }): string | null {
     return addressOwner(row.${owner}, viewer);
   },
 `
       : parent && throughField && signedIn
         ? `
-  /** The ${inert(n.pluralLabel.toLowerCase())} the viewer reads as their own: those they made, and those of the ${names(parent, t).pluralLabel.toLowerCase()} they may read (support-portal-path.md §2: owning through a reference is reading). */
+  /** The ${inert(n.pluralLabel.toLowerCase())} the viewer reads as their own: those they made, and those of the ${inert(names(parent, t).pluralLabel.toLowerCase())} they may read (support-portal-path.md §2: owning through a reference is reading). */
   own(viewer: Viewer): SQL {
     return or(eq(${n.table}.ownerId, viewer.id), inArray(${n.table}.${throughField.name}Id, db.select({ id: ${tableRef(parent)}.id }).from(${tableRef(parent)}).where(${names(parent, t).data}.readable(viewer)))) as SQL;
   },
@@ -2014,7 +2014,7 @@ function ownerFor(viewer: Viewer | null, given: string | null | undefined): stri
   if (!owner)
     throw new AccessDenied(
       viewer !== null,
-      viewer ? (personOf(viewer) ? \`Name the ${ownerLabel} (${model.ownedBy}).\` : \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${ownerLabel} (${model.ownedBy}).\`) : undefined,
+      viewer ? (personOf(viewer) ? \`Name the ${templateText(ownerLabel)} (${model.ownedBy}).\` : \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${templateText(ownerLabel)} (${model.ownedBy}).\`) : undefined,
     );`
         : ""
     }
@@ -2032,7 +2032,7 @@ function ownerLike(viewer: Viewer | null, given: string | null | undefined, from
     const owner = asAddress(given);${
       ownerRequired
         ? `
-    if (!owner) throw new AccessDenied(true, \`Name the ${ownerLabel} (${model.ownedBy}).\`);`
+    if (!owner) throw new AccessDenied(true, \`Name the ${templateText(ownerLabel)} (${model.ownedBy}).\`);`
         : ""
     }
     return owner;
@@ -2054,7 +2054,7 @@ ${
   if (!owner)
     throw new AccessDenied(
       viewer !== null,
-      viewer ? \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${ownerLabel} (${model.ownedBy}).\` : undefined,
+      viewer ? \`A \${viewer.system ? "timer" : "key"} owns nothing: name the ${templateText(ownerLabel)} (${model.ownedBy}).\` : undefined,
     );
   return owner;
 }`
