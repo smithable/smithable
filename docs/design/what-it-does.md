@@ -27,7 +27,7 @@ Start from the spec, not from the sentences. The spec is a tree whose shape is k
 ## 4. Where it lives
 
 - `apps/studio/src/builder/`: the form is built from the schema at run time (`buildJsonSchema()` and the companion schemas, both in the tab already for Code mode), with a small table of control kinds by schema shape and a table of key to operation; the properties panel (`properties.tsx`) becomes one such form, no longer written by hand per concept.
-- Core: the operations' argument schemas say which operation sets which key; where that is not derivable, a `sets: ["models.*.fields.*.required"]` on the operation makes it so, and a test checks every schema key is covered by an operation or by the editSpec fallback. `editSpec` of a part is a new argument, `path`, of the existing operation (the part to replace), no new operation.
+- Core: the operations' argument schemas say which operation sets which key; where that is not derivable, a `sets: ["models.*.fields.*.required"]` on the operation makes it so, and a test checks every schema key is covered by an operation or by the editSpec fallback. `editSpec` of a part is a new argument, `path`, of the existing operation (the part to replace), no new operation. (Built 2026-11-11: an operation's `sets` lists its keys as `file:path` patterns, core's `operationsSetting(file, path)` reads them, and `key-operations.test.ts` keeps the keys left to editSpec as a reviewed snapshot, checks every pattern names a key the schemas have, and Studio's test that every operation a control writes through is one core lists for its key.)
 - The preview re-renders only when what it shows is touched (A 116c); a form change to another page leaves the place.
 
 ## 5. Steps

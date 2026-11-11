@@ -128,6 +128,7 @@ const setDomains: Operation<{ domains: string[] }> = {
 
 const setDefaultAccess: Operation<{ access: "shared" | "private" }> = {
   name: "setDefaultAccess",
+  sets: ["smithable.auth.yml:defaultAccess"],
   summary:
     "Choose the record rule: shared (everyone who signs in sees every record) or private (each person sees only their own); everyone changes and deletes their own, and the roles' grants say the rest.",
   schema: {
@@ -270,6 +271,11 @@ const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string 
 
 const setPublic: Operation<{ pages?: string[]; read?: string[]; create?: string[] }> = {
   name: "setPublic",
+  sets: [
+    "smithable.auth.yml:public.pages",
+    "smithable.auth.yml:public.read",
+    "smithable.auth.yml:public.create",
+  ],
   summary:
     "Set what anyone on the internet may use without signing in: pages to open, models to read, models to create (a contact form). Each list replaces the old one; an empty list closes it, and the confirmation says what visitors lose.",
   schema: {

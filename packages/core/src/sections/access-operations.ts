@@ -18,6 +18,16 @@ const VERBS: Record<GrantKey, string> = {
 
 const grant: Operation<{ role: string; what: string; names?: string[] }> = {
   name: "grant",
+  sets: [
+    "smithable.auth.yml:roles.*",
+    "smithable.auth.yml:roles.*.pages",
+    "smithable.auth.yml:roles.*.read",
+    "smithable.auth.yml:roles.*.create",
+    "smithable.auth.yml:roles.*.write",
+    "smithable.auth.yml:roles.*.delete",
+    "smithable.auth.yml:roles.*.actions",
+    "smithable.auth.yml:roles.*.review",
+  ],
   summary:
     'Set what a role may do beyond the record rule, in smithable.auth.yml: the pages it opens, the models it adds to (create), reads, changes (write) or deletes for everyone, the custom actions it runs, or the models whose waiting pictures and files it approves (review). "all" names everything, "none" nothing; "grant <role> all" is the whole app and "grant <role> none" the record rule only.',
   schema: {

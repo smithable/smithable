@@ -761,6 +761,7 @@ const setTone: Operation<{ model: string; field: string; value: string; tone: st
 
 const setIcon: Operation<{ page: string; icon: string }> = {
   name: "setIcon",
+  sets: ["smithable.ux.yml:pages.*.icon"],
   summary: 'Choose the icon a page has in navigation ("auto": chosen from its model\'s name).',
   schema: {
     type: "object",

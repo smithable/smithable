@@ -98,6 +98,34 @@ export function findOperation(
   return operationsFor(plugins).find((op) => op.name === name);
 }
 
+/** Whether a key's path in a file fits one of an operation's `sets` patterns. */
+export function setsKey(
+  pattern: string,
+  file: string,
+  path: readonly (string | number)[],
+): boolean {
+  const [patternFile, keys = ""] = pattern.split(":");
+  if (patternFile !== file) return false;
+  const parts = keys.split(".");
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i] === "**") return path.length > i;
+    if (i >= path.length || (parts[i] !== "*" && parts[i] !== String(path[i]))) return false;
+  }
+  return path.length === parts.length;
+}
+
+/**
+ * The operations that set a spec key (what-it-does.md §4), by their `sets`: a form's control for
+ * the key writes through one of them; none leaves it to editSpec of its part.
+ */
+export function operationsSetting(
+  file: string,
+  path: readonly (string | number)[],
+  plugins?: readonly SpecPlugin[],
+): AnyOperation[] {
+  return operationsFor(plugins).filter((op) => op.sets?.some((p) => setsKey(p, file, path)));
+}
+
 /**
  * Applies an operation to the project's files. Pure: returns the edited texts, or why the
  * operation cannot be applied. The result is always a valid spec and content file.
