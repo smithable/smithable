@@ -10,7 +10,10 @@ export const Route = createFileRoute("/files/$model/$id/$field/$n")({
   server: {
     handlers: {
       GET: async ({ request, params }) => {
-        const entry = UPLOADS[params.model]?.[params.field];
+        // Names from the address: only the app's own models and fields, never an object's own properties.
+        const fields = Object.hasOwn(UPLOADS, params.model) ? UPLOADS[params.model] : undefined;
+        const entry =
+          fields && Object.hasOwn(fields, params.field) ? fields[params.field] : undefined;
         const id = Number(params.id);
         const n = Number(params.n);
         if (!entry || !Number.isInteger(id) || !Number.isInteger(n) || n < 0)
