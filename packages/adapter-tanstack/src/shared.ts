@@ -186,6 +186,57 @@ export const tableRef = (model: ModelIR) => `schema.${tableNames(model).table}`;
 /** The namespace import that tableRef needs. */
 export const SCHEMA_IMPORT = 'import * as schema from "#/db/schema";';
 
+/** Text as a template literal's own part, exactly: backticks, backslashes and `${` kept literal. */
+export const templateText = (text: string) =>
+  text.replace(/[\\`]/g, "\\$&").replace(/\$\{/g, "\\${");
+
+/** Text inside a double-quoted string in generated code, exactly: escaped as JSON escapes it. */
+export const quotedText = (text: string) => JSON.stringify(text).slice(1, -1);
+
+/** Text inside a single-quoted SQL string in a generated template literal, exactly. */
+export const sqlText = (text: string) => templateText(text.replace(/'/g, "''"));
+
+/**
+ * Text from the spec as a comment's line: it cannot end the comment (a star and a slash) or the
+ * line (line breaks, U+2028, U+2029 and U+0085 among them), and control and bidirectional-override
+ * characters go, and an @ cannot start a pragma. For prose a developer reads; elsewhere in code,
+ * `inert`.
+ */
+export function commentText(text: string): string {
+  return (
+    text
+      .replace(/[\r\n\u2028\u2029\u0085]+/g, " ")
+      .replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, "")
+      .replace(/\*\//g, "* /")
+      // A pragma (@jsxImportSource, @ts-nocheck) in a comment is an instruction to the build.
+      .replace(/@/g, "\uff20")
+  );
+}
+
+/**
+ * Text from the spec made inert where a generator writes it raw into the app's code: in a comment,
+ * a quoted string, a template literal or JSX text it stays text. Line breaks (U+2028, U+2029 and
+ * U+0085 too) become spaces; control and bidirectional-override characters go; the characters
+ * that end a comment, a string or a template literal, open JSX or start a pragma (@) become
+ * look-alikes. Where the
+ * exact text matters (what the app shows) it is written with JSON.stringify instead.
+ */
+export function inert(text: string): string {
+  return text
+    .replace(/[\r\n\u2028\u2029\u0085]+/g, " ")
+    .replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, "")
+    .replace(/\*\//g, "* /")
+    .replace(/\\/g, "\u2216")
+    .replace(/"/g, "\u201d")
+    .replace(/'/g, "\u2019")
+    .replace(/`/g, "\u02bc")
+    .replace(/\{/g, "(")
+    .replace(/\}/g, ")")
+    .replace(/</g, "\u2039")
+    .replace(/>/g, "\u203a")
+    .replace(/@/g, "\uff20");
+}
+
 // Names derived from a model, used consistently across files.
 export function names(model: ModelIR, t: Texts) {
   const pluralName = plural(model.name);

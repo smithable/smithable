@@ -2,7 +2,7 @@
 // that `occupies` a scheduled model's time, for its data module (the check in the write's
 // transaction, the free times) and its client module (the picker's server function).
 import type { FieldIR, ModelIR, OccupiesIR, SpecIR } from "@smithable/core";
-import { dataKey, literal, modelNamed, tableRef } from "./shared.js";
+import { dataKey, inert, literal, modelNamed, tableRef } from "./shared.js";
 
 /** What an occupying model's modules need, all read from the spec once. */
 export interface Occupying {
@@ -178,7 +178,7 @@ export function cancelMembers(
 ): string {
   const cancel = o.occupies.cancel;
   if (!cancel) return "";
-  const label = n.label.toLowerCase();
+  const label = inert(n.label.toLowerCase());
   return `  /** Whether the viewer may cancel this ${label} themselves now: their own, holding time, ${o.occupies.cancelUntil ? `more than ${o.occupies.cancelUntil} before its start` : "before its start"}. */
   cancelState(viewer: Viewer | null, id: number): { can: boolean; late: boolean } | null {
     if (!viewer) return null;

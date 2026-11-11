@@ -17,6 +17,7 @@ import { titleField } from "./samples.js";
 import { notSendable } from "./sections/outgoing.js";
 import { didYouMean } from "./suggest.js";
 import { placeholdersOf } from "./template.js";
+import { rejectUnsafeText } from "./text-safety.js";
 
 /**
  * Visible text from smithable.content.yml (ARCHITECTURE §3.3). Everything is optional:
@@ -333,6 +334,7 @@ export function validateContent(
     );
   }
   if (hasErrors(ctx.diagnostics)) return done();
+  rejectUnsafeText(ctx, doc);
 
   const root = doc.contents as ParsedNode | null;
   const entries = mapEntries(ctx, root, "smithable.content.yml") ?? [];

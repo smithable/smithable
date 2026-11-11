@@ -16,9 +16,11 @@ import {
 import {
   composedName as composed,
   HEADER,
+  inert,
   modelNamed,
   names,
   type Texts,
+  templateText,
   titleField,
 } from "./shared.js";
 
@@ -193,7 +195,7 @@ export function nameModule(ir: SpecIR, model: ModelIR, t: Texts, ux?: UxIR): str
     const parts = model.nameParts ?? [];
     code += `
 /**
- * A ${label.toLowerCase()}'s name: ${words(parts)} (smithable.yml's namedBy). \`leave\`: parts a
+ * A ${inert(label.toLowerCase())}'s name: ${words(parts)} (smithable.yml's namedBy). \`leave\`: parts a
  * page already shows another way (a calendar's start), left out.
  */
 export function ${nameFunction(model)}(row: Record<string, unknown>, leave: readonly string[] = []): string {
@@ -202,7 +204,7 @@ export function ${nameFunction(model)}(row: Record<string, unknown>, leave: read
   ];
   return nameOf(
     parts.filter(([part]) => !leave.includes(part)).map(([, words]) => words),
-    \`${label} #\${row.id}\`,
+    \`${templateText(label)} #\${row.id}\`,
   );
 }
 `;
@@ -213,7 +215,7 @@ export function ${nameFunction(model)}(row: Record<string, unknown>, leave: read
     // Only the detail joins its parts with nameOf: a subtitle alone would leave it unused.
     if (lines.detail?.length) imports.push(["#/kit/format", "nameOf"]);
     code += `
-/** What a ${label.toLowerCase()} shows under its name where there is room (smithable.ux.yml's record). */
+/** What a ${inert(label.toLowerCase())} shows under its name where there is room (smithable.ux.yml's record). */
 export function ${linesFunction(model)}(row: Record<string, unknown>): { subtitle?: string; detail?: string } {
   return {${lines.subtitle ? `\n    subtitle: (${partCode(lines.subtitle)}) || undefined,` : ""}${lines.detail?.length ? `\n    detail: nameOf([${lines.detail.map(partCode).join(", ")}], "") || undefined,` : ""}
   };

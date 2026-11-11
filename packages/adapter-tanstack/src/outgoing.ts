@@ -28,6 +28,7 @@ import { nameColumns, nameFunction } from "./names.js";
 import {
   composedName,
   HEADER,
+  inert,
   keyOf,
   literal,
   modelNamed,
@@ -456,7 +457,7 @@ export type Target = (typeof TARGETS)[number];
 ${[...composedUsed]
   .map(
     (m) => `
-/** A ${t.modelLabel(m).toLowerCase()}'s name, read with what it needs (record-names.md); one in the trash is gone. */
+/** A ${inert(t.modelLabel(m).toLowerCase())}'s name, read with what it needs (record-names.md); one in the trash is gone. */
 function ${camel(m.name)}Named(tx: Tx, id: number | null): string {
   if (id == null) return "—";
   const row = tx.query.${names(m, t).tableKey}.findFirst({ where: (t, { eq }) => eq(t.id, id), ...${nameColumns(ir, m, m.trash ? ", deletedAt: true" : "")} }).sync();

@@ -9112,7 +9112,7 @@ function ProjectPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Tasks</h2>
+          <h2 className="text-lg font-semibold">{"Tasks"}</h2>
           
         </div>
         <ModelTable
@@ -9126,7 +9126,7 @@ function ProjectPage() {
       </section>
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Notes</h2>
+          <h2 className="text-lg font-semibold">{"Notes"}</h2>
           
         </div>
         <ModelTable
@@ -11151,7 +11151,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/notes/$id.tsx": "087fdc58 generated",
   "src/routes/admin/notes/index.tsx": "54d57aec generated",
   "src/routes/admin/notes/new.tsx": "6d8a3ab3 generated",
-  "src/routes/admin/projects/$id.tsx": "2c89ae57 generated",
+  "src/routes/admin/projects/$id.tsx": "16165153 generated",
   "src/routes/admin/projects/index.tsx": "e88da81e generated",
   "src/routes/admin/projects/new.tsx": "c08aa83c generated",
   "src/routes/admin/tasks/$id.tsx": "ca514671 generated",
@@ -17133,7 +17133,7 @@ function BarberPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Time offs</h2>
+          <h2 className="text-lg font-semibold">{"Time offs"}</h2>
           {row.timeOffs.length > 0 && canAdd?.timeOffs && (
               <Link to="/time-off/new" search={{ barber: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("time off")}
@@ -18837,7 +18837,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/appointments/$id.tsx": "05b6e945 generated",
   "src/routes/appointments/index.tsx": "a983a43c generated",
   "src/routes/appointments/new.tsx": "cf4771c5 generated",
-  "src/routes/barbers/$id.tsx": "96fac3f5 generated",
+  "src/routes/barbers/$id.tsx": "10ac13c7 generated",
   "src/routes/barbers/index.tsx": "45283bb1 generated",
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
@@ -29454,7 +29454,7 @@ function ClassTypePage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Sessions</h2>
+          <h2 className="text-lg font-semibold">{"Sessions"}</h2>
           
         </div>
         <ModelTable
@@ -29743,7 +29743,7 @@ function InstructorPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Sessions</h2>
+          <h2 className="text-lg font-semibold">{"Sessions"}</h2>
           
         </div>
         <ModelTable
@@ -30327,7 +30327,7 @@ function SessionPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Bookings</h2>
+          <h2 className="text-lg font-semibold">{"Bookings"}</h2>
           
         </div>
         <ModelTable
@@ -31078,7 +31078,7 @@ function ClassTypePage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Sessions</h2>
+          <h2 className="text-lg font-semibold">{"Sessions"}</h2>
           {row.sessions.length > 0 && canAdd?.sessions && (
               <Link to="/sessions/new" search={{ classType: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("session")}
@@ -31511,7 +31511,7 @@ function InstructorPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Sessions</h2>
+          <h2 className="text-lg font-semibold">{"Sessions"}</h2>
           {row.sessions.length > 0 && canAdd?.sessions && (
               <Link to="/sessions/new" search={{ instructor: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("session")}
@@ -32761,7 +32761,7 @@ function SessionPage() {
       </section>
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Bookings</h2>
+          <h2 className="text-lg font-semibold">{"Bookings"}</h2>
           {row.bookings.length > 0 && canAdd?.bookings && (
               <Link to="/my-bookings/new" search={{ session: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("booking")}
@@ -33929,11 +33929,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/bookings/$id.tsx": "3343f459 generated",
   "src/routes/admin/bookings/index.tsx": "3cede361 generated",
   "src/routes/admin/bookings/new.tsx": "9b91aaca generated",
-  "src/routes/admin/class-types/$id.tsx": "d21b28ee generated",
+  "src/routes/admin/class-types/$id.tsx": "8603d18a generated",
   "src/routes/admin/class-types/index.tsx": "8db2bc16 generated",
   "src/routes/admin/class-types/new.tsx": "15a01d89 generated",
   "src/routes/admin/index.tsx": "19b6cd26 generated",
-  "src/routes/admin/instructors/$id.tsx": "1061c9cb generated",
+  "src/routes/admin/instructors/$id.tsx": "52bb8fb7 generated",
   "src/routes/admin/instructors/index.tsx": "a34071e2 generated",
   "src/routes/admin/instructors/new.tsx": "f43b4446 generated",
   "src/routes/admin/messages/$id.tsx": "fe146cb5 generated",
@@ -33942,7 +33942,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/posts/$id.tsx": "8e849fa3 generated",
   "src/routes/admin/posts/index.tsx": "27da3624 generated",
   "src/routes/admin/posts/new.tsx": "2131bd64 generated",
-  "src/routes/admin/sessions/$id.tsx": "82cafa3b generated",
+  "src/routes/admin/sessions/$id.tsx": "cccb38d7 generated",
   "src/routes/admin/sessions/index.tsx": "c4703df1 generated",
   "src/routes/admin/sessions/new.tsx": "bdc24b1c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
@@ -33952,7 +33952,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/bookings/$id.tsx": "28c46fa8 generated",
   "src/routes/bookings/index.tsx": "5ab565dd generated",
   "src/routes/bookings/new.tsx": "09aebe1c generated",
-  "src/routes/class-types/$id.tsx": "3af3b04e generated",
+  "src/routes/class-types/$id.tsx": "7774de5a generated",
   "src/routes/class-types/index.tsx": "4d83873e generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/events.ts": "98860b46 generated",
@@ -33961,7 +33961,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "196f8c8c generated",
-  "src/routes/instructors/$id.tsx": "42f0ce40 generated",
+  "src/routes/instructors/$id.tsx": "edc5cce4 generated",
   "src/routes/instructors/index.tsx": "856face6 generated",
   "src/routes/instructors/new.tsx": "8bd30440 generated",
   "src/routes/messages/$id.tsx": "c0a4d7de generated",
@@ -33977,7 +33977,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/privacy/index.tsx": "c7ef14eb generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "79cdbac7 generated",
-  "src/routes/sessions/$id.tsx": "651b876b generated",
+  "src/routes/sessions/$id.tsx": "10f389eb generated",
   "src/routes/sessions/index.tsx": "becb08cf generated",
   "src/routes/sessions/new.tsx": "55613a12 generated",
   "src/routes/sign-in.tsx": "64dbc342 generated",
@@ -41343,7 +41343,7 @@ function CustomerPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Orders</h2>
+          <h2 className="text-lg font-semibold">{"Orders"}</h2>
           {row.orders.length > 0 && canAdd?.orders && (
               <Link to="/orders/new" search={{ customer: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("order")}
@@ -41366,7 +41366,7 @@ function CustomerPage() {
       </section>
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Follow ups</h2>
+          <h2 className="text-lg font-semibold">{"Follow ups"}</h2>
           {row.followUps.length > 0 && canAdd?.followUps && (
               <Link to="/follow-ups/new" search={{ customer: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("follow up")}
@@ -41522,7 +41522,7 @@ function CustomersPage() {
   );
   const scheduleFollowUpsButton = allows(scheduleFollowUpsAccess, viewer) && (
     <Link to="/customers/actions/schedule-follow-ups" className={buttonVariants({ variant: "outline" })}>
-      Schedule follow ups
+      {"Schedule follow ups"}
     </Link>
   );
   return (
@@ -43613,9 +43613,9 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/__root.tsx": "3a1f8636 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/customers/$id.tsx": "e8c61d80 generated",
+  "src/routes/customers/$id.tsx": "6a23d1ec generated",
   "src/routes/customers/actions/schedule-follow-ups.tsx": "0fb22ed7 generated",
-  "src/routes/customers/index.tsx": "6f88582e generated",
+  "src/routes/customers/index.tsx": "99249990 generated",
   "src/routes/customers/new.tsx": "101540c3 generated",
   "src/routes/customers/trash.tsx": "7848b304 generated",
   "src/routes/follow-ups/$id.tsx": "180573bb generated",
@@ -51126,7 +51126,7 @@ function ClientPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Invoices</h2>
+          <h2 className="text-lg font-semibold">{"Invoices"}</h2>
           {row.invoices.length > 0 && canAdd?.invoices && (
               <Link to="/invoices/new" search={{ client: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("invoice")}
@@ -51539,7 +51539,7 @@ function InvoicePage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Lines</h2>
+          <h2 className="text-lg font-semibold">{"Lines"}</h2>
           
         </div>
         <ModelTable
@@ -51882,7 +51882,7 @@ function OverviewPage() {
       </div>
       <BarChart label="Invoiced" kind="money" app={app} bars={data.invoiced} period="month" />
       <section aria-labelledby="latest-title" className="space-y-3">
-        <h2 id="latest-title" className="font-semibold">Latest</h2>
+        <h2 id="latest-title" className="font-semibold">{"Latest"}</h2>
         <ModelTable
           ui={invoiceUi}
           app={app}
@@ -52911,7 +52911,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/__root.tsx": "43f38496 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/clients/$id.tsx": "ccab8f93 generated",
+  "src/routes/clients/$id.tsx": "e36f8b7f generated",
   "src/routes/clients/index.tsx": "12269975 generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/events.ts": "2a5e5b78 generated",
@@ -52920,10 +52920,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "268208f5 generated",
-  "src/routes/invoices/$id.tsx": "99070619 generated",
+  "src/routes/invoices/$id.tsx": "ab4f8ccf generated",
   "src/routes/invoices/index.tsx": "892a7477 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
-  "src/routes/overview/index.tsx": "e7b45adf generated",
+  "src/routes/overview/index.tsx": "254c2c93 generated",
   "src/routes/privacy/index.tsx": "a2c437ac generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/settings/index.tsx": "dd4e71b0 generated",
@@ -60473,7 +60473,7 @@ function OrderPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Lines</h2>
+          <h2 className="text-lg font-semibold">{"Lines"}</h2>
           
         </div>
         <ModelTable
@@ -62152,7 +62152,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f71e6cf2 generated",
-  "src/routes/orders/$id.tsx": "1072b050 generated",
+  "src/routes/orders/$id.tsx": "eb8a58da generated",
   "src/routes/orders/index.tsx": "4fb12d6e generated",
   "src/routes/orders/new.tsx": "1739d5ad generated",
   "src/routes/robots[.]txt.ts": "933017e8 generated",
@@ -81759,7 +81759,7 @@ function ComponentPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Incidents</h2>
+          <h2 className="text-lg font-semibold">{"Incidents"}</h2>
           {row.incidents.length > 0 && canAdd?.incidents && (
               <Link to="/incidents/new" search={{ component: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("incident")}
@@ -81782,7 +81782,7 @@ function ComponentPage() {
       </section>
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Maintenances</h2>
+          <h2 className="text-lg font-semibold">{"Maintenances"}</h2>
           {row.maintenances.length > 0 && canAdd?.maintenances && (
               <Link to="/maintenance/new" search={{ component: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("maintenance")}
@@ -82301,7 +82301,7 @@ function IncidentPage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Updates</h2>
+          <h2 className="text-lg font-semibold">{"Updates"}</h2>
           {row.updates.length > 0 && canAdd?.updates && (
               <Link to="/updates/new" search={{ incident: row.id }} className={buttonVariants({ variant: "outline" })}>
                 {w.addOne("incident update")}
@@ -83118,7 +83118,7 @@ function OverviewPage() {
       </div>
       <BarChart label="Per month" kind="int" app={app} bars={data.perMonth} period="month" />
       <section aria-labelledby="latest-title" className="space-y-3">
-        <h2 id="latest-title" className="font-semibold">Latest</h2>
+        <h2 id="latest-title" className="font-semibold">{"Latest"}</h2>
         <ModelTable
           ui={incidentUi}
           app={app}
@@ -84544,13 +84544,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents[.]csv.ts": "766067c0 generated",
   "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/components/$id.tsx": "b8a3aa18 generated",
+  "src/routes/components/$id.tsx": "dc8ee51a generated",
   "src/routes/components/index.tsx": "505a019a generated",
   "src/routes/components/new.tsx": "0fbd3870 generated",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/history/$address.tsx": "62c1d3b2 generated",
   "src/routes/history/index.tsx": "fe879f2e generated",
-  "src/routes/incidents/$id.tsx": "6b3b7246 generated",
+  "src/routes/incidents/$id.tsx": "bf4ecf44 generated",
   "src/routes/incidents/index.tsx": "7c4beb6e generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",
   "src/routes/incoming/chatCommand.ts": "9b12c3b5 generated",
@@ -84559,7 +84559,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/maintenance/index.tsx": "cf3eb42f generated",
   "src/routes/maintenance/new.tsx": "569f7977 generated",
   "src/routes/mcp.ts": "0d8813db generated",
-  "src/routes/overview/index.tsx": "349243f0 generated",
+  "src/routes/overview/index.tsx": "be91b9dc generated",
   "src/routes/robots[.]txt.ts": "deeaa1e2 generated",
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
@@ -90853,7 +90853,7 @@ function SupportCasePage() {
       />
       <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Messages</h2>
+          <h2 className="text-lg font-semibold">{"Messages"}</h2>
           
         </div>
         <ModelTable
@@ -92450,7 +92450,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/__root.tsx": "05dab5c3 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/cases/$id.tsx": "74f8aab9 generated",
+  "src/routes/cases/$id.tsx": "69d4f745 generated",
   "src/routes/cases/index.tsx": "f45f99ca generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/events.ts": "f683a575 generated",

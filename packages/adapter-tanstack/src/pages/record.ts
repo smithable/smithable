@@ -42,6 +42,7 @@ import {
   hasFavorites,
   importList,
   indexPath,
+  inert,
   inlineLists,
   join,
   keyOf,
@@ -55,10 +56,12 @@ import {
   ownerKey,
   ownerOf,
   parentRefs,
+  quotedText,
   references,
   splitActions,
   standardActions,
   type Texts,
+  templateText,
   threadLists,
   titleField,
   trashedLists,
@@ -103,7 +106,7 @@ export function recordPageRoute(
     .add("#/lib/viewer.server", "currentViewer");
   const writeCheck = `allows(${n.access}.write, viewer${hasSignIn(auth) ? `, ${ownerOf(model, n)}` : ""})`;
   const server = `
-/** The viewer's ${n.label.toLowerCase()}: the first one they may read. */
+/** The viewer's ${inert(n.label.toLowerCase())}: the first one they may read. */
 const ${fn} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
   const row = (await ${n.data}.list(viewer)).at(-1) ?? null;
@@ -408,8 +411,8 @@ export function detailRoute(
   const heading = composedName(model)
     ? `${nameFunction(model)}(row as Record<string, unknown>)`
     : title === "id"
-      ? `\`${n.label} #\${row.id}\``
-      : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${n.label} #\${row.id}\``;
+      ? `\`${templateText(n.label)} #\${row.id}\``
+      : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${templateText(n.label)} #\${row.id}\``;
   const options =
     hasChoices(model) || (auth && addressOwnedForm(model, auth))
       ? optionsFor(model, t, ir, auth)
@@ -594,7 +597,7 @@ export function detailRoute(
       const lead = ux.pages[page.id]?.recordFirst === "thread";
       const markup = `      <section className="${lead ? "mb-10" : "mt-10"}">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">${label}</h2>
+          <h2 className="text-lg font-semibold">{${JSON.stringify(label)}}</h2>
           ${add?.route && !thread.replies ? `{${button}}` : ""}
         </div>
         <Thread
@@ -652,7 +655,7 @@ export function detailRoute(
                 }
               : undefined`;
       return `      <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">${label}</h2>
+        <h2 className="mb-3 text-lg font-semibold">{${JSON.stringify(label)}}</h2>
         <InlineRows
           ui={${tn.ui}}
           app={app}
@@ -673,7 +676,7 @@ export function detailRoute(
     tables = true;
     return `      <section className="mt-10">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">${label}</h2>
+          <h2 className="text-lg font-semibold">{${JSON.stringify(label)}}</h2>
           ${add ? `{row.${field.name}.length > 0 && ${button}}` : ""}
         </div>
         <ModelTable
@@ -1081,14 +1084,14 @@ import { mailConfigured, sendMail } from "#/kit/mail";
 import { currentViewer } from "#/lib/viewer.server";
 `,
     fn: `
-/** A message about this ${n.label.toLowerCase()} to its ${recipient}, by mail; their address stays here. */
+/** A message about this ${inert(n.label.toLowerCase())} to its ${inert(recipient)}, by mail; their address stays here. */
 const contact${model.name} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.int(), name: z.string().trim().min(1).max(200), email: z.email().max(200), message: z.string().trim().min(1).max(2000) }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     writeAllowed(viewer, getRequestHeaders());
     const row = await ${n.data}.get(viewer, data.id);
-    if (!row) throw new Error("This ${n.label.toLowerCase()} is not there any more.");
+    if (!row) throw new Error("This ${quotedText(n.label.toLowerCase())} is not there any more.");
 ${
   contact.to === "owner" && model.ownerKind === "address"
     ? `    // The owner is the address itself (support-portal-path.md §2).
@@ -1096,9 +1099,9 @@ ${
     : `    const recipient = ${contact.to === "owner" && creatorOwned(model) ? `${n.data}.ownerOf(viewer, row.id)` : `row.${key}`};
     const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;`
 }
-    if (!to?.email) throw new Error("The ${recipient} cannot be reached.");
+    if (!to?.email) throw new Error("The ${quotedText(recipient)} cannot be reached.");
     const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
-    const name = ${title === "id" ? `\`${n.label} #\${row.id}\`` : `String(row.${title})`};
+    const name = ${title === "id" ? `\`${templateText(n.label)} #\${row.id}\`` : `String(row.${title})`};
     const link = \`\${process.env.BETTER_AUTH_URL ?? ""}${page.route === "/" ? "" : page.route}/\${row.id}\`;
     await sendMail({
       to: to.email,
