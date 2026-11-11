@@ -4,13 +4,13 @@ import selfHost from "../../../docs/site/self-host.md?raw";
 // Every setting the app kit and the generated code read from the environment is in self-host.md's
 // table (docs review 2026-11-11, 3.4): a setting added without a line there fails here.
 const all: Record<string, string> = {
-  ...import.meta.glob("../templates/**/*.{ts,tsx,mjs}", {
+  ...import.meta.glob("../templates/**/*.{ts,tsx,js,jsx,mjs,cjs}", {
     query: "?raw",
     import: "default",
     eager: true,
   }),
   // The generator writes reads into generated code (process.env.HOST_PAGE_URL in a page).
-  ...import.meta.glob("./**/*.ts", {
+  ...import.meta.glob("./**/*.{ts,tsx,js,mjs}", {
     query: "?raw",
     import: "default",
     eager: true,
@@ -20,10 +20,14 @@ const sources = Object.fromEntries(
   Object.entries(all).filter(([path]) => !/\.(test|gen)\./.test(path)),
 );
 
-/** The names read: process.env.X, process.env["X"], { X, Y } = process.env, env.X where env is it. */
+/**
+ * The names read: process.env.X, process.env["X"], { X, Y } = process.env, env.X where env is it.
+ * A name made in a template literal (process.env.INCOMING_${…}_ADDRESS) is read as INCOMING_<>_ADDRESS.
+ */
 function readNames(text: string): string[] {
   const names = new Set<string>();
-  for (const m of text.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)/g)) names.add(m[1] ?? "");
+  for (const m of text.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)(\$\{[^}]*\}([A-Z0-9_]*))?/g))
+    names.add(m[2] ? `${m[1]}<>${m[3]}` : (m[1] ?? ""));
   for (const m of text.matchAll(/process\.env\[\s*["'`]([A-Z][A-Z0-9_]*)["'`]\s*\]/g))
     names.add(m[1] ?? "");
   for (const m of text.matchAll(/\{([^{}]*)\}\s*=\s*process\.env\b/g))
@@ -33,30 +37,25 @@ function readNames(text: string): string[] {
   return [...names];
 }
 
-/** The table's settings; a name with <NAME> stands for its prefix (INCOMING_<NAME>_SECRET). */
+/** The table's settings, a row's name with <NAME> as <> (INCOMING_<NAME>_SECRET is INCOMING_<>_SECRET). */
 const documented = [...selfHost.matchAll(/^\| (`[^|]+`) \|/gm)].flatMap((m) =>
-  [...(m[1] ?? "").matchAll(/`([A-Z][A-Z0-9_]*(?:<[A-Z]+>[A-Z0-9_]*)?)`/g)].map((n) => n[1] ?? ""),
+  [...(m[1] ?? "").matchAll(/`([A-Z][A-Z0-9_]*(?:<[A-Z]+>[A-Z0-9_]*)?)`/g)].map((n) =>
+    (n[1] ?? "").replace(/<[A-Z]+>/, "<>"),
+  ),
 );
-const listed = (name: string) =>
-  documented.some((d) =>
-    d.includes("<") ? name.startsWith(d.slice(0, d.indexOf("<"))) : d === name,
-  );
+const read = () => new Set(Object.values(sources).flatMap(readNames));
 
 test("every setting the app reads has a line in self-host.md's settings table", () => {
-  const read = new Set(Object.values(sources).flatMap(readNames));
-  expect(read.size).toBeGreaterThan(30);
-  expect([...read].filter((n) => !listed(n)).sort()).toEqual([]);
+  const names = read();
+  expect(names.size).toBeGreaterThan(30);
+  expect([...names].filter((n) => !documented.includes(n)).sort()).toEqual([]);
 });
 
 test("the table lists no setting the app no longer reads", () => {
-  const read = [...new Set(Object.values(sources).flatMap(readNames))];
-  // Read by name in code the test cannot see as a read: the sign-in providers' settings (a map in
-  // auth.ts), the outgoing targets' (built from the target's name in the kit).
-  const other = /^(GOOGLE|FACEBOOK)_CLIENT_|^OUTGOING_</;
-  const stale = documented.filter(
-    (d) =>
-      !other.test(d) &&
-      !read.some((n) => (d.includes("<") ? n.startsWith(d.slice(0, d.indexOf("<"))) : n === d)),
-  );
-  expect(stale).toEqual([]);
+  const names = read();
+  // Names the code builds before it reads them, which the reads above cannot see: the sign-in
+  // providers' (a map in auth.ts), an incoming entry's secret (incomingSecret in incoming.ts) and
+  // an outgoing target's (targetSettings in the kit's outgoing.ts).
+  const built = /^(GOOGLE|FACEBOOK)_CLIENT_|^INCOMING_<>_SECRET$|^OUTGOING_<>/;
+  expect(documented.filter((d) => !built.test(d) && !names.has(d))).toEqual([]);
 });
