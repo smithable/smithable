@@ -7648,6 +7648,21 @@ function manager(viewer: Viewer | null): Viewer {
   return viewer as Viewer;
 }
 
+/**
+ * The roles each role may give, take or remove: an administrator any; another role only those
+ * whose rights are all its own, never an administrator's (so a manager cannot make one).
+ */
+const GRANTABLE: Record<string, readonly string[]> = {
+  admin: ["admin", "member", "assistant"],
+  member: ["member", "assistant"],
+  assistant: ["assistant"],
+};
+
+/** Refuses a manager a role it may not give or take away. */
+function mayGrant(by: Viewer, role: string): void {
+  if (!(GRANTABLE[by.role] ?? []).includes(role)) throw new AccessDenied(true);
+}
+
 const link = (origin: string, token: string) => \`\${origin}/sign-in?invite=\${token}\`;
 
 const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow => ({
@@ -7658,13 +7673,15 @@ const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow =
   link: link(origin, i.token),
 });
 
-/** Everyone with access, and the invitations not yet accepted. */
+/** Everyone with access, the invitations not yet accepted, and the roles the viewer may give. */
 export async function listUsers(
   viewer: Viewer | null,
   origin: string,
-): Promise<{ users: UserRow[]; invitations: InvitationRow[] }> {
-  manager(viewer);
+): Promise<{ users: UserRow[]; invitations: InvitationRow[]; grantable: string[] }> {
+  const by = manager(viewer);
   return {
+    /** The roles this viewer may give: the page offers only these. */
+    grantable: [...(GRANTABLE[by.role] ?? [])],
     users: db
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
@@ -7675,7 +7692,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -7687,9 +7706,13 @@ export async function invite(
   origin: string,
 ): Promise<InvitationRow> {
   const by = manager(viewer);
+  mayGrant(by, role);
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -7718,6 +7741,8 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   const renewed = db.transaction((tx) => {
     const sent = tx
       .update(invitation)
@@ -7735,6 +7760,8 @@ export async function resendInvitation(
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   db.transaction((tx) => {
     const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
     if (gone)
@@ -7748,6 +7775,9 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   if (userId === by.id) throw new Error("You cannot change your own role.");
   const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
+  // Both ends: the role they have, and the one they get.
+  mayGrant(by, target.role);
+  mayGrant(by, role);
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
   db.transaction((tx) => {
@@ -7807,6 +7837,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
     .where(eq(user.id, userId))
     .get();
   if (!target) return;
+  mayGrant(by, target.role);
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
@@ -7942,6 +7973,27 @@ test("a role the team page does not give, and a key whatever its role, is refuse
   expect(open).toContain("users-test-target@example.com");
   expect(open).not.toContain("users-test-sneak@example.com");
   await withdrawInvitation(admin, pending.id);
+});
+
+test("a role that manages users but is no administrator makes no administrator, and changes none", async () => {
+  const rule = pageAccess["team"];
+  for (const role of ROLES.filter((r) => r !== "admin" && rule.roles.includes(r))) {
+    const manager = { id: \`users-test-manager-\${role}\`, name: role, email: \`users-test-manager-\${role}@example.com\`, role };
+    // The page offers it no administrator's role.
+    expect((await listUsers(manager, ORIGIN)).grantable).not.toContain("admin");
+    await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
+    await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
+  }
+  expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
+  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
 });
 
 test("only the page's roles manage users; an administrator cannot change or remove themselves", async () => {
@@ -10442,7 +10494,7 @@ export const Route = createFileRoute("/team/")({
 });
 
 function TeamPage() {
-  const { users, invitations, keys } = Route.useLoaderData();
+  const { users, invitations, grantable, keys } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
   const then = async <T,>(change: Promise<T>) => {
@@ -10456,6 +10508,7 @@ function TeamPage() {
       <Users
         viewerId={viewer?.id}
         roles={ROLE_OPTIONS}
+        grantable={grantable}
         users={users}
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
@@ -11011,8 +11064,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "d437282f generated",
-  "src/generated/users.test.ts": "b5d92c9f generated",
+  "src/generated/users.server.ts": "98bfd380 generated",
+  "src/generated/users.test.ts": "8ad7ab74 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
@@ -11038,7 +11091,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4f9abaf1 kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/api.server.ts": "3dcef74d kit",
@@ -11130,7 +11183,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "9eb77c47 generated",
   "src/routes/team/activity.tsx": "f071bc95 generated",
-  "src/routes/team/index.tsx": "1f7fedb9 generated",
+  "src/routes/team/index.tsx": "c1b1e9fc generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",
@@ -40150,6 +40203,17 @@ function manager(viewer: Viewer | null): Viewer {
   return viewer as Viewer;
 }
 
+/**
+ * The roles each role may give, take or remove: an administrator any; another role only those
+ * whose rights are all its own, never an administrator's (so a manager cannot make one).
+ */
+const GRANTABLE: Record<string, readonly string[]> = { admin: ["admin", "sales"], sales: ["sales"] };
+
+/** Refuses a manager a role it may not give or take away. */
+function mayGrant(by: Viewer, role: string): void {
+  if (!(GRANTABLE[by.role] ?? []).includes(role)) throw new AccessDenied(true);
+}
+
 const link = (origin: string, token: string) => \`\${origin}/sign-in?invite=\${token}\`;
 
 const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow => ({
@@ -40160,13 +40224,15 @@ const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow =
   link: link(origin, i.token),
 });
 
-/** Everyone with access, and the invitations not yet accepted. */
+/** Everyone with access, the invitations not yet accepted, and the roles the viewer may give. */
 export async function listUsers(
   viewer: Viewer | null,
   origin: string,
-): Promise<{ users: UserRow[]; invitations: InvitationRow[] }> {
-  manager(viewer);
+): Promise<{ users: UserRow[]; invitations: InvitationRow[]; grantable: string[] }> {
+  const by = manager(viewer);
   return {
+    /** The roles this viewer may give: the page offers only these. */
+    grantable: [...(GRANTABLE[by.role] ?? [])],
     users: db
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
@@ -40177,7 +40243,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -40189,9 +40257,13 @@ export async function invite(
   origin: string,
 ): Promise<InvitationRow> {
   const by = manager(viewer);
+  mayGrant(by, role);
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -40220,6 +40292,8 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   const renewed = db.transaction((tx) => {
     const sent = tx
       .update(invitation)
@@ -40237,6 +40311,8 @@ export async function resendInvitation(
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   db.transaction((tx) => {
     const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
     if (gone)
@@ -40250,6 +40326,9 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   if (userId === by.id) throw new Error("You cannot change your own role.");
   const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
+  // Both ends: the role they have, and the one they get.
+  mayGrant(by, target.role);
+  mayGrant(by, role);
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
   db.transaction((tx) => {
@@ -40299,6 +40378,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
     .where(eq(user.id, userId))
     .get();
   if (!target) return;
+  mayGrant(by, target.role);
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
@@ -40422,6 +40502,27 @@ test("a role the team page does not give, and a key whatever its role, is refuse
   expect(open).toContain("users-test-target@acme.example");
   expect(open).not.toContain("users-test-sneak@acme.example");
   await withdrawInvitation(admin, pending.id);
+});
+
+test("a role that manages users but is no administrator makes no administrator, and changes none", async () => {
+  const rule = pageAccess["team"];
+  for (const role of ROLES.filter((r) => r !== "admin" && rule.roles.includes(r))) {
+    const manager = { id: \`users-test-manager-\${role}\`, name: role, email: \`users-test-manager-\${role}@acme.example\`, role };
+    // The page offers it no administrator's role.
+    expect((await listUsers(manager, ORIGIN)).grantable).not.toContain("admin");
+    await expect(invite(manager, "users-test-new-admin@acme.example", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
+    await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@acme.example", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@acme.example", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
+  }
+  expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
+  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@acme.example");
 });
 
 test("only the page's roles manage users; an administrator cannot change or remove themselves", async () => {
@@ -42779,7 +42880,7 @@ export const Route = createFileRoute("/team/")({
 });
 
 function TeamPage() {
-  const { users, invitations } = Route.useLoaderData();
+  const { users, invitations, grantable } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
   const then = async <T,>(change: Promise<T>) => {
@@ -42793,6 +42894,7 @@ function TeamPage() {
       <Users
         viewerId={viewer?.id}
         roles={ROLE_OPTIONS}
+        grantable={grantable}
         users={users}
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
@@ -43425,8 +43527,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "bd5ac85e generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "31c09fe7 generated",
-  "src/generated/users.test.ts": "88e55585 generated",
+  "src/generated/users.server.ts": "ad010a68 generated",
+  "src/generated/users.test.ts": "18f42451 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -43456,7 +43558,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Trash.tsx": "77988823 kit",
-  "src/kit/Users.tsx": "4f9abaf1 kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/aggregate.ts": "531e264f kit",
@@ -43529,7 +43631,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "1155ec62 generated",
   "src/routes/team/activity.tsx": "7c53973c generated",
-  "src/routes/team/index.tsx": "d125d34a generated",
+  "src/routes/team/index.tsx": "6349287f generated",
   "src/routes/team/trash.tsx": "bbce40d6 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
@@ -58824,6 +58926,17 @@ function manager(viewer: Viewer | null): Viewer {
   return viewer as Viewer;
 }
 
+/**
+ * The roles each role may give, take or remove: an administrator any; another role only those
+ * whose rights are all its own, never an administrator's (so a manager cannot make one).
+ */
+const GRANTABLE: Record<string, readonly string[]> = { admin: ["admin", "staff"], staff: ["staff"] };
+
+/** Refuses a manager a role it may not give or take away. */
+function mayGrant(by: Viewer, role: string): void {
+  if (!(GRANTABLE[by.role] ?? []).includes(role)) throw new AccessDenied(true);
+}
+
 const link = (origin: string, token: string) => \`\${origin}/sign-in?invite=\${token}\`;
 
 const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow => ({
@@ -58834,13 +58947,15 @@ const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow =
   link: link(origin, i.token),
 });
 
-/** Everyone with access, and the invitations not yet accepted. */
+/** Everyone with access, the invitations not yet accepted, and the roles the viewer may give. */
 export async function listUsers(
   viewer: Viewer | null,
   origin: string,
-): Promise<{ users: UserRow[]; invitations: InvitationRow[] }> {
-  manager(viewer);
+): Promise<{ users: UserRow[]; invitations: InvitationRow[]; grantable: string[] }> {
+  const by = manager(viewer);
   return {
+    /** The roles this viewer may give: the page offers only these. */
+    grantable: [...(GRANTABLE[by.role] ?? [])],
     users: db
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
@@ -58851,7 +58966,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -58863,9 +58980,13 @@ export async function invite(
   origin: string,
 ): Promise<InvitationRow> {
   const by = manager(viewer);
+  mayGrant(by, role);
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -58894,6 +59015,8 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   const renewed = db.transaction((tx) => {
     const sent = tx
       .update(invitation)
@@ -58911,6 +59034,8 @@ export async function resendInvitation(
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   db.transaction((tx) => {
     const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
     if (gone)
@@ -58924,6 +59049,9 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   if (userId === by.id) throw new Error("You cannot change your own role.");
   const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
+  // Both ends: the role they have, and the one they get.
+  mayGrant(by, target.role);
+  mayGrant(by, role);
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
   db.transaction((tx) => {
@@ -58974,6 +59102,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
     .where(eq(user.id, userId))
     .get();
   if (!target) return;
+  mayGrant(by, target.role);
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
@@ -59101,6 +59230,27 @@ test("a role the team page does not give, and a key whatever its role, is refuse
   expect(open).toContain("users-test-target@example.com");
   expect(open).not.toContain("users-test-sneak@example.com");
   await withdrawInvitation(admin, pending.id);
+});
+
+test("a role that manages users but is no administrator makes no administrator, and changes none", async () => {
+  const rule = pageAccess["team"];
+  for (const role of ROLES.filter((r) => r !== "admin" && rule.roles.includes(r))) {
+    const manager = { id: \`users-test-manager-\${role}\`, name: role, email: \`users-test-manager-\${role}@example.com\`, role };
+    // The page offers it no administrator's role.
+    expect((await listUsers(manager, ORIGIN)).grantable).not.toContain("admin");
+    await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
+    await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
+  }
+  expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
+  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
 });
 
 test("only the page's roles manage users; an administrator cannot change or remove themselves", async () => {
@@ -61264,7 +61414,7 @@ export const Route = createFileRoute("/team/")({
 });
 
 function TeamPage() {
-  const { users, invitations } = Route.useLoaderData();
+  const { users, invitations, grantable } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
   const then = async <T,>(change: Promise<T>) => {
@@ -61278,6 +61428,7 @@ function TeamPage() {
       <Users
         viewerId={viewer?.id}
         roles={ROLE_OPTIONS}
+        grantable={grantable}
         users={users}
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
@@ -61905,8 +62056,8 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/stop.server.ts": "55e3c3f4 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
-  "src/generated/users.server.ts": "26958fac generated",
-  "src/generated/users.test.ts": "0b576940 generated",
+  "src/generated/users.server.ts": "d51294bd generated",
+  "src/generated/users.test.ts": "7acaec15 generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
@@ -61935,7 +62086,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4f9abaf1 kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -62011,7 +62162,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/stops/index.tsx": "8122a4c9 generated",
   "src/routes/stops/new.tsx": "0033752d generated",
   "src/routes/team/activity.tsx": "2c5e20dd generated",
-  "src/routes/team/index.tsx": "968fd9c5 generated",
+  "src/routes/team/index.tsx": "d0aa5bca generated",
   "src/routes/where/index.tsx": "55545172 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
@@ -80160,6 +80311,17 @@ function manager(viewer: Viewer | null): Viewer {
   return viewer as Viewer;
 }
 
+/**
+ * The roles each role may give, take or remove: an administrator any; another role only those
+ * whose rights are all its own, never an administrator's (so a manager cannot make one).
+ */
+const GRANTABLE: Record<string, readonly string[]> = { admin: ["admin", "staff"], staff: ["staff"] };
+
+/** Refuses a manager a role it may not give or take away. */
+function mayGrant(by: Viewer, role: string): void {
+  if (!(GRANTABLE[by.role] ?? []).includes(role)) throw new AccessDenied(true);
+}
+
 const link = (origin: string, token: string) => \`\${origin}/sign-in?invite=\${token}\`;
 
 const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow => ({
@@ -80170,13 +80332,15 @@ const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow =
   link: link(origin, i.token),
 });
 
-/** Everyone with access, and the invitations not yet accepted. */
+/** Everyone with access, the invitations not yet accepted, and the roles the viewer may give. */
 export async function listUsers(
   viewer: Viewer | null,
   origin: string,
-): Promise<{ users: UserRow[]; invitations: InvitationRow[] }> {
-  manager(viewer);
+): Promise<{ users: UserRow[]; invitations: InvitationRow[]; grantable: string[] }> {
+  const by = manager(viewer);
   return {
+    /** The roles this viewer may give: the page offers only these. */
+    grantable: [...(GRANTABLE[by.role] ?? [])],
     users: db
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
@@ -80187,7 +80351,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -80199,9 +80365,13 @@ export async function invite(
   origin: string,
 ): Promise<InvitationRow> {
   const by = manager(viewer);
+  mayGrant(by, role);
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -80230,6 +80400,8 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   const renewed = db.transaction((tx) => {
     const sent = tx
       .update(invitation)
@@ -80247,6 +80419,8 @@ export async function resendInvitation(
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   db.transaction((tx) => {
     const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
     if (gone)
@@ -80260,6 +80434,9 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   if (userId === by.id) throw new Error("You cannot change your own role.");
   const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
+  // Both ends: the role they have, and the one they get.
+  mayGrant(by, target.role);
+  mayGrant(by, role);
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
   db.transaction((tx) => {
@@ -80319,6 +80496,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
     .where(eq(user.id, userId))
     .get();
   if (!target) return;
+  mayGrant(by, target.role);
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
@@ -80454,6 +80632,27 @@ test("a role the team page does not give, and a key whatever its role, is refuse
   expect(open).toContain("users-test-target@example.com");
   expect(open).not.toContain("users-test-sneak@example.com");
   await withdrawInvitation(admin, pending.id);
+});
+
+test("a role that manages users but is no administrator makes no administrator, and changes none", async () => {
+  const rule = pageAccess["team"];
+  for (const role of ROLES.filter((r) => r !== "admin" && rule.roles.includes(r))) {
+    const manager = { id: \`users-test-manager-\${role}\`, name: role, email: \`users-test-manager-\${role}@example.com\`, role };
+    // The page offers it no administrator's role.
+    expect((await listUsers(manager, ORIGIN)).grantable).not.toContain("admin");
+    await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
+    await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
+  }
+  expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
+  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
 });
 
 test("only the page's roles manage users; an administrator cannot change or remove themselves", async () => {
@@ -83371,7 +83570,7 @@ export const Route = createFileRoute("/team/")({
 });
 
 function TeamPage() {
-  const { users, invitations, keys } = Route.useLoaderData();
+  const { users, invitations, grantable, keys } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
   const then = async <T,>(change: Promise<T>) => {
@@ -83385,6 +83584,7 @@ function TeamPage() {
       <Users
         viewerId={viewer?.id}
         roles={ROLE_OPTIONS}
+        grantable={grantable}
         users={users}
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
@@ -84246,8 +84446,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
-  "src/generated/users.server.ts": "89addff1 generated",
-  "src/generated/users.test.ts": "cd7e93db generated",
+  "src/generated/users.server.ts": "08aef890 generated",
+  "src/generated/users.test.ts": "253c266e generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
@@ -84278,7 +84478,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4f9abaf1 kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/aggregate.ts": "531e264f kit",
@@ -84364,7 +84564,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/sign-in.tsx": "11f3b277 generated",
   "src/routes/sitemap[.]xml.ts": "de1b6faa generated",
   "src/routes/team/activity.tsx": "ded514ba generated",
-  "src/routes/team/index.tsx": "985b893e generated",
+  "src/routes/team/index.tsx": "dafa2829 generated",
   "src/routes/updates/$id.tsx": "68a6081c generated",
   "src/routes/updates/index.tsx": "11c7f442 generated",
   "src/routes/updates/new.tsx": "ac78941b generated",
@@ -89527,6 +89727,17 @@ function manager(viewer: Viewer | null): Viewer {
   return viewer as Viewer;
 }
 
+/**
+ * The roles each role may give, take or remove: an administrator any; another role only those
+ * whose rights are all its own, never an administrator's (so a manager cannot make one).
+ */
+const GRANTABLE: Record<string, readonly string[]> = { admin: ["admin", "agent"], agent: ["agent"] };
+
+/** Refuses a manager a role it may not give or take away. */
+function mayGrant(by: Viewer, role: string): void {
+  if (!(GRANTABLE[by.role] ?? []).includes(role)) throw new AccessDenied(true);
+}
+
 const link = (origin: string, token: string) => \`\${origin}/sign-in?invite=\${token}\`;
 
 const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow => ({
@@ -89537,13 +89748,15 @@ const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow =
   link: link(origin, i.token),
 });
 
-/** Everyone with access, and the invitations not yet accepted. */
+/** Everyone with access, the invitations not yet accepted, and the roles the viewer may give. */
 export async function listUsers(
   viewer: Viewer | null,
   origin: string,
-): Promise<{ users: UserRow[]; invitations: InvitationRow[] }> {
-  manager(viewer);
+): Promise<{ users: UserRow[]; invitations: InvitationRow[]; grantable: string[] }> {
+  const by = manager(viewer);
   return {
+    /** The roles this viewer may give: the page offers only these. */
+    grantable: [...(GRANTABLE[by.role] ?? [])],
     users: db
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
@@ -89554,7 +89767,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -89566,9 +89781,13 @@ export async function invite(
   origin: string,
 ): Promise<InvitationRow> {
   const by = manager(viewer);
+  mayGrant(by, role);
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -89597,6 +89816,8 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   const renewed = db.transaction((tx) => {
     const sent = tx
       .update(invitation)
@@ -89614,6 +89835,8 @@ export async function resendInvitation(
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   db.transaction((tx) => {
     const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
     if (gone)
@@ -89627,6 +89850,9 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   if (userId === by.id) throw new Error("You cannot change your own role.");
   const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
+  // Both ends: the role they have, and the one they get.
+  mayGrant(by, target.role);
+  mayGrant(by, role);
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
   db.transaction((tx) => {
@@ -89677,6 +89903,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
     .where(eq(user.id, userId))
     .get();
   if (!target) return;
+  mayGrant(by, target.role);
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
@@ -89804,6 +90031,27 @@ test("a role the team page does not give, and a key whatever its role, is refuse
   expect(open).toContain("users-test-target@example.com");
   expect(open).not.toContain("users-test-sneak@example.com");
   await withdrawInvitation(admin, pending.id);
+});
+
+test("a role that manages users but is no administrator makes no administrator, and changes none", async () => {
+  const rule = pageAccess["team"];
+  for (const role of ROLES.filter((r) => r !== "admin" && rule.roles.includes(r))) {
+    const manager = { id: \`users-test-manager-\${role}\`, name: role, email: \`users-test-manager-\${role}@example.com\`, role };
+    // The page offers it no administrator's role.
+    expect((await listUsers(manager, ORIGIN)).grantable).not.toContain("admin");
+    await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
+    await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
+  }
+  expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
+  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
 });
 
 test("only the page's roles manage users; an administrator cannot change or remove themselves", async () => {
@@ -91609,7 +91857,7 @@ export const Route = createFileRoute("/team/")({
 });
 
 function TeamPage() {
-  const { users, invitations } = Route.useLoaderData();
+  const { users, invitations, grantable } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
   const then = async <T,>(change: Promise<T>) => {
@@ -91623,6 +91871,7 @@ function TeamPage() {
       <Users
         viewerId={viewer?.id}
         roles={ROLE_OPTIONS}
+        grantable={grantable}
         users={users}
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
@@ -92134,8 +92383,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "89ad054e generated",
-  "src/generated/users.test.ts": "c9e9da25 generated",
+  "src/generated/users.server.ts": "ffcdfdf6 generated",
+  "src/generated/users.test.ts": "5cb4d084 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -92164,7 +92413,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "4f9abaf1 kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -92237,7 +92486,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e52e206e generated",
   "src/routes/team/activity.tsx": "468cb15a generated",
-  "src/routes/team/index.tsx": "a945c0f8 generated",
+  "src/routes/team/index.tsx": "b9305ec9 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",

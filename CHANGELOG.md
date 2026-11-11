@@ -20,6 +20,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- On a generated app's users page, only an administrator makes or removes an administrator, and a role that manages users gives only the roles within its own rights (`fixes/users-page-roles.yml`).
+
 - A mail that a generated app finds a thread for only by the `[app #id]` tag in its subject joins it only from the record's own address or one already in its thread; from anyone else it starts a new one (`fixes/mail-tag-sender.yml`).
 
 - The generated apps count an IPv6 address by its /64 in their limits, and keep signed-in people's counts apart from strangers', where a flood of new keys pushes out keys counted once instead of refusing everyone new (`fixes/limits-by-network.yml`).

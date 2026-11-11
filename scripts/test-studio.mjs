@@ -1341,7 +1341,10 @@ try {
       // The preview reloads a few seconds after the column change before: a click that lands in
       // the frame being replaced edits nothing, so the title must be editable before typing.
       const title = preview.locator('[data-sm-text="pages.customers.title"]');
+      const changed = last.getByText("Changed the Customers page's title to “Clients”").first();
       await page.getByRole("button", { name: "Select" }).click();
+      // A reload that lands between the title becoming editable and the typing takes the typing
+      // with it: the whole edit is made again then (the same title again changes nothing).
       for (let attempt = 1; ; attempt++) {
         await openPreview("/customers");
         await preview
@@ -1350,17 +1353,14 @@ try {
         await title.click({ timeout: 60000 * P });
         try {
           await title.and(preview.locator("[contenteditable=true]")).waitFor({ timeout: 5000 * P });
+          await page.keyboard.type("Clients");
+          await page.keyboard.press("Enter");
+          await changed.waitFor({ timeout: (attempt === 3 ? 60000 : 20000) * P });
           break;
         } catch (error) {
           if (attempt === 3) throw error;
         }
       }
-      await page.keyboard.type("Clients");
-      await page.keyboard.press("Enter");
-      await last
-        .getByText("Changed the Customers page's title to “Clients”")
-        .first()
-        .waitFor({ timeout: 60000 * P });
       if (!(await project()).files.content.includes("title: Clients"))
         throw new Error("content not changed");
       await page.getByRole("button", { name: "Select" }).click();

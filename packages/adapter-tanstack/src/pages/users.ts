@@ -126,7 +126,7 @@ ${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  loader: () =>
 });
 
 function ${component}() {
-  const { users, invitations${keys ? ", keys" : ""} } = Route.useLoaderData();
+  const { users, invitations, grantable${keys ? ", keys" : ""} } = Route.useLoaderData();
   const { viewer } = Route.useRouteContext();
   const router = useRouter();
   const then = async <T,>(change: Promise<T>) => {
@@ -140,6 +140,7 @@ function ${component}() {
       <Users
         viewerId={viewer?.id}
         roles={ROLE_OPTIONS}
+        grantable={grantable}
         users={users}
         invitations={invitations}
         onInvite={(email, role) => then(inviteUser({ data: { email, role: role as Role } }))}
