@@ -95,19 +95,19 @@ export function rejectUnsafeText(ctx: ParseContext, doc: ReturnType<typeof parse
         ctx.error(n, "text-line-break", "A name cannot run over several lines.");
         return;
       }
+      // The key the text is the value of: the nearest pair (a list's items are their list's).
       const pairs = path.filter(isPair);
-      for (let i = pairs.length - 1; i >= 0; i--) {
-        const parent = pairs[i] as (typeof pairs)[number];
-        const key = isScalar(parent.key) ? String(parent.key.value) : "";
-        if (LONG_TEXTS.has(key) && !isName(pairs, i)) return;
-        ctx.error(
-          n,
-          "text-line-break",
-          `"${key}" is one line: it cannot hold a line break.`,
-          "Write it on one line, or put the longer words in a description or a text.",
-        );
-        return;
-      }
+      const i = pairs.length - 1;
+      const parent = pairs[i];
+      if (!parent) return;
+      const key = isScalar(parent.key) ? String(parent.key.value) : "";
+      if (LONG_TEXTS.has(key) && !isName(pairs, i)) return;
+      ctx.error(
+        n,
+        "text-line-break",
+        `"${key}" is one line: it cannot hold a line break.`,
+        "Write it on one line, or put the longer words in a description or a text.",
+      );
     },
   });
 }
