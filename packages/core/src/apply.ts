@@ -98,7 +98,10 @@ export function findOperation(
   return operationsFor(plugins).find((op) => op.name === name);
 }
 
-/** Whether a key's path in a file fits one of an operation's `sets` patterns. */
+/**
+ * Whether a key's path in a file fits one of an operation's `sets` patterns: `*` is one name (or
+ * a list's index), `**` (only at the end) anything below.
+ */
 export function setsKey(
   pattern: string,
   file: string,
