@@ -315,7 +315,7 @@ async function runOperationLocked(
   if (result.r) flags.onResult?.(result.r);
   if (code !== FAILED) return code;
   recordFailure(dir, name, args, said.join(""), flags.trace);
-  if (!flags.reportLater) await afterFailure(dir, io);
+  if (!flags.reportLater) afterFailure(dir, io);
   return 1;
 }
 

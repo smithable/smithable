@@ -223,7 +223,6 @@ export async function run(argv: string[], io: Io = processIo): Promise<number> {
   if (command === "report")
     return report(values.dir ?? ".", io, {
       send: values.send === true,
-      always: values.always === true,
       never: values.never === true,
       ask: values.ask === true,
     });
@@ -525,7 +524,6 @@ const CONFIG = {
     replaceable: { type: "boolean" },
     home: { type: "string" },
     send: { type: "boolean" },
-    always: { type: "boolean" },
     never: { type: "boolean" },
     ask: { type: "boolean" },
     live: { type: "boolean" },

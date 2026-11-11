@@ -323,13 +323,13 @@ export const COMMANDS: Command[] = [
   },
   {
     name: "report",
-    usage: "report [--send] [--always | --never | --ask]",
+    usage: "report [--send] [--never | --ask]",
     text: [
       "Show the report of the last failure: the operation, the error, the log and the spec",
-      "files (never records, uploads or custom code); --send sends it, --always and --never",
-      "are remembered for you, --ask asks again",
+      "files (never records, uploads or custom code); --send sends it, --never is",
+      "remembered for you, --ask asks again",
     ],
-    options: ["send", "always", "never", "ask", "dir"],
+    options: ["send", "never", "ask", "dir"],
   },
   {
     name: "test",

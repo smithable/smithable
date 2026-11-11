@@ -773,7 +773,7 @@ async function answers(): Promise<boolean> {
  * it again, and a report of it, offered as for a change that failed.
  */
 function Stuck({ retry }: { retry: () => void }) {
-  const [stuck, setStuck] = useState<{ log: string[]; report?: "sent" | "offer" }>();
+  const [stuck, setStuck] = useState<{ log: string[]; report?: "offer" }>();
   const [reporting, setReporting] = useState(false);
   const [restarting, setRestarting] = useState(false);
   useEffect(() => {
@@ -807,7 +807,6 @@ function Stuck({ retry }: { retry: () => void }) {
           </Button>
         )}
       </div>
-      {stuck?.report === "sent" && <p className="text-xs">A report of this was sent.</p>}
       {reporting && <ReportDialog onClose={() => setReporting(false)} />}
     </div>
   );

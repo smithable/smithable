@@ -775,16 +775,10 @@ export async function studio(
       }
     | undefined;
 
-  /**
-   * The last failure, recorded `since` then, is reported at once for someone who chose
-   * "always"; else Studio offers it.
-   */
-  const offerReport = async (since = ""): Promise<"sent" | "offer" | undefined> => {
+  /** Studio offers the last failure's report, recorded `since` then, unless told never to. */
+  const offerReport = (since = ""): "offer" | undefined => {
     const built = buildReport(dir, logs);
-    const choice = reportChoice();
-    if (!built || built.at < since || choice === "never") return undefined;
-    if (choice !== "always") return "offer";
-    return "sent" in (await sendReport(built).catch(() => ({ url: "" }))) ? "sent" : "offer";
+    return !built || built.at < since || reportChoice() === "never" ? undefined : "offer";
   };
 
   /** Runs a command with its output captured for the response. */
@@ -1239,14 +1233,14 @@ export async function studio(
         // reopens it, as after an undo.
         else if (result.output.includes("Nothing was changed.")) restored(packages);
         // A failure of this change (not a refusal, and not an earlier failure).
-        const report = result.ok ? undefined : await offerReport(asked);
+        const report = result.ok ? undefined : offerReport(asked);
         return json({ ...result, needsConfirm, report, ...(change ? { change } : {}) });
       }
       // The preview has not answered within Studio's wait: its last log lines, and the failure
       // kept for a report (seen on the hosted beta: a preview that never started).
       if (req.method === "POST" && url.pathname === "/api/preview/stuck") {
         const tail = logs.slice(-40);
-        // Each Retry asks again: recorded, and sent for "always", once while it stays stuck.
+        // Each Retry asks again: recorded once while it stays stuck.
         if (!stuck) {
           recordFailure(
             dir,
@@ -1255,7 +1249,7 @@ export async function studio(
             tail.join("\n") || "No log lines.",
             traceIdOf(req.headers.traceparent),
           );
-          stuck = { report: await offerReport() };
+          stuck = { report: offerReport() };
         }
         return json({ log: tail.slice(-12), report: stuck.report });
       }
@@ -1282,7 +1276,7 @@ export async function studio(
       }
       if (req.method === "POST" && url.pathname === "/api/report") {
         const { send: sending, choice } = await body();
-        if (choice === "always" || choice === "never" || choice === "ask") setReportChoice(choice);
+        if (choice === "never" || choice === "ask") setReportChoice(choice);
         const built = buildReport(dir, logs);
         if (!sending || !built) return json({ ok: true });
         try {
