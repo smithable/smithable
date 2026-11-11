@@ -1466,7 +1466,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
   // A person answered by the host's model spends its calls: they have a limit of their own.
-  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions);
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
     kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],

@@ -1,0 +1,8 @@
+id: mail-tag-sender
+title: A mail with a record's number in its subject joined that record's thread whoever sent it.
+severity: security
+exposure: A stranger could have added messages and attachments to an open case or request by writing its number in a mail's subject; nothing was sent to them.
+introduced: unknown
+affects:
+  features: [section:incoming]
+migration: none

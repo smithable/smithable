@@ -22,6 +22,12 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 - Generated apps: Ask counts the questions the host's model answers per person (30 a quarter of an hour); a private picture or document is asked for again each time instead of kept an hour; an API key's last use is written at most once a minute; the users page counts in SQL (`fixes/kit-hardening.yml`). A field named like a built-in property of objects (`constructor`, `toString`) is read as a name everywhere; Studio's preview takes select mode and highlighting only from Studio.
 
+- On a generated app's users page, only an administrator makes or removes an administrator, and a role that manages users gives only the roles within its own rights (`fixes/users-page-roles.yml`).
+
+- A mail that a generated app finds a thread for only by the `[app #id]` tag in its subject joins it only from the record's own address or one already in its thread; from anyone else it starts a new one (`fixes/mail-tag-sender.yml`).
+
+- The generated apps count an IPv6 address by its /64 in their limits, and keep signed-in people's counts apart from strangers', where a flood of new keys pushes out keys counted once instead of refusing everyone new (`fixes/limits-by-network.yml`).
+
 - Text from the spec is written into the generated apps' code as text wherever it goes: comments, strings, template literals, the page's markup and the README's commands (`fixes/spec-text-in-code.yml`).
 
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.

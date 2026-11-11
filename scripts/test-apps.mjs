@@ -2501,9 +2501,9 @@ async function mailThreadFlow(dir, base) {
       throw new Error("then did not set handled");
     if (!(await sentSince(before, 1)).some((m) => /^To: dev-admin@/m.test(m)))
       throw new Error("the admin was not told of the reply");
-    // By the tag alone, a forwarded mail.
+    // By the tag alone, from the address that wrote the message.
     const tagged = await post({
-      from: "bo@example.org",
+      from: "ada@example.org",
       subject: `Fwd: question ${/\[[^\]]*#\d+\]$/.exec(header(ack, "Subject"))?.[0]}`,
       text: "Same question from me.",
       messageId: "",
@@ -2530,8 +2530,24 @@ async function mailThreadFlow(dir, base) {
     await new Promise((r) => setTimeout(r, 1000));
     if (mails().length !== before) throw new Error("an auto-reply sent mail");
     if (replies().length !== 3) throw new Error(`the replies: ${replies().length}`);
+    // The tag alone from someone else (anyone can write a number in a subject): a new message.
+    const stranger = await post({
+      // A display name copied from the thread is not its address.
+      from: "Ada Lovelace <mallory@example.org>",
+      subject: `Re: ${/\[[^\]]*#\d+\]$/.exec(header(ack, "Subject"))?.[0]}`,
+      text: "Written into someone else's thread.",
+      messageId: "",
+      inReplyTo: "",
+      references: [],
+      autoSubmitted: "",
+    });
+    const strangers = await stranger.json();
+    if (stranger.status !== 201 || !strangers.id || strangers.thread !== undefined)
+      throw new Error(`a stranger's tag: ${stranger.status} ${JSON.stringify(strangers)}`);
+    if (replies().length !== 3)
+      throw new Error(`the replies after a stranger's tag: ${replies().length}`);
     console.log(
-      "  ✓ mail threads: the acknowledgement carries the tag and the thread's headers and is kept; an answer by its headers, and one by the tag, become replies on the message; an auto-reply joins and tells nobody",
+      "  ✓ mail threads: the acknowledgement carries the tag and the thread's headers and is kept; an answer by its headers, and one by the tag from its own address, become replies on the message; an auto-reply joins and tells nobody; a stranger's tag starts a new one",
     );
   } catch (error) {
     console.log(`  ✗ mail threads: ${error.message.split("\n")[0]}`);
