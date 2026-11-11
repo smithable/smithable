@@ -9,7 +9,13 @@ afterEach(() => {
 // The kit's limit.ts, as the generated apps get it (a path the build does not follow).
 const path: string = "../templates/src/kit/limit.ts";
 const kit = (await import(path)) as {
-  count(key: string, limit: { max: number; seconds: number }, what: string, now?: number): void;
+  count(
+    key: string,
+    limit: { max: number; seconds: number },
+    what: string,
+    now?: number,
+    person?: boolean,
+  ): void;
   TooMany: new (what: string) => Error;
   address(headers: { get(name: string): string | null }): string;
 };
@@ -41,13 +47,35 @@ test("the limit counts within a window, refuses beyond it, and starts over after
   expect(() => kit.count("write:a", limit, "changes", at(64))).toThrow(kit.TooMany);
 });
 
-test("full of live counts, the limit keeps them and refuses a new key until the window ends", () => {
-  const limit = { max: 1, seconds: 60 };
+test("full of strangers' counts, a newcomer pushes out a count of one; a count above one stays", () => {
+  const limit = { max: 2, seconds: 60 };
   const now = 5_000_000;
-  for (let i = 0; i < 50_000; i++) kit.count(`flood:${i}`, limit, "changes", now);
-  // A live count is not dropped to make room: its limit still holds.
-  expect(() => kit.count("flood:0", limit, "changes", now + 1000)).toThrow(kit.TooMany);
-  expect(() => kit.count("newcomer", limit, "changes", now + 1000)).toThrow(kit.TooMany);
-  // Once the window is over the expired counts go, and a new key is counted.
-  expect(() => kit.count("newcomer", limit, "changes", now + 61_000)).not.toThrow();
+  // One stranger near the limit, then a flood of new keys, each counted once.
+  kit.count("near", limit, "changes", now);
+  kit.count("near", limit, "changes", now);
+  for (let i = 0; i < 50_000; i++) kit.count(`flood:${i}`, limit, "changes", now + 1);
+  // A newcomer is counted: room is made among the counts of one.
+  expect(() => kit.count("newcomer", limit, "changes", now + 2)).not.toThrow();
+  // The count at its limit was not dropped: it still refuses.
+  expect(() => kit.count("near", limit, "changes", now + 3)).toThrow(kit.TooMany);
+});
+
+test("a signed-in person's count is kept apart: strangers filling theirs never refuse a person", () => {
+  const limit = { max: 1, seconds: 3600 };
+  const now = 9_000_000;
+  for (let i = 0; i < 50_000; i++)
+    kit.count(`stranger:${i}`, { max: 5, seconds: 3600 }, "changes", now);
+  expect(() => kit.count("write:person", limit, "changes", now + 1, true)).not.toThrow();
+  expect(() => kit.count("write:person", limit, "changes", now + 2, true)).toThrow(kit.TooMany);
+});
+
+test("an IPv6 address counts by its /64; an IPv4 one, also written IPv4-mapped, by itself", () => {
+  process.env.TRUST_PROXY = "1";
+  const of = (address: string) => kit.address(headers({ "x-forwarded-for": address }));
+  expect(of("2001:db8:1:2:aaaa::1")).toBe(of("2001:0db8:0001:0002:bbbb:cccc:dddd:eeee"));
+  expect(of("2001:db8:1:2::1")).not.toBe(of("2001:db8:1:3::1"));
+  expect(of("2001:db8::1")).toBe("2001:db8:0:0::/64");
+  for (const mapped of ["::ffff:203.0.113.9", "::FFFF:cb00:7109", "::203.0.113.9"])
+    expect(of(mapped), mapped).toBe("203.0.113.9");
+  expect(of("203.0.113.9")).toBe("203.0.113.9");
 });

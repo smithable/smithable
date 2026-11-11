@@ -4,6 +4,7 @@
 // the root route (src/kit/security.ts).
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
+import { isIPv4, isIPv6 } from "node:net";
 import { serve } from "srvx";
 import { staticMiddleware } from "srvx/static";
 import app from "./dist/server/server.js";
@@ -85,7 +86,40 @@ function addressOf(request) {
   // else could send a new address with every request.
   const forwarded =
     TRUST_PROXY && request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
-  return forwarded || request.ip || "";
+  return addressKey(forwarded || request.ip || "");
+}
+
+/**
+ * An address as the limits count it: IPv4 as it is (also when written IPv4-mapped), IPv6 by its
+ * /64, which is what one subscriber is given. As src/kit/address.server.ts.
+ */
+function addressKey(address) {
+  const bare = address.split("%")[0] ?? "";
+  if (isIPv4(bare) || !isIPv6(bare)) return bare;
+  let s = bare.toLowerCase();
+  const dotted = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s);
+  if (dotted) {
+    const [a, b, c, d] = dotted.slice(1).map(Number);
+    s = `${s.slice(0, dotted.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head = "", tail] = s.split("::");
+  const front = head ? head.split(":") : [];
+  const back = tail === undefined ? [] : tail ? tail.split(":") : [];
+  const g = (
+    tail === undefined
+      ? front
+      : [...front, ...Array(8 - front.length - back.length).fill("0"), ...back]
+  ).map((x) => Number.parseInt(x, 16));
+  // IPv4-mapped (::ffff:a.b.c.d) and the old IPv4-compatible form (::a.b.c.d) are that IPv4 address.
+  if (
+    g.slice(0, 5).every((x) => x === 0) &&
+    (g[5] === 0xffff || (g[5] === 0 && (g[6] | g[7]) !== 0))
+  )
+    return [g[6] >> 8, g[6] & 255, g[7] >> 8, g[7] & 255].join(".");
+  return `${g
+    .slice(0, 4)
+    .map((x) => x.toString(16))
+    .join(":")}::/64`;
 }
 
 /**

@@ -18,6 +18,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- The generated apps count an IPv6 address by its /64 in their limits, and keep signed-in people's counts apart from strangers', where a flood of new keys pushes out keys counted once instead of refusing everyone new (`fixes/limits-by-network.yml`).
+
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
 
 ### The app's API

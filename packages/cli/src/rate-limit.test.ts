@@ -1,6 +1,8 @@
 // The production server's limit on changes (adapter-tanstack/templates/server.mjs): per address,
 // and a list of addresses that cannot grow without end.
+
 import { readFileSync } from "node:fs";
+import { isIPv4, isIPv6 } from "node:net";
 import { expect, test } from "vitest";
 
 const source = readFileSync(
@@ -46,4 +48,24 @@ test("an address seen once is forgotten when the list is full, and a flood keeps
   for (let i = 0; i < 59; i++) limited("busy", 63);
   expect(limited("busy", 63)).toBe(true);
   expect(limited("busy", 63)).toBe(false);
+});
+
+// The same file's addressKey: an IPv6 address counts by its /64, as the kit's own limits count it.
+const keyStart = source.indexOf("function addressKey(");
+const keyBody = source.slice(keyStart, source.indexOf("\n}\n", keyStart) + 2);
+const addressKey = new Function("isIPv4", "isIPv6", `${keyBody}; return addressKey;`)(
+  isIPv4,
+  isIPv6,
+) as (address: string) => string;
+
+test("an IPv6 address is counted by its /64; an IPv4 one, also written IPv4-mapped, by itself", () => {
+  expect(addressKey("2001:db8:1:2:aaaa::1")).toBe(
+    addressKey("2001:0db8:0001:0002:bbbb:cccc:dddd:eeee"),
+  );
+  expect(addressKey("2001:db8:1:2::1")).not.toBe(addressKey("2001:db8:1:3::1"));
+  expect(addressKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
+  for (const mapped of ["::ffff:203.0.113.9", "::FFFF:cb00:7109", "::203.0.113.9"])
+    expect(addressKey(mapped), mapped).toBe("203.0.113.9");
+  expect(addressKey("203.0.113.9")).toBe("203.0.113.9");
+  expect(addressKey("")).toBe("");
 });
