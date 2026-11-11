@@ -174,8 +174,8 @@ export interface Result {
   output: string;
   /** A change that loses data: ask, then send it again confirmed. */
   needsConfirm?: boolean;
-  /** A failure: its report was sent (the person chose "always"), or can be offered. */
-  report?: "sent" | "offer";
+  /** A failure whose report can be offered. */
+  report?: "offer";
   /** For an editSpec: the newest change's id after it (grown or new), for the editor to grow. */
   change?: string;
   /** A proposal whose base moved: not applied, its consequences worked out again (§4.1). */
@@ -383,13 +383,13 @@ export const api = {
     }),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
   report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
-  sendReport: (send: boolean, choice?: "always" | "never" | "ask") =>
+  sendReport: (send: boolean, choice?: "never" | "ask") =>
     call<{ ok: boolean; sent?: true; url?: string; message?: string }>("/api/report", {
       send,
       choice,
     }),
   /** The preview did not answer: its last log lines, and whether a report is offered or sent. */
-  previewStuck: () => call<{ log: string[]; report?: "sent" | "offer" }>("/api/preview/stuck", {}),
+  previewStuck: () => call<{ log: string[]; report?: "offer" }>("/api/preview/stuck", {}),
   previewAnswers: () => call<{ ok: boolean }>("/api/preview/answers"),
   /** Starts the preview's server again; `why` goes to the log. */
   previewRestart: (why?: string) => call<{ ok: boolean }>("/api/preview/restart", { why }),

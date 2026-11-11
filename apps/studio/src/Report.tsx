@@ -1,6 +1,6 @@
 // "Report this": the report of a failure, shown in full before it is sent (cli/src/report.ts).
-// Sent to the service when hosted; self-hosted, a prefilled GitHub issue opens. "Always" and
-// "Never" are remembered for the person.
+// Sent to the service when hosted; self-hosted, a prefilled GitHub issue opens. Each report is
+// sent by hand (legal-1.0 section 3); "Never ask" is remembered for the person.
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { Button } from "./ui";
@@ -16,13 +16,13 @@ export function ReportDialog({ onClose }: { onClose: () => void }) {
       .then((r) => setText(r.text ?? "Nothing has failed, so there is nothing to report."))
       .catch((e: Error) => setText(e.message));
   }, []);
-  const send = async (choice?: "always" | "never") => {
+  const send = async (choice?: "never") => {
     if (choice === "never") {
       await api.sendReport(false, "never");
       onClose();
       return;
     }
-    const result = await api.sendReport(true, choice);
+    const result = await api.sendReport(true);
     if (result.url) window.open(result.url, "_blank", "noopener");
     setDone(
       !result.ok
@@ -66,9 +66,6 @@ export function ReportDialog({ onClose }: { onClose: () => void }) {
               </Button>
               <Button variant="ghost" onClick={() => dialog.current?.close()}>
                 Cancel
-              </Button>
-              <Button variant="ghost" disabled={!text} onClick={() => void send("always")}>
-                Always send
               </Button>
               <Button disabled={!text} onClick={() => void send()}>
                 Send report

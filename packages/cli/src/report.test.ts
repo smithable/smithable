@@ -71,6 +71,9 @@ test("self-hosted, a prefilled GitHub issue; the choice is remembered for the pe
   expect(reportChoice()).toBe("never");
   setReportChoice("ask");
   expect(reportChoice()).toBeUndefined();
+  // An "always" saved earlier: every report is shown before it is sent, so it asks again.
+  setReportChoice("always" as "ask");
+  expect(reportChoice()).toBeUndefined();
 });
 
 test("hosted, the service's own words: its thanks, or why it refused", async () => {

@@ -109,7 +109,7 @@ export function App() {
     ok: boolean;
     text: string;
     change?: boolean;
-    report?: "sent" | "offer";
+    report?: "offer";
     /** Something went wrong (not a change refused): the bar offers Troubleshoot. */
     failure?: boolean;
     /** Left for Studio by the making or the daemon (a description that could not be used). */
@@ -571,10 +571,7 @@ export function App() {
         result.ok && spec.ir ? describeChange(name, args, spec.ir, spec.content) : undefined;
       setMessage({
         ok: result.ok,
-        text:
-          result.report === "sent"
-            ? `${plain ?? summary}\nA report of this was sent.`
-            : (plain ?? summary),
+        text: plain ?? summary,
         change: result.ok,
         report: result.report,
         failure: Boolean(result.report),

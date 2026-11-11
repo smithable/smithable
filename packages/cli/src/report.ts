@@ -1,7 +1,7 @@
 // Opt-in error reports: what failed (the operation, its arguments, the error, the last log
 // lines) and the spec files, shown in full before anything leaves, never the data, uploads or
 // custom code. Hosted, the service collects them (SMITHABLE_REPORT_URL); self-hosted, they open
-// a prefilled GitHub issue. "Always" or "never" is remembered for the person, not the project.
+// a prefilled GitHub issue. Each is sent by hand; "never" is remembered for the person.
 // Apart from them, a hosted workspace sends every failure's record without the person's
 // content (SMITHABLE_FAILURE_URL, studio-v3.md §6): the version, the operation's name, the
 // error's class, message and stack, and the trace id; never the arguments, files or records.
@@ -216,7 +216,7 @@ export async function sendReport(
 /**
  * Feedback (A 242): the person's own words, and up to three things they chose to add, each shown
  * in full before it leaves: this session's Changes lines, the spec files as a report sends them,
- * and the last failure's report. It goes where a report goes; no "always" or "never" for it.
+ * and the last failure's report. It goes where a report goes; no "never" for it.
  */
 export interface Feedback {
   kind: "feedback";
@@ -354,69 +354,52 @@ export function buildFeedback(
 const settingsPath = () =>
   join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "smithable", "reports.json");
 
-/** Whether this person always or never sends reports; undefined until they choose. */
-export function reportChoice(): "always" | "never" | undefined {
+/**
+ * Whether this person asked never to be offered reports. An "always" saved before reports were
+ * always shown first reads as asking again.
+ */
+export function reportChoice(): "never" | undefined {
   try {
     const choice = JSON.parse(readFileSync(settingsPath(), "utf8")).choice;
-    return choice === "always" || choice === "never" ? choice : undefined;
+    return choice === "never" ? choice : undefined;
   } catch {
     return undefined;
   }
 }
 
-export function setReportChoice(choice: "always" | "never" | "ask"): void {
+export function setReportChoice(choice: "never" | "ask"): void {
   mkdirSync(dirname(settingsPath()), { recursive: true });
   writeFileSync(settingsPath(), `${JSON.stringify({ choice })}\n`);
 }
 
-/** After a failure: sent at once for "always", else a line on how to see and send it. */
-export async function afterFailure(dir: string, io: Io, log: string[] = []): Promise<void> {
-  const choice = reportChoice();
-  if (choice === "never") return;
-  const report = buildReport(dir, log);
-  if (!report) return;
-  if (choice === "always") {
-    try {
-      const result = await sendReport(report);
-      io.err(
-        "sent" in result
-          ? "A report of this was sent (smithable report shows what).\n"
-          : `To report this: ${result.url}\n`,
-      );
-    } catch (error) {
-      io.err(`The report could not be sent: ${(error as Error).message}\n`);
-    }
-    return;
-  }
+/** After a failure: a line on how to see and send its report. */
+export function afterFailure(dir: string, io: Io, log: string[] = []): void {
+  if (reportChoice() === "never" || !buildReport(dir, log)) return;
   io.err("To report this, run `smithable report`: it shows exactly what it would send first.\n");
 }
 
 /**
- * `smithable report [--send] [--always | --never | --ask]`: shows the report of the last failure;
- * --send sends it; --always and --never are remembered, --ask forgets the choice.
+ * `smithable report [--send] [--never | --ask]`: shows the report of the last failure;
+ * --send sends it; --never is remembered, --ask forgets it.
  */
 export async function report(
   dir: string,
   io: Io,
-  flags: { send?: boolean; always?: boolean; never?: boolean; ask?: boolean },
+  flags: { send?: boolean; never?: boolean; ask?: boolean },
 ): Promise<number> {
-  if (flags.never || flags.always || flags.ask) {
-    setReportChoice(flags.never ? "never" : flags.always ? "always" : "ask");
+  if (flags.never || flags.ask) {
+    setReportChoice(flags.never ? "never" : "ask");
     io.out(
-      flags.never
-        ? "Reports will not be offered.\n"
-        : flags.always
-          ? "Reports will be sent when something fails, without asking.\n"
-          : "You will be asked before each report.\n",
+      flags.never ? "Reports will not be offered.\n" : "You will be asked before each report.\n",
     );
-    if (!flags.send && !flags.always) return 0;
+    if (!flags.send) return 0;
   }
   const built = buildReport(dir);
   if (!built) {
     io.out("Nothing has failed in this project, so there is nothing to report.\n");
     return 0;
   }
-  if (!flags.send && !flags.always) {
+  if (!flags.send) {
     io.out(
       `${reportText(built)}\n\nThis is everything a report sends: no records, uploads or custom code. Send it with \`smithable report --send\`.\n`,
     );

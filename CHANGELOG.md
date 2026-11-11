@@ -12,6 +12,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Breaking
 
+- **The engine**: `smithable report --always` and Studio's Always send are gone: every error report is shown in full and sent by hand. Someone who chose always before is asked again.
+
 - **The spec**: a name, a label, a title or a subject is one line, in every spec file; the longer texts (descriptions, intents, rules, a section's text, help, answers, quotes) may still run over several. Control characters, the line breaks U+2028, U+2029 and U+0085, and the characters that reverse text's direction are refused anywhere.
 
 - Backup capture now briefly holds SQLite writes and requires source write access. A 30-second deadline bounds capture; staged uploads receive content-address checks.
