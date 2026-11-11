@@ -56,10 +56,12 @@ import {
   ownerKey,
   ownerOf,
   parentRefs,
+  quotedText,
   references,
   splitActions,
   standardActions,
   type Texts,
+  templateText,
   threadLists,
   titleField,
   trashedLists,
@@ -409,8 +411,8 @@ export function detailRoute(
   const heading = composedName(model)
     ? `${nameFunction(model)}(row as Record<string, unknown>)`
     : title === "id"
-      ? `\`${inert(n.label)} #\${row.id}\``
-      : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${inert(n.label)} #\${row.id}\``;
+      ? `\`${templateText(n.label)} #\${row.id}\``
+      : `${longTitle(model) ? `titleOf(row.${title})` : `row.${title}`} || \`${templateText(n.label)} #\${row.id}\``;
   const options =
     hasChoices(model) || (auth && addressOwnedForm(model, auth))
       ? optionsFor(model, t, ir, auth)
@@ -1082,14 +1084,14 @@ import { mailConfigured, sendMail } from "#/kit/mail";
 import { currentViewer } from "#/lib/viewer.server";
 `,
     fn: `
-/** A message about this ${inert(n.label.toLowerCase())} to its ${recipient}, by mail; their address stays here. */
+/** A message about this ${inert(n.label.toLowerCase())} to its ${inert(recipient)}, by mail; their address stays here. */
 const contact${model.name} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.int(), name: z.string().trim().min(1).max(200), email: z.email().max(200), message: z.string().trim().min(1).max(2000) }))
   .handler(async ({ data }) => {
     const viewer = await currentViewer();
     writeAllowed(viewer, getRequestHeaders());
     const row = await ${n.data}.get(viewer, data.id);
-    if (!row) throw new Error("This ${inert(n.label.toLowerCase())} is not there any more.");
+    if (!row) throw new Error("This ${quotedText(n.label.toLowerCase())} is not there any more.");
 ${
   contact.to === "owner" && model.ownerKind === "address"
     ? `    // The owner is the address itself (support-portal-path.md §2).
@@ -1097,9 +1099,9 @@ ${
     : `    const recipient = ${contact.to === "owner" && creatorOwned(model) ? `${n.data}.ownerOf(viewer, row.id)` : `row.${key}`};
     const to = recipient ? db.select({ email: user.email }).from(user).where(eq(user.id, recipient)).get() : undefined;`
 }
-    if (!to?.email) throw new Error("The ${recipient} cannot be reached.");
+    if (!to?.email) throw new Error("The ${quotedText(recipient)} cannot be reached.");
     const sender = viewer ? { name: viewer.name, email: viewer.email, message: data.message } : data;
-    const name = ${title === "id" ? `\`${inert(n.label)} #\${row.id}\`` : `String(row.${title})`};
+    const name = ${title === "id" ? `\`${templateText(n.label)} #\${row.id}\`` : `String(row.${title})`};
     const link = \`\${process.env.BETTER_AUTH_URL ?? ""}${page.route === "/" ? "" : page.route}/\${row.id}\`;
     await sendMail({
       to: to.email,

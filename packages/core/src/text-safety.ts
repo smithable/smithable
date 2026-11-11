@@ -59,6 +59,21 @@ const hasControl = (text: string) =>
  * and bidirectional-override characters anywhere, the rare line breaks anywhere, and a line break
  * in a name, label, title or other one-line text.
  */
+/** The keys of the pairs from the root to a value, each a name or a keyword. */
+type Pairs = { key: unknown }[];
+
+/**
+ * Whether the pair at `i` is an entry of a named map (a field called "text" under `fields`), so
+ * its key is a name, not a keyword: its map's own key is one of the named maps and is itself a
+ * keyword (a field called "values" is a name, and what is under it are keywords again).
+ */
+function isName(pairs: Pairs, i: number): boolean {
+  if (i === 0) return false;
+  const holder = pairs[i - 1] as Pairs[number];
+  const key = isScalar(holder.key) ? String(holder.key.value) : "";
+  return NAMED_MAPS.has(key) && !isName(pairs, i - 1);
+}
+
 export function rejectUnsafeText(ctx: ParseContext, doc: ReturnType<typeof parseDocument>): void {
   visit(doc, {
     Scalar(where, node, path) {
@@ -74,19 +89,17 @@ export function rejectUnsafeText(ctx: ParseContext, doc: ReturnType<typeof parse
         );
         return;
       }
-      if (!LINE_BREAK.test(text)) return;
+      // A block scalar (label: |) ends in a line break of its own, which says nothing.
+      if (!LINE_BREAK.test(text.replace(/\r?\n$/, ""))) return;
       if (where === "key") {
         ctx.error(n, "text-line-break", "A name cannot run over several lines.");
         return;
       }
-      for (let i = path.length - 1; i >= 0; i--) {
-        const parent = path[i];
-        if (!isPair(parent)) continue;
+      const pairs = path.filter(isPair);
+      for (let i = pairs.length - 1; i >= 0; i--) {
+        const parent = pairs[i] as (typeof pairs)[number];
         const key = isScalar(parent.key) ? String(parent.key.value) : "";
-        const holder = path[i - 2];
-        const named =
-          isPair(holder) && isScalar(holder.key) && NAMED_MAPS.has(String(holder.key.value));
-        if (LONG_TEXTS.has(key) && !named) return;
+        if (LONG_TEXTS.has(key) && !isName(pairs, i)) return;
         ctx.error(
           n,
           "text-line-break",

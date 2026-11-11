@@ -30,6 +30,7 @@ import {
   names,
   relatedTitle,
   shownTitleKey,
+  templateText,
   titleField,
 } from "../shared.js";
 import { filterCode } from "./list.js";
@@ -117,7 +118,7 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
       : undefined) ??
     (own !== "id" ? titleOf(field(own)) : undefined) ??
     titleOf(model.fields.find((f) => f.required && f.type.kind === "relation" && !f.type.many)) ??
-    `\`${inert(n.label)} #\${row.id}\``;
+    `\`${templateText(n.label)} #\${row.id}\``;
 
   // Records that take someone's time (appointments.md §1): a day view with a column for each of them.
   const occupied = model.occupies;

@@ -44,12 +44,14 @@ import {
   ownerKey,
   ownerOf,
   paramsUsed,
+  quotedText,
   relatedTitle,
   scalarField,
   shownTitle,
   standardActions,
   type Texts,
   tableRef,
+  templateText,
   threadLists,
   type Within,
 } from "../shared.js";
@@ -1078,15 +1080,15 @@ ${
             : ""
         }${
           filtering
-            ? `\n        emptyMessage={q || Object.values(values).some(Boolean) ? "No ${inert(n.pluralLabel.toLowerCase())} match the search and filters." : ${
+            ? `\n        emptyMessage={q || Object.values(values).some(Boolean) ? "No ${quotedText(n.pluralLabel.toLowerCase())} match the search and filters." : ${
                 favorites === "only"
-                  ? `"No saved ${inert(n.pluralLabel.toLowerCase())} yet."`
+                  ? `"No saved ${quotedText(n.pluralLabel.toLowerCase())} yet."`
                   : favorites
-                    ? `view === "saved" ? "No saved ${inert(n.pluralLabel.toLowerCase())} yet: the heart on one saves it." : undefined`
+                    ? `view === "saved" ? "No saved ${quotedText(n.pluralLabel.toLowerCase())} yet: the heart on one saves it." : undefined`
                     : "undefined"
               }}`
             : searchable
-              ? `\n        emptyMessage={q ? \`No ${inert(n.pluralLabel.toLowerCase())} match “\${q}”.\` : undefined}`
+              ? `\n        emptyMessage={q ? \`No ${templateText(n.pluralLabel.toLowerCase())} match “\${q}”.\` : undefined}`
               : ""
         }
         emptyAction={newButton || undefined}

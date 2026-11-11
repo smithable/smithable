@@ -51,3 +51,19 @@ test("the rare line breaks, control characters and bidirectional overrides are r
     ).toContain("text-control-character");
   expect(codes(spec({ name: "Tasks", description: "a\tb" }))).toEqual([]);
 });
+
+test("a field called values is a name: its help may still run over lines; a block scalar's last line break says nothing", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Tasks }\nmodels:\n  Task:\n    fields:\n      values: string\n",
+  }).ir;
+  if (!ir) throw new Error("the spec is valid");
+  const content = (text: string) =>
+    validateContent({ path: "smithable.content.yml", text: `smithableContent: 0.1\n${text}` }, ir);
+  expect(
+    codes(
+      content(`models:\n  Task:\n    fields:\n      values: { help: ${JSON.stringify("a\nb")} }\n`),
+    ),
+  ).toEqual([]);
+  expect(codes(content("models:\n  Task:\n    label: |\n      Task\n"))).toEqual([]);
+});

@@ -190,6 +190,12 @@ export const SCHEMA_IMPORT = 'import * as schema from "#/db/schema";';
 export const templateText = (text: string) =>
   text.replace(/[\\`]/g, "\\$&").replace(/\$\{/g, "\\${");
 
+/** Text inside a double-quoted string in generated code, exactly: escaped as JSON escapes it. */
+export const quotedText = (text: string) => JSON.stringify(text).slice(1, -1);
+
+/** Text inside a single-quoted SQL string in a generated template literal, exactly. */
+export const sqlText = (text: string) => templateText(text.replace(/'/g, "''"));
+
 /**
  * Text from the spec as a comment's line: it cannot end the comment (a star and a slash) or the
  * line (line breaks, U+2028, U+2029 and U+0085 among them), and control and bidirectional-override
@@ -200,7 +206,7 @@ export function commentText(text: string): string {
   return (
     text
       .replace(/[\r\n\u2028\u2029\u0085]+/g, " ")
-      .replace(/[\p{Cc}\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu, "")
+      .replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, "")
       .replace(/\*\//g, "* /")
       // A pragma (@jsxImportSource, @ts-nocheck) in a comment is an instruction to the build.
       .replace(/@/g, "\uff20")
@@ -218,7 +224,7 @@ export function commentText(text: string): string {
 export function inert(text: string): string {
   return text
     .replace(/[\r\n\u2028\u2029\u0085]+/g, " ")
-    .replace(/[\p{Cc}\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu, "")
+    .replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, "")
     .replace(/\*\//g, "* /")
     .replace(/\\/g, "\u2216")
     .replace(/"/g, "\u201d")

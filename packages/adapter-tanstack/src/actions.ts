@@ -38,6 +38,7 @@ import {
   sequenceEntries,
   shownTitleKey,
   type Texts,
+  templateText,
 } from "./shared.js";
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -749,7 +750,7 @@ ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  con
       plans.push(plan(viewer, row${askedArg}));
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);
-      throw new Error(\`${inert(n.label)} "\${String(row.${title} ?? row.id)}": \${why}\`);
+      throw new Error(\`${templateText(n.label)} "\${String(row.${title} ?? row.id)}": \${why}\`);
     }
   }
   const written = db.transaction((tx) => plans.map((p) => ${writes("p")}));

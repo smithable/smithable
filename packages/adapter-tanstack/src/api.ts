@@ -37,9 +37,11 @@ import {
   modelNamed,
   names,
   ownerKey,
+  quotedText,
   references,
   shownTitleKey,
   type Texts,
+  templateText,
   titleField,
 } from "./shared.js";
 
@@ -689,7 +691,7 @@ const found = async (viewer: Parameters<typeof ${n.data}.get>[0], id: string) =>
   // In the trash (docs/design/trash.md): gone, with when, by whom and how to restore it.
   const gone = row ? null : await ${n.data}.trashed(viewer, Number(id));
   if (gone)
-    throw new Gone("This ${inert(n.label.toLowerCase())} is in the trash.", {
+    throw new Gone("This ${quotedText(n.label.toLowerCase())} is in the trash.", {
       deletedAt: gone.deletedAt.toISOString(),
       deletedBy: gone.by,
       removedOn: gone.until.toISOString(),
@@ -697,7 +699,7 @@ const found = async (viewer: Parameters<typeof ${n.data}.get>[0], id: string) =>
     });`
       : ""
   }
-  if (!row) throw new NotFound("No such ${inert(n.label.toLowerCase())}, or not one this key may read.");
+  if (!row) throw new NotFound("No such ${quotedText(n.label.toLowerCase())}, or not one this key may read.");
   return row;
 };
 
@@ -717,7 +719,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
           // ?permanent=true removes a record in the trash for good; otherwise it goes to the trash.
           if (new URL(request.url).searchParams.get("permanent") === "true") {
             if (!${n.data}.removeForGood(viewer, [Number(params.id)]).deleted)
-              throw new NotFound("No such ${inert(n.label.toLowerCase())} in the trash, or not one this key may delete.");
+              throw new NotFound("No such ${quotedText(n.label.toLowerCase())} in the trash, or not one this key may delete.");
             return;
           }`
             : ""
@@ -746,9 +748,9 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
         apiCall(request, async (viewer) => {
           const id = Number(params.id);
           if (!${n.data}.restore(viewer, [id]).restored)
-            throw new NotFound("No such ${inert(n.label.toLowerCase())} in the trash, or not one this key may restore.");
+            throw new NotFound("No such ${quotedText(n.label.toLowerCase())} in the trash, or not one this key may restore.");
           const row = await ${n.data}.get(viewer, id);
-          if (!row) throw new NotFound("No such ${inert(n.label.toLowerCase())}, or not one this key may read.");
+          if (!row) throw new NotFound("No such ${quotedText(n.label.toLowerCase())}, or not one this key may read.");
           return ${camelName}ToApi(row);
         }),
     },
@@ -790,9 +792,9 @@ ${uploads.map((f) => `  ${JSON.stringify(f.name)}: { kind: "${storesFiles(f) ? "
 
 async function target(viewer: Parameters<typeof ${n.data}.get>[0], id: string, name: string) {
   const field = FIELDS[name];
-  if (!field) throw new NotFound("This ${inert(n.label.toLowerCase())} has no picture or document by that name.");
+  if (!field) throw new NotFound("This ${quotedText(n.label.toLowerCase())} has no picture or document by that name.");
   const row = await ${n.data}.get(viewer, Number(id));
-  if (!row) throw new NotFound("No such ${inert(n.label.toLowerCase())}, or not one this key may read.");
+  if (!row) throw new NotFound("No such ${quotedText(n.label.toLowerCase())}, or not one this key may read.");
   return { field, row, value: (row as Record<string, unknown>)[field.key] };
 }
 
@@ -1073,7 +1075,7 @@ function toolsModule(
       return `    case ${JSON.stringify(`restore${model.name}`)}: {
       const id = Number(args.id);
       if (!${n.data}.restore(viewer, [id]).restored)
-        throw new NotFound(\`No ${inert(n.label.toLowerCase())} \${id} in the trash that you may restore.\`);
+        throw new NotFound(\`No ${templateText(n.label.toLowerCase())} \${id} in the trash that you may restore.\`);
       return ${c}ToApi((await ${n.data}.get(viewer, id)) as Record<string, any>);
     }`;
     });

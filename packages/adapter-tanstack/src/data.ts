@@ -79,6 +79,7 @@ import {
   shownFields,
   shownTitle,
   shownTitleKey,
+  sqlText,
   storedFields,
   type Texts,
   tableRef,
@@ -2515,7 +2516,7 @@ ${
         .map((row) => String(row.v));
       const asked = String(v);
       if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No ${inert(n.label.toLowerCase())} has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+        return \`No ${templateText(n.label.toLowerCase())} has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -2823,7 +2824,7 @@ ${
     // Through shownRefs: a part the viewer may not read names nothing here either.
     const rows = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({ where: ${self}.readable(viewer), ...${nameColumns(ir, model, "", linesParts(ir, ux, model))} }));
     return sortRows(
-      rows.map((row) => ({ value: row.id, label: ${composedName(model) ? `${nameFunction(model)}(row)` : titleColumn === "id" ? `\`${inert(n.label)} #\${row.id}\`` : `String(row.${titleColumn} ?? \`${inert(n.label)} #\${row.id}\`)`}, first: ${composedName(model) ? firstPart(model, ir) : titleColumn === "id" ? "row.id" : `row.${titleColumn} ?? null`}${lined ? `, detail: ${linesFunction(model)}(row).subtitle` : ""} })),
+      rows.map((row) => ({ value: row.id, label: ${composedName(model) ? `${nameFunction(model)}(row)` : titleColumn === "id" ? `\`${templateText(n.label)} #\${row.id}\`` : `String(row.${titleColumn} ?? \`${templateText(n.label)} #\${row.id}\`)`}, first: ${composedName(model) ? firstPart(model, ir) : titleColumn === "id" ? "row.id" : `row.${titleColumn} ?? null`}${lined ? `, detail: ${linesFunction(model)}(row).subtitle` : ""} })),
       "first",
     ).map(({ value, label${lined ? ", detail" : ""} }) => ({ value, label${lined ? ", detail" : ""} }));
   },
@@ -2833,11 +2834,11 @@ ${
     return db
       .select({ value: ${n.table}.id, label: ${
         titleColumn === "id"
-          ? `sql<string>\`'${inert(n.label)} #' || \${${n.table}.id}\``
+          ? `sql<string>\`'${sqlText(n.label)} #' || \${${n.table}.id}\``
           : model.fields.find((f) => f.name === titleColumn)?.required
             ? `${n.table}.${titleColumn}`
             : // An optional title: the record's number where it is empty, so every choice has a name.
-              `sql<string>\`coalesce(\${${n.table}.${titleColumn}}, '${inert(n.label)} #' || \${${n.table}.id})\``
+              `sql<string>\`coalesce(\${${n.table}.${titleColumn}}, '${sqlText(n.label)} #' || \${${n.table}.id})\``
       } })
       .from(${n.table})
       .where(${self}.readable(viewer))
