@@ -19,6 +19,7 @@ import {
   addressOwned,
   dataKey,
   HEADER,
+  inert,
   literal,
   modelNamed,
   names,
@@ -90,7 +91,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { ${a.preview}, ${a.run} } from "./${kebab(action.name)}.server";
 
-/** Who may run the "${action.name}" ${into === "new" ? "combine" : "merge"}: its grant, with ${into === "new" ? "the right to add" : "write on"} ${n.pluralLabel.toLowerCase()}. */
+/** Who may run the "${action.name}" ${into === "new" ? "combine" : "merge"}: its grant, with ${into === "new" ? "the right to add" : "write on"} ${inert(n.pluralLabel.toLowerCase())}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
 /** Where the records go: into the one the person picks (chosen), or into a new one (new). */
@@ -520,7 +521,7 @@ export async function ${a.run}(viewer: Viewer | null, ids: number[], given: Reco
           model.trash
             ? `// It goes to the trash, its unique values released as a trashed record's are.
         if (goes.has(other.id)) tx.update(${n.table}).set({ deletedAt: when${signedIn ? ", deletedBy: personOf(viewer)" : ""} }).where(eq(${n.table}.id, other.id)).run();`
-            : `// No trash for ${n.pluralLabel.toLowerCase()}: it is deleted for good.
+            : `// No trash for ${inert(n.pluralLabel.toLowerCase())}: it is deleted for good.
         if (goes.has(other.id)) tx.delete(${n.table}).where(eq(${n.table}.id, other.id)).run();`
         }
         // What moved from it, so its Restore can put it back: tied to this trashing.
@@ -641,7 +642,7 @@ export function unmergeCode(ir: SpecIR, model: ModelIR, auth: AuthIR, t: Texts):
     ...new Map(referrersOf(ir, model.name).map((r) => [r.model.name, r.model])).values(),
   ];
   return `
-/** The tables a merge of ${n.pluralLabel.toLowerCase()} moves records in, by model. */
+/** The tables a merge of ${inert(n.pluralLabel.toLowerCase())} moves records in, by model. */
 const MERGED_TABLES = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${names(m, t).table}`).join(", ")} } as const;
 
 /** Who may change a record of each, read when asked (the modules import one another). */
@@ -651,7 +652,7 @@ const mergedWrite = (model: keyof typeof MERGED_TABLES): ModelAccess["write"] =>
 const MERGED_OWNERS: Record<keyof typeof MERGED_TABLES, string | null> = { ${tables.map((m) => `${JSON.stringify(m.name)}: ${signedIn ? JSON.stringify(ownerKey(m)) : "null"}`).join(", ")} };
 
 /**
- * Puts back what merging this ${n.label.toLowerCase()} away moved, as far as it is still as the merge left it;
+ * Puts back what merging this ${inert(n.label.toLowerCase())} away moved, as far as it is still as the merge left it;
  * returns how many things were changed since and stay as they are.
  */
 function unmerge(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], viewer: Viewer | null, id: number, deletedAt: Date | null): number {

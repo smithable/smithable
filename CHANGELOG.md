@@ -12,6 +12,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Breaking
 
+- **The spec**: a name, a label, a title or a subject is one line, in every spec file; the longer texts (descriptions, intents, rules, a section's text, help, answers, quotes) may still run over several. Control characters, the line breaks U+2028, U+2029 and U+0085, and the characters that reverse text's direction are refused anywhere.
+
 - Backup capture now briefly holds SQLite writes and requires source write access. A 30-second deadline bounds capture; staged uploads receive content-address checks.
 
 - Backup data containing symbolic links is refused. New CLI backups use a versioned file inventory and completion marker; restores verify file hashes before changing data and prefer complete versioned backups. Legacy backups remain explicitly selectable with a verification warning. These checks detect accidental corruption, not a malicious storage provider.
@@ -21,6 +23,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 - A mail that a generated app finds a thread for only by the `[app #id]` tag in its subject joins it only from the record's own address or one already in its thread; from anyone else it starts a new one (`fixes/mail-tag-sender.yml`).
 
 - The generated apps count an IPv6 address by its /64 in their limits, and keep signed-in people's counts apart from strangers', where a flood of new keys pushes out keys counted once instead of refusing everyone new (`fixes/limits-by-network.yml`).
+
+- Text from the spec is written into the generated apps' code as text wherever it goes: comments, strings, template literals, the page's markup and the README's commands (`fixes/spec-text-in-code.yml`).
 
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
 
