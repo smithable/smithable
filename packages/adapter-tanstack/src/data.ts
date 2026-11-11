@@ -2284,8 +2284,8 @@ ${
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
   },${
-  single
-    ? `
+    single
+      ? `
   /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
   async first(viewer: Viewer | null) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
@@ -2296,8 +2296,8 @@ ${
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ", "[0] ?? null")}
   },`
-    : ""
-}
+      : ""
+  }
   /** Development candidates: check all eligible rows, fetching at most 200 at once. */
   async candidateIds(viewer: Viewer | null, accepts: (row: Record<string, unknown>) => boolean = () => true): Promise<number[]> {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
