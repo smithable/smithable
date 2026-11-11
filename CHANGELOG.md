@@ -18,6 +18,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- On a generated app's users page, only an administrator makes or removes an administrator, and a role that manages users gives only the roles within its own rights (`fixes/users-page-roles.yml`).
+
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
 
 ### The app's API

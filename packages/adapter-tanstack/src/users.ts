@@ -1,5 +1,12 @@
 // Part of the TanStack adapter's generator (generate.ts), split out by concern (C7).
-import { type AuthIR, humanize, type SpecIR, USER_MODEL } from "@smithable/core";
+import {
+  type AuthIR,
+  GRANT_KEYS,
+  humanize,
+  type RoleGrants,
+  type SpecIR,
+  USER_MODEL,
+} from "@smithable/core";
 import { hasSignIn, roleLabels } from "./auth.js";
 import { hasKeys } from "./keys.js";
 import { creatorOwned, HEADER, literal, type Texts, tableRef } from "./shared.js";
@@ -55,6 +62,36 @@ export const ROLE_LABELS: Record<string, string> = ${literal(roleLabels(auth))};
  * the users page's roles) does with them. Acceptance is by verified email address at sign-in
  * (src/lib/auth.ts); the token in the link only tells the sign-in page whom it is for.
  */
+/**
+ * The roles each role may grant on the users page (Johan, 2026-11-11): an administrator any; any
+ * other role only those whose rights are all its own (each grant's names among its own, and no
+ * actions when it may run none), never the administrator's.
+ */
+export function grantable(auth: AuthIR): Record<string, string[]> {
+  const within = (s: AuthIR["roles"][number], r: AuthIR["roles"][number]) => {
+    if (r.grants === "all") return true;
+    if (s.grants === "all") return false;
+    const mine = r.grants;
+    if (r.actionsNone && !s.actionsNone) return false;
+    return GRANT_KEYS.every((key) => {
+      const theirs = (s.grants as RoleGrants)[key];
+      if (!theirs || (Array.isArray(theirs) && !theirs.length)) return true;
+      const own = mine[key];
+      if (own === "all") return true;
+      if (!own || theirs === "all") return false;
+      return theirs.every((name) => own.includes(name));
+    });
+  };
+  return Object.fromEntries(
+    auth.roles.map((r) => [
+      r.name,
+      r.name === "admin"
+        ? auth.roles.map((s) => s.name)
+        : auth.roles.filter((s) => s.name !== "admin" && within(s, r)).map((s) => s.name),
+    ]),
+  );
+}
+
 export function usersServerModule(ir: SpecIR, auth: AuthIR, t: Texts, sampled = false): string {
   const roles = auth.roles.map((r) => r.name);
   const uses = userUses(ir, auth, t);
@@ -106,6 +143,17 @@ function manager(viewer: Viewer | null): Viewer {
   return viewer as Viewer;
 }
 
+/**
+ * The roles each role may give, take or remove: an administrator any; another role only those
+ * whose rights are all its own, never an administrator's (so a manager cannot make one).
+ */
+const GRANTABLE: Record<string, readonly string[]> = ${literal(grantable(auth))};
+
+/** Refuses a manager a role it may not give or take away. */
+function mayGrant(by: Viewer, role: string): void {
+  if (!(GRANTABLE[by.role] ?? []).includes(role)) throw new AccessDenied(true);
+}
+
 const link = (origin: string, token: string) => \`\${origin}/sign-in?invite=\${token}\`;
 
 const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow => ({
@@ -116,13 +164,15 @@ const row = (i: typeof invitation.$inferSelect, origin: string): InvitationRow =
   link: link(origin, i.token),
 });
 
-/** Everyone with access, and the invitations not yet accepted. */
+/** Everyone with access, the invitations not yet accepted, and the roles the viewer may give. */
 export async function listUsers(
   viewer: Viewer | null,
   origin: string,
-): Promise<{ users: UserRow[]; invitations: InvitationRow[] }> {
-  manager(viewer);
+): Promise<{ users: UserRow[]; invitations: InvitationRow[]; grantable: string[] }> {
+  const by = manager(viewer);
   return {
+    /** The roles this viewer may give: the page offers only these. */
+    grantable: [...(GRANTABLE[by.role] ?? [])],
     users: db
       .select({ id: user.id, name: user.name, email: user.email, role: user.role })
       .from(user)
@@ -145,6 +195,7 @@ export async function invite(
   origin: string,
 ): Promise<InvitationRow> {
   const by = manager(viewer);
+  mayGrant(by, role);
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
@@ -176,6 +227,8 @@ export async function resendInvitation(
   origin: string,
 ): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   const renewed = db.transaction((tx) => {
     const sent = tx
       .update(invitation)
@@ -193,6 +246,8 @@ export async function resendInvitation(
 
 export async function withdrawInvitation(viewer: Viewer | null, invitationId: string): Promise<void> {
   const by = manager(viewer);
+  const open = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.id, invitationId)).get();
+  if (open) mayGrant(by, open.role);
   db.transaction((tx) => {
     const gone = tx.delete(invitation).where(eq(invitation.id, invitationId)).returning().get();
     if (gone)
@@ -206,6 +261,9 @@ export async function setRole(viewer: Viewer | null, userId: string, role: Role)
   if (userId === by.id) throw new Error("You cannot change your own role.");
   const target = db.select({ role: user.role, name: user.name }).from(user).where(eq(user.id, userId)).get();
   if (!target) throw new Error("This user no longer exists.");
+  // Both ends: the role they have, and the one they get.
+  mayGrant(by, target.role);
+  mayGrant(by, role);
   if (target.role === "admin" && role !== "admin" && admins() === 1)
     throw new Error("The last administrator stays an administrator.");
   db.transaction((tx) => {
@@ -271,6 +329,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
     .where(eq(user.id, userId))
     .get();
   if (!target) return;
+  mayGrant(by, target.role);
   if (target.role === "admin" && admins() === 1)
     throw new Error("The last administrator cannot be removed.");
   try {
@@ -417,6 +476,20 @@ test("a role the ${usersPage(ir)} page does not give, and a key whatever its rol
   expect(open).toContain("users-test-target@${domain}");
   expect(open).not.toContain("users-test-sneak@${domain}");
   await withdrawInvitation(admin, pending.id);
+});
+
+test("a role that manages users but is no administrator makes no administrator, and changes none", async () => {
+  const rule = pageAccess[${JSON.stringify(usersPage(ir))}];
+  for (const role of ROLES.filter((r) => r !== "admin" && rule.roles.includes(r))) {
+    const manager = { id: \`users-test-manager-\${role}\`, name: role, email: \`users-test-manager-\${role}@${domain}\`, role };
+    // The page offers it no administrator's role.
+    expect((await listUsers(manager, ORIGIN)).grantable).not.toContain("admin");
+    await expect(invite(manager, "users-test-new-admin@${domain}", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
+    await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+  }
+  expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
+  expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@${domain}");
 });
 
 test("only the page's roles manage users; an administrator cannot change or remove themselves", async () => {

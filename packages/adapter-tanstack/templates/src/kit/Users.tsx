@@ -47,6 +47,11 @@ interface UsersProps {
   /** The signed-in user: their own role and account are not theirs to change here. */
   viewerId?: string;
   roles: RoleOption[];
+  /**
+   * The roles the viewer may give, take or remove (an administrator any; a manager those whose
+   * rights are its own); unsaid, all. Others are shown, never offered.
+   */
+  grantable?: string[];
   users: UserRow[];
   invitations: InvitationRow[];
   /** Resolves to whether the invitation stayed in the outbox (the preview sends no mail). */
@@ -73,6 +78,7 @@ interface UserUse {
 export function Users({
   viewerId,
   roles,
+  grantable,
   users,
   invitations,
   onInvite,
@@ -83,7 +89,12 @@ export function Users({
   onWithdraw,
 }: UsersProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState(roles.find((r) => r.value !== "admin")?.value ?? "admin");
+  // Whether the viewer may give, take or remove a role; and the roles it may give.
+  const may = (value: string) => !grantable || grantable.includes(value);
+  const offered = roles.filter((r) => may(r.value));
+  const [role, setRole] = useState(
+    offered.find((r) => r.value !== "admin")?.value ?? offered[0]?.value ?? "admin",
+  );
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
   const [notice, setNotice] = useState<string>();
@@ -135,7 +146,7 @@ export function Users({
 
   // The same controls in the table and in the phone cards.
   const roleControl = (u: UserRow) =>
-    u.id === viewerId ? (
+    u.id === viewerId || !may(u.role) ? (
       <span>{label(u.role)}</span>
     ) : (
       <NativeSelect
@@ -145,7 +156,7 @@ export function Users({
         disabled={busy}
         onChange={(e) => run(() => onSetRole(u.id, e.target.value))}
       >
-        {roles.map((r) => (
+        {offered.map((r) => (
           <option key={r.value} value={r.value}>
             {r.label}
           </option>
@@ -153,7 +164,8 @@ export function Users({
       </NativeSelect>
     );
   const removeButton = (u: UserRow) =>
-    u.id !== viewerId && (
+    u.id !== viewerId &&
+    may(u.role) && (
       <Button
         type="button"
         variant="outline"
@@ -178,45 +190,46 @@ export function Users({
     ) : (
       <Badge variant="warning">{w.invitedUntil(date(i.expiresAt))}</Badge>
     );
-  const invitationActions = (i: InvitationRow) => (
-    <div className="flex flex-wrap gap-2 md:justify-end">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={busy || expired(i)}
-        onClick={() => copy(i.link)}
-      >
-        {w.copyLink}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={busy}
-        onClick={() => {
-          let kept = false;
-          return run(
-            async () => {
-              kept = Boolean((await onResend(i.id))?.kept);
-            },
-            () => (kept ? w.invitationKept(i.email) : w.invitationSentAgain(i.email)),
-          );
-        }}
-      >
-        {w.resend}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={busy}
-        onClick={() => run(() => onWithdraw(i.id))}
-      >
-        {w.withdraw}
-      </Button>
-    </div>
-  );
+  const invitationActions = (i: InvitationRow) =>
+    may(i.role) && (
+      <div className="flex flex-wrap gap-2 md:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy || expired(i)}
+          onClick={() => copy(i.link)}
+        >
+          {w.copyLink}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => {
+            let kept = false;
+            return run(
+              async () => {
+                kept = Boolean((await onResend(i.id))?.kept);
+              },
+              () => (kept ? w.invitationKept(i.email) : w.invitationSentAgain(i.email)),
+            );
+          }}
+        >
+          {w.resend}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => run(() => onWithdraw(i.id))}
+        >
+          {w.withdraw}
+        </Button>
+      </div>
+    );
   // A sample user is a person of the sample data the development door acts as, not someone who signs in.
   const status = (u: UserRow) =>
     u.sample ? <Badge>{w.sampleUser}</Badge> : <Badge variant="success">{w.active}</Badge>;
@@ -259,7 +272,7 @@ export function Users({
               onChange={(e) => setRole(e.target.value)}
               disabled={busy}
             >
-              {roles.map((r) => (
+              {offered.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>

@@ -1,0 +1,9 @@
+id: users-page-roles
+title: A role given the users page could invite or promote anyone to administrator, itself through a second address included.
+severity: security
+exposure: Someone with a role that manages users, but no administrator, could have made themselves or another person an administrator.
+introduced: unknown
+affects:
+  kit: [src/kit/Users.tsx]
+  features: [page:users]
+migration: none
