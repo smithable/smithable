@@ -94,14 +94,17 @@ export class YamlEditor {
       return;
     }
     if (node && JSON.stringify(node.toJSON()) === JSON.stringify(value)) return;
-    // A block list or mapping runs on over its last line break, so it is replaced below.
-    const inlineNode = node && (isScalar(node) || ((isSeq(node) || isMap(node)) && node.flow));
+    // A block list, mapping or text (| or >) runs on over its last line break, so it is replaced
+    // below.
+    const inlineNode =
+      node &&
+      ((isScalar(node) && node.type !== "BLOCK_LITERAL" && node.type !== "BLOCK_FOLDED") ||
+        ((isSeq(node) || isMap(node)) && node.flow));
     if (!isBlock(value) && inlineNode) {
       // A scalar in a block mapping keeps its plain form; only inside { … } is it quoted for commas.
       // A list's comment on its line described the old items, so it goes with them.
       const rest = this.source.slice(node.range[1], this.lineEnd(node.range[1]));
-      const end =
-        Array.isArray(value) && /^\s*#/.test(rest) ? node.range[1] + rest.length : node.range[1];
+      const end = isSeq(node) && /^\s*#/.test(rest) ? node.range[1] + rest.length : node.range[1];
       this.splice(node.range[0], end, Array.isArray(value) ? flow(value) : scalar(value));
       return;
     }

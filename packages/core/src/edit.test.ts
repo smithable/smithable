@@ -350,3 +350,9 @@ describe("set replaces a list", () => {
     expect(e.text).toBe(auth);
   });
 });
+
+test("set replaces a block text with one line without joining the next key", () => {
+  const e = new YamlEditor("about: |\n  Two\n  lines\nnext: 1\n");
+  e.set(["about"], "One line");
+  expect(e.text).toBe("about: One line\nnext: 1\n");
+});
