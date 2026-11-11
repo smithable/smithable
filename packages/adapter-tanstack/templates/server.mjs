@@ -90,11 +90,14 @@ function addressOf(request) {
 }
 
 /**
- * An address as the limits count it: IPv4 as it is (also when written IPv4-mapped), IPv6 by its
- * /64, which is what one subscriber is given. As src/kit/address.server.ts.
+ * An address as the limits count it: without a port, brackets or a zone; IPv4 as it is (also
+ * when written IPv4-mapped), IPv6 by its /64, which is what one subscriber is given. As
+ * src/kit/address.server.ts.
  */
 function addressKey(address) {
-  const bare = address.split("%")[0] ?? "";
+  const unbracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(address.trim())?.[1] ?? address.trim();
+  const bare =
+    (/^(\d+\.\d+\.\d+\.\d+):\d+$/.exec(unbracketed)?.[1] ?? unbracketed).split("%")[0] ?? "";
   if (isIPv4(bare) || !isIPv6(bare)) return bare;
   let s = bare.toLowerCase();
   const dotted = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s);
@@ -110,11 +113,8 @@ function addressKey(address) {
       ? front
       : [...front, ...Array(8 - front.length - back.length).fill("0"), ...back]
   ).map((x) => Number.parseInt(x, 16));
-  // IPv4-mapped (::ffff:a.b.c.d) and the old IPv4-compatible form (::a.b.c.d) are that IPv4 address.
-  if (
-    g.slice(0, 5).every((x) => x === 0) &&
-    (g[5] === 0xffff || (g[5] === 0 && (g[6] | g[7]) !== 0))
-  )
+  // IPv4-mapped (::ffff:a.b.c.d) is that IPv4 address.
+  if (g.slice(0, 5).every((x) => x === 0) && g[5] === 0xffff)
     return [g[6] >> 8, g[6] & 255, g[7] >> 8, g[7] & 255].join(".");
   return `${g
     .slice(0, 4)

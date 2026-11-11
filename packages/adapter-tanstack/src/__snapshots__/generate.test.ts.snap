@@ -90970,6 +90970,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import { boundedBody, BodyLimit } from "#/kit/bounded-body";
 import { supportCaseData } from "#/generated/support-case.server";
 import { supportCaseSchema } from "#/generated/support-case.schema";
+import * as schema from "#/db/schema";
 import { messageData } from "#/generated/message.server";
 import { messageSchema } from "#/generated/message.schema";
 import { fromMail } from "#/generated/outgoing.server";
@@ -91041,6 +91042,19 @@ async function saved(mail: Mail, model: string, field: string, uses: (file: stri
   }
   return files;
 }
+/** Whether a sender is the record's own address, or one that already wrote in its thread. */
+function known(sender: string, record: Record<string, unknown>, thread: number): boolean {
+  const s = sender.toLowerCase();
+  if (!s) return false;
+  if (String(record.customerEmail ?? "").toLowerCase() === s) return true;
+  return db
+    .select({ from: schema.messages.fromEmail })
+    .from(schema.messages)
+    .where(eq(schema.messages.supportCaseId, thread))
+    .all()
+    .some((r) => String(r.from ?? "").toLowerCase() === s);
+}
+
 /** The mail's own id, kept in its record's thread so an answer to it finds the record. */
 function keeper(mailId: string) {
   return (record: number) => {
@@ -91101,12 +91115,21 @@ export const Route = createFileRoute("/incoming/support")({
           let thread = answers.length
             ? db.select({ id: mailThreads.recordId }).from(mailThreads).where(and(eq(mailThreads.model, "SupportCase"), inArray(mailThreads.messageId, answers))).orderBy(desc(mailThreads.at)).get()?.id
             : undefined;
+          let byTag = false;
           if (thread === undefined) {
             const tagged = /\\[[^[\\]]*#(\\d+)\\]/.exec(text(mail.subject))?.[1];
-            if (tagged) thread = Number(tagged);
+            if (tagged) {
+              thread = Number(tagged);
+              byTag = true;
+            }
           }
           // A record that is gone (or never was) has no thread: the mail is a new one.
-          if (thread !== undefined && !(await supportCaseData.get(caller, thread))) thread = undefined;
+          const record = thread === undefined ? null : await supportCaseData.get(caller, thread);
+          if (!record) thread = undefined;
+          // Anyone can write a number in a subject: by the tag alone a mail joins only from the
+          // record's own address or one already in its thread; from anyone else it is a new one.
+          if (thread !== undefined && byTag && !known(address(mail.from), record as Record<string, unknown>, thread))
+            thread = undefined;
           if (thread !== undefined) {
             const files = await saved(mail, "message", "attachments", messageData.uses);
             if (files instanceof Response) return files;
@@ -92209,7 +92232,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "4054e00f generated",
+  "src/routes/incoming/support.ts": "7bf0f206 generated",
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e52e206e generated",

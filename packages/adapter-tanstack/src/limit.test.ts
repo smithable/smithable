@@ -60,6 +60,16 @@ test("full of strangers' counts, a newcomer pushes out a count of one; a count a
   expect(() => kit.count("near", limit, "changes", now + 3)).toThrow(kit.TooMany);
 });
 
+test("a flood counted twice each does not refuse a newcomer either: the lowest counts make room", () => {
+  const limit = { max: 5, seconds: 3600 };
+  const now = 20_000_000;
+  for (let i = 0; i < 50_000; i++) {
+    kit.count(`twice:${i}`, limit, "changes", now);
+    kit.count(`twice:${i}`, limit, "changes", now);
+  }
+  expect(() => kit.count("newcomer-2", limit, "changes", now + 1)).not.toThrow();
+});
+
 test("a signed-in person's count is kept apart: strangers filling theirs never refuse a person", () => {
   const limit = { max: 1, seconds: 3600 };
   const now = 9_000_000;
@@ -75,7 +85,15 @@ test("an IPv6 address counts by its /64; an IPv4 one, also written IPv4-mapped, 
   expect(of("2001:db8:1:2:aaaa::1")).toBe(of("2001:0db8:0001:0002:bbbb:cccc:dddd:eeee"));
   expect(of("2001:db8:1:2::1")).not.toBe(of("2001:db8:1:3::1"));
   expect(of("2001:db8::1")).toBe("2001:db8:0:0::/64");
-  for (const mapped of ["::ffff:203.0.113.9", "::FFFF:cb00:7109", "::203.0.113.9"])
+  for (const mapped of [
+    "::ffff:203.0.113.9",
+    "::FFFF:cb00:7109",
+    "[::ffff:203.0.113.9]:443",
+    "203.0.113.9:443",
+  ])
     expect(of(mapped), mapped).toBe("203.0.113.9");
   expect(of("203.0.113.9")).toBe("203.0.113.9");
+  // A port or brackets do not make another address; ::1 is IPv6 like the rest.
+  expect(of("[2001:db8:1:2::1]:443")).toBe(of("2001:db8:1:2::9"));
+  expect(of("::1")).toBe("0:0:0:0::/64");
 });

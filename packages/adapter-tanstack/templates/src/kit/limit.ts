@@ -42,19 +42,17 @@ const pruned = new Map<Counts, number>();
 const MAX_KEYS = 50_000;
 
 /**
- * Room for a new key in a full list: first the expired counts go, then counts of one, the
- * soonest to end first. A flood of new keys is mostly counts of one, so it pushes out mostly its
- * own; a count above one is never dropped, since that would clear a limit someone is near. False
- * when there is no room even so.
+ * Room for a new key in a full list: the expired counts go first, then a tenth of the list, the
+ * lowest counts first and of those the soonest to end. A flood of new keys is mostly low counts,
+ * so it pushes out mostly its own, and the counts nearest their limit are the last to go; a full
+ * list never refuses everyone new, and the sorting is done once per tenth, not per request.
  */
-function room(counts: Counts, now: number): boolean {
-  if (counts.size < MAX_KEYS) return true;
+function room(counts: Counts, now: number): void {
+  if (counts.size < MAX_KEYS) return;
   for (const [k, v] of counts) if (v.until <= now) counts.delete(k);
-  if (counts.size < MAX_KEYS) return true;
-  // A tenth at a time, so a flood does not pay a full pass for every request.
-  const ones = [...counts].filter(([, v]) => v.n <= 1).sort(([, a], [, b]) => a.until - b.until);
-  for (const [k] of ones.slice(0, MAX_KEYS / 10)) counts.delete(k);
-  return counts.size < MAX_KEYS;
+  if (counts.size < MAX_KEYS) return;
+  const order = [...counts].sort(([, a], [, b]) => a.n - b.n || a.until - b.until);
+  for (const [k] of order.slice(0, MAX_KEYS / 10)) counts.delete(k);
 }
 
 /**
@@ -75,8 +73,8 @@ export function count(
   }
   const entry = counts.get(key);
   if (!entry || entry.until <= now) {
-    // Bounded even under a flood of new keys within the hour: no live count above one is dropped.
-    if (!entry && !room(counts, now)) throw new TooMany(what);
+    // Bounded even under a flood of new keys within the hour.
+    if (!entry) room(counts, now);
     counts.set(key, { n: 1, until: now + seconds * 1000 });
     return;
   }

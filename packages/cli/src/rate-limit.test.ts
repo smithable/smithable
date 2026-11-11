@@ -64,8 +64,16 @@ test("an IPv6 address is counted by its /64; an IPv4 one, also written IPv4-mapp
   );
   expect(addressKey("2001:db8:1:2::1")).not.toBe(addressKey("2001:db8:1:3::1"));
   expect(addressKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
-  for (const mapped of ["::ffff:203.0.113.9", "::FFFF:cb00:7109", "::203.0.113.9"])
+  for (const mapped of [
+    "::ffff:203.0.113.9",
+    "::FFFF:cb00:7109",
+    "[::ffff:203.0.113.9]:443",
+    "203.0.113.9:443",
+  ])
     expect(addressKey(mapped), mapped).toBe("203.0.113.9");
   expect(addressKey("203.0.113.9")).toBe("203.0.113.9");
+  // A port or brackets do not make another address; ::1 is IPv6 like the rest.
+  expect(addressKey("[2001:db8:1:2::1]:443")).toBe(addressKey("2001:db8:1:2::9"));
+  expect(addressKey("::1")).toBe("0:0:0:0::/64");
   expect(addressKey("")).toBe("");
 });

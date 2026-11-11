@@ -21,20 +21,29 @@ function ipv6Groups(address: string): number[] {
 }
 
 /**
- * An address as the limits count it: IPv4 as it is (also when written IPv4-mapped), IPv6 by its
- * /64, which is what one subscriber is given, so one person cannot be a new address for every
- * request. Anything else (no address at all) as it is.
+ * An address as written plainly: without a port, brackets or a zone, and an IPv4-mapped IPv6
+ * address (::ffff:a.b.c.d, as a dual-stack server reports IPv4 visitors) as the IPv4 address.
+ */
+export function plainAddress(address: string): string {
+  const unbracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(address.trim())?.[1] ?? address.trim();
+  const bare =
+    (/^(\d+\.\d+\.\d+\.\d+):\d+$/.exec(unbracketed)?.[1] ?? unbracketed).split("%")[0] ?? "";
+  if (!isIPv6(bare)) return bare;
+  const g = ipv6Groups(bare);
+  if (g.slice(0, 5).every((x) => x === 0) && g[5] === 0xffff)
+    return [(g[6] ?? 0) >> 8, (g[6] ?? 0) & 255, (g[7] ?? 0) >> 8, (g[7] ?? 0) & 255].join(".");
+  return bare;
+}
+
+/**
+ * An address as the limits count it: IPv4 as it is, IPv6 by its /64, which is what one
+ * subscriber is given, so one person cannot be a new address for every request. Anything else
+ * (no address at all) as it is.
  */
 export function addressKey(address: string): string {
-  const bare = address.split("%")[0] ?? "";
-  if (isIPv4(bare) || !isIPv6(bare)) return bare;
-  const g = ipv6Groups(bare);
-  // IPv4-mapped (::ffff:a.b.c.d) and the old IPv4-compatible form (::a.b.c.d) are that IPv4 address.
-  if (
-    g.slice(0, 5).every((x) => x === 0) &&
-    (g[5] === 0xffff || (g[5] === 0 && ((g[6] ?? 0) | (g[7] ?? 0)) !== 0))
-  )
-    return [(g[6] ?? 0) >> 8, (g[6] ?? 0) & 255, (g[7] ?? 0) >> 8, (g[7] ?? 0) & 255].join(".");
+  const plain = plainAddress(address);
+  if (isIPv4(plain) || !isIPv6(plain)) return plain;
+  const g = ipv6Groups(plain);
   return `${g
     .slice(0, 4)
     .map((x) => x.toString(16))
@@ -64,7 +73,7 @@ export const ADDRESS_HEADER = "x-visitor-address";
 /** The request with the visitor's address in ADDRESS_HEADER, whatever the visitor sent there. */
 export function withAddress(request: Request): Request {
   const headers = new Headers(request.headers);
-  headers.set(ADDRESS_HEADER, visitorAddress(request) ?? "");
+  headers.set(ADDRESS_HEADER, plainAddress(visitorAddress(request) ?? ""));
   // From its parts: the server's own Request is not one the standard constructor can copy.
   const body = request.method === "GET" || request.method === "HEAD" ? undefined : request.body;
   return new Request(request.url, {
