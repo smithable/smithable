@@ -7692,7 +7692,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -7708,6 +7710,9 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -11052,7 +11057,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "1bd9eabf generated",
+  "src/generated/users.server.ts": "98bfd380 generated",
   "src/generated/users.test.ts": "032f9f19 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -11079,7 +11084,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "aef1061c kit",
+  "src/kit/Users.tsx": "708266fa kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "6a5eaded kit",
@@ -40231,7 +40236,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -40247,6 +40254,9 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -43503,7 +43513,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "bd5ac85e generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "0adeb1a7 generated",
+  "src/generated/users.server.ts": "ad010a68 generated",
   "src/generated/users.test.ts": "bf46cec2 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -43534,7 +43544,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Trash.tsx": "77988823 kit",
-  "src/kit/Users.tsx": "aef1061c kit",
+  "src/kit/Users.tsx": "708266fa kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "531e264f kit",
@@ -58942,7 +58952,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -58958,6 +58970,9 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -62020,7 +62035,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/stop.server.ts": "55e3c3f4 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
-  "src/generated/users.server.ts": "9af6b966 generated",
+  "src/generated/users.server.ts": "d51294bd generated",
   "src/generated/users.test.ts": "170a5142 generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -62050,7 +62065,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "aef1061c kit",
+  "src/kit/Users.tsx": "708266fa kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -80315,7 +80330,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -80331,6 +80348,9 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -84398,7 +84418,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
-  "src/generated/users.server.ts": "179bad1b generated",
+  "src/generated/users.server.ts": "08aef890 generated",
   "src/generated/users.test.ts": "843cc4a9 generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -84430,7 +84450,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "aef1061c kit",
+  "src/kit/Users.tsx": "708266fa kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "531e264f kit",
@@ -89719,7 +89739,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -89735,6 +89757,9 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
@@ -92300,7 +92325,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "1adf9235 generated",
+  "src/generated/users.server.ts": "ffcdfdf6 generated",
   "src/generated/users.test.ts": "40623e3f generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -92330,7 +92355,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "aef1061c kit",
+  "src/kit/Users.tsx": "708266fa kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",

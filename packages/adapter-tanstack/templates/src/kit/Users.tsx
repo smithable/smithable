@@ -93,7 +93,7 @@ export function Users({
   const may = (value: string) => !grantable || grantable.includes(value);
   const offered = roles.filter((r) => may(r.value));
   const [role, setRole] = useState(
-    offered.find((r) => r.value !== "admin")?.value ?? offered[0]?.value ?? "admin",
+    offered.find((r) => r.value !== "admin")?.value ?? offered[0]?.value ?? "",
   );
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
@@ -279,7 +279,7 @@ export function Users({
               ))}
             </NativeSelect>
           </div>
-          <Button type="submit" disabled={busy}>
+          <Button type="submit" disabled={busy || !role}>
             {w.sendInvitation}
           </Button>
         </form>

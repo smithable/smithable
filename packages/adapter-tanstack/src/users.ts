@@ -183,7 +183,9 @@ export async function listUsers(
       .from(invitation)
       .orderBy(asc(invitation.email))
       .all()
-      .map((i) => row(i, origin)),
+      .map((i) => row(i, origin))
+      // The link of an invitation the viewer may not touch is not theirs to pass on.
+      .map((i) => ((GRANTABLE[by.role] ?? []).includes(i.role) ? i : { ...i, link: "" })),
   };
 }
 
@@ -199,6 +201,9 @@ export async function invite(
   const address = email.trim().toLowerCase();
   if (db.select({ id: user.id }).from(user).where(eq(user.email, address)).get())
     throw new Error(\`\${address} already has access.\`);
+  // A new invitation replaces an open one to the address: that one must be the manager's to take.
+  const replaced = db.select({ role: invitation.role }).from(invitation).where(eq(invitation.email, address)).get();
+  if (replaced) mayGrant(by, replaced.role);
   const created = db.transaction((tx) => {
     tx.delete(invitation).where(eq(invitation.email, address)).run();
     audit(tx, by, { action: "invited", model: "User", details: { email: address, role } });
