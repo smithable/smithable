@@ -40,6 +40,9 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // Studio's origin, learned from its first message; until then only "ready" and "errored"
   // (which carry nothing of the app) go out, to any origin.
   let studio = null;
+  // Studio, and only Studio: a page on this machine, or the preview's own site (behind the
+  // service's proxy both are one origin); never another site that frames the preview.
+  const trusted = (origin) => /^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(origin) || origin === location.origin;
   const post = (message) => {
     const target = studio ?? (message.type === "ready" || message.type === "errored" ? "*" : null);
     if (target) window.parent.postMessage({ source: "smithable-preview", ...message }, target);
@@ -59,6 +62,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   let watching = null;
   window.addEventListener("message", (event) => {
     if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
+    if (!trusted(event.origin)) return;
     studio = event.origin;
     // Studio hears when the page has flashed (with the key it sent), so a change is flashed
     // once however often the page reloads for it, and never lost to a reload without it.
@@ -102,7 +106,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // become the paths Vite serves them at (every app has all seven).
   window.addEventListener("message", (event) => {
     if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:theme-css") return;
-    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    if (!trusted(event.origin)) return;
     if (typeof event.data.css !== "string") return;
     let sheet = document.getElementById("sm-theme");
     if (!sheet) {
@@ -149,7 +153,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // own this actual iframe; hosted authorization is supplied separately by the host adapter.
   window.addEventListener("message", (event) => {
     if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:discover-record") return;
-    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    if (!trusted(event.origin)) return;
     const { request, base } = event.data;
     if (typeof request !== "string" || request.length > 100 || typeof base !== "string" || base.length > 1000) return;
     const until = Date.now() + 15000;
@@ -166,7 +170,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // the sign-in page clicks the role's button once it is ready.
   window.addEventListener("message", (event) => {
     if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:dev-sign-in") return;
-    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    if (!trusted(event.origin)) return;
     const started = Date.now();
     const tryClick = () => {
       const buttons = [...document.querySelectorAll("[data-dev-role]")];
@@ -186,7 +190,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // moves as it comes into view moves (same parent-and-machine rule).
   window.addEventListener("message", (event) => {
     if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:motion-tour") return;
-    if (!/^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(event.origin)) return;
+    if (!trusted(event.origin)) return;
     const end = document.documentElement.scrollHeight - window.innerHeight;
     const started = Date.now();
     const step = () => {
@@ -203,6 +207,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   window.addEventListener("message", (event) => {
     // Only the page this preview is in: Studio.
     if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
+    if (!trusted(event.origin)) return;
     studio = event.origin;
     report();
     selecting = Boolean(event.data.on);

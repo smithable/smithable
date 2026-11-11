@@ -189,7 +189,7 @@ export function checkKeys(ctx: ParseContext, entries: Entry[], where: string, ru
         "not-yet-supported",
         `"${key}" in ${where} is not available in spec version 0.1 yet.`,
       );
-    } else if (rules.moved && key in rules.moved) {
+    } else if (rules.moved && Object.hasOwn(rules.moved, key)) {
       ctx.error(
         keyNode,
         "moved-key",

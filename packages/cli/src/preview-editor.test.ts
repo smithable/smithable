@@ -288,6 +288,20 @@ test("only from the page the preview is in, on this machine", () => {
   expect(theme()).toBeUndefined();
 });
 
+test("select mode and highlighting only from Studio: another site that frames the preview gets nothing", () => {
+  const { send, posted } = page();
+  const before = posted.length;
+  send({ type: "smithable:select-mode", on: true }, "https://evil.example");
+  send(
+    { type: "smithable:highlight", concepts: ["model:Customer"], key: 1 },
+    "https://evil.example",
+  );
+  expect(posted.length).toBe(before);
+  // From Studio on this machine it answers as before.
+  send({ type: "smithable:select-mode", on: true });
+  expect(posted.length).toBeGreaterThan(before);
+});
+
 test("a frame in one mode: the app's dark rules always apply, or never", () => {
   const { send, darkRule, root } = page();
   send({ type: "smithable:theme-css", css: "a{}", mode: "dark" });

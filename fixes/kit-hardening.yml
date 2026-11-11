@@ -1,0 +1,9 @@
+id: kit-hardening
+title: Ask had no limit of its own for a person answered by the host's model, a private picture or document stayed in the browser's cache for an hour, and two counts read every row.
+severity: security
+exposure: A person signed in could have made the app's model calls run on for hours; on a shared computer, a private file could have been seen from the cache for up to an hour after signing out.
+introduced: unknown
+affects:
+  kit: [src/kit/uploads.ts, src/kit/limit.ts]
+  features: [any]
+migration: none

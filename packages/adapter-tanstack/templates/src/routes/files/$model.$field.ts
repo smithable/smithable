@@ -28,7 +28,10 @@ export const Route = createFileRoute("/files/$model/$field")({
   server: {
     handlers: {
       POST: async ({ request, params }) => {
-        const entry = UPLOADS[params.model]?.[params.field];
+        // Names from the address: only the app's own models and fields, never an object's own properties.
+        const fields = Object.hasOwn(UPLOADS, params.model) ? UPLOADS[params.model] : undefined;
+        const entry =
+          fields && Object.hasOwn(fields, params.field) ? fields[params.field] : undefined;
         if (!entry) return new Response("Not found", { status: 404 });
         const viewer = await currentViewer();
         const { create, write } = entry.access;

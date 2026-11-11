@@ -2429,6 +2429,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -3282,9 +3284,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "UTC",
@@ -4230,7 +4234,9 @@ export function keyViewer(authorization: string | null | undefined): Viewer | nu
     )
     .get();
   if (!found) return null;
-  db.update(apiKey).set({ lastUsedAt: new Date() }).where(eq(apiKey.id, found.id)).run();
+  // When it was last used, to the minute: one write a minute per key, not one per call.
+  if (!found.lastUsedAt || Date.now() - found.lastUsedAt.getTime() >= 60_000)
+    db.update(apiKey).set({ lastUsedAt: new Date() }).where(eq(apiKey.id, found.id)).run();
   return { id: \`key:\${found.id}\`, name: found.name, email: "", role: found.role };
 }
 "
@@ -7603,7 +7609,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, invitation, user } from "#/db/schema";
 import * as schema from "#/db/schema";
@@ -7811,10 +7817,10 @@ export interface UserUse {
 export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
   manager(viewer);
   const uses: UserUse[] = [
-    { model: "Project", field: null, noun: ["project", "projects"], required: false, count: db.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.ownerId, userId)).all().length },
-    { model: "Task", field: "assignee", noun: ["task", "tasks"], required: false, count: db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.assigneeId, userId)).all().length },
-    { model: "Task", field: null, noun: ["task", "tasks"], required: false, count: db.select({ id: schema.tasks.id }).from(schema.tasks).where(eq(schema.tasks.ownerId, userId)).all().length },
-    { model: "Note", field: null, noun: ["note", "notes"], required: false, count: db.select({ id: schema.notes.id }).from(schema.notes).where(eq(schema.notes.ownerId, userId)).all().length },
+    { model: "Project", field: null, noun: ["project", "projects"], required: false, count: db.select({ n: count() }).from(schema.projects).where(eq(schema.projects.ownerId, userId)).get()?.n ?? 0 },
+    { model: "Task", field: "assignee", noun: ["task", "tasks"], required: false, count: db.select({ n: count() }).from(schema.tasks).where(eq(schema.tasks.assigneeId, userId)).get()?.n ?? 0 },
+    { model: "Task", field: null, noun: ["task", "tasks"], required: false, count: db.select({ n: count() }).from(schema.tasks).where(eq(schema.tasks.ownerId, userId)).get()?.n ?? 0 },
+    { model: "Note", field: null, noun: ["note", "notes"], required: false, count: db.select({ n: count() }).from(schema.notes).where(eq(schema.notes.ownerId, userId)).get()?.n ?? 0 },
   ];
   return uses.filter((use) => use.count > 0);
 }
@@ -7878,7 +7884,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
 }
 
 function admins(): number {
-  return db.select({ id: user.id }).from(user).where(eq(user.role, "admin")).all().length;
+  return db.select({ n: count() }).from(user).where(eq(user.role, "admin")).get()?.n ?? 0;
 }
 
 async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void> {
@@ -11035,13 +11041,13 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/activity.server.ts": "3bfe13cf generated",
   "src/generated/api.server.ts": "b737b4b9 generated",
   "src/generated/app.ts": "547ab03a generated",
-  "src/generated/ask.server.ts": "6328982e generated",
+  "src/generated/ask.server.ts": "a2e9859f generated",
   "src/generated/card.server.ts": "9b4d94be generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "4ab97120 generated",
   "src/generated/hooks.ts": "d6804a3c generated",
-  "src/generated/keys.server.ts": "2237f355 generated",
+  "src/generated/keys.server.ts": "0fa3cf33 generated",
   "src/generated/keys.test.ts": "2a71c746 generated",
   "src/generated/mcp.server.ts": "5ece0f35 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -11064,7 +11070,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "98bfd380 generated",
+  "src/generated/users.server.ts": "69df2677 generated",
   "src/generated/users.test.ts": "8ad7ab74 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -11112,7 +11118,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
@@ -11129,11 +11135,11 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "c46877ec kit",
+  "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
@@ -11174,9 +11180,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks/index.ts": "dae1f46a generated",
   "src/routes/api/v1/tasks[.]csv.ts": "b9d31159 generated",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/files/$model.$field.ts": "47918d6e kit",
-  "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
-  "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
+  "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "aafcc5e4 generated",
   "src/routes/mcp.ts": "911cee15 generated",
@@ -18798,7 +18804,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -18818,10 +18824,10 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "c46877ec kit",
+  "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
@@ -18842,9 +18848,9 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/barbers/new.tsx": "49d2cb83 generated",
   "src/routes/day/index.tsx": "84bc75d1 generated",
   "src/routes/events.ts": "cdf9dd08 generated",
-  "src/routes/files/$model.$field.ts": "47918d6e kit",
-  "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
-  "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
+  "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "e1786bfd generated",
   "src/routes/privacy/index.tsx": "016616e0 generated",
@@ -20586,6 +20592,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -21603,9 +21611,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -33780,7 +33790,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "62d77470 generated",
+  "src/generated/ask.server.ts": "cba56f7d generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -33888,7 +33898,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -33908,11 +33918,11 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "c46877ec kit",
+  "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
@@ -33956,9 +33966,9 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/class-types/index.tsx": "4d83873e generated",
   "src/routes/class-types/new.tsx": "d4e202b3 generated",
   "src/routes/events.ts": "98860b46 generated",
-  "src/routes/files/$model.$field.ts": "47918d6e kit",
-  "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
-  "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
+  "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "196f8c8c generated",
   "src/routes/instructors/$id.tsx": "edc5cce4 generated",
@@ -35342,6 +35352,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -36084,9 +36096,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -40158,7 +40172,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import * as schema from "#/db/schema";
@@ -40353,9 +40367,9 @@ export interface UserUse {
 export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
   manager(viewer);
   const uses: UserUse[] = [
-    { model: "Customer", field: "account manager", noun: ["customer", "customers"], required: false, count: db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.accountManagerId, userId)).all().length },
-    { model: "Order", field: null, noun: ["order", "orders"], required: false, count: db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.ownerId, userId)).all().length },
-    { model: "FollowUp", field: null, noun: ["follow up", "follow ups"], required: false, count: db.select({ id: schema.followUps.id }).from(schema.followUps).where(eq(schema.followUps.ownerId, userId)).all().length },
+    { model: "Customer", field: "account manager", noun: ["customer", "customers"], required: false, count: db.select({ n: count() }).from(schema.customers).where(eq(schema.customers.accountManagerId, userId)).get()?.n ?? 0 },
+    { model: "Order", field: null, noun: ["order", "orders"], required: false, count: db.select({ n: count() }).from(schema.orders).where(eq(schema.orders.ownerId, userId)).get()?.n ?? 0 },
+    { model: "FollowUp", field: null, noun: ["follow up", "follow ups"], required: false, count: db.select({ n: count() }).from(schema.followUps).where(eq(schema.followUps.ownerId, userId)).get()?.n ?? 0 },
   ];
   return uses.filter((use) => use.count > 0);
 }
@@ -40407,7 +40421,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
 }
 
 function admins(): number {
-  return db.select({ id: user.id }).from(user).where(eq(user.role, "admin")).all().length;
+  return db.select({ n: count() }).from(user).where(eq(user.role, "admin")).get()?.n ?? 0;
 }
 
 async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void> {
@@ -43498,7 +43512,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "163927b1 generated",
+  "src/generated/ask.server.ts": "e1896b86 generated",
   "src/generated/card.server.ts": "a5f24452 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -43527,7 +43541,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "bd5ac85e generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "ad010a68 generated",
+  "src/generated/users.server.ts": "aedee060 generated",
   "src/generated/users.test.ts": "18f42451 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -43580,7 +43594,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -43598,7 +43612,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
@@ -45257,6 +45271,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -46022,9 +46038,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
@@ -52787,7 +52805,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "5d1b6944 generated",
+  "src/generated/ask.server.ts": "d41af9ad generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "9b6e7123 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
@@ -52873,7 +52891,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -52893,11 +52911,11 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "c46877ec kit",
+  "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
@@ -52915,9 +52933,9 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/clients/index.tsx": "12269975 generated",
   "src/routes/clients/new.tsx": "1194d3e4 generated",
   "src/routes/events.ts": "2a5e5b78 generated",
-  "src/routes/files/$model.$field.ts": "47918d6e kit",
-  "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
-  "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
+  "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "268208f5 generated",
   "src/routes/invoices/$id.tsx": "ab4f8ccf generated",
@@ -58881,7 +58899,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code > 
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import * as schema from "#/db/schema";
@@ -59076,10 +59094,10 @@ export interface UserUse {
 export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
   manager(viewer);
   const uses: UserUse[] = [
-    { model: "Dish", field: null, noun: ["dish", "dishes"], required: false, count: db.select({ id: schema.dishes.id }).from(schema.dishes).where(eq(schema.dishes.ownerId, userId)).all().length },
-    { model: "Order", field: null, noun: ["order", "orders"], required: false, count: db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.ownerId, userId)).all().length },
-    { model: "OrderLine", field: null, noun: ["order line", "order lines"], required: false, count: db.select({ id: schema.orderLines.id }).from(schema.orderLines).where(eq(schema.orderLines.ownerId, userId)).all().length },
-    { model: "Stop", field: null, noun: ["stop", "stops"], required: false, count: db.select({ id: schema.stops.id }).from(schema.stops).where(eq(schema.stops.ownerId, userId)).all().length },
+    { model: "Dish", field: null, noun: ["dish", "dishes"], required: false, count: db.select({ n: count() }).from(schema.dishes).where(eq(schema.dishes.ownerId, userId)).get()?.n ?? 0 },
+    { model: "Order", field: null, noun: ["order", "orders"], required: false, count: db.select({ n: count() }).from(schema.orders).where(eq(schema.orders.ownerId, userId)).get()?.n ?? 0 },
+    { model: "OrderLine", field: null, noun: ["order line", "order lines"], required: false, count: db.select({ n: count() }).from(schema.orderLines).where(eq(schema.orderLines.ownerId, userId)).get()?.n ?? 0 },
+    { model: "Stop", field: null, noun: ["stop", "stops"], required: false, count: db.select({ n: count() }).from(schema.stops).where(eq(schema.stops.ownerId, userId)).get()?.n ?? 0 },
   ];
   return uses.filter((use) => use.count > 0);
 }
@@ -59135,7 +59153,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
 }
 
 function admins(): number {
-  return db.select({ id: user.id }).from(user).where(eq(user.role, "admin")).all().length;
+  return db.select({ n: count() }).from(user).where(eq(user.role, "admin")).get()?.n ?? 0;
 }
 
 async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void> {
@@ -62056,7 +62074,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/stop.server.ts": "55e3c3f4 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
-  "src/generated/users.server.ts": "d51294bd generated",
+  "src/generated/users.server.ts": "875974ba generated",
   "src/generated/users.test.ts": "7acaec15 generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -62105,7 +62123,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/hours.ts": "fac9ba0f kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -62127,10 +62145,10 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "c46877ec kit",
+  "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
@@ -62147,9 +62165,9 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/routes/dishes/index.tsx": "bbffbf09 generated",
   "src/routes/dishes/new.tsx": "7aa588df generated",
   "src/routes/events.ts": "e5bcb4f0 generated",
-  "src/routes/files/$model.$field.ts": "47918d6e kit",
-  "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
-  "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
+  "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "f71e6cf2 generated",
   "src/routes/orders/$id.tsx": "eb8a58da generated",
@@ -62849,6 +62867,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -63440,9 +63460,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
@@ -67402,7 +67424,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/access.test.ts": "17492689 generated",
   "src/generated/activity.server.ts": "c6b9630b generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "1b72c788 generated",
+  "src/generated/ask.server.ts": "d823d229 generated",
   "src/generated/card.server.ts": "f87d436f generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -67469,7 +67491,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -67486,11 +67508,11 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "c46877ec kit",
+  "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
@@ -67505,9 +67527,9 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/routes/__root.tsx": "0929eb69 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/files/$model.$field.ts": "47918d6e kit",
-  "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
-  "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
+  "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "0775d6da generated",
   "src/routes/my-items/$id.tsx": "5e517763 generated",
@@ -68134,6 +68156,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -68712,9 +68736,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -71433,7 +71459,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "994f1f1e generated",
+  "src/generated/ask.server.ts": "2040abdb generated",
   "src/generated/card.server.ts": "57b7eaca generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -71494,7 +71520,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -71512,7 +71538,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
@@ -74202,6 +74228,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -74965,9 +74993,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -78496,7 +78526,9 @@ export function keyViewer(authorization: string | null | undefined): Viewer | nu
     )
     .get();
   if (!found) return null;
-  db.update(apiKey).set({ lastUsedAt: new Date() }).where(eq(apiKey.id, found.id)).run();
+  // When it was last used, to the minute: one write a minute per key, not one per call.
+  if (!found.lastUsedAt || Date.now() - found.lastUsedAt.getTime() >= 60_000)
+    db.update(apiKey).set({ lastUsedAt: new Date() }).where(eq(apiKey.id, found.id)).run();
   return { id: \`key:\${found.id}\`, name: found.name, email: "", role: found.role };
 }
 "
@@ -80266,7 +80298,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code >
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
 import { db } from "#/db";
 import { apiKey, invitation, user } from "#/db/schema";
 import * as schema from "#/db/schema";
@@ -80470,10 +80502,10 @@ export interface UserUse {
 export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
   manager(viewer);
   const uses: UserUse[] = [
-    { model: "Component", field: null, noun: ["component", "components"], required: false, count: db.select({ id: schema.components.id }).from(schema.components).where(eq(schema.components.ownerId, userId)).all().length },
-    { model: "Incident", field: null, noun: ["incident", "incidents"], required: false, count: db.select({ id: schema.incidents.id }).from(schema.incidents).where(eq(schema.incidents.ownerId, userId)).all().length },
-    { model: "IncidentUpdate", field: null, noun: ["incident update", "incident updates"], required: false, count: db.select({ id: schema.incidentUpdates.id }).from(schema.incidentUpdates).where(eq(schema.incidentUpdates.ownerId, userId)).all().length },
-    { model: "Maintenance", field: null, noun: ["maintenance", "maintenances"], required: false, count: db.select({ id: schema.maintenances.id }).from(schema.maintenances).where(eq(schema.maintenances.ownerId, userId)).all().length },
+    { model: "Component", field: null, noun: ["component", "components"], required: false, count: db.select({ n: count() }).from(schema.components).where(eq(schema.components.ownerId, userId)).get()?.n ?? 0 },
+    { model: "Incident", field: null, noun: ["incident", "incidents"], required: false, count: db.select({ n: count() }).from(schema.incidents).where(eq(schema.incidents.ownerId, userId)).get()?.n ?? 0 },
+    { model: "IncidentUpdate", field: null, noun: ["incident update", "incident updates"], required: false, count: db.select({ n: count() }).from(schema.incidentUpdates).where(eq(schema.incidentUpdates.ownerId, userId)).get()?.n ?? 0 },
+    { model: "Maintenance", field: null, noun: ["maintenance", "maintenances"], required: false, count: db.select({ n: count() }).from(schema.maintenances).where(eq(schema.maintenances.ownerId, userId)).get()?.n ?? 0 },
   ];
   return uses.filter((use) => use.count > 0);
 }
@@ -80537,7 +80569,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
 }
 
 function admins(): number {
-  return db.select({ id: user.id }).from(user).where(eq(user.role, "admin")).all().length;
+  return db.select({ n: count() }).from(user).where(eq(user.role, "admin")).get()?.n ?? 0;
 }
 
 async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void> {
@@ -84413,7 +84445,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/activity.server.ts": "dc01d286 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "712a64ca generated",
+  "src/generated/ask.server.ts": "9a0deac7 generated",
   "src/generated/card.server.ts": "944abfcc generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
@@ -84434,7 +84466,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident.schema.ts": "45d7d984 generated",
   "src/generated/incident.server.ts": "a02e68bf generated",
   "src/generated/incident.ts": "755dc086 generated",
-  "src/generated/keys.server.ts": "9390b2d5 generated",
+  "src/generated/keys.server.ts": "50bbd5b3 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",
   "src/generated/maintenance.import.server.ts": "7f9a3b5d generated",
   "src/generated/maintenance.import.ts": "d0b5690b generated",
@@ -84446,7 +84478,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
-  "src/generated/users.server.ts": "08aef890 generated",
+  "src/generated/users.server.ts": "82848c13 generated",
   "src/generated/users.test.ts": "253c266e generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -84501,7 +84533,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
@@ -84520,7 +84552,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
@@ -86318,6 +86350,8 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { count, LIMITS } from "#/kit/limit";
+import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 import type { Offer } from "#/kit/tools";
@@ -86995,9 +87029,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -89682,7 +89718,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { invitation, user } from "#/db/schema";
 import * as schema from "#/db/schema";
@@ -89877,10 +89913,10 @@ export interface UserUse {
 export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
   manager(viewer);
   const uses: UserUse[] = [
-    { model: "SupportCase", field: "assignee", noun: ["support case", "support cases"], required: false, count: db.select({ id: schema.supportCases.id }).from(schema.supportCases).where(eq(schema.supportCases.assigneeId, userId)).all().length },
-    { model: "SupportCase", field: null, noun: ["support case", "support cases"], required: false, count: db.select({ id: schema.supportCases.id }).from(schema.supportCases).where(eq(schema.supportCases.ownerId, userId)).all().length },
-    { model: "Message", field: "agent", noun: ["message", "messages"], required: false, count: db.select({ id: schema.messages.id }).from(schema.messages).where(eq(schema.messages.agentId, userId)).all().length },
-    { model: "Message", field: null, noun: ["message", "messages"], required: false, count: db.select({ id: schema.messages.id }).from(schema.messages).where(eq(schema.messages.ownerId, userId)).all().length },
+    { model: "SupportCase", field: "assignee", noun: ["support case", "support cases"], required: false, count: db.select({ n: count() }).from(schema.supportCases).where(eq(schema.supportCases.assigneeId, userId)).get()?.n ?? 0 },
+    { model: "SupportCase", field: null, noun: ["support case", "support cases"], required: false, count: db.select({ n: count() }).from(schema.supportCases).where(eq(schema.supportCases.ownerId, userId)).get()?.n ?? 0 },
+    { model: "Message", field: "agent", noun: ["message", "messages"], required: false, count: db.select({ n: count() }).from(schema.messages).where(eq(schema.messages.agentId, userId)).get()?.n ?? 0 },
+    { model: "Message", field: null, noun: ["message", "messages"], required: false, count: db.select({ n: count() }).from(schema.messages).where(eq(schema.messages.ownerId, userId)).get()?.n ?? 0 },
   ];
   return uses.filter((use) => use.count > 0);
 }
@@ -89936,7 +89972,7 @@ export async function removeUser(viewer: Viewer | null, userId: string, heirId?:
 }
 
 function admins(): number {
-  return db.select({ id: user.id }).from(user).where(eq(user.role, "admin")).all().length;
+  return db.select({ n: count() }).from(user).where(eq(user.role, "admin")).get()?.n ?? 0;
 }
 
 async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void> {
@@ -92363,7 +92399,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.ts": "2fdc7c64 generated",
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "ff0b751f generated",
+  "src/generated/ask.server.ts": "70b969f8 generated",
   "src/generated/card.server.ts": "eb1c3b3c generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -92383,7 +92419,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
-  "src/generated/users.server.ts": "ffcdfdf6 generated",
+  "src/generated/users.server.ts": "a6b70aa0 generated",
   "src/generated/users.test.ts": "5cb4d084 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -92435,7 +92471,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "5f930dd9 kit",
+  "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -92455,11 +92491,11 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
-  "src/kit/uploads.ts": "c46877ec kit",
+  "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "047b1867 kit",
+  "src/kit/words/en.ts": "e2e0dfe3 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",
@@ -92477,9 +92513,9 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/cases/index.tsx": "f45f99ca generated",
   "src/routes/cases/new.tsx": "0befc28f generated",
   "src/routes/events.ts": "f683a575 generated",
-  "src/routes/files/$model.$field.ts": "47918d6e kit",
-  "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
-  "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
+  "src/routes/files/$model.$field.ts": "5059a1b3 kit",
+  "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
+  "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/incoming/support.ts": "a851f532 generated",
   "src/routes/index.tsx": "cc5bad02 generated",

@@ -1160,7 +1160,7 @@ function toolsModule(
 // describes them for each caller; every call goes through the data functions, as the API's do.`
   }
 ${actions.length || rowsActions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
-${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${app ? `import { count, LIMITS${confirms ? ", writeAllowed" : ""} } from "#/kit/limit";\nimport { w } from "#/kit/words";\n` : confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
@@ -1465,9 +1465,11 @@ export function asks(viewer: Viewer | null): boolean {
 export async function ask(viewer: Viewer | null, question: string, turns: Turn[] = []): Promise<Answer> {
   const caller = viewer?.role ?? "visitor";
   if (!Object.hasOwn(ASKS, caller)) throw new AccessDenied(viewer !== null);
+  // A person answered by the host's model spends its calls: they have a limit of their own.
+  if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,${ir.app.timezone ? `\n    timeZone: ${JSON.stringify(ir.app.timezone)},` : ""}
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,

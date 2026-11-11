@@ -20,6 +20,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: Ask counts the questions the host's model answers per person (30 a quarter of an hour); a private picture or document is asked for again each time instead of kept an hour; an API key's last use is written at most once a minute; the users page counts in SQL (`fixes/kit-hardening.yml`). A field named like a built-in property of objects (`constructor`, `toString`) is read as a name everywhere; Studio's preview takes select mode and highlighting only from Studio.
+
 - On a generated app's users page, only an administrator makes or removes an administrator, and a role that manages users gives only the roles within its own rights (`fixes/users-page-roles.yml`).
 
 - A mail that a generated app finds a thread for only by the `[app #id]` tag in its subject joins it only from the record's own address or one already in its thread; from anyone else it starts a new one (`fixes/mail-tag-sender.yml`).

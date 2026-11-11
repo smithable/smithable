@@ -612,6 +612,7 @@ export const w = {
   options: "Alternativ",
   pictureDescription: "Beskrivning (för den som inte kan se bilden)",
   question: "Fråga",
+  questions: "frågor",
   trashedVerb: "flyttades till papperskorgen",
   asRole: (role: string) => `som ${role}`,
   contactThe: (who: string) => `Kontakta ${who}`,
