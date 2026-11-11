@@ -1,0 +1,9 @@
+id: limits-by-network
+title: The limits on changes and sign-in codes counted every IPv6 address on its own, and a flood of new addresses could refuse everyone new for up to an hour.
+severity: security
+exposure: Someone with many addresses could have sent more changes or sign-in codes than the limits allow, or kept new visitors from signing in for a while.
+introduced: unknown
+affects:
+  kit: [src/kit/limit.ts, src/kit/address.server.ts, src/kit/api.server.ts]
+  features: [any]
+migration: none
