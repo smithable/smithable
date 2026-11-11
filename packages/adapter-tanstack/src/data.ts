@@ -785,6 +785,12 @@ export function dataModule(
         .flatMap((p) => ux.pages[p.id]?.totals ?? []),
     ),
   ].map((name) => keyOf(model, name));
+  // A settings or onboarding page shows the viewer's one record: it reads only that row.
+  const single = ir.pages.some(
+    (p) =>
+      (p.pattern.kind === "settings" || p.pattern.kind === "onboarding") &&
+      p.pattern.model === model.name,
+  );
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -2277,7 +2283,21 @@ ${
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
-  },
+  },${
+  single
+    ? `
+  /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
+  async first(viewer: Viewer | null) {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { asc }) => [asc(t.id)],
+      limit: 1,
+    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    ${asListed("rows", "return ", "[0] ?? null")}
+  },`
+    : ""
+}
   /** Development candidates: check all eligible rows, fetching at most 200 at once. */
   async candidateIds(viewer: Viewer | null, accepts: (row: Record<string, unknown>) => boolean = () => true): Promise<number[]> {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
