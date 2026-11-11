@@ -22,9 +22,11 @@ import {
   addressFrom,
   addressOwned,
   attr,
+  commentText,
   dataKey,
   guard,
   HEADER,
+  inert,
   join,
   literal,
   modelNamed,
@@ -509,7 +511,7 @@ export const ${a.asks} = z.object({
 ${asked.map((x) => `  ${JSON.stringify(x.key)}: ${named(x.model).schema}.shape.${x.field},`).join("\n")}
 });
 
-/** The dialog's fields: the ${n.label.toLowerCase()}'s own, then each added record's under its heading. */
+/** The dialog's fields: the ${inert(n.label.toLowerCase())}'s own, then each added record's under its heading. */
 export const ${a.askUi}: ModelUi = {
   label: ${JSON.stringify(t.action(action))},
   pluralLabel: ${JSON.stringify(t.action(action))},
@@ -546,10 +548,10 @@ ${asked.length ? 'import type { ModelUi } from "#/kit/model";\n' : ""}${choices 
 import { currentViewer } from "#/lib/viewer.server";
 import { ${a.run}${action.copy ? "" : `, ${a.runMany}`} } from "./${kebab(action.name)}.server";
 
-/** Who may run the "${action.name}" action: whoever may edit the ${n.label.toLowerCase()}${action.add ? ", and may create what it adds" : ""}. */
+/** Who may run the "${action.name}" action: whoever may edit the ${inert(n.label.toLowerCase())}${action.add ? ", and may create what it adds" : ""}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
-/** Whether the "${action.name}" action fits the ${n.label.toLowerCase()}: it is offered and allowed only then. */
+/** Whether the "${action.name}" action fits the ${inert(n.label.toLowerCase())}: it is offered and allowed only then. */
 export function ${a.fits}(${when.length ? "row" : "_row"}: { ${when.map((f) => `${f}?: unknown`).join("; ")}${when.length ? " " : ""}}, ${whenNamesViewer(action) ? "viewer" : "_viewer"}: { id: string } | null): boolean {
   return ${fitsCode(action, ir)};
 }
@@ -568,7 +570,7 @@ ${
   action.copy
     ? ""
     : `
-/** The "${action.name}" action on the chosen ${n.pluralLabel.toLowerCase()} (at most 1,000 at once). */
+/** The "${action.name}" action on the chosen ${inert(n.pluralLabel.toLowerCase())} (at most 1,000 at once). */
 export const ${a.many} = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000)${asked.length ? `, values: ${a.asks}` : ""} }))
   .handler(async ({ data }) => ${a.runMany}(await writer(), data.ids${asked.length ? ", data.values" : ""}));
@@ -633,7 +635,7 @@ export function standardActionServer(
   const asked = askedFields(action).length > 0;
   const askedParam = asked ? `, asked: z.output<typeof ${a.asks}>` : "";
   const askedArg = asked ? ", asked" : "";
-  const label = n.label.toLowerCase();
+  const label = inert(n.label.toLowerCase());
   const title = titleField(model);
   // The writes of one record's plan, inside a transaction ("tx"), each with its audit line,
   // returning what was written.
@@ -747,7 +749,7 @@ ${adds.map(({ tn }) => `  check(${tn.access}.create, viewer);\n`).join("")}  con
       plans.push(plan(viewer, row${askedArg}));
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);
-      throw new Error(\`${n.label} "\${String(row.${title} ?? row.id)}": \${why}\`);
+      throw new Error(\`${inert(n.label)} "\${String(row.${title} ?? row.id)}": \${why}\`);
     }
   }
   const written = db.transaction((tx) => plans.map((p) => ${writes("p")}));
@@ -767,7 +769,7 @@ export function queryContract(query: QueryIR, ir: SpecIR, t: Texts): string {
   const n = names(modelNamed(ir, query.returns), t);
   return `${HEADER}import type { ${n.data} } from "#/generated/${kebab(query.returns)}.server";
 
-/** What the "${query.name}" query returns: ${n.pluralLabel.toLowerCase()}, in its order. */
+/** What the "${query.name}" query returns: ${inert(n.pluralLabel.toLowerCase())}, in its order. */
 export type ${pascal(query.name)}Rows = Awaited<ReturnType<typeof ${n.data}.list>>;
 `;
 }
@@ -791,8 +793,8 @@ import { ${n.data} } from "#/generated/${kebab(query.returns)}.server";
 import type { ${pascal(query.name)}Rows } from "#/generated/queries/${kebab(query.name)}";
 import type { Viewer } from "#/kit/access";
 
-${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${query.name}(viewer: Viewer | null): Promise<${pascal(query.name)}Rows> {
-  // Not written yet: every ${n.label.toLowerCase()} the viewer may read, newest first.
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${commentText(l)}` : ""}`).join("\n")}\n */\n` : ""}export async function ${query.name}(viewer: Viewer | null): Promise<${pascal(query.name)}Rows> {
+  // Not written yet: every ${inert(n.label.toLowerCase())} the viewer may read, newest first.
   return ${n.data}.list(viewer);
 }
 `;
@@ -815,7 +817,7 @@ export function actionStub(action: ActionIR): string {
 import type { ${a.inputType}, ${a.outputType}${action.custom && action.touches ? `, ${a.touches}` : ""} } from "${a.module}";
 import type { Viewer } from "#/kit/access";
 
-${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${l}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null${action.custom && action.touches ? `, _touched: ${a.touches}` : ""}): Promise<${a.outputType}> {
+${doc.length ? `/**\n${doc.map((l) => ` *${l ? ` ${commentText(l)}` : ""}`).join("\n")}\n */\n` : ""}export async function ${action.name}(input: ${a.inputType}, _viewer: Viewer | null${action.custom && action.touches ? `, _touched: ${a.touches}` : ""}): Promise<${a.outputType}> {
   throw new Error(\`${action.name} is not implemented yet (input: \${JSON.stringify(input)}).\`);
 }
 `;
@@ -936,7 +938,7 @@ import { ${n.schema} } from "${n.module}.schema";
 import { ${n.data} } from "${n.module}.server";
 ${lists.map((l) => `import { ${l.ln.schema} } from "${l.ln.module}.schema";\n${l.ln.data === n.data ? "" : `import { ${l.ln.data} } from "${l.ln.module}.server";\n`}`).join("")}import { ${a.access}, ${a.fits}${asked ? `, type ${a.asks}` : ""} } from "./${kebab(action.name)}";
 ${asked ? 'import type { z } from "zod";\n' : ""}
-/** Makes a copy of the ${n.label.toLowerCase()} as the viewer${asked ? ", with what was asked" : ""}; returns the copy's id. */
+/** Makes a copy of the ${inert(n.label.toLowerCase())} as the viewer${asked ? ", with what was asked" : ""}; returns the copy's id. */
 export async function ${a.run}(viewer: Viewer | null, id: number${asked ? `, asked: z.output<typeof ${a.asks}>` : ""}): Promise<number> {
   const row = await ${n.data}.get(viewer, id);
   if (!row) throw new AccessDenied(viewer !== null);

@@ -16,6 +16,7 @@ import { paymentModels, paymentsSection } from "./sections/payments.js";
 import { queriesSection } from "./sections/queries.js";
 import { timersSection } from "./sections/timers.js";
 import { didYouMean } from "./suggest.js";
+import { rejectUnsafeText } from "./text-safety.js";
 
 /** The spec format version this build of Smithable reads and writes. */
 export const SPEC_VERSION = "0.1";
@@ -74,6 +75,7 @@ export function validateSpec(file: SpecFile, options: ValidateOptions = {}): Val
   }
   if (hasErrors(ctx.diagnostics)) return done();
   rejectYamlFeatures(ctx, doc);
+  rejectUnsafeText(ctx, doc);
 
   const root = doc.contents as ParsedNode | null;
   const entries = mapEntries(ctx, root, "smithable.yml");

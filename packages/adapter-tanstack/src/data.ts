@@ -61,6 +61,7 @@ import {
   HEADER,
   hasFavorites,
   type importList,
+  inert,
   inlineLists,
   keyOf,
   lists,
@@ -81,6 +82,7 @@ import {
   storedFields,
   type Texts,
   tableRef,
+  templateText,
   threadLists,
   titleField,
   userFields,
@@ -156,13 +158,13 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
 import ${/\bz\.(?!output)/.test(schema) ? "{ z }" : "type { z }"} from "zod";
 ${SCHEMA_IMPORT}
 ${schema.includes("w.") ? 'import { w } from "#/kit/words";\n' : ""}
-/** What a ${n.label.toLowerCase()} may be given: a form's values and what the app fills (an action's set). */
+/** What a ${inert(n.label.toLowerCase())} may be given: a form's values and what the app fills (an action's set). */
 export const ${n.settable} = ${schema}.omit({ ${omitted.map((k) => `${k}: true`).join(", ")} })${byApp.length ? `.partial({ ${byApp.map((k) => `${k}: true`).join(", ")} })` : ""};
 ${
   byApp.length
-    ? `/** What a ${n.label.toLowerCase()}'s form sends, checked: never what the app fills. */
+    ? `/** What a ${inert(n.label.toLowerCase())}'s form sends, checked: never what the app fills. */
 export const ${n.schema} = ${n.settable}.omit({ ${byApp.map((k) => `${k}: true`).join(", ")} });`
-    : `/** What a ${n.label.toLowerCase()}'s form sends, checked. */
+    : `/** What a ${inert(n.label.toLowerCase())}'s form sends, checked. */
 export const ${n.schema} = ${n.settable};`
 }
 
@@ -263,7 +265,7 @@ export function modelModule(model: ModelIR, t: Texts, ir: SpecIR, auth: AuthIR, 
   const owner = ownerKey(model);
   const options = referenced
     ? `
-/** Choices for fields that refer to a ${n.label.toLowerCase()}. */
+/** Choices for fields that refer to a ${inert(n.label.toLowerCase())}. */
 export const ${n.options} = createServerFn().handler(async () =>
   asPerson(async () => ${n.data}.options(await currentViewer())),
 );
@@ -278,7 +280,7 @@ export const ${n.options} = createServerFn().handler(async () =>
   const addressField = addressOwnedForm(model, auth);
   const ownerOptions = ownerField
     ? `
-/** Whom a ${n.label.toLowerCase()} can be given to: null for a viewer who can only make their own. */
+/** Whom a ${inert(n.label.toLowerCase())} can be given to: null for a viewer who can only make their own. */
 export const ${n.ownerOptions} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
   return (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? userChoices() : null;
@@ -286,7 +288,7 @@ export const ${n.ownerOptions} = createServerFn().handler(async () => {
 `
     : addressField
       ? `
-/** Whether the viewer writes whose a ${n.label.toLowerCase()} is: null leaves the address out of their form, the app fills in their own (support-portal-path.md §2). */
+/** Whether the viewer writes whose a ${inert(n.label.toLowerCase())} is: null leaves the address out of their form, the app fills in their own (support-portal-path.md §2). */
 export const ${n.ownerOptions} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
   return (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? undefined : null;
@@ -371,7 +373,7 @@ export type ${model.name}Row = ${rowType};${
     isMessageModel(model, ir, ux) && threadBindings(model).side
       ? `
 
-/** The roles that write on our side of a conversation of ${n.pluralLabel.toLowerCase()} (support-portal-path.md §4): granted read or write on everyone's, and administrators. */
+/** The roles that write on our side of a conversation of ${inert(n.pluralLabel.toLowerCase())} (support-portal-path.md §4): granted read or write on everyone's, and administrators. */
 export const ${n.ours}: string[] = ${literal(oursRoles(model, auth))};`
       : ""
   }
@@ -385,12 +387,12 @@ export const ${timesName(model)} = createServerFn()
 ${
   model.occupies.cancel && hasSignIn(auth)
     ? `
-/** Whether the viewer may cancel their own ${n.label.toLowerCase()} now (the record page's Cancel). */
+/** Whether the viewer may cancel their own ${inert(n.label.toLowerCase())} now (the record page's Cancel). */
 export const ${cancelNames(model).state} = createServerFn()
   .validator(z.number().int())
   .handler(async ({ data: id }) => ${n.data}.cancelState(await currentViewer(), id));
 
-/** Cancels the viewer's own ${n.label.toLowerCase()}, while they may. */
+/** Cancels the viewer's own ${inert(n.label.toLowerCase())}, while they may. */
 export const ${cancelNames(model).cancel} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data: id }) => ${n.data}.cancelOwn(await writer(), id));
@@ -401,7 +403,7 @@ export const ${cancelNames(model).cancel} = createServerFn({ method: "POST" })
 }
 export const ${n.ui}: RecordUi<${model.name}Row> = ${uiSource};
 
-/** Who may delete ${n.pluralLabel.toLowerCase()}: a list's selection offers Delete by it (the server checks again). */
+/** Who may delete ${inert(n.pluralLabel.toLowerCase())}: a list's selection offers Delete by it (the server checks again). */
 export const ${n.deleteRule}: Rule = ${literal(modelAccess(model, auth).delete)};
 
 
@@ -466,30 +468,30 @@ export const ${n.update} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), values: ${n.schema} }))
   .handler(async ({ data }) => ${n.data}.update(await writer(), data.id, data.values));
 
-/** Deletes a ${n.label.toLowerCase()}; \`together\` takes what points to it along (docs/design/delete-together.md). */
+/** Deletes a ${inert(n.label.toLowerCase())}; \`together\` takes what points to it along (docs/design/delete-together.md). */
 export const ${n.remove} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), together: z.boolean().optional() }))
   .handler(async ({ data }) => ${n.data}.remove(await writer(), data.id, data.together));
 
-/** Deletes the chosen ${n.pluralLabel.toLowerCase()}, all or none (at most 1,000 at once). */
+/** Deletes the chosen ${inert(n.pluralLabel.toLowerCase())}, all or none (at most 1,000 at once). */
 export const ${n.removeMany} = createServerFn({ method: "POST" })
   .validator(z.object({ ids: z.array(z.number().int()).max(1000), together: z.boolean().optional() }))
   .handler(async ({ data }) => ${n.data}.removeMany(await writer(), data.ids, data.together));${
     model.trash
       ? `
 
-/** The viewer's trash of ${n.pluralLabel.toLowerCase()} (docs/design/trash.md). */
+/** The viewer's trash of ${inert(n.pluralLabel.toLowerCase())} (docs/design/trash.md). */
 export const ${trashNames(model).list} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
   return { rows: await ${n.data}.trash(viewer) };
 });
 
-/** Takes the chosen ${n.pluralLabel.toLowerCase()} out of the trash. */
+/** Takes the chosen ${inert(n.pluralLabel.toLowerCase())} out of the trash. */
 export const ${trashNames(model).restore} = createServerFn({ method: "POST" })
   .validator(z.array(z.number().int()).max(1000))
   .handler(async ({ data: ids }) => ${n.data}.restore(await writer(), ids));
 
-/** Removes the chosen ${n.pluralLabel.toLowerCase()} in the trash for good. */
+/** Removes the chosen ${inert(n.pluralLabel.toLowerCase())} in the trash for good. */
 export const ${trashNames(model).erase} = createServerFn({ method: "POST" })
   .validator(z.array(z.number().int()).max(1000))
   .handler(async ({ data: ids }) => ${n.data}.removeForGood(await writer(), ids));`
@@ -639,20 +641,20 @@ export function dataModule(
   const ownerMethods =
     addressOwned(model) && signedIn
       ? `
-  /** The ${n.pluralLabel.toLowerCase()} that are the viewer's own: their proven address is the record's, stored as compared (support-portal-path.md §2). */
+  /** The ${inert(n.pluralLabel.toLowerCase())} that are the viewer's own: their proven address is the record's, stored as compared (support-portal-path.md §2). */
   own(viewer: Viewer): SQL {
     const address = viewer.proven ? addressOf(viewer) : null;
     return address ? eq(${n.table}.${owner}, address) : sql\`false\`;
   },
 
-  /** Whose a ${n.label.toLowerCase()} is: whoever signed in with its ${ownerLabel}, proven; the viewer, or no one they can be. */
+  /** Whose a ${inert(n.label.toLowerCase())} is: whoever signed in with its ${ownerLabel}, proven; the viewer, or no one they can be. */
   whose(viewer: Viewer | null, row: { ${owner}: string | null }): string | null {
     return addressOwner(row.${owner}, viewer);
   },
 `
       : parent && throughField && signedIn
         ? `
-  /** The ${n.pluralLabel.toLowerCase()} the viewer reads as their own: those they made, and those of the ${names(parent, t).pluralLabel.toLowerCase()} they may read (support-portal-path.md §2: owning through a reference is reading). */
+  /** The ${inert(n.pluralLabel.toLowerCase())} the viewer reads as their own: those they made, and those of the ${names(parent, t).pluralLabel.toLowerCase()} they may read (support-portal-path.md §2: owning through a reference is reading). */
   own(viewer: Viewer): SQL {
     return or(eq(${n.table}.ownerId, viewer.id), inArray(${n.table}.${throughField.name}Id, db.select({ id: ${tableRef(parent)}.id }).from(${tableRef(parent)}).where(${names(parent, t).data}.readable(viewer)))) as SQL;
   },
@@ -1271,7 +1273,7 @@ export function dataModule(
   const updateUses = (name: string) => new RegExp(`\\b${name}\\b`).test(updateBody);
   const writeChecks = `
   /**
-   * What a new ${n.label.toLowerCase()} must pass, in the transaction that adds it (A 153): its files and
+   * What a new ${inert(n.label.toLowerCase())} must pass, in the transaction that adds it (A 153): its files and
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}): ${n.settableValues} {
@@ -1446,8 +1448,8 @@ ${updateBody}
   const usedBy = group.length
     ? `
 /**
- * What points to a ${n.label.toLowerCase()} (docs/design/delete-together.md): the records that would go with it
- * to the trash, by model, and those that would show no ${n.label.toLowerCase()}; nothing when nothing does.
+ * What points to a ${inert(n.label.toLowerCase())} (docs/design/delete-together.md): the records that would go with it
+ * to the trash, by model, and those that would show no ${inert(n.label.toLowerCase())}; nothing when nothing does.
  */
 function usedBy(tx: Tx, id: number, title: string) {
   const pointing: { model: string; from: string; label: string; plural: string; depth: number; count: number | null }[] = [
@@ -1578,7 +1580,7 @@ ${roots
     const rt = titleField(r);
     return `    case "${r.name}": {
       const root = db.select({ deletedAt: ${tr}.deletedAt${rt === "id" ? "" : `, title: ${tr}.${rt}`} }).from(${tr}).where(eq(${tr}.id, Number(id))).get();
-      return root?.deletedAt ? \`${names(r, t).label}:\${${rt === "id" ? "`#${id}`" : "String(root.title ?? id)"}}\` : undefined;
+      return root?.deletedAt ? \`${templateText(names(r, t).label)}:\${${rt === "id" ? "`#${id}`" : "String(root.title ?? id)"}}\` : undefined;
     }`;
   })
   .join("\n")}
@@ -1603,7 +1605,7 @@ ${roots
   const trashFunctions = () => `
 
   /**
-   * The viewer's trash (docs/design/trash.md): the ${n.pluralLabel.toLowerCase()} in it they may delete, the
+   * The viewer's trash (docs/design/trash.md): the ${inert(n.pluralLabel.toLowerCase())} in it they may delete, the
    * latest first, with when and by whom, kept for thirty days.
    */
   async trash(viewer: Viewer | null) {
@@ -1618,7 +1620,7 @@ ${roots
     ${asListed(`rows.map((row) => ({ ...${ownedAuto ? "shownTo(viewer, row)" : "row"}, deletedByName: ${byName}${roots.length ? ", withTitle: (row.deletedWith && withTitle.get(row.deletedWith)) ?? null" : ""}${together && group.length ? `, withCount: withCount.get(\`${model.name}:\${row.id}\`) ?? 0` : ""}${unmerge ? ", mergedInto: merged.get(row.id) ?? null" : ""} }))`, "return ")}
   },
 
-  /** A ${n.label.toLowerCase()} in the trash, as its page shows it read-only, with when and by whom; else nothing. */
+  /** A ${inert(n.label.toLowerCase())} in the trash, as its page shows it read-only, with when and by whom; else nothing. */
   async trashed(viewer: Viewer | null, id: number) {
     const fetched = await db.query.${n.tableKey}.findFirst({
       where: and(eq(${n.table}.id, id), ${trashedRows}),${withClause(getWith, "      ")}
@@ -1635,7 +1637,7 @@ ${roots
     };
   },
 
-  /** Takes the chosen ${n.pluralLabel.toLowerCase()} out of the trash, those the viewer may delete. */
+  /** Takes the chosen ${inert(n.pluralLabel.toLowerCase())} out of the trash, those the viewer may delete. */
   restore(viewer: Viewer | null, ids: number[]): { restored: number; skipped: number${unmerge ? "; stayed: number" : ""} } {
     const rows = db
       .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, ${roots.length ? `deletedWith: ${n.table}.deletedWith, ` : ""}${unmerge ? `deletedAt: ${n.table}.deletedAt, ` : ""}`)})
@@ -1671,7 +1673,7 @@ ${members.map((m) => `          ${dataOf(m)}.restoreWith(tx, viewer, \`${model.n
     return { restored: rows.length, skipped: new Set(ids).size - rows.length${unmerge ? ", stayed" : ""} };
   },
 
-  /** Removes the chosen ${n.pluralLabel.toLowerCase()} in the trash for good, with their pictures and documents. */
+  /** Removes the chosen ${inert(n.pluralLabel.toLowerCase())} in the trash for good, with their pictures and documents. */
   removeForGood(viewer: Viewer | null, ids: number[]): { deleted: number; skipped: number } {
     const rows = db
       .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
@@ -1732,13 +1734,13 @@ ${dropPictures(
       ? `
 
   /**
-   * Moves the live ${n.pluralLabel.toLowerCase()} the condition fits to the trash with another record
+   * Moves the live ${inert(n.pluralLabel.toLowerCase())} the condition fits to the trash with another record
    * (docs/design/delete-together.md), marked as its group; the viewer must be allowed to delete each.
    */
   trashWith(tx: Tx, viewer: Viewer | null, fits: SQL, tag: string, when: Date): void {
     const rows = tx.select().from(${n.table}).where(and(fits, isNull(${n.table}.deletedAt))).all();
     for (const row of rows)
-      if (!allows(${n.access}.delete, viewer, ${rowOwner})) throw new Conflict("no-right:${names(model, t).label}");
+      if (!allows(${n.access}.delete, viewer, ${rowOwner})) throw new Conflict(${JSON.stringify(`no-right:${names(model, t).label}`)});
     if (rows.length === 0) return;
     tx.update(${n.table}).set({ deletedAt: when, deletedBy: personOf(viewer), deletedWith: tag }).where(and(fits, isNull(${n.table}.deletedAt))).run();
     for (const row of rows) {
@@ -1746,7 +1748,7 @@ ${dropPictures(
     }
   },
 
-  /** Takes the ${n.pluralLabel.toLowerCase()} that went to the trash with a record out of it again. */
+  /** Takes the ${inert(n.pluralLabel.toLowerCase())} that went to the trash with a record out of it again. */
   restoreWith(tx: Tx, viewer: Viewer | null, tag: string): void {
     const back = tx.update(${n.table}).set({ deletedAt: null, deletedBy: null, deletedWith: null }).where(eq(${n.table}.deletedWith, tag)).returning().all();
     for (const row of back)
@@ -1925,17 +1927,17 @@ function veiled<R extends { id: number }>(viewer: Viewer | null, rows: R[]): R[]
 
 `
     : ""
-}/** Who may read, create, change and delete ${n.pluralLabel.toLowerCase()}. */
+}/** Who may read, create, change and delete ${inert(n.pluralLabel.toLowerCase())}. */
 export const ${n.access}: ModelAccess = ${literal(access)};${
     sided
       ? `
-/** Whether the viewer writes on our side of the thread (support-portal-path.md §4): a role granted read or write on everyone's ${n.pluralLabel.toLowerCase()}, an administrator, or the app. */
+/** Whether the viewer writes on our side of the thread (support-portal-path.md §4): a role granted read or write on everyone's ${inert(n.pluralLabel.toLowerCase())}, an administrator, or the app. */
 const ours = (viewer: Viewer | null) => !!viewer && (!!viewer.system || ${n.ours}.includes(viewer.role));`
       : ""
   }${
     model.review
       ? `
-/** The roles that approve or reject ${n.pluralLabel.toLowerCase()}' waiting files (docs/design/file-review.md). */
+/** The roles that approve or reject ${inert(n.pluralLabel.toLowerCase())}' waiting files (docs/design/file-review.md). */
 export const REVIEWERS: string[] = ${JSON.stringify(reviewRoles(model.name, auth))};`
       : ""
   }
@@ -2113,7 +2115,7 @@ function hideRefs<R extends Record<string, unknown>>(rows: R[], field: string, r
       ? `\n  /** Whether a stored picture or document is on any record (the trash too): a file no record has may go. */\n  uses(file: string): boolean {\n    return ${stillShown("", "file")};\n  },\n`
       : ""
   }${writeChecks}
-  /** A condition for the ${n.pluralLabel.toLowerCase()} the viewer may read. */
+  /** A condition for the ${inert(n.pluralLabel.toLowerCase())} the viewer may read. */
   readable(viewer: Viewer | null) {${
     model.trash || held.length || model.heldByPayment
       ? `
@@ -2199,7 +2201,7 @@ ${
 }${
   reads && threadTarget && threadRef
     ? `
-  /** Marks the ${n.label.toLowerCase()}'s conversation read for the viewer, now. */
+  /** Marks the ${inert(n.label.toLowerCase())}'s conversation read for the viewer, now. */
   markRead(viewer: Viewer | null, id: number): void {
     if (!viewer) return;
     db.insert(${reads})
@@ -2208,7 +2210,7 @@ ${
       .run();
   },
 
-  /** Each ${n.label.toLowerCase()}'s messages, and how many the viewer has not read: a message is read once they opened the conversation after it, and their own always. */
+  /** Each ${inert(n.label.toLowerCase())}'s messages, and how many the viewer has not read: a message is read once they opened the conversation after it, and their own always. */
   threadCounts(viewer: Viewer | null, ids: number[]): Record<number, { count: number; unread: number }> {
     const counts: Record<number, { count: number; unread: number }> = {};
     if (!ids.length) return counts;
@@ -2227,7 +2229,7 @@ ${
     return counts;
   },
 
-  /** The ${n.pluralLabel.toLowerCase()} with a message the viewer has not read, as a list's condition. */
+  /** The ${inert(n.pluralLabel.toLowerCase())} with a message the viewer has not read, as a list's condition. */
   unread(viewer: Viewer | null): SQL {
     if (!viewer) return sql\`false\`;
     const target = ${tableRef(threadTarget)};
@@ -2244,7 +2246,7 @@ ${
 }${
   favorites
     ? `
-  /** The ${n.pluralLabel.toLowerCase()} the viewer saved, by id: their own marks, never anyone else's. */
+  /** The ${inert(n.pluralLabel.toLowerCase())} the viewer saved, by id: their own marks, never anyone else's. */
   saved(viewer: Viewer | null): number[] {
     if (!viewer) return [];
     return db
@@ -2255,7 +2257,7 @@ ${
       .map((r) => r.id);
   },
 
-  /** Saves a ${n.label.toLowerCase()} the viewer may read, or unsaves it; whether it is saved now. */
+  /** Saves a ${inert(n.label.toLowerCase())} the viewer may read, or unsaves it; whether it is saved now. */
   toggleSaved(viewer: Viewer | null, id: number): boolean {
     if (!viewer || !${self}.canRead(viewer, id)) throw new AccessDenied(viewer !== null);
     const mark = and(eq(${favorites}.userId, viewer.id), eq(${favorites}.recordId, id));
@@ -2266,7 +2268,7 @@ ${
 `
     : ""
 }
-  /** The ${n.pluralLabel.toLowerCase()} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}${ordered ? "; `order` sorts them before the newest-first rest" : ""}. */
+  /** The ${inert(n.pluralLabel.toLowerCase())} the viewer may read; \`where\` narrows them, e.g. to a search${capped ? "; `limit` keeps the newest (a data page)" : ""}${ordered ? "; `order` sorts them before the newest-first rest" : ""}. */
   async list(viewer: Viewer | null, where?: SQL${capped ? ", limit?: number" : ""}${ordered ? ", order?: SQL" : ""}) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
@@ -2301,7 +2303,7 @@ ${
   hasListPage
     ? `
   /**
-   * A page of the ${n.pluralLabel.toLowerCase()} the viewer may read that fit \`where\`, newest first (or in
+   * A page of the ${inert(n.pluralLabel.toLowerCase())} the viewer may read that fit \`where\`, newest first (or in
    * \`order\`), and how many fit in all: for a list page. A page past the end is the last one.
    */
   async page(viewer: Viewer | null, where?: SQL, order?: SQL, page = 1, size = 50) {
@@ -2329,7 +2331,7 @@ ${
   paged
     ? `
   /**
-   * The ${n.pluralLabel.toLowerCase()} the viewer may read that fit \`where\` and \`search\`, in \`sort\`'s order (else newest
+   * The ${inert(n.pluralLabel.toLowerCase())} the viewer may read that fit \`where\` and \`search\`, in \`sort\`'s order (else newest
    * first), a page of them and how many there are: for the API and the assistants' tools.
    */
   async find(
@@ -2350,7 +2352,7 @@ ${
   },
 
   /**
-   * A number from the ${n.pluralLabel.toLowerCase()} the viewer may read that fit \`where\`: how many, or the sum,
+   * A number from the ${inert(n.pluralLabel.toLowerCase())} the viewer may read that fit \`where\`: how many, or the sum,
    * average, smallest or largest of a number field.
    */
   async measure(
@@ -2474,7 +2476,7 @@ ${
 
 ${
   titleColumn !== "id"
-    ? `  /** The ${n.pluralLabel.toLowerCase()} the viewer may read whose ${titleColumn} has the text: a few, for naming one. */
+    ? `  /** The ${inert(n.pluralLabel.toLowerCase())} the viewer may read whose ${titleColumn} has the text: a few, for naming one. */
   named(viewer: Viewer | null, text: string): { id: number; title: string }[] {
     return db
       .select({ id: ${n.table}.id, title: ${n.table}.${titleColumn} })
@@ -2513,7 +2515,7 @@ ${
         .map((row) => String(row.v));
       const asked = String(v);
       if (values.length && !values.some((x) => x.toLowerCase().includes(asked.toLowerCase())))
-        return \`No ${n.label.toLowerCase()} has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
+        return \`No ${inert(n.label.toLowerCase())} has "\${asked}" in \${name}; the nearest: \${nearest(asked, values).join(", ")}.\`;
     }
     return undefined;
   },
@@ -2532,7 +2534,7 @@ ${
 }
 ${
   filteredBy
-    ? `  /** How many ${n.pluralLabel.toLowerCase()} the viewer may read, for a list's filter on them (A 208), without listing them. */
+    ? `  /** How many ${inert(n.pluralLabel.toLowerCase())} the viewer may read, for a list's filter on them (A 208), without listing them. */
   pickCount(viewer: Viewer | null): number {
     if (readScope(${n.access}.read, viewer) === "none") return 0;
     return db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
@@ -2581,7 +2583,7 @@ ${
 }
 ${
   capped
-    ? `  /** How many ${n.pluralLabel.toLowerCase()} the viewer may read, for a data page's overview; none to read: null. */
+    ? `  /** How many ${inert(n.pluralLabel.toLowerCase())} the viewer may read, for a data page's overview; none to read: null. */
   count(viewer: Viewer | null): number | null {
     if (readScope(${n.access}.read, viewer) === "none") return null;
     return db.select({ n: count() }).from(${n.table}).where(${self}.readable(viewer)).get()?.n ?? 0;
@@ -2597,7 +2599,7 @@ ${
     return { taken, max: ${capacityMax.replaceAll("tx.", "db.").replace(`values.${capacity.per}Id`, `${capacity.per}Id`)}, closesAt: ${deadlineOf("closes", `${capacity.per}Id`).replaceAll("tx.", "db.")}, cancelUntilAt: ${deadlineOf("cancelUntil", `${capacity.per}Id`).replaceAll("tx.", "db.")} };
   },
 
-  /** The viewer's own ${n.label.toLowerCase()} for a ${capacity.per}, if they have one. */
+  /** The viewer's own ${inert(n.label.toLowerCase())} for a ${capacity.per}, if they have one. */
   mine(viewer: Viewer, ${capacity.per}Id: number): number | undefined {
     return db.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.${capacity.per}Id, ${capacity.per}Id), ${ownCondition(model, n)}${model.trash ? `, isNull(${n.table}.deletedAt)` : ""})).get()?.id;
   },
@@ -2632,7 +2634,7 @@ ${
 
 ${
   mailsOwner
-    ? `  /** Who owns a ${n.label.toLowerCase()} the viewer may read, for the server only (a message to its owner). */
+    ? `  /** Who owns a ${inert(n.label.toLowerCase())} the viewer may read, for the server only (a message to its owner). */
   ownerOf(viewer: Viewer | null, id: number): string | null {
     return (
       db
@@ -2798,7 +2800,7 @@ ${
           ? ""
           : `
   /**
-   * The ${n.pluralLabel.toLowerCase()} the viewer may read whose ${titleColumn} contains the text: a search of records that
+   * The ${inert(n.pluralLabel.toLowerCase())} the viewer may read whose ${titleColumn} contains the text: a search of records that
    * refer to them finds them only among these.
    */
   titled(viewer: Viewer | null, text: string): number[] {
@@ -2811,7 +2813,7 @@ ${
   },
 `
       }
-  /** Choices for fields that refer to a ${n.label.toLowerCase()}: the ones the viewer may read. */
+  /** Choices for fields that refer to a ${inert(n.label.toLowerCase())}: the ones the viewer may read. */
 ${
   composedName(model) || lined
     ? `  async options(viewer: Viewer | null) {
@@ -2821,7 +2823,7 @@ ${
     // Through shownRefs: a part the viewer may not read names nothing here either.
     const rows = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({ where: ${self}.readable(viewer), ...${nameColumns(ir, model, "", linesParts(ir, ux, model))} }));
     return sortRows(
-      rows.map((row) => ({ value: row.id, label: ${composedName(model) ? `${nameFunction(model)}(row)` : titleColumn === "id" ? `\`${n.label} #\${row.id}\`` : `String(row.${titleColumn} ?? \`${n.label} #\${row.id}\`)`}, first: ${composedName(model) ? firstPart(model, ir) : titleColumn === "id" ? "row.id" : `row.${titleColumn} ?? null`}${lined ? `, detail: ${linesFunction(model)}(row).subtitle` : ""} })),
+      rows.map((row) => ({ value: row.id, label: ${composedName(model) ? `${nameFunction(model)}(row)` : titleColumn === "id" ? `\`${inert(n.label)} #\${row.id}\`` : `String(row.${titleColumn} ?? \`${inert(n.label)} #\${row.id}\`)`}, first: ${composedName(model) ? firstPart(model, ir) : titleColumn === "id" ? "row.id" : `row.${titleColumn} ?? null`}${lined ? `, detail: ${linesFunction(model)}(row).subtitle` : ""} })),
       "first",
     ).map(({ value, label${lined ? ", detail" : ""} }) => ({ value, label${lined ? ", detail" : ""} }));
   },
@@ -2831,11 +2833,11 @@ ${
     return db
       .select({ value: ${n.table}.id, label: ${
         titleColumn === "id"
-          ? `sql<string>\`'${n.label} #' || \${${n.table}.id}\``
+          ? `sql<string>\`'${inert(n.label)} #' || \${${n.table}.id}\``
           : model.fields.find((f) => f.name === titleColumn)?.required
             ? `${n.table}.${titleColumn}`
             : // An optional title: the record's number where it is empty, so every choice has a name.
-              `sql<string>\`coalesce(\${${n.table}.${titleColumn}}, '${n.label} #' || \${${n.table}.id})\``
+              `sql<string>\`coalesce(\${${n.table}.${titleColumn}}, '${inert(n.label)} #' || \${${n.table}.id})\``
       } })
       .from(${n.table})
       .where(${self}.readable(viewer))

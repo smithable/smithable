@@ -156,7 +156,7 @@ export function dashboardParts(
       return {
         block: "list",
         code: `<section aria-labelledby=${attr(`${item.name}-title`)} className="space-y-3">
-        <h2 id=${attr(`${item.name}-title`)} className="font-semibold">${label}</h2>
+        <h2 id=${attr(`${item.name}-title`)} className="font-semibold">{${JSON.stringify(label)}}</h2>
         <ModelTable
           ui={${n.ui}}
           app={app}${columns ? `\n          columns={${literal(columns)}}` : ""}

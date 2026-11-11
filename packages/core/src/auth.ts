@@ -14,6 +14,7 @@ import {
 } from "./context.js";
 import { type Diagnostic, hasErrors } from "./diagnostics.js";
 import { type Condition, channelsOf, conditionFits, type SpecIR, USER_MODEL } from "./ir.js";
+import { rejectUnsafeText } from "./text-safety.js";
 
 export type { Condition } from "./ir.js";
 
@@ -214,6 +215,7 @@ export function validateAuth(
     );
   }
   if (hasErrors(ctx.diagnostics)) return done();
+  rejectUnsafeText(ctx, doc);
 
   const root = doc.contents as ParsedNode | null;
   const entries = mapEntries(ctx, root, "smithable.auth.yml") ?? [];

@@ -28,6 +28,7 @@ import {
   HEADER,
   importList,
   indexPath,
+  inert,
   keyOf,
   literal,
   modelNamed,
@@ -360,7 +361,7 @@ export function landingRoute(
                 ...(section.search && searchLabels.length
                   ? {
                       search: {
-                        label: `Search ${n.pluralLabel.toLowerCase()}`,
+                        label: `Search ${inert(n.pluralLabel.toLowerCase())}`,
                         placeholder: `Search by ${searchLabels.length > 1 ? `${searchLabels.slice(0, -1).join(", ")} or ${searchLabels.at(-1)}` : searchLabels[0]}`,
                       },
                     }

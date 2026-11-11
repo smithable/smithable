@@ -186,6 +186,44 @@ export const tableRef = (model: ModelIR) => `schema.${tableNames(model).table}`;
 /** The namespace import that tableRef needs. */
 export const SCHEMA_IMPORT = 'import * as schema from "#/db/schema";';
 
+/** Text as a template literal's own part, exactly: backticks, backslashes and `${` kept literal. */
+export const templateText = (text: string) =>
+  text.replace(/[\\`]/g, "\\$&").replace(/\$\{/g, "\\${");
+
+/**
+ * Text from the spec as a comment's line: it cannot end the comment (a star and a slash) or the
+ * line (line breaks, U+2028, U+2029 and U+0085 among them), and control and bidirectional-override
+ * characters go. For prose a developer reads; elsewhere in code, `inert`.
+ */
+export function commentText(text: string): string {
+  return text
+    .replace(/[\r\n\u2028\u2029\u0085]+/g, " ")
+    .replace(/[\p{Cc}\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu, "")
+    .replace(/\*\//g, "* /");
+}
+
+/**
+ * Text from the spec made inert where a generator writes it raw into the app's code: in a comment,
+ * a quoted string, a template literal or JSX text it stays text. Line breaks (U+2028, U+2029 and
+ * U+0085 too) become spaces; control and bidirectional-override characters go; the characters
+ * that end a comment, a string or a template literal or open JSX become look-alikes. Where the
+ * exact text matters (what the app shows) it is written with JSON.stringify instead.
+ */
+export function inert(text: string): string {
+  return text
+    .replace(/[\r\n\u2028\u2029\u0085]+/g, " ")
+    .replace(/[\p{Cc}\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu, "")
+    .replace(/\*\//g, "* /")
+    .replace(/\\/g, "\u2216")
+    .replace(/"/g, "\u201d")
+    .replace(/'/g, "\u2019")
+    .replace(/`/g, "\u02bc")
+    .replace(/\{/g, "(")
+    .replace(/\}/g, ")")
+    .replace(/</g, "\u2039")
+    .replace(/>/g, "\u203a");
+}
+
 // Names derived from a model, used consistently across files.
 export function names(model: ModelIR, t: Texts) {
   const pluralName = plural(model.name);

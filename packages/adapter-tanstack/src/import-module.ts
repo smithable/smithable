@@ -10,7 +10,7 @@ import {
   type SpecIR,
   USER_MODEL,
 } from "@smithable/core";
-import { dataKey, HEADER, modelNamed, names, SCHEMA_IMPORT, type Texts } from "./shared.js";
+import { dataKey, HEADER, inert, modelNamed, names, SCHEMA_IMPORT, type Texts } from "./shared.js";
 
 /**
  * The models records can be imported into: those with a list page (its Import), and those the API
@@ -49,7 +49,7 @@ export function importModule(ir: SpecIR, model: ModelIR, t: Texts): string {
   const targets = [...new Set(refs.map((f) => (f.type as { model: string }).model))]
     .filter((m) => m !== model.name)
     .map((m) => modelNamed(ir, m));
-  return `${HEADER}// Importing ${n.pluralLabel.toLowerCase()} from a file or a JSON list (the kit's import with this model's parts).
+  return `${HEADER}// Importing ${inert(n.pluralLabel.toLowerCase())} from a file or a JSON list (the kit's import with this model's parts).
 import { ${model.trash ? "and, inArray, isNull" : "inArray"} } from "drizzle-orm";
 import { db } from "#/db";
 ${SCHEMA_IMPORT}
@@ -85,7 +85,7 @@ ${refs
 const lookup = async () => () => undefined;`
 }
 
-/** A file's rows as ${n.pluralLabel.toLowerCase()}, or with \`dryRun\` what would go in. */
+/** A file's rows as ${inert(n.pluralLabel.toLowerCase())}, or with \`dryRun\` what would go in. */
 export function ${i.rows}(viewer: Viewer | null, file: string, rows: string[][], dryRun: boolean) {
   return importRows({
     viewer,
@@ -102,7 +102,7 @@ export function ${i.rows}(viewer: Viewer | null, file: string, rows: string[][],
   });
 }
 
-/** Takes an import of ${n.pluralLabel.toLowerCase()} back (its importer, within a day). */
+/** Takes an import of ${inert(n.pluralLabel.toLowerCase())} back (its importer, within a day). */
 export function ${i.undoRows}(viewer: Viewer | null, id: number) {
   return undoImport({
     viewer,

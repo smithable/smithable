@@ -23,6 +23,7 @@ import {
   HEADER,
   importList,
   indexPath,
+  inert,
   join,
   literal,
   modelNamed,
@@ -116,7 +117,7 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
       : undefined) ??
     (own !== "id" ? titleOf(field(own)) : undefined) ??
     titleOf(model.fields.find((f) => f.required && f.type.kind === "relation" && !f.type.many)) ??
-    `\`${n.label} #\${row.id}\``;
+    `\`${inert(n.label)} #\${row.id}\``;
 
   // Records that take someone's time (appointments.md §1): a day view with a column for each of them.
   const occupied = model.occupies;
@@ -212,7 +213,7 @@ export function calendarRoute(page: CalendarPage, ctx: GenContext): string {
   const itemEnd = dateOnly ? `new Date(\`\${row.${starts.name}}T23:59:00Z\`)` : end;
 
   return `${HEADER}${imports.render()}
-/** The ${n.pluralLabel.toLowerCase()} whose start falls in the range shown, among those the viewer may read. */
+/** The ${inert(n.pluralLabel.toLowerCase())} whose start falls in the range shown, among those the viewer may read. */
 const getRange = createServerFn()
   // A real range, and no longer than a month view needs: six weeks, a day before and two after
   // (a month starting on a Sunday spans six).

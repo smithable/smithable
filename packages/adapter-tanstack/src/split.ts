@@ -17,6 +17,7 @@ import {
   addressOwned,
   dataKey,
   HEADER,
+  inert,
   literal,
   modelNamed,
   names,
@@ -68,7 +69,7 @@ import { writeAllowed } from "#/kit/limit";
 import { currentViewer } from "#/lib/viewer.server";
 import { ${a.run}${model.trash ? `, ${a.undo}` : ""} } from "./${kebab(action.name)}.server";
 
-/** Who may run the "${action.name}" split: its grant, with the right to add ${n.pluralLabel.toLowerCase()}. */
+/** Who may run the "${action.name}" split: its grant, with the right to add ${inert(n.pluralLabel.toLowerCase())}. */
 export const ${a.access}: Rule = ${literal(actionAccess(action, auth, ir.models))};
 
 /** The viewer about to change things, counted against how often one may write (see src/kit/limit.ts). */
@@ -78,14 +79,14 @@ async function writer() {
   return viewer;
 }
 
-/** Splits the ${n.label.toLowerCase()}: the picked records go to a new one, whose id it returns. */
+/** Splits the ${inert(n.label.toLowerCase())}: the picked records go to a new one, whose id it returns. */
 export const ${action.name} = createServerFn({ method: "POST" })
   .validator(z.object({ id: z.number().int(), picked: z.array(z.number().int()).min(1).max(1000) }))
   .handler(async ({ data }) => ${a.run}(await writer(), data.id, data.picked));
 ${
   model.trash
     ? `
-/** Undoes a split: what is still on the new ${n.label.toLowerCase()} moves back, and it goes to the trash. */
+/** Undoes a split: what is still on the new ${inert(n.label.toLowerCase())} moves back, and it goes to the trash. */
 export const ${a.undoFn} = createServerFn({ method: "POST" })
   .validator(z.number().int())
   .handler(async ({ data }) => ${a.undo}(await writer(), data));
@@ -125,7 +126,7 @@ export function splitActionServer(
   const title = titleField(model);
   // Undo is the trash's (intents.md §4): a model without one has none.
   const undo = `/**
- * Undoes a split (intents.md §4): the moved ${cn.pluralLabel.toLowerCase()} still on the new ${n.label.toLowerCase()}
+ * Undoes a split (intents.md §4): the moved ${inert(cn.pluralLabel.toLowerCase())} still on the new ${inert(n.label.toLowerCase())}
  * go back to the one it came from, then the new one goes to the trash; a number it took stays
  * taken. Returns the original's id and how many stayed (moved on since).
  */
@@ -173,7 +174,7 @@ import { ${n.schema} } from "${n.module}.schema";
 import { ${n.access}, ${n.data} } from "${n.module}.server";
 ${cn.data === n.data ? `import { ${n.ui} } from "${n.module}";\n` : `import { ${cn.access}, ${cn.data} } from "${cn.module}.server";\nimport { ${cn.ui} } from "${cn.module}";\n`}import { ${a.access} } from "./${kebab(action.name)}";
 
-/** The ${child.name === model.name ? "records" : cn.pluralLabel.toLowerCase()} of a ${n.label.toLowerCase()} the viewer may see: those on it now, with whose each is. */
+/** The ${child.name === model.name ? "records" : cn.pluralLabel.toLowerCase()} of a ${inert(n.label.toLowerCase())} the viewer may see: those on it now, with whose each is. */
 function childrenOf(viewer: Viewer | null, id: number) {
   return db
     .select({ id: ${cn.table}.id${signedIn ? `, owner: ${cn.table}.${ownerKey(child)}` : ""} })
@@ -183,8 +184,8 @@ function childrenOf(viewer: Viewer | null, id: number) {
 }
 
 /**
- * Splits the ${n.label.toLowerCase()} as the viewer: the picked ${cn.pluralLabel.toLowerCase()} go to a new
- * ${n.label.toLowerCase()} with its copied fields; at least one is picked and at least one stays.
+ * Splits the ${inert(n.label.toLowerCase())} as the viewer: the picked ${inert(cn.pluralLabel.toLowerCase())} go to a new
+ * ${inert(n.label.toLowerCase())} with its copied fields; at least one is picked and at least one stays.
  * Returns the new record's id, whose page the person lands on.
  */
 export async function ${a.run}(viewer: Viewer | null, id: number, picked: number[]): Promise<number> {

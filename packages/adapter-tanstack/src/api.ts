@@ -32,6 +32,7 @@ import {
   addressOwned,
   dataKey,
   HEADER,
+  inert,
   literal,
   modelNamed,
   names,
@@ -174,7 +175,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     };
     paths[`/api/v1/${path}`] = {
       get: {
-        summary: `${n.pluralLabel} the key's role may read`,
+        summary: `${inert(n.pluralLabel)} the key's role may read`,
         parameters: [
           { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
           { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
@@ -190,12 +191,12 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
             : []),
         ],
         responses: {
-          200: { description: `A page of ${n.pluralLabel.toLowerCase()}` },
+          200: { description: `A page of ${inert(n.pluralLabel.toLowerCase())}` },
           401: problem,
         },
       },
       post: {
-        summary: `Add a ${n.label.toLowerCase()}`,
+        summary: `Add a ${inert(n.label.toLowerCase())}`,
         requestBody: one,
         responses: {
           201: { description: "Added", ...one },
@@ -208,7 +209,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     paths[`/api/v1/${path}/{id}`] = {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
       get: {
-        summary: `One ${n.label.toLowerCase()}`,
+        summary: `One ${inert(n.label.toLowerCase())}`,
         responses: {
           200: { description: "The record", ...one },
           404: problem,
@@ -223,7 +224,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
         },
       },
       patch: {
-        summary: `Change a ${n.label.toLowerCase()} (the fields given)`,
+        summary: `Change a ${inert(n.label.toLowerCase())} (the fields given)`,
         requestBody: one,
         responses: {
           200: { description: "Changed", ...one },
@@ -234,9 +235,9 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       },
       delete: {
         summary: model.trash
-          ? `Move a ${n.label.toLowerCase()} to the trash; with permanent=true, remove one in the trash for good`
-          : `Delete a ${n.label.toLowerCase()}`,
-        description: `A ${n.label.toLowerCase()} that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no ${n.label.toLowerCase()} (loose), and whether they can go to the trash together.${
+          ? `Move a ${inert(n.label.toLowerCase())} to the trash; with permanent=true, remove one in the trash for good`
+          : `Delete a ${inert(n.label.toLowerCase())}`,
+        description: `A ${inert(n.label.toLowerCase())} that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no ${inert(n.label.toLowerCase())} (loose), and whether they can go to the trash together.${
           model.trash
             ? " With together=true they are moved to the trash with it, and restored with it."
             : ""
@@ -256,7 +257,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       paths[`/api/v1/${path}/{id}/restore`] = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         post: {
-          summary: `Take a ${n.label.toLowerCase()} out of the trash`,
+          summary: `Take a ${inert(n.label.toLowerCase())} out of the trash`,
           responses: { 200: { description: "Restored", ...one }, 401: problem, 404: problem },
         },
       };
@@ -412,7 +413,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
     if (read || add)
       visitorPaths[`/api/v1/${path}`] = {
         ...(read
-          ? { get: { ...(list.get as object), summary: `${n.pluralLabel} anyone may read` } }
+          ? { get: { ...(list.get as object), summary: `${inert(n.pluralLabel)} anyone may read` } }
           : {}),
         ...(add ? { post: list.post } : {}),
       };
@@ -504,7 +505,7 @@ ${models
     const writable = entered(model);
     const camelName = model.name[0]?.toLowerCase() + model.name.slice(1);
     return `
-/** A ${n.label.toLowerCase()} as the API gives it. */
+/** A ${inert(n.label.toLowerCase())} as the API gives it. */
 export function ${camelName}ToApi(row: Record<string, any>) {
   return {
     id: row.id as number,
@@ -514,7 +515,7 @@ ${fields.map((f) => `    ${f.name}: ${readCode(f)},`).join("\n")}
   };
 }
 
-/** A ${n.label.toLowerCase()}'s values from a body: all of them, or a change to \`current\`. */
+/** A ${inert(n.label.toLowerCase())}'s values from a body: all of them, or a change to \`current\`. */
 export function ${camelName}FromApi(body: unknown, current?: Record<string, unknown>) {
   const given = fieldsOf(body, ${literal(writable.map((f) => f.name))});
   const values: Record<string, unknown> = { ...current };
@@ -563,7 +564,7 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
     const reads = visitors.read.includes(model.name) ? "openApiCall" : "apiCall";
     const adds = visitors.create.includes(model.name) ? "openApiCall" : "apiCall";
     files[`src/routes/api/v1/${path}/index.ts`] =
-      `${HEADER}// ${n.pluralLabel} for programs with a key (docs/design/integrations.md §2): what the key's role may read, a page at a time, and adding one.
+      `${HEADER}// ${inert(n.pluralLabel)} for programs with a key (docs/design/integrations.md §2): what the key's role may read, a page at a time, and adding one.
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
@@ -627,7 +628,7 @@ export const Route = createFileRoute("/api/v1/${path}/")({
     // The same list as CSV, for a spreadsheet: every record that fits, at most 10,000.
     // An import taken back (A 238): by the key that made it, within a day.
     files[`src/routes/api/v1/${path}/imports.$id.ts`] =
-      `${HEADER}// An import of ${n.pluralLabel.toLowerCase()} taken back, by the key that made it, within a day (A 238).
+      `${HEADER}// An import of ${inert(n.pluralLabel.toLowerCase())} taken back, by the key that made it, within a day (A 238).
 import { createFileRoute } from "@tanstack/react-router";
 import { ${importNames(model).undoRows} } from "${importNames(model).server}";
 import { apiCall } from "#/kit/api.server";
@@ -642,7 +643,7 @@ export const Route = createFileRoute("/api/v1/${path}/imports/$id")({
 });
 `;
     files[`src/routes/api/v1/${path}[.]csv.ts`] =
-      `${HEADER}// ${n.pluralLabel} as CSV for programs with a key: the same filters, search and sort as the JSON list.
+      `${HEADER}// ${inert(n.pluralLabel)} as CSV for programs with a key: the same filters, search and sort as the JSON list.
 import { createFileRoute } from "@tanstack/react-router";
 import { ${n.ui} } from "${n.module}";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
@@ -675,7 +676,7 @@ export const Route = createFileRoute("/api/v1/${path}.csv")({
 });
 `;
     files[`src/routes/api/v1/${path}/$id.ts`] =
-      `${HEADER}// One ${n.label.toLowerCase()} for programs with a key: read, change (the fields given) or delete it.
+      `${HEADER}// One ${inert(n.label.toLowerCase())} for programs with a key: read, change (the fields given) or delete it.
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
@@ -688,7 +689,7 @@ const found = async (viewer: Parameters<typeof ${n.data}.get>[0], id: string) =>
   // In the trash (docs/design/trash.md): gone, with when, by whom and how to restore it.
   const gone = row ? null : await ${n.data}.trashed(viewer, Number(id));
   if (gone)
-    throw new Gone("This ${n.label.toLowerCase()} is in the trash.", {
+    throw new Gone("This ${inert(n.label.toLowerCase())} is in the trash.", {
       deletedAt: gone.deletedAt.toISOString(),
       deletedBy: gone.by,
       removedOn: gone.until.toISOString(),
@@ -696,7 +697,7 @@ const found = async (viewer: Parameters<typeof ${n.data}.get>[0], id: string) =>
     });`
       : ""
   }
-  if (!row) throw new NotFound("No such ${n.label.toLowerCase()}, or not one this key may read.");
+  if (!row) throw new NotFound("No such ${inert(n.label.toLowerCase())}, or not one this key may read.");
   return row;
 };
 
@@ -716,7 +717,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
           // ?permanent=true removes a record in the trash for good; otherwise it goes to the trash.
           if (new URL(request.url).searchParams.get("permanent") === "true") {
             if (!${n.data}.removeForGood(viewer, [Number(params.id)]).deleted)
-              throw new NotFound("No such ${n.label.toLowerCase()} in the trash, or not one this key may delete.");
+              throw new NotFound("No such ${inert(n.label.toLowerCase())} in the trash, or not one this key may delete.");
             return;
           }`
             : ""
@@ -732,7 +733,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
     // Out of the trash (docs/design/trash.md): the record restored, as GET gives it.
     if (model.trash)
       files[`src/routes/api/v1/${path}/$id.restore.ts`] =
-        `${HEADER}// A ${n.label.toLowerCase()} taken out of the trash, by a key whose role may delete it.
+        `${HEADER}// A ${inert(n.label.toLowerCase())} taken out of the trash, by a key whose role may delete it.
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
@@ -745,9 +746,9 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
         apiCall(request, async (viewer) => {
           const id = Number(params.id);
           if (!${n.data}.restore(viewer, [id]).restored)
-            throw new NotFound("No such ${n.label.toLowerCase()} in the trash, or not one this key may restore.");
+            throw new NotFound("No such ${inert(n.label.toLowerCase())} in the trash, or not one this key may restore.");
           const row = await ${n.data}.get(viewer, id);
-          if (!row) throw new NotFound("No such ${n.label.toLowerCase()}, or not one this key may read.");
+          if (!row) throw new NotFound("No such ${inert(n.label.toLowerCase())}, or not one this key may read.");
           return ${camelName}ToApi(row);
         }),
     },
@@ -758,7 +759,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
     const uploads = model.fields.filter(isUpload);
     if (uploads.length)
       files[`src/routes/api/v1/${path}/$id.$field.ts`] =
-        `${HEADER}// A ${n.label.toLowerCase()}'s pictures and documents, for programs with a key: GET one (?n= for the n-th of
+        `${HEADER}// A ${inert(n.label.toLowerCase())}'s pictures and documents, for programs with a key: GET one (?n= for the n-th of
 // several), PUT one as the body (a document's name in X-File-Name, a picture's description in
 // X-Alt); a field of several gets it added.
 import { createFileRoute } from "@tanstack/react-router";
@@ -789,9 +790,9 @@ ${uploads.map((f) => `  ${JSON.stringify(f.name)}: { kind: "${storesFiles(f) ? "
 
 async function target(viewer: Parameters<typeof ${n.data}.get>[0], id: string, name: string) {
   const field = FIELDS[name];
-  if (!field) throw new NotFound("This ${n.label.toLowerCase()} has no picture or document by that name.");
+  if (!field) throw new NotFound("This ${inert(n.label.toLowerCase())} has no picture or document by that name.");
   const row = await ${n.data}.get(viewer, Number(id));
-  if (!row) throw new NotFound("No such ${n.label.toLowerCase()}, or not one this key may read.");
+  if (!row) throw new NotFound("No such ${inert(n.label.toLowerCase())}, or not one this key may read.");
   return { field, row, value: (row as Record<string, unknown>)[field.key] };
 }
 
@@ -863,7 +864,7 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
     const onRows = rowsActions.filter((a) => a.rows.model === model.name);
     if (onRows.length || combines.length)
       files[`src/routes/api/v1/${path}/actions.$action.ts`] =
-        `${HEADER}// The actions offered on ${n.pluralLabel.toLowerCase()} picked by id, for programs with a key.
+        `${HEADER}// The actions offered on ${inert(n.pluralLabel.toLowerCase())} picked by id, for programs with a key.
 import { createFileRoute } from "@tanstack/react-router";
 ${combines.length ? `import { ${camelName}ToApi } from "#/generated/api.server";\nimport { ${n.data} } from "#/generated/${kebab(model.name)}.server";\n` : ""}${combines.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";\n`).join("")}${onRows.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";\nimport { ${actionNames(a).input} } from "#/generated/actions/${kebab(a.name)}.input";\n`).join("")}import { apiCall, NotFound } from "#/kit/api.server";${combines.length ? '\nimport { BadInput } from "#/kit/refusal";' : ""}
 
@@ -904,7 +905,7 @@ ${onRows
 `;
     if (own.length)
       files[`src/routes/api/v1/${path}/$id.actions.$action.ts`] =
-        `${HEADER}// The standard actions offered on a ${n.label.toLowerCase()}, for programs with a key.
+        `${HEADER}// The standard actions offered on a ${inert(n.label.toLowerCase())}, for programs with a key.
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}ToApi } from "#/generated/api.server";${own.some((a) => a.copy || a.merge || a.split) ? `\nimport { ${n.data} } from "#/generated/${kebab(model.name)}.server";` : ""}
 ${own.map((a) => `import { ${actionNames(a).run} } from "#/generated/actions/${kebab(a.name)}.server";${!a.merge && !a.split && askedFields(a).length ? `\nimport { ${actionNames(a).asks} } from "#/generated/actions/${kebab(a.name)}";` : ""}`).join("\n")}
@@ -1072,7 +1073,7 @@ function toolsModule(
       return `    case ${JSON.stringify(`restore${model.name}`)}: {
       const id = Number(args.id);
       if (!${n.data}.restore(viewer, [id]).restored)
-        throw new NotFound(\`No ${n.label.toLowerCase()} \${id} in the trash that you may restore.\`);
+        throw new NotFound(\`No ${inert(n.label.toLowerCase())} \${id} in the trash that you may restore.\`);
       return ${c}ToApi((await ${n.data}.get(viewer, id)) as Record<string, any>);
     }`;
     });
