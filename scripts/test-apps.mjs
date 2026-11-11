@@ -2532,7 +2532,8 @@ async function mailThreadFlow(dir, base) {
     if (replies().length !== 3) throw new Error(`the replies: ${replies().length}`);
     // The tag alone from someone else (anyone can write a number in a subject): a new message.
     const stranger = await post({
-      from: "mallory@example.org",
+      // A display name copied from the thread is not its address.
+      from: "Ada Lovelace <mallory@example.org>",
       subject: `Re: ${/\[[^\]]*#\d+\]$/.exec(header(ack, "Subject"))?.[0]}`,
       text: "Written into someone else's thread.",
       messageId: "",
@@ -2540,8 +2541,11 @@ async function mailThreadFlow(dir, base) {
       references: [],
       autoSubmitted: "",
     });
-    if ((await stranger.json()).thread !== undefined) throw new Error("a stranger's tag joined the thread");
-    if (replies().length !== 3) throw new Error(`the replies after a stranger's tag: ${replies().length}`);
+    const strangers = await stranger.json();
+    if (stranger.status !== 201 || !strangers.id || strangers.thread !== undefined)
+      throw new Error(`a stranger's tag: ${stranger.status} ${JSON.stringify(strangers)}`);
+    if (replies().length !== 3)
+      throw new Error(`the replies after a stranger's tag: ${replies().length}`);
     console.log(
       "  ✓ mail threads: the acknowledgement carries the tag and the thread's headers and is kept; an answer by its headers, and one by the tag from its own address, become replies on the message; an auto-reply joins and tells nobody; a stranger's tag starts a new one",
     );

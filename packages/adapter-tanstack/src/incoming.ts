@@ -544,12 +544,11 @@ ${files ? `            discardUploads(files, ${rn.data}.uses);\n` : ""}         
           }
         }
 `;
-  const imports = `
-${SCHEMA_IMPORT}
-import { ${rn.data} } from "#/generated/${kebab(model.name)}.server";
-import { ${rn.schema} } from "#/generated/${kebab(model.name)}.schema";${outgoing ? '\nimport { fromMail } from "#/generated/outgoing.server";' : ""}`;
   const ownerFrom = incoming.mail?.from;
   const replyFrom = reply.mail.from;
+  const imports = `${replyFrom ? `\n${SCHEMA_IMPORT}` : ""}
+import { ${rn.data} } from "#/generated/${kebab(model.name)}.server";
+import { ${rn.schema} } from "#/generated/${kebab(model.name)}.schema";${outgoing ? '\nimport { fromMail } from "#/generated/outgoing.server";' : ""}`;
   const helpers = `
 /** Whether a sender is the record's own address, or one that already wrote in its thread. */
 function known(sender: string, record: Record<string, unknown>, thread: number): boolean {
@@ -557,7 +556,7 @@ function known(sender: string, record: Record<string, unknown>, thread: number):
   if (!s) return false;${
     ownerFrom
       ? `
-  if (String(record.${ownerFrom} ?? "").toLowerCase() === s) return true;`
+  if (address(record.${ownerFrom}).toLowerCase() === s) return true;`
       : ""
   }${
     replyFrom
@@ -567,7 +566,7 @@ function known(sender: string, record: Record<string, unknown>, thread: number):
     .from(${tableRef(model)})
     .where(eq(${tableRef(model)}.${dataKey(ref)}, thread))
     .all()
-    .some((r) => String(r.from ?? "").toLowerCase() === s);`
+    .some((r) => address(r.from).toLowerCase() === s);`
       : "\n  return false;"
   }
 }
