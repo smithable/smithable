@@ -62,7 +62,7 @@ export function usersServerModule(ir: SpecIR, auth: AuthIR, t: Texts, sampled = 
 // Server-only. The users page's server functions pass the viewer; nothing here trusts the client.
 import { randomBytes, randomUUID } from "node:crypto";
 import { getRequestUrl } from "@tanstack/react-start/server";
-import { ${hasKeys(ir, auth) ? "and, asc, eq, isNull" : "asc, eq"} } from "drizzle-orm";
+import { ${hasKeys(ir, auth) ? "and, asc, count, eq, isNull" : "asc, count, eq"} } from "drizzle-orm";
 import { db } from "#/db";
 import { ${hasKeys(ir, auth) ? "apiKey, invitation, user" : "invitation, user"} } from "#/db/schema";${uses.length ? '\nimport * as schema from "#/db/schema";' : ""}
 import { app } from "#/generated/app";
@@ -246,7 +246,7 @@ export function usesOf(viewer: Viewer | null, userId: string): UserUse[] {
 ${uses
   .map(
     (u) =>
-      `    { model: ${JSON.stringify(u.model)}, field: ${JSON.stringify(u.field)}, noun: ${literal(u.noun)}, required: ${u.required}, count: db.select({ id: ${u.table}.id }).from(${u.table}).where(eq(${u.table}.${u.column}, userId)).all().length },`,
+      `    { model: ${JSON.stringify(u.model)}, field: ${JSON.stringify(u.field)}, noun: ${literal(u.noun)}, required: ${u.required}, count: db.select({ n: count() }).from(${u.table}).where(eq(${u.table}.${u.column}, userId)).get()?.n ?? 0 },`,
   )
   .join("\n")}
   ];
@@ -307,7 +307,7 @@ ${uses
 }
 
 function admins(): number {
-  return db.select({ id: user.id }).from(user).where(eq(user.role, "admin")).all().length;
+  return db.select({ n: count() }).from(user).where(eq(user.role, "admin")).get()?.n ?? 0;
 }
 
 async function sendInvitation(by: Viewer, invited: InvitationRow): Promise<void> {

@@ -540,8 +540,9 @@ export function fileHeaders(stored: StoredFile): Record<string, string> {
 
 /**
  * A record's stored picture or document as the file routes send it, or "Not found": cached by
- * browsers for a day when anyone may read the model (the address changes with the content),
- * privately otherwise.
+ * browsers for a day when anyone may read the model (the address changes with the content);
+ * otherwise asked again each time (no-cache, with its ETag: a short 304 when it has not
+ * changed), so after a sign-out or access taken away the browser no longer shows it.
  */
 export function uploadResponse(
   request: Request,
@@ -557,7 +558,7 @@ export function uploadResponse(
     ...(kind === "picture"
       ? { "Content-Type": "image/webp", "X-Content-Type-Options": "nosniff" }
       : fileHeaders(found)),
-    "Cache-Control": everyone ? "public, max-age=86400" : "private, max-age=3600",
+    "Cache-Control": everyone ? "public, max-age=86400" : "private, no-cache",
     ETag: tag,
   };
   if (request.headers.get("if-none-match") === tag)

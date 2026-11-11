@@ -121,7 +121,9 @@ export function keyViewer(authorization: string | null | undefined): Viewer | nu
     )
     .get();
   if (!found) return null;
-  db.update(apiKey).set({ lastUsedAt: new Date() }).where(eq(apiKey.id, found.id)).run();
+  // When it was last used, to the minute: one write a minute per key, not one per call.
+  if (!found.lastUsedAt || Date.now() - found.lastUsedAt.getTime() >= 60_000)
+    db.update(apiKey).set({ lastUsedAt: new Date() }).where(eq(apiKey.id, found.id)).run();
   return { id: \`key:\${found.id}\`, name: found.name, email: "", role: found.role };
 }
 `;

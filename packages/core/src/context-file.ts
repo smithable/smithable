@@ -142,7 +142,7 @@ export function analyticsOf(text: string | undefined): AnalyticsSetting | undefi
   if (!text) return undefined;
   const analytics = parseDocument(text).toJSON()?.analytics as Record<string, unknown> | undefined;
   const [provider, id] = Object.entries(analytics ?? {})[0] ?? [];
-  return provider && provider in ANALYTICS && typeof id === "string"
+  return provider && Object.hasOwn(ANALYTICS, provider) && typeof id === "string"
     ? { provider: provider as AnalyticsProvider, id }
     : undefined;
 }

@@ -25,6 +25,8 @@ export const LIMITS = {
   codes: { max: 5, seconds: 3600 },
   /** Sign-in codes asked for from one network address. */
   codesFromAddress: { max: 20, seconds: 3600 },
+  /** Questions to Ask that the host's model answers, by one person. */
+  questions: { max: 30, seconds: 900 },
 };
 
 const counts = new Map<string, { n: number; until: number }>();

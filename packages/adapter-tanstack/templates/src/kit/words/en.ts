@@ -646,6 +646,7 @@ export const w = {
   options: "Options",
   pictureDescription: "Description (for those who cannot see it)",
   question: "Question",
+  questions: "questions",
   trashedVerb: "moved to the trash",
   asRole: (role: string) => `as ${role}`,
   contactThe: (who: string) => `Contact the ${who}`,

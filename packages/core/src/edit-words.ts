@@ -64,9 +64,9 @@ function specChanges(before: Obj, after: Obj): EditReading {
   if (renamedModel) operations.push({ op: "renameModel", args: renamedModel });
   else {
     for (const name of Object.keys(models.was))
-      if (!(name in models.is)) other.push(`removed the ${name} records`);
+      if (!Object.hasOwn(models.is, name)) other.push(`removed the ${name} records`);
     for (const name of Object.keys(models.is)) {
-      if (!(name in models.was)) {
+      if (!Object.hasOwn(models.was, name)) {
         operations.push({ op: "addModel", args: { model: name } });
         continue;
       }
@@ -84,10 +84,10 @@ function specChanges(before: Obj, after: Obj): EditReading {
   if (renamedPage) operations.push({ op: "renamePage", args: renamedPage });
   else {
     for (const page of Object.keys(pages.was))
-      if (!(page in pages.is)) operations.push({ op: "removePage", args: { page } });
+      if (!Object.hasOwn(pages.is, page)) operations.push({ op: "removePage", args: { page } });
     for (const page of Object.keys(pages.is)) {
       const is = obj(pages.is[page]);
-      if (!(page in pages.was))
+      if (!Object.hasOwn(pages.was, page))
         operations.push(
           "landing" in is
             ? { op: "addLandingPage", args: { page } }

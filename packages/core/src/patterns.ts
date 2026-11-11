@@ -475,7 +475,7 @@ const dashboard: PagePattern<"dashboard"> = {
           (item.field === f.from ||
             byFirst === f.from ||
             item.when === f.from ||
-            (item.where && f.from in item.where))) ||
+            (item.where && Object.hasOwn(item.where, f.from)))) ||
         away;
       if (!uses) continue;
       if (!f.to)
@@ -489,7 +489,7 @@ const dashboard: PagePattern<"dashboard"> = {
         spec.set([...tile, "by"], bySecond === undefined ? f.to : `${f.to}.${bySecond}`);
       if (away) spec.set([...tile, "by"], `${byFirst}.${f.to}`);
       if (own && item.when === f.from) spec.set([...tile, "when"], f.to);
-      if (own && item.where && f.from in item.where)
+      if (own && item.where && Object.hasOwn(item.where, f.from))
         spec.renameKey([...tile, "where", f.from], f.to);
     }
     return undefined;
@@ -1186,7 +1186,7 @@ export function followSections(
     if (!section.where || section.model !== effect.model) continue;
     const path = ["pages", page.id, under, section.name, "where"];
     const field = effect.kind === "rename-field" ? effect.from : effect.field;
-    if (!(field in section.where)) continue;
+    if (!Object.hasOwn(section.where, field)) continue;
     const at = `the ${section.name} section of the ${page.id} page`;
     if (effect.kind === "remove-field")
       return {

@@ -18,6 +18,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: Ask counts the questions the host's model answers per person (30 a quarter of an hour); a private picture or document is asked for again each time instead of kept an hour; an API key's last use is written at most once a minute; the users page counts in SQL (`fixes/kit-hardening.yml`). A field named like a built-in property of objects (`constructor`, `toString`) is read as a name everywhere; Studio's preview takes select mode and highlighting only from Studio.
+
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
 
 ### The app's API

@@ -245,7 +245,7 @@ export function parseTheme(
       `"radius" is a length like 12px or 0.75rem.`,
     );
   const shadowName = optional("shadow") ?? "soft";
-  if (!(shadowName in SHADOWS))
+  if (!Object.hasOwn(SHADOWS, shadowName))
     ctx.error(
       byKey.get("shadow")?.value ?? root,
       "invalid-value",
