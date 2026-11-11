@@ -3288,7 +3288,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "UTC",
@@ -10988,7 +10988,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/activity.server.ts": "3bfe13cf generated",
   "src/generated/api.server.ts": "b737b4b9 generated",
   "src/generated/app.ts": "547ab03a generated",
-  "src/generated/ask.server.ts": "db039f67 generated",
+  "src/generated/ask.server.ts": "a2e9859f generated",
   "src/generated/card.server.ts": "9b4d94be generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -21562,7 +21562,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -33737,7 +33737,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "34a6d435 generated",
+  "src/generated/ask.server.ts": "cba56f7d generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -36047,7 +36047,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -43410,7 +43410,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "1478cb0e generated",
+  "src/generated/ask.server.ts": "e1896b86 generated",
   "src/generated/card.server.ts": "a5f24452 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -45940,7 +45940,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
@@ -52703,7 +52703,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "7dd14a4d generated",
+  "src/generated/ask.server.ts": "d41af9ad generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "9b6e7123 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
@@ -63313,7 +63313,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
@@ -67273,7 +67273,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/access.test.ts": "17492689 generated",
   "src/generated/activity.server.ts": "c6b9630b generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "0c38cc39 generated",
+  "src/generated/ask.server.ts": "d823d229 generated",
   "src/generated/card.server.ts": "f87d436f generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -68589,7 +68589,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -71308,7 +71308,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "29bca7db generated",
+  "src/generated/ask.server.ts": "2040abdb generated",
   "src/generated/card.server.ts": "57b7eaca generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -74846,7 +74846,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -84245,7 +84245,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/activity.server.ts": "dc01d286 generated",
   "src/generated/api.server.ts": "deca8db3 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "b3c9c1f7 generated",
+  "src/generated/ask.server.ts": "9a0deac7 generated",
   "src/generated/card.server.ts": "944abfcc generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
@@ -86833,7 +86833,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,
     timeZone: "Europe/Mariehamn",
@@ -92127,7 +92127,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.ts": "2fdc7c64 generated",
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "edf6aca0 generated",
+  "src/generated/ask.server.ts": "70b969f8 generated",
   "src/generated/card.server.ts": "eb1c3b3c generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",

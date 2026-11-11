@@ -1466,7 +1466,7 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
   if (viewer && ASKS[caller] === "model") count(\`ask:\${viewer.id}\`, LIMITS.questions, w.questions, Date.now(), true);
   return answer(question, {
     offer: offerFor(viewer),
-    kinds: WORDS[caller]?.() ?? [],
+    kinds: Object.hasOwn(WORDS, caller) ? (WORDS[caller]?.() ?? []) : [],
     call: (tool, args) => callTool(viewer, tool, args),
     turns,${ir.app.timezone ? `\n    timeZone: ${JSON.stringify(ir.app.timezone)},` : ""}
     model: viewer && ASKS[caller] === "model" ? hostModel(viewer.id) : undefined,
