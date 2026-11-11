@@ -93,10 +93,19 @@ export class YamlEditor {
       this.splice(node.range[0], node.range[1], flow(value));
       return;
     }
-    const inlineNode = node && (isScalar(node) || isSeq(node) || (isMap(node) && node.flow));
+    if (node && JSON.stringify(node.toJSON()) === JSON.stringify(value)) return;
+    // A block list, mapping or text (| or >) runs on over its last line break, so it is replaced
+    // below.
+    const inlineNode =
+      node &&
+      ((isScalar(node) && node.type !== "BLOCK_LITERAL" && node.type !== "BLOCK_FOLDED") ||
+        ((isSeq(node) || isMap(node)) && node.flow));
     if (!isBlock(value) && inlineNode) {
       // A scalar in a block mapping keeps its plain form; only inside { … } is it quoted for commas.
-      this.splice(node.range[0], node.range[1], Array.isArray(value) ? flow(value) : scalar(value));
+      // A list's comment on its line described the old items, so it goes with them.
+      const rest = this.source.slice(node.range[1], this.lineEnd(node.range[1]));
+      const end = isSeq(node) && /^\s*#/.test(rest) ? node.range[1] + rest.length : node.range[1];
+      this.splice(node.range[0], end, Array.isArray(value) ? flow(value) : scalar(value));
       return;
     }
     // Replace everything after "key:" up to the end of the value's last line.
