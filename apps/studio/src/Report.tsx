@@ -41,9 +41,12 @@ export function ReportDialog({ onClose }: { onClose: () => void }) {
     >
       <div className="space-y-3 p-4">
         <h2 className="text-base font-semibold">Report this</h2>
+        {/* The error report's notice, as legal-1.0 U6 words it. */}
         <p className="text-sm text-muted">
-          This is everything the report sends: the change, the error, the last log lines and the
-          spec files. No records, uploads or code of your own.
+          Send this report to Smithable to investigate the failure. Review the attached prompt, spec
+          and log excerpt below: it is everything the report sends, with no records, uploads or code
+          of your own. It is retained for 90 days unless an identified dispute requires restricted
+          retention. Sending is optional.
         </p>
         <pre className="max-h-[50vh] overflow-auto rounded border border-line bg-surface p-2 text-xs whitespace-pre-wrap">
           {text ?? "…"}
