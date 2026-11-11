@@ -246,6 +246,16 @@ for attempt in 1 2 3 4 5 6 7 8; do
       gh pr checks "$pr" "${repo[@]}" || true
       refuse "its run was cancelled by GitHub. Run it again (gh run rerun <run id>, from gh run list --branch <branch>) and merge again."
     fi
+    # Green but behind main: another merge went first while it waited, branch protection wants it
+    # up to date, and auto-merge waits for that with nothing to update it (cloud #394 waited 40
+    # minutes, 2026-11-11, its required checks named otherwise than `check`). Every half minute:
+    # when it is behind and its required checks have passed, round again, which updates it.
+    if [ $((i % 3)) = 0 ] \
+      && [ "$(gh pr view "$pr" "${repo[@]}" --json mergeStateStatus -q .mergeStateStatus 2>/dev/null || true)" = BEHIND ] \
+      && gh pr checks "$pr" "${repo[@]}" --required >/dev/null 2>&1; then
+      echo "#$pr: its required checks passed, but it is behind main."
+      continue 2
+    fi
     [ $((i % 30)) = 0 ] && echo "#$pr: waiting for its required check to be reported"
     sleep 10
   done
