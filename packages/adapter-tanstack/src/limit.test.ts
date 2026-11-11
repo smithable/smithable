@@ -70,6 +70,21 @@ test("a flood counted twice each does not refuse a newcomer either: the lowest c
   expect(() => kit.count("newcomer-2", limit, "changes", now + 1)).not.toThrow();
 });
 
+test("a count at its own limit outlasts a flood whose counts are higher but further from theirs", () => {
+  const now = 30_000_000;
+  // A mailbox's codes at their limit of 5.
+  for (let i = 0; i < 5; i++) kit.count("code:victim", { max: 5, seconds: 3600 }, "codes", now);
+  // A flood of keys counted 10 times each against a limit of 60.
+  for (let i = 0; i < 50_000; i++)
+    for (let j = 0; j < 10; j++)
+      kit.count(`api-nokey:${i}`, { max: 60, seconds: 3600 }, "requests", now);
+  kit.count("newcomer-3", { max: 5, seconds: 3600 }, "codes", now + 1);
+  // The mailbox's limit still holds.
+  expect(() => kit.count("code:victim", { max: 5, seconds: 3600 }, "codes", now + 2)).toThrow(
+    kit.TooMany,
+  );
+});
+
 test("a signed-in person's count is kept apart: strangers filling theirs never refuse a person", () => {
   const limit = { max: 1, seconds: 3600 };
   const now = 9_000_000;

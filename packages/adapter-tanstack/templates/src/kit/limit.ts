@@ -28,7 +28,8 @@ export const LIMITS = {
   codesFromAddress: { max: 20, seconds: 3600 },
 };
 
-type Counts = Map<string, { n: number; until: number }>;
+/** A count, its window's end, and its limit's own ceiling (limits differ: 5 codes, 60 calls). */
+type Counts = Map<string, { n: number; until: number; max: number }>;
 /**
  * Two lists: the counts of signed-in people (by their id), and those of strangers (by address,
  * or by the mail address a sign-in code is asked for). Strangers can make new keys at will; they
@@ -43,7 +44,7 @@ const MAX_KEYS = 50_000;
 
 /**
  * Room for a new key in a full list: the expired counts go first, then a tenth of the list, the
- * lowest counts first and of those the soonest to end. A flood of new keys is mostly low counts,
+ * least full against their own limits first and of those the soonest to end. A flood of new keys is mostly low counts,
  * so it pushes out mostly its own, and the counts nearest their limit are the last to go; a full
  * list never refuses everyone new, and the sorting is done once per tenth, not per request.
  */
@@ -51,7 +52,9 @@ function room(counts: Counts, now: number): void {
   if (counts.size < MAX_KEYS) return;
   for (const [k, v] of counts) if (v.until <= now) counts.delete(k);
   if (counts.size < MAX_KEYS) return;
-  const order = [...counts].sort(([, a], [, b]) => a.n - b.n || a.until - b.until);
+  // How full each count is, against its own limit: one at its limit goes last, so pushing out
+  // a flood's keys never clears the limit someone (a mailbox's codes) has reached.
+  const order = [...counts].sort(([, a], [, b]) => a.n / a.max - b.n / b.max || a.until - b.until);
   for (const [k] of order.slice(0, MAX_KEYS / 10)) counts.delete(k);
 }
 
@@ -75,7 +78,7 @@ export function count(
   if (!entry || entry.until <= now) {
     // Bounded even under a flood of new keys within the hour.
     if (!entry) room(counts, now);
-    counts.set(key, { n: 1, until: now + seconds * 1000 });
+    counts.set(key, { n: 1, until: now + seconds * 1000, max });
     return;
   }
   if (entry.n >= max) throw new TooMany(what);
