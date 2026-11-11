@@ -7984,6 +7984,13 @@ test("a role that manages users but is no administrator makes no administrator, 
     await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
     await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
     await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
   }
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
   expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
@@ -11058,7 +11065,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
   "src/generated/users.server.ts": "98bfd380 generated",
-  "src/generated/users.test.ts": "032f9f19 generated",
+  "src/generated/users.test.ts": "8ad7ab74 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
@@ -11084,7 +11091,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/SearchBox.tsx": "7861f45a kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "708266fa kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/api.server.ts": "6a5eaded kit",
@@ -40506,6 +40513,13 @@ test("a role that manages users but is no administrator makes no administrator, 
     await expect(invite(manager, "users-test-new-admin@acme.example", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
     await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
     await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@acme.example", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@acme.example", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
   }
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
   expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@acme.example");
@@ -43514,7 +43528,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/trash.server.ts": "bd5ac85e generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
   "src/generated/users.server.ts": "ad010a68 generated",
-  "src/generated/users.test.ts": "bf46cec2 generated",
+  "src/generated/users.test.ts": "18f42451 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -43544,7 +43558,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Trash.tsx": "77988823 kit",
-  "src/kit/Users.tsx": "708266fa kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "531e264f kit",
@@ -59227,6 +59241,13 @@ test("a role that manages users but is no administrator makes no administrator, 
     await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
     await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
     await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
   }
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
   expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
@@ -62036,7 +62057,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "d51294bd generated",
-  "src/generated/users.test.ts": "170a5142 generated",
+  "src/generated/users.test.ts": "7acaec15 generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
@@ -62065,7 +62086,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "708266fa kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",
@@ -80622,6 +80643,13 @@ test("a role that manages users but is no administrator makes no administrator, 
     await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
     await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
     await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
   }
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
   expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
@@ -84419,7 +84447,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/roles.ts": "6b44c69a generated",
   "src/generated/site.ts": "4365ed76 generated",
   "src/generated/users.server.ts": "08aef890 generated",
-  "src/generated/users.test.ts": "843cc4a9 generated",
+  "src/generated/users.test.ts": "253c266e generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
   "src/kit/AiMark.tsx": "960e0f76 kit",
@@ -84450,7 +84478,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "708266fa kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/aggregate.ts": "531e264f kit",
@@ -90014,6 +90042,13 @@ test("a role that manages users but is no administrator makes no administrator, 
     await expect(invite(manager, "users-test-new-admin@example.com", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
     await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
     await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@example.com", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@example.com", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
   }
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
   expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@example.com");
@@ -92326,7 +92361,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
   "src/generated/users.server.ts": "ffcdfdf6 generated",
-  "src/generated/users.test.ts": "40623e3f generated",
+  "src/generated/users.test.ts": "5cb4d084 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -92355,7 +92390,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/SelectionBar.tsx": "add259cf kit",
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
-  "src/kit/Users.tsx": "708266fa kit",
+  "src/kit/Users.tsx": "ce0bde9c kit",
   "src/kit/access.ts": "d1691774 kit",
   "src/kit/address.server.ts": "ef02319c kit",
   "src/kit/appearance.ts": "b39c153d kit",

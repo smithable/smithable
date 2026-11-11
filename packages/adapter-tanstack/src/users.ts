@@ -69,10 +69,10 @@ export const ROLE_LABELS: Record<string, string> = ${literal(roleLabels(auth))};
  */
 export function grantable(auth: AuthIR): Record<string, string[]> {
   const within = (s: AuthIR["roles"][number], r: AuthIR["roles"][number]) => {
+    if (r.actionsNone && !s.actionsNone) return false;
     if (r.grants === "all") return true;
     if (s.grants === "all") return false;
     const mine = r.grants;
-    if (r.actionsNone && !s.actionsNone) return false;
     return GRANT_KEYS.every((key) => {
       const theirs = (s.grants as RoleGrants)[key];
       if (!theirs || (Array.isArray(theirs) && !theirs.length)) return true;
@@ -492,6 +492,13 @@ test("a role that manages users but is no administrator makes no administrator, 
     await expect(invite(manager, "users-test-new-admin@${domain}", "admin", ORIGIN)).rejects.toThrow(AccessDenied);
     await expect(setRole(manager, admin.id, role)).rejects.toThrow(AccessDenied);
     await expect(removeUser(manager, admin.id)).rejects.toThrow(AccessDenied);
+    // An open invitation to be an administrator: neither replaced, resent nor withdrawn by them.
+    const toAdmin = await invite(admin, "users-test-future-admin@${domain}", "admin", ORIGIN);
+    await expect(invite(manager, "users-test-future-admin@${domain}", role, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(resendInvitation(manager, toAdmin.id, ORIGIN)).rejects.toThrow(AccessDenied);
+    await expect(withdrawInvitation(manager, toAdmin.id)).rejects.toThrow(AccessDenied);
+    expect((await listUsers(manager, ORIGIN)).invitations.find((i) => i.id === toAdmin.id)?.link).toBe("");
+    await withdrawInvitation(admin, toAdmin.id);
   }
   expect(db.select({ role: user.role }).from(user).where(eq(user.id, admin.id)).get()?.role).toBe("admin");
   expect((await listUsers(admin, ORIGIN)).invitations.map((i) => i.email)).not.toContain("users-test-new-admin@${domain}");

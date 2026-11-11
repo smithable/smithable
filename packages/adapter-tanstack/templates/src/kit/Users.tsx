@@ -92,9 +92,11 @@ export function Users({
   // Whether the viewer may give, take or remove a role; and the roles it may give.
   const may = (value: string) => !grantable || grantable.includes(value);
   const offered = roles.filter((r) => may(r.value));
-  const [role, setRole] = useState(
+  const [picked, setRole] = useState(
     offered.find((r) => r.value !== "admin")?.value ?? offered[0]?.value ?? "",
   );
+  // A role no longer offered (the page loaded again with fewer) is not sent: the first offered is.
+  const role = offered.some((r) => r.value === picked) ? picked : (offered[0]?.value ?? "");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string>();
   const [notice, setNotice] = useState<string>();
