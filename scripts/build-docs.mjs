@@ -93,6 +93,22 @@ const PAGES = [
     group: "Build",
   },
   {
+    src: "docs/site/timers.md",
+    out: "timers.html",
+    description:
+      "Timers: things an app does on a clock, at a date of each record or every day, week or month, running an action or raising an event for a mail.",
+    nav: "On a clock",
+    group: "Build",
+  },
+  {
+    src: "docs/site/queries.md",
+    out: "queries.html",
+    description:
+      "Queries: lists a filter cannot make, chosen or ordered by code of your own that starts from the access rules, shown on a dashboard.",
+    nav: "Lists by code",
+    group: "Build",
+  },
+  {
     src: "docs/site/import.md",
     out: "import.html",
     description:
