@@ -40,7 +40,7 @@ test("a list and a page per article, read through the data function in the handl
   // The server's data function only inside handlers; the row type from the model's module.
   expect(list).toContain('import { type PostRow } from "#/generated/post";');
   expect(list).toMatch(
-    /\.handler\(async \(\{ data: page \}\) => \{\n[^}]*postData\.list\(viewer\)/,
+    /\.handler\(async \(\{ data: page \}\) => \{\n[^}]*postData\.latest\(viewer, [^,]+, 13, \(page - 1\) \* 12\)/,
   );
   expect(article).toContain("const i = rows.findIndex((row) => addressOf(row) === address);");
   // What a shared link shows, and the Edit link for those who may change it.

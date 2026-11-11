@@ -785,6 +785,11 @@ export function dataModule(
         .flatMap((p) => ux.pages[p.id]?.totals ?? []),
     ),
   ].map((name) => keyOf(model, name));
+  // Articles pages list a page of them, newest first by their date field (if any) in the query.
+  const articleDates = ir.pages.flatMap((p) =>
+    p.pattern.kind === "articles" && p.pattern.model === model.name ? [p.pattern.date ?? ""] : [],
+  );
+  const byDate = [...new Set(articleDates.filter(Boolean))].sort().map((d) => keyOf(model, d));
   // A settings or onboarding page shows the viewer's one record: it reads only that row.
   const single = ir.pages.some(
     (p) =>
@@ -2295,6 +2300,21 @@ ${
       limit: 1,
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ", "[0] ?? null")}
+  },`
+      : ""
+  }${
+    articleDates.length
+      ? `
+  /** A page of the ${inert(n.pluralLabel.toLowerCase())} the viewer may read for an articles page: newest first${byDate.length ? " by `by` (none last)" : ""}, then by creation. */
+  async latest(viewer: Viewer | null, ${byDate.length ? `by: ${byDate.map((k) => JSON.stringify(k)).join(" | ")} | undefined, ` : ""}limit: number, offset = 0) {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { desc }) => [${byDate.length ? "...(by ? [desc(t[by])] : []), " : ""}desc(t.id)],
+      limit,
+      offset,
+    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    ${asListed("rows", "return ")}
   },`
       : ""
   }
