@@ -1,0 +1,8 @@
+id: spec-text-in-code
+title: A label or other text from the spec could end a comment or a string in the app's generated code, so some texts would have run as code in the app.
+severity: security
+exposure: A spec with such a text, from a page read in, a drafted description or a shared starter, could have run code in the app as it was built or served.
+introduced: unknown
+affects:
+  features: [any]
+migration: none

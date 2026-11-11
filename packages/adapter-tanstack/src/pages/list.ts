@@ -32,6 +32,7 @@ import {
   hasFavorites,
   importList,
   indexPath,
+  inert,
   join,
   keyOf,
   literal,
@@ -43,12 +44,14 @@ import {
   ownerKey,
   ownerOf,
   paramsUsed,
+  quotedText,
   relatedTitle,
   scalarField,
   shownTitle,
   standardActions,
   type Texts,
   tableRef,
+  templateText,
   threadLists,
   type Within,
 } from "../shared.js";
@@ -301,7 +304,7 @@ export function filterCode(
         );
         options.push(`${name}: ${v}Many ? ${v}Chosen : ${all}`, `${name}Search: ${v}Many`);
         picks.push(`
-/** The ${tn.pluralLabel.toLowerCase()} the viewer may read whose name has the text, for the ${name} filter (a few). */
+/** The ${inert(tn.pluralLabel.toLowerCase())} the viewer may read whose name has the text, for the ${name} filter (a few). */
 const ${v} = createServerFn()
   .validator((data: { text?: unknown }) => ({ text: String(data?.text ?? "").slice(0, 100) }))
   .handler(async ({ data }) => asPerson(async () => ${tn.data}.pick(await currentViewer(), data.text)));
@@ -503,7 +506,7 @@ export function searchCode(
     const keys = ["q", "sort", ...filtering.names];
     return {
       fn: `
-/** The ${n.pluralLabel.toLowerCase()} matching the search and the filters, among those the viewer may read. */
+/** The ${inert(n.pluralLabel.toLowerCase())} matching the search and the filters, among those the viewer may read. */
 const ${fn} = createServerFn()
   .validator(listQuery)
   .handler(async ({ data${filtering.defaults ? ": given" : ""} }) => {${
@@ -555,7 +558,7 @@ ${filtering.picks.join("")}`,
   }
   return {
     fn: `
-/** The ${n.pluralLabel.toLowerCase()} matching the search, among those the viewer may read. */
+/** The ${inert(n.pluralLabel.toLowerCase())} matching the search, among those the viewer may read. */
 const ${fn} = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {
@@ -901,7 +904,7 @@ ${actions.length || offered.length || selecting || filtering?.mine || filtering?
       (a) => `
   const ${a.name}Button = allows(${actionNames(a).access}, viewer) && (
     <Link to=${attr(join(page.route, `actions/${kebab(a.name)}`))}${t.actionHelp(a) ? ` title=${attr(t.actionHelp(a) as string)}` : ""} className={buttonVariants({ variant: "outline" })}>
-      ${t.action(a)}
+      {${JSON.stringify(t.action(a))}}
     </Link>
   );`,
     )
@@ -1077,15 +1080,15 @@ ${
             : ""
         }${
           filtering
-            ? `\n        emptyMessage={q || Object.values(values).some(Boolean) ? "No ${n.pluralLabel.toLowerCase()} match the search and filters." : ${
+            ? `\n        emptyMessage={q || Object.values(values).some(Boolean) ? "No ${quotedText(n.pluralLabel.toLowerCase())} match the search and filters." : ${
                 favorites === "only"
-                  ? `"No saved ${n.pluralLabel.toLowerCase()} yet."`
+                  ? `"No saved ${quotedText(n.pluralLabel.toLowerCase())} yet."`
                   : favorites
-                    ? `view === "saved" ? "No saved ${n.pluralLabel.toLowerCase()} yet: the heart on one saves it." : undefined`
+                    ? `view === "saved" ? "No saved ${quotedText(n.pluralLabel.toLowerCase())} yet: the heart on one saves it." : undefined`
                     : "undefined"
               }}`
             : searchable
-              ? `\n        emptyMessage={q ? \`No ${n.pluralLabel.toLowerCase()} match “\${q}”.\` : undefined}`
+              ? `\n        emptyMessage={q ? \`No ${templateText(n.pluralLabel.toLowerCase())} match “\${q}”.\` : undefined}`
               : ""
         }
         emptyAction={newButton || undefined}
@@ -1112,14 +1115,14 @@ ${
     search?.fn ??
     (capped
       ? `
-/** The newest ${n.pluralLabel.toLowerCase()} the viewer may read. */
+/** The newest ${inert(n.pluralLabel.toLowerCase())} the viewer may read. */
 const ${newest} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
   ${listed(n, "undefined", within)}
 });
 `
       : `
-/** A page of the ${n.pluralLabel.toLowerCase()} the viewer may read. */
+/** A page of the ${inert(n.pluralLabel.toLowerCase())} the viewer may read. */
 const ${newest} = createServerFn()
   .validator(listQuery)
   .handler(async ({ data }) => {

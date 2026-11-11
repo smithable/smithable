@@ -1,4 +1,5 @@
 import { readSummaryFields, recordSummary, type SummaryFields } from "./record-emphasis.js";
+import { rejectUnsafeText } from "./text-safety.js";
 
 export { recordSummary } from "./record-emphasis.js";
 
@@ -781,6 +782,7 @@ export function validateUx(
     );
   }
   if (hasErrors(ctx.diagnostics)) return done();
+  rejectUnsafeText(ctx, doc);
 
   const root = doc.contents as ParsedNode | null;
   const entries = mapEntries(ctx, root, "smithable.ux.yml") ?? [];
