@@ -12,7 +12,16 @@ import {
   type SpecIR,
 } from "@smithable/core";
 import { formulaCompiler } from "./formulas.js";
-import { dataKey, HEADER, indent, modelNamed, names, type Texts } from "./shared.js";
+import {
+  dataKey,
+  HEADER,
+  indent,
+  modelNamed,
+  names,
+  SCHEMA_IMPORT,
+  type Texts,
+  tableRef,
+} from "./shared.js";
 
 /** The setting that holds an entry's secret: INCOMING_MONITORDOWN_SECRET. */
 export const incomingSecret = (incoming: IncomingIR) =>
@@ -480,12 +489,21 @@ function replyParts(incoming: IncomingIR, owner: ModelIR, ir: SpecIR, t: Texts) 
         let thread = answers.length
           ? db.select({ id: mailThreads.recordId }).from(mailThreads).where(and(eq(mailThreads.model, ${JSON.stringify(owner.name)}), inArray(mailThreads.messageId, answers))).orderBy(desc(mailThreads.at)).get()?.id
           : undefined;
+        let byTag = false;
         if (thread === undefined) {
           const tagged = /\\[[^[\\]]*#(\\d+)\\]/.exec(text(mail.subject))?.[1];
-          if (tagged) thread = Number(tagged);
+          if (tagged) {
+            thread = Number(tagged);
+            byTag = true;
+          }
         }
         // A record that is gone (or never was) has no thread: the mail is a new one.
-        if (thread !== undefined && !(await ${on.data}.get(caller, thread))) thread = undefined;
+        const record = thread === undefined ? null : await ${on.data}.get(caller, thread);
+        if (!record) thread = undefined;
+        // Anyone can write a number in a subject: by the tag alone a mail joins only from the
+        // record's own address or one already in its thread; from anyone else it is a new one.
+        if (thread !== undefined && byTag && !known(address(mail.from), record as Record<string, unknown>, thread))
+          thread = undefined;
         if (thread !== undefined) {
 ${
   files
@@ -526,10 +544,33 @@ ${files ? `            discardUploads(files, ${rn.data}.uses);\n` : ""}         
           }
         }
 `;
-  const imports = `
+  const ownerFrom = incoming.mail?.from;
+  const replyFrom = reply.mail.from;
+  const imports = `${replyFrom ? `\n${SCHEMA_IMPORT}` : ""}
 import { ${rn.data} } from "#/generated/${kebab(model.name)}.server";
 import { ${rn.schema} } from "#/generated/${kebab(model.name)}.schema";${outgoing ? '\nimport { fromMail } from "#/generated/outgoing.server";' : ""}`;
   const helpers = `
+/** Whether a sender is the record's own address, or one that already wrote in its thread. */
+function known(sender: string, record: Record<string, unknown>, thread: number): boolean {
+  const s = sender.toLowerCase();
+  if (!s) return false;${
+    ownerFrom
+      ? `
+  if (address(record.${ownerFrom}).toLowerCase() === s) return true;`
+      : ""
+  }${
+    replyFrom
+      ? `
+  return db
+    .select({ from: ${tableRef(model)}.${replyFrom} })
+    .from(${tableRef(model)})
+    .where(eq(${tableRef(model)}.${dataKey(ref)}, thread))
+    .all()
+    .some((r) => address(r.from).toLowerCase() === s);`
+      : "\n  return false;"
+  }
+}
+
 /** The mail's own id, kept in its record's thread so an answer to it finds the record. */
 function keeper(mailId: string) {
   return (record: number) => {

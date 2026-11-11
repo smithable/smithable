@@ -45,7 +45,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -10956,13 +10956,13 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "6c385d35 generated",
+  "README.md": "c404dd3b generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "9ba09b97 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -11040,8 +11040,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4f9abaf1 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
-  "src/kit/api.server.ts": "6a5eaded kit",
+  "src/kit/address.server.ts": "76112e4f kit",
+  "src/kit/api.server.ts": "3dcef74d kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -11059,7 +11059,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
@@ -11181,7 +11181,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -18643,13 +18643,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "2c5fce83 generated",
+  "README.md": "b9fcd689 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "94c27bb0 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -18729,7 +18729,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/Slots.tsx": "2dc8163f kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
@@ -18745,7 +18745,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/formula.ts": "d73c0380 kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -18854,7 +18854,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -33704,13 +33704,13 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "d340ff4f generated",
+  "README.md": "20c87bfd generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "5a3fb05f generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "059fe4c5 generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -33814,7 +33814,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -33835,7 +33835,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -33985,7 +33985,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -43369,13 +43369,13 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "fb4f1863 generated",
+  "README.md": "25ef97a9 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "5bfdd160 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "3567ba27 generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -43458,7 +43458,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/Trash.tsx": "77988823 kit",
   "src/kit/Users.tsx": "4f9abaf1 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -43478,7 +43478,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -43581,7 +43581,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -52658,13 +52658,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "72d2f14e generated",
+  "README.md": "ad057e8e generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c824ae7b generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "288fe58f generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -52749,7 +52749,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/aggregate.ts": "531e264f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
@@ -52771,7 +52771,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -52886,7 +52886,7 @@ Browser push (\`to: push\`) needs no settings: the app makes a key pair at its f
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -61838,7 +61838,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "98218519 generated",
+  "README.md": "f34a3e57 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "bbbbe093 generated",
   "playwright.config.ts": "5ffef2a7 kit",
@@ -61846,7 +61846,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "public/favicon.svg": "e09d9afd generated",
   "public/manifest.webmanifest": "5ed0ee91 generated",
   "public/sw.js": "107e85e9 generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -61937,7 +61937,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4f9abaf1 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
@@ -61954,7 +61954,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/hours.ts": "fac9ba0f kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -62063,7 +62063,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -67230,13 +67230,13 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "ea84412d generated",
+  "README.md": "c693a203 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "e5e108f8 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "246dedca generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -67299,7 +67299,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -67318,7 +67318,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -67422,7 +67422,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -71261,13 +71261,13 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "f19f8273 generated",
+  "README.md": "812ffdb9 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "c776ad12 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "57bda269 generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -71324,7 +71324,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/SignIn.tsx": "21a3d26d kit",
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -71343,7 +71343,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -71439,7 +71439,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -84184,13 +84184,13 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "80efd3a6 generated",
+  "README.md": "be472d56 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "66b90e4b generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "e4b054e8 generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -84280,9 +84280,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4f9abaf1 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/aggregate.ts": "531e264f kit",
-  "src/kit/api.server.ts": "6a5eaded kit",
+  "src/kit/api.server.ts": "3dcef74d kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -84301,7 +84301,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
@@ -84424,7 +84424,7 @@ Hooks (\`src/custom/hooks.ts\`) and custom code send mail with \`sendMail\` from
 
 ## Limits
 
-A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
+A signed-in person may make 60 changes a minute, a visitor 10 a minute per address, and an administrator may send 20 invitations an hour; beyond that a change is refused with "Too many changes in a short time" until the minute is over. The numbers are in \`src/kit/limit.ts\` (\`LIMITS\`), counted in memory by the running process; sign-in attempts are limited by Better Auth itself (3 per 10 seconds). Behind a proxy that sets \`X-Forwarded-For\`, the address is the one the proxy saw; an IPv6 address counts by its /64, the block one subscriber is given. When the strangers' counts fill up (50,000), those counted once make room first, and signed-in people are counted apart. A request may carry at most 1 MB (a picture's limit too), said by its \`Content-Length\`: more is refused with 413, and a body without a length with 411 (\`MAX_BODY\` in \`server.mjs\`).
 
 ## Custom styles
 
@@ -90970,6 +90970,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import { boundedBody, BodyLimit } from "#/kit/bounded-body";
 import { supportCaseData } from "#/generated/support-case.server";
 import { supportCaseSchema } from "#/generated/support-case.schema";
+import * as schema from "#/db/schema";
 import { messageData } from "#/generated/message.server";
 import { messageSchema } from "#/generated/message.schema";
 import { fromMail } from "#/generated/outgoing.server";
@@ -91041,6 +91042,19 @@ async function saved(mail: Mail, model: string, field: string, uses: (file: stri
   }
   return files;
 }
+/** Whether a sender is the record's own address, or one that already wrote in its thread. */
+function known(sender: string, record: Record<string, unknown>, thread: number): boolean {
+  const s = sender.toLowerCase();
+  if (!s) return false;
+  if (address(record.customerEmail).toLowerCase() === s) return true;
+  return db
+    .select({ from: schema.messages.fromEmail })
+    .from(schema.messages)
+    .where(eq(schema.messages.supportCaseId, thread))
+    .all()
+    .some((r) => address(r.from).toLowerCase() === s);
+}
+
 /** The mail's own id, kept in its record's thread so an answer to it finds the record. */
 function keeper(mailId: string) {
   return (record: number) => {
@@ -91101,12 +91115,21 @@ export const Route = createFileRoute("/incoming/support")({
           let thread = answers.length
             ? db.select({ id: mailThreads.recordId }).from(mailThreads).where(and(eq(mailThreads.model, "SupportCase"), inArray(mailThreads.messageId, answers))).orderBy(desc(mailThreads.at)).get()?.id
             : undefined;
+          let byTag = false;
           if (thread === undefined) {
             const tagged = /\\[[^[\\]]*#(\\d+)\\]/.exec(text(mail.subject))?.[1];
-            if (tagged) thread = Number(tagged);
+            if (tagged) {
+              thread = Number(tagged);
+              byTag = true;
+            }
           }
           // A record that is gone (or never was) has no thread: the mail is a new one.
-          if (thread !== undefined && !(await supportCaseData.get(caller, thread))) thread = undefined;
+          const record = thread === undefined ? null : await supportCaseData.get(caller, thread);
+          if (!record) thread = undefined;
+          // Anyone can write a number in a subject: by the tag alone a mail joins only from the
+          // record's own address or one already in its thread; from anyone else it is a new one.
+          if (thread !== undefined && byTag && !known(address(mail.from), record as Record<string, unknown>, thread))
+            thread = undefined;
           if (thread !== undefined) {
             const files = await saved(mail, "message", "attachments", messageData.uses);
             if (files instanceof Response) return files;
@@ -92060,13 +92083,13 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "Dockerfile": "e44ac00d kit",
   "LICENSES/README.md": "ec616264 kit",
   "LICENSES/shadcn-ui.txt": "38dd653a kit",
-  "README.md": "cdec4528 generated",
+  "README.md": "5a2b27f0 generated",
   "drizzle.config.ts": "0987fb48 kit",
   "package.json": "3dc19288 generated",
   "playwright.config.ts": "5ffef2a7 kit",
   "pnpm-workspace.yaml": "1da1537f scaffold",
   "public/favicon.svg": "220f4dc6 generated",
-  "server.mjs": "2d895962 kit",
+  "server.mjs": "e77d2b28 kit",
   "smithable.lock": "2c03be87 generated",
   "src/components/ui/badge.tsx": "7c9b048e kit",
   "src/components/ui/button.tsx": "43356a7c kit",
@@ -92143,7 +92166,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/Together.tsx": "66a45263 kit",
   "src/kit/Users.tsx": "4f9abaf1 kit",
   "src/kit/access.ts": "d1691774 kit",
-  "src/kit/address.server.ts": "ef02319c kit",
+  "src/kit/address.server.ts": "76112e4f kit",
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "9693f2f8 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
@@ -92163,7 +92186,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/grounded.ts": "5513d9ac kit",
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
-  "src/kit/limit.ts": "6f8372f7 kit",
+  "src/kit/limit.ts": "5f930dd9 kit",
   "src/kit/live.server.ts": "474834ab kit",
   "src/kit/log.server.ts": "cfa35fb4 kit",
   "src/kit/mail.ts": "d005acf1 kit",
@@ -92209,7 +92232,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.$n.ts": "278cf4c8 kit",
   "src/routes/files/$model.$id.$field.ts": "c4a5b5e0 kit",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/incoming/support.ts": "4054e00f generated",
+  "src/routes/incoming/support.ts": "a851f532 generated",
   "src/routes/index.tsx": "cc5bad02 generated",
   "src/routes/robots[.]txt.ts": "c64e7261 generated",
   "src/routes/sign-in.tsx": "e52e206e generated",

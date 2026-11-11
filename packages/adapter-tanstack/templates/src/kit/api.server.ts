@@ -39,6 +39,8 @@ export function keyOf(request: Request): Viewer | null {
     viewer ? `api:${viewer.id}` : `api-nokey:${address(request.headers)}`,
     { max: 60, seconds: 60 },
     "requests",
+    Date.now(),
+    Boolean(viewer),
   );
   if (viewer) traceWho(viewer.id, viewer.role);
   return viewer;
