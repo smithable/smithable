@@ -382,7 +382,7 @@ export const api = {
       shown,
     }),
   /** The report of the last failure, exactly as it would be sent, and the person's choice. */
-  report: () => call<{ text?: string; choice: "always" | "never" | "ask" }>("/api/report"),
+  report: () => call<{ text?: string; choice: "never" | "ask" }>("/api/report"),
   sendReport: (send: boolean, choice?: "never" | "ask") =>
     call<{ ok: boolean; sent?: true; url?: string; message?: string }>("/api/report", {
       send,
