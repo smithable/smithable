@@ -1117,6 +1117,7 @@ const addSection: Operation<{
 
 const removeSection: Operation<{ page: string; section: string }> = {
   name: "removeSection",
+  sets: ["smithable.yml:pages.*.landing.*", "smithable.yml:pages.*.sections.*"],
   summary:
     "Remove a section from a page, with its texts. A page kind's own part (a crud page's list) stays.",
   schema: {
@@ -1162,6 +1163,7 @@ const setSectionWhere: Operation<{
   where?: Record<string, string | boolean | string[]>;
 }> = {
   name: "setSectionWhere",
+  sets: ["smithable.yml:pages.*.landing.*.where", "smithable.yml:pages.*.sections.*.where"],
   summary:
     "Show only some of a records section's records: those with these values (none shows every record).",
   schema: {
