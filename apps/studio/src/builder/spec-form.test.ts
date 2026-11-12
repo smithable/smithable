@@ -63,7 +63,11 @@ test("a key with an operation of its own goes through it; the rest through editS
     "setApp",
     { timezone: "Europe/Stockholm" },
   ]);
-  expect(operationFor("smithable.yml", ["models", "Customer", "trash"], true)).toBeUndefined();
+  expect(operationFor("smithable.yml", ["models", "Customer", "trash"], true)).toEqual([
+    "setTrash",
+    { model: "Customer", trash: true },
+  ]);
+  expect(operationFor("smithable.yml", ["models", "Customer", "unique"], [])).toBeUndefined();
   expect(
     operationFor("smithable.yml", ["models", "Customer", "fields", "phone"], "phone!"),
   ).toEqual(["changeField", { model: "Customer", field: "phone", type: "phone!" }]);
@@ -176,6 +180,20 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.auth.yml", ["public", "read"], ["Order"]],
     ["smithable.auth.yml", ["roles", "sales"], "all"],
     ["smithable.auth.yml", ["roles", "sales", "write"], ["Order"]],
+    ["smithable.yml", ["app", "intent"], "Bookings without phone calls"],
+    ["smithable.yml", ["models", "Order", "description"], "One order"],
+    ["smithable.yml", ["models", "Order", "intent"], undefined],
+    ["smithable.yml", ["models", "Order", "fields", "note", "description"], "What was said"],
+    ["smithable.yml", ["models", "Order", "trash"], true],
+    ["smithable.yml", ["models", "Order", "ownedBy"], "customer"],
+    ["smithable.yml", ["models", "Order", "namedBy"], ["customer", "placedAt"]],
+    ["smithable.yml", ["models", "Order", "review"], "all"],
+    ["smithable.yml", ["models", "Order", "fields", "note", "by"], "app"],
+    ["smithable.yml", ["models", "Order", "fields", "note", "unique"], "owner"],
+    ["smithable.yml", ["models", "Order", "fields", "note", "locked"], true],
+    ["smithable.yml", ["models", "Order", "fields", "note", "required"], { status: "paid" }],
+    ["smithable.yml", ["models", "Order", "thread"], undefined],
+    ["smithable.yml", ["models", "Order", "capacity"], undefined],
   ];
   for (const [file, path, value] of cases) {
     const [op] = operationFor(file, path, value) ?? [];
@@ -185,4 +203,81 @@ test("every operation a control writes through is one core lists for its key", (
       `${file}:${path.join(".")}`,
     ).toContain(op);
   }
+});
+
+test("the Data keys go through their operations, a group's key written with the rest of it", () => {
+  const spec = {
+    models: {
+      Booking: {
+        fields: { session: "Session!", status: "booked | cancelled" },
+        capacity: { per: "session", max: "session.capacity", where: { status: "booked" } },
+      },
+      Message: { fields: { body: "text", from: "email" }, thread: { body: "body" } },
+    },
+  };
+  const at = ["models", "Booking", "capacity"];
+  expect(
+    operationFor("smithable.yml", [...at, "closes"], "1 hour before session.startsAt", spec),
+  ).toEqual([
+    "setCapacity",
+    {
+      model: "Booking",
+      per: "session",
+      max: "session.capacity",
+      where: { status: "booked" },
+      closes: "1 hour before session.startsAt",
+    },
+  ]);
+  expect(operationFor("smithable.yml", [...at, "max"], 12, spec)?.[1]).toMatchObject({ max: "12" });
+  expect(operationFor("smithable.yml", at, undefined, spec)).toEqual([
+    "setCapacity",
+    { model: "Booking", per: "none" },
+  ]);
+  // A capacity without its limit yet stays with editSpec until it is whole.
+  expect(operationFor("smithable.yml", [...at, "max"], undefined, spec)).toBeUndefined();
+  const thread = ["models", "Message", "thread"];
+  expect(operationFor("smithable.yml", [...thread, "author"], "from", spec)).toEqual([
+    "setThread",
+    { model: "Message", body: "body", author: "from" },
+  ]);
+  // A side half given waits for its other half with editSpec.
+  expect(
+    operationFor("smithable.yml", [...thread, "side"], { field: "from" }, spec),
+  ).toBeUndefined();
+  expect(operationFor("smithable.yml", ["models", "Message", "review"], [])).toEqual([
+    "setReview",
+    { model: "Message", fields: ["none"] },
+  ]);
+  // A key taken away from it: setThread keeps what it is not given, so editSpec takes it away.
+  expect(operationFor("smithable.yml", [...thread, "body"], undefined, spec)).toBeUndefined();
+  const field = ["models", "Booking", "fields", "status"];
+  expect(operationFor("smithable.yml", [...field, "locked"], { status: "cancelled" })).toEqual([
+    "setFieldRules",
+    { model: "Booking", field: "status", once: false, locked: { status: "cancelled" } },
+  ]);
+  expect(operationFor("smithable.yml", [...field, "locked"], undefined)?.[1]).toMatchObject({
+    once: false,
+    locked: {},
+  });
+  // Always required is the type's "!", through changeField; only a condition is a field rule.
+  expect(operationFor("smithable.yml", [...field, "required"], true)).toBeUndefined();
+  expect(operationFor("smithable.yml", [...field, "unique"], undefined)?.[1]).toMatchObject({
+    unique: "false",
+  });
+  expect(operationFor("smithable.yml", [...field, "intent"], "")).toEqual([
+    "setMeaning",
+    { concept: "Booking.status", intent: "" },
+  ]);
+  expect(operationFor("smithable.yml", ["models", "Booking", "namedBy"], "session")).toEqual([
+    "setNamedBy",
+    { model: "Booking", parts: ["session"] },
+  ]);
+  expect(operationFor("smithable.yml", ["models", "Booking", "ownedBy"], undefined)).toEqual([
+    "setOwner",
+    { model: "Booking" },
+  ]);
+  expect(operationFor("smithable.yml", ["models", "Booking", "review"], undefined)).toEqual([
+    "setReview",
+    { model: "Booking", fields: ["none"] },
+  ]);
 });

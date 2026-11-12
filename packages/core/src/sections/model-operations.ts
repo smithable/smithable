@@ -467,6 +467,14 @@ const setCapacity: Operation<{
   cancelUntil?: string;
 }> = {
   name: "setCapacity",
+  sets: [
+    "smithable.yml:models.*.capacity",
+    "smithable.yml:models.*.capacity.per",
+    "smithable.yml:models.*.capacity.max",
+    "smithable.yml:models.*.capacity.where",
+    "smithable.yml:models.*.capacity.closes",
+    "smithable.yml:models.*.capacity.cancelUntil",
+  ],
   summary:
     'Limit how many records of a model each referenced record may have, e.g. a session\'s bookings up to its capacity ("none" as per removes the limit). The capacity is set whole: a where or a deadline left out is lifted.',
   schema: {
@@ -595,6 +603,7 @@ const importRecords: Operation<{
  */
 const setTrash: Operation<{ model: string; trash: boolean }> = {
   name: "setTrash",
+  sets: ["smithable.yml:models.*.trash"],
   summary:
     "Keep a model's deleted records in a trash for thirty days, where whoever may delete them can restore them (true), or delete for good at once (false, the default).",
   schema: {
@@ -633,6 +642,7 @@ const setTrash: Operation<{ model: string; trash: boolean }> = {
  */
 const setReview: Operation<{ model: string; fields: string[] }> = {
   name: "setReview",
+  sets: ["smithable.yml:models.*.review"],
   summary:
     'Hold a model\'s pictures and files for review before others see them: the fields named, "all" (every picture and file field), or "none". A required one holds the whole record until approved, an optional one only the file; admins and the roles granted review approve them on a review page.',
   schema: {
@@ -698,6 +708,12 @@ const setFieldRules: Operation<{
   unique?: "true" | "false" | "owner" | "app";
 }> = {
   name: "setFieldRules",
+  sets: [
+    "smithable.yml:models.*.fields.*.by",
+    "smithable.yml:models.*.fields.*.locked",
+    "smithable.yml:models.*.fields.*.required",
+    "smithable.yml:models.*.fields.*.unique",
+  ],
   summary:
     "Set who fills a field and when it may change: by app (the form never shows it), locked (after it is made, or while a condition holds), required while a condition holds; and whether it is unique, and where (owner or app).",
   schema: {
@@ -944,6 +960,12 @@ const setThread: Operation<{
   none?: boolean;
 }> = {
   name: "setThread",
+  sets: [
+    "smithable.yml:models.*.thread",
+    "smithable.yml:models.*.thread.body",
+    "smithable.yml:models.*.thread.author",
+    "smithable.yml:models.*.thread.side",
+  ],
   summary:
     "Say which fields a conversation reads from a model's records: the message's body (a text field), its author (a person or email field) and the side that is ours (a two-valued choice and its value); --none leaves it to the rule again.",
   schema: {
@@ -1041,6 +1063,7 @@ const setThread: Operation<{
 
 const setNamedBy: Operation<{ model: string; parts?: string[]; field?: string; none?: boolean }> = {
   name: "setNamedBy",
+  sets: ["smithable.yml:models.*.namedBy"],
   summary:
     'Say what names a record of a model, its title wherever one record is shown or referred to: one part or several (a field, a reference for that record\'s own name, or a field one reference away like classType.name), joined with " · "; --none leaves it to the rule again (the first short text, else the first long text).',
   schema: {
@@ -1134,6 +1157,13 @@ function meaningPath(
 /** Meaning text for the assistant and developers (docs/design/ask-words.md §2): set, or removed when empty. */
 const setMeaning: Operation<{ concept: string; description?: string; intent?: string }> = {
   name: "setMeaning",
+  sets: [
+    "smithable.yml:app.intent",
+    "smithable.yml:models.*.description",
+    "smithable.yml:models.*.intent",
+    "smithable.yml:models.*.fields.*.description",
+    "smithable.yml:models.*.fields.*.intent",
+  ],
   summary:
     "Explain what something means, for the assistant and developers, never shown to visitors: the app, a model, a field (Model.field), an action or a page gets a description (what it is) or an intent (what it should achieve). A choice field's short description goes in the assistant's summary, so a word that is both a value and a word people use loosely is read as the app means it. An empty text removes the key.",
   schema: {

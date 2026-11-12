@@ -1598,7 +1598,7 @@ try {
       await page
         .getByText(
           // Which model made it and what it cost (T721); the trace keeps the tier and tokens.
-          /^Done: Customers: added a mobile \(a phone number\)\. Done by fake-model, cost /,
+          /^Done: Customers: added a mobile \(a phone number\)\. By fake-model, cost /,
         )
         .waitFor({ timeout: 60000 * P });
       await trace

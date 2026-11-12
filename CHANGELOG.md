@@ -37,6 +37,10 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 - The generated apps' sign-in library, better-auth, moves from 1.7.15 to 1.7.18 for its published security fixes (`fixes/better-auth-1-7-18.yml`), with tailwind 4.3.5.
 
+### The engine
+
+- Studio's "What it does" writes a kind of record's keys through their own operations: what it and its fields mean (setMeaning), the trash, the owner, what names a record, review, a field's rules, a conversation's fields and a capacity, each with that operation's checks and words in the history; setMeaning, setTrash, setOwner, setNamedBy, setReview, setFieldRules, setThread and setCapacity list the keys they set.
+
 ### The app's API
 
 - User references accept the string identifiers returned by reads, including updates through the API and assistant conversions. Ordinary model references retain integer identifiers; generated OpenAPI descriptions distinguish the two.

@@ -143,6 +143,7 @@ const grant: Operation<{ role: string; what: string; names?: string[] }> = {
 
 const setOwner: Operation<{ model: string; field?: string }> = {
   name: "setOwner",
+  sets: ["smithable.yml:models.*.ownedBy"],
   summary:
     "Say whose a record is, instead of whoever created it: the user in one of its User fields (the account manager who handles it), whoever signed in with the address in one of its email fields (a case's customer), or the owner of the record one of its references names (a message's case). Without a field, the creator again. \"The owner\" in the access rules is then that person.",
   schema: {
