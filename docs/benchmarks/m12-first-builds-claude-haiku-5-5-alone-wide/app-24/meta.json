@@ -1,6 +1,0 @@
-{
-  "description": "Somewhere my AI assistant keeps my tasks and notes, by project.",
-  "starter": "api",
-  "wordStarter": "api",
-  "questions": []
-}

@@ -1,5 +1,0 @@
-smithableUx: 0.1
-pages:
-  guests:
-    table:
-      columns: [name, rsvp, meal, plusOne, table, dietary]

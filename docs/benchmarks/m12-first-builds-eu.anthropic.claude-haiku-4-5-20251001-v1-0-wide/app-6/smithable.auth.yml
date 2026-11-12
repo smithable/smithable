@@ -1,6 +1,0 @@
-smithableAuth: 0.1
-signIn:
-  providers: [email]
-  selfSignUp: false
-defaultAccess: shared
-admins: [johan@smithable.ai]

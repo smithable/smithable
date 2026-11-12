@@ -29,7 +29,7 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | A backend for my habit app: habits, daily check-ins and streaks. | records | yes | yes | 25,102 | 1,781 | $0.0012 | 0 | – | 153 s |
 | Somewhere my AI assistant keeps my tasks and notes, by project. | api | yes | yes | 25,386 | 1,598 | $0.0011 | 0 | – | 129 s |
 
-Each created app's four spec files are in [m12-first-builds-claude-haiku-5-5-alone-wide/](m12-first-builds-claude-haiku-5-5-alone-wide/), one folder per description (app-1 …).
+Each created app's four spec files are in the folder m12-first-builds-claude-haiku-5-5-alone-wide/ (removed from the repository on 2026-11-13 as a superseded run; it is in the Git history), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)

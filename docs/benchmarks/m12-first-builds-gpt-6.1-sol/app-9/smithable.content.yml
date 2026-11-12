@@ -1,7 +1,0 @@
-smithableContent: 0.1
-models:
-  Ticket:
-    fields:
-      status:
-        values:
-          inProgress: In progress

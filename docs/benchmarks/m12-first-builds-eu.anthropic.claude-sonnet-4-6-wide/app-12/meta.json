@@ -1,6 +1,0 @@
-{
-  "description": "Service status for our municipality's online services, for residents to check outages.",
-  "starter": "status",
-  "wordStarter": "status",
-  "questions": []
-}

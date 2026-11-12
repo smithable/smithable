@@ -1,9 +1,0 @@
-{
-  "description": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
-  "starter": "booking",
-  "wordStarter": "booking",
-  "questions": [
-    "What can customers do without signing in?",
-    "How are appointment lengths determined?"
-  ]
-}

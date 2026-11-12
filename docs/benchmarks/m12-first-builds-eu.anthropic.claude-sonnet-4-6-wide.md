@@ -31,7 +31,7 @@ Prompt caching: of the input of the 64 calls the model answered (the response ca
 | A backend for my habit app: habits, daily check-ins and streaks. | api | yes | **no** | 19,673 | 1,103 | $0.0280 | 0 | 1 | 16 s |
 | Somewhere my AI assistant keeps my tasks and notes, by project. | api | yes | yes | 19,670 | 1,194 | $0.0295 | 0 | 1 | 17 s |
 
-Each created app's four spec files are in [m12-first-builds-eu.anthropic.claude-sonnet-4-6-wide/](m12-first-builds-eu.anthropic.claude-sonnet-4-6-wide/), one folder per description (app-1 …).
+Each created app's four spec files are in the folder m12-first-builds-eu.anthropic.claude-sonnet-4-6-wide/ (removed from the repository on 2026-11-13 as a superseded run; it is in the Git history), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)

@@ -1,5 +1,0 @@
-smithableUx: 0.1
-pages:
-  stock:
-    table:
-      sort: -recordedAt
