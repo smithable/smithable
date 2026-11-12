@@ -29,7 +29,7 @@ Prompt caching: of the input of the 56 calls the model answered (the response ca
 | Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. | records | yes | yes | 36,253 | 3,334 | $0.0254 | 0 | 4 | 41 s |
 | Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | marketplace | yes | yes | 55,518 | 4,998 | $0.0394 | 0 | 6 | 42 s |
 
-Each created app's four spec files are in [m12-first-builds-eu.anthropic.claude-haiku-4-5-20251001-v1-0-wide/](m12-first-builds-eu.anthropic.claude-haiku-4-5-20251001-v1-0-wide/), one folder per description (app-1 …).
+Each created app's four spec files are in the folder m12-first-builds-eu.anthropic.claude-haiku-4-5-20251001-v1-0-wide/ (removed from the repository on 2026-11-13 as a superseded run; it is in the Git history), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)

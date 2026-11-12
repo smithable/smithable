@@ -19,7 +19,7 @@ Prompt caching: of the input of the 55 calls the model answered (the response ca
 | A status page for our API, with incidents and planned maintenance. | status | yes | yes | 100,196 | 3,984 | $0.1122 | 0 | – | 71 s |
 | A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 49,781 | 4,036 | $0.0888 | 0 | – | 57 s |
 
-Each created app's four spec files are in [m12-first-builds-eu.anthropic.claude-sonnet-4-6/](m12-first-builds-eu.anthropic.claude-sonnet-4-6/), one folder per description (app-1 …).
+Each created app's four spec files are in the folder m12-first-builds-eu.anthropic.claude-sonnet-4-6/ (removed from the repository on 2026-11-13 as a superseded run; it is in the Git history), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)

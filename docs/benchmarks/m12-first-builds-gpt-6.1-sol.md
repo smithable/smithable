@@ -19,7 +19,7 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | A status page for our API, with incidents and planned maintenance. | status | yes | yes | 13,071 | 2,065 | €0.0000 | 0 | 1 | 61 s |
 | A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 13,076 | 1,971 | €0.0000 | 0 | 1 | 58 s |
 
-Each created app's four spec files are in [m12-first-builds-gpt-6.1-sol/](m12-first-builds-gpt-6.1-sol/), one folder per description (app-1 …).
+Each created app's four spec files are in the folder m12-first-builds-gpt-6.1-sol/ (removed from the repository on 2026-11-13 as a superseded run; it is in the Git history), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)

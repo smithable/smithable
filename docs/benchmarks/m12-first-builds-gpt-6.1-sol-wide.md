@@ -29,7 +29,7 @@ The app descriptions, each started with `smithable new --describe … --yes` (th
 | Pieni autokorjaamo: asiakkaat, autot, huoltotyöt ja laskut yhdessä paikassa. | crm | yes | yes | 12,734 | 4,293 | €0.0000 | 0 | 1 | 68 s |
 | Für meinen kleinen Hofladen: Produkte, Vorbestellungen der Kunden und Abholzeiten. | crm | yes | yes | 12,727 | 3,618 | €0.0000 | 0 | 1 | 61 s |
 
-Each created app's four spec files are in [m12-first-builds-gpt-6.1-sol-wide/](m12-first-builds-gpt-6.1-sol-wide/), one folder per description (app-1 …).
+Each created app's four spec files are in the folder m12-first-builds-gpt-6.1-sol-wide/ (removed from the repository on 2026-11-13 as a superseded run; it is in the Git history), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)

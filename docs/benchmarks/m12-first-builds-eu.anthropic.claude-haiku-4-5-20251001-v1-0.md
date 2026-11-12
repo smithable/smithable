@@ -19,7 +19,7 @@ Prompt caching: of the input of the 30 calls the model answered (the response ca
 | A status page for our API, with incidents and planned maintenance. | status | yes | yes | 18,255 | 2,232 | $0.0160 | 0 | 2 | 28 s |
 | A public uptime page for a web shop: which services work, outages and their updates. | status | yes | yes | 18,262 | 2,199 | $0.0158 | 0 | 3 | 27 s |
 
-Each created app's four spec files are in [m12-first-builds-eu.anthropic.claude-haiku-4-5-20251001-v1-0/](m12-first-builds-eu.anthropic.claude-haiku-4-5-20251001-v1-0/), one folder per description (app-1 …).
+Each created app's four spec files are in the folder m12-first-builds-eu.anthropic.claude-haiku-4-5-20251001-v1-0/ (removed from the repository on 2026-11-13 as a superseded run; it is in the Git history), one folder per description (app-1 …).
 
 <!-- scorecard -->
 ## Scorecard (scripts/bench-m12.mjs --score)

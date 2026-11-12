@@ -1,9 +1,0 @@
-smithableContent: 0.1
-pages:
-  home:
-    title: Municipality Service Status
-    hero:
-      button: View incident history
-      image:
-        src: images/hero.webp
-        alt: Soft out-of-focus light through linen curtains in pale tones
