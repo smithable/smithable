@@ -1,7 +1,7 @@
 id: nodemailer-address-parsing
 title: The mail library could read an address differently from how it showed it, in two published ways.
 severity: security
-exposure: A mail from the app to an address typed by someone (a contact form's reply address, an invitation) could have gone to a different domain than the one shown; no case is known.
+exposure: A mail the app sends to an address someone typed (a sign-in code, an invitation) could have gone to a different domain than the one the app read; an account is matched by its exact address, so a code for one person's account still went to that address. No case is known.
 introduced: unknown
 affects:
   stack: [nodemailer]
