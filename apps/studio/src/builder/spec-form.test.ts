@@ -194,6 +194,9 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.yml", ["models", "Order", "fields", "note", "required"], { status: "paid" }],
     ["smithable.yml", ["models", "Order", "thread"], undefined],
     ["smithable.yml", ["models", "Order", "capacity"], undefined],
+    ["smithable.yml", ["models", "Order", "schedule"], undefined],
+    ["smithable.yml", ["models", "Order", "occupies"], undefined],
+    ["smithable.yml", ["models", "Order", "unique"], [["customer", "number"]]],
   ];
   for (const [file, path, value] of cases) {
     const [op] = operationFor(file, path, value) ?? [];
@@ -280,4 +283,79 @@ test("the Data keys go through their operations, a group's key written with the 
     "setReview",
     { model: "Booking", fields: ["none"] },
   ]);
+});
+
+test("a schedule, what a booking occupies and fields unique together, each through its operation", () => {
+  const spec = {
+    models: {
+      Barber: {
+        fields: { name: "string!" },
+        schedule: { hours: { "mon-fri": "09:00-17:00" }, gap: 10 },
+      },
+      Visit: {
+        fields: {
+          barber: "Barber!",
+          startsAt: "datetime!",
+          minutes: "int!",
+          customer: "string!",
+          day: "date!",
+        },
+        occupies: {
+          resource: "barber",
+          starts: "startsAt",
+          duration: "minutes",
+          cancelUntil: "12h",
+        },
+        unique: [["barber", "startsAt"]],
+      },
+    },
+  };
+  const schedule = ["models", "Barber", "schedule"];
+  expect(operationFor("smithable.yml", [...schedule, "hours", "sat"], "10:00-14:00", spec)).toEqual(
+    [
+      "setSchedule",
+      { model: "Barber", hours: { "mon-fri": "09:00-17:00", sat: "10:00-14:00" }, gap: "10" },
+    ],
+  );
+  // setSchedule writes it whole, so a key taken away goes with it.
+  expect(operationFor("smithable.yml", [...schedule, "gap"], undefined, spec)).toEqual([
+    "setSchedule",
+    { model: "Barber", hours: { "mon-fri": "09:00-17:00" } },
+  ]);
+  expect(operationFor("smithable.yml", schedule, undefined, spec)).toEqual([
+    "setSchedule",
+    { model: "Barber", hours: "none" },
+  ]);
+  const occupies = ["models", "Visit", "occupies"];
+  expect(operationFor("smithable.yml", [...occupies, "cancelUntil"], undefined, spec)).toEqual([
+    "setOccupies",
+    { model: "Visit", resource: "barber", starts: "startsAt", duration: "minutes" },
+  ]);
+  expect(operationFor("smithable.yml", [...occupies, "starts"], undefined, spec)).toBeUndefined();
+  const unique = ["models", "Visit", "unique"];
+  expect(
+    operationFor(
+      "smithable.yml",
+      unique,
+      [
+        ["barber", "startsAt"],
+        ["customer", "day"],
+      ],
+      spec,
+    ),
+  ).toEqual(["setUnique", { model: "Visit", fields: ["customer", "day"] }]);
+  expect(operationFor("smithable.yml", unique, undefined, spec)).toEqual([
+    "setUnique",
+    { model: "Visit", fields: ["barber", "startsAt"], remove: true },
+  ]);
+  expect(
+    operationFor(
+      "smithable.yml",
+      [...unique, 0],
+      { fields: ["barber", "startsAt"], scope: "app" },
+      spec,
+    ),
+  ).toEqual(["setUnique", { model: "Visit", fields: ["barber", "startsAt"], scope: "app" }]);
+  // Two rules changed at once are more than one operation: editSpec writes them.
+  expect(operationFor("smithable.yml", unique, [["customer", "day"]], spec)).toBeUndefined();
 });
