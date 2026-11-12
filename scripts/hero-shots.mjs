@@ -169,7 +169,7 @@ async function shoot(browser, starter, change) {
     const proposal = page.getByRole("region", { name: "Proposal" });
     await proposal.waitFor({ timeout: 60000 });
     const said = await proposal.innerText();
-    if (!/No AI needed/.test(said))
+    if (!/by rule, no AI/.test(said))
       throw new Error(`${starter}: the rules did not read "${change.sentence}":\n${said}`);
     await page.waitForTimeout(500);
     await save(

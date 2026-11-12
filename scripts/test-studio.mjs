@@ -1597,13 +1597,19 @@ try {
       await shown.getByRole("button", { name: "Apply" }).click();
       await page
         .getByText(
-          // Which model made it, in words; the trace keeps the tier and tokens.
-          /^Done: Customers: added a mobile \(a phone number\)\. Made with fake-model\./,
+          // Which model made it and what it cost (T721); the trace keeps the tier and tokens.
+          /^Done: Customers: added a mobile \(a phone number\)\. Done by fake-model, cost /,
         )
         .waitFor({ timeout: 60000 * P });
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 * P });
+      // The history says who made it and what it cost, as the confirmation did (T721).
+      await trace
+        .locator("[data-receipt]")
+        .filter({ hasText: /^Done by fake-model, cost / })
+        .first()
+        .waitFor({ timeout: 30000 * P });
       // Without the model's use or cost under it (Johan, 2026-10-23).
       if (await trace.getByText(/ tokens/).count())
         throw new Error("Changes shows a model's tokens");

@@ -8,6 +8,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { type Assumption, api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
 import { lastLine } from "../history";
+import { usageReceipt } from "../receipt";
 import { SpeechControls } from "../speech/SpeechControls";
 import { useSpeech } from "../speech/useSpeech";
 import { Button, cx, Input } from "../ui";
@@ -363,7 +364,7 @@ export function Ask({
           : [];
       setOutput(
         result.ok && done.length
-          ? `Done: ${done.join("; ")}. ${plainUsage(proposal.usage)}`
+          ? `Done: ${done.join("; ")}. ${usageReceipt(proposal.usage, "done")}.`
           : result.output,
       );
       setProposal(undefined);
@@ -1457,7 +1458,16 @@ export function ProposalView({
       aria-live="polite"
       className="space-y-3 rounded-md border border-line p-3"
     >
-      {proposal.usage && <p className="text-xs text-quiet">{plainUsage(proposal.usage)}</p>}
+      <p data-receipt className="text-xs text-quiet">
+        {usageReceipt(
+          proposal.usage,
+          proposal.kind === "change"
+            ? "proposed"
+            : proposal.kind === "answer"
+              ? "answered"
+              : "nothing",
+        )}
+      </p>
       {proposal.kind === "change" && (
         <>
           <p className="text-sm font-medium">Proposed change</p>
@@ -1559,17 +1569,6 @@ export function ProposalView({
       {proposal.kind === "failed" && <p className="text-sm text-red-700">{proposal.message}</p>}
     </section>
   );
-}
-
-/**
- * The usage line in No code's words: whether a model was needed, and which. Code mode shows the
- * engine's own line (the tier, tokens and cost).
- */
-function plainUsage(usage: string): string {
-  if (!usage || usage.startsWith("Generator") || usage === "No model was used")
-    return "No AI needed.";
-  const model = /\(([^)]+)\)/.exec(usage)?.[1];
-  return model ? `Made with ${model}.` : "";
 }
 
 /**
