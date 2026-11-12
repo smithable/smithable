@@ -420,8 +420,8 @@ export function operationFor(
         return pay({ description: value || "none" });
       if (which === "paid.set" && (value === undefined || isCondition(value)))
         return pay({ paidSet: value ?? "none" });
-      if (which === "refund.by" && Array.isArray(value) && value.length)
-        return pay({ refundBy: value });
+      if (which === "refund.by" && (value === undefined || (Array.isArray(value) && value.length)))
+        return pay({ refundBy: value ?? ["none"] });
     }
     // A page's lists, filters and choices, each through its own operation (the lists written whole).
     if (first === "pages" && model) {

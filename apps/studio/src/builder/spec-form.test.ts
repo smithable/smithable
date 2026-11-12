@@ -579,6 +579,10 @@ test("timers, outgoing mail, payments, incoming calls and an action's meaning th
     "setMeaning",
     { concept: "merge", intent: "One customer, not two" },
   ]);
+  expect(operationFor(y, ["payments", "deposit", "refund", "by"], undefined)?.[1]).toEqual({
+    name: "deposit",
+    refundBy: ["none"],
+  });
   // A payment's amount taken away has no "none": editSpec writes it, and the checks say why not.
   expect(operationFor(y, ["payments", "deposit", "amount"], undefined)).toBeUndefined();
 });
