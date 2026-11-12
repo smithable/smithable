@@ -650,6 +650,24 @@ export const w = {
   legalAccount: (providers: string[]) =>
     `När du loggar in sparar appen ditt namn, din e-postadress och din roll, och sätter en kaka som håller dig inloggad.${providers.length ? ` Du loggar in med ${providers.join(" eller ")}.` : ""}`,
   legalInvitedOnly: "Bara den som är inbjuden kan logga in.",
+  legalGoogle:
+    "När du loggar in med Google skickas du till Google, som berättar ditt namn och din e-postadress för appen.",
+  legalAssistantTitle: "Assistenten",
+  legalAssistant: (who: "visitors" | "members" | string[], changes: boolean) =>
+    `Appen har en assistent, Fråga, för ${who === "visitors" ? "alla" : who === "members" ? "alla som loggar in" : who.join(", ")}. Den svarar utifrån de poster den som frågar får läsa${changes ? " och kan föreslå ändringar, som görs först när den personen bekräftar dem" : ""}. Frågor från dem som loggar in, med de poster som behövs för svaret, går till en AI-modell som appens ägare har valt.${who === "visitors" ? " Besökares frågor besvaras av appens egna regler, utan modell." : ""}`,
+  legalFormsTitle: "Vad besökare ombeds uppge",
+  legalFormsIntro: "Formulär som vem som helst kan fylla i frågar efter:",
+  legalIncomingTitle: "Vad som kommer in",
+  legalMailInto: (labels: string[]) =>
+    `E-post som skickas till appens adress blir ${labels.join(", ")} i appen, med avsändarens adress och vad brevet säger.`,
+  legalCalls: (calls: { name: string; into?: string }[]) =>
+    `Tjänster som appens ägare har kopplat in skickar uppgifter till den: ${calls.map((c) => (c.into ? `${c.name}, som blir ${c.into}` : `${c.name}, som ägarens egen kod tar hand om`)).join("; ")}.`,
+  legalServicesTitle: "Andra tjänster",
+  legalServices: (services: { name: string; about?: string }[]) =>
+    `Appen skickar uppgifter till tjänster som dess ägare har kopplat in: ${services.map((s) => (s.about ? `${s.name}, om ${s.about}` : s.name)).join("; ")}.`,
+  legalCustomTitle: "Ägarens egna funktioner",
+  legalCustom: (actions: string[]) =>
+    `Appen kör också funktioner som dess ägare har skrivit för den${actions.length ? ` (${actions.join(", ")})` : ""}. Den här sidan beskriver inte vad de gör.`,
   legalRecordsTitle: "Uppgifter i poster",
   legalRecordsIntro: "Utöver konton har appen dessa slags poster med personuppgifter:",
   legalReadBy: (readers: "visitors" | "members" | string[]) =>
@@ -670,8 +688,8 @@ export const w = {
   legalAnalyticsConsent: (provider: string) =>
     `Besök räknas med ${provider} först när du godkänt det i kakrutan. Du kan ändra ditt val under Kakinställningar längst ner på sidan.`,
   legalPayTitle: "Betalningar",
-  legalPay: (labels: string[]) =>
-    `Betalningar för ${labels.join(", ")} görs på betaltjänstens egen sida, som appens ägare valt; betaltjänsten har egna villkor för personuppgifter. Appen sparar beloppet, om det betalades eller återbetalades och betaltjänstens referens, aldrig dina kort- eller bankuppgifter.`,
+  legalPay: (labels: string[], provider?: string) =>
+    `Betalningar för ${labels.join(", ")} görs på ${provider ? `${provider}s egen sida` : "betaltjänstens egen sida, som appens ägare valt"}; betaltjänsten har egna villkor för personuppgifter. Appen sparar beloppet, om det betalades eller återbetalades och betaltjänstens referens, aldrig dina kort- eller bankuppgifter.`,
   legalSmsTitle: "Sms till din telefon",
   legalSms: (labels: string[]) =>
     `Om du anger ditt mobilnummer under ditt namn, bekräftar det med koden som sms:as till det och slår på sms, sms:ar appen dig om nya ${labels.join(", ")}. Ett nummer du anger med en egen post kan få ett sms om den posten, när någon som arbetar i appen gör något med den. Sms:en går via den sms-leverantör appens ägare har valt. Ditt nummer används inte till något annat; att ta bort det under ditt namn avslutar sms:en.`,
