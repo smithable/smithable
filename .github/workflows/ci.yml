@@ -12,9 +12,10 @@
 # `check` to wait for, so scripts/merge-green.sh merges it itself, after reading the same list from
 # main and scanning its commits for secrets.
 # A push to main starts no run: a merge is of a pull request that was checked, or of plain
-# documents. Main itself gets the full check twice a day (03:00 and 13:00 UTC), which is also
-# where two changes that only clash together show (a pull request is no longer run again when it
-# is merely behind main), and an administrator's merge past the check. It is skipped when main's
+# documents. Main itself gets the full check every four hours (01:00, 05:00 and so on, UTC),
+# which is also where two changes that only clash together show (a pull request is no longer run
+# again when it is merely behind main), and an administrator's merge past the check. It is
+# skipped when main's
 # head is the commit the last scheduled run checked: it passes again if that run passed and fails
 # again if it failed (a cancelled one is run again), so the latest scheduled run always tells
 # main's state. Run workflow (workflow_dispatch) runs the full check on any branch. A newer push
@@ -40,7 +41,7 @@ on:
       - "docs/threat-model.md"
       # plain docs: end
   schedule:
-    - cron: "0 3,13 * * *"
+    - cron: "0 1,5,9,13,17,21 * * *"
   workflow_dispatch:
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'full-ci' && github.event.label.name != 'no-fix-file' && format('-{0}', github.run_id) || '' }}
