@@ -212,7 +212,14 @@ export function legalRoute(
     if (facts.records.some((r) => r.label.text === `${names(m, t).ui}.pluralLabel`))
       imports.add(names(m, t).module, names(m, t).ui);
   const given = Object.fromEntries(Object.entries(operator).filter(([, v]) => v));
-  const page_ = `<LegalPage title={${t.pageTitleOf(page.id)}} facts={facts} />`;
+  // What only the running app knows (§6.1): read when the page is shown, never frozen in.
+  const ai = Boolean(facts.assistant);
+  const sms = Boolean(facts.smsAbout);
+  const running = ai || sms;
+  if (running) imports.add("@tanstack/react-start", "createServerFn");
+  if (ai) imports.add("#/kit/assistant.server", "aiFacts");
+  if (sms) imports.add("#/kit/sms.server", "smsProvider");
+  const page_ = `<LegalPage title={${t.pageTitleOf(page.id)}} facts={facts}${running ? " running={Route.useLoaderData()}" : ""} />`;
   return `${HEADER}${imports.render()}
 /** What the page says, from the app's definition when it was generated. */
 const facts: LegalFacts = ${literal({
@@ -221,8 +228,17 @@ const facts: LegalFacts = ${literal({
     ...(more.text ? { more } : {}),
   })};
 
+${
+  running
+    ? `
+/** What the app is set up with now: the AI model's provider and region, the SMS provider. */
+const runningFacts = createServerFn().handler(async () => ({${ai ? "\n  ai: aiFacts()," : ""}${sms ? "\n  sms: smsProvider()," : ""}
+}));
+`
+    : ""
+}
 export const Route = createFileRoute(${JSON.stringify(indexPath(page.route))})({
-${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}  component: () => ${page_},
+${guard(`pageAccess[${JSON.stringify(page.id)}]`)}${t.head(page)}${running ? "  loader: () => runningFacts(),\n" : ""}  component: () => ${page_},
 });
 `;
 }

@@ -690,6 +690,11 @@ export const w = {
   legalAssistantTitle: "The assistant",
   legalAssistant: (who: "visitors" | "members" | string[], changes: boolean) =>
     `The app has an assistant, Ask, for ${who === "visitors" ? "everyone" : who === "members" ? "everyone who signs in" : who.join(", ")}. It answers from the records the person asking may read${changes ? ", and may propose changes, which are made only once that person confirms them" : ""}. The questions of people who sign in, with the records needed to answer them, may go to an AI model the app's owner chose.${who === "visitors" ? " Visitors' questions are answered by the app's own rules, without a model." : ""}`,
+  legalNoModelNow:
+    "As the app is set up now, no AI model is used: questions are answered from the records by the app's own rules.",
+  legalModelNow: (provider: string, region?: string) =>
+    `As the app is set up now, the AI model is ${provider}'s${region ? `, in ${region}` : ""}.`,
+  legalSmsNow: (provider: string) => `As the app is set up now, the SMS provider is ${provider}.`,
   legalFormsTitle: "What visitors are asked for",
   legalFormsIntro: "Forms anyone can fill in ask for:",
   legalIncomingTitle: "What comes in",

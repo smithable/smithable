@@ -655,6 +655,11 @@ export const w = {
   legalAssistantTitle: "Assistenten",
   legalAssistant: (who: "visitors" | "members" | string[], changes: boolean) =>
     `Appen har en assistent, Fråga, för ${who === "visitors" ? "alla" : who === "members" ? "alla som loggar in" : who.join(", ")}. Den svarar utifrån de poster den som frågar får läsa${changes ? " och kan föreslå ändringar, som görs först när den personen bekräftar dem" : ""}. Frågor från dem som loggar in, med de poster som behövs för svaret, kan gå till en AI-modell som appens ägare har valt.${who === "visitors" ? " Besökares frågor besvaras av appens egna regler, utan modell." : ""}`,
+  legalNoModelNow:
+    "Som appen är inställd nu används ingen AI-modell: frågor besvaras utifrån posterna av appens egna regler.",
+  legalModelNow: (provider: string, region?: string) =>
+    `Som appen är inställd nu är AI-modellen ${provider}s${region ? `, i ${region}` : ""}.`,
+  legalSmsNow: (provider: string) => `Som appen är inställd nu är sms-tjänsten ${provider}.`,
   legalFormsTitle: "Vad besökare ombeds uppge",
   legalFormsIntro: "Formulär som vem som helst kan fylla i frågar efter:",
   legalIncomingTitle: "Vad som kommer in",
