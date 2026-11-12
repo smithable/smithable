@@ -689,12 +689,12 @@ export const w = {
     "Signing in with Google takes you to Google, which tells the app your name and email address.",
   legalAssistantTitle: "The assistant",
   legalAssistant: (who: "visitors" | "members" | string[], changes: boolean) =>
-    `The app has an assistant, Ask, for ${who === "visitors" ? "everyone" : who === "members" ? "everyone who signs in" : who.join(", ")}. It answers from the records the person asking may read${changes ? ", and may propose changes, which are made only once that person confirms them" : ""}. The questions of people who sign in, with the records needed to answer them, go to an AI model the app's owner chose.${who === "visitors" ? " Visitors' questions are answered by the app's own rules, without a model." : ""}`,
+    `The app has an assistant, Ask, for ${who === "visitors" ? "everyone" : who === "members" ? "everyone who signs in" : who.join(", ")}. It answers from the records the person asking may read${changes ? ", and may propose changes, which are made only once that person confirms them" : ""}. The questions of people who sign in, with the records needed to answer them, may go to an AI model the app's owner chose.${who === "visitors" ? " Visitors' questions are answered by the app's own rules, without a model." : ""}`,
   legalFormsTitle: "What visitors are asked for",
   legalFormsIntro: "Forms anyone can fill in ask for:",
   legalIncomingTitle: "What comes in",
-  legalMailInto: (labels: string[]) =>
-    `Mail sent to the app's address becomes ${labels.join(", ")} in the app, with the sender's address and what the mail says.`,
+  legalMailInto: (entries: { into: string; sender: boolean }[]) =>
+    `Mail sent to the app's address becomes ${entries.map((e) => `${e.into}${e.sender ? ", with the sender's address" : ""}`).join("; ")} in the app, holding what the mail says.`,
   legalCalls: (calls: { name: string; into?: string }[]) =>
     `Services the app's owner set up send it information: ${calls.map((c) => (c.into ? `${c.name}, which becomes ${c.into}` : `${c.name}, handled by the owner's own code`)).join("; ")}.`,
   legalServicesTitle: "Other services",

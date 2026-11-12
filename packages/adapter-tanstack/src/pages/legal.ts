@@ -82,9 +82,10 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
     .filter((o) => !o.channels)
     .map((o) => ({ name: o.to, about: "model" in o.when ? plural(o.when.model) : undefined }));
   // What comes in: mail that becomes records, and calls from other services.
-  const mailInto = [
-    ...new Set(ir.incoming.flatMap((i) => (i.mail && i.create ? [plural(i.create)] : []))),
-  ];
+  // Each with whether it keeps the sender's address (a field the mail's sender goes to).
+  const mailInto = ir.incoming.flatMap((i) =>
+    i.mail && i.create ? [{ into: plural(i.create), sender: !!i.mail.from }] : [],
+  );
   const calls = ir.incoming
     .filter((i) => !i.mail)
     .map((i) => ({ name: i.name, into: i.create ? plural(i.create) : undefined }));
