@@ -7,6 +7,7 @@ import { type PartChange, summaryDiff } from "./builder/change-diff";
 import { entryText, grouped, numbers, restores, summary as summaryOf } from "./history";
 import { isPreviewMessage, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
+import { receipt } from "./receipt";
 import { Button, cx, Input, Panel } from "./ui";
 import { useVerified, Verified } from "./Verified";
 
@@ -570,13 +571,11 @@ export function Trace({
                   </span>
                 )}
                 <span className="mt-0.5 block text-xs text-quiet">
-                  {/* The Builder (words given) says only when; Studio says how every change was made
-                    and the files. A model's use and its cost are not shown here (Johan, 2026-10-23). */}
+                  {/* Both say who made it and what it cost (T721, Johan 2026-11-12); Studio adds how
+                    long it took and the files. */}
+                  <span data-receipt>{receipt(group)}</span> ·{" "}
                   {!words ? (
-                    <>
-                      {e.isUndo ? "undo" : e.engine}
-                      {e.ms !== undefined ? ` · ${(e.ms / 1000).toFixed(1)} s` : ""} ·{" "}
-                    </>
+                    <>{e.ms !== undefined ? `${(e.ms / 1000).toFixed(1)} s · ` : ""}</>
                   ) : null}
                   {new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   {!words && e.files.length > 0 && ` · ${e.files.join(", ")}`}
