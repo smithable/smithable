@@ -34,11 +34,24 @@ const ANALYTICS_NAMES: Record<string, string> = {
 };
 
 /** What the page says, from the app itself (the kit's LegalFacts). */
-export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenContext, "options">) {
+export function legalFacts(
+  ir: SpecIR,
+  auth: AuthIR,
+  t: Texts,
+  ctx: Pick<GenContext, "options">,
+  page?: string,
+) {
   const everyone = auth.roles.map((r) => r.name);
+  const own = page ? t.privacy(page) : {};
+  const keeps = own.keeps ?? {};
   const records = ir.models.flatMap((m) => {
+    const named = keeps[m.name] !== undefined;
     const personal = personalFields(m);
-    if (!personal.length) return [];
+    if (!personal.length && !named) return [];
+    // Named by the maker only: every field it holds, by label.
+    const listed = personal.length
+      ? personal
+      : m.fields.filter((f) => !(f.type.kind === "relation" && f.type.many));
     const read = modelAccess(m, auth).read;
     const readers: "visitors" | "members" | string[] = read.public
       ? "visitors"
@@ -48,8 +61,9 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
     return [
       {
         label: code(`${names(m, t).ui}.pluralLabel`),
-        fields: personal.map((f) => t.field(m, f).label ?? humanLabel(f.name)),
+        fields: listed.map((f) => t.field(m, f).label ?? humanLabel(f.name)),
         readers,
+        ...(named ? { keeps: keeps[m.name] } : {}),
       },
     ];
   });
@@ -103,7 +117,8 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
   const custom =
     customActions.length > 0 ||
     ir.incoming.some((i) => i.custom) ||
-    ir.pages.some((p) => p.pattern.kind === "custom");
+    ir.pages.some((p) => p.pattern.kind === "custom") ||
+    own.custom !== undefined;
   const payProvider = PAYMENT_NAMES[ctx.options.paymentProvider ?? ""];
   return {
     app: code("app.name"),
@@ -115,7 +130,10 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
     ...(services.length ? { services } : {}),
     ...(mailInto.length ? { mailInto } : {}),
     ...(calls.length ? { calls } : {}),
-    ...(custom ? { custom: { actions: customActions } } : {}),
+    ...(custom
+      ? { custom: { actions: customActions, ...(own.custom ? { text: own.custom } : {}) } }
+      : {}),
+    ...(own.services?.length ? { ownServices: own.services } : {}),
     ...(payProvider ? { payProvider } : {}),
     uploads: ir.models.some((m) => m.fields.some(isUpload)),
     ...(analytics
@@ -196,7 +214,7 @@ export function legalRoute(
   ctx: GenContext,
 ): string {
   const { ir, auth, t } = ctx;
-  const facts = legalFacts(ir, auth, t, ctx);
+  const facts = legalFacts(ir, auth, t, ctx, page.id);
   const operator = t.section(page.id, "operator") as Record<string, string | undefined>;
   const more = t.section(page.id, "more") as { title?: string; text?: string };
   // The root frames a public page for visitors in the site's layout and for signed-in people in

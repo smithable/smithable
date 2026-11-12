@@ -21,7 +21,13 @@ export interface LegalFacts {
   /** Ask, the assistant in the app: who gets it, and whether it may propose changes. */
   assistant?: { for: "visitors" | "members" | string[]; changes: boolean };
   /** Kinds of record with personal details: what they hold and who may read them. */
-  records: { label: string; fields: string[]; readers: "visitors" | "members" | string[] }[];
+  records: {
+    label: string;
+    fields: string[];
+    readers: "visitors" | "members" | string[];
+    /** How long they are kept, in the maker's words; unsaid, until removed or asked for. */
+    keeps?: string;
+  }[];
   /** Whether people can upload pictures or documents. */
   uploads: boolean;
   analytics?: { provider: string; consent: boolean };
@@ -43,8 +49,10 @@ export interface LegalFacts {
   mailInto?: { into: string; sender: boolean }[];
   /** Calls from other services, and the kind of record each becomes (none: the operator's own code). */
   calls?: { name: string; into?: string }[];
-  /** The operator's own functions: custom actions by name, or other custom code. */
-  custom?: { actions: string[] };
+  /** The operator's own functions: custom actions by name, or other custom code; the maker's words on them. */
+  custom?: { actions: string[]; text?: string };
+  /** Other services the operator uses that the files do not show, in the maker's words. */
+  ownServices?: { name: string; for?: string; where?: string }[];
   /** The maker's own words under the generated text. */
   more?: { title?: string; text?: string };
 }
@@ -122,7 +130,8 @@ export function LegalPage({
             <ul className="list-disc space-y-1 pl-6">
               {facts.records.map((r) => (
                 <li key={r.label}>
-                  <strong>{r.label}</strong>: {r.fields.join(", ")}. {w.legalReadBy(r.readers)}
+                  <strong>{r.label}</strong>: {r.fields.join(", ")}. {w.legalReadBy(r.readers)}{" "}
+                  {r.keeps ? w.legalKeeps(r.keeps) : w.legalKeptUntil}
                 </li>
               ))}
             </ul>
@@ -150,9 +159,23 @@ export function LegalPage({
           {facts.calls && <p>{w.legalCalls(facts.calls)}</p>}
         </Part>
       )}
-      {facts.services && (
+      {(facts.services || facts.ownServices) && (
         <Part title={w.legalServicesTitle}>
-          <p>{w.legalServices(facts.services)}</p>
+          {facts.services && <p>{w.legalServices(facts.services)}</p>}
+          {facts.ownServices && (
+            <>
+              <p>{w.legalOwnServices}</p>
+              <ul className="list-disc space-y-1 pl-6">
+                {facts.ownServices.map((s) => (
+                  <li key={s.name}>
+                    <strong>{s.name}</strong>
+                    {s.for ? `: ${s.for}` : ""}
+                    {s.where ? ` (${s.where})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </Part>
       )}
       <Part title={w.legalCookiesTitle}>
@@ -190,6 +213,7 @@ export function LegalPage({
       {facts.custom && (
         <Part title={w.legalCustomTitle}>
           <p>{w.legalCustom(facts.custom.actions)}</p>
+          {facts.custom.text && <p className="whitespace-pre-line">{facts.custom.text}</p>}
         </Part>
       )}
       <Part title={w.legalLogsTitle}>

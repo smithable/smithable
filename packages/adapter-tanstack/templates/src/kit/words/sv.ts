@@ -670,6 +670,9 @@ export const w = {
   legalServicesTitle: "Andra tjänster",
   legalServices: (services: { name: string; about?: string }[]) =>
     `Appen skickar uppgifter till tjänster som dess ägare har kopplat in: ${services.map((s) => (s.about ? `${s.name}, om ${s.about}` : s.name)).join("; ")}.`,
+  legalKeeps: (text: string) => `Hur länge de sparas: ${text}`,
+  legalKeptUntil: "De sparas tills ägaren tar bort dem eller du ber om att de tas bort.",
+  legalOwnServices: "Appens ägare använder också:",
   legalCustomTitle: "Ägarens egna funktioner",
   legalCustom: (actions: string[]) =>
     `Appen kör också funktioner som dess ägare har skrivit för den${actions.length ? ` (${actions.join(", ")})` : ""}. Den här sidan beskriver inte vad de gör.`,

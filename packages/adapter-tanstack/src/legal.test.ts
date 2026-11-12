@@ -3,6 +3,7 @@ import {
   emptyContent,
   type SpecIR,
   validateAuth,
+  validateContent,
   validateSpec,
 } from "@smithable/core";
 import { expect, test } from "vitest";
@@ -126,4 +127,63 @@ pages:
     ir,
   ).auth as AuthIR;
   expect(route(plain)).not.toContain("runningFacts");
+});
+
+test("what only the maker knows: how long records are kept, their other services, their own functions (legal-page.md §6.2)", () => {
+  const spec = `smithable: 0.1
+app: { name: X }
+models:
+  Message:
+    fields: { name: string!, email: email! }
+  Note:
+    fields: { text: string! }
+pages:
+  home: { route: /, landing: { hero: {}, footer: {} } }
+  messages: { crud: Message }
+  notes: { crud: Note }
+  privacy: { route: /privacy, legal: privacy }
+`;
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
+  const read = validateContent(
+    {
+      path: "smithable.content.yml",
+      text: `smithableContent: 0.1
+pages:
+  privacy:
+    operator: { name: Calm Ab }
+    keeps:
+      Message: Until answered, at most six months.
+      Note: As long as the project runs.
+      Booking: Two years.
+    services:
+      - { name: Example Mail Ab, for: sending mail, where: in the EU }
+    custom: The waiting list mails the next person.
+`,
+    },
+    ir,
+  );
+  // A line for a kind of record the app does not have is said, not dropped silently.
+  expect(read.diagnostics.map((d) => d.code)).toContain("privacy-keeps-unknown");
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\npublic: { pages: [home, privacy] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const files = generateApp(ir, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: read.content as NonNullable<typeof read.content>,
+  });
+  const route = files.find((f) => f.path === "src/routes/privacy/index.tsx")?.content ?? "";
+  expect(route).toContain('keeps: "Until answered, at most six months."');
+  // Note holds nothing personal by its fields, but the maker named it: it is listed.
+  expect(route).toContain('keeps: "As long as the project runs."');
+  expect(route).toContain(
+    'ownServices: [{ name: "Example Mail Ab", for: "sending mail", where: "in the EU" }]',
+  );
+  expect(route).toContain(
+    'custom: { actions: [], text: "The waiting list mails the next person." }',
+  );
 });

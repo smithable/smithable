@@ -705,6 +705,9 @@ export const w = {
   legalServicesTitle: "Other services",
   legalServices: (services: { name: string; about?: string }[]) =>
     `The app sends information to services its owner set up: ${services.map((s) => (s.about ? `${s.name}, about ${s.about}` : s.name)).join("; ")}.`,
+  legalKeeps: (text: string) => `How long they are kept: ${text}`,
+  legalKeptUntil: "They are kept until the owner removes them or you ask for their removal.",
+  legalOwnServices: "The app's owner also uses:",
   legalCustomTitle: "The owner's own functions",
   legalCustom: (actions: string[]) =>
     `The app also runs functions written for it by its owner${actions.length ? ` (${actions.join(", ")})` : ""}. This page does not describe what they do.`,
