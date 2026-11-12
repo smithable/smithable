@@ -1,0 +1,8 @@
+id: missing-reference
+title: Adding or changing a record with a reference to one that does not exist was refused as "still used by other records, so it cannot be deleted"; it now says which field names no record.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  features: [field:reference]
+migration: none

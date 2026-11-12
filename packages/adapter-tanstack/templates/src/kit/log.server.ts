@@ -37,11 +37,12 @@ export const log = {
 };
 
 /**
- * A database error as people may see it: a unique value already taken, or a record still in
- * use. Anything else goes to the app log; the page gets a plain apology with the request's
- * reference, which finds the log line.
+ * A database error as people may see it: a unique value already taken, a record still in use,
+ * or, on an add or a change (`missing` given), a reference to a record that is not there, named
+ * by its field when `missing` finds it. Anything else goes to the app log; the page gets a plain
+ * apology with the request's reference, which finds the log line.
  */
-export function refusal(error: unknown): Error {
+export function refusal(error: unknown, missing?: () => string | undefined): Error {
   // A refusal the app made itself (an owner that must be someone, a place that is full, a locked
   // field) as it is.
   if (error instanceof AccessDenied || error instanceof Conflict || error instanceof BadInput)
@@ -50,7 +51,11 @@ export function refusal(error: unknown): Error {
   // With several columns (unique per owner), the last one is the field.
   const column = /UNIQUE constraint failed: (?:\w+\.\w+, )*\w+\.(\w+)/.exec(message)?.[1];
   if (column) return new Conflict(`taken:${column}`);
-  if (message.includes("FOREIGN KEY constraint failed")) return new Conflict("in-use");
+  if (message.includes("FOREIGN KEY constraint failed")) {
+    if (!missing) return new Conflict("in-use");
+    const field = missing();
+    return new BadInput(field ? w.notThere(field) : w.someNotThere);
+  }
   log.error("A change could not be saved", { error });
   const reference = traceId();
   return new Error(w.wentWrongReference(reference));

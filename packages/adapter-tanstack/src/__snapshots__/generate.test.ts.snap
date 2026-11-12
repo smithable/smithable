@@ -5459,6 +5459,12 @@ import { type NoteSettable } from "./note";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.projectId != null && !db.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.id, values.projectId as never)).get()) return "Project";
+  return undefined;
+}
+
 /** Who may read, create, change and delete notes. */
 export const noteAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "member", "assistant"], owner: false },
@@ -5847,7 +5853,7 @@ export const noteData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Note", row, viewer);
     return row;
@@ -5878,7 +5884,7 @@ export const noteData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     cleanUploads(() => {
     if (row.attachment && row.attachment.file !== changed.attachment?.file) deleteFile(row.attachment, keepsUpload(row.attachment.file) || !!db.select({ id: schema.notes.id }).from(schema.notes).where(sql\`\${schema.notes.attachment} like \${\`%"file":"\${row.attachment.file}"%\`}\`).get());
@@ -6968,6 +6974,13 @@ import { type TaskSettable } from "./task";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.projectId != null && !db.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.id, values.projectId as never)).get()) return "Project";
+  if (values.assigneeId != null && !db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, values.assigneeId as never)).get()) return "Assignee";
+  return undefined;
+}
+
 /** Who may read, create, change and delete tasks. */
 export const taskAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "member", "assistant"], owner: false },
@@ -7345,7 +7358,7 @@ export const taskData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Task", row, viewer);
     return row;
@@ -7376,7 +7389,7 @@ export const taskData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Task", changed, viewer);
     return changed;
@@ -11054,7 +11067,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/note.import.server.ts": "7b3f75d9 generated",
   "src/generated/note.import.ts": "13466794 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "8ced31a0 generated",
+  "src/generated/note.server.ts": "0ddade98 generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "3984a4bc generated",
   "src/generated/project.import.server.ts": "a327a846 generated",
@@ -11066,7 +11079,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.import.server.ts": "6df64d29 generated",
   "src/generated/task.import.ts": "1c316273 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "02577e61 generated",
+  "src/generated/task.server.ts": "c57e688e generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
@@ -11119,7 +11132,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -11139,7 +11152,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
@@ -12855,6 +12868,13 @@ import { type AppointmentSettable } from "./appointment";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.serviceId != null && !db.select({ id: schema.services.id }).from(schema.services).where(eq(schema.services.id, values.serviceId as never)).get()) return "Service";
+  if (values.barberId != null && !db.select({ id: schema.barbers.id }).from(schema.barbers).where(eq(schema.barbers.id, values.barberId as never)).get()) return "Barber";
+  return undefined;
+}
+
 /** The time a barber is booked by (smithable.yml, models.Barber.schedule). */
 const SCHEDULE: Schedule = {
   hours: {
@@ -13105,7 +13125,7 @@ export const appointmentData = {
         return made;
       });
     } catch (error) {
-      throw error instanceof Conflict ? error : refusal(error);
+      throw error instanceof Conflict ? error : refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Appointment", row, viewer);
     return row;
@@ -13137,7 +13157,7 @@ export const appointmentData = {
         return after;
       });
     } catch (error) {
-      throw error instanceof Conflict ? error : refusal(error);
+      throw error instanceof Conflict ? error : refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Appointment", changed, viewer);
     return changed;
@@ -15797,6 +15817,12 @@ import { type TimeOffSettable } from "./time-off";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.barberId != null && !db.select({ id: schema.barbers.id }).from(schema.barbers).where(eq(schema.barbers.id, values.barberId as never)).get()) return "Barber";
+  return undefined;
+}
+
 /** Who may read, create, change and delete time offs. */
 export const timeOffAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "staff"], owner: true },
@@ -15956,7 +15982,7 @@ export const timeOffData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "TimeOff", row, viewer);
     return row;
@@ -15987,7 +16013,7 @@ export const timeOffData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "TimeOff", changed, viewer);
     return changed;
@@ -18730,7 +18756,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.import.server.ts": "eee34c8a generated",
   "src/generated/appointment.import.ts": "bd211139 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "1a3f2e0e generated",
+  "src/generated/appointment.server.ts": "5dca62ac generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
@@ -18755,7 +18781,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/time-off.import.server.ts": "2d8ccb72 generated",
   "src/generated/time-off.import.ts": "b7017dfb generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "d7b61f75 generated",
+  "src/generated/time-off.server.ts": "70238ed9 generated",
   "src/generated/time-off.ts": "94851289 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -18806,7 +18832,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -18827,7 +18853,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
@@ -21798,6 +21824,13 @@ import "./timers.server";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.sessionId != null && !db.select({ id: schema.sessions.id }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId as never)).get()) return "Session";
+  if (values.attendeeId != null && !db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, values.attendeeId as never)).get()) return "Attendee";
+  return undefined;
+}
+
 /** Who may read, create, change and delete bookings. */
 export const bookingAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "staff"], owner: true },
@@ -22207,7 +22240,7 @@ export const bookingData = {
         return made;
       });
     } catch (error) {
-      throw error instanceof Conflict ? error : refusal(error);
+      throw error instanceof Conflict ? error : refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Booking", row, viewer);
     return row;
@@ -22239,7 +22272,7 @@ export const bookingData = {
         return after;
       });
     } catch (error) {
-      throw error instanceof Conflict ? error : refusal(error);
+      throw error instanceof Conflict ? error : refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Booking", changed, viewer);
     return changed;
@@ -27470,6 +27503,13 @@ function usedBy(tx: Tx, id: number, title: string) {
   return { id, title, model: "Session", label: sessionUi.label, with: with_, loose, together: false, missing: [sessionUi.label, bookingUi.label] };
 }
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.classTypeId != null && !db.select({ id: schema.classTypes.id }).from(schema.classTypes).where(eq(schema.classTypes.id, values.classTypeId as never)).get()) return "Class type";
+  if (values.instructorId != null && !db.select({ id: schema.instructors.id }).from(schema.instructors).where(eq(schema.instructors.id, values.instructorId as never)).get()) return "Instructor";
+  return undefined;
+}
+
 /** Who may read, create, change and delete sessions. */
 export const sessionAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: true },
@@ -27876,7 +27916,7 @@ export const sessionData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Session", row, viewer);
     return row;
@@ -27908,7 +27948,7 @@ export const sessionData = {
         return after;
       });
     } catch (error) {
-      throw error instanceof Conflict ? error : refusal(error);
+      throw error instanceof Conflict ? error : refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Session", changed, viewer);
     return changed;
@@ -33815,7 +33855,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "88d7bb91 generated",
+  "src/generated/booking.server.ts": "befd36d1 generated",
   "src/generated/booking.ts": "fc39a336 generated",
   "src/generated/card.server.ts": "72496fa8 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -33854,7 +33894,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.import.ts": "4b3e59f0 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "319c7a5d generated",
+  "src/generated/session.server.ts": "f7b47a29 generated",
   "src/generated/session.ts": "e2a3ab62 generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "9e37548f generated",
@@ -33920,7 +33960,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -33942,7 +33982,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
@@ -36640,6 +36680,12 @@ function usedBy(tx: Tx, id: number, title: string) {
   return { id, title, model: "Customer", label: customerUi.label, with: with_, loose, together: true, missing: [] };
 }
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.accountManagerId != null && !db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, values.accountManagerId as never)).get()) return "Account manager";
+  return undefined;
+}
+
 /** The tables a merge of customers moves records in, by model. */
 const MERGED_TABLES = { "Order": schema.orders, "FollowUp": schema.followUps } as const;
 
@@ -37110,7 +37156,7 @@ export const customerData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Customer", row, viewer);
     return row;
@@ -37141,7 +37187,7 @@ export const customerData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Customer", changed, viewer);
     return changed;
@@ -38195,6 +38241,12 @@ import "./trash.server";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.customerId != null && !db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.id, values.customerId as never)).get()) return "Customer";
+  return undefined;
+}
+
 /** The record one went to the trash with, while it is still there: its label and title, by the mark ("Customer:12"). */
 function rootInTrash(tag: string): string | undefined {
   const [model, id] = tag.split(":");
@@ -38605,7 +38657,7 @@ export const followUpData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "FollowUp", row, viewer);
     return row;
@@ -38636,7 +38688,7 @@ export const followUpData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "FollowUp", changed, viewer);
     return changed;
@@ -39283,6 +39335,12 @@ import "./trash.server";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.customerId != null && !db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.id, values.customerId as never)).get()) return "Customer";
+  return undefined;
+}
+
 /** The record one went to the trash with, while it is still there: its label and title, by the mark ("Customer:12"). */
 function rootInTrash(tag: string): string | undefined {
   const [model, id] = tag.split(":");
@@ -39695,7 +39753,7 @@ export const orderData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Order", row, viewer);
     return row;
@@ -39726,7 +39784,7 @@ export const orderData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Order", changed, viewer);
     return changed;
@@ -43539,14 +43597,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "9e76aa35 generated",
+  "src/generated/customer.server.ts": "69dbb3f9 generated",
   "src/generated/customer.ts": "8c21bca9 generated",
   "src/generated/dev-door.server.ts": "c6582e43 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
-  "src/generated/follow-up.server.ts": "8e4926e6 generated",
+  "src/generated/follow-up.server.ts": "c30824a8 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -43555,7 +43613,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "1462e1a4 generated",
+  "src/generated/order.server.ts": "67ece6a0 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -43615,7 +43673,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -43632,7 +43690,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
@@ -48706,6 +48764,12 @@ function usedBy(tx: Tx, id: number, title: string) {
   return { id, title, model: "Invoice", label: invoiceUi.label, with: with_, loose, together: false, missing: [invoiceUi.label, invoiceLineUi.label] };
 }
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.clientId != null && !db.select({ id: schema.clients.id }).from(schema.clients).where(eq(schema.clients.id, values.clientId as never)).get()) return "Client";
+  return undefined;
+}
+
 /** Who may read, create, change and delete invoices. */
 export const invoiceAccess: ModelAccess = {
   read: { public: false, roles: ["admin"], owner: true },
@@ -49129,7 +49193,7 @@ export const invoiceData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Invoice", row, viewer);
     return row;
@@ -49161,7 +49225,7 @@ export const invoiceData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     cleanUploads(() => {
     if (row.contract && row.contract.file !== changed.contract?.file) deleteFile(row.contract, keepsUpload(row.contract.file) || !!db.select({ id: schema.invoices.id }).from(schema.invoices).where(sql\`\${schema.invoices.contract} like \${\`%"file":"\${row.contract.file}"%\`}\`).get());
@@ -49491,6 +49555,12 @@ import "./timers.server";
 
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.invoiceId != null && !db.select({ id: schema.invoices.id }).from(schema.invoices).where(eq(schema.invoices.id, values.invoiceId as never)).get()) return "Invoice";
+  return undefined;
+}
 
 /** Who may read, create, change and delete invoice lines. */
 export const invoiceLineAccess: ModelAccess = {
@@ -49860,7 +49930,7 @@ export const invoiceLineData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "InvoiceLine", row, viewer);
     return row;
@@ -49891,7 +49961,7 @@ export const invoiceLineData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "InvoiceLine", changed, viewer);
     return changed;
@@ -52853,13 +52923,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "778cad93 generated",
+  "src/generated/invoice-line.server.ts": "ef56bd3d generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "986ecf22 generated",
+  "src/generated/invoice.server.ts": "1b676a8a generated",
   "src/generated/invoice.ts": "f4863bb7 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "d19f0751 generated",
@@ -52924,7 +52994,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -52946,7 +53016,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
@@ -57764,6 +57834,13 @@ import { withOrderLineFormulas } from "./order-line.formulas";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.orderId != null && !db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.id, values.orderId as never)).get()) return "Order";
+  if (values.dishId != null && !db.select({ id: schema.dishes.id }).from(schema.dishes).where(eq(schema.dishes.id, values.dishId as never)).get()) return "Dish";
+  return undefined;
+}
+
 /** Who may read, create, change and delete order lines. */
 export const orderLineAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "staff"], owner: false },
@@ -57905,7 +57982,7 @@ export const orderLineData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "OrderLine", row, viewer);
     return row;
@@ -57936,7 +58013,7 @@ export const orderLineData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "OrderLine", changed, viewer);
     return changed;
@@ -62086,7 +62163,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "ff9ba6cc generated",
+  "src/generated/order-line.server.ts": "aa01e065 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.import.server.ts": "c25ea634 generated",
@@ -62156,7 +62233,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -62179,7 +62256,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
@@ -67523,7 +67600,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -67543,7 +67620,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
@@ -71552,7 +71629,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -71569,7 +71646,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
@@ -77058,6 +77135,12 @@ function usedBy(tx: Tx, id: number, title: string) {
   return { id, title, model: "Incident", label: incidentUi.label, with: with_, loose, together: false, missing: [incidentUi.label, incidentUpdateUi.label] };
 }
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.componentId != null && !db.select({ id: schema.components.id }).from(schema.components).where(eq(schema.components.id, values.componentId as never)).get()) return "Component";
+  return undefined;
+}
+
 /** Who may read, create, change and delete incidents. */
 export const incidentAccess: ModelAccess = {
   read: {
@@ -77487,7 +77570,7 @@ export const incidentData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Incident", row, viewer);
     return row;
@@ -77518,7 +77601,7 @@ export const incidentData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Incident", changed, viewer);
     return changed;
@@ -77896,6 +77979,12 @@ import { type IncidentUpdateSettable } from "./incident-update";
 
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.incidentId != null && !db.select({ id: schema.incidents.id }).from(schema.incidents).where(eq(schema.incidents.id, values.incidentId as never)).get()) return "Incident";
+  return undefined;
+}
 
 /** Who may read, create, change and delete incident updates. */
 export const incidentUpdateAccess: ModelAccess = {
@@ -78285,7 +78374,7 @@ export const incidentUpdateData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "IncidentUpdate", row, viewer);
     return row;
@@ -78316,7 +78405,7 @@ export const incidentUpdateData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "IncidentUpdate", changed, viewer);
     return changed;
@@ -78812,6 +78901,12 @@ import { type MaintenanceSettable } from "./maintenance";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.componentId != null && !db.select({ id: schema.components.id }).from(schema.components).where(eq(schema.components.id, values.componentId as never)).get()) return "Component";
+  return undefined;
+}
+
 /** Who may read, create, change and delete maintenances. */
 export const maintenanceAccess: ModelAccess = {
   read: { public: true, roles: ["admin", "staff"], owner: false },
@@ -79201,7 +79296,7 @@ export const maintenanceData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Maintenance", row, viewer);
     return row;
@@ -79232,7 +79327,7 @@ export const maintenanceData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterUpdate", "Maintenance", changed, viewer);
     return changed;
@@ -84511,19 +84606,19 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident-update.import.server.ts": "05597fda generated",
   "src/generated/incident-update.import.ts": "2512bea4 generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "59a3de82 generated",
+  "src/generated/incident-update.server.ts": "d5b751e6 generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.import.server.ts": "f466f13d generated",
   "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "d33c48f1 generated",
+  "src/generated/incident.server.ts": "964bac97 generated",
   "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "50bbd5b3 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",
   "src/generated/maintenance.import.server.ts": "7f9a3b5d generated",
   "src/generated/maintenance.import.ts": "d0b5690b generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "3c7f0824 generated",
+  "src/generated/maintenance.server.ts": "cc094f88 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "c95c523a generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -84586,7 +84681,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/import.server.ts": "7a5a3701 kit",
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/mcp.server.ts": "2e063918 kit",
   "src/kit/model.ts": "a10b6641 kit",
@@ -84604,7 +84699,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
@@ -87978,6 +88073,13 @@ import { messageOurs, type MessageSettable } from "./message";
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.agentId != null && !db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, values.agentId as never)).get()) return "Agent";
+  if (values.supportCaseId != null && !db.select({ id: schema.supportCases.id }).from(schema.supportCases).where(eq(schema.supportCases.id, values.supportCaseId as never)).get()) return "Support case";
+  return undefined;
+}
+
 /** Who may read, create, change and delete messages. */
 export const messageAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "agent"], owner: false },
@@ -88371,7 +88473,7 @@ export const messageData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "Message", row, viewer);
     return row;
@@ -88403,7 +88505,7 @@ export const messageData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     cleanUploads(() => {
     for (const p of row.attachments ?? []) if (!(changed.attachments ?? []).map((p) => p.file).includes(p.file)) deleteFile(p, keepsUpload(p.file) || !!db.select({ id: schema.messages.id }).from(schema.messages).where(sql\`\${schema.messages.attachments} like \${\`%"file":"\${p.file}"%\`}\`).get());
@@ -89051,6 +89153,12 @@ function usedBy(tx: Tx, id: number, title: string) {
   return { id, title, model: "SupportCase", label: supportCaseUi.label, with: with_, loose, together: false, missing: [supportCaseUi.label, messageUi.label] };
 }
 
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+  if (values.assigneeId != null && !db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, values.assigneeId as never)).get()) return "Assignee";
+  return undefined;
+}
+
 /** Who may read, create, change and delete support cases. */
 export const supportCaseAccess: ModelAccess = {
   read: { public: false, roles: ["admin", "agent"], owner: false },
@@ -89443,7 +89551,7 @@ export const supportCaseData = {
         return made;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     await afterChange("afterCreate", "SupportCase", row, viewer);
     return row;
@@ -89475,7 +89583,7 @@ export const supportCaseData = {
         return after;
       });
     } catch (error) {
-      throw refusal(error);
+      throw refusal(error, () => missingReference(values));
     }
     cleanUploads(() => {
     for (const p of row.attachments ?? []) if (!(changed.attachments ?? []).map((p) => p.file).includes(p.file)) deleteFile(p, keepsUpload(p.file) || !!db.select({ id: schema.supportCases.id }).from(schema.supportCases).where(sql\`\${schema.supportCases.attachments} like \${\`%"file":"\${p.file}"%\`}\`).get());
@@ -92458,7 +92566,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3782a982 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "65d3ca48 generated",
+  "src/generated/message.server.ts": "585c6649 generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "8956b93c generated",
@@ -92467,7 +92575,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
   "src/generated/support-case.import.ts": "84512c28 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "6c03aa90 generated",
+  "src/generated/support-case.server.ts": "6bad6e7b generated",
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "725a8b84 generated",
@@ -92525,7 +92633,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/import.ts": "3f48e858 kit",
   "src/kit/limit.ts": "1996b3c2 kit",
   "src/kit/live.server.ts": "474834ab kit",
-  "src/kit/log.server.ts": "cfa35fb4 kit",
+  "src/kit/log.server.ts": "4d493425 kit",
   "src/kit/mail.ts": "d005acf1 kit",
   "src/kit/model.ts": "a10b6641 kit",
   "src/kit/now.ts": "5ea87828 kit",
@@ -92547,7 +92655,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "e2e0dfe3 kit",
+  "src/kit/words/en.ts": "c1eb2f8a kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",

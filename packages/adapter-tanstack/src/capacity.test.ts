@@ -83,7 +83,9 @@ test("a capacity is checked in the write's transaction, and the referenced recor
   expect(booking).toContain("tx.select({ n: schema.sessions.capacity }).from(schema.sessions)");
   expect(booking).toContain('throw new Conflict("full")');
   expect(booking).toContain("ne(schema.bookings.id, id)");
-  expect(booking).toContain("error instanceof Conflict ? error : refusal(error)");
+  expect(booking).toContain(
+    "error instanceof Conflict ? error : refusal(error, () => missingReference(values))",
+  );
   const session = file("src/generated/session.server.ts");
   expect(session).toContain(
     "if (values.capacity < booked) throw new Conflict(`booked:$" + "{booked}`);",
@@ -153,4 +155,16 @@ test("the block's words come from the content file", () => {
   expect(app.find((f) => f.path === "src/routes/sessions/$id.tsx")?.content).toContain(
     'cancel={deleteBooking} bookLabel="Book a mat" fullLabel="No mats left" texts="models.Booking.reserve" timeZone={app.timeZone} />',
   );
+});
+
+test("a reference to a record that is not there is bad input naming its field, not a record in use", () => {
+  const booking = file("src/generated/booking.server.ts");
+  expect(booking).toContain(
+    'if (values.sessionId != null && !db.select({ id: schema.sessions.id }).from(schema.sessions).where(eq(schema.sessions.id, values.sessionId as never)).get()) return "Session";',
+  );
+  // On an add and a change; a delete keeps "still used by other records".
+  expect(booking.match(/refusal\(error, \(\) => missingReference\(values\)\)/g)).toHaveLength(2);
+  const log = file("src/kit/log.server.ts");
+  expect(log).toContain('if (!missing) return new Conflict("in-use");');
+  expect(log).toContain("return new BadInput(field ? w.notThere(field) : w.someNotThere);");
 });
