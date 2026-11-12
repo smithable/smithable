@@ -109,7 +109,7 @@ export function recordPageRoute(
 /** The viewer's ${inert(n.label.toLowerCase())}: the first one they may read. */
 const ${fn} = createServerFn().handler(async () => {
   const viewer = await currentViewer();
-  const row = (await ${n.data}.list(viewer)).at(-1) ?? null;
+  const row = await ${n.data}.first(viewer);
   return {
     row,
     canSave: row ? ${writeCheck} : allows(${n.access}.create, viewer),${

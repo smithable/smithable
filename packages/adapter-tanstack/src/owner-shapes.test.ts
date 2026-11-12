@@ -208,7 +208,9 @@ describe("the support portal: an owner by address, and reading through a referen
       updated.sender = "customer";
     }`);
     // Unread marks go by who wrote a message (its creator), as for any message model.
-    expect(cases).toContain("at: target.createdAt, by: target.ownerId }");
+    expect(cases).toContain(
+      "or(isNull(target.ownerId), ne(target.ownerId, viewer.id)), gt(target.createdAt",
+    );
   });
 
   test("the side rule holds without the ux file too: a mail's reply makes the model a message model", () => {

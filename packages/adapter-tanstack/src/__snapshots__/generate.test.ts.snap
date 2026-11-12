@@ -26712,6 +26712,18 @@ export const postData = {
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
+  /** A page of the posts the viewer may read for an articles page: newest first by \`by\` (none last), then by creation. */
+  async latest(viewer: Viewer | null, by: "publishedOn" | undefined, limit: number, offset = 0) {
+    if (readScope(postAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const found = postData.shownRefs(viewer, await db.query.posts.findMany({
+      where: postData.readable(viewer),
+      orderBy: (t, { desc }) => [...(by ? [desc(t[by])] : []), desc(t.id)],
+      limit,
+      offset,
+    }));
+    const rows = found.map((row) => shownTo(viewer, row));
+    return rows;
+  },
   /** Development candidates: check all eligible rows, fetching at most 200 at once. */
   async candidateIds(viewer: Viewer | null, accepts: (row: Record<string, unknown>) => boolean = () => true): Promise<number[]> {
     if (readScope(postAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
@@ -30512,8 +30524,6 @@ import { site } from "#/generated/site";
 // import in the page's code.
 type Row = PostRow;
 
-/** When an article appeared, for ordering: its publishedOn. */
-const when = (row: Row) => (row.publishedOn ? new Date(\`\${row.publishedOn}T00:00:00Z\`).getTime() : 0);
 const dateText = (row: Row) =>
   row.publishedOn ? dayText(String(row.publishedOn), { month: "long", year: true }) : undefined;
 /** An article's address under the page: its address. */
@@ -30534,6 +30544,8 @@ const cardOf = (row: Row) => ({
   picture: row.cover ? { src: \`/files/post/\${row.id}/cover\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated } : undefined,
 });
 
+/** When an article appeared, for ordering: its publishedOn. */
+const when = (row: Row) => (row.publishedOn ? new Date(\`\${row.publishedOn}T00:00:00Z\`).getTime() : 0);
 /** Newest first: by when they appeared, then by creation. */
 const newestFirst = (rows: Row[]) => [...rows].sort((a, b) => when(b) - when(a) || b.id - a.id);
 
@@ -30632,8 +30644,6 @@ import { site } from "#/generated/site";
 // import in the page's code.
 type Row = PostRow;
 
-/** When an article appeared, for ordering: its publishedOn. */
-const when = (row: Row) => (row.publishedOn ? new Date(\`\${row.publishedOn}T00:00:00Z\`).getTime() : 0);
 const dateText = (row: Row) =>
   row.publishedOn ? dayText(String(row.publishedOn), { month: "long", year: true }) : undefined;
 /** An article's address under the page: its address. */
@@ -30654,19 +30664,16 @@ const cardOf = (row: Row) => ({
   picture: row.cover ? { src: \`/files/post/\${row.id}/cover\`, alt: row.cover.alt, width: row.cover.width, height: row.cover.height, generated: row.cover.generated } : undefined,
 });
 
-/** Newest first: by when they appeared, then by creation. */
-const newestFirst = (rows: Row[]) => [...rows].sort((a, b) => when(b) - when(a) || b.id - a.id);
-
 const getArticles = createServerFn()
   .validator(z.number().int().min(1))
   .handler(async ({ data: page }) => {
     // In the handler: the data function is the server's alone.
     const viewer = await currentViewer();
-    const rows = newestFirst(await postData.list(viewer));
-    const start = (page - 1) * 12;
+    // One more than a page, to know whether there is another.
+    const rows = await postData.latest(viewer, "publishedOn", 13, (page - 1) * 12);
     return {
-      items: rows.slice(start, start + 12).map(cardOf),
-      more: rows.length > start + 12,
+      items: rows.slice(0, 12).map(cardOf),
+      more: rows.length > 12,
       canCreate: allows(postAccess.create, viewer),
     };
   });
@@ -33826,7 +33833,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "3ff4cc3d generated",
+  "src/generated/post.server.ts": "406a7942 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -33957,8 +33964,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/sessions/new.tsx": "bdc24b1c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/app-card.tsx": "48827720 generated",
-  "src/routes/blog/$address.tsx": "796ebf2d generated",
-  "src/routes/blog/index.tsx": "71716e26 generated",
+  "src/routes/blog/$address.tsx": "be4b02d5 generated",
+  "src/routes/blog/index.tsx": "7cf3c708 generated",
   "src/routes/bookings/$id.tsx": "28c46fa8 generated",
   "src/routes/bookings/index.tsx": "5ab565dd generated",
   "src/routes/bookings/new.tsx": "09aebe1c generated",
@@ -46196,6 +46203,17 @@ export const businessProfileData = {
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
+  /** The viewer's business profile for a settings page: the first one they may read, or null. */
+  async first(viewer: Viewer | null) {
+    if (readScope(businessProfileAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const found = businessProfileData.shownRefs(viewer, await db.query.businessProfiles.findMany({
+      where: businessProfileData.readable(viewer),
+      orderBy: (t, { asc }) => [asc(t.id)],
+      limit: 1,
+    }));
+    const rows = found.map((row) => shownTo(viewer, row));
+    return rows[0] ?? null;
+  },
   /** Development candidates: check all eligible rows, fetching at most 200 at once. */
   async candidateIds(viewer: Viewer | null, accepts: (row: Record<string, unknown>) => boolean = () => true): Promise<number[]> {
     if (readScope(businessProfileAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
@@ -51981,7 +51999,7 @@ import { PageHeader } from "#/kit/AppShell";
 /** The viewer's business profile: the first one they may read. */
 const getSettings = createServerFn().handler(async () => {
   const viewer = await currentViewer();
-  const row = (await businessProfileData.list(viewer)).at(-1) ?? null;
+  const row = await businessProfileData.first(viewer);
   return {
     row,
     canSave: row ? allows(businessProfileAccess.write, viewer, row.ownerId) : allows(businessProfileAccess.create, viewer),
@@ -52202,7 +52220,7 @@ import { OnboardingLayout } from "#/kit/Onboarding";
 /** The viewer's business profile: the first one they may read. */
 const getWelcome = createServerFn().handler(async () => {
   const viewer = await currentViewer();
-  const row = (await businessProfileData.list(viewer)).at(-1) ?? null;
+  const row = await businessProfileData.first(viewer);
   return {
     row,
     canSave: row ? allows(businessProfileAccess.write, viewer, row.ownerId) : allows(businessProfileAccess.create, viewer),
@@ -52807,7 +52825,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "d41af9ad generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "9b6e7123 generated",
+  "src/generated/business-profile.server.ts": "32f93e49 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/card.server.ts": "5992cd52 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -52944,10 +52962,10 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/overview/index.tsx": "254c2c93 generated",
   "src/routes/privacy/index.tsx": "a2c437ac generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
-  "src/routes/settings/index.tsx": "dd4e71b0 generated",
+  "src/routes/settings/index.tsx": "9fdd2b64 generated",
   "src/routes/sign-in.tsx": "f931fe7c generated",
   "src/routes/sitemap[.]xml.ts": "5c8fa673 generated",
-  "src/routes/welcome/index.tsx": "902bc455 generated",
+  "src/routes/welcome/index.tsx": "152dd8b1 generated",
   "src/start.ts": "6b874d2d kit",
   "src/styles.css": "3120f1ba kit",
   "src/theme.css": "ba057d91 generated",
@@ -77157,6 +77175,19 @@ export const incidentData = {
     const rows = found.map((row) => shownTo(viewer, row));
     return rows;
   },
+  /** A page of the incidents the viewer may read for an articles page: newest first by \`by\` (none last), then by creation. */
+  async latest(viewer: Viewer | null, by: "detectedAt" | undefined, limit: number, offset = 0) {
+    if (readScope(incidentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const found = incidentData.shownRefs(viewer, await db.query.incidents.findMany({
+      where: incidentData.readable(viewer),
+      with: { component: { columns: { id: true, name: true } } },
+      orderBy: (t, { desc }) => [...(by ? [desc(t[by])] : []), desc(t.id)],
+      limit,
+      offset,
+    }));
+    const rows = found.map((row) => shownTo(viewer, row));
+    return rows;
+  },
   /** Development candidates: check all eligible rows, fetching at most 200 at once. */
   async candidateIds(viewer: Viewer | null, accepts: (row: Record<string, unknown>) => boolean = () => true): Promise<number[]> {
     if (readScope(incidentAccess.read, viewer) === "none") throw new AccessDenied(viewer !== null);
@@ -82006,8 +82037,6 @@ import { site } from "#/generated/site";
 // import in the page's code.
 type Row = IncidentRow;
 
-/** When an article appeared, for ordering: its detectedAt. */
-const when = (row: Row) => (row.detectedAt ? new Date(row.detectedAt).getTime() : 0);
 const dateText = (row: Row) =>
   row.detectedAt ? instantText(row.detectedAt, app.timeZone, { month: "long", year: true }) : undefined;
 /** An article's address under the page: its id. */
@@ -82028,6 +82057,8 @@ const cardOf = (row: Row) => ({
   picture: undefined,
 });
 
+/** When an article appeared, for ordering: its detectedAt. */
+const when = (row: Row) => (row.detectedAt ? new Date(row.detectedAt).getTime() : 0);
 /** Newest first: by when they appeared, then by creation. */
 const newestFirst = (rows: Row[]) => [...rows].sort((a, b) => when(b) - when(a) || b.id - a.id);
 
@@ -82123,8 +82154,6 @@ import { site } from "#/generated/site";
 // import in the page's code.
 type Row = IncidentRow;
 
-/** When an article appeared, for ordering: its detectedAt. */
-const when = (row: Row) => (row.detectedAt ? new Date(row.detectedAt).getTime() : 0);
 const dateText = (row: Row) =>
   row.detectedAt ? instantText(row.detectedAt, app.timeZone, { month: "long", year: true }) : undefined;
 /** An article's address under the page: its id. */
@@ -82145,19 +82174,16 @@ const cardOf = (row: Row) => ({
   picture: undefined,
 });
 
-/** Newest first: by when they appeared, then by creation. */
-const newestFirst = (rows: Row[]) => [...rows].sort((a, b) => when(b) - when(a) || b.id - a.id);
-
 const getArticles = createServerFn()
   .validator(z.number().int().min(1))
   .handler(async ({ data: page }) => {
     // In the handler: the data function is the server's alone.
     const viewer = await currentViewer();
-    const rows = newestFirst(await incidentData.list(viewer));
-    const start = (page - 1) * 12;
+    // One more than a page, to know whether there is another.
+    const rows = await incidentData.latest(viewer, "detectedAt", 13, (page - 1) * 12);
     return {
-      items: rows.slice(start, start + 12).map(cardOf),
-      more: rows.length > start + 12,
+      items: rows.slice(0, 12).map(cardOf),
+      more: rows.length > 12,
       canCreate: allows(incidentAccess.create, viewer),
     };
   });
@@ -84464,7 +84490,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident.import.server.ts": "f466f13d generated",
   "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "a02e68bf generated",
+  "src/generated/incident.server.ts": "f3c27f60 generated",
   "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "50bbd5b3 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",
@@ -84580,8 +84606,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/components/index.tsx": "505a019a generated",
   "src/routes/components/new.tsx": "0fbd3870 generated",
   "src/routes/health.ts": "362c9904 kit",
-  "src/routes/history/$address.tsx": "62c1d3b2 generated",
-  "src/routes/history/index.tsx": "fe879f2e generated",
+  "src/routes/history/$address.tsx": "14530eec generated",
+  "src/routes/history/index.tsx": "57adc080 generated",
   "src/routes/incidents/$id.tsx": "bf4ecf44 generated",
   "src/routes/incidents/index.tsx": "7c4beb6e generated",
   "src/routes/incidents/new.tsx": "a9f07576 generated",

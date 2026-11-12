@@ -13,6 +13,7 @@ import {
   importList,
   indexPath,
   join,
+  keyOf,
   modelNamed,
   names,
 } from "../shared.js";
@@ -55,17 +56,22 @@ function shared(page: ArticlesPage, ctx: GenContext) {
   const picture = p.picture
     ? `row.${p.picture} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${p.picture}\`, alt: row.${p.picture}.alt, width: row.${p.picture}.width, height: row.${p.picture}.height, generated: row.${p.picture}.generated } : undefined`
     : "undefined";
-  const code = `
-// The row type from the model's module: a type of the data function would keep its server
-// import in the page's code.
-type Row = ${model.name}Row;
-
+  // The article page orders all of them, to find the one before and after.
+  const order = `
 /** When an article appeared, for ordering: its ${p.date ?? "record"}${p.date ? "" : "'s creation"}. */
 const when = (row: Row) => ${
     p.date
       ? `(row.${p.date} ? new Date(${dated ? `\`\${row.${p.date}}T00:00:00Z\`` : `row.${p.date}`}).getTime() : 0)`
       : "row.id"
   };
+/** Newest first: by when they appeared, then by creation. */
+const newestFirst = (rows: Row[]) => [...rows].sort((a, b) => when(b) - when(a) || b.id - a.id);
+`;
+  const code = `
+// The row type from the model's module: a type of the data function would keep its server
+// import in the page's code.
+type Row = ${model.name}Row;
+
 const dateText = (row: Row) =>
   ${
     p.date
@@ -89,15 +95,17 @@ const cardOf = (row: Row) => ({
   date: dateText(row),
   picture: ${picture},
 });
-
-/** Newest first: by when they appeared, then by creation. */
-const newestFirst = (rows: Row[]) => [...rows].sort((a, b) => when(b) - when(a) || b.id - a.id);
 `;
-  return { imports, code, n, model, author, crud };
+  // The date the page orders by, as latest() takes it (its model may have other articles pages).
+  const dates = ir.pages.some(
+    (x) => x.pattern.kind === "articles" && x.pattern.model === model.name && x.pattern.date,
+  );
+  const by = dates ? `${p.date ? JSON.stringify(keyOf(model, p.date)) : "undefined"}, ` : "";
+  return { imports, code, order, n, model, author, crud, by };
 }
 
 function listRoute(page: ArticlesPage, ctx: GenContext): string {
-  const { imports, code, n } = shared(page, ctx);
+  const { imports, code, n, by } = shared(page, ctx);
   const framed = publicArticles(page, ctx);
   imports
     .add("@tanstack/react-router", "createFileRoute")
@@ -120,11 +128,11 @@ const getArticles = createServerFn()
   .handler(async ({ data: page }) => {
     // In the handler: the data function is the server's alone.
     const viewer = await currentViewer();
-    const rows = newestFirst(await ${n.data}.list(viewer));
-    const start = (page - 1) * ${PER_PAGE};
+    // One more than a page, to know whether there is another.
+    const rows = await ${n.data}.latest(viewer, ${by}${PER_PAGE + 1}, (page - 1) * ${PER_PAGE});
     return {
-      items: rows.slice(start, start + ${PER_PAGE}).map(cardOf),
-      more: rows.length > start + ${PER_PAGE},
+      items: rows.slice(0, ${PER_PAGE}).map(cardOf),
+      more: rows.length > ${PER_PAGE},
       canCreate: allows(${n.access}.create, viewer),
     };
   });
@@ -168,7 +176,7 @@ function ArticlesPage() {
 }
 
 function articleRoute(page: ArticlesPage, ctx: GenContext): string {
-  const { imports, code, n, author, crud } = shared(page, ctx);
+  const { imports, code, order, n, author, crud } = shared(page, ctx);
   const p = page.pattern;
   const framed = publicArticles(page, ctx);
   imports
@@ -189,7 +197,7 @@ function articleRoute(page: ArticlesPage, ctx: GenContext): string {
   const edit = crud
     ? `allows(${n.access}.write, viewer${owner}) && allows(pageAccess[${JSON.stringify(crud.id)}], viewer) ? \`${crud.route === "/" ? "" : crud.route}/\${row.id}\` : undefined`
     : "undefined";
-  return `${HEADER}${imports.render()}${code}
+  return `${HEADER}${imports.render()}${code}${order}
 const getArticle = createServerFn()
   .validator(z.string().max(200))
   .handler(async ({ data: address }) => {

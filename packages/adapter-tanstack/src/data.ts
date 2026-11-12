@@ -785,6 +785,17 @@ export function dataModule(
         .flatMap((p) => ux.pages[p.id]?.totals ?? []),
     ),
   ].map((name) => keyOf(model, name));
+  // Articles pages list a page of them, newest first by their date field (if any) in the query.
+  const articleDates = ir.pages.flatMap((p) =>
+    p.pattern.kind === "articles" && p.pattern.model === model.name ? [p.pattern.date ?? ""] : [],
+  );
+  const byDate = [...new Set(articleDates.filter(Boolean))].sort().map((d) => keyOf(model, d));
+  // A settings or onboarding page shows the viewer's one record: it reads only that row.
+  const single = ir.pages.some(
+    (p) =>
+      (p.pattern.kind === "settings" || p.pattern.kind === "onboarding") &&
+      p.pattern.model === model.name,
+  );
   // A page that lets its viewer sort the list: the order goes into the query (marketplace.md §2.2).
   const ordered = ir.pages.some(
     (p) => p.pattern.kind === "crud" && p.pattern.model === model.name && p.sortable?.length,
@@ -1537,7 +1548,7 @@ ${loose
   if (usesOr) drizzle.push("or");
   if (model.fields.some((f) => f.sequence)) drizzle.push("max");
   if (threadTarget?.trash) drizzle.push("isNull");
-  if (reads) drizzle.push("gt", "inArray", "isNotNull", "isNull", "ne", "or");
+  if (reads) drizzle.push("count", "gt", "inArray", "isNotNull", "isNull", "ne", "or");
   if (group.length) drizzle.push("count");
   if ((group.length && [...members, ...loose].some((m) => m.trash)) || roots.length)
     drizzle.push("isNull");
@@ -2215,18 +2226,21 @@ ${
   threadCounts(viewer: Viewer | null, ids: number[]): Record<number, { count: number; unread: number }> {
     const counts: Record<number, { count: number; unread: number }> = {};
     if (!ids.length) return counts;
-    const marks = new Map(
-      viewer
-        ? db.select({ id: ${reads}.recordId, at: ${reads}.readAt }).from(${reads}).where(and(eq(${reads}.userId, viewer.id), inArray(${reads}.recordId, ids))).all().map((r) => [r.id, r.at.getTime()])
-        : [],
-    );
     const target = ${tableRef(threadTarget)};
-    for (const m of db.select({ parent: target.${dataKey(threadRef)}, at: target.createdAt${writer ? `, by: target.${writer}` : ""} }).from(target).where(${threadTarget.trash ? `and(inArray(target.${dataKey(threadRef)}, ids), isNull(target.deletedAt))` : `inArray(target.${dataKey(threadRef)}, ids)`}).all()) {
-      if (m.parent === null) continue;
-      const c = (counts[m.parent] ??= { count: 0, unread: 0 });
-      c.count++;
-      if (viewer${writer ? " && m.by !== viewer.id" : ""} && m.at.getTime() > (marks.get(m.parent) ?? 0)) c.unread++;
-    }
+    const parent = target.${dataKey(threadRef)};
+    const theirs = ${threadTarget.trash ? "and(inArray(parent, ids), isNull(target.deletedAt))" : "inArray(parent, ids)"};
+    // Counted in the query, a group per record: its messages, then those after the viewer's mark.
+    for (const r of db.select({ parent, n: count() }).from(target).where(theirs).groupBy(parent).all())
+      if (r.parent !== null) counts[r.parent] = { count: r.n, unread: 0 };
+    if (!viewer) return counts;
+    const unread = db
+      .select({ parent, n: count() })
+      .from(target)
+      .leftJoin(${reads}, and(eq(${reads}.recordId, parent), eq(${reads}.userId, viewer.id)))
+      .where(and(theirs,${writer ? ` or(isNull(target.${writer}), ne(target.${writer}, viewer.id)),` : ""} gt(target.createdAt, sql\`coalesce(\${${reads}.readAt}, 0)\`)))
+      .groupBy(parent)
+      .all();
+    for (const r of unread) if (r.parent !== null && counts[r.parent]) counts[r.parent].unread = r.n;
     return counts;
   },
 
@@ -2277,7 +2291,36 @@ ${
       orderBy: (t, { desc }) => [${ordered ? "...(order ? [order] : []), " : ""}desc(t.id)],${capped ? "\n      limit," : ""}
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
-  },
+  },${
+    single
+      ? `
+  /** The viewer's ${inert(n.label.toLowerCase())} for a settings page: the first one they may read, or null. */
+  async first(viewer: Viewer | null) {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { asc }) => [asc(t.id)],
+      limit: 1,
+    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    ${asListed("rows", "return ", "[0] ?? null")}
+  },`
+      : ""
+  }${
+    articleDates.length
+      ? `
+  /** A page of the ${inert(n.pluralLabel.toLowerCase())} the viewer may read for an articles page: newest first${byDate.length ? " by `by` (none last)" : ""}, then by creation. */
+  async latest(viewer: Viewer | null, ${byDate.length ? `by: ${byDate.map((k) => JSON.stringify(k)).join(" | ")} | undefined, ` : ""}limit: number, offset = 0) {
+    if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
+    const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
+      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
+      orderBy: (t, { desc }) => [${byDate.length ? "...(by ? [desc(t[by])] : []), " : ""}desc(t.id)],
+      limit,
+      offset,
+    }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
+    ${asListed("rows", "return ")}
+  },`
+      : ""
+  }
   /** Development candidates: check all eligible rows, fetching at most 200 at once. */
   async candidateIds(viewer: Viewer | null, accepts: (row: Record<string, unknown>) => boolean = () => true): Promise<number[]> {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
