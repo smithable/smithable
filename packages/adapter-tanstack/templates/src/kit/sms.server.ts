@@ -117,6 +117,11 @@ export function queueSms(
   if (queued) sendSoon();
 }
 
+/** The SMS provider as the app is set up now (SMS_PROVIDER), for the privacy page; none unset. */
+export function smsProvider(): string | null {
+  return process.env.SMS_PROVIDER || null;
+}
+
 /** Sends one text through the provider, or writes it when there are no settings. */
 async function deliver(
   to: string,

@@ -85,3 +85,45 @@ pages:
   const page = files.find((f) => f.path === "src/kit/LegalPage.tsx")?.content ?? "";
   expect(page).toContain("{facts.signIn.google && <p>{w.legalGoogle}</p>}");
 });
+
+test("what only the running app knows is read when the page is shown, not frozen in (legal-page.md §6.1)", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: X }
+models:
+  Message:
+    fields: { name: string!, email: email! }
+pages:
+  home: { route: /, landing: { hero: {}, footer: {} } }
+  messages: { crud: Message }
+  privacy: { route: /privacy, legal: privacy }
+`,
+  }).ir as SpecIR;
+  const withAsk = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\npublic: { pages: [home, privacy] }\nassistant: { for: signed-in }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const route = (auth: AuthIR) =>
+    generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() }).find(
+      (f) => f.path === "src/routes/privacy/index.tsx",
+    )?.content ?? "";
+  const asked = route(withAsk);
+  expect(asked).toContain(
+    "const runningFacts = createServerFn().handler(async () => ({\n  ai: aiFacts(),\n}));",
+  );
+  expect(asked).toContain("  loader: () => runningFacts(),\n");
+  expect(asked).toContain("running={Route.useLoaderData()}");
+  // Without Ask or texts there is nothing running to read.
+  const plain = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\npublic: { pages: [home, privacy] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  expect(route(plain)).not.toContain("runningFacts");
+});

@@ -49,7 +49,24 @@ export interface LegalFacts {
   more?: { title?: string; text?: string };
 }
 
-export function LegalPage({ facts, title }: { facts: LegalFacts; title: string }) {
+/**
+ * What only the running app knows (legal-page.md §6.1), read when the page is shown: the AI
+ * model's provider and region (null: no model is set up), the SMS provider (null: none set).
+ */
+export interface RunningFacts {
+  ai?: { provider?: string; region?: string } | null;
+  sms?: string | null;
+}
+
+export function LegalPage({
+  facts,
+  title,
+  running,
+}: {
+  facts: LegalFacts;
+  title: string;
+  running?: RunningFacts;
+}) {
   const o = facts.operator ?? {};
   const providers = [
     ...(facts.signIn?.email ? [w.legalByEmailCode] : []),
@@ -92,6 +109,10 @@ export function LegalPage({ facts, title }: { facts: LegalFacts; title: string }
       {facts.assistant && (
         <Part title={w.legalAssistantTitle}>
           <p>{w.legalAssistant(facts.assistant.for, facts.assistant.changes)}</p>
+          {running?.ai === null && <p>{w.legalNoModelNow}</p>}
+          {running?.ai?.provider && (
+            <p>{w.legalModelNow(running.ai.provider, running.ai.region)}</p>
+          )}
         </Part>
       )}
       <Part title={w.legalRecordsTitle}>
@@ -158,6 +179,7 @@ export function LegalPage({ facts, title }: { facts: LegalFacts; title: string }
       {facts.smsAbout && (
         <Part title={w.legalSmsTitle}>
           <p>{w.legalSms(facts.smsAbout)}</p>
+          {running?.sms && <p>{w.legalSmsNow(running.sms)}</p>}
         </Part>
       )}
       {facts.pushAbout && (
