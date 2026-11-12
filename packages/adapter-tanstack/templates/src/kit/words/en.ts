@@ -609,6 +609,8 @@ export const w = {
   // A field's rules on the record (record-rules.md): a lock, a requirement while a condition holds.
   cannotChangeNow: (label: string) => `${label} cannot be changed now.`,
   requiredNow: (label: string) => `${label} is required now.`,
+  notThere: (label: string) => `${label}: there is no such record. Give the id of one that exists.`,
+  someNotThere: "A record it refers to does not exist. Give the ids of ones that do.",
   removePicture: (n: number) => `Remove picture ${n}`,
   removeWho: (name: string) => `Remove ${name}?`,
   revokeKey: (name: string) => `Revoke "${name}"? Programs using it stop working at once.`,
