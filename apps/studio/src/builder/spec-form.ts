@@ -340,6 +340,65 @@ export function operationFor(
         ? (["setMeaning", { concept, [which]: value ?? "" }] as [string, Record<string, unknown>])
         : undefined;
     if (path.length === 2 && first === "app" && key === "intent") return meaning("app", "intent");
+    // A page's lists, filters and choices, each through its own operation (the lists written whole).
+    if (first === "pages" && model) {
+      const page = model;
+      const own = path[2];
+      const op = (name: string, args: Record<string, unknown>) =>
+        [name, { page, ...args }] as [string, Record<string, unknown>];
+      if (path.length === 3) {
+        const list = { search: "setSearch", filters: "setFilters", sortable: "setSortable" }[
+          String(own)
+        ];
+        if (list && (value === undefined || Array.isArray(value)))
+          return op(list, { fields: value ?? [] });
+        if (own === "export" && (value === undefined || value === false))
+          return op("setExport", { offered: value === false ? "off" : "on" });
+        if (
+          own === "favorites" &&
+          (value === undefined || typeof value === "boolean" || value === "only")
+        )
+          return op("setFavorites", { mode: value === "only" ? "only" : value ? "on" : "off" });
+        if (own === "mine" && (value === undefined || typeof value === "boolean"))
+          return op("setMine", { mode: value ? "on" : "off" });
+        if (own === "period") {
+          if (value === undefined) return op("setPeriod", { field: "none" });
+          if (typeof value === "string") return op("setPeriod", { field: value });
+          if (isCondition(value)) return op("setPeriod", { byModel: value });
+        }
+        // What the page means; an action of the same name would take setMeaning's concept.
+        const actions = (whole as { actions?: Record<string, unknown> } | undefined)?.actions;
+        if ((own === "description" || own === "intent") && !actions?.[page])
+          return meaning(page, own);
+      }
+      if (own === "contact" && path.length <= 4) {
+        if (path.length === 3 && value === undefined) return op("setContact", {});
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value) as unknown;
+        const contact = typeof next === "string" ? { to: next } : (next as Record<string, unknown>);
+        if (typeof contact?.to === "string")
+          return op("setContact", {
+            to: contact.to,
+            ...(typeof contact.keep === "string" ? { keep: contact.keep } : {}),
+          });
+      }
+      // A filter's value until the viewer chooses: one filter at a time, "none" taking it away.
+      if (own === "defaultFilter" && path.length <= 4) {
+        const asText = (v: unknown) =>
+          Array.isArray(v) ? v.map(String).join(",") : v === undefined ? "none" : String(v);
+        if (path.length === 4)
+          return op("setDefaultFilter", { field: path[3], value: asText(value) });
+        const before = (at(whole, path) ?? {}) as Record<string, unknown>;
+        const after = (isCondition(value) ? value : {}) as Record<string, unknown>;
+        const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+          (k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]),
+        );
+        if (changed.length === 1)
+          return op("setDefaultFilter", {
+            field: changed[0],
+            value: asText(after[changed[0] ?? ""]),
+          });
+      }
+    }
     if (first === "models" && model) {
       const own = path[2];
       if (path.length === 3 && (own === "description" || own === "intent"))

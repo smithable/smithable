@@ -197,6 +197,15 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.yml", ["models", "Order", "schedule"], undefined],
     ["smithable.yml", ["models", "Order", "occupies"], undefined],
     ["smithable.yml", ["models", "Order", "unique"], [["customer", "number"]]],
+    ["smithable.yml", ["pages", "orders", "search"], ["name"]],
+    ["smithable.yml", ["pages", "orders", "filters"], ["status"]],
+    ["smithable.yml", ["pages", "orders", "export"], false],
+    ["smithable.yml", ["pages", "orders", "favorites"], true],
+    ["smithable.yml", ["pages", "orders", "mine"], true],
+    ["smithable.yml", ["pages", "orders", "period"], "placedAt"],
+    ["smithable.yml", ["pages", "orders", "contact"], "owner"],
+    ["smithable.yml", ["pages", "orders", "defaultFilter", "status"], "open"],
+    ["smithable.yml", ["pages", "orders", "description"], "Every order"],
   ];
   for (const [file, path, value] of cases) {
     const [op] = operationFor(file, path, value) ?? [];
@@ -358,4 +367,72 @@ test("a schedule, what a booking occupies and fields unique together, each throu
   ).toEqual(["setUnique", { model: "Visit", fields: ["barber", "startsAt"], scope: "app" }]);
   // Two rules changed at once are more than one operation: editSpec writes them.
   expect(operationFor("smithable.yml", unique, [["customer", "day"]], spec)).toBeUndefined();
+});
+
+test("a page's lists, filters and choices each go through their own operation", () => {
+  const spec = {
+    pages: {
+      orders: {
+        crud: "Order",
+        filters: ["status", "placedAt"],
+        defaultFilter: { placedAt: "upcoming" },
+        contact: { to: "owner", keep: "Note" },
+      },
+    },
+    actions: { report: { on: "Order" } },
+  };
+  const page = (...rest: (string | number)[]) => ["pages", "orders", ...rest];
+  expect(operationFor("smithable.yml", page("search"), ["name", "email"])).toEqual([
+    "setSearch",
+    { page: "orders", fields: ["name", "email"] },
+  ]);
+  expect(operationFor("smithable.yml", page("filters"), undefined)).toEqual([
+    "setFilters",
+    { page: "orders", fields: [] },
+  ]);
+  expect(operationFor("smithable.yml", page("sortable"), ["total"])?.[0]).toBe("setSortable");
+  expect(operationFor("smithable.yml", page("export"), false)).toEqual([
+    "setExport",
+    { page: "orders", offered: "off" },
+  ]);
+  expect(operationFor("smithable.yml", page("favorites"), "only")?.[1]).toEqual({
+    page: "orders",
+    mode: "only",
+  });
+  expect(operationFor("smithable.yml", page("mine"), undefined)?.[1]).toEqual({
+    page: "orders",
+    mode: "off",
+  });
+  expect(operationFor("smithable.yml", page("period"), { Invoice: "issuedOn" })).toEqual([
+    "setPeriod",
+    { page: "orders", byModel: { Invoice: "issuedOn" } },
+  ]);
+  expect(operationFor("smithable.yml", page("contact", "keep"), undefined, spec)).toEqual([
+    "setContact",
+    { page: "orders", to: "owner" },
+  ]);
+  expect(operationFor("smithable.yml", page("contact"), undefined, spec)).toEqual([
+    "setContact",
+    { page: "orders" },
+  ]);
+  // One filter's value at a time; a list of values is written as setDefaultFilter reads it.
+  expect(
+    operationFor(
+      "smithable.yml",
+      page("defaultFilter"),
+      { placedAt: "upcoming", status: ["open", "paid"] },
+      spec,
+    ),
+  ).toEqual(["setDefaultFilter", { page: "orders", field: "status", value: "open,paid" }]);
+  expect(operationFor("smithable.yml", page("defaultFilter", "placedAt"), undefined, spec)).toEqual(
+    ["setDefaultFilter", { page: "orders", field: "placedAt", value: "none" }],
+  );
+  expect(operationFor("smithable.yml", page("intent"), "Find an order fast", spec)).toEqual([
+    "setMeaning",
+    { concept: "orders", intent: "Find an order fast" },
+  ]);
+  // A page named like an action: setMeaning would explain the action, so editSpec writes it.
+  expect(
+    operationFor("smithable.yml", ["pages", "report", "intent"], "Monthly figures", spec),
+  ).toBeUndefined();
 });

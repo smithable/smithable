@@ -1171,6 +1171,8 @@ const setMeaning: Operation<{ concept: string; description?: string; intent?: st
     "smithable.yml:models.*.intent",
     "smithable.yml:models.*.fields.*.description",
     "smithable.yml:models.*.fields.*.intent",
+    "smithable.yml:pages.*.description",
+    "smithable.yml:pages.*.intent",
   ],
   summary:
     "Explain what something means, for the assistant and developers, never shown to visitors: the app, a model, a field (Model.field), an action or a page gets a description (what it is) or an intent (what it should achieve). A choice field's short description goes in the assistant's summary, so a word that is both a value and a word people use loosely is read as the app means it. An empty text removes the key.",

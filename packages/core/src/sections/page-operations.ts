@@ -412,6 +412,7 @@ const setPeriod: Operation<{
   byModel?: Record<string, string>;
 }> = {
   name: "setPeriod",
+  sets: ["smithable.yml:pages.*.period", "smithable.yml:pages.*.period.*"],
   summary:
     "Give a dashboard a period: the date field its tiles are scoped by, with chips on the page (none takes it away).",
   schema: {
@@ -595,6 +596,7 @@ const setNavigation: Operation<{ menu: string; pages: string[] }> = {
 
 const setSearch: Operation<{ page: string; fields?: string[] }> = {
   name: "setSearch",
+  sets: ["smithable.yml:pages.*.search", "smithable.yml:pages.*.search.*"],
   summary: "Let a page's list be searched by these fields, or remove the search (no fields).",
   schema: {
     type: "object",
@@ -635,6 +637,7 @@ function listKeyOperation(
 ): Operation<{ page: string; fields?: string[] }> {
   return {
     name: key === "filters" ? "setFilters" : "setSortable",
+    sets: [`smithable.yml:pages.*.${key}`, `smithable.yml:pages.*.${key}.*`],
     summary,
     schema: {
       type: "object",
@@ -697,6 +700,7 @@ const setSortable = listKeyOperation(
 
 const setDefaultFilter: Operation<{ page: string; field: string; value: string }> = {
   name: "setDefaultFilter",
+  sets: ["smithable.yml:pages.*.defaultFilter", "smithable.yml:pages.*.defaultFilter.*"],
   summary:
     'What a page\'s list is filtered by until the viewer chooses: a filter and its value, as the address carries it (startsAt upcoming; status "open,pending"); "none" takes the default away.',
   schema: {
@@ -755,6 +759,7 @@ const setDefaultFilter: Operation<{ page: string; field: string; value: string }
 
 const setExport: Operation<{ page: string; offered: "on" | "off" }> = {
   name: "setExport",
+  sets: ["smithable.yml:pages.*.export"],
   summary:
     "Offer Export CSV on a list page (on, as a list does unless it says otherwise) or not (off).",
   schema: {
@@ -788,6 +793,7 @@ const setExport: Operation<{ page: string; offered: "on" | "off" }> = {
 
 const setFavorites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = {
   name: "setFavorites",
+  sets: ["smithable.yml:pages.*.favorites"],
   summary:
     "Let people save a page's records (a heart on each, and a Saved view), list only the viewer's saved ones (only), or remove favorites (off).",
   schema: {
@@ -829,6 +835,7 @@ const setFavorites: Operation<{ page: string; mode?: "on" | "only" | "off" }> = 
 
 const setMine: Operation<{ page: string; mode?: "on" | "off" }> = {
   name: "setMine",
+  sets: ["smithable.yml:pages.*.mine"],
   summary:
     "Make a page list only the viewer's own records (my items, my orders), or every record again (off).",
   schema: {
@@ -860,6 +867,11 @@ const setMine: Operation<{ page: string; mode?: "on" | "off" }> = {
 
 const setContact: Operation<{ page: string; to?: string; keep?: string }> = {
   name: "setContact",
+  sets: [
+    "smithable.yml:pages.*.contact",
+    "smithable.yml:pages.*.contact.to",
+    "smithable.yml:pages.*.contact.keep",
+  ],
   summary:
     "Give a page's record page a contact block that mails the record's owner (or the user a field names), optionally keeping a copy in a model; no recipient removes it.",
   schema: {
