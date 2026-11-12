@@ -586,3 +586,36 @@ test("timers, outgoing mail, payments, incoming calls and an action's meaning th
   // A payment's amount taken away has no "none": editSpec writes it, and the checks say why not.
   expect(operationFor(y, ["payments", "deposit", "amount"], undefined)).toBeUndefined();
 });
+
+test("the whole app's look goes through its operations", () => {
+  const u = "smithable.ux.yml";
+  expect(operationFor(u, ["aiBadge"], false)).toEqual(["setAiBadge", { shown: "false" }]);
+  expect(operationFor(u, ["aiBadge"], undefined)).toEqual(["setAiBadge", { shown: "true" }]);
+  expect(operationFor(u, ["chrome"], undefined)).toEqual(["setChrome", { chrome: "inherit" }]);
+  expect(operationFor(u, ["navigation"], "topbar")).toEqual([
+    "setMenuLayout",
+    { navigation: "topbar" },
+  ]);
+  expect(operationFor(u, ["menuActive"], "subtle")).toEqual([
+    "setMenuActive",
+    { active: "subtle" },
+  ]);
+  expect(operationFor(u, ["assistant", "voice"], "formal")).toEqual([
+    "setAssistantVoice",
+    { voice: "formal" },
+  ]);
+  expect(operationFor(u, ["theme", "preset"], "minimal")).toEqual([
+    "setTheme",
+    { preset: "minimal" },
+  ]);
+  expect(operationFor(u, ["theme", "brand", "primary"], undefined)).toEqual([
+    "setTheme",
+    { primary: "none" },
+  ]);
+  expect(operationFor(u, ["theme", "density"], "compact")).toEqual([
+    "setTheme",
+    { density: "compact" },
+  ]);
+  // Motion's "none" is no motion at all, so taking the key away stays with editSpec.
+  expect(operationFor(u, ["theme", "motion"], undefined)).toBeUndefined();
+});

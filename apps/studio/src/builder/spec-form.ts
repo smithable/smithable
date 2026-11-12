@@ -328,6 +328,34 @@ export function operationFor(
         ];
     }
   }
+  // The whole app's look: the AI badge, the menu, the chrome, the assistant's voice and the theme.
+  if (
+    file === "smithable.ux.yml" &&
+    (typeof value === "string" || value === undefined || typeof value === "boolean")
+  ) {
+    const where = path.join(".");
+    const text = typeof value === "string" ? value : undefined;
+    if (where === "aiBadge" && typeof value !== "string")
+      return ["setAiBadge", { shown: String(value ?? true) }];
+    if (where === "menuActive" && value !== true && value !== false)
+      return ["setMenuActive", { active: text ?? "inherit" }];
+    if (where === "chrome" && value !== true && value !== false)
+      return ["setChrome", { chrome: text ?? "inherit" }];
+    if (where === "navigation" && value !== true && value !== false)
+      return ["setMenuLayout", { navigation: text ?? "inherit" }];
+    if (where === "assistant.voice" && text) return ["setAssistantVoice", { voice: text }];
+    // A theme key taken away is "none" where setTheme has it (motion's "none" is no motion at all).
+    if ((where === "theme.preset" || where === "theme.motion") && text)
+      return ["setTheme", { [where.slice(6)]: text }];
+    const brand = {
+      "theme.density": "density",
+      "theme.brand.primary": "primary",
+      "theme.brand.background": "background",
+      "theme.brand.font": "font",
+    }[where];
+    if (brand && value !== true && value !== false)
+      return ["setTheme", { [brand]: text ?? "none" }];
+  }
   // A page's icon in the menu.
   if (
     file === "smithable.ux.yml" &&
