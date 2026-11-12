@@ -79,7 +79,7 @@ pages:
     'forms: [{ label: messageUi.pluralLabel, fields: ["name", "email", "text"] }]',
   );
   expect(route).toContain('services: [{ name: "kitchen", about: "orders" }]');
-  expect(route).toContain('mailInto: ["messages"]');
+  expect(route).toContain('mailInto: [{ into: "messages", sender: true }]');
   expect(route).toContain('custom: { actions: ["tidy"] }');
   expect(route).not.toContain("payProvider");
   const page = files.find((f) => f.path === "src/kit/LegalPage.tsx")?.content ?? "";

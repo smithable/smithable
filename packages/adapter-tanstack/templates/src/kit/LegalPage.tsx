@@ -39,8 +39,8 @@ export interface LegalFacts {
   forms?: { label: string; fields: string[] }[];
   /** Services the operator set up that records are sent to, and what about. */
   services?: { name: string; about?: string }[];
-  /** Kinds of record that mail sent to the app's address becomes. */
-  mailInto?: string[];
+  /** Kinds of record that mail sent to the app's address becomes, and whether the sender is kept. */
+  mailInto?: { into: string; sender: boolean }[];
   /** Calls from other services, and the kind of record each becomes (none: the operator's own code). */
   calls?: { name: string; into?: string }[];
   /** The operator's own functions: custom actions by name, or other custom code. */

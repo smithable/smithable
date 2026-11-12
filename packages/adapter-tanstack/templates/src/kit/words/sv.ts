@@ -654,12 +654,12 @@ export const w = {
     "När du loggar in med Google skickas du till Google, som berättar ditt namn och din e-postadress för appen.",
   legalAssistantTitle: "Assistenten",
   legalAssistant: (who: "visitors" | "members" | string[], changes: boolean) =>
-    `Appen har en assistent, Fråga, för ${who === "visitors" ? "alla" : who === "members" ? "alla som loggar in" : who.join(", ")}. Den svarar utifrån de poster den som frågar får läsa${changes ? " och kan föreslå ändringar, som görs först när den personen bekräftar dem" : ""}. Frågor från dem som loggar in, med de poster som behövs för svaret, går till en AI-modell som appens ägare har valt.${who === "visitors" ? " Besökares frågor besvaras av appens egna regler, utan modell." : ""}`,
+    `Appen har en assistent, Fråga, för ${who === "visitors" ? "alla" : who === "members" ? "alla som loggar in" : who.join(", ")}. Den svarar utifrån de poster den som frågar får läsa${changes ? " och kan föreslå ändringar, som görs först när den personen bekräftar dem" : ""}. Frågor från dem som loggar in, med de poster som behövs för svaret, kan gå till en AI-modell som appens ägare har valt.${who === "visitors" ? " Besökares frågor besvaras av appens egna regler, utan modell." : ""}`,
   legalFormsTitle: "Vad besökare ombeds uppge",
   legalFormsIntro: "Formulär som vem som helst kan fylla i frågar efter:",
   legalIncomingTitle: "Vad som kommer in",
-  legalMailInto: (labels: string[]) =>
-    `E-post som skickas till appens adress blir ${labels.join(", ")} i appen, med avsändarens adress och vad brevet säger.`,
+  legalMailInto: (entries: { into: string; sender: boolean }[]) =>
+    `E-post som skickas till appens adress blir ${entries.map((e) => `${e.into}${e.sender ? ", med avsändarens adress" : ""}`).join("; ")} i appen, med det brevet säger.`,
   legalCalls: (calls: { name: string; into?: string }[]) =>
     `Tjänster som appens ägare har kopplat in skickar uppgifter till den: ${calls.map((c) => (c.into ? `${c.name}, som blir ${c.into}` : `${c.name}, som ägarens egen kod tar hand om`)).join("; ")}.`,
   legalServicesTitle: "Andra tjänster",
