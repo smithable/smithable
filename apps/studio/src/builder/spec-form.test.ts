@@ -669,6 +669,15 @@ test("Who can: sign-in, the administrators, the roles, Ask and the API, each thr
     "setRoles",
     { roles: { admin: "", sales: "Sells", member: "" }, defaultRole: "member" },
   ]);
+  // The new users' role the file has is given again with a description, never dropped or added.
+  const chosen = { ...auth, defaultRole: "member" };
+  expect(operationFor(a, ["roles", "sales", "description"], "Sells more", chosen)?.[1]).toEqual({
+    roles: { admin: "", sales: "Sells more", member: "" },
+    defaultRole: "member",
+  });
+  const one = { roles: { admin: "all", member: {} } };
+  expect(operationFor(a, ["roles", "member", "description"], "Books", one)).toBeUndefined();
+  expect(operationFor(a, ["api", "except"], ["Secret"], auth)?.[1]).not.toHaveProperty("except");
   expect(operationFor(a, ["assistant", "may"], undefined, auth)).toEqual([
     "setAssistant",
     { for: ["sales"] },
@@ -678,8 +687,13 @@ test("Who can: sign-in, the administrators, the roles, Ask and the API, each thr
     { for: ["signed-in"], may: "change" },
   ]);
   expect(operationFor(a, ["assistant"], undefined, auth)).toEqual(["setAssistant", { for: [] }]);
-  expect(operationFor(a, ["api", "except"], ["Secret"], auth)?.[1]).toEqual({
-    models: ["Order"],
+  expect(
+    operationFor(a, ["api", "except"], ["Secret"], {
+      ...auth,
+      api: { ...auth.api, models: "all" },
+    })?.[1],
+  ).toEqual({
+    models: ["all"],
     actions: ["ship"],
     except: ["Secret"],
     assistants: true,

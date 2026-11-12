@@ -413,13 +413,24 @@ export function operationFor(
         ]),
       );
       // setRoles keeps a description it is given none for, so one taken away stays with editSpec.
-      const fits = typeof value === "string" && value.trim() !== "";
+      // It also writes the new users' role each time: the one the file has is given again, and
+      // with no such line and one role besides admin (which setRoles would write) editSpec writes it.
+      const kept = at(whole, ["defaultRole"]);
+      const others = Object.keys(roles).filter((r) => r !== "admin");
+      const fits =
+        typeof value === "string" &&
+        value.trim() !== "" &&
+        (where === "defaultRole" || typeof kept === "string" || others.length !== 1);
       if (fits)
         return [
           "setRoles",
           {
             roles: Object.fromEntries(Object.entries(described).map(([n, d]) => [n, d ?? ""])),
-            ...(where === "defaultRole" ? { defaultRole: value } : {}),
+            ...(where === "defaultRole"
+              ? { defaultRole: value }
+              : typeof kept === "string"
+                ? { defaultRole: kept }
+                : {}),
           },
         ];
     }
@@ -457,7 +468,8 @@ export function operationFor(
             ...(next?.actions !== undefined
               ? { actions: next.actions === "all" ? ["all"] : next.actions }
               : {}),
-            ...(list(next?.except) ? { except: next?.except } : {}),
+            // "except" belongs with all; left over beside a list, editSpec's checks say so.
+            ...(list(next?.except) && models[0] === "all" ? { except: next?.except } : {}),
             ...(assistants ? { assistants: true } : {}),
             ...(isCondition(assistants) && assistants.delete === true
               ? { assistantsDelete: true }
