@@ -21,6 +21,7 @@ import { pageModel } from "../patterns.js";
  */
 const setText: Operation<{ path: string[]; text: string; language?: string }> = {
   name: "setText",
+  sets: ["smithable.content.yml:**"],
   summary:
     'Change a visible text, e.g. path [pages, customers, subtitle] or [models, Customer, fields, email, label] ("" restores the default).',
   schema: {

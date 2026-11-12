@@ -15,7 +15,9 @@ export {
   findOperation,
   OPERATIONS,
   operationsFor,
+  operationsSetting,
   parseOperationArgs,
+  setsKey,
   translationPath,
 } from "./apply.js";
 export { namesFor } from "./arguments.js";

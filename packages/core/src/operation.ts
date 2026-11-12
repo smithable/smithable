@@ -140,6 +140,12 @@ export function refTo(ref: ArgRef, schema: JsonSchema = {}, list = false): JsonS
 export interface Operation<A extends OperationArgs = OperationArgs> {
   name: string;
   summary: string;
+  /**
+   * The spec keys this operation sets, where the argument schema does not say it
+   * (docs/design/what-it-does.md §4): "file:path", `*` one name, `**` anything below. A form's
+   * control for such a key writes through this operation; any other key through editSpec.
+   */
+  sets?: readonly string[];
   /** Argument JSON Schema. */
   schema: JsonSchema;
   /**

@@ -552,6 +552,7 @@ const setAction: Operation<{
 
 const removeAction: Operation<{ action: string }> = {
   name: "removeAction",
+  sets: ["smithable.yml:actions.*"],
   summary:
     "Remove an action, from the pages that offer it too. A custom action's code in src/custom/actions/ stays.",
   schema: {

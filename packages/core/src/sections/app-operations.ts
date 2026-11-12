@@ -23,6 +23,16 @@ const setApp: Operation<{
   numbers?: string;
 }> = {
   name: "setApp",
+  sets: [
+    "smithable.yml:app.name",
+    "smithable.yml:app.description",
+    "smithable.yml:app.currency",
+    "smithable.yml:app.timezone",
+    "smithable.yml:app.clock",
+    "smithable.yml:app.date",
+    "smithable.yml:app.week",
+    "smithable.yml:app.numbers",
+  ],
   summary:
     'Set what the app is: its name, a one-sentence description, its currency (ISO 4217), time zone, clock, date order, first day of the week or numbers ("none" removes any but the name and description, back to the default).',
   schema: {

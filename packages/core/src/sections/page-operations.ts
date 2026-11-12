@@ -901,6 +901,7 @@ const setContact: Operation<{ page: string; to?: string; keep?: string }> = {
 
 const removePage: Operation<{ page: string }> = {
   name: "removePage",
+  sets: ["smithable.yml:pages.*"],
   summary: "Remove a page, from the menus too. Its records and their data stay.",
   schema: {
     type: "object",

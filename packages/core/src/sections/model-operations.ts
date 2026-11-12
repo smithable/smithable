@@ -152,6 +152,7 @@ function fieldPath(m: string, f: string, ir?: SpecIR) {
 
 const addModel: Operation<{ model: string; fields: Record<string, FieldArg> }> = {
   name: "addModel",
+  sets: ["smithable.yml:models.*"],
   summary: "Add a model with its fields.",
   schema: {
     type: "object",
@@ -191,6 +192,7 @@ const addField: Operation<{
   list?: boolean;
 }> = {
   name: "addField",
+  sets: ["smithable.yml:models.*.fields.*"],
   summary: "Add a field to a model.",
   schema: {
     type: "object",
@@ -256,6 +258,7 @@ const addField: Operation<{
 
 const changeField: Operation<{ model: string; field: string; type: string; renames?: string[] }> = {
   name: "changeField",
+  sets: ["smithable.yml:models.*.fields.*"],
   summary: "Change a field's type, required flag, uniqueness or default.",
   schema: {
     type: "object",
@@ -430,6 +433,7 @@ const renameModel: Operation<{ from: string; to: string }> = {
 
 const removeField: Operation<{ model: string; field: string }> = {
   name: "removeField",
+  sets: ["smithable.yml:models.*.fields.*"],
   summary: "Remove a field and its data.",
   schema: {
     type: "object",

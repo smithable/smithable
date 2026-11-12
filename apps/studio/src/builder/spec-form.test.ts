@@ -1,4 +1,4 @@
-import { buildJsonSchema, COMPANION_SCHEMAS } from "@smithable/core";
+import { buildJsonSchema, COMPANION_SCHEMAS, operationsSetting } from "@smithable/core";
 import { expect, test } from "vitest";
 import {
   alternativeFor,
@@ -159,4 +159,30 @@ test("a key's label is its schema title where core gives one, the first sentence
     "Currency",
   );
   expect(labelOf("thing", { description: "What it holds. More words." })).toBe("What it holds");
+});
+
+test("every operation a control writes through is one core lists for its key", () => {
+  const cases: [string, (string | number)[], unknown][] = [
+    ["smithable.content.yml", ["pages", "home", "title"], "Hem"],
+    ["smithable.yml", ["app", "name"], "Shop"],
+    ["smithable.yml", ["models", "Order"], {}],
+    ["smithable.yml", ["models", "Order", "fields", "note"], {}],
+    ["smithable.yml", ["models", "Order", "fields", "note"], "text"],
+    ["smithable.yml", ["models", "Order", "fields", "note"], undefined],
+    ["smithable.yml", ["pages", "orders"], undefined],
+    ["smithable.yml", ["actions", "ship"], undefined],
+    ["smithable.ux.yml", ["pages", "orders", "icon"], "Box"],
+    ["smithable.auth.yml", ["defaultAccess"], "private"],
+    ["smithable.auth.yml", ["public", "read"], ["Order"]],
+    ["smithable.auth.yml", ["roles", "sales"], "all"],
+    ["smithable.auth.yml", ["roles", "sales", "write"], ["Order"]],
+  ];
+  for (const [file, path, value] of cases) {
+    const [op] = operationFor(file, path, value) ?? [];
+    expect(op, `${file}:${path.join(".")}`).toBeDefined();
+    expect(
+      operationsSetting(file, path).map((o) => o.name),
+      `${file}:${path.join(".")}`,
+    ).toContain(op);
+  }
 });
