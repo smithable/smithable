@@ -5398,8 +5398,15 @@ async function articlesFlow(dir, base) {
       .getByRole("heading", { level: 1, name: "Yin for beginners" })
       .waitFor({ timeout: 10000 * P });
     await page.locator("strong", { hasText: "deep" }).waitFor();
+    // To a visitor, the one other published article is its neighbour; no draft is (an admin's
+    // neighbours may be drafts, which they read).
+    const visitor = await browser.newPage();
+    await open(visitor, `${base}/blog/yin-for-beginners`);
+    await visitor.getByRole("link", { name: /Morning practice/ }).waitFor({ timeout: 10000 * P });
+    if ((await visitor.getByRole("link", { name: /←|→/ }).count()) !== 1)
+      throw new Error("a visitor's article has a neighbour that is not published");
     console.log(
-      "  ✓ browser: visitors see only published articles (list, home cards, article with head tags; a draft is not found); a new article's address comes from its title",
+      "  ✓ browser: visitors see only published articles (list, home cards, article with head tags and its neighbour; a draft is not found); a new article's address comes from its title",
     );
   } catch (error) {
     console.log(
