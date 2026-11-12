@@ -67,6 +67,16 @@ export interface AssistantTexts {
 export const ASSISTANT_TEXTS = ["name", "greeting", "placeholder", "about"] as const;
 
 export interface PageContent {
+  /**
+   * A privacy page's facts only the maker knows (legal-page.md §6.2): how long each kind of
+   * record is kept, in the maker's words; other services the operator uses that the files do not
+   * show; and what the owner's own functions do.
+   */
+  privacy?: {
+    keeps?: Record<string, string>;
+    services?: { name: string; for?: string; where?: string }[];
+    custom?: string;
+  };
   title?: string;
   /** A line under the title, e.g. "Keep every relationship in view." */
   subtitle?: string;
@@ -671,6 +681,58 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
             ["title"],
           );
       }
+      continue;
+    }
+    if (page?.pattern.kind === "legal" && ["keeps", "services", "custom"].includes(entry.key)) {
+      result.privacy = result.privacy ?? {};
+      const privacy = result.privacy;
+      const at = `"${entry.key}" of ${where}`;
+      if (entry.key === "custom") {
+        const text = readString(ctx, entry.value, at);
+        if (text !== undefined) privacy.custom = text;
+      } else if (entry.key === "keeps") {
+        privacy.keeps = {};
+        for (const kept of mapEntries(ctx, entry.value, at) ?? []) {
+          const text = readString(ctx, kept.value, `"${kept.key}" of ${at}`);
+          if (text !== undefined) privacy.keeps[kept.key] = text;
+          // A renamed or removed model does not lose its line silently.
+          if (!ir.models.some((m) => m.name === kept.key))
+            ctx.warning(
+              kept.keyNode,
+              "privacy-keeps-unknown",
+              `${at} names "${kept.key}", which is no kind of record of this app.`,
+              didYouMean(
+                kept.key,
+                ir.models.map((m) => m.name),
+              ),
+            );
+        }
+      } else if (entry.value && isSeq(entry.value)) {
+        privacy.services = [];
+        for (const [i, item] of entry.value.items.entries()) {
+          const itemAt = `service ${i + 1} of ${at}`;
+          const keys = checkKeys(ctx, mapEntries(ctx, item as ParsedNode, itemAt) ?? [], itemAt, {
+            allowed: ["name", "for", "where"],
+          });
+          const text = (key: string) => {
+            const found = keys.find((e) => e.key === key);
+            return found ? readString(ctx, found.value, `"${key}" of ${itemAt}`) : undefined;
+          };
+          const name = text("name");
+          if (!name) continue;
+          const service: { name: string; for?: string; where?: string } = { name };
+          const purpose = text("for");
+          const place = text("where");
+          if (purpose) service.for = purpose;
+          if (place) service.where = place;
+          privacy.services.push(service);
+        }
+      } else
+        ctx.error(
+          entry.keyNode,
+          "invalid-value",
+          `${at} is a list: - { name: …, for: …, where: … }.`,
+        );
       continue;
     }
     const kind = parts[entry.key];
