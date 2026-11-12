@@ -19,6 +19,11 @@ import {
 import { describe, expect, test } from "vitest";
 
 const EXAMPLES = join(import.meta.dirname, "../../../examples");
+// smithable.context.yml is left out: no example has one, and its free texts (adapter, database,
+// conventions, guidance) are read by models, never written into the app. What the generator takes
+// from it is held to a pattern or a list: exact package versions, an analytics id, the payment
+// provider, and the AI policy the app card reads. When an example gets one, add it here and pass
+// those options to generateApp, so the values validation lets through are checked as well.
 const FILES = ["smithable.yml", "smithable.auth.yml", "smithable.content.yml", "smithable.ux.yml"];
 const MARK = "zq9x";
 // One text that may stand on one line, one with line breaks (for the texts that allow them).
