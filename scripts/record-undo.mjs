@@ -1,16 +1,18 @@
-// A short recording for the site: in Studio, a change adds a field, a record is added in the
-// preview, and one Undo takes the app and its data back to how they were. Scripted, so it can be
+// A short recording for the site: in Studio, instructors with phone numbers on screen; a change
+// removes the phone field (Studio warns that three values go with it), the numbers are gone; one
+// Undo, and the same numbers are back. Scripted, so it can be
 // made again after a change to Studio's look: a new booking app (sample data only), Studio on a
 // fixed port, a fixed viewport, Playwright's own video. Writes the video (WebM) and a JSON of when
-// each moment starts, for the editing tool, to --out.
+// each moment starts with its caption, for the editing tool, to --out. The checks read the
+// database and the spec at each step, so a take where undo did not work stops.
 // Run after `pnpm build`: `node scripts/record-undo.mjs [--out <dir>] [--port 8412]`. Not part of `check`.
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
-import { cli, newApp } from "./dev-app.mjs";
+import { cli, newApp, op } from "./dev-app.mjs";
 
 const { values: opts } = parseArgs({
   options: {
@@ -20,10 +22,47 @@ const { values: opts } = parseArgs({
 });
 const port = Number(opts.port);
 const base = `http://localhost:${port}`;
-const size = { width: 1920, height: 1080 };
+const size = { width: 1280, height: 720 }; // drawn at twice that, so text reads in a small player
 mkdirSync(opts.out, { recursive: true });
 
 const dir = newApp("booking", "record-undo");
+// Before the take, as the owner's set-up (undo passes over it): instructors have a phone number,
+// shown in their list as a table with each one's picture.
+op(dir, "addField", "Instructor", "phone", "phone", "--setup");
+op(dir, "setView", "instructors", "table", "--setup");
+op(dir, "setColumns", "instructors", "name", "phone", "--setup");
+op(dir, "setTableMark", "instructors", "picture", "--setup");
+const database = (write) => new DatabaseSync(join(dir, "data/db/app.db"), { readOnly: !write });
+const phones = {
+  "Emma Lindqvist": "+358 18 520 11",
+  "Oskar Berg": "+358 18 520 22",
+  "Aino Virtanen": "+358 18 520 33",
+};
+// The starter gives only Emma a picture; the other two get the blog's sample pictures.
+const portraits = {
+  "Oskar Berg": "A runner on a path by the sea at sunset",
+  "Aino Virtanen": "A rolled-up yoga mat and a water bottle on a wooden floor by a window",
+};
+{
+  const db = database(true);
+  try {
+    for (const [name, phone] of Object.entries(phones))
+      db.prepare("update instructors set phone = ? where name = ?").run(phone, name);
+    for (const [name, alt] of Object.entries(portraits)) {
+      const cover = db.prepare("select cover from posts where cover like ?").get(`%${alt}%`)?.cover;
+      if (!cover) throw new Error(`no sample picture "${alt}"`);
+      const picture = JSON.parse(cover);
+      const file = picture.file.replace(/^post\//, "instructor/");
+      copyFileSync(join(dir, "data/uploads", picture.file), join(dir, "data/uploads", file));
+      db.prepare("update instructors set portrait = ? where name = ?").run(
+        JSON.stringify({ ...picture, file }),
+        name,
+      );
+    }
+  } finally {
+    db.close();
+  }
+}
 const studio = spawn("node", [cli, "studio", dir, "--port", String(port)], { detached: true });
 const stop = () => {
   try {
@@ -45,20 +84,26 @@ async function up(url) {
 await up(`${base}/api/project`);
 await up(`http://localhost:${port + 1}/health`);
 
-// How many instructors the preview's database holds, read beside the running app.
-const instructors = () => {
-  const db = new DatabaseSync(join(dir, "data/db/app.db"), { readOnly: true });
+// Each instructor's phone number as the preview's database holds it, read beside the running app
+// (none when the column is gone).
+const numbers = () => {
+  const db = database(false);
   try {
-    return String(db.prepare("select count(*) as n from instructors").get().n);
+    const rows = db.prepare("select * from instructors").all();
+    return JSON.stringify(Object.fromEntries(rows.map((r) => [r.name, r.phone ?? null])));
   } finally {
     db.close();
   }
+};
+const expect = (what, got, want) => {
+  if (got !== want) throw new Error(`${what}: ${got}, expected ${want}`);
 };
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
   viewport: size,
-  recordVideo: { dir: opts.out, size },
+  deviceScaleFactor: 2,
+  recordVideo: { dir: opts.out, size: { width: size.width * 2, height: size.height * 2 } },
   colorScheme: "light",
   timezoneId: "Europe/Mariehamn",
 });
@@ -74,7 +119,8 @@ await context.addInitScript(() => {
 const page = await context.newPage();
 const started = Date.now();
 const moments = [];
-const moment = (name) => moments.push({ at: (Date.now() - started) / 1000, name });
+const moment = (name, caption) =>
+  moments.push({ at: (Date.now() - started) / 1000, name, caption });
 const hold = (ms) => page.waitForTimeout(ms);
 // A still of each moment beside the video, for a look without playing it.
 let shots = 0;
@@ -103,17 +149,19 @@ try {
   const keep = preview.getByRole("button", { name: /^Keep / });
   if (await keep.isVisible().catch(() => false)) await keep.click();
 
-  // 1. The app as it is: three instructors.
-  moment("the app as it is");
+  // 1. The app as it is: three instructors, each with a phone number on screen.
+  const before = JSON.stringify(phones);
+  expect("numbers before", numbers(), before);
   await go("/sign-in");
   await preview.getByRole("button", { name: "Sign in as admin" }).click();
   await go("/instructors");
-  await preview.getByRole("heading", { name: "Instructors" }).waitFor({ timeout: 60000 });
+  for (const phone of Object.values(phones))
+    await preview.getByRole("cell", { name: phone }).waitFor({ timeout: 60000 });
+  moment("the app as it is", "Three instructors, each with a phone number");
   await shot("before");
   await hold(3000);
 
-  // 2. A change: instructors get a phone number, in No code.
-  moment("a change adds a field");
+  // 2. A change removes the phone field, in No code; Studio says what goes with it.
   const area = page
     .getByRole("region", { name: "What the app does" })
     .locator('details[data-key="models"]')
@@ -124,53 +172,55 @@ try {
     .first();
   if (!(await instructor.evaluate((d) => d.open)))
     await instructor.locator('summary:text-is("Instructor")').first().click();
-  const field = instructor.getByLabel("New entry in fields");
-  await field.pressSequentially("phone", { delay: 120 });
-  await hold(500);
-  await field.locator("..").getByRole("button", { name: "Add" }).click();
+  const field = instructor
+    .locator("details", { has: page.locator('summary:text-is("phone")') })
+    .first();
+  await field.locator("summary").first().click();
+  await hold(800);
+  moment("a change removes the field", "A change removes the phone field");
+  await field.getByRole("button", { name: "Remove phone" }).click();
+  const apply = page.getByRole("button", { name: "Apply anyway" });
+  await apply.waitFor({ timeout: 30000 });
+  moment("the warning", "Studio says three numbers go with it");
+  await shot("warning");
+  await hold(3000);
+  await apply.click();
   await status
-    .getByText(/added a phone/)
+    .getByText(/[Rr]emove/)
     .first()
     .waitFor({ timeout: 90000 });
-  await shot("field-added");
-  await hold(2000);
-
-  // 3. A record that uses it, added in the preview.
-  moment("a record added in the preview");
-  await go("/instructors/new");
-  await preview.getByLabel("Phone").waitFor({ timeout: 90000 });
-  await preview
-    .getByRole("textbox", { name: /^Name/ })
-    .pressSequentially("Sample Teacher", { delay: 80 });
-  await preview.getByLabel("Phone").pressSequentially("+358 18 000 000", { delay: 80 });
-  await hold(800);
-  await preview
-    .getByRole("button", { name: /^(Save|Create|Add)/ })
-    .first()
-    .click();
-  await preview.getByText("Sample Teacher").first().waitFor({ timeout: 60000 });
-  if (instructors() !== "4") throw new Error(`instructors after adding: ${instructors()}`);
   await go("/instructors");
-  await preview.getByText("Sample Teacher").first().waitFor({ timeout: 60000 });
-  await shot("record-added");
+  // The table again, without its phone column.
+  await preview.locator("td", { hasText: "Emma Lindqvist" }).waitFor({ timeout: 60000 });
+  await preview
+    .locator('td[data-field="phone"]')
+    .first()
+    .waitFor({ state: "detached", timeout: 60000 });
+  expect(
+    "numbers after the change",
+    numbers(),
+    JSON.stringify({ "Emma Lindqvist": null, "Oskar Berg": null, "Aino Virtanen": null }),
+  );
+  moment("the numbers are gone", "The field and its numbers are gone");
+  await shot("field-removed");
   await hold(3000);
 
-  // 4. Undo: the field and the record are gone, the three instructors are as they were.
-  moment("one Undo");
+  // 3. One Undo: the field and the same numbers are back.
+  moment("one Undo", "One Undo");
   await page.locator("header").getByRole("button", { name: "Undo", exact: true }).click();
   await status
     .getByText(/^Undid/)
     .first()
     .waitFor({ timeout: 90000 });
   await go("/instructors");
-  await preview.getByRole("heading", { name: "Instructors" }).waitFor({ timeout: 60000 });
-  await preview.getByText("Sample Teacher").waitFor({ state: "detached", timeout: 60000 });
-  moment("back as before");
+  for (const phone of Object.values(phones))
+    await preview.getByRole("cell", { name: phone }).waitFor({ timeout: 60000 });
+  expect("numbers after undo", numbers(), before);
+  if (!/phone: phone/.test(readFileSync(join(dir, "smithable.yml"), "utf8")))
+    throw new Error("the field is not back in smithable.yml");
+  moment("back as before", "The same numbers are back");
   await shot("after-undo");
-  await hold(3000);
-  if (instructors() !== "3") throw new Error(`instructors after undo: ${instructors()}`);
-  if (/phone:/.test(readFileSync(join(dir, "smithable.yml"), "utf8")))
-    throw new Error("the field is still in smithable.yml");
+  await hold(3500);
   moment("end");
 } catch (error) {
   await page.screenshot({ path: join(opts.out, "failed.png") }).catch(() => {});
