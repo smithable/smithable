@@ -436,3 +436,13 @@ test("a page's lists, filters and choices each go through their own operation", 
     operationFor("smithable.yml", ["pages", "report", "intent"], "Monthly figures", spec),
   ).toBeUndefined();
 });
+
+test("a default filter value with a comma of its own stays with editSpec", () => {
+  expect(
+    operationFor(
+      "smithable.yml",
+      ["pages", "orders", "defaultFilter", "status"],
+      ["on hold, waiting"],
+    ),
+  ).toBeUndefined();
+});

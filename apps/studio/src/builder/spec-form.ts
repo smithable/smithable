@@ -383,6 +383,13 @@ export function operationFor(
       }
       // A filter's value until the viewer chooses: one filter at a time, "none" taking it away.
       if (own === "defaultFilter" && path.length <= 4) {
+        // setDefaultFilter reads several values from one text by its commas: a value with a comma
+        // of its own stays with editSpec.
+        const comma = (v: unknown): boolean =>
+          Array.isArray(v)
+            ? v.some((x) => String(x).includes(","))
+            : isCondition(v) && Object.values(v).some(comma);
+        if (comma(value)) return undefined;
         const asText = (v: unknown) =>
           Array.isArray(v) ? v.map(String).join(",") : v === undefined ? "none" : String(v);
         if (path.length === 4)
