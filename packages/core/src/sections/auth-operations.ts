@@ -6,6 +6,7 @@ import { type AnyOperation, type Operation, OperationError, refTo } from "../ope
 
 const setSignUp: Operation<{ who: "anyone" | "invited" }> = {
   name: "setSignUp",
+  sets: ["smithable.auth.yml:signIn.selfSignUp"],
   summary:
     "Choose who may sign in: anyone with an account at the sign-in provider (within allowedDomains, when set), or only invited people and the admins (needs a users page).",
   schema: {
@@ -42,6 +43,7 @@ const setSignUp: Operation<{ who: "anyone" | "invited" }> = {
 
 const setProviders: Operation<{ providers: string[] }> = {
   name: "setProviders",
+  sets: ["smithable.auth.yml:signIn.providers", "smithable.auth.yml:signIn.providers.*"],
   summary:
     "Choose how people sign in, in button order: email (a code by mail, needs only the app's mail settings), google or facebook (each needs its keys in the environment, see the README).",
   schema: {
@@ -82,6 +84,7 @@ const domainList = (domains: string[]) => [
 
 const setDomains: Operation<{ domains: string[] }> = {
   name: "setDomains",
+  sets: ["smithable.auth.yml:signIn.allowedDomains", "smithable.auth.yml:signIn.allowedDomains.*"],
   summary:
     "Let only addresses on these email domains sign up (allowedDomains, e.g. acme.com); none (or no domains) lifts it. The admins may always sign in.",
   schema: {
@@ -161,6 +164,7 @@ const setDefaultAccess: Operation<{ access: "shared" | "private" }> = {
 
 const setAdmins: Operation<{ admins: string[] }> = {
   name: "setAdmins",
+  sets: ["smithable.auth.yml:admins", "smithable.auth.yml:admins.*"],
   summary:
     "Say who the administrators are, by email address: they become admins when they sign in, also an address added later, and may always sign in.",
   schema: {
@@ -200,6 +204,7 @@ const ROLE_NAME = /^[a-z][A-Za-z0-9]*$/;
 
 const setRoles: Operation<{ roles: Record<string, string>; defaultRole?: string }> = {
   name: "setRoles",
+  sets: ["smithable.auth.yml:roles.*.description", "smithable.auth.yml:defaultRole"],
   summary:
     'Set the app\'s roles with a description each ("admin" always exists and does everything), and which one new users get. A role keeps what it was granted; a new one starts with the record rule only, so grant it its pages.',
   schema: {
@@ -404,6 +409,17 @@ const setApi: Operation<{
   assistantsDelete?: boolean;
 }> = {
   name: "setApi",
+  sets: [
+    "smithable.auth.yml:api",
+    "smithable.auth.yml:api.models",
+    "smithable.auth.yml:api.models.*",
+    "smithable.auth.yml:api.actions",
+    "smithable.auth.yml:api.actions.*",
+    "smithable.auth.yml:api.except",
+    "smithable.auth.yml:api.except.*",
+    "smithable.auth.yml:api.assistants",
+    "smithable.auth.yml:api.assistants.delete",
+  ],
   summary:
     'Say what other programs may reach with a key: models ("all" for every model, also later ones), the standard actions they may run, and whether AI assistants may use it too. No models turns the API off. A key\'s role still decides what it may do.',
   schema: {
@@ -508,6 +524,12 @@ function list(items: string[]): string {
 
 const setAssistant: Operation<{ for?: string[]; may?: "read" | "change" }> = {
   name: "setAssistant",
+  sets: [
+    "smithable.auth.yml:assistant",
+    "smithable.auth.yml:assistant.for",
+    "smithable.auth.yml:assistant.for.*",
+    "smithable.auth.yml:assistant.may",
+  ],
   summary:
     'Say who gets "Ask", the assistant in the app: some roles, signed-in (everyone who signs in) or anyone (visitors too, who are answered without a model); and whether it only reads or may also change things, each change confirmed by the person. Nobody turns it off. It never deletes.',
   schema: {
