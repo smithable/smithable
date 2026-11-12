@@ -103,6 +103,7 @@ const setTheme: Operation<{
 
 const setFrame: Operation<{ page: string; frame: "site" | "app" | "none" | "default" }> = {
   name: "setFrame",
+  sets: ["smithable.ux.yml:pages.*.frame"],
   summary:
     "Which frame a page shows in: site (the public frame with the top menu), app (the workspace with the side menu) or none (the page alone); default returns to its kind's.",
   schema: {
@@ -136,6 +137,7 @@ const setFrame: Operation<{ page: string; frame: "site" | "app" | "none" | "defa
 /** A calendar's blocks coloured by a field (look-gap §4); none takes the colour away. */
 const setCalendarColor: Operation<{ page: string; field: string }> = {
   name: "setCalendarColor",
+  sets: ["smithable.ux.yml:pages.*.calendar.colorBy"],
   summary:
     "Colour a calendar's blocks by a choice field (its values' tones), a reference (each record its own colour) or a choice one reference away (classType.level); none takes it away.",
   schema: {
@@ -166,6 +168,7 @@ const setCalendarColor: Operation<{ page: string; field: string }> = {
 /** How a calendar shows its records (A 215): week (the default), agenda or days. */
 const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days" | "inherit" }> = {
   name: "setCalendarView",
+  sets: ["smithable.ux.yml:pages.*.calendar.view"],
   summary:
     "Show a calendar as the week's grid (the default), an agenda (the coming weeks as one list by day) or days (the coming days side by side, each a list). week keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
@@ -196,6 +199,10 @@ const setCalendarView: Operation<{ page: string; view: "week" | "agenda" | "days
 /** A calendar's own filters (A 215): timeOfDay, or none. */
 const setCalendarFilters: Operation<{ page: string; filters?: string[] }> = {
   name: "setCalendarFilters",
+  sets: [
+    "smithable.ux.yml:pages.*.calendar.filters",
+    "smithable.ux.yml:pages.*.calendar.filters.*",
+  ],
   summary:
     "Give a calendar its own filters: timeOfDay (morning before 12, afternoon 12 to 17, evening from 17, by the start hour); none takes them away.",
   schema: {
@@ -313,6 +320,7 @@ const setTableMark: Operation<{ page: string; mark: "initials" | "picture" | "no
 /** A list's rows' actions: buttons (below) or a menu at the row's end (look-gap §4). */
 const setRowActions: Operation<{ page: string; actions: "below" | "menu" | "inherit" }> = {
   name: "setRowActions",
+  sets: ["smithable.ux.yml:pages.*.table.actions"],
   summary:
     "Show each row's actions as buttons (below, the default) or in a … menu at the row's end. below keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
@@ -345,6 +353,7 @@ const setRowActions: Operation<{ page: string; actions: "below" | "menu" | "inhe
 
 const setColumns: Operation<{ page: string; columns?: string[] }> = {
   name: "setColumns",
+  sets: ["smithable.ux.yml:pages.*.table.columns", "smithable.ux.yml:pages.*.table.columns.*"],
   summary: "Choose which fields a page's table shows, in order (none: back to the default).",
   schema: {
     type: "object",
@@ -374,6 +383,7 @@ const NUMBERS = ["int", "decimal", "money"];
 
 const setTotals: Operation<{ page: string; totals?: string[] }> = {
   name: "setTotals",
+  sets: ["smithable.ux.yml:pages.*.table.totals", "smithable.ux.yml:pages.*.table.totals.*"],
   summary:
     "Give a page's table a last row with the sum of these number or amount fields, and the count, over every record the viewer may see that fits the filters (none: no totals row).",
   schema: {
@@ -479,6 +489,7 @@ const setLandingWidth: Operation<{
   width: "contained" | "wide" | "full" | "inherit";
 }> = {
   name: "setLandingWidth",
+  sets: ["smithable.ux.yml:pages.*.width"],
   summary:
     "How wide a landing page's content runs: contained (72rem, the default), wide (80rem) or full (edge to edge). contained keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
@@ -559,6 +570,7 @@ const setRecordList: Operation<{
 
 const setRecordPictures: Operation<{ page: string; look: "aside" | "top" | "none" | "inherit" }> = {
   name: "setRecordPictures",
+  sets: ["smithable.ux.yml:pages.*.record.pictures"],
   summary:
     "Show a record's pictures large on its view: aside (beside the fields), top (across the top, with a strip to switch them) or none (among the fields, the default). none keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
@@ -671,6 +683,7 @@ const setRecordEmphasis: Operation<{
 
 const setRecordFirst: Operation<{ page: string; first: "form" | "thread" | "inherit" }> = {
   name: "setRecordFirst",
+  sets: ["smithable.ux.yml:pages.*.record.first"],
   summary:
     "What a record page shows first: its form (the default), or its conversation (a list shown as a thread) before the form. form keeps an explicit choice; inherit leaves it to the theme.",
   schema: {
@@ -704,6 +717,7 @@ const setRecordFirst: Operation<{ page: string; first: "form" | "thread" | "inhe
 
 const setFieldOrder: Operation<{ page: string; fields?: string[] }> = {
   name: "setFieldOrder",
+  sets: ["smithable.ux.yml:pages.*.form.fieldOrder", "smithable.ux.yml:pages.*.form.fieldOrder.*"],
   summary: "Order the fields of a page's form; fields not listed follow (none: the spec's order).",
   schema: {
     type: "object",
@@ -1009,6 +1023,7 @@ const setFormSections: Operation<{ page: string; sections?: string[] }> = {
 
 const setFormColumns: Operation<{ page: string; columns: number }> = {
   name: "setFormColumns",
+  sets: ["smithable.ux.yml:pages.*.form.columns"],
   summary:
     "Short fields of a page's form one under the other (1) or two abreast on wide screens (2).",
   schema: {
@@ -1033,6 +1048,7 @@ const setFormColumns: Operation<{ page: string; columns: number }> = {
 
 const setView: Operation<{ page: string; view: "table" | "cards" }> = {
   name: "setView",
+  sets: ["smithable.ux.yml:pages.*.table.view"],
   summary:
     "Show a page's list as a table or as cards on wide screens (a phone shows cards anyway).",
   schema: {
@@ -1207,6 +1223,7 @@ const setAssistantVoice: Operation<{ voice: Voice }> = {
 
 const setSort: Operation<{ page: string; field: string }> = {
   name: "setSort",
+  sets: ["smithable.ux.yml:pages.*.table.sort"],
   summary:
     'The order of a page\'s list until someone sorts it: a field, or "-field" for the largest or latest first ("none": newest first).',
   schema: {
@@ -1236,6 +1253,7 @@ const setSort: Operation<{ page: string; field: string }> = {
 
 const setFiltersShown: Operation<{ page: string; fields?: string[] }> = {
   name: "setFiltersShown",
+  sets: ["smithable.ux.yml:pages.*.filters.shown", "smithable.ux.yml:pages.*.filters.shown.*"],
   summary:
     'Which of a page\'s filters show when the list is first reached; the rest fold behind "More filters" (no fields: every filter shows).',
   schema: {
@@ -1273,6 +1291,7 @@ const setFiltersShown: Operation<{ page: string; fields?: string[] }> = {
 /** How a page's filters show (look-gap §4): today's controls (default) or a row of chips. */
 const setFiltersLook: Operation<{ page: string; look: "default" | "chips" | "inherit" }> = {
   name: "setFiltersLook",
+  sets: ["smithable.ux.yml:pages.*.filters.look"],
   summary:
     "Show a page's filters as today's controls (default: chips up to eight values, a list to pick from above) or every choice and reference as a row of chips (chips).",
   schema: {

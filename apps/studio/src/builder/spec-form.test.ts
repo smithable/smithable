@@ -206,6 +206,23 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.yml", ["pages", "orders", "contact"], "owner"],
     ["smithable.yml", ["pages", "orders", "defaultFilter", "status"], "open"],
     ["smithable.yml", ["pages", "orders", "description"], "Every order"],
+    ["smithable.ux.yml", ["pages", "orders", "table", "columns"], ["total"]],
+    ["smithable.ux.yml", ["pages", "orders", "table", "totals"], ["total"]],
+    ["smithable.ux.yml", ["pages", "orders", "table", "view"], "cards"],
+    ["smithable.ux.yml", ["pages", "orders", "table", "sort"], "-total"],
+    ["smithable.ux.yml", ["pages", "orders", "table", "actions"], "menu"],
+    ["smithable.ux.yml", ["pages", "orders", "filters", "shown"], ["status"]],
+    ["smithable.ux.yml", ["pages", "orders", "filters", "look"], "chips"],
+    ["smithable.ux.yml", ["pages", "orders", "calendar", "colorBy"], "status"],
+    ["smithable.ux.yml", ["pages", "orders", "calendar", "view"], "agenda"],
+    ["smithable.ux.yml", ["pages", "orders", "calendar", "filters"], ["timeOfDay"]],
+    ["smithable.ux.yml", ["pages", "orders", "frame"], "site"],
+    ["smithable.ux.yml", ["pages", "orders", "width"], "wide"],
+    ["smithable.ux.yml", ["pages", "orders", "record", "pictures"], "top"],
+    ["smithable.ux.yml", ["pages", "orders", "record", "first"], "thread"],
+    ["smithable.ux.yml", ["pages", "orders", "form", "fieldOrder"], ["total"]],
+    ["smithable.ux.yml", ["pages", "orders", "form", "columns"], 2],
+    ["smithable.yml", ["pages", "home", "landing", "faq"], undefined],
   ];
   for (const [file, path, value] of cases) {
     const [op] = operationFor(file, path, value) ?? [];
@@ -445,4 +462,60 @@ test("a default filter value with a comma of its own stays with editSpec", () =>
       ["on hold, waiting"],
     ),
   ).toBeUndefined();
+});
+
+test("a section taken away, and which records one shows, through their operations", () => {
+  const home = (...rest: string[]) => ["pages", "home", "landing", ...rest];
+  expect(operationFor("smithable.yml", home("faq"), undefined)).toEqual([
+    "removeSection",
+    { page: "home", section: "faq" },
+  ]);
+  expect(operationFor("smithable.yml", home("items", "where"), { featured: "true" })).toEqual([
+    "setSectionWhere",
+    { page: "home", section: "items", where: { featured: "true" } },
+  ]);
+  expect(
+    operationFor("smithable.yml", ["pages", "about", "sections", "team", "where"], undefined),
+  ).toEqual(["setSectionWhere", { page: "about", section: "team", where: {} }]);
+  // The hero's buttons are any section's key in the schema: editSpec writes them.
+  expect(operationFor("smithable.yml", home("hero", "button"), "items")).toBeUndefined();
+});
+
+test("a page's look, one key to one operation, and each taken away as that operation says", () => {
+  const ux = (...rest: string[]) => ["pages", "orders", ...rest];
+  expect(operationFor("smithable.ux.yml", ux("table", "columns"), ["customer", "total"])).toEqual([
+    "setColumns",
+    { page: "orders", columns: ["customer", "total"] },
+  ]);
+  expect(operationFor("smithable.ux.yml", ux("table", "columns"), undefined)).toEqual([
+    "setColumns",
+    { page: "orders" },
+  ]);
+  expect(operationFor("smithable.ux.yml", ux("table", "sort"), undefined)).toEqual([
+    "setSort",
+    { page: "orders", field: "none" },
+  ]);
+  expect(operationFor("smithable.ux.yml", ux("table", "view"), "cards")?.[1]).toEqual({
+    page: "orders",
+    view: "cards",
+  });
+  expect(operationFor("smithable.ux.yml", ux("calendar", "view"), undefined)?.[1]).toEqual({
+    page: "orders",
+    view: "inherit",
+  });
+  expect(operationFor("smithable.ux.yml", ux("frame"), undefined)?.[1]).toEqual({
+    page: "orders",
+    frame: "default",
+  });
+  expect(operationFor("smithable.ux.yml", ux("form", "columns"), 2)?.[1]).toEqual({
+    page: "orders",
+    columns: 2,
+  });
+  expect(operationFor("smithable.ux.yml", ux("filters", "shown"), undefined)?.[1]).toEqual({
+    page: "orders",
+    fields: [],
+  });
+  // A list where a word is expected (or the other way round) is left to editSpec's checks.
+  expect(operationFor("smithable.ux.yml", ux("table", "sort"), ["total"])).toBeUndefined();
+  expect(operationFor("smithable.ux.yml", ux("table", "header"), "x")).toBeUndefined();
 });

@@ -184,6 +184,29 @@ export function wordOrList(options: JsonSchema[]): { word: string; list: JsonSch
 }
 
 /** A new entry of a named map, as the form's Add writes it: an empty map. */
+/**
+ * A page's look keys (smithable.ux.yml) and the operation that sets each: its name, its argument,
+ * the value that takes the key away (none: the argument left out), and whether it is a list.
+ */
+const UX_PAGE_KEYS: Record<string, [string, string, unknown, boolean?]> = {
+  "table.columns": ["setColumns", "columns", undefined, true],
+  "table.totals": ["setTotals", "totals", undefined, true],
+  "table.view": ["setView", "view", "table"],
+  "table.sort": ["setSort", "field", "none"],
+  "table.actions": ["setRowActions", "actions", "inherit"],
+  "filters.shown": ["setFiltersShown", "fields", [], true],
+  "filters.look": ["setFiltersLook", "look", "inherit"],
+  "calendar.colorBy": ["setCalendarColor", "field", "none"],
+  "calendar.view": ["setCalendarView", "view", "inherit"],
+  "calendar.filters": ["setCalendarFilters", "filters", undefined, true],
+  frame: ["setFrame", "frame", "default"],
+  width: ["setLandingWidth", "width", "inherit"],
+  "record.pictures": ["setRecordPictures", "look", "inherit"],
+  "record.first": ["setRecordFirst", "first", "inherit"],
+  "form.fieldOrder": ["setFieldOrder", "fields", undefined, true],
+  "form.columns": ["setFormColumns", "columns", 1],
+};
+
 /** The value at a path of a parsed file. */
 const at = (whole: unknown, path: (string | number)[]): unknown =>
   path.reduce<unknown>((v, k) => (v as Record<string | number, unknown> | undefined)?.[k], whole);
@@ -286,6 +309,25 @@ export function operationFor(
     if (first === "pages") return ["removePage", { page: key }];
     if (first === "actions") return ["removeAction", { action: key }];
   }
+  // A page's look, one key to one operation: [operation, its argument, what takes the key away
+  // (undefined: the argument left out)].
+  if (file === "smithable.ux.yml" && first === "pages" && typeof key === "string") {
+    const look = UX_PAGE_KEYS[path.slice(2).join(".")];
+    if (look) {
+      const [name, arg, away, list] = look;
+      const fits =
+        value === undefined ||
+        (list ? Array.isArray(value) : !Array.isArray(value) && typeof value !== "object");
+      if (fits)
+        return [
+          name,
+          {
+            page: key,
+            ...(value !== undefined ? { [arg]: value } : away !== undefined ? { [arg]: away } : {}),
+          },
+        ];
+    }
+  }
   // A page's icon in the menu.
   if (
     file === "smithable.ux.yml" &&
@@ -380,6 +422,15 @@ export function operationFor(
             to: contact.to,
             ...(typeof contact.keep === "string" ? { keep: contact.keep } : {}),
           });
+      }
+      // A landing page's or a page of sections' parts: one taken away, and which records one shows.
+      // (The hero's buttons and shortcuts stay with editSpec: their keys are every section's.)
+      const section = path[3];
+      if ((own === "landing" || own === "sections") && typeof section === "string") {
+        if (path.length === 4 && value === undefined) return op("removeSection", { section });
+        const key = path[4];
+        if (path.length === 5 && key === "where" && (value === undefined || isCondition(value)))
+          return op("setSectionWhere", { section, where: value ?? {} });
       }
       // A filter's value until the viewer chooses: one filter at a time, "none" taking it away.
       if (own === "defaultFilter" && path.length <= 4) {
