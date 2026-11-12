@@ -188,20 +188,24 @@ export function wordOrList(options: JsonSchema[]): { word: string; list: JsonSch
 const at = (whole: unknown, path: (string | number)[]): unknown =>
   path.reduce<unknown>((v, k) => (v as Record<string | number, unknown> | undefined)?.[k], whole);
 
-/** A group with one key set (or taken away), or the given group when no key is named. */
-function withKey(
+/** A copy of a group or list with the value at a path inside it set (or taken away). */
+function setIn(
   current: unknown,
-  key: string | number | undefined,
+  path: (string | number)[],
   value: unknown,
 ): Record<string, unknown> | undefined {
-  if (key === undefined)
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : undefined;
-  const next = { ...((current ?? {}) as Record<string, unknown>) };
-  if (value === undefined) delete next[String(key)];
-  else next[String(key)] = value;
-  return next;
+  const [step, ...rest] = path;
+  if (step === undefined)
+    return value === undefined ? undefined : (value as Record<string, unknown>);
+  const copy: Record<string | number, unknown> = Array.isArray(current)
+    ? ([...current] as unknown as Record<number, unknown>)
+    : { ...((current ?? {}) as Record<string, unknown>) };
+  const inner = rest.length ? setIn(copy[step], rest, value) : value;
+  if (inner === undefined) {
+    if (Array.isArray(copy)) (copy as unknown[]).splice(Number(step), 1);
+    else delete copy[step];
+  } else copy[step] = inner;
+  return copy as Record<string, unknown>;
 }
 
 /** A condition on a record's values ({ status: closed }). */
@@ -393,7 +397,7 @@ export function operationFor(
       // A conversation's fields, the whole setting or one of its keys, through setThread.
       if (own === "thread" && path.length >= 3 && path.length <= 4) {
         if (path.length === 3 && value === undefined) return ["setThread", { model, none: true }];
-        const next = withKey(at(whole, path.slice(0, 3)), path[3], value);
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
         // A key taken away is left to editSpec: setThread keeps what it is not given.
         if (next && (path.length === 3 || value !== undefined)) {
           const side = next.side as { field?: unknown; ours?: unknown } | undefined;
@@ -409,10 +413,10 @@ export function operationFor(
         }
       }
       // A limit per referenced record, written whole by setCapacity.
-      if (own === "capacity" && path.length >= 3 && path.length <= 4) {
+      if (own === "capacity" && path.length >= 3) {
         if (path.length === 3 && value === undefined)
           return ["setCapacity", { model, per: "none" }];
-        const next = withKey(at(whole, path.slice(0, 3)), path[3], value);
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
         if (next && typeof next.per === "string" && next.max !== undefined)
           return [
             "setCapacity",
@@ -423,6 +427,75 @@ export function operationFor(
               ...(isCondition(next.where) ? { where: next.where } : {}),
               ...(typeof next.closes === "string" ? { closes: next.closes } : {}),
               ...(typeof next.cancelUntil === "string" ? { cancelUntil: next.cancelUntil } : {}),
+            },
+          ];
+      }
+      // When a booked record is free, written whole by setSchedule (its hours, breaks, gap, time away).
+      if (own === "schedule" && path.length >= 3) {
+        if (path.length === 3 && value === undefined)
+          return ["setSchedule", { model, hours: "none" }];
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
+        if (next && isCondition(next.hours) && Object.keys(next.hours).length)
+          return [
+            "setSchedule",
+            {
+              model,
+              hours: next.hours,
+              ...(next.breaks !== undefined ? { breaks: next.breaks } : {}),
+              ...(next.gap !== undefined ? { gap: String(next.gap) } : {}),
+              ...(next.away !== undefined ? { away: next.away } : {}),
+            },
+          ];
+      }
+      // Whose time a record takes, written whole by setOccupies.
+      if (own === "occupies" && path.length >= 3) {
+        if (path.length === 3 && value === undefined)
+          return ["setOccupies", { model, resource: "none" }];
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
+        const text = (key: string) => (typeof next?.[key] === "string" ? next[key] : undefined);
+        if (next && text("resource") && text("starts") && text("duration"))
+          return [
+            "setOccupies",
+            {
+              model,
+              resource: text("resource"),
+              starts: text("starts"),
+              duration: text("duration"),
+              ...(isCondition(next.while) ? { while: next.while } : {}),
+              ...(text("cancelUntil") ? { cancelUntil: text("cancelUntil") } : {}),
+              ...(text("cancelTo") ? { cancelTo: text("cancelTo") } : {}),
+            },
+          ];
+      }
+      // Fields unique together: one rule added, taken away or given another scope is one setUnique.
+      if (own === "unique" && path.length >= 3) {
+        const rules = (list: unknown) =>
+          (Array.isArray(list) ? list : []).map((e) =>
+            Array.isArray(e)
+              ? { fields: e.map(String) }
+              : {
+                  fields: ((e as { fields?: unknown[] })?.fields ?? []).map(String),
+                  scope: (e as { scope?: string })?.scope,
+                },
+          );
+        const before = rules(at(whole, path.slice(0, 3)));
+        const after = rules(
+          path.length === 3 ? value : setIn(at(whole, path.slice(0, 3)), path.slice(3), value),
+        );
+        const key = (r: { fields: string[] }) => [...r.fields].sort().join(" ");
+        const gone = before.filter((b) => !after.some((a) => key(a) === key(b)));
+        const added = after.filter(
+          (a) => !before.some((b) => key(a) === key(b) && a.scope === b.scope),
+        );
+        if (gone.length === 1 && !added.length)
+          return ["setUnique", { model, fields: gone[0]?.fields, remove: true }];
+        if (added.length === 1 && !gone.length && (added[0]?.fields.length ?? 0) >= 2)
+          return [
+            "setUnique",
+            {
+              model,
+              fields: added[0]?.fields,
+              ...(added[0]?.scope ? { scope: added[0].scope } : {}),
             },
           ];
       }

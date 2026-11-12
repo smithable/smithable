@@ -878,6 +878,14 @@ const setUnique: Operation<{
   remove?: boolean;
 }> = {
   name: "setUnique",
+  sets: [
+    "smithable.yml:models.*.unique",
+    "smithable.yml:models.*.unique.*",
+    "smithable.yml:models.*.unique.*.*",
+    "smithable.yml:models.*.unique.*.fields",
+    "smithable.yml:models.*.unique.*.fields.*",
+    "smithable.yml:models.*.unique.*.scope",
+  ],
   summary:
     "Make two or more fields of a model unique together: no two records hold the same values in all of them, among one owner's records (owner), in the whole app (app), or as the access says; --remove takes the rule away. One field alone is unique through setFieldRules.",
   schema: {

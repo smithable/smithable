@@ -33,6 +33,20 @@ const setSchedule: Operation<{
   away?: string | { model: string; resource?: string; from?: string; until?: string };
 }> = {
   name: "setSchedule",
+  sets: [
+    "smithable.yml:models.*.schedule",
+    "smithable.yml:models.*.schedule.hours",
+    "smithable.yml:models.*.schedule.hours.*",
+    "smithable.yml:models.*.schedule.hours.*.*",
+    "smithable.yml:models.*.schedule.breaks",
+    "smithable.yml:models.*.schedule.breaks.*",
+    "smithable.yml:models.*.schedule.gap",
+    "smithable.yml:models.*.schedule.away",
+    "smithable.yml:models.*.schedule.away.model",
+    "smithable.yml:models.*.schedule.away.resource",
+    "smithable.yml:models.*.schedule.away.from",
+    "smithable.yml:models.*.schedule.away.until",
+  ],
   summary:
     'Say a model\'s records are booked by their time (barbers, rooms): weekly hours, breaks, minutes between bookings, and a model of time away ("none" as hours removes it).',
   schema: {
@@ -106,6 +120,15 @@ const setOccupies: Operation<{
   cancelTo?: string;
 }> = {
   name: "setOccupies",
+  sets: [
+    "smithable.yml:models.*.occupies",
+    "smithable.yml:models.*.occupies.resource",
+    "smithable.yml:models.*.occupies.starts",
+    "smithable.yml:models.*.occupies.duration",
+    "smithable.yml:models.*.occupies.while",
+    "smithable.yml:models.*.occupies.cancelUntil",
+    "smithable.yml:models.*.occupies.cancelTo",
+  ],
   summary:
     "Say each record of a model takes a scheduled record's time, e.g. an appointment its barber's, from its start for its service's minutes (\"none\" as resource removes it).",
   schema: {
