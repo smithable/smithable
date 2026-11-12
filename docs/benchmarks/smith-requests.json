@@ -1,0 +1,4576 @@
+{
+  "version": 1,
+  "about": "Labelled requests to Smith, Studio's assistant, written from the ten starters and the docs, to test whether Smith tells apart what kind of request each one is.",
+  "requests": [
+    {
+      "id": "bk-phone-instructors",
+      "starter": "booking",
+      "text": "add a phone field to instructors",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Instructor",
+          "field": "phone",
+          "type": "phone"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "bk-bio-required",
+      "starter": "booking",
+      "text": "make the bio requird for instrutors",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Instructor",
+          "field": "bio",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "bk-capacity-default",
+      "starter": "booking",
+      "text": "change the defualt capacity of sessions to 15",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Session",
+          "field": "capacity",
+          "default": 15
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "bk-level-intermediate",
+      "starter": "booking",
+      "text": "can we have an intermediate level too, between beginner and advanced",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "ClassType",
+          "field": "level",
+          "type": "beginner | allLevels | intermediate | advanced"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-instructors-teachers",
+      "starter": "booking",
+      "text": "call instructors teachers instead",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "nameRecords"
+        ],
+        "args": {
+          "model": "Instructor",
+          "one": "Teacher",
+          "many": "Teachers"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-hide-about",
+      "starter": "booking",
+      "text": "hide the about page from visitors",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setPublic"
+        ],
+        "args": {
+          "pages": [
+            "home",
+            "schedule",
+            "blog",
+            "privacy"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-schedule-agenda",
+      "starter": "booking",
+      "text": "show the schedule as a list of the coming days instead of the week grid",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setCalendarView"
+        ],
+        "args": {
+          "page": "schedule",
+          "view": "agenda"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-schedule-color-level",
+      "starter": "booking",
+      "text": "färglägg passen i schemat efter nivå",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setCalendarColor"
+        ],
+        "args": {
+          "page": "schedule",
+          "by": "classType.level"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-reminder-2h",
+      "starter": "booking",
+      "text": "send members a reminder 2 hours before class as well",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addTimer",
+          "addOutgoing"
+        ],
+        "args": {
+          "model": "Booking",
+          "at": "2 hours before session.startsAt",
+          "recipient": "owner"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-staff-delete-sessions",
+      "starter": "booking",
+      "text": "let staff delete sessions",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "grant"
+        ],
+        "args": {
+          "role": "staff",
+          "delete": [
+            "Session"
+          ]
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "bk-sort-sessions",
+      "starter": "booking",
+      "text": "sort sessions by start time, latest first",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setSort"
+        ],
+        "args": {
+          "page": "sessions",
+          "field": "-startsAt"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "bk-sv-phone-instructors",
+      "starter": "booking",
+      "text": "lägg till ett telefonnummer på instruktörerna",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Instructor",
+          "field": "phone",
+          "type": "phone"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-fi-phone-messages",
+      "starter": "booking",
+      "text": "lisää viesteihin puhelinnumero",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Message",
+          "field": "phone",
+          "type": "phone"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-cancel-2h",
+      "starter": "booking",
+      "text": "members should only be able to cancel up to 2 hours before the class starts",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setCapacity"
+        ],
+        "args": {
+          "model": "Booking",
+          "per": "session",
+          "cancelUntil": "2 hours before session.startsAt"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-ask-members",
+      "starter": "booking",
+      "text": "låt alla medlemmar använda Ask, men bara läsa",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setAssistant"
+        ],
+        "args": {
+          "for": [
+            "member"
+          ]
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-website",
+      "starter": "crm",
+      "text": "add a webiste field to customers",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Customer",
+          "field": "website",
+          "type": "url"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "crm-email-required",
+      "starter": "crm",
+      "text": "make customer email requred",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Customer",
+          "field": "email",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "crm-status-returned",
+      "starter": "crm",
+      "text": "orders can also be returned, add that to the status",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Order",
+          "field": "status",
+          "type": "draft | placed | shipped | returned | canceled"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-orders-columns",
+      "starter": "crm",
+      "text": "on the orders list i only want number, customer, status and total",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setColumns"
+        ],
+        "args": {
+          "page": "orders",
+          "fields": [
+            "number",
+            "customer",
+            "status",
+            "total"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-followups-no-trash",
+      "starter": "crm",
+      "text": "turn off the trash for follow ups, just delete them",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setTrash"
+        ],
+        "args": {
+          "model": "FollowUp",
+          "trash": false
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "crm-followups-rename-page",
+      "starter": "crm",
+      "text": "rename the follow ups page to To do",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "renamePage"
+        ],
+        "args": {
+          "page": "followUps",
+          "name": "to-do"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-tones",
+      "starter": "crm",
+      "text": "skickade ordrar ska synas gröna och avbrutna röda",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setTone"
+        ],
+        "args": {
+          "model": "Order",
+          "field": "status",
+          "tones": {
+            "shipped": "success",
+            "canceled": "danger"
+          }
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-sv-segment-required",
+      "starter": "crm",
+      "text": "gör segment obligatoriskt på kunder",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Customer",
+          "field": "segment",
+          "required": true
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-followup-priority",
+      "starter": "crm",
+      "text": "add a priority field to follow ups: high, medium, low",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "FollowUp",
+          "field": "priority",
+          "type": "high | medium | low"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "crm-sales-manager",
+      "starter": "crm",
+      "text": "we need a sales manager role that can delete anyone's orders",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setRoles",
+          "grant"
+        ],
+        "args": {
+          "role": "salesManager",
+          "delete": [
+            "Order"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-no-export",
+      "starter": "crm",
+      "text": "hide the export button on custmers",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setExport"
+        ],
+        "args": {
+          "page": "customers",
+          "export": "off"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "crm-mail-manager",
+      "starter": "crm",
+      "text": "email the account manager whenever a new order comes in for one of their customers",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addOutgoing"
+        ],
+        "args": {
+          "when": "Order created",
+          "to": "mail",
+          "recipient": "customer.accountManager"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "crm-fi-followup-sort",
+      "starter": "crm",
+      "text": "järjestä seurannat eräpäivän mukaan, vanhin ensin",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "setSort"
+        ],
+        "args": {
+          "page": "followUps",
+          "field": "dueOn"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bb-email-appointments",
+      "starter": "barbers",
+      "text": "add an email feild to appointments",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Appointment",
+          "field": "email",
+          "type": "email"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "bb-phone-required",
+      "starter": "barbers",
+      "text": "make phone required on appoinments",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Appointment",
+          "field": "phone",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "bb-service-45",
+      "starter": "barbers",
+      "text": "new services should be 45 minutes by default",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Service",
+          "field": "minutes",
+          "default": 45
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bb-saturday-16",
+      "starter": "barbers",
+      "text": "we're open saturdays until 16 now",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setSchedule"
+        ],
+        "args": {
+          "model": "Barber",
+          "hours": {
+            "sat": "10:00-16:00"
+          }
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bb-cancel-24h",
+      "starter": "barbers",
+      "text": "customers should be able to cancel online until 24 hours before, not 12",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setOccupies"
+        ],
+        "args": {
+          "model": "Appointment",
+          "cancelUntil": "24h"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bb-sms-confirm",
+      "starter": "barbers",
+      "text": "send a text message too when an appointment is confirmed",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setOutgoingTo"
+        ],
+        "args": {
+          "name": "appointmentConfirmed",
+          "to": [
+            "mail",
+            "sms"
+          ]
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "bb-sv-phone-required",
+      "starter": "barbers",
+      "text": "gör telefonnummer obligatoriskt på bokningarna",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Appointment",
+          "field": "phone",
+          "required": true
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bb-fi-barber-email",
+      "starter": "barbers",
+      "text": "lisää parturille sähköpostiosoite",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Barber",
+          "field": "email",
+          "type": "email"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "bb-staff-services",
+      "starter": "barbers",
+      "text": "let staff add services",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "grant"
+        ],
+        "args": {
+          "role": "staff",
+          "create": [
+            "Service"
+          ],
+          "pages": [
+            "services"
+          ]
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "inv-notes",
+      "starter": "invoicing",
+      "text": "add a notes field to invoices",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Invoice",
+          "field": "notes",
+          "type": "text"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "inv-notes-required",
+      "starter": "invoicing",
+      "text": "make it required",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Invoice",
+          "field": "notes",
+          "required": true
+        }
+      },
+      "noModel": false,
+      "after": "inv-notes"
+    },
+    {
+      "id": "inv-vat-required",
+      "starter": "invoicing",
+      "text": "make vat number required on clinets",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Client",
+          "field": "vatNumber",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "inv-overdue-3",
+      "starter": "invoicing",
+      "text": "mark invoices overdue 3 days after the due date instead of a week",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setTimer"
+        ],
+        "args": {
+          "name": "markOverdue",
+          "at": "3 days after dueOn"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "inv-tones",
+      "starter": "invoicing",
+      "text": "paid green, overdue red",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setTone"
+        ],
+        "args": {
+          "model": "Invoice",
+          "field": "status",
+          "tones": {
+            "paid": "success",
+            "overdue": "danger"
+          }
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "inv-totals",
+      "starter": "invoicing",
+      "text": "add a totals row at the bottom of the invoice list",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setTotals"
+        ],
+        "args": {
+          "page": "invoices",
+          "fields": [
+            "total"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "inv-sort-newest",
+      "starter": "invoicing",
+      "text": "sort invocies newest first",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setSort"
+        ],
+        "args": {
+          "page": "invoices",
+          "field": "-issuedOn"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "inv-overdue-mail",
+      "starter": "invoicing",
+      "text": "mejla kunden en påminnelse när fakturan blir förfallen",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addOutgoing"
+        ],
+        "args": {
+          "when": "markOverdue",
+          "to": "mail",
+          "recipient": "client.email"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "inv-sv-currency",
+      "starter": "invoicing",
+      "text": "byt valuta till svenska kronor",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setApp"
+        ],
+        "args": {
+          "currency": "SEK"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "inv-sv-language",
+      "starter": "invoicing",
+      "text": "gör appen på svenska",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setLanguage"
+        ],
+        "args": {
+          "language": "sv"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-calories",
+      "starter": "kiosk",
+      "text": "add calroies to dishes",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Dish",
+          "field": "calories",
+          "type": "int"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "ki-calories-rename",
+      "starter": "kiosk",
+      "text": "actually call it energy",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "renameField"
+        ],
+        "args": {
+          "model": "Dish",
+          "from": "calories",
+          "to": "energy"
+        }
+      },
+      "noModel": false,
+      "after": "ki-calories"
+    },
+    {
+      "id": "ki-diet-glutenfree",
+      "starter": "kiosk",
+      "text": "add gluten free as a diet option",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Dish",
+          "field": "diet",
+          "type": "none | vegetarian | vegan | glutenFree"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-email-required",
+      "starter": "kiosk",
+      "text": "people have to give their email when they order",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Order",
+          "field": "email",
+          "required": true
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-sunday-hours",
+      "starter": "kiosk",
+      "text": "we open sundays now, 12 to 18",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "editSpec"
+        ],
+        "args": {
+          "page": "menu",
+          "hours": {
+            "sun": "12:00-18:00"
+          }
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-dishes-cards",
+      "starter": "kiosk",
+      "text": "visa rätterna som kort",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setView"
+        ],
+        "args": {
+          "page": "dishes",
+          "view": "cards"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-sms-ready",
+      "starter": "kiosk",
+      "text": "text the customer on their phone when the order is ready instead of mailing",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setOutgoingTo"
+        ],
+        "args": {
+          "name": "orderReady",
+          "to": [
+            "sms"
+          ],
+          "recipient": "phone"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-sv-kids",
+      "starter": "kiosk",
+      "text": "lägg till barnmeny som en sektion bland rätterna",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Dish",
+          "field": "section",
+          "type": "starters | mains | drinks | sweets | kids"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-fi-allergens-required",
+      "starter": "kiosk",
+      "text": "tee allergeeneista pakollinen tieto annoksille",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Dish",
+          "field": "allergens",
+          "required": true
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "ki-orders-filter-default",
+      "starter": "kiosk",
+      "text": "open the orders page on the new ones only",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setDefaultFilter"
+        ],
+        "args": {
+          "page": "orders",
+          "field": "status",
+          "value": "new"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "mp-category-toys",
+      "starter": "marketplace",
+      "text": "add toys as a category",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "category",
+          "type": "furniture | bikes | electronics | sports | kids | toys | other"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "mp-price-required",
+      "starter": "marketplace",
+      "text": "make price requierd",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "price",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "mp-no-favorites",
+      "starter": "marketplace",
+      "text": "turn off favorites",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setFavorites"
+        ],
+        "args": {
+          "page": "catalog",
+          "favorites": "off"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "mp-no-review",
+      "starter": "marketplace",
+      "text": "foton ska inte behöva godkännas längre",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setReview"
+        ],
+        "args": {
+          "model": "Item",
+          "fields": "none"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "mp-sort-price",
+      "starter": "marketplace",
+      "text": "sort the catalog by price, cheapest first",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setSort"
+        ],
+        "args": {
+          "page": "catalog",
+          "field": "price"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "mp-sv-delivery",
+      "starter": "marketplace",
+      "text": "lägg till ett fält för leveranssätt på annonserna",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "delivery"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "mp-fi-phone",
+      "starter": "marketplace",
+      "text": "lisää ilmoitukseen puhelinnumero",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "phone",
+          "type": "phone"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "rec-picture",
+      "starter": "records",
+      "text": "add a picture to items",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "picture",
+          "type": "picture"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "rec-kind-wishlist",
+      "starter": "records",
+      "text": "add wishlist to kind",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "kind",
+          "type": "general | favorite | archived | wishlist"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "rec-link-required",
+      "starter": "records",
+      "text": "make the link requried",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "link",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "rec-members-add",
+      "starter": "records",
+      "text": "let members add items too",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "grant"
+        ],
+        "args": {
+          "role": "member",
+          "create": [
+            "Item"
+          ],
+          "pages": [
+            "items"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "rec-app-name",
+      "starter": "records",
+      "text": "vaihda sovelluksen nimeksi Levyhylly",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "setApp"
+        ],
+        "args": {
+          "name": "Levyhylly"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "rec-sv-app-name",
+      "starter": "records",
+      "text": "byt namn på appen till Min samling",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setApp"
+        ],
+        "args": {
+          "name": "Min samling"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "rec-cafe",
+      "starter": "records",
+      "text": "use the cafe theme",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setTheme"
+        ],
+        "args": {
+          "preset": "cafe"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "rec-fi-price",
+      "starter": "records",
+      "text": "lisää kohteille hinta",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "price",
+          "type": "money"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "rec-brand-green",
+      "starter": "records",
+      "text": "make the main colour a dark green",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setTheme"
+        ],
+        "args": {
+          "brand": "dark green"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "rec-sv-compact",
+      "starter": "records",
+      "text": "mer kompakt, det är för mycket luft",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setTheme"
+        ],
+        "args": {
+          "density": "compact"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "st-severity",
+      "starter": "status",
+      "text": "add severity to incidents: minor, major, critical",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Incident",
+          "field": "severity",
+          "type": "minor | major | critical"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "st-component-required",
+      "starter": "status",
+      "text": "make the component required on incidnets",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Incident",
+          "field": "component",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "st-staff-components",
+      "starter": "status",
+      "text": "let staff edit components too",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "grant"
+        ],
+        "args": {
+          "role": "staff",
+          "pages": [
+            "overview",
+            "incidents",
+            "updates",
+            "maintenance",
+            "components"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "st-hide-maintenance",
+      "starter": "status",
+      "text": "don't show planned maintenance to the public",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setPublic",
+          "removeSection"
+        ],
+        "args": {
+          "read": [
+            "Component",
+            "Incident",
+            "IncidentUpdate"
+          ],
+          "page": "home",
+          "section": "planned"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "st-mail-admins",
+      "starter": "status",
+      "text": "mail the admins when an incident is opened",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addOutgoing"
+        ],
+        "args": {
+          "when": "Incident created",
+          "to": "mail",
+          "recipient": "admin"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "st-remove-uptime",
+      "starter": "status",
+      "text": "ta bort upptidsdelen från startsidan",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "removeSection"
+        ],
+        "args": {
+          "page": "home",
+          "section": "uptime"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "st-sv-icon",
+      "starter": "status",
+      "text": "ge incidents-sidan en varningsikon i menyn",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setIcon"
+        ],
+        "args": {
+          "page": "incidents",
+          "icon": "alert"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "st-fi-severity",
+      "starter": "status",
+      "text": "lisää häiriöille vakavuus: pieni, suuri, kriittinen",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Incident",
+          "field": "severity"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "st-api-monitoring",
+      "starter": "status",
+      "text": "let api users run monitoring as well",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setApi"
+        ],
+        "args": {
+          "models": [
+            "Component",
+            "Incident"
+          ],
+          "actions": [
+            "resolve",
+            "monitoring"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "sp-category",
+      "starter": "support",
+      "text": "add a categroy field to cases: billing, technical, other",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "SupportCase",
+          "field": "category",
+          "type": "billing | technical | other"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "sp-priority-2",
+      "starter": "support",
+      "text": "oletusprioriteetiksi 2",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "SupportCase",
+          "field": "priority",
+          "default": 2
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "sp-autoclose",
+      "starter": "support",
+      "text": "close cases automatically after 14 days in progress",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addTimer"
+        ],
+        "args": {
+          "on": "SupportCase",
+          "at": "14 days after updatedAt",
+          "run": "close"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "sp-newest",
+      "starter": "support",
+      "text": "show the newest cases first",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setSort"
+        ],
+        "args": {
+          "page": "cases",
+          "field": "-createdAt"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "sp-by-priority",
+      "starter": "support",
+      "text": "no, by priority",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setSort"
+        ],
+        "args": {
+          "page": "cases",
+          "field": "priority"
+        }
+      },
+      "noModel": false,
+      "after": "sp-newest"
+    },
+    {
+      "id": "sp-thread",
+      "starter": "support",
+      "text": "visa meddelandena på ett ärende som en konversation",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setRecordList"
+        ],
+        "args": {
+          "page": "cases",
+          "list": "messages",
+          "as": "thread"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "sp-sv-customer-name",
+      "starter": "support",
+      "text": "lägg till fältet kundnamn på ärenden",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "SupportCase",
+          "field": "customerName",
+          "type": "string"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "sp-fi-slider",
+      "starter": "support",
+      "text": "näytä prioriteetti liukusäätimenä",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "setControl"
+        ],
+        "args": {
+          "page": "cases",
+          "field": "priority",
+          "control": "slider"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "api-priority",
+      "starter": "api",
+      "text": "add a priorty to tasks",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Task",
+          "field": "priority"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "api-due-required",
+      "starter": "api",
+      "text": "make due date required on tasks",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "changeField"
+        ],
+        "args": {
+          "model": "Task",
+          "field": "dueDate",
+          "required": true
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "api-assistant-delete-notes",
+      "starter": "api",
+      "text": "let the assistant delete notes",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "grant"
+        ],
+        "args": {
+          "role": "assistant",
+          "delete": [
+            "Note"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "api-only-tasks",
+      "starter": "api",
+      "text": "only offer projects and tasks through the api, not notes",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setApi"
+        ],
+        "args": {
+          "models": [
+            "Project",
+            "Task"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "api-tasks-page",
+      "starter": "api",
+      "text": "add a page for tasks",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addPage"
+        ],
+        "args": {
+          "model": "Task"
+        }
+      },
+      "noModel": true
+    },
+    {
+      "id": "api-sv-projects-page",
+      "starter": "api",
+      "text": "lägg till en sida för projekt",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addPage"
+        ],
+        "args": {
+          "model": "Project"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "api-fi-tag",
+      "starter": "api",
+      "text": "lisää tehtäviin tunniste-kenttä",
+      "kind": "change",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Task",
+          "field": "tag",
+          "type": "string"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-crm-phone-email",
+      "starter": "crm",
+      "text": "add a phone field to follow ups and make email required on customers",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "changeField"
+        ],
+        "args": {
+          "model": "FollowUp",
+          "field": "phone"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-bk-phone-message",
+      "starter": "booking",
+      "text": "add a phone field to messages and make the message itself optional",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "changeField"
+        ],
+        "args": {
+          "model": "Message",
+          "field": "phone"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-bb-email-phone",
+      "starter": "barbers",
+      "text": "add email to appointments and make phone required",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "changeField"
+        ],
+        "args": {
+          "model": "Appointment",
+          "field": "email"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-inv-notes-sort",
+      "starter": "invoicing",
+      "text": "add a notes field to clients and sort invoices by due date",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "setSort"
+        ],
+        "args": {
+          "model": "Client",
+          "field": "notes",
+          "page": "invoices"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-ki-cal-cards",
+      "starter": "kiosk",
+      "text": "add calories to dishes, and show them as cards",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "setView"
+        ],
+        "args": {
+          "model": "Dish",
+          "field": "calories",
+          "page": "dishes"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-mp-fav-sort",
+      "starter": "marketplace",
+      "text": "turn off favorites and sort the catalog by price",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setFavorites",
+          "setSort"
+        ],
+        "args": {
+          "page": "catalog"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-rec-name-theme",
+      "starter": "records",
+      "text": "rename the app to Vinyl Shelf and use the cafe theme",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setApp",
+          "setTheme"
+        ],
+        "args": {
+          "name": "Vinyl Shelf",
+          "preset": "cafe"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-st-sev-comp",
+      "starter": "status",
+      "text": "add severity to incidents and make the componnet required",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "changeField"
+        ],
+        "args": {
+          "model": "Incident"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-sp-cat-search",
+      "starter": "support",
+      "text": "add a category to cases and let agents search by it",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "setSearch"
+        ],
+        "args": {
+          "model": "SupportCase",
+          "field": "category",
+          "page": "cases"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-api-prio-page",
+      "starter": "api",
+      "text": "add a priority to tasks and a page for tasks",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "addPage"
+        ],
+        "args": {
+          "model": "Task",
+          "field": "priority"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-crm-sv",
+      "starter": "crm",
+      "text": "lägg till webbplats på kunder och gör telefon obligatoriskt",
+      "kind": "two-things",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addField",
+          "changeField"
+        ],
+        "args": {
+          "model": "Customer"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-bk-sv",
+      "starter": "booking",
+      "text": "byt språk till svenska och sortera sessionerna efter kapacitet",
+      "kind": "two-things",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setLanguage",
+          "setSort"
+        ],
+        "args": {
+          "language": "sv",
+          "page": "sessions",
+          "field": "capacity"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-bb-fi",
+      "starter": "barbers",
+      "text": "lisää ajanvaraukseen sähköposti ja tee puhelinnumerosta pakollinen",
+      "kind": "two-things",
+      "language": "fi",
+      "outcome": {
+        "operations": [
+          "addField",
+          "changeField"
+        ],
+        "args": {
+          "model": "Appointment"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-inv-contract-address",
+      "starter": "invoicing",
+      "text": "add a contract field to clients and remove the address",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "removeField"
+        ],
+        "args": {
+          "model": "Client"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "tt-st-mail-uptime",
+      "starter": "status",
+      "text": "mail the admins when an incident is opened, and get rid of the uptime thing on the home page",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addOutgoing",
+          "removeSection"
+        ],
+        "args": {
+          "page": "home",
+          "section": "uptime"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "u-undo",
+      "starter": "crm",
+      "text": "undo",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-undo-that",
+      "starter": "booking",
+      "text": "undo that",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-take-back",
+      "starter": "invoicing",
+      "text": "take that back",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-undo-12",
+      "starter": "kiosk",
+      "text": "undo #12",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": 12
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-undo-7",
+      "starter": "barbers",
+      "text": "undo 7",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": 7
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-last-three",
+      "starter": "status",
+      "text": "undo the last three",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "range",
+        "count": 3
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-last-2",
+      "starter": "support",
+      "text": "undo the last 2 changes",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "range",
+        "count": 2
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-redo",
+      "starter": "records",
+      "text": "redo",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "redo"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-sv-angra",
+      "starter": "booking",
+      "text": "ångra",
+      "kind": "undo",
+      "language": "sv",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-sv-angra-senaste",
+      "starter": "crm",
+      "text": "ångra senaste ändringen",
+      "kind": "undo",
+      "language": "sv",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-sv-three",
+      "starter": "marketplace",
+      "text": "ångra de tre senaste",
+      "kind": "undo",
+      "language": "sv",
+      "outcome": {
+        "which": "range",
+        "count": 3
+      },
+      "noModel": false
+    },
+    {
+      "id": "u-fi-kumoa",
+      "starter": "barbers",
+      "text": "kumoa",
+      "kind": "undo",
+      "language": "fi",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-fi-viimeisin",
+      "starter": "kiosk",
+      "text": "kumoa viimeisin muutos",
+      "kind": "undo",
+      "language": "fi",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-typo",
+      "starter": "api",
+      "text": "undoo",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-please",
+      "starter": "invoicing",
+      "text": "can you undo the last change please, it wasn't what i meant",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": false
+    },
+    {
+      "id": "u-revert",
+      "starter": "records",
+      "text": "revert",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true
+    },
+    {
+      "id": "u-theme",
+      "starter": "booking",
+      "text": "undo the theme change",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last",
+        "unsure": true,
+        "note": "the most recent theme change, which may not be the last change"
+      },
+      "noModel": false
+    },
+    {
+      "id": "u-after-severity",
+      "starter": "status",
+      "text": "undo that",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true,
+      "after": "st-severity"
+    },
+    {
+      "id": "u-after-phone",
+      "starter": "booking",
+      "text": "no wait, undo",
+      "kind": "undo",
+      "language": "en",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true,
+      "after": "bk-phone-instructors"
+    },
+    {
+      "id": "u-after-sv",
+      "starter": "booking",
+      "text": "ångra",
+      "kind": "undo",
+      "language": "sv",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true,
+      "after": "bk-sv-phone-instructors"
+    },
+    {
+      "id": "u-after-fi",
+      "starter": "booking",
+      "text": "kumoa se",
+      "kind": "undo",
+      "language": "fi",
+      "outcome": {
+        "which": "last"
+      },
+      "noModel": true,
+      "after": "bk-fi-phone-messages"
+    },
+    {
+      "id": "q-bk-delete-bookings",
+      "starter": "booking",
+      "text": "who can delete bookings?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "staff",
+          "administrators",
+          "a member only their own"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-bk-and-members",
+      "starter": "booking",
+      "text": "and members?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "only their own bookings",
+          "until the class starts"
+        ],
+        "mustNot": [
+          "members can delete other people's bookings"
+        ]
+      },
+      "noModel": false,
+      "after": "q-bk-delete-bookings"
+    },
+    {
+      "id": "q-bk-schedule-public",
+      "starter": "booking",
+      "text": "is the schedule public?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "yes",
+          "visitors can open it without signing in"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-bk-full",
+      "starter": "booking",
+      "text": "what happens when a session is full?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no more bookings than its capacity"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-bk-see-others",
+      "starter": "booking",
+      "text": "can members see who else booked a class?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "members see only their own bookings"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-bk-session-fields",
+      "starter": "booking",
+      "text": "which fields does a session have?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "class type",
+          "instructor",
+          "starts at",
+          "capacity",
+          "places left"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-bk-mail-book",
+      "starter": "booking",
+      "text": "do members get an email when they book",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "yes",
+          "a mail when the booking is made",
+          "a reminder the day before"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-bk-sv-drafts",
+      "starter": "booking",
+      "text": "kan besökare läsa utkast på bloggen?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "nej",
+          "bara publicerade inlägg"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-crm-phone-exists",
+      "starter": "crm",
+      "text": "add a phone field to customers",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [],
+        "say": "customers already have a phone field: nothing to add, and Smith says so"
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-crm-shared",
+      "starter": "crm",
+      "text": "who can see other people's customers?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "everyone who signs in",
+          "shared"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-crm-shared-private",
+      "starter": "crm",
+      "text": "make it private then",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "setDefaultAccess"
+        ],
+        "args": {
+          "access": "private"
+        }
+      },
+      "noModel": false,
+      "after": "q-crm-shared"
+    },
+    {
+      "id": "q-crm-shipping",
+      "starter": "crm",
+      "text": "how is shipping cost worked out",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "standard is free above 100 EUR",
+          "otherwise 5 EUR",
+          "express 15 EUR"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-crm-signup",
+      "starter": "crm",
+      "text": "vem kan registrera sig?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "bara inbjudna kollegor",
+          "adresser på acme.example"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-crm-fi-delete",
+      "starter": "crm",
+      "text": "kuka voi poistaa asiakkaita?",
+      "kind": "spec-question",
+      "language": "fi",
+      "outcome": {
+        "must": [
+          "omat asiakkaansa",
+          "ylläpitäjät"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-bb-cancel",
+      "starter": "barbers",
+      "text": "kuinka myöhään asiakas voi perua ajan?",
+      "kind": "spec-question",
+      "language": "fi",
+      "outcome": {
+        "must": [
+          "12 tuntia ennen"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-bb-hours",
+      "starter": "barbers",
+      "text": "what are the opening hours",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "Monday to Friday 09:00-17:00",
+          "Saturday 10:00-14:00",
+          "a break 12:00-12:30"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-bb-double",
+      "starter": "barbers",
+      "text": "can a barber get double booked?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "an appointment takes its barber's time"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-bb-sv-delete-services",
+      "starter": "barbers",
+      "text": "får frisörerna ta bort tjänster?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "nej",
+          "bara ledighet"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-bb-price-exists",
+      "starter": "barbers",
+      "text": "add a price to services",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [],
+        "say": "services already have a price field: nothing to add, and Smith says so"
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-inv-overdue",
+      "starter": "invoicing",
+      "text": "when does an invoice become overdue?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "7 days after the due date",
+          "if it is still sent"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-inv-private",
+      "starter": "invoicing",
+      "text": "can other users see my cleints?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "each user sees only their own"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-inv-overview",
+      "starter": "invoicing",
+      "text": "whats on the overveiw page",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "outstanding",
+          "overdue",
+          "paid",
+          "invoiced by month",
+          "latest invoices"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-inv-edit-sent",
+      "starter": "invoicing",
+      "text": "can I still change an invoice after it's sent",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "a rule says sent or paid invoices can no longer be edited, only credited"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-ki-order-notify",
+      "starter": "kiosk",
+      "text": "who gets told when an order comes in?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "staff",
+          "mail and push",
+          "the kitchen"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-ki-sv-others",
+      "starter": "kiosk",
+      "text": "kan kunderna se varandras beställningar?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "nej",
+          "besökare kan bara skicka beställningar"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-ki-decline",
+      "starter": "kiosk",
+      "text": "what does decline do?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "status becomes declined",
+          "asks for a reason"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-mp-seller",
+      "starter": "marketplace",
+      "text": "can visitors see who is selling an item?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "the owner is not shown"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-mp-hidden",
+      "starter": "marketplace",
+      "text": "why doesnt my item show up for others",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "photos wait for approval",
+          "an administrator approves them"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-rec-who-adds",
+      "starter": "records",
+      "text": "who can add itmes?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "only administrators"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-st-public-incidents",
+      "starter": "status",
+      "text": "which incidents can the public see?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "all of them",
+          "investigating, identified, monitoring and resolved"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-st-api",
+      "starter": "status",
+      "text": "what does the api offer",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "components and incidents",
+          "the resolve action",
+          "AI assistants too"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-st-fi-resolve",
+      "starter": "status",
+      "text": "mitä tapahtuu kun häiriö ratkaistaan?",
+      "kind": "spec-question",
+      "language": "fi",
+      "outcome": {
+        "must": [
+          "tila on ratkaistu",
+          "ratkaisuaika",
+          "päivitys lisätään"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-st-slack",
+      "starter": "status",
+      "text": "can we open incidents from slack?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "yes",
+          "an incoming call creates an incident",
+          "status investigating"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-sp-mail-in",
+      "starter": "support",
+      "text": "what happens when a customer mails in?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "a new case",
+          "status open",
+          "a mail tells the customer it was received"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-sp-close",
+      "starter": "support",
+      "text": "who can close cases",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "agents",
+          "administrators"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-sp-email-locked",
+      "starter": "support",
+      "text": "can the customers email be changed later",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "fixed once the case exists"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-sp-sv-assignee",
+      "starter": "support",
+      "text": "när måste ett ärende ha en ansvarig?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "när det pågår eller är stängt"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "q-api-assistant-delete",
+      "starter": "api",
+      "text": "can the assistant delete tasks?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "it never deletes"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "q-api-let-it",
+      "starter": "api",
+      "text": "let it then",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "grant"
+        ],
+        "args": {
+          "role": "assistant",
+          "delete": [
+            "Task"
+          ]
+        }
+      },
+      "noModel": false,
+      "after": "q-api-assistant-delete"
+    },
+    {
+      "id": "q-api-roles",
+      "starter": "api",
+      "text": "what roles are there",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "admin",
+          "member",
+          "assistant"
+        ],
+        "mustNot": []
+      },
+      "noModel": true
+    },
+    {
+      "id": "d-publish",
+      "starter": "booking",
+      "text": "how do I publsh?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "Publish and share",
+          "Publish live",
+          "a sandbox needs an invite to publish"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-domain",
+      "starter": "booking",
+      "text": "and on my own domain?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "once the app is live",
+          "an A record and a TXT record"
+        ],
+        "mustNot": [
+          "a price for domains"
+        ]
+      },
+      "noModel": false,
+      "after": "d-publish"
+    },
+    {
+      "id": "d-mcp",
+      "starter": "api",
+      "text": "what is mcp",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "Model Context Protocol",
+          "tools for AI assistants",
+          "/mcp",
+          "the same key"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-api-key",
+      "starter": "status",
+      "text": "how do I make an api key",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "an administrator",
+          "on the users page (Team)",
+          "shown once"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-ask",
+      "starter": "crm",
+      "text": "what is Ask?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "a panel in the app",
+          "questions about the records",
+          "reads only what the person may read"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-cost",
+      "starter": "invoicing",
+      "text": "what does it cost to host this?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "pricing and plans are not set",
+          "the beta is free"
+        ],
+        "mustNot": [
+          "a monthly price",
+          "a price per app"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-export",
+      "starter": "crm",
+      "text": "can I export my data",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "Download everything (.zip)",
+          "code, history, data and uploads",
+          "Export CSV on a list page"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-where-data",
+      "starter": "support",
+      "text": "where is my data stored?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "Sweden",
+          "backups in the same region"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-selfhost",
+      "starter": "kiosk",
+      "text": "can i run it on my own server",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "yes",
+          "Docker",
+          "smithable deploy"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-need-ai",
+      "starter": "records",
+      "text": "do I need an AI model for this?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "operations need no model"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-sandbox",
+      "starter": "marketplace",
+      "text": "how long does the sandbox last",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "two hours"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-import",
+      "starter": "crm",
+      "text": "can I import my customers from excel?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "Import on the list page",
+          "a CSV file",
+          "save as CSV"
+        ],
+        "mustNot": [
+          "xlsx files are read directly"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-apps",
+      "starter": "booking",
+      "text": "hur många appar kan jag ha?",
+      "kind": "docs-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "10",
+          "var och en med en live- och en staging-kopia"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-mail-limit",
+      "starter": "barbers",
+      "text": "how many emails can my app send?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "100 recipients a day per app",
+          "1,000 recipients a month per account"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-ai-allowance",
+      "starter": "invoicing",
+      "text": "what happens when my AI allowance runs out",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "€2 a month",
+          "changes through forms, code and built-in rules still work"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-slack",
+      "starter": "status",
+      "text": "can I connect slack",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "calls in",
+          "a slash command makes a record"
+        ],
+        "mustNot": [
+          "a Connect button that signs in to Slack"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-depend",
+      "starter": "crm",
+      "text": "does my app depend on smithable?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "no",
+          "smithable detach"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-fi-finnish",
+      "starter": "booking",
+      "text": "voiko sovelluksen saada suomeksi?",
+      "kind": "docs-question",
+      "language": "fi",
+      "outcome": {
+        "must": [
+          "englanti ja ruotsi",
+          "uusi kieli lisätään pyynnöstä"
+        ],
+        "mustNot": [
+          "suomi on jo tuettu"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-sv-publish",
+      "starter": "kiosk",
+      "text": "hur publicerar jag appen?",
+      "kind": "docs-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "Publish and share",
+          "Publish live"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-sv-data",
+      "starter": "support",
+      "text": "var lagras datan?",
+      "kind": "docs-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "Sverige",
+          "säkerhetskopior i samma region"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-fi-cost",
+      "starter": "barbers",
+      "text": "paljonko tämä maksaa?",
+      "kind": "docs-question",
+      "language": "fi",
+      "outcome": {
+        "must": [
+          "hinnoittelua ei ole päätetty",
+          "beta on ilmainen"
+        ],
+        "mustNot": [
+          "kuukausihinta"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-google",
+      "starter": "marketplace",
+      "text": "can people log in with google",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "Sign in with Google",
+          "under Connections"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-staging",
+      "starter": "status",
+      "text": "whats staging",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "a separate copy with its own data"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-handover",
+      "starter": "invoicing",
+      "text": "can I hand the app over to a developer?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "a transfer link valid for seven days",
+          "download everything"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-lovable",
+      "starter": "records",
+      "text": "how is this different from lovable?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "keeps a spec and generates the code",
+          "changes are operations that can be undone"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-storage",
+      "starter": "marketplace",
+      "text": "how much space do i get for photos",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "2 GB per app",
+          "uploaded files included"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "d-sv-mcp",
+      "starter": "api",
+      "text": "hur kopplar jag Claude Code till appen?",
+      "kind": "docs-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "en nyckel från Team-sidan",
+          "/mcp"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-crm-acme",
+      "starter": "crm",
+      "text": "add a customer called Acme",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "records are added in the app, on the Customers page; the app's design does not change"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-crm-acme-email",
+      "starter": "crm",
+      "text": "with email info@acme.example",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "on the Customers page, in Acme's record"
+      },
+      "noModel": false,
+      "after": "da-crm-acme"
+    },
+    {
+      "id": "da-crm-delete-week",
+      "starter": "crm",
+      "text": "delete all orders from last week",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "orders are deleted in the app, on the Orders page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-crm-maria",
+      "starter": "crm",
+      "text": "change Maria's phone number to 040 123 4567",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "on the Customers page, in her record"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-crm-import",
+      "starter": "crm",
+      "text": "import my customers from customers.csv",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "importRecords"
+        ],
+        "args": {
+          "model": "Customer",
+          "file": "customers.csv"
+        },
+        "say": "or Import on the Customers page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-crm-fi",
+      "starter": "crm",
+      "text": "lisää asiakas Nordvik Oy",
+      "kind": "data",
+      "language": "fi",
+      "outcome": {
+        "say": "asiakkaat lisätään sovelluksessa, Customers-sivulla"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-bk-book-me",
+      "starter": "booking",
+      "text": "book me into tuesday's yin class",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "bookings are made in the app, from the schedule or My bookings"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-bk-hatha",
+      "starter": "booking",
+      "text": "add a hatha class on friday at 18:00 with Anna",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "sessions are added on the Sessions page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-bk-sv-instructor",
+      "starter": "booking",
+      "text": "lägg till instruktören Anna Berg",
+      "kind": "data",
+      "language": "sv",
+      "outcome": {
+        "say": "på sidan Instructors i appen"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-bb-timeoff",
+      "starter": "barbers",
+      "text": "Erik is off all next week, put that in",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "time off is entered on the Time off page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-bb-sv-book",
+      "starter": "barbers",
+      "text": "boka en klippning åt Lisa kl 14 imorgon",
+      "kind": "data",
+      "language": "sv",
+      "outcome": {
+        "say": "på sidan Appointments i appen"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-inv-create",
+      "starter": "invoicing",
+      "text": "create an invoice for Nordvik for 3 hours at 80 euros",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "invoices are made on the Invoices page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-inv-paid",
+      "starter": "invoicing",
+      "text": "markera faktura 2026-004 som betald",
+      "kind": "data",
+      "language": "sv",
+      "outcome": {
+        "say": "Mark paid på fakturan, på sidan Invoices"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-ki-soldout",
+      "starter": "kiosk",
+      "text": "fish soup is sold out",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "Sold out on the dish, on the Dishes page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-ki-dish",
+      "starter": "kiosk",
+      "text": "add a dish: fish and chips, 12.50, mains",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "dishes are added on the Dishes page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-ki-fi-stop",
+      "starter": "kiosk",
+      "text": "lisää uusi pysäkki Maarianhaminaan lauantaille klo 11-15",
+      "kind": "data",
+      "language": "fi",
+      "outcome": {
+        "say": "pysäkit lisätään Stops-sivulla"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-mp-remove",
+      "starter": "marketplace",
+      "text": "remove my old bike listing",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "on the My items page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-rec-watch",
+      "starter": "records",
+      "text": "add my grandfathers watch to the collection",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "items are added on the Items page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-st-open",
+      "starter": "status",
+      "text": "payments are down, open an incident",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "incidents are opened on the Incidents page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-st-resolve",
+      "starter": "status",
+      "text": "resolve the login incident",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "Resolve on the incident, on the Incidents page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-sp-assign",
+      "starter": "support",
+      "text": "assign case 42 to Anna",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "Assign to on the case, on the Cases page"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-sp-sv-close",
+      "starter": "support",
+      "text": "stäng alla ärenden från förra månaden",
+      "kind": "data",
+      "language": "sv",
+      "outcome": {
+        "say": "ärenden stängs på sidan Cases i appen"
+      },
+      "noModel": false
+    },
+    {
+      "id": "da-api-task",
+      "starter": "api",
+      "text": "create a task 'write release notes' in project Apollo",
+      "kind": "data",
+      "language": "en",
+      "outcome": {
+        "say": "on the Admin page, or through the API"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-inv-accounting",
+      "starter": "invoicing",
+      "text": "connect to our accounting system and sync the invoices there every night",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs custom code or a call out to that system; say what can be set up and what needs code"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-ki-postal",
+      "starter": "kiosk",
+      "text": "calculate the delivery cost from the post office's API",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs custom code (a custom action); offer the nearest"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-crm-register",
+      "starter": "crm",
+      "text": "fill in the company details from the business register when I type the vat number",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs custom code calling the register"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-bk-gcal",
+      "starter": "booking",
+      "text": "sync the sessions with my google calendar",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs custom code or an integration; not an operation"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-crm-churn",
+      "starter": "crm",
+      "text": "show me which customers are most likely to churn",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "a custom query whose code is written in src/custom/queries/",
+        "operations": [
+          "addQuery"
+        ],
+        "args": {
+          "model": "Customer"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-st-ping",
+      "starter": "status",
+      "text": "check our website every minute and set it to down if it doesn't answer",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs a monitor outside the app calling the API, or custom code"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-sp-ai-reply",
+      "starter": "support",
+      "text": "use AI to draft a reply for every new case",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs custom code"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-inv-pdf",
+      "starter": "invoicing",
+      "text": "make the invoice pdf look exactly like our old word template",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs custom code; offer what the look settings can do"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-bb-map",
+      "starter": "barbers",
+      "text": "put a map with the shop's location on the home page",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "a custom section or page with its own component",
+        "operations": [
+          "addSection"
+        ],
+        "args": {
+          "page": "home"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-rec-barcode",
+      "starter": "records",
+      "text": "scan a barcode with the phone camera to add an item",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "needs custom code"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-sv-postnord",
+      "starter": "kiosk",
+      "text": "räkna ut frakten med Postnords API",
+      "kind": "custom-code",
+      "language": "sv",
+      "outcome": {
+        "say": "kräver egen kod"
+      },
+      "noModel": false
+    },
+    {
+      "id": "cc-fi-weather",
+      "starter": "kiosk",
+      "text": "hae sääennuste jokaiselle pysäkille",
+      "kind": "custom-code",
+      "language": "fi",
+      "outcome": {
+        "say": "vaatii omaa koodia"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-simpler",
+      "starter": "booking",
+      "text": "make it simpler",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "which part: fewer pages, fewer fields, or the menu?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-crm-status",
+      "starter": "crm",
+      "text": "add status",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "status on which: customers or follow-ups, and which values?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-bk-date",
+      "starter": "booking",
+      "text": "the date is wrong",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "which date, and on which page?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-ki-darker",
+      "starter": "kiosk",
+      "text": "darker",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "the menu, the background or the main colour?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-bb-phone",
+      "starter": "barbers",
+      "text": "phone?",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "a phone field on which: barbers, or required on appointments?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-inv-logo",
+      "starter": "invoicing",
+      "text": "add a logo",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "which picture file?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-mp-sold",
+      "starter": "marketplace",
+      "text": "add a sold status",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "a new status field, or use Available?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-crm-lost",
+      "starter": "crm",
+      "text": "add a lost reason field",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "on orders or on customers?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-sp-priority",
+      "starter": "support",
+      "text": "priority is weird",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "what is wrong with it: its range, its default or how it's shown?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-bk-colours",
+      "starter": "booking",
+      "text": "change the colours",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "to what: a theme, or one colour?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-rec-home",
+      "starter": "records",
+      "text": "fix the home page",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "what is wrong with it?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-sv-name",
+      "starter": "invoicing",
+      "text": "ändra namnet",
+      "kind": "ambiguous",
+      "language": "sv",
+      "outcome": {
+        "ask": "vilket namn: appens, en sidas eller ett fälts?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-fi-colours",
+      "starter": "kiosk",
+      "text": "muuta värejä",
+      "kind": "ambiguous",
+      "language": "fi",
+      "outcome": {
+        "ask": "mitkä värit ja millaisiksi?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-ki-drinks",
+      "starter": "kiosk",
+      "text": "remove drinks",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "the drinks section from the menu's choices, or the drink dishes themselves?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-bb-prices",
+      "starter": "barbers",
+      "text": "show prices",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "where: on the home page's services, or on the appointment?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-inv-remind",
+      "starter": "invoicing",
+      "text": "remind them",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "remind whom, and when?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-st-notify",
+      "starter": "status",
+      "text": "notify people",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "who, and when: a new incident, a resolved one?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-api-private",
+      "starter": "api",
+      "text": "make it private",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "each person sees only their own tasks, or off the API?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-bk-teachers",
+      "starter": "booking",
+      "text": "the teachers",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "what about the instructors?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-sp-tags",
+      "starter": "support",
+      "text": "tags",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "tags on cases? which values, and should agents filter by them?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-mp-sv-cat",
+      "starter": "marketplace",
+      "text": "kategorier?",
+      "kind": "ambiguous",
+      "language": "sv",
+      "outcome": {
+        "ask": "lägga till en kategori, eller ändra dem?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-fi-field",
+      "starter": "records",
+      "text": "lisää kenttä",
+      "kind": "ambiguous",
+      "language": "fi",
+      "outcome": {
+        "ask": "mikä kenttä ja minkä tyyppinen?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "a-rec-darker",
+      "starter": "records",
+      "text": "hmm, darker",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "a darker main colour, a dark menu, or dark mode?"
+      },
+      "noModel": false,
+      "after": "rec-cafe"
+    },
+    {
+      "id": "f-menu",
+      "starter": "booking",
+      "text": "feedback: the menu is confusing",
+      "kind": "feedback",
+      "language": "en",
+      "outcome": {
+        "say": "record the feedback and thank them"
+      },
+      "noModel": true
+    },
+    {
+      "id": "f-leave",
+      "starter": "crm",
+      "text": "I want to leave feedback",
+      "kind": "feedback",
+      "language": "en",
+      "outcome": {
+        "say": "ask what they want to say, or show where feedback goes"
+      },
+      "noModel": true
+    },
+    {
+      "id": "f-slow",
+      "starter": "status",
+      "text": "feedback: the preview takes ages to update after each change",
+      "kind": "feedback",
+      "language": "en",
+      "outcome": {
+        "say": "record the feedback"
+      },
+      "noModel": true
+    },
+    {
+      "id": "f-sv",
+      "starter": "kiosk",
+      "text": "feedback: det är svårt att hitta var man ändrar färger",
+      "kind": "feedback",
+      "language": "sv",
+      "outcome": {
+        "say": "spara återkopplingen och tacka"
+      },
+      "noModel": true
+    },
+    {
+      "id": "f-fi",
+      "starter": "barbers",
+      "text": "palaute: Smith ymmärsi minua väärin kaksi kertaa",
+      "kind": "feedback",
+      "language": "fi",
+      "outcome": {
+        "say": "tallenna palaute ja kiitä"
+      },
+      "noModel": true
+    },
+    {
+      "id": "f-love",
+      "starter": "records",
+      "text": "feedback: love how quick it is to change things!",
+      "kind": "feedback",
+      "language": "en",
+      "outcome": {
+        "say": "record the feedback and thank them"
+      },
+      "noModel": true
+    },
+    {
+      "id": "f-bug",
+      "starter": "invoicing",
+      "text": "feedback - the overview numbers dont match the invoices list",
+      "kind": "feedback",
+      "language": "en",
+      "outcome": {
+        "say": "record it; ask which period if needed"
+      },
+      "noModel": false
+    },
+    {
+      "id": "f-long",
+      "starter": "marketplace",
+      "text": "just so you know, I tried to change the categories three times today and every time it showed something different from what I expected, and then the undo button took back more than I wanted. not sure if it's me or the app but it felt fragile. please pass this on to whoever builds this",
+      "kind": "feedback",
+      "language": "en",
+      "outcome": {
+        "say": "record it as feedback, thank them, no change to the app"
+      },
+      "noModel": false
+    },
+    {
+      "id": "f-sv-tyck",
+      "starter": "support",
+      "text": "jag vill lämna synpunkter på Smith",
+      "kind": "feedback",
+      "language": "sv",
+      "outcome": {
+        "say": "fråga vad, eller visa var återkoppling lämnas"
+      },
+      "noModel": false
+    },
+    {
+      "id": "f-typo",
+      "starter": "api",
+      "text": "feeback: the keys part is hard to find",
+      "kind": "feedback",
+      "language": "en",
+      "outcome": {
+        "say": "record the feedback"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-weather",
+      "starter": "booking",
+      "text": "what's the weather tomorrow",
+      "kind": "off-topic",
+      "language": "en",
+      "outcome": {
+        "say": "politely say Smith helps with this app only"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-poem",
+      "starter": "records",
+      "text": "write me a poem about the sea",
+      "kind": "off-topic",
+      "language": "en",
+      "outcome": {
+        "say": "decline politely; offer help with the app"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-capital",
+      "starter": "kiosk",
+      "text": "what's the capital of australia",
+      "kind": "off-topic",
+      "language": "en",
+      "outcome": {
+        "say": "say it is outside what Smith does"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-sv-joke",
+      "starter": "crm",
+      "text": "berätta ett skämt",
+      "kind": "off-topic",
+      "language": "sv",
+      "outcome": {
+        "say": "vänligt nej, erbjud hjälp med appen"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-fi-recipe",
+      "starter": "kiosk",
+      "text": "anna resepti lohikeittoon",
+      "kind": "off-topic",
+      "language": "fi",
+      "outcome": {
+        "say": "kohteliaasti: Smith auttaa vain sovelluksen kanssa"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-stock",
+      "starter": "invoicing",
+      "text": "is now a good time to buy tesla stock?",
+      "kind": "off-topic",
+      "language": "en",
+      "outcome": {
+        "say": "decline; outside the app"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-python",
+      "starter": "api",
+      "text": "write a python script that renames all my photos by date",
+      "kind": "off-topic",
+      "language": "en",
+      "outcome": {
+        "say": "outside the app; decline politely"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-translate",
+      "starter": "support",
+      "text": "translate 'good morning' into japanese",
+      "kind": "off-topic",
+      "language": "en",
+      "outcome": {
+        "say": "outside the app; decline politely"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-essay",
+      "starter": "marketplace",
+      "text": "can you help me write my cover letter for a job application",
+      "kind": "off-topic",
+      "language": "en",
+      "outcome": {
+        "say": "outside the app; decline politely"
+      },
+      "noModel": false
+    },
+    {
+      "id": "o-sv-recipe",
+      "starter": "barbers",
+      "text": "vad ska jag laga till middag?",
+      "kind": "off-topic",
+      "language": "sv",
+      "outcome": {
+        "say": "utanför appen; vänligt nej"
+      },
+      "noModel": false
+    },
+    {
+      "id": "s-hi",
+      "starter": "booking",
+      "text": "hi",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "greet back and offer help"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-hello",
+      "starter": "crm",
+      "text": "helo",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "greet back"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-thanks",
+      "starter": "invoicing",
+      "text": "thanks",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "you're welcome"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-thnks",
+      "starter": "kiosk",
+      "text": "thnks!",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "you're welcome"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-morning",
+      "starter": "status",
+      "text": "good morning",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "greet back"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-hej",
+      "starter": "support",
+      "text": "hej",
+      "kind": "smalltalk",
+      "language": "sv",
+      "outcome": {
+        "say": "hälsa tillbaka"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-tack",
+      "starter": "barbers",
+      "text": "tack!",
+      "kind": "smalltalk",
+      "language": "sv",
+      "outcome": {
+        "say": "varsågod"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-kiitos",
+      "starter": "barbers",
+      "text": "kiitos",
+      "kind": "smalltalk",
+      "language": "fi",
+      "outcome": {
+        "say": "ole hyvä"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-moi",
+      "starter": "records",
+      "text": "moi",
+      "kind": "smalltalk",
+      "language": "fi",
+      "outcome": {
+        "say": "tervehdi takaisin"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-great",
+      "starter": "marketplace",
+      "text": "you're great",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "thank them"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-how-are-you",
+      "starter": "api",
+      "text": "how are you today?",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "brief friendly answer, offer help"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-ok",
+      "starter": "booking",
+      "text": "ok",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "acknowledge"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-fi-morning",
+      "starter": "kiosk",
+      "text": "hyvää huomenta",
+      "kind": "smalltalk",
+      "language": "fi",
+      "outcome": {
+        "say": "tervehdi takaisin"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-sv-morning",
+      "starter": "invoicing",
+      "text": "god morgon Smith",
+      "kind": "smalltalk",
+      "language": "sv",
+      "outcome": {
+        "say": "hälsa tillbaka"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-thank-you-much",
+      "starter": "status",
+      "text": "thank you so much smith, that was exactly it",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "you're welcome"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-who",
+      "starter": "records",
+      "text": "who are you?",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "introduce Smith as Studio's assistant for this app"
+      },
+      "noModel": true
+    },
+    {
+      "id": "s-after-fav",
+      "starter": "marketplace",
+      "text": "thanks",
+      "kind": "smalltalk",
+      "language": "en",
+      "outcome": {
+        "say": "you're welcome"
+      },
+      "noModel": true,
+      "after": "mp-no-favorites"
+    },
+    {
+      "id": "long-bk-change",
+      "starter": "booking",
+      "text": "ok so here's the thing. our studio has started doing private one-on-one sessions and people keep asking about them at the front desk. I don't want to make a whole new system, but it would be good if when you add a session you could say whether it's private or a group class. most will be group. can you do that?",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Session",
+          "field": "kind",
+          "type": "group | private"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-crm-ambig",
+      "starter": "crm",
+      "text": "our sales team says the CRM is getting messy. there are lots of old customers nobody talks to anymore and the lists are long. I'm not really sure what the fix is, maybe archiving or hiding them somehow, or sorting differently. what do you think we should do?",
+      "kind": "ambiguous",
+      "language": "en",
+      "outcome": {
+        "ask": "hide old customers by a status field and a default filter, or sort them? which do you prefer?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-kiosk-cc",
+      "starter": "kiosk",
+      "text": "we just bought one of those receipt printers for the truck and it would be amazing if every new order would just print out in the kitchen automatically, the printer has some kind of cloud thing with an API key. also the guy who sold it said it works with webhooks?",
+      "kind": "custom-code",
+      "language": "en",
+      "outcome": {
+        "say": "the app already calls the kitchen on each new order (a target with its address and secret); the printer side needs its settings or custom code"
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-inv-spec",
+      "starter": "invoicing",
+      "text": "I'm a bit worried, I sent an invoice to a client last month and it still says sent. they paid it but I forgot to click anything. will the app mark it as overdue by itself and email them or something embarrassing like that?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "a sent invoice is marked overdue 7 days after its due date",
+          "the app mails the client only when an invoice is marked sent",
+          "Mark paid on the invoice"
+        ],
+        "mustNot": [
+          "the app mails the client when it goes overdue"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-sv-change",
+      "starter": "barbers",
+      "text": "Hej! Vi har anställt en ny frisör som bara jobbar tisdagar och torsdagar, och samtidigt vill vi att kunderna ska kunna skriva sin e-post när de bokar så vi kan skicka bekräftelser. Hur gör vi det?",
+      "kind": "two-things",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Appointment",
+          "field": "email",
+          "type": "email",
+          "note": "the barber's own days are entered as time off, or need a schedule per barber"
+        },
+        "unsure": true
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-status-change",
+      "starter": "status",
+      "text": "When an incident gets resolved I'd like the whole team to get a mail about it, not just the person who fixed it, because people keep asking in the chat if things are back up. Just a short mail with the title and when it was resolved would do.",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addOutgoing",
+          "setOutgoingBody"
+        ],
+        "args": {
+          "when": "resolve",
+          "to": "mail",
+          "recipient": "staff",
+          "fields": [
+            "title",
+            "resolvedAt"
+          ]
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-fi-ambig",
+      "starter": "support",
+      "text": "Asiakkaat valittavat että vastaukset tulevat hitaasti. En tiedä pitäisikö meidän lisätä joku muistutus tai näyttää vanhimmat tapaukset ensin tai jotain muuta. Mitä ehdotat?",
+      "kind": "ambiguous",
+      "language": "fi",
+      "outcome": {
+        "ask": "muistutus vanhoista tapauksista, vai vanhimmat ensin listassa?"
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-mp-docs",
+      "starter": "marketplace",
+      "text": "we're thinking about using this for our neighbourhood for real, maybe a few hundred people. before we invite anyone I need to know if the data is safe, where it is kept and whether we can take everything with us if we stop using smithable later",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "hosted in Sweden",
+          "backups in the same region",
+          "Download everything (.zip)",
+          "a transfer link"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-rec-change",
+      "starter": "records",
+      "text": "this is for my record collection. I'd like each item to have the year it was released, and I'd like the list sorted by that year, oldest first, so I can browse by decade. and the kind thing with general/favorite/archived is fine",
+      "kind": "two-things",
+      "language": "en",
+      "outcome": {
+        "operations": [
+          "addField",
+          "setSort"
+        ],
+        "args": {
+          "model": "Item",
+          "field": "year",
+          "type": "int",
+          "page": "items"
+        }
+      },
+      "noModel": false
+    },
+    {
+      "id": "long-api-spec",
+      "starter": "api",
+      "text": "I've connected Claude Code to this with a key and it's adding tasks fine, but my colleague is worried it could wipe out our notes by mistake. can it actually delete things? and what else can it do that we should know about?",
+      "kind": "spec-question",
+      "language": "en",
+      "outcome": {
+        "must": [
+          "it cannot delete",
+          "it adds and changes tasks and notes",
+          "it reads everything"
+        ],
+        "mustNot": []
+      },
+      "noModel": false
+    }
+  ]
+}
