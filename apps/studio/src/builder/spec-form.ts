@@ -382,6 +382,47 @@ export function operationFor(
         ? (["setMeaning", { concept, [which]: value ?? "" }] as [string, Record<string, unknown>])
         : undefined;
     if (path.length === 2 && first === "app" && key === "intent") return meaning("app", "intent");
+    // What an action means; timers, outgoing mail, payments and incoming calls taken away, and
+    // their keys set, each through its own operation.
+    if (
+      first === "actions" &&
+      model &&
+      path.length === 3 &&
+      (path[2] === "description" || path[2] === "intent")
+    )
+      return meaning(model, path[2]);
+    if (model && path.length === 2 && value === undefined) {
+      if (first === "timers") return ["removeTimer", { name: model }];
+      if (first === "outgoing") return ["removeOutgoing", { outgoing: model }];
+      if (first === "payments") return ["removePayment", { name: model }];
+      if (first === "incoming") return ["removeIncoming", { name: model }];
+    }
+    if (first === "timers" && model && path.length === 3) {
+      const which = String(path[2]);
+      if (which === "where" && (value === undefined || isCondition(value)))
+        return ["setTimer", { name: model, where: value ?? {} }];
+      if (
+        ["on", "at", "every", "cron", "run"].includes(which) &&
+        (value === undefined || typeof value === "string")
+      )
+        return ["setTimer", { name: model, [which]: value ?? "none" }];
+    }
+    if (first === "outgoing" && model && path.length === 3 && path[2] === "to")
+      if (typeof value === "string" || (Array.isArray(value) && value.length))
+        return ["setOutgoingTo", { outgoing: model, to: value }];
+    if (first === "payments" && model) {
+      const which = path.slice(2).join(".");
+      const pay = (args: Record<string, unknown>) =>
+        ["setPayment", { name: model, ...args }] as [string, Record<string, unknown>];
+      if ((which === "on" || which === "amount") && typeof value === "string")
+        return pay({ [which]: value });
+      if (which === "description" && (value === undefined || typeof value === "string"))
+        return pay({ description: value || "none" });
+      if (which === "paid.set" && (value === undefined || isCondition(value)))
+        return pay({ paidSet: value ?? "none" });
+      if (which === "refund.by" && Array.isArray(value) && value.length)
+        return pay({ refundBy: value });
+    }
     // A page's lists, filters and choices, each through its own operation (the lists written whole).
     if (first === "pages" && model) {
       const page = model;
