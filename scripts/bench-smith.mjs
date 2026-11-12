@@ -139,7 +139,9 @@ async function scored(r, p) {
   const kind = r.kind;
   if (p.kind === "failed") return { right: false, why: p.message };
   if (kind === "change" || kind === "two-things") {
-    if (p.kind === "none") return { right: false, why: `none: ${p.reason}` };
+    // "Cannot as asked" is right only where nothing was to be added (already there).
+    if (p.kind === "none")
+      return { right: !(r.outcome.operations ?? []).length, why: `none: ${p.reason}` };
     if (p.kind !== "change") return { right: false, why: `${p.kind}` };
     const got = [...new Set(p.operations.map((o) => o.op))].sort().join();
     const wanted = [...new Set(r.outcome.operations ?? [])].sort().join();
@@ -150,7 +152,11 @@ async function scored(r, p) {
   if (kind === "data") return { right: p.kind !== "change", why: p.kind };
   if (kind === "spec-question" || kind === "docs-question") {
     if (p.kind !== "answer") return { right: false, why: p.kind };
-    return judge(r, p.text);
+    // A judge that fails is a wrong mark with the reason, never a crash that prints the request.
+    return judge(r, p.text).catch((error) => ({
+      right: false,
+      why: `judge failed: ${error.message}`,
+    }));
   }
   // smalltalk, off-topic: an answer, no change.
   return { right: p.kind === "answer", why: p.kind };

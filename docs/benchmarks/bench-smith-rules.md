@@ -4,14 +4,14 @@
 
 | Setup | Kind | Right | Of | By rule | Tokens | Cost | Seconds |
 |---|---|---|---|---|---|---|---|
-| rules | ambiguous | 0 | 25 | 0 | 0 | 0.0000 | 0.1 |
-| rules | change | 12 | 104 | 17 | 0 | 0.0000 | 0.6 |
-| rules | custom-code | 0 | 13 | 0 | 0 | 0.0000 | 0.0 |
-| rules | data | 0 | 23 | 0 | 0 | 0.0000 | 0.1 |
-| rules | docs-question | 0 | 28 | 0 | 0 | 0.0000 | 0.1 |
-| rules | off-topic | 0 | 10 | 0 | 0 | 0.0000 | 0.0 |
-| rules | smalltalk | 8 | 17 | 8 | 0 | 0.0000 | 0.0 |
-| rules | spec-question | 2 | 38 | 2 | 0 | 0.0000 | 0.2 |
+| rules | ambiguous | 0 | 25 | 0 | 0 | 0.0000 | 0.2 |
+| rules | change | 14 | 104 | 17 | 0 | 0.0000 | 2.1 |
+| rules | custom-code | 0 | 13 | 0 | 0 | 0.0000 | 0.1 |
+| rules | data | 0 | 23 | 0 | 0 | 0.0000 | 0.2 |
+| rules | docs-question | 0 | 28 | 0 | 0 | 0.0000 | 0.3 |
+| rules | off-topic | 0 | 10 | 0 | 0 | 0.0000 | 0.1 |
+| rules | smalltalk | 8 | 17 | 8 | 0 | 0.0000 | 0.1 |
+| rules | spec-question | 2 | 38 | 2 | 0 | 0.0000 | 0.6 |
 | rules | two-things | 0 | 17 | 0 | 0 | 0.0000 | 0.1 |
 
 Wrong ones:
@@ -123,7 +123,6 @@ Wrong ones:
 - rules q-bk-session-fields (spec-question): failed, needs a model
 - rules q-bk-mail-book (spec-question): failed, needs a model
 - rules q-bk-sv-drafts (spec-question): failed, needs a model
-- rules q-crm-phone-exists (change): none, none: Customers already have a field called "phone".
 - rules q-crm-shared (spec-question): failed, needs a model
 - rules q-crm-shared-private (change): failed, needs a model
 - rules q-crm-shipping (spec-question): failed, needs a model
@@ -133,7 +132,6 @@ Wrong ones:
 - rules q-bb-hours (spec-question): failed, needs a model
 - rules q-bb-double (spec-question): failed, needs a model
 - rules q-bb-sv-delete-services (spec-question): failed, needs a model
-- rules q-bb-price-exists (change): none, none: Services already have a field called "price".
 - rules q-inv-overdue (spec-question): failed, needs a model
 - rules q-inv-private (spec-question): failed, needs a model
 - rules q-inv-overview (spec-question): failed, needs a model

@@ -4018,7 +4018,7 @@
       "outcome": {
         "say": "ask what they want to say, or show where feedback goes"
       },
-      "noModel": false
+      "noModel": true
     },
     {
       "id": "f-slow",
