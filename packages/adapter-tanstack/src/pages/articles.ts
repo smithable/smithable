@@ -56,17 +56,6 @@ function shared(page: ArticlesPage, ctx: GenContext) {
   const picture = p.picture
     ? `row.${p.picture} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${p.picture}\`, alt: row.${p.picture}.alt, width: row.${p.picture}.width, height: row.${p.picture}.height, generated: row.${p.picture}.generated } : undefined`
     : "undefined";
-  // The article page orders all of them, to find the one before and after.
-  const order = `
-/** When an article appeared, for ordering: its ${p.date ?? "record"}${p.date ? "" : "'s creation"}. */
-const when = (row: Row) => ${
-    p.date
-      ? `(row.${p.date} ? new Date(${dated ? `\`\${row.${p.date}}T00:00:00Z\`` : `row.${p.date}`}).getTime() : 0)`
-      : "row.id"
-  };
-/** Newest first: by when they appeared, then by creation. */
-const newestFirst = (rows: Row[]) => [...rows].sort((a, b) => when(b) - when(a) || b.id - a.id);
-`;
   const code = `
 // The row type from the model's module: a type of the data function would keep its server
 // import in the page's code.
@@ -96,12 +85,20 @@ const cardOf = (row: Row) => ({
   picture: ${picture},
 });
 `;
-  // The date the page orders by, as latest() takes it (its model may have other articles pages).
+  // The date the page orders by, as articleRows() and around() take it (its model may have other
+  // articles pages).
   const dates = ir.pages.some(
     (x) => x.pattern.kind === "articles" && x.pattern.model === model.name && x.pattern.date,
   );
   const by = dates ? `${p.date ? JSON.stringify(keyOf(model, p.date)) : "undefined"}, ` : "";
-  return { imports, code, order, n, model, author, crud, by };
+  // The field its articles are addressed by, as around() takes it.
+  const addressed = ir.pages.some(
+    (x) => x.pattern.kind === "articles" && x.pattern.model === model.name && x.pattern.address,
+  );
+  const at = addressed
+    ? `${p.address ? JSON.stringify(keyOf(model, p.address)) : "undefined"}, `
+    : "";
+  return { imports, code, n, model, author, crud, by, at };
 }
 
 function listRoute(page: ArticlesPage, ctx: GenContext): string {
@@ -129,7 +126,7 @@ const getArticles = createServerFn()
     // In the handler: the data function is the server's alone.
     const viewer = await currentViewer();
     // One more than a page, to know whether there is another.
-    const rows = await ${n.data}.latest(viewer, ${by}${PER_PAGE + 1}, (page - 1) * ${PER_PAGE});
+    const rows = await ${n.data}.articleRows(viewer, undefined, true, ${by}${PER_PAGE + 1}, (page - 1) * ${PER_PAGE});
     return {
       items: rows.slice(0, ${PER_PAGE}).map(cardOf),
       more: rows.length > ${PER_PAGE},
@@ -176,7 +173,7 @@ function ArticlesPage() {
 }
 
 function articleRoute(page: ArticlesPage, ctx: GenContext): string {
-  const { imports, code, order, n, author, crud } = shared(page, ctx);
+  const { imports, code, n, author, crud, by, at } = shared(page, ctx);
   const p = page.pattern;
   const framed = publicArticles(page, ctx);
   imports
@@ -197,18 +194,16 @@ function articleRoute(page: ArticlesPage, ctx: GenContext): string {
   const edit = crud
     ? `allows(${n.access}.write, viewer${owner}) && allows(pageAccess[${JSON.stringify(crud.id)}], viewer) ? \`${crud.route === "/" ? "" : crud.route}/\${row.id}\` : undefined`
     : "undefined";
-  return `${HEADER}${imports.render()}${code}${order}
+  return `${HEADER}${imports.render()}${code}
 const getArticle = createServerFn()
   .validator(z.string().max(200))
   .handler(async ({ data: address }) => {
     // In the handler: the data function is the server's alone.
     const viewer = await currentViewer();
-    const rows = newestFirst(await ${n.data}.list(viewer));
-    const i = rows.findIndex((row) => addressOf(row) === address);
-    const row = rows[i];
-    if (!row) return null;
-    const newer = rows[i - 1];
-    const older = rows[i + 1];
+    // The article and the ones just newer and older, a row each in the query.
+    const found = await ${n.data}.around(viewer, ${by}${at}address);
+    if (!found) return null;
+    const { row, newer, older } = found;
     // The site's address, for the picture in links shared elsewhere (og:image).
     const headers = getRequestHeaders();
     const origin = \`\${headers.get("x-forwarded-proto") ?? "http"}://\${headers.get("x-forwarded-host") ?? headers.get("host")}\`;

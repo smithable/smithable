@@ -40,9 +40,9 @@ test("a list and a page per article, read through the data function in the handl
   // The server's data function only inside handlers; the row type from the model's module.
   expect(list).toContain('import { type PostRow } from "#/generated/post";');
   expect(list).toMatch(
-    /\.handler\(async \(\{ data: page \}\) => \{\n[^}]*postData\.latest\(viewer, [^,]+, 13, \(page - 1\) \* 12\)/,
+    /\.handler\(async \(\{ data: page \}\) => \{\n[^}]*postData\.articleRows\(viewer, undefined, true, [^,]+, 13, \(page - 1\) \* 12\)/,
   );
-  expect(article).toContain("const i = rows.findIndex((row) => addressOf(row) === address);");
+  expect(article).toMatch(/const found = await postData\.around\(viewer, [^)]*address\);/);
   // What a shared link shows, and the Edit link for those who may change it.
   expect(article).toContain(
     '{ property: "og:image", content: loaderData.origin + loaderData.article.picture.src }',

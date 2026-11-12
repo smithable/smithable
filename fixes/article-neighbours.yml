@@ -1,0 +1,8 @@
+id: article-neighbours
+title: The page of one article read every article to find it and the ones before and after it.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  features: [page:articles]
+migration: none

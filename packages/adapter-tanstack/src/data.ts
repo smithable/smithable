@@ -790,6 +790,19 @@ export function dataModule(
     p.pattern.kind === "articles" && p.pattern.model === model.name ? [p.pattern.date ?? ""] : [],
   );
   const byDate = [...new Set(articleDates.filter(Boolean))].sort().map((d) => keyOf(model, d));
+  const atKeys = [
+    ...new Set(
+      ir.pages.flatMap((p) =>
+        p.pattern.kind === "articles" && p.pattern.model === model.name && p.pattern.address
+          ? [keyOf(model, p.pattern.address)]
+          : [],
+      ),
+    ),
+  ].sort();
+  const keysOf = (keys: string[]) => keys.map((k) => JSON.stringify(k)).join(" | ");
+  const byParam = byDate.length ? `by: ${keysOf(byDate)} | undefined, ` : "";
+  const byArg = byDate.length ? "by, " : "";
+  const atParam = atKeys.length ? `at: ${keysOf(atKeys)} | undefined, ` : "";
   // A settings or onboarding page shows the viewer's one record: it reads only that row.
   const single = ir.pages.some(
     (p) =>
@@ -1549,6 +1562,7 @@ ${loose
   if (model.fields.some((f) => f.sequence)) drizzle.push("max");
   if (threadTarget?.trash) drizzle.push("isNull");
   if (reads) drizzle.push("count", "gt", "inArray", "isNotNull", "isNull", "ne", "or");
+  if (articleDates.length) drizzle.push("and", "eq", "gt", "isNotNull", "isNull", "lt", "or");
   if (group.length) drizzle.push("count");
   if ((group.length && [...members, ...loose].some((m) => m.trash)) || roots.length)
     drizzle.push("isNull");
@@ -2308,16 +2322,42 @@ ${
   }${
     articleDates.length
       ? `
-  /** A page of the ${inert(n.pluralLabel.toLowerCase())} the viewer may read for an articles page: newest first${byDate.length ? " by `by` (none last)" : ""}, then by creation. */
-  async latest(viewer: Viewer | null, ${byDate.length ? `by: ${byDate.map((k) => JSON.stringify(k)).join(" | ")} | undefined, ` : ""}limit: number, offset = 0) {
+  /** The ${inert(n.pluralLabel.toLowerCase())} the viewer may read for an articles page that fit \`where\`: newest first${byDate.length ? " by `by` (none last)" : ""}, then by creation, or the other way round. */
+  async articleRows(viewer: Viewer | null, where: SQL | undefined, newest: boolean, ${byParam}limit: number, offset = 0) {
     if (readScope(${n.access}.read, viewer) === "none") throw new AccessDenied(viewer !== null);
     const ${ownedAuto ? "found" : "rows"} = ${self}.shownRefs(viewer, await db.query.${n.tableKey}.findMany({
-      where: ${self}.readable(viewer),${withClause(listWith, "      ")}
-      orderBy: (t, { desc }) => [${byDate.length ? "...(by ? [desc(t[by])] : []), " : ""}desc(t.id)],
+      where: and(${self}.readable(viewer), where),${withClause(listWith, "      ")}
+      orderBy: (t, { asc, desc }) => {
+        const o = newest ? desc : asc;
+        return [${byDate.length ? "...(by ? [o(t[by])] : []), " : ""}o(t.id)];
+      },
       limit,
       offset,
     }));${ownedAuto ? "\n    const rows = found.map((row) => shownTo(viewer, row));" : ""}
     ${asListed("rows", "return ")}
+  },
+  /** An article by its address (${atKeys.length ? "the page's `at` field, else " : ""}its number), with the ones just newer and older in the page's order. */
+  async around(viewer: Viewer | null, ${byParam}${atParam}address: string) {
+    const t = ${n.table};
+    const id = /^\\d+$/.test(address) ? Number(address) : 0;
+    const named = ${atKeys.length ? `at ? or(eq(t[at], address), and(or(isNull(t[at]), eq(t[at], "")), eq(t.id, id))) : eq(t.id, id)` : "eq(t.id, id)"};
+    const [row] = await ${self}.articleRows(viewer, named, true, ${byArg}1);
+    if (!row) return null;${
+      byDate.length
+        ? `
+    const when = (by ? row[by] : null) as never;
+    // Newer: a later date, or the same and made later; without a date, any with one, or made later.
+    const newer = !by ? gt(t.id, row.id) : when == null ? or(isNotNull(t[by]), gt(t.id, row.id)) : or(gt(t[by], when), and(eq(t[by], when), gt(t.id, row.id)));
+    const older = !by ? lt(t.id, row.id) : when == null ? and(isNull(t[by]), lt(t.id, row.id)) : or(lt(t[by], when), and(eq(t[by], when), lt(t.id, row.id)), isNull(t[by]));`
+        : `
+    const newer = gt(t.id, row.id);
+    const older = lt(t.id, row.id);`
+    }
+    const [[next], [previous]] = await Promise.all([
+      ${self}.articleRows(viewer, newer, false, ${byArg}1),
+      ${self}.articleRows(viewer, older, true, ${byArg}1),
+    ]);
+    return { row, newer: next, older: previous };
   },`
       : ""
   }
