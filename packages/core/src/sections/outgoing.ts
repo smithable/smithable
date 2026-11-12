@@ -974,6 +974,7 @@ function checkRecipient(
 
 const setOutgoingTo: Operation<{ outgoing: string; to: string; recipient?: string }> = {
   name: "setOutgoingTo",
+  sets: ["smithable.yml:outgoing.*.to", "smithable.yml:outgoing.*.to.*"],
   summary:
     "Change how an outgoing entry tells: its channels (mail, push, sms; several separated by commas) or a target, and with --recipient whom. A target has its own address, so a recipient goes with the change to one.",
   schema: {
@@ -1068,6 +1069,7 @@ const setOutgoingList: Operation<{ outgoing: string } & ListArgs> = {
 
 const removeOutgoing: Operation<{ outgoing: string }> = {
   name: "removeOutgoing",
+  sets: ["smithable.yml:outgoing.*"],
   summary: "Stop telling someone when something happens: remove an outgoing mail or call.",
   schema: {
     type: "object",

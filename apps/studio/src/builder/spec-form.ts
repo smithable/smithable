@@ -328,6 +328,34 @@ export function operationFor(
         ];
     }
   }
+  // The whole app's look: the AI badge, the menu, the chrome, the assistant's voice and the theme.
+  if (
+    file === "smithable.ux.yml" &&
+    (typeof value === "string" || value === undefined || typeof value === "boolean")
+  ) {
+    const where = path.join(".");
+    const text = typeof value === "string" ? value : undefined;
+    if (where === "aiBadge" && typeof value !== "string")
+      return ["setAiBadge", { shown: String(value ?? true) }];
+    if (where === "menuActive" && value !== true && value !== false)
+      return ["setMenuActive", { active: text ?? "inherit" }];
+    if (where === "chrome" && value !== true && value !== false)
+      return ["setChrome", { chrome: text ?? "inherit" }];
+    if (where === "navigation" && value !== true && value !== false)
+      return ["setMenuLayout", { navigation: text ?? "inherit" }];
+    if (where === "assistant.voice" && text) return ["setAssistantVoice", { voice: text }];
+    // A theme key taken away is "none" where setTheme has it (motion's "none" is no motion at all).
+    if ((where === "theme.preset" || where === "theme.motion") && text)
+      return ["setTheme", { [where.slice(6)]: text }];
+    const brand = {
+      "theme.density": "density",
+      "theme.brand.primary": "primary",
+      "theme.brand.background": "background",
+      "theme.brand.font": "font",
+    }[where];
+    if (brand && value !== true && value !== false)
+      return ["setTheme", { [brand]: text ?? "none" }];
+  }
   // A page's icon in the menu.
   if (
     file === "smithable.ux.yml" &&
@@ -382,6 +410,47 @@ export function operationFor(
         ? (["setMeaning", { concept, [which]: value ?? "" }] as [string, Record<string, unknown>])
         : undefined;
     if (path.length === 2 && first === "app" && key === "intent") return meaning("app", "intent");
+    // What an action means; timers, outgoing mail, payments and incoming calls taken away, and
+    // their keys set, each through its own operation.
+    if (
+      first === "actions" &&
+      model &&
+      path.length === 3 &&
+      (path[2] === "description" || path[2] === "intent")
+    )
+      return meaning(model, path[2]);
+    if (model && path.length === 2 && value === undefined) {
+      if (first === "timers") return ["removeTimer", { name: model }];
+      if (first === "outgoing") return ["removeOutgoing", { outgoing: model }];
+      if (first === "payments") return ["removePayment", { name: model }];
+      if (first === "incoming") return ["removeIncoming", { name: model }];
+    }
+    if (first === "timers" && model && path.length === 3) {
+      const which = String(path[2]);
+      if (which === "where" && (value === undefined || isCondition(value)))
+        return ["setTimer", { name: model, where: value ?? {} }];
+      if (
+        ["on", "at", "every", "cron", "run"].includes(which) &&
+        (value === undefined || typeof value === "string")
+      )
+        return ["setTimer", { name: model, [which]: value ?? "none" }];
+    }
+    if (first === "outgoing" && model && path.length === 3 && path[2] === "to")
+      if (typeof value === "string" || (Array.isArray(value) && value.length))
+        return ["setOutgoingTo", { outgoing: model, to: value }];
+    if (first === "payments" && model) {
+      const which = path.slice(2).join(".");
+      const pay = (args: Record<string, unknown>) =>
+        ["setPayment", { name: model, ...args }] as [string, Record<string, unknown>];
+      if ((which === "on" || which === "amount") && typeof value === "string")
+        return pay({ [which]: value });
+      if (which === "description" && (value === undefined || typeof value === "string"))
+        return pay({ description: value || "none" });
+      if (which === "paid.set" && (value === undefined || isCondition(value)))
+        return pay({ paidSet: value ?? "none" });
+      if (which === "refund.by" && (value === undefined || (Array.isArray(value) && value.length)))
+        return pay({ refundBy: value ?? ["none"] });
+    }
     // A page's lists, filters and choices, each through its own operation (the lists written whole).
     if (first === "pages" && model) {
       const page = model;

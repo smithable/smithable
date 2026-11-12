@@ -37,6 +37,14 @@ const setTheme: Operation<{
   page?: string;
 }> = {
   name: "setTheme",
+  sets: [
+    "smithable.ux.yml:theme.preset",
+    "smithable.ux.yml:theme.motion",
+    "smithable.ux.yml:theme.density",
+    "smithable.ux.yml:theme.brand.primary",
+    "smithable.ux.yml:theme.brand.background",
+    "smithable.ux.yml:theme.brand.font",
+  ],
   summary:
     'Choose the theme preset, brand color, background color, font, density or motion ("none" removes a color or the font; for motion it means no motion).',
   schema: {
@@ -1077,6 +1085,7 @@ const setView: Operation<{ page: string; view: "table" | "cards" }> = {
  */
 const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
   name: "setAiBadge",
+  sets: ["smithable.ux.yml:aiBadge"],
   summary:
     'Mark pictures an AI made with "AI-generated" or "AI" (true, the default) or not (false): whether your audience needs it is your responsibility.',
   schema: {
@@ -1102,6 +1111,7 @@ const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
 /** Where the app's menu sits (look-gap.md §4); default removes the key, back to the sidebar. */
 const setMenuLayout: Operation<{ navigation: string }> = {
   name: "setMenuLayout",
+  sets: ["smithable.ux.yml:navigation"],
   summary:
     "Put the app's menu in a sidebar (the default), a bar across the top (topbar) or a bar with the name centred between the links (topbar-centered).",
   schema: {
@@ -1140,6 +1150,7 @@ const setMenuLayout: Operation<{ navigation: string }> = {
 /** How the menu marks the open page (A 215); default removes the key, back to the menu's own. */
 const setMenuActive: Operation<{ active: string }> = {
   name: "setMenuActive",
+  sets: ["smithable.ux.yml:menuActive"],
   summary:
     "Mark the menu's open page filled (the primary behind it), subtle (a tint behind it) or underline; default returns to the menu's own (filled in the sidebar, underlined in a bar).",
   schema: {
@@ -1173,6 +1184,7 @@ const setMenuActive: Operation<{ active: string }> = {
 /** The menu's surface (look-gap.md §4); default removes the key, back to the theme's colours. */
 const setChrome: Operation<{ chrome: string }> = {
   name: "setChrome",
+  sets: ["smithable.ux.yml:chrome"],
   summary:
     "Give the menu a light surface (the page's colours) or a dark one (the text colour as its surface); default returns to the theme's own menu colours.",
   schema: {
@@ -1202,6 +1214,7 @@ const setChrome: Operation<{ chrome: string }> = {
 /** Ask's manner (docs/design/ask-defaults.md §2): plain, the default, is written as nothing. */
 const setAssistantVoice: Operation<{ voice: Voice }> = {
   name: "setAssistantVoice",
+  sets: ["smithable.ux.yml:assistant.voice"],
   summary:
     "Set the manner of Ask, the assistant in the app: plain (the default: short, no pleasantries), friendly or formal.",
   schema: {

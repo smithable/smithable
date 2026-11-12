@@ -206,6 +206,15 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.yml", ["pages", "orders", "contact"], "owner"],
     ["smithable.yml", ["pages", "orders", "defaultFilter", "status"], "open"],
     ["smithable.yml", ["pages", "orders", "description"], "Every order"],
+    ["smithable.yml", ["timers", "reminder"], undefined],
+    ["smithable.yml", ["timers", "reminder", "cron"], "0 8 * * *"],
+    ["smithable.yml", ["outgoing", "receipt"], undefined],
+    ["smithable.yml", ["outgoing", "receipt", "to"], "owner"],
+    ["smithable.yml", ["payments", "deposit"], undefined],
+    ["smithable.yml", ["payments", "deposit", "amount"], "total"],
+    ["smithable.yml", ["payments", "deposit", "paid", "set"], { paid: true }],
+    ["smithable.yml", ["incoming", "mail"], undefined],
+    ["smithable.yml", ["actions", "ship", "description"], "Sends the order"],
     ["smithable.ux.yml", ["pages", "orders", "table", "columns"], ["total"]],
     ["smithable.ux.yml", ["pages", "orders", "table", "totals"], ["total"]],
     ["smithable.ux.yml", ["pages", "orders", "table", "view"], "cards"],
@@ -518,4 +527,95 @@ test("a page's look, one key to one operation, and each taken away as that opera
   // A list where a word is expected (or the other way round) is left to editSpec's checks.
   expect(operationFor("smithable.ux.yml", ux("table", "sort"), ["total"])).toBeUndefined();
   expect(operationFor("smithable.ux.yml", ux("table", "header"), "x")).toBeUndefined();
+});
+
+test("timers, outgoing mail, payments, incoming calls and an action's meaning through their operations", () => {
+  const y = "smithable.yml";
+  expect(operationFor(y, ["timers", "reminder"], undefined)).toEqual([
+    "removeTimer",
+    { name: "reminder" },
+  ]);
+  expect(operationFor(y, ["outgoing", "receipt"], undefined)).toEqual([
+    "removeOutgoing",
+    { outgoing: "receipt" },
+  ]);
+  expect(operationFor(y, ["payments", "deposit"], undefined)).toEqual([
+    "removePayment",
+    { name: "deposit" },
+  ]);
+  expect(operationFor(y, ["incoming", "mail"], undefined)).toEqual([
+    "removeIncoming",
+    { name: "mail" },
+  ]);
+  expect(operationFor(y, ["timers", "reminder", "every"], "1 day")).toEqual([
+    "setTimer",
+    { name: "reminder", every: "1 day" },
+  ]);
+  expect(operationFor(y, ["timers", "reminder", "at"], undefined)?.[1]).toEqual({
+    name: "reminder",
+    at: "none",
+  });
+  expect(operationFor(y, ["timers", "reminder", "where"], { status: "open" })?.[1]).toEqual({
+    name: "reminder",
+    where: { status: "open" },
+  });
+  expect(operationFor(y, ["outgoing", "receipt", "to"], "customer.email")).toEqual([
+    "setOutgoingTo",
+    { outgoing: "receipt", to: "customer.email" },
+  ]);
+  expect(operationFor(y, ["payments", "deposit", "description"], undefined)?.[1]).toEqual({
+    name: "deposit",
+    description: "none",
+  });
+  expect(operationFor(y, ["payments", "deposit", "paid", "set"], { paid: true })?.[1]).toEqual({
+    name: "deposit",
+    paidSet: { paid: true },
+  });
+  expect(operationFor(y, ["payments", "deposit", "refund", "by"], ["staff"])?.[1]).toEqual({
+    name: "deposit",
+    refundBy: ["staff"],
+  });
+  expect(operationFor(y, ["actions", "merge", "intent"], "One customer, not two")).toEqual([
+    "setMeaning",
+    { concept: "merge", intent: "One customer, not two" },
+  ]);
+  expect(operationFor(y, ["payments", "deposit", "refund", "by"], undefined)?.[1]).toEqual({
+    name: "deposit",
+    refundBy: ["none"],
+  });
+  // A payment's amount taken away has no "none": editSpec writes it, and the checks say why not.
+  expect(operationFor(y, ["payments", "deposit", "amount"], undefined)).toBeUndefined();
+});
+
+test("the whole app's look goes through its operations", () => {
+  const u = "smithable.ux.yml";
+  expect(operationFor(u, ["aiBadge"], false)).toEqual(["setAiBadge", { shown: "false" }]);
+  expect(operationFor(u, ["aiBadge"], undefined)).toEqual(["setAiBadge", { shown: "true" }]);
+  expect(operationFor(u, ["chrome"], undefined)).toEqual(["setChrome", { chrome: "inherit" }]);
+  expect(operationFor(u, ["navigation"], "topbar")).toEqual([
+    "setMenuLayout",
+    { navigation: "topbar" },
+  ]);
+  expect(operationFor(u, ["menuActive"], "subtle")).toEqual([
+    "setMenuActive",
+    { active: "subtle" },
+  ]);
+  expect(operationFor(u, ["assistant", "voice"], "formal")).toEqual([
+    "setAssistantVoice",
+    { voice: "formal" },
+  ]);
+  expect(operationFor(u, ["theme", "preset"], "minimal")).toEqual([
+    "setTheme",
+    { preset: "minimal" },
+  ]);
+  expect(operationFor(u, ["theme", "brand", "primary"], undefined)).toEqual([
+    "setTheme",
+    { primary: "none" },
+  ]);
+  expect(operationFor(u, ["theme", "density"], "compact")).toEqual([
+    "setTheme",
+    { density: "compact" },
+  ]);
+  // Motion's "none" is no motion at all, so taking the key away stays with editSpec.
+  expect(operationFor(u, ["theme", "motion"], undefined)).toBeUndefined();
 });

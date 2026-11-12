@@ -754,6 +754,7 @@ const setIncomingReply: Operation<{
 
 const removeIncoming: Operation<{ name: string }> = {
   name: "removeIncoming",
+  sets: ["smithable.yml:incoming.*"],
   summary: "Remove an incoming call: its address answers no more. Custom code for it stays.",
   schema: {
     type: "object",
