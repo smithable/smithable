@@ -364,7 +364,7 @@ export function Ask({
           : [];
       setOutput(
         result.ok && done.length
-          ? `Done: ${done.join("; ")}. ${usageReceipt(proposal.usage, "done")}.`
+          ? `Done: ${done.join("; ")}. ${usageReceipt(proposal.usage, "by")}.`
           : result.output,
       );
       setProposal(undefined);

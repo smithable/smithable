@@ -184,6 +184,30 @@ export function wordOrList(options: JsonSchema[]): { word: string; list: JsonSch
 }
 
 /** A new entry of a named map, as the form's Add writes it: an empty map. */
+/** The value at a path of a parsed file. */
+const at = (whole: unknown, path: (string | number)[]): unknown =>
+  path.reduce<unknown>((v, k) => (v as Record<string | number, unknown> | undefined)?.[k], whole);
+
+/** A group with one key set (or taken away), or the given group when no key is named. */
+function withKey(
+  current: unknown,
+  key: string | number | undefined,
+  value: unknown,
+): Record<string, unknown> | undefined {
+  if (key === undefined)
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined;
+  const next = { ...((current ?? {}) as Record<string, unknown>) };
+  if (value === undefined) delete next[String(key)];
+  else next[String(key)] = value;
+  return next;
+}
+
+/** A condition on a record's values ({ status: closed }). */
+const isCondition = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
 const isNew = (value: unknown) =>
   value !== null &&
   typeof value === "object" &&
@@ -193,12 +217,15 @@ const isNew = (value: unknown) =>
 /**
  * The specific operation that sets a key, when there is one (what-it-does.md §2): a text of the
  * content file through setText (empty restores the default), the app's name, description,
- * currency, time zone and formats through setApp. Undefined leaves it to editSpec with the key's path.
+ * currency, time zone and formats through setApp; the Data keys each through the operation that
+ * sets them (a key of a group written whole, from `whole`, the file as it is). Undefined leaves it
+ * to editSpec with the key's path.
  */
 export function operationFor(
   file: string,
   path: (string | number)[],
   value: unknown,
+  whole?: unknown,
 ): [string, Record<string, unknown>] | undefined {
   if (
     file === "smithable.content.yml" &&
@@ -298,6 +325,108 @@ export function operationFor(
           names: value === "all" ? ["all"] : value?.length ? value : ["none"],
         },
       ];
+  }
+  if (file === "smithable.yml") {
+    const model = typeof key === "string" ? key : "";
+    // What a thing means, for the assistant and developers: the app's intent, a model's or a
+    // field's description and intent (setMeaning; empty removes it).
+    const meaning = (concept: string, which: string) =>
+      (typeof value === "string" || value === undefined) &&
+      ["description", "intent"].includes(which)
+        ? (["setMeaning", { concept, [which]: value ?? "" }] as [string, Record<string, unknown>])
+        : undefined;
+    if (path.length === 2 && first === "app" && key === "intent") return meaning("app", "intent");
+    if (first === "models" && model) {
+      const own = path[2];
+      if (path.length === 3 && (own === "description" || own === "intent"))
+        return meaning(model, own);
+      if (
+        path.length === 3 &&
+        own === "trash" &&
+        (typeof value === "boolean" || value === undefined)
+      )
+        return ["setTrash", { model, trash: value === true }];
+      if (
+        path.length === 3 &&
+        own === "ownedBy" &&
+        (typeof value === "string" || value === undefined)
+      )
+        return ["setOwner", { model, ...(value ? { field: value } : {}) }];
+      if (path.length === 3 && own === "namedBy") {
+        if (value === undefined || (Array.isArray(value) && !value.length))
+          return ["setNamedBy", { model, none: true }];
+        if (typeof value === "string") return ["setNamedBy", { model, parts: [value] }];
+        if (Array.isArray(value) && value.length) return ["setNamedBy", { model, parts: value }];
+      }
+      if (path.length === 3 && own === "review") {
+        if (value === undefined || (Array.isArray(value) && !value.length))
+          return ["setReview", { model, fields: ["none"] }];
+        if (value === "all") return ["setReview", { model, fields: ["all"] }];
+        if (Array.isArray(value) && value.length) return ["setReview", { model, fields: value }];
+      }
+      // A field's rules: who fills it, locked, required while a condition holds, unique.
+      if (path.length === 5 && own === "fields" && typeof field === "string") {
+        const which = path[4];
+        if (which === "description" || which === "intent")
+          return meaning(`${model}.${field}`, which);
+        const rules = (args: Record<string, unknown>) =>
+          ["setFieldRules", { model, field, ...args }] as [string, Record<string, unknown>];
+        if (which === "by" && (value === "app" || value === undefined))
+          return rules({ by: value ?? "" });
+        if (
+          which === "unique" &&
+          (value === undefined ||
+            typeof value === "boolean" ||
+            value === "owner" ||
+            value === "app")
+        )
+          return rules({ unique: String(value ?? false) });
+        if (which === "locked") {
+          if (value === true) return rules({ once: true, locked: {} });
+          if (value === undefined || value === false) return rules({ once: false, locked: {} });
+          if (isCondition(value)) return rules({ once: false, locked: value });
+        }
+        // Always required is the type's "!" (changeField); a condition is the field's rule.
+        if (which === "required" && (value === undefined || isCondition(value)))
+          return rules({ required: value ?? {} });
+      }
+      // A conversation's fields, the whole setting or one of its keys, through setThread.
+      if (own === "thread" && path.length >= 3 && path.length <= 4) {
+        if (path.length === 3 && value === undefined) return ["setThread", { model, none: true }];
+        const next = withKey(at(whole, path.slice(0, 3)), path[3], value);
+        // A key taken away is left to editSpec: setThread keeps what it is not given.
+        if (next && (path.length === 3 || value !== undefined)) {
+          const side = next.side as { field?: unknown; ours?: unknown } | undefined;
+          // A side half given (its field without our value) is kept by editSpec until whole.
+          const paired = typeof side?.field === "string" && typeof side.ours === "string";
+          if (side !== undefined && !paired) return undefined;
+          const args = {
+            ...(typeof next.body === "string" ? { body: next.body } : {}),
+            ...(typeof next.author === "string" ? { author: next.author } : {}),
+            ...(paired ? { side: side?.field, ours: side?.ours } : {}),
+          };
+          if (Object.keys(args).length) return ["setThread", { model, ...args }];
+        }
+      }
+      // A limit per referenced record, written whole by setCapacity.
+      if (own === "capacity" && path.length >= 3 && path.length <= 4) {
+        if (path.length === 3 && value === undefined)
+          return ["setCapacity", { model, per: "none" }];
+        const next = withKey(at(whole, path.slice(0, 3)), path[3], value);
+        if (next && typeof next.per === "string" && next.max !== undefined)
+          return [
+            "setCapacity",
+            {
+              model,
+              per: next.per,
+              max: String(next.max),
+              ...(isCondition(next.where) ? { where: next.where } : {}),
+              ...(typeof next.closes === "string" ? { closes: next.closes } : {}),
+              ...(typeof next.cancelUntil === "string" ? { cancelUntil: next.cancelUntil } : {}),
+            },
+          ];
+      }
+    }
   }
   return undefined;
 }

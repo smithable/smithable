@@ -48,8 +48,8 @@ const read = (text: string | undefined): unknown => {
 type Path = (string | number)[];
 
 /** Writes one key: through its own operation when it has one, else editSpec with its path. */
-const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown) => {
-  const own = operationFor(file, path, value);
+const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown, whole?: unknown) => {
+  const own = operationFor(file, path, value, whole);
   return own
     ? run(own[0], own[1])
     : run("editSpec", { file, path, value: value === undefined ? null : value });
@@ -261,7 +261,8 @@ export function SpecForm({
         const schema = schemas[file];
         if (!schema || !parts.includes(key) || (key !== "spec" && files[key] === undefined))
           return null;
-        const write = (path: Path, value: unknown) => writeKey(run, file, path, value);
+        const write = (path: Path, value: unknown) =>
+          writeKey(run, file, path, value, read(files[key]));
         return (
           <section key={file} aria-label={title}>
             <h2 className="mb-2 border-b border-line pb-1 text-xs font-semibold tracking-wide text-quiet uppercase">
@@ -821,7 +822,7 @@ export function SpecPart({
   if (!schema) return null;
   let value = whole;
   for (const step of path) value = (value as Record<string | number, unknown> | undefined)?.[step];
-  const write = (at: Path, next: unknown) => writeKey(run, file, at, next);
+  const write = (at: Path, next: unknown) => writeKey(run, file, at, next, whole);
   return (
     <Writer.Provider value={write}>
       <Choices.Provider value={choicesOf(files, file)}>
