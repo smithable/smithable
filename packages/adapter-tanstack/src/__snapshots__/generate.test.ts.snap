@@ -26730,7 +26730,7 @@ export const postData = {
   /** An article by its address (the page's \`at\` field, else its number), with the ones just newer and older in the page's order. */
   async around(viewer: Viewer | null, by: "publishedOn" | undefined, at: "address" | undefined, address: string) {
     const t = schema.posts;
-    const id = /^\\d+$/.test(address) ? Number(address) : 0;
+    const id = /^[1-9]\\d*$/.test(address) ? Number(address) : 0;
     const named = at ? or(eq(t[at], address), and(or(isNull(t[at]), eq(t[at], "")), eq(t.id, id))) : eq(t.id, id);
     const [row] = await postData.articleRows(viewer, named, true, by, 1);
     if (!row) return null;
@@ -33846,7 +33846,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "61ae1a23 generated",
+  "src/generated/post.server.ts": "d92be115 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -77207,7 +77207,7 @@ export const incidentData = {
   /** An article by its address (its number), with the ones just newer and older in the page's order. */
   async around(viewer: Viewer | null, by: "detectedAt" | undefined, address: string) {
     const t = schema.incidents;
-    const id = /^\\d+$/.test(address) ? Number(address) : 0;
+    const id = /^[1-9]\\d*$/.test(address) ? Number(address) : 0;
     const named = eq(t.id, id);
     const [row] = await incidentData.articleRows(viewer, named, true, by, 1);
     if (!row) return null;
@@ -84516,7 +84516,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident.import.server.ts": "f466f13d generated",
   "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "bafb4e75 generated",
+  "src/generated/incident.server.ts": "d33c48f1 generated",
   "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "50bbd5b3 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",

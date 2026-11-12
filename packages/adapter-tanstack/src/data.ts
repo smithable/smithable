@@ -2339,7 +2339,7 @@ ${
   /** An article by its address (${atKeys.length ? "the page's `at` field, else " : ""}its number), with the ones just newer and older in the page's order. */
   async around(viewer: Viewer | null, ${byParam}${atParam}address: string) {
     const t = ${n.table};
-    const id = /^\\d+$/.test(address) ? Number(address) : 0;
+    const id = /^[1-9]\\d*$/.test(address) ? Number(address) : 0;
     const named = ${atKeys.length ? `at ? or(eq(t[at], address), and(or(isNull(t[at]), eq(t[at], "")), eq(t.id, id))) : eq(t.id, id)` : "eq(t.id, id)"};
     const [row] = await ${self}.articleRows(viewer, named, true, ${byArg}1);
     if (!row) return null;${
