@@ -953,6 +953,39 @@ ${own
 });
 `;
   }
+  // People by name for the keys whose role may set a field that refers to a user (T729,
+  // docs/design/api-only.md §3.6): the same people a form lists, by id and name only.
+  const peopleRoles = auth.roles
+    .map((r) => r.name)
+    .filter((role) =>
+      assistantOffer(ir, auth, { role }, { scope: "api" }).tools.some(
+        (tool) => tool.name === "people",
+      ),
+    );
+  if (peopleRoles.length)
+    files["src/routes/api/v1/users.ts"] =
+      `${HEADER}// People by name for a key whose role may set a field that refers to a user (docs/design/api-only.md
+// §3.6): ?name= two letters or more, at most ten, each as id and name, never an address. Other keys
+// are told there is nothing here.
+import { createFileRoute } from "@tanstack/react-router";
+import { apiCall } from "#/kit/api.server";
+import { NotFound } from "#/kit/refusal";
+import { peopleNamed } from "#/generated/user-choices.server";
+
+const ROLES: readonly string[] = ${JSON.stringify(peopleRoles)};
+
+export const Route = createFileRoute("/api/v1/users")({
+  server: {
+    handlers: {
+      GET: ({ request }) =>
+        apiCall(request, async (viewer) => {
+          if (!ROLES.includes(viewer.role)) throw new NotFound("There is nothing here.");
+          return { items: peopleNamed(new URL(request.url).searchParams.get("name") ?? "") };
+        }),
+    },
+  },
+});
+`;
   return files;
 }
 
@@ -1019,6 +1052,8 @@ function toolsModule(
       ];
     }),
   );
+  // People by name, when a caller is offered the lookup (T729).
+  const people = Object.values(offers).some((o) => o.tools.some((tool) => tool.name === "people"));
   // Whose a record is, for allows: its owner column, or what the kind's data function says for an
   // owner by address or one step away (docs/design/support-portal-path.md §2).
   const ownerOfKind = models.some(({ model }) => addressOwned(model))
@@ -1161,7 +1196,7 @@ function toolsModule(
   }
 ${actions.length || rowsActions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
 ${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${app ? `import { count, LIMITS${confirms ? ", writeAllowed" : ""} } from "#/kit/limit";\nimport { w } from "#/kit/words";\n` : confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
-import { NoSuchValue, nearest } from "#/kit/where";
+import { NoSuchValue, nearest } from "#/kit/where";${people ? '\nimport { peopleNamed } from "./user-choices.server";' : ""}
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
   app
@@ -1409,7 +1444,13 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       await kind.data.remove(viewer, row.id, args.together === true);
       return { deleted: row.id };
     }
-    case "describe":
+${
+  people
+    ? `    case "people":
+      return { people: peopleNamed(String(args.name ?? "")) };
+`
+    : ""
+}    case "describe":
       kindOf(args);
       return { description: offerFor(viewer).describe[args.kind as string] };
     case "run":

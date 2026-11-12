@@ -45,6 +45,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### The app's API
 
+- A key whose role may set a field that refers to a user can look people up by name, as the role's form lists them: `GET /api/v1/users?name=` and the `people` tool, two letters or more, at most ten, each as id and name only. Other keys get a 404 and no such tool (docs/design/api-only.md §3.6).
 - User references accept the string identifiers returned by reads, including updates through the API and assistant conversions. Ordinary model references retain integer identifiers; generated OpenAPI descriptions distinguish the two.
 
 ## 0.1.1 (2026-10-13)

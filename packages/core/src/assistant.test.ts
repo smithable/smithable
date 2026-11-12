@@ -353,3 +353,42 @@ pages:
   expect(offer.summary).toContain("kind* (api | site)");
   expect(offer.summary).not.toContain("xxxx");
 });
+
+test("people by name only for a key whose role may set a field that refers to a user (T729)", () => {
+  const auth = authOf("api: { models: all, actions: all, assistants: true }\n");
+  const has = (offer: AssistantOffer) => names(offer.tools).includes("people");
+  // Customer's only user field is its owner: as in a form, only a role that may change every
+  // customer gives it (admin), not sales, who adds customers but owns what it adds.
+  expect(has(assistantOffer(ir, auth, { role: "admin" }))).toBe(true);
+  expect(has(assistantOffer(ir, auth, { role: "sales" }))).toBe(false);
+  // A user field that is no owner: whoever may add or change the record may look people up.
+  const handled = validateSpec({
+    path: "smithable.yml",
+    text: spec.replace("      rush: bool\n", "      rush: bool\n      handledBy: User\n"),
+  }).ir as SpecIR;
+  const authHandled = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, sales: { pages: all, create: all, write: [Order] }, viewer: { pages: all } }\ndefaultRole: viewer\napi: { models: all, assistants: true }\n",
+    },
+    handled,
+  ).auth as AuthIR;
+  const sales = assistantOffer(handled, authHandled, { role: "sales" });
+  expect(has(sales)).toBe(true);
+  const tool = sales.tools.find((t) => t.name === "people");
+  expect(tool?.inputSchema.required).toEqual(["name"]);
+  expect(tool?.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
+  // Never for a visitor, never inside the app (Ask), and not when the key reaches no such field.
+  expect(has(assistantOffer(handled, authHandled, "visitor"))).toBe(false);
+  expect(has(assistantOffer(handled, authHandled, { role: "sales" }, { scope: "app" }))).toBe(
+    false,
+  );
+  const customersOnly = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, sales: { pages: all, create: all, write: [Order] }, viewer: { pages: all } }\ndefaultRole: viewer\napi: { models: [Customer], assistants: true }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  expect(has(assistantOffer(ir, customersOnly, { role: "sales" }))).toBe(false);
+});

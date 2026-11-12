@@ -131,6 +131,15 @@ Rules:
 
 What stays for later, as §5c says: "ask your app" for every signed-in user, acting as that person. It needs sign-in for programs on behalf of a person.
 
+### 3.6 People by name, for a key that sets a person (T729)
+
+A field that refers to a user (an attendee, an account manager) takes a user's id, and a key cannot list the users: a person in the app picks from a list of names, a program or an assistant had no way to find the id of "Maria". Decision (2026-11-13), by parity with the app's own pages: what a key's role can do in a form, the key can do through the API and MCP. Where the role may set a user field, its form offers everyone by name, so the key gets the same lookup, narrowed:
+
+- `GET /api/v1/users?name=ma` and the `people` tool (`{ "name": "ma" }`): two letters or more of the name, at most ten people whose name holds them, each as `{ id, name }`. Never an address, a phone number or a role.
+- Only for a key whose role may add or change a record with a field that refers to a user. A record's owner field counts only for a role that may change every record of it, as in a form, where only those roles choose the owner. Another key is answered as if there were nothing there (404), and its offer has no `people` tool.
+- Counted against the key's ordinary limit, 60 calls a minute. No listing of everyone: an empty or one-letter name is refused.
+- Not in "Ask" inside the app, whose people are already signed in and pick from the form.
+
 ## 4. The starter
 
 `api`: **tasks and notes an assistant keeps**. It is the commonest reason to want this app, and small enough to read in a minute.
