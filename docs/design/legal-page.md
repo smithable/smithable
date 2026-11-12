@@ -55,3 +55,89 @@ The sentences are the kit's words (`legal*` in `words/en.ts` and `sv.ts`), so th
 ## 5. What it is not
 
 Not legal advice and not a terms page: `legal: terms` can follow the same shape when someone needs it. No per-country texts, no cookie list beyond what the app sets, no consent records.
+
+## 6. The whole configuration, and the owner's review
+
+Design, 2026-11-13 (Fable). Not built. Sections 1 to 5 describe the page as built; this section closes the gap between what the page says and what the app really does, and adds the owner's review of it. Three rules hold throughout: the page states only what the app's own files or its running settings show; it never states a legal basis, a consent or a retention period nobody set; and it never says the app complies with anything.
+
+### 6.1 Facts the page does not state yet
+
+| Part | From | Today |
+|---|---|---|
+| AI assistant | the spec's assistant section: that the app has one, what it may read, whether questions are kept; the provider and region from the running app's settings (`ASSISTANT_PROVIDER`, `ASSISTANT_REGION`, the kit's `aiFacts()`) | not on the page |
+| Signing in with another service | the auth file's providers: that signing in with Google sends the person to Google and brings back their name and address | the provider is named as a way in, nothing more |
+| Payments | the context file's payment provider, by name; which models a payment is about | says "the payment provider", unnamed |
+| Text messages and push | the `outgoing` entries by channel; the SMS provider from the running app's settings (`SMS_PROVIDER`) | channels named, provider not |
+| Other services the app sends to | `outgoing` entries whose target is not mail: the target's name and the model sent | not on the page |
+| What comes in | `incoming` entries: mail received at the app's address becomes a record of which model; requests from which named service (a webhook) become which | not on the page |
+| What visitors are asked for | the public forms (a landing page's form, an order page's asked fields): the fields by label, whatever their type | only models with an email, phone or user field are listed |
+| Records the maker names | any model with a `keeps` line (6.2) is listed with its fields, so a model holding only names or notes can be put on the page | not possible |
+| The operator's own functions | whether the project has custom code or custom actions, and the maker's `custom` text about them (6.2) | not on the page |
+| How long records are kept | the content file, when the maker says it (6.2) | only the kit's fixed log and backup times |
+
+Which models hold personal information is still decided by the shape of the spec (an email, a phone number, a link to a user, a public form) and by the maker's own naming in `keeps`, never by a field's name.
+
+Two kinds of source, kept apart on purpose. What the project's files say is frozen into the page at generation, as today: the same files give the same generated code, and section 4's answer on determinism stands for it. What only the running app knows (which AI provider, which region, which SMS provider) is read when the page is shown, by the kit function that already feeds the assistant's own notice, extended to the SMS provider; when such a setting is absent the page says the service is one the operator chose and does not guess a name. The page states a region as it is set and draws no conclusion from it.
+
+### 6.2 What only the maker knows
+
+Three additions to the page's part of the content file, all plain text shown as written:
+
+```yaml
+pages:
+  privacy:
+    operator: { name: …, address: …, email: …, country: …, hosting: in the EU }
+    keeps:                       # how long, per model; the maker's words
+      Booking: Two years after the class, for the bookkeeping.
+      Message: Until answered, at most six months.
+    services:                    # others the operator uses that the files do not show
+      - { name: Example Mail Ab, for: sending mail, where: in the EU }
+    custom: The waiting-list function mails the next person when a place is free.
+```
+
+A listed model without a `keeps` line gets the sentence that records stay until the operator removes them or a person asks for removal. A `keeps` line for a model that no longer exists is a validation warning, so a renamed model does not silently lose its line.
+
+The page's generated sentences are never written by a model (section 2). The maker's own lines are the maker's text like any other content, however they come to write it.
+
+On the hosted service, Studio offers the account's name and contact as the operator's details; the maker confirms, and it is an ordinary change to the content file.
+
+### 6.3 The completeness check
+
+`smithable validate` and the app card say what is missing, as warnings, never as a verdict on the law:
+
+| Code | When |
+|---|---|
+| `privacy-missing` | no privacy page, and the app has sign-in, a public form, incoming mail, an assistant open to visitors, or analytics |
+| `operator-unknown` (exists) | no operator name; extended to a missing contact email |
+| `privacy-custom` | the project has custom code or custom actions and the page has no `custom` text |
+| `privacy-keeps-unknown` | a `keeps` line names a model that does not exist |
+| `privacy-unreviewed` | the page has never been reviewed, or its facts changed since (6.4) |
+
+A setting only the running app knows cannot be checked at validation; the page's own wording covers its absence (6.1), and the app card shows the running value.
+
+### 6.4 The owner's review
+
+The page is generated, and its operator answers for it. So the owner reads it and says so, and is asked again when it changes.
+
+- **What is reviewed.** The page's description of the app as the project's files give it: the facts the generator freezes into the route, which already hold the operator's details, `keeps`, `services`, `custom` and `more`, and the names of the custom actions; and the generated sentences the page uses, in the app's own language. The `reviewed` record itself and the page's title are left out.
+- **The fingerprint.** SHA-256 over those facts written as JSON with sorted keys and Unix line ends, followed by the sentences used, in a fixed order; the first sixteen hexadecimal digits are kept. Rewording a sentence the page uses asks for a new review; a change to another language's file or to a sentence the page does not use asks for none.
+- **Recording it.** One operation, `reviewPrivacyPage`, writes `reviewed: { facts: <fingerprint>, on: <date, UTC> }` under the page in the content file. It goes through the operation layer like every change, so it is in the history and can be undone. It records no person's name. A review that arrives by a merge from another branch counts only if the fingerprint matches the merged facts.
+- **When the facts change.** A new field in a listed model, a new provider, a changed access rule, a new custom action: the fingerprint no longer matches. Studio shows the page as "changed since your review" with the changed parts side by side in words, and one button to review again. It needs no stored copy for that: the facts as reviewed are computed again from the project's files at the change that recorded the review. `validate` warns `privacy-unreviewed`.
+- **The page itself always shows the current facts**, reviewed or not: a true page nobody has confirmed is better than a confirmed page that is no longer true. While the fingerprint matches it carries one line, "The operator reviewed this description of the app on <date>"; otherwise it carries no line about review, in either direction.
+- **Settings of the running app are outside the review**, because the files do not hold them and Studio's preview does not have the live ones. The review line's wording is about the description of the app for that reason, and the sentences that come from running settings say that they show the current setting. Where the hosted service sets or changes such a setting for a published app, its publish card shows the value the owner is publishing with.
+- **Custom code is reviewed by its presence and the actions' names only.** Editing what a custom function does asks for no new review; the `custom` text is the maker's statement about it, and the page says so.
+- **Publishing.** The engine does not stop a build over it; a self-hosted maker reads the warning. The hosted service reads the review's state from the build (reviewed, changed, never) for its publish card and decides there how firmly to ask.
+
+`reviewed` is a record about the page's text, kept with that text; it is not a new construct of the app's definition and changes nothing the app does.
+
+### 6.5 Still not
+
+Not legal advice, no terms page, no legal basis per purpose, no consent records, no per-country texts, no list of what a visitor's browser fetches from elsewhere beyond the analytics setting, and no reading of custom code. The page says what the app does; whether that is enough is the operator's judgement, and the review is where they make it.
+
+### 6.6 Build order
+
+1. The missing facts of 6.1 that come from the files, with their sentences in every language file; the app card shares them.
+2. The running app's settings on the page (AI provider and region, SMS provider).
+3. `keeps`, `services` and `custom` in the content file, with Studio's form.
+4. The fingerprint, `reviewPrivacyPage`, the warnings of 6.3 and Studio's "changed since your review".
+5. On the hosted service: the account's details offered as the operator, and the publish card reading the review's state.
