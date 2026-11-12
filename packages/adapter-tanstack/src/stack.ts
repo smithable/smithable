@@ -9,7 +9,7 @@ export const STACK_PROFILE = {
     "@tailwindcss/vite": "4.3.5",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-start": "1.169.5",
-    "better-auth": "1.7.18",
+    "better-auth": "1.7.22",
     // 12.x ships prebuilt binaries; 13.x always compiles from source (needs Python and a C++ compiler).
     "better-sqlite3": "12.11.1",
     "class-variance-authority": "0.7.1",
@@ -17,7 +17,7 @@ export const STACK_PROFILE = {
     "drizzle-orm": "0.45.4",
     "drizzle-zod": "0.8.3",
     "lucide-react": "1.48.0",
-    nodemailer: "10.1.7",
+    nodemailer: "10.4.1",
     react: "19.3.1",
     "react-dom": "19.3.1",
     srvx: "1.0.8",
@@ -87,7 +87,7 @@ export const STACK_PROFILE = {
     "drizzle-kit": "0.31.11",
     tsx: "4.23.15",
     typescript: "6.0.3",
-    vite: "8.3.7",
+    vite: "8.3.8",
     vitest: "5.0.5",
   },
 } as const;
