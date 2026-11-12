@@ -39,7 +39,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### The engine
 
-- Studio's "What it does" writes a kind of record's keys through their own operations: what it and its fields mean (setMeaning), the trash, the owner, what names a record, review, a field's rules, a conversation's fields, a capacity, a schedule, whose time a booking takes and fields unique together, each with that operation's checks and words in the history; setMeaning, setTrash, setOwner, setNamedBy, setReview, setFieldRules, setThread, setCapacity, setSchedule, setOccupies and setUnique list the keys they set.
+- Studio's "What it does" writes a kind of record's keys through their own operations: what it and its fields mean (setMeaning), the trash, the owner, what names a record, review, a field's rules, a conversation's fields, a capacity, a schedule, whose time a booking takes and fields unique together, each with that operation's checks and words in the history; setMeaning, setTrash, setOwner, setNamedBy, setReview, setFieldRules, setThread, setCapacity, setSchedule, setOccupies and setUnique list the keys they set. A page's search, filters, sort choice, default filter, export, favorites, own records only, contact block, period and meaning go the same way, through setSearch, setFilters, setSortable, setDefaultFilter, setExport, setFavorites, setMine, setContact, setPeriod and setMeaning.
 
 ### The app's API
 
