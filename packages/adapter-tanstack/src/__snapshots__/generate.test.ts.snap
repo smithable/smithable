@@ -5314,6 +5314,8 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       return { deleted: row.id };
     }
     case "people":
+      // Only for a caller offered it (MCP refuses the rest before this too).
+      if (!offerFor(viewer).tools.some((tool) => tool.name === "people")) throw new NotFound(\`There is no tool "people".\`);
       return { people: peopleNamed(String(args.name ?? "")) };
     case "describe":
       kindOf(args);
@@ -11173,7 +11175,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "0fa3cf33 generated",
   "src/generated/keys.test.ts": "2a71c746 generated",
-  "src/generated/mcp.server.ts": "a2969fd3 generated",
+  "src/generated/mcp.server.ts": "a279592d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/note.import.server.ts": "7b3f75d9 generated",
   "src/generated/note.import.ts": "13466794 generated",

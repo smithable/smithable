@@ -1447,6 +1447,8 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
 ${
   people
     ? `    case "people":
+      // Only for a caller offered it (MCP refuses the rest before this too).
+      if (!offerFor(viewer).tools.some((tool) => tool.name === "people")) throw new NotFound(\`There is no tool "people".\`);
       return { people: peopleNamed(String(args.name ?? "")) };
 `
     : ""

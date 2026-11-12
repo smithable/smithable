@@ -40,7 +40,7 @@ test("the lookup gives id and name only, at most ten, and asks for two letters",
   const lookup = choices.slice(choices.indexOf("export function peopleNamed"));
   expect(lookup).not.toMatch(/email|phone|role/);
   expect(of("src/generated/mcp.server.ts")).toContain(
-    'case "people":\n      return { people: peopleNamed(String(args.name ?? "")) };',
+    'if (!offerFor(viewer).tools.some((tool) => tool.name === "people")) throw new NotFound(`There is no tool "people".`);\n      return { people: peopleNamed(String(args.name ?? "")) };',
   );
   const route = of("src/routes/api/v1/users.ts") ?? "";
   expect(route).toContain('const ROLES: readonly string[] = ["admin","staff"];');
