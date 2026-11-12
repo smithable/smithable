@@ -136,6 +136,39 @@ Each answer took Claude Code four or five steps and 9 to 12 cents of its own mod
 
 A test bench on the administrator's pages, to try the tools as an assistant with a chosen role before connecting one, is coming (docs/design/api-only.md, decision 4). Until then, Claude Code as above, or any MCP client with the settings from step 2, is the way to try it.
 
-## For your own app
+## 6. An app with pages: the front desk's assistant
 
-An app with pages can be used by programs and assistants too: `smithable op setApi all --assistants true` offers every model, and a key is made on its users page the same way. Give a key the smallest role that does the job, and a role of its own (like `assistant` here) when what a program may do differs from what people may.
+An app with pages can be used by programs and assistants too. This is the `booking` starter, Stillwater Yoga, whose reception (the role `staff`) runs the sessions and the bookings but not the teachers or the website. Two operations open it to assistants:
+
+```sh
+smithable new stillwater --starter booking
+cd stillwater
+smithable op addUsersPage team /team          # where the owner invites people and makes keys
+smithable op setApi all --assistants true      # every model, offered to programs and assistants
+smithable run
+```
+
+Sign in as the owner, open **Team**, and under **Keys** make one for "Reception assistant" with the role **Staff**. A key is a role, not a person: it acts with what reception may do, and what it creates has no owner (the activity log says the key made it). Connect Claude Code with it as in step 4.
+
+The tools follow the role. Reception may add and change sessions and bookings, so the key gets **find**, **measure**, **read**, **add**, **change** and **describe**, with a summary of the app that ends "You act as someone with the role staff." It gets no **delete**: an assistant may delete only where `setApi … --assistantsDelete true` says so, since it can be talked into things by the text it reads.
+
+Asked "Add a Yin class this Saturday at 10:00 with Emma Lindqvist. Also change Emma's bio to say she is away in December.", Claude Code looked up the class type, the teacher and Saturday's sessions, added the session (times go in UTC: 08:00Z is 10:00 in the studio's time zone), and tried the bio:
+
+```text
+add     {"kind":"Session","values":{"classType":4,"instructor":1,"startsAt":"2026-11-14T08:00:00.000Z","capacity":12}}
+        → {"id":23, "classType":4, "instructor":1, "startsAt":"2026-11-14T08:00:00.000Z", "capacity":12, …}
+change  {"kind":"Instructor","id":1,"values":{"bio":"…"}}
+        → You are not allowed to do this.
+```
+
+The class was on the schedule at once, for visitors too. The teachers are the owner's, so the change was refused in the app's words, and Claude said so (shortened):
+
+> I added the Yin class, but I couldn't change Emma's bio.
+>
+> **1. Yin class added (session #23):** Saturday 14 November, 10:00–11:15, with Emma Lindqvist. I set the capacity to 12 because her other Yin classes use 12. Oskar Berg's Vinyasa also starts at 10:00 that Saturday. If the studio has only one room, these two classes will clash.
+>
+> **2. Emma's bio not changed:** the system said "You are not allowed to do this." My staff account can't edit instructor profiles, so someone with admin access will need to make the change.
+
+It took eight steps and 16 cents of Claude Code's own model. The new session is in the activity log like anyone's change, made by the key with the role staff.
+
+Give a key the smallest role that does the job, and a role of its own (like `assistant` in Team Tasks) when what a program may do differs from what people may.
