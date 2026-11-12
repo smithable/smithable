@@ -1548,7 +1548,7 @@ ${loose
   if (usesOr) drizzle.push("or");
   if (model.fields.some((f) => f.sequence)) drizzle.push("max");
   if (threadTarget?.trash) drizzle.push("isNull");
-  if (reads) drizzle.push("gt", "inArray", "isNotNull", "isNull", "ne", "or");
+  if (reads) drizzle.push("count", "gt", "inArray", "isNotNull", "isNull", "ne", "or");
   if (group.length) drizzle.push("count");
   if ((group.length && [...members, ...loose].some((m) => m.trash)) || roots.length)
     drizzle.push("isNull");
@@ -2226,18 +2226,21 @@ ${
   threadCounts(viewer: Viewer | null, ids: number[]): Record<number, { count: number; unread: number }> {
     const counts: Record<number, { count: number; unread: number }> = {};
     if (!ids.length) return counts;
-    const marks = new Map(
-      viewer
-        ? db.select({ id: ${reads}.recordId, at: ${reads}.readAt }).from(${reads}).where(and(eq(${reads}.userId, viewer.id), inArray(${reads}.recordId, ids))).all().map((r) => [r.id, r.at.getTime()])
-        : [],
-    );
     const target = ${tableRef(threadTarget)};
-    for (const m of db.select({ parent: target.${dataKey(threadRef)}, at: target.createdAt${writer ? `, by: target.${writer}` : ""} }).from(target).where(${threadTarget.trash ? `and(inArray(target.${dataKey(threadRef)}, ids), isNull(target.deletedAt))` : `inArray(target.${dataKey(threadRef)}, ids)`}).all()) {
-      if (m.parent === null) continue;
-      const c = (counts[m.parent] ??= { count: 0, unread: 0 });
-      c.count++;
-      if (viewer${writer ? " && m.by !== viewer.id" : ""} && m.at.getTime() > (marks.get(m.parent) ?? 0)) c.unread++;
-    }
+    const parent = target.${dataKey(threadRef)};
+    const theirs = ${threadTarget.trash ? "and(inArray(parent, ids), isNull(target.deletedAt))" : "inArray(parent, ids)"};
+    // Counted in the query, a group per record: its messages, then those after the viewer's mark.
+    for (const r of db.select({ parent, n: count() }).from(target).where(theirs).groupBy(parent).all())
+      if (r.parent !== null) counts[r.parent] = { count: r.n, unread: 0 };
+    if (!viewer) return counts;
+    const unread = db
+      .select({ parent, n: count() })
+      .from(target)
+      .leftJoin(${reads}, and(eq(${reads}.recordId, parent), eq(${reads}.userId, viewer.id)))
+      .where(and(theirs,${writer ? ` or(isNull(target.${writer}), ne(target.${writer}, viewer.id)),` : ""} gt(target.createdAt, sql\`coalesce(\${${reads}.readAt}, 0)\`)))
+      .groupBy(parent)
+      .all();
+    for (const r of unread) if (r.parent !== null && counts[r.parent]) counts[r.parent].unread = r.n;
     return counts;
   },
 
