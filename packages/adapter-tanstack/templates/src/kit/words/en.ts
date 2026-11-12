@@ -685,6 +685,24 @@ export const w = {
   legalAccount: (providers: string[]) =>
     `When you sign in, the app keeps your name, your email address and your role, and sets a cookie that keeps you signed in.${providers.length ? ` You sign in with ${providers.join(" or ")}.` : ""}`,
   legalInvitedOnly: "Only people who are invited can sign in.",
+  legalGoogle:
+    "Signing in with Google takes you to Google, which tells the app your name and email address.",
+  legalAssistantTitle: "The assistant",
+  legalAssistant: (who: "visitors" | "members" | string[], changes: boolean) =>
+    `The app has an assistant, Ask, for ${who === "visitors" ? "everyone" : who === "members" ? "everyone who signs in" : who.join(", ")}. It answers from the records the person asking may read${changes ? ", and may propose changes, which are made only once that person confirms them" : ""}. The questions of people who sign in, with the records needed to answer them, go to an AI model the app's owner chose.${who === "visitors" ? " Visitors' questions are answered by the app's own rules, without a model." : ""}`,
+  legalFormsTitle: "What visitors are asked for",
+  legalFormsIntro: "Forms anyone can fill in ask for:",
+  legalIncomingTitle: "What comes in",
+  legalMailInto: (labels: string[]) =>
+    `Mail sent to the app's address becomes ${labels.join(", ")} in the app, with the sender's address and what the mail says.`,
+  legalCalls: (calls: { name: string; into?: string }[]) =>
+    `Services the app's owner set up send it information: ${calls.map((c) => (c.into ? `${c.name}, which becomes ${c.into}` : `${c.name}, handled by the owner's own code`)).join("; ")}.`,
+  legalServicesTitle: "Other services",
+  legalServices: (services: { name: string; about?: string }[]) =>
+    `The app sends information to services its owner set up: ${services.map((s) => (s.about ? `${s.name}, about ${s.about}` : s.name)).join("; ")}.`,
+  legalCustomTitle: "The owner's own functions",
+  legalCustom: (actions: string[]) =>
+    `The app also runs functions written for it by its owner${actions.length ? ` (${actions.join(", ")})` : ""}. This page does not describe what they do.`,
   legalRecordsTitle: "Information in records",
   legalRecordsIntro:
     "Besides accounts, the app keeps these kinds of records with personal details:",
@@ -706,8 +724,8 @@ export const w = {
   legalAnalyticsConsent: (provider: string) =>
     `Visits are counted with ${provider} only after you accept it in the cookie bar. You can change your choice under Cookie settings at the bottom of the page.`,
   legalPayTitle: "Payments",
-  legalPay: (labels: string[]) =>
-    `Payments for ${labels.join(", ")} are made on the payment provider's own page, which the app's owner chose; the provider has its own privacy terms. The app keeps the amount, whether it was paid or refunded, and the provider's reference for it, never your card or bank details.`,
+  legalPay: (labels: string[], provider?: string) =>
+    `Payments for ${labels.join(", ")} are made on ${provider ? `${provider}'s own page` : "the payment provider's own page, which the app's owner chose"}; the provider has its own privacy terms. The app keeps the amount, whether it was paid or refunded, and the provider's reference for it, never your card or bank details.`,
   legalSmsTitle: "Texts to your phone",
   legalSms: (labels: string[]) =>
     `If you give your mobile number under your name, confirm it with the code texted to it and turn texts on, the app texts you about new ${labels.join(", ")}. A number you give with a record of your own may get a text about that record, sent when someone working in the app acts on it. The texts go through the SMS provider the app's owner chose. Your number is used for nothing else; removing it under your name ends the texts.`,

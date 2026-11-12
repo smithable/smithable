@@ -24,6 +24,8 @@ import {
   type Texts,
 } from "../shared.js";
 
+const PAYMENT_NAMES: Record<string, string> = { stripe: "Stripe", mollie: "Mollie" };
+
 const ANALYTICS_NAMES: Record<string, string> = {
   plausible: "Plausible",
   umami: "Umami",
@@ -60,11 +62,60 @@ export function legalFacts(ir: SpecIR, auth: AuthIR, t: Texts, ctx: Pick<GenCont
           google: auth.signIn.providers.includes("google"),
           invitedOnly: !auth.signIn.selfSignUp,
         };
+  const plural = (name: string) => t.modelPluralLabel(modelNamed(ir, name)).toLowerCase();
+  // Who gets Ask: visitors too (answered by rule), everyone who signs in, or some roles.
+  const asks = auth.assistant;
+  const assistant = asks
+    ? {
+        for:
+          asks.for === "anyone"
+            ? ("visitors" as const)
+            : asks.for === "signed-in"
+              ? ("members" as const)
+              : asks.for,
+        changes: asks.may === "change",
+      }
+    : undefined;
+  // Services the operator set up that records are sent to (an outgoing entry with a target, not
+  // one of the built-in channels), by the target's name and what the entry is about.
+  const services = ir.outgoing
+    .filter((o) => !o.channels)
+    .map((o) => ({ name: o.to, about: "model" in o.when ? plural(o.when.model) : undefined }));
+  // What comes in: mail that becomes records, and calls from other services.
+  const mailInto = [
+    ...new Set(ir.incoming.flatMap((i) => (i.mail && i.create ? [plural(i.create)] : []))),
+  ];
+  const calls = ir.incoming
+    .filter((i) => !i.mail)
+    .map((i) => ({ name: i.name, into: i.create ? plural(i.create) : undefined }));
+  // What visitors are asked for: the forms anyone may fill in, by their fields' labels.
+  const forms = ir.models
+    .filter((m) => auth.public.create.includes(m.name))
+    .map((m) => ({
+      label: code(`${names(m, t).ui}.pluralLabel`),
+      fields: m.fields
+        .filter((f) => !f.byApp && !f.formula && !(f.type.kind === "relation" && f.type.many))
+        .map((f) => t.field(m, f).label ?? humanLabel(f.name)),
+    }));
+  // The operator's own functions: their custom actions by name, and whether there is custom code.
+  const customActions = ir.actions.filter((a) => a.custom).map((a) => a.name);
+  const custom =
+    customActions.length > 0 ||
+    ir.incoming.some((i) => i.custom) ||
+    ir.pages.some((p) => p.pattern.kind === "custom");
+  const payProvider = PAYMENT_NAMES[ctx.options.paymentProvider ?? ""];
   return {
     app: code("app.name"),
     ...(ir.app.description ? { purpose: ir.app.description } : {}),
     ...(signIn ? { signIn } : {}),
+    ...(assistant ? { assistant } : {}),
     records,
+    ...(forms.length ? { forms } : {}),
+    ...(services.length ? { services } : {}),
+    ...(mailInto.length ? { mailInto } : {}),
+    ...(calls.length ? { calls } : {}),
+    ...(custom ? { custom: { actions: customActions } } : {}),
+    ...(payProvider ? { payProvider } : {}),
     uploads: ir.models.some((m) => m.fields.some(isUpload)),
     ...(analytics
       ? {
