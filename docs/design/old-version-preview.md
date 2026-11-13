@@ -35,7 +35,7 @@ Three choices were weighed for its data:
 
 ## 4. What a person sees
 
-In Changes, each change and each milestone has **See this version**. The preview pane then shows the old app under a bar from Studio (not from the app):
+In Changes, each change and each milestone has **See this version**. The old app opens in a tab of its own, and the preview pane shows a bar from Studio (not from the app). A tab, not a frame: the copy is on another host name than Studio's page, and a framed page from another site keeps no sign-in cookie (SameSite, and browsers that block third-party cookies). The copy's cookies are left as its code makes them. The tab is opened at the click, so it is not a blocked pop-up, and with no way back to Studio's page (its opener is cut before it loads); Back to now closes it:
 
 > **The app as it was on 12 November, 14:02** · after "Instructors: added a phone" · a copy with the data from then (or: with sample data). Nothing you do here is kept. — **Back to now**
 

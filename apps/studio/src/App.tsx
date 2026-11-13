@@ -33,7 +33,7 @@ import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { grouped, line } from "./history";
 import { logStore } from "./logs";
 import { Making } from "./Making";
-import { OldVersion, type OpenOld } from "./OldVersion";
+import { OLD_TAB, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { OwnerCheck } from "./OwnerCheck";
 import { PeoplePanel } from "./People";
@@ -264,20 +264,36 @@ export function App() {
   // An old version open in the preview's place (old-version-preview.md §4), or being prepared.
   const [old, setOld] = useState<OpenOld>();
   const [opening, setOpening] = useState<string>();
+  // The old version's own tab (OldVersion.tsx): opened at the click, closed by Back to now.
+  const oldTab = useRef<Window | null>(null);
   const seeVersion = async (id: string) => {
     const entry = project?.trace.find((e) => e.id === id);
     if (!entry) return;
+    oldTab.current = openOldTab();
     setOpening(entry.description);
     const result = await api
       .openOldVersion(id)
       .catch((e: Error) => ({ ok: false as const, message: e.message }));
     setOpening(undefined);
-    if (!result.ok) return setMessage({ ok: false, text: result.message });
+    if (!result.ok) {
+      oldTab.current?.close();
+      oldTab.current = null;
+      return setMessage({ ok: false, text: result.message });
+    }
+    if (oldTab.current && !oldTab.current.closed) oldTab.current.location.href = result.url;
+    else oldTab.current = window.open(result.url, OLD_TAB, "noopener");
     setOld({ url: result.url, entry, data: result.data, pictures: result.pictures });
   };
   const backToNow = () => {
+    oldTab.current?.close();
+    oldTab.current = null;
     setOld(undefined);
     void api.closeOldVersion();
+  };
+  const showOldTab = () => {
+    if (!old) return;
+    if (oldTab.current && !oldTab.current.closed) oldTab.current.focus();
+    else window.open(old.url, OLD_TAB, "noopener");
   };
   // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
   // Floating, Smith leaves the first place and the preview takes the width: the window there
@@ -1422,7 +1438,7 @@ export function App() {
                 style={{ gridArea: area(placed("preview")) }}
               >
                 {old ? (
-                  <OldVersion open={old} onBack={backToNow} />
+                  <OldVersion open={old} onBack={backToNow} onOpenAgain={showOldTab} />
                 ) : opening ? (
                   <p
                     role="status"
