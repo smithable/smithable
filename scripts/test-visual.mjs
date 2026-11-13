@@ -1,8 +1,8 @@
 // Generated-app visual regression fixtures. All setup writes stay in this run's own temporary app.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { createRequire } from "node:module";
 import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { chromium } from "playwright";
@@ -347,7 +347,11 @@ async function serve() {
 }
 // A cancelled job (the runner sends SIGINT, then SIGTERM) skips the finally below; stop the
 // server on the way out all the same.
-for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129]])
+for (const [signal, code] of [
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+  ["SIGHUP", 129],
+])
   process.once(signal, () => {
     const done = () => process.exit(code);
     Promise.resolve(running?.()).then(done, done);
