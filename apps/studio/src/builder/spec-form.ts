@@ -662,6 +662,29 @@ export function operationFor(
           ["setFieldRules", { model, field, ...args }] as [string, Record<string, unknown>];
         if (which === "by" && (value === "app" || value === undefined))
           return rules({ by: value ?? "" });
+        if (which === "sequence" && (value === undefined || typeof value === "boolean"))
+          return rules({ sequence: value === true });
+        // Its default and bounds, each through its own operation.
+        if (which === "default") {
+          // An emptied box ("") takes the default away, as no value does.
+          if (value === undefined || value === "")
+            return ["setFieldDefault", { model, field, remove: true }];
+          if (["string", "number", "boolean"].includes(typeof value))
+            return ["setFieldDefault", { model, field, value: String(value) }];
+        }
+        if (
+          (which === "min" || which === "max") &&
+          (value === undefined || typeof value === "number")
+        ) {
+          // Taken away: the other bound stays, so both are written again without this one.
+          const other = which === "min" ? "max" : "min";
+          const kept = at(whole, [...path.slice(0, 4), other]);
+          if (value === undefined)
+            return typeof kept === "number"
+              ? undefined
+              : ["setFieldRange", { model, field, none: true }];
+          return ["setFieldRange", { model, field, [which]: value }];
+        }
         if (
           which === "unique" &&
           (value === undefined ||

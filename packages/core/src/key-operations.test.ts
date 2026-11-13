@@ -84,5 +84,7 @@ test("a key's operation, by its path", () => {
     "setFieldRules",
   ]);
   expect(names("smithable.yml", ["models", "Note", "capacity", "max"])).toEqual(["setCapacity"]);
-  expect(names("smithable.yml", ["models", "Note", "fields", "title", "sequence"])).toEqual([]);
+  expect(names("smithable.yml", ["models", "Note", "fields", "title", "sequence"])).toEqual([
+    "setFieldRules",
+  ]);
 });

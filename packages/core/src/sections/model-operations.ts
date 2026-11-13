@@ -706,6 +706,7 @@ const setFieldRules: Operation<{
   once?: boolean;
   required?: Record<string, string | boolean | string[]>;
   unique?: "true" | "false" | "owner" | "app";
+  sequence?: boolean;
 }> = {
   name: "setFieldRules",
   sets: [
@@ -713,6 +714,7 @@ const setFieldRules: Operation<{
     "smithable.yml:models.*.fields.*.locked",
     "smithable.yml:models.*.fields.*.required",
     "smithable.yml:models.*.fields.*.unique",
+    "smithable.yml:models.*.fields.*.sequence",
   ],
   summary:
     "Set who fills a field and when it may change: by app (the form never shows it), locked (after it is made, or while a condition holds), required while a condition holds; and whether it is unique, and where (owner or app).",
@@ -743,6 +745,11 @@ const setFieldRules: Operation<{
         description:
           'Required while the record fits the condition, e.g. { status: "inProgress | closed" }; {} removes it. Always required is "!" in the type (changeField).',
       },
+      sequence: {
+        type: "boolean",
+        description:
+          "On an int!: the app gives each new record the next number after the highest (an order or invoice number), and the form never shows it; false removes it.",
+      },
       unique: {
         enum: ["true", "false", "owner", "app"],
         description:
@@ -751,8 +758,9 @@ const setFieldRules: Operation<{
     },
   },
   positional: ["model", "field"],
-  describe: ({ model, field, by, locked, once, required, unique }) =>
+  describe: ({ model, field, by, locked, once, required, unique, sequence }) =>
     `Set ${model}.${field}'s rules: ${[
+      sequence !== undefined && (sequence ? "numbered in turn" : "not numbered in turn"),
       unique !== undefined &&
         {
           true: "unique",
@@ -774,7 +782,7 @@ const setFieldRules: Operation<{
       .filter(Boolean)
       .join(", ")}`,
   destructive: () => false,
-  apply({ spec }, { model: m, field: f, by, locked, once, required, unique }, ir) {
+  apply({ spec }, { model: m, field: f, by, locked, once, required, unique, sequence }, ir) {
     const found = field(ir, m, f);
     if (found.formula)
       throw new OperationError(`${m}.${f} is computed by its formula: nobody fills it in.`);
@@ -783,9 +791,12 @@ const setFieldRules: Operation<{
       locked === undefined &&
       once === undefined &&
       required === undefined &&
-      unique === undefined
+      unique === undefined &&
+      sequence === undefined
     )
-      throw new OperationError("Say what to set: --by, --locked, --once, --required or --unique.");
+      throw new OperationError(
+        "Say what to set: --by, --locked, --once, --required, --unique or --sequence.",
+      );
     if (unique !== undefined && unique !== "false" && isUpload(found))
       throw new OperationError(
         `${m}.${f} is a ${found.type.kind === "scalar" ? found.type.name : "file"}: it cannot be unique.`,
@@ -818,6 +829,7 @@ const setFieldRules: Operation<{
       else long[key] = value;
     };
     if (by !== undefined) keep("by", by || undefined);
+    if (sequence !== undefined) keep("sequence", sequence || undefined);
     if (unique !== undefined) {
       // The shorthand's "unique" moves to the key, which says where.
       long.type = String(long.type).replace(/\s+unique\b/, "");
@@ -839,7 +851,9 @@ const setFieldRules: Operation<{
       long.type = `${String(long.type)} unique`;
       delete long.unique;
     }
-    const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
+    // A choice's default stays its own key: "=" on a choice is refused.
+    const choice = found.type.kind === "choice";
+    const keys = Object.keys(long).filter((k) => k !== "type" && (choice || k !== "default"));
     spec.set(
       path,
       keys.length
@@ -847,6 +861,162 @@ const setFieldRules: Operation<{
         : long.default === undefined
           ? String(long.type)
           : `${String(long.type)} = ${String(long.default)}`,
+    );
+    return [];
+  },
+};
+
+/** A field in its long form, from the shorthand when it has none yet; written back short when it can be. */
+function withLong(
+  spec: YamlEditor,
+  path: ReturnType<typeof fieldPath>,
+  change: (long: Record<string, YamlValue>) => void,
+  /** A choice's default is never written "= value" (the shorthand reads that as its first value). */
+  choice = false,
+): void {
+  const current = spec.get(path);
+  const long: Record<string, YamlValue> =
+    typeof current === "object" && current !== null
+      ? { ...(current as Record<string, YamlValue>) }
+      : longForm(String(current));
+  change(long);
+  const keys = Object.keys(long).filter((k) => k !== "type" && (choice || k !== "default"));
+  spec.set(
+    path,
+    keys.length
+      ? long
+      : long.default === undefined
+        ? String(long.type)
+        : `${String(long.type)} = ${String(long.default)}`,
+  );
+}
+
+/**
+ * A field's default (T727): the value a new record starts with. Written as the spec writes it: a
+ * number for a number field, true or false for yes/no, a text otherwise ("none" on a choice means
+ * no default at all); remove takes the default away.
+ */
+const setFieldDefault: Operation<{
+  model: string;
+  field: string;
+  value?: string;
+  remove?: boolean;
+}> = {
+  name: "setFieldDefault",
+  sets: ["smithable.yml:models.*.fields.*.default"],
+  summary:
+    'Set the value a new record starts with in a field, e.g. 60 for minutes or "open" for a status ("none" on a choice: no default, not its first value); remove takes the default away.',
+  schema: {
+    type: "object",
+    required: ["model", "field"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      field: refTo({ ref: "field", model: "model", label: "Field" }),
+      value: {
+        type: "string",
+        description: "The default, as written in the spec: 60, true, open, TODAY().",
+      },
+      remove: { type: "boolean", description: "true takes the default away." },
+    },
+  },
+  positional: ["model", "field", "value"],
+  describe: ({ model, field, value, remove }) =>
+    remove ? `Take away ${model}.${field}'s default` : `Start ${model}.${field} at ${value}`,
+  destructive: () => false,
+  apply({ spec }, { model: m, field: f, value, remove }, ir) {
+    const found = field(ir, m, f);
+    if (found.formula)
+      throw new OperationError(`${m}.${f} is computed by its formula: it has no default.`);
+    if (!remove && (value === undefined || value.trim() === ""))
+      throw new OperationError("Say the default, or remove: true to take it away.");
+    const numeric =
+      found.type.kind === "scalar" && ["int", "decimal", "money"].includes(found.type.name);
+    const yesNo = found.type.kind === "scalar" && found.type.name === "bool";
+    const text = value?.trim() ?? "";
+    const written: YamlValue | undefined = remove
+      ? undefined
+      : numeric && /^-?\d+(\.\d+)?$/.test(text)
+        ? Number(text)
+        : yesNo && (text === "true" || text === "false")
+          ? text === "true"
+          : text;
+    withLong(
+      spec,
+      fieldPath(m, f, ir),
+      (long) => {
+        // The shorthand's "= value" goes with the key, which says it now.
+        long.type = String(long.type).replace(/\s*=.*$/, "");
+        if (written === undefined) delete long.default;
+        else long.default = written;
+      },
+      found.type.kind === "choice",
+    );
+    return [];
+  },
+};
+
+/**
+ * A field's bounds (T727): the smallest and largest number, or a text's shortest and longest
+ * length. Each given is set; none takes both away.
+ */
+const setFieldRange: Operation<{
+  model: string;
+  field: string;
+  min?: number;
+  max?: number;
+  none?: boolean;
+}> = {
+  name: "setFieldRange",
+  sets: ["smithable.yml:models.*.fields.*.min", "smithable.yml:models.*.fields.*.max"],
+  summary:
+    "Set a number field's smallest and largest value, or a text field's shortest and longest length (none takes both away).",
+  schema: {
+    type: "object",
+    required: ["model", "field"],
+    additionalProperties: false,
+    properties: {
+      model: refTo({ ref: "model", label: "Kind of record" }),
+      field: refTo({ ref: "field", model: "model", label: "Field" }),
+      min: { type: "number", description: "The smallest number, or a text's shortest length." },
+      max: { type: "number", description: "The largest number, or a text's longest length." },
+      none: { type: "boolean", description: "true takes both bounds away." },
+    },
+  },
+  positional: ["model", "field", "min", "max"],
+  describe: ({ model, field, min, max, none }) =>
+    none
+      ? `Take away ${model}.${field}'s bounds`
+      : `Keep ${model}.${field} ${[min !== undefined && `from ${min}`, max !== undefined && `up to ${max}`].filter(Boolean).join(" ")}`,
+  destructive: () => false,
+  apply({ spec }, { model: m, field: f, min, max, none }, ir) {
+    const found = field(ir, m, f);
+    if (found.formula)
+      throw new OperationError(`${m}.${f} is computed by its formula: nobody fills it in.`);
+    if (!none && min === undefined && max === undefined)
+      throw new OperationError("Say min, max or both (or none: true to take them away).");
+    if (min !== undefined && max !== undefined && min > max)
+      throw new OperationError(`The smallest (${min}) is above the largest (${max}).`);
+    // A text's length counts characters: a whole number, 0 or more.
+    const number =
+      found.type.kind === "scalar" && ["int", "decimal", "money"].includes(found.type.name);
+    for (const bound of [min, max])
+      if (!number && bound !== undefined && !(Number.isInteger(bound) && bound >= 0))
+        throw new OperationError(
+          `${m}.${f} is not a number, so its bounds are its length: a whole number, 0 or more (not ${bound}).`,
+        );
+    withLong(
+      spec,
+      fieldPath(m, f, ir),
+      (long) => {
+        if (none) {
+          delete long.min;
+          delete long.max;
+        }
+        if (min !== undefined) long.min = min;
+        if (max !== undefined) long.max = max;
+      },
+      found.type.kind === "choice",
     );
     return [];
   },
@@ -1222,7 +1392,11 @@ const setMeaning: Operation<{ concept: string; description?: string; intent?: st
         if (value.trim()) long[key] = value.trim();
         else delete long[key];
       }
-      const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
+      // A choice's default stays its own key: "=" on a choice is refused.
+      const choice =
+        ir.models.find((x) => x.name === field.model)?.fields.find((x) => x.name === field.name)
+          ?.type.kind === "choice";
+      const keys = Object.keys(long).filter((k) => k !== "type" && (choice || k !== "default"));
       spec.set(
         path,
         keys.length
@@ -1257,6 +1431,8 @@ export const modelOperations: AnyOperation[] = [
   addField,
   changeField,
   setFieldRules,
+  setFieldDefault,
+  setFieldRange,
   renameField,
   removeField,
   renameModel,

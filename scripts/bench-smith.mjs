@@ -2,13 +2,18 @@
 // rules pass on put to the configured models, per setup: small alone, small then better, better
 // alone. A change is judged by rule (the operations' names); an answer by a judging model on the
 // facts it must and must not state. Per kind: right, wrong, tokens, cost, time.
-//   node scripts/bench-smith.mjs [small] [small>better] [better] [--label today] [--only id,id]
+//   node scripts/bench-smith.mjs [small] [small>better] [better] [haiku] [--label today] [--only id,id]
 //   node scripts/bench-smith.mjs --rules    the rules alone, no model, free
 // The models are Claude's by default, as the hosted service answers: small claude-haiku-5-5, better
 // and judge claude-sonnet-5-5, through scripts/claude-route.mjs (the key in ~/.config/smithable/claude.env,
 // never printed). --provider mistral: small mistral-small-latest, better and judge mistral-medium-latest
 // (the key in ~/.config/smithable/mistral.env). BENCH_SMALL, BENCH_BETTER and BENCH_JUDGE name others.
 // The judge is never the small model under test.
+// haiku is Claude Haiku through Anthropic's API (BENCH_HAIKU, claude-haiku-4-5, the hosted
+// service's model), its key read from ~/.config/smithable/claude.env and never printed.
+// Smith's reading (T755): the docs' parts by docs.smithable.ai's own index (site/search.json,
+// built by `pnpm site` first) and the app's summary parts, both searched as Studio does; for a
+// docs question the row says whether its labelled part ("docs") was among those found.
 // Not part of check; ask before a paid run (C runs it daily within the bench budget).
 // Writes docs/benchmarks/bench-smith-<label>.md and .jsonl.
 import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -17,8 +22,12 @@ import { join } from "node:path";
 import { claudeRoute } from "./claude-route.mjs";
 import { repo } from "./dev-app.mjs";
 
-const { validateSpec } = await import(join(repo, "packages/core/dist/index.js"));
-const { buildContext, buildIndex } = await import(join(repo, "packages/index/dist/index.js"));
+const { validateAuth, validateContent, validateSpec, validateUx } = await import(
+  join(repo, "packages/core/dist/index.js")
+);
+const { appParts, buildContext, buildIndex, searchDocs, summarize } = await import(
+  join(repo, "packages/index/dist/index.js")
+);
 const { proposeChange, openAICompatible, listPrice } = await import(
   join(repo, "packages/ai/dist/index.js")
 );
@@ -67,16 +76,68 @@ const BETTER =
 const JUDGE = process.env.BENCH_JUDGE ?? BETTER;
 if (!rulesOnly && JUDGE === SMALL)
   throw new Error("The judge must not be the small model under test.");
+const HAIKU = process.env.BENCH_HAIKU ?? "claude-haiku-4-5";
+
+/** Claude's key, read from its file and never printed. */
+const claudeKey = () => {
+  const text = readFileSync(join(homedir(), ".config/smithable/claude.env"), "utf8");
+  const key = /^(?:export\s+)?[A-Za-z_]*(?:API_KEY|api_key)=["']?([^"'\n]+)/m.exec(text)?.[1];
+  if (!key) throw new Error("No key in ~/.config/smithable/claude.env");
+  return key;
+};
+
+/** Claude through Anthropic's Messages API, the answer's JSON as a forced tool call. */
+const claude = (name) => ({
+  name,
+  tier: "smithable",
+  location: "elsewhere",
+  model: name,
+  price: { input: 1, output: 5 },
+  currency: "USD",
+  async complete(request) {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": claudeKey(),
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: name,
+        max_tokens: 4000,
+        system: [{ type: "text", text: request.system, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: request.user }],
+        tools: [{ name: "answer", description: "The answer.", input_schema: request.schema }],
+        tool_choice: { type: "tool", name: "answer" },
+      }),
+    });
+    const body = await response.json();
+    if (!response.ok)
+      throw new Error(`${name} answered ${response.status}: ${JSON.stringify(body).slice(0, 300)}`);
+    const call = (body.content ?? []).find((c) => c.type === "tool_use");
+    return {
+      text: JSON.stringify(call?.input ?? {}),
+      model: name,
+      inputTokens:
+        (body.usage?.input_tokens ?? 0) +
+        (body.usage?.cache_read_input_tokens ?? 0) +
+        (body.usage?.cache_creation_input_tokens ?? 0),
+      outputTokens: body.usage?.output_tokens ?? 0,
+    };
+  },
+});
 const providersOf = (setup) =>
-  setup === "small"
-    ? [model(SMALL, "smithable")]
-    : setup === "better"
-      ? [model(BETTER, "frontier")]
-      : setup === "small>better"
-        ? [model(SMALL, "smithable"), model(BETTER, "frontier")]
-        : (() => {
-            throw new Error(`Unknown setup "${setup}": small, small>better or better.`);
-          })();
+  setup === "haiku"
+    ? [claude(HAIKU)]
+    : setup === "small"
+      ? [model(SMALL, "smithable")]
+      : setup === "better"
+        ? [model(BETTER, "frontier")]
+        : setup === "small>better"
+          ? [model(SMALL, "smithable"), model(BETTER, "frontier")]
+          : (() => {
+              throw new Error(`Unknown setup "${setup}": small, small>better, better or haiku.`);
+            })();
 
 /** A starter's files as Studio reads them. */
 const files = new Map();
@@ -98,33 +159,31 @@ const project = (starter) => {
     ])
       if (read(name)) f[key] = read(name);
     const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
-    files.set(starter, { files: f, index: buildIndex({ ir, generated: {}, custom: [] }) });
+    const auth = f.auth && validateAuth({ path: "smithable.auth.yml", text: f.auth }, ir).auth;
+    const content =
+      f.content && validateContent({ path: "smithable.content.yml", text: f.content }, ir).content;
+    const ux = f.ux && validateUx({ path: "smithable.ux.yml", text: f.ux }, ir).ux;
+    files.set(starter, {
+      files: f,
+      index: buildIndex({ ir, generated: {}, custom: [] }),
+      summary: summarize(ir, auth || undefined, content || undefined, [], ux || undefined),
+    });
   }
   return files.get(starter);
 };
 
-/** The docs as Studio finds them for a question: the built site's index, by shared words. */
-let docsIndex;
-const docsFor = (text) => {
-  if (docsIndex === undefined) {
-    try {
-      docsIndex = JSON.parse(readFileSync(join(repo, "site/search.json"), "utf8"));
-    } catch {
-      docsIndex = null;
-    }
+/** The docs' index as the site builds it; the bench needs it (`pnpm site`). */
+const docsIndex = (() => {
+  try {
+    return JSON.parse(readFileSync(join(repo, "site/search.json"), "utf8"));
+  } catch {
+    throw new Error("No site/search.json: run `pnpm site` first.");
   }
-  if (!docsIndex || !/\?\s*$|^(how|where|what|why|can i|is there)\b/i.test(text.trim())) return [];
-  const words = new Set(text.toLowerCase().match(/[a-zåäö]{4,}/g) ?? []);
-  const entries = Array.isArray(docsIndex) ? docsIndex : (docsIndex.pages ?? []);
-  return entries
-    .map((e) => ({
-      e,
-      n: [...words].filter((w) => `${e.title} ${e.text}`.toLowerCase().includes(w)).length,
-    }))
-    .filter((x) => x.n > 0)
-    .sort((a, b) => b.n - a.n)
-    .slice(0, 3)
-    .map(({ e }) => ({ title: e.title, url: e.url, text: String(e.text).slice(0, 1500) }));
+})();
+/** Whether a found part is one of a docs question's labelled parts (a page alone: any of its parts). */
+const isLabelled = (url, labels) => {
+  const at = url.replace("https://docs.smithable.ai/", "");
+  return labels.some((d) => at === d || (!d.includes("#") && at.split("#")[0] === d));
 };
 
 /** A judging model on an answer: does it state each must and none of the mustNots? */
@@ -207,7 +266,8 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
     // Undo, redo and feedback are Studio's own rules before Smith (apps/studio's test).
     if (r.kind === "undo" || r.kind === "feedback") continue;
     if (rows.some((x) => x.setup === setup && x.id === r.id)) continue;
-    const { files: f, index } = project(r.starter);
+    const { files: f, index, summary } = project(r.starter);
+    const docs = searchDocs(docsIndex, r.text);
     const before = r.after ? requests.find((x) => x.id === r.after) : undefined;
     const started = Date.now();
     // A provider's rate limit (429) is the bench's pace, not the model's answer: the request is
@@ -218,7 +278,8 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
         files: f,
         context: buildContext(index, r.text),
         providers,
-        docs: docsFor(r.text),
+        docs,
+        app: appParts(summary, r.text),
         ...(before ? { conversation: [{ request: before.text, reply: "" }] } : {}),
       });
     let p = await ask();
@@ -256,6 +317,7 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
       tokens: usage.reduce((n, u) => n + u.inputTokens + u.outputTokens, 0),
       cost: usage.reduce((n, u) => n + u.cost, 0),
       ms: Date.now() - started,
+      ...(r.docs ? { found: docs.some((d) => isLabelled(d.url, r.docs)) } : {}),
     };
     rows.push(row);
     appendFileSync(partial, `${JSON.stringify(row)}\n`);
@@ -272,8 +334,8 @@ const lines = [
   "",
   `${new Date().toISOString().slice(0, 10)}, ${requests.length} requests of docs/benchmarks/smith-requests.json (undo and feedback are Studio's rules, not here). ${rulesOnly ? "No model." : `Small: ${SMALL}; better: ${BETTER}; judge: ${JUDGE}. Cost in US dollars at the models' list prices.`}`,
   "",
-  "| Setup | Kind | Right | Of | By rule | Tokens | Cost | Seconds |",
-  "|---|---|---|---|---|---|---|---|",
+  "| Setup | Kind | Right | Of | By rule | Docs found | Tokens | Cost | Seconds |",
+  "|---|---|---|---|---|---|---|---|---|",
 ];
 for (const setup of [...new Set(rows.map((r) => r.setup))])
   for (const kind of kinds) {
@@ -281,12 +343,14 @@ for (const setup of [...new Set(rows.map((r) => r.setup))])
     if (!of.length) continue;
     const sum = (k) => of.reduce((n, r) => n + r[k], 0);
     lines.push(
-      `| ${setup} | ${kind} | ${of.filter((r) => r.right).length} | ${of.length} | ${of.filter((r) => r.byRule).length} | ${sum("tokens")} | ${sum("cost").toFixed(4)} | ${(sum("ms") / 1000).toFixed(1)} |`,
+      `| ${setup} | ${kind} | ${of.filter((r) => r.right).length} | ${of.length} | ${of.filter((r) => r.byRule).length} | ${of.some((r) => "found" in r) ? of.filter((r) => r.found).length : ""} | ${sum("tokens")} | ${sum("cost").toFixed(4)} | ${(sum("ms") / 1000).toFixed(1)} |`,
     );
   }
 lines.push("", "Wrong ones:", "");
 for (const r of rows.filter((x) => !x.right))
-  lines.push(`- ${r.setup} ${r.id} (${r.kind}): ${r.got}${r.why ? `, ${r.why}` : ""}`);
+  lines.push(
+    `- ${r.setup} ${r.id} (${r.kind}): ${r.got}${r.found === false ? ", docs part not found" : ""}${r.why ? `, ${r.why}` : ""}`,
+  );
 writeFileSync(`${out}.md`, `${lines.join("\n")}\n`);
 await route?.close();
 console.log(`${out}.md`);

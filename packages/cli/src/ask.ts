@@ -16,7 +16,7 @@ import {
   type Usage,
 } from "@smithable/ai";
 import { PEOPLE_PATH, validateSpec } from "@smithable/core";
-import { buildContext } from "@smithable/index";
+import { appParts, buildContext, summarize } from "@smithable/index";
 import { anthropic } from "./anthropic.js";
 import { bedrock } from "./bedrock.js";
 import { claudeCode } from "./claude-code.js";
@@ -164,7 +164,7 @@ export async function proposeFor(
   id: string = randomUUID(),
   around: Pick<Parameters<typeof proposeChange>[0], "conversation" | "docs"> = {},
 ): Promise<Proposal | undefined> {
-  const { ir, auth } = loadSpec(dir, io);
+  const { ir, auth, content, ux } = loadSpec(dir, io);
   if (!ir || !auth) return undefined;
   const read = (name: string) =>
     existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : undefined;
@@ -179,6 +179,8 @@ export async function proposeFor(
     themes: projectThemes(dir),
   };
   const context = buildContext(projectIndex(dir, ir, auth), request);
+  // The app's own summary, the parts the request names (T755): what a question is answered from.
+  const app = appParts(summarize(ir, auth, content, files.plugins, ux), request);
   const providers = providersFor();
   const irOf = (text: string) =>
     validateSpec({ path: "smithable.yml", text }, { plugins: files.plugins }).ir;
@@ -189,6 +191,7 @@ export async function proposeFor(
     providers,
     anyConfigured: aiProviders().length > 0,
     kit: kitSummary(),
+    app,
     ...around,
     // What only the project's data can tell: a new required field on a table with rows.
     check: (before, after, effects) => {
