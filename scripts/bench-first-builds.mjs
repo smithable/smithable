@@ -13,7 +13,7 @@
 //   validates and generates; tokens and cost per build
 // The landing text's fit (`taste`) is for a judging model, scored apart; not in this script yet.
 //   node scripts/bench-first-builds.mjs [reader] [small] [small>better] [--set PATH] [--only fb-01,fb-02]
-//     [--label today] [--max-cost USD]
+//     [--label today] [--max-cost USD] [--record DIR]
 // reader: no model, free: the description reader alone, or (when it cannot build) the starter `new`
 // names instead, as a person without a model would start. small: Claude Haiku 5.5. small>better:
 // Haiku and Sonnet 5.5, as the hosted service drafts (a first build takes the strongest first, so
@@ -68,6 +68,8 @@ function envOf(tier) {
     ANTHROPIC_API_KEY: claudeKey(),
     SMITHABLE_AI_POLICY: "best-available",
   });
+  // --record DIR: every model call kept by the CLI's response cache, for replay (T784).
+  if (option("--record")) env.SMITHABLE_LLM_CACHE = option("--record");
   return env;
 }
 
