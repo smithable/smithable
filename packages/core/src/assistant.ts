@@ -322,6 +322,39 @@ export function assistantOffer(
       },
       annotations: changing,
     });
+  // People by name, for a key whose role may set a field that refers to a user (T729): what the
+  // app's own form lists for such a field, everyone by name, by id and name only, at most ten.
+  // A record's owner field counts only for roles that may change every record of it, as in a form.
+  const setsPeople =
+    scope === "api" &&
+    caller !== "visitor" &&
+    kinds.some((k) => {
+      const model = ir.models.find((m) => m.name === k.model) as ModelIR;
+      const access = modelAccess(model, auth);
+      return model.fields.some(
+        (f) =>
+          f.type.kind === "relation" &&
+          f.type.model === USER_MODEL &&
+          !f.byApp &&
+          !f.formula &&
+          (f.name === model.ownedBy
+            ? access.write.roles.includes(caller.role)
+            : // A field locked once made is set only when the record is added, as in the form.
+              k.may.add || (k.may.change && f.locked !== true)),
+      );
+    });
+  if (setsPeople)
+    tools.push({
+      name: "people",
+      description:
+        "People by name, to fill a field that refers to a user: at most ten whose name holds the words given (two letters or more), each as {id, name}. Give the id as the field's value.",
+      inputSchema: {
+        type: "object",
+        required: ["name"],
+        properties: { name: { type: "string", minLength: 2, description: "Part of the name." } },
+      },
+      annotations: reading,
+    });
   // A merge runs on the record that stays, a split on the record that is split
   // (docs/design/intents.md §3, §4).
   const merges = actions.filter(

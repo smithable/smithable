@@ -4335,11 +4335,38 @@ async function apiFlow(base) {
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
     });
-    // The seven tools, with the assistant's actions under run; no delete tool.
+    // The seven tools, with the assistant's actions under run; no delete tool. The assistant may
+    // set a task's assignee, so it also looks people up by name (T729).
     const listedTools = (await tools.json()).result.tools;
     const names = listedTools.map((tool) => tool.name).sort();
-    if (names.join() !== "add,change,describe,find,measure,read,run")
+    if (names.join() !== "add,change,describe,find,measure,people,read,run")
       throw new Error(`the tools are ${names.join(", ")}`);
+    const people = async (name) =>
+      (
+        await (
+          await fetch(`${base}/mcp`, {
+            method: "POST",
+            headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "tools/call",
+              params: { name: "people", arguments: { name } },
+            }),
+          })
+        ).json()
+      ).result;
+    // One letter is no lookup (no list of everyone); a name nobody has is an empty list, not an error.
+    if (!(await people("a")).isError) throw new Error("the people tool took one letter");
+    const nobody = await people("zzqx");
+    if (nobody.isError || JSON.stringify(nobody.structuredContent) !== '{"people":[]}')
+      throw new Error(`people by a name nobody has gave ${JSON.stringify(nobody)}`);
+    const users = (name) =>
+      fetch(`${base}/api/v1/users?name=${name}`, { headers: { authorization: `Bearer ${key}` } });
+    if ((await users("a")).status !== 400) throw new Error("GET /api/v1/users took one letter");
+    const found = await users("zzqx");
+    if (found.status !== 200 || JSON.stringify(await found.json()) !== '{"items":[]}')
+      throw new Error(`GET /api/v1/users gave ${found.status}`);
     const runs = listedTools.find((tool) => tool.name === "run").inputSchema.properties.action.enum;
     if (!runs.includes("complete") || !runs.includes("reopen"))
       throw new Error(`run offers ${runs.join(", ")}`);

@@ -175,7 +175,7 @@ A refusal is a JSON problem (`application/problem+json`) in the app's own words,
 
 With `assistants: true` in the `api` block (the status starter has it), the same offer is also there as tools for AI assistants, at `/mcp` in the Model Context Protocol, with the same keys. Point an assistant that speaks MCP over HTTP (Claude, ChatGPT and others) at `https://status.example.com/mcp` with the header `Authorization: Bearer <key>`.
 
-The tools are the same seven for every app (an eighth, `delete`, where the auth file allows it), whatever its size:
+The tools are the same seven for every app, whatever its size, with `delete` where the auth file allows it and `people` for a key that sets a field referring to a user:
 
 | Tool | What it does |
 |---|---|
@@ -186,6 +186,9 @@ The tools are the same seven for every app (an eighth, `delete`, where the auth 
 | `change` | Change fields of a record |
 | `run` | One of the app's standard actions on a record |
 | `describe` | What a kind of record means: its fields, rules and actions |
+| `people` | People by name, for a key whose role may set a field that refers to a user: two letters or more, at most ten, each as `{ id, name }` |
+
+The same lookup is `GET /api/v1/users?name=ma` for programs, for the same keys: give the `id` it returns as the value of a field that refers to a user (an attendee, an account manager). Other keys get a 404, and nobody gets a list of everyone.
 
 With the tools comes a short summary of the app, one line per kind of record, as the server's instructions; an assistant reads it once and asks for `describe` only when it needs more. Each tool is marked as reading only or as changing what exists, so an assistant that asks its user before a risky call knows which. The key's role decides what is offered: a narrow key is not told of what it cannot reach, and without a key an assistant gets what anyone may read or add (§3). There is a `delete` tool only when the auth file says `assistants: { delete: true }`, and only for a role that may delete.
 

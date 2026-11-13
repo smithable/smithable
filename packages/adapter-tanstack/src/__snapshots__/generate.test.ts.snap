@@ -4318,6 +4318,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 import { AccessDenied, type Viewer } from "#/kit/access";
 import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";
+import { peopleNamed } from "./user-choices.server";
 import type { Offer } from "#/kit/tools";
 import { noteFromApi, noteToApi, projectFromApi, projectToApi, taskFromApi, taskToApi } from "./api.server";
 import { projectData } from "./project.server";
@@ -4513,6 +4514,27 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true
+        }
+      },
+      {
+        "name": "people",
+        "description": "People by name, to fill a field that refers to a user: at most ten whose name holds the words given (two letters or more), each as {id, name}. Give the id as the field's value.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Part of the name."
+            }
+          }
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false
         }
       },
       {
@@ -4760,6 +4782,27 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
         }
       },
       {
+        "name": "people",
+        "description": "People by name, to fill a field that refers to a user: at most ten whose name holds the words given (two letters or more), each as {id, name}. Give the id as the field's value.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Part of the name."
+            }
+          }
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false
+        }
+      },
+      {
         "name": "run",
         "description": "Run one of the app's actions on a record; \`input\` holds what it asks for.",
         "inputSchema": {
@@ -5000,6 +5043,27 @@ const OFFERS: Record<string, Offer & { describe: Record<string, string> }> = {
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true
+        }
+      },
+      {
+        "name": "people",
+        "description": "People by name, to fill a field that refers to a user: at most ten whose name holds the words given (two letters or more), each as {id, name}. Give the id as the field's value.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Part of the name."
+            }
+          }
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false
         }
       },
       {
@@ -5249,6 +5313,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       await kind.data.remove(viewer, row.id, args.together === true);
       return { deleted: row.id };
     }
+    case "people":
+      // Only for a caller offered it (MCP refuses the rest before this too).
+      if (!offerFor(viewer).tools.some((tool) => tool.name === "people")) throw new NotFound(\`There is no tool "people".\`);
+      return { people: peopleNamed(String(args.name ?? "")) };
     case "describe":
       kindOf(args);
       return { description: offerFor(viewer).describe[args.kind as string] };
@@ -7609,10 +7677,26 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 import { asc } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
+import { lookedFor, namesHolding } from "#/kit/people-match";
+import { BadInput } from "#/kit/refusal";
 
 /** Everyone who can be chosen in a User field, by name. */
 export const userChoices = () =>
   db.select({ value: user.id, label: user.name }).from(user).orderBy(asc(user.name)).all();
+
+/**
+ * People by name, for a key whose role may set a field that refers to a user (docs/design/api-only.md
+ * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
+ * never an address.
+ */
+export function peopleNamed(words: string): { id: string; name: string }[] {
+  const text = lookedFor(words);
+  if (!text) throw new BadInput("Give two letters or more of the name.");
+  return namesHolding(
+    db.select({ id: user.id, name: user.name }).from(user).orderBy(asc(user.name)).all(),
+    text,
+  );
+}
 "
 `;
 
@@ -10069,6 +10153,32 @@ export const Route = createFileRoute("/api/v1/tasks.csv")({
 "
 `;
 
+exports[`../../../examples/api/smithable.yml > file list and generated code > src/routes/api/v1/users.ts 1`] = `
+"// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
+// People by name for a key whose role may set a field that refers to a user (docs/design/api-only.md
+// §3.6): ?name= two letters or more, at most ten, each as id and name, never an address. Other keys
+// are told there is nothing here.
+import { createFileRoute } from "@tanstack/react-router";
+import { apiCall } from "#/kit/api.server";
+import { NotFound } from "#/kit/refusal";
+import { peopleNamed } from "#/generated/user-choices.server";
+
+const ROLES: readonly string[] = ["admin","member","assistant"];
+
+export const Route = createFileRoute("/api/v1/users")({
+  server: {
+    handlers: {
+      GET: ({ request }) =>
+        apiCall(request, async (viewer) => {
+          if (!ROLES.includes(viewer.role)) throw new NotFound("There is nothing here.");
+          return { items: peopleNamed(new URL(request.url).searchParams.get("name") ?? "") };
+        }),
+    },
+  },
+});
+"
+`;
+
 exports[`../../../examples/api/smithable.yml > file list and generated code > src/routes/app-card.tsx 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 import { createFileRoute } from "@tanstack/react-router";
@@ -10944,6 +11054,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/origin.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
@@ -10996,6 +11107,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "generated: src/routes/api/v1/tasks/imports.$id.ts",
   "generated: src/routes/api/v1/tasks/index.ts",
   "generated: src/routes/api/v1/tasks[.]csv.ts",
+  "generated: src/routes/api/v1/users.ts",
   "generated: src/routes/app-card.tsx",
   "kit: src/routes/files/$model.$field.ts",
   "kit: src/routes/files/$model.$id.$field.$n.ts",
@@ -11062,7 +11174,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "0fa3cf33 generated",
   "src/generated/keys.test.ts": "2a71c746 generated",
-  "src/generated/mcp.server.ts": "5ece0f35 generated",
+  "src/generated/mcp.server.ts": "a279592d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/note.import.server.ts": "7b3f75d9 generated",
   "src/generated/note.import.ts": "13466794 generated",
@@ -11082,7 +11194,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/task.server.ts": "c57e688e generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
-  "src/generated/user-choices.server.ts": "725a8b84 generated",
+  "src/generated/user-choices.server.ts": "a4a73a74 generated",
   "src/generated/users.server.ts": "69df2677 generated",
   "src/generated/users.test.ts": "8ad7ab74 generated",
   "src/generated/users.ts": "91c319ce generated",
@@ -11140,6 +11252,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
@@ -11192,6 +11305,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/tasks/imports.$id.ts": "0a104a2f generated",
   "src/routes/api/v1/tasks/index.ts": "dae1f46a generated",
   "src/routes/api/v1/tasks[.]csv.ts": "b9d31159 generated",
+  "src/routes/api/v1/users.ts": "0798ee24 generated",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/files/$model.$field.ts": "5059a1b3 kit",
   "src/routes/files/$model.$id.$field.$n.ts": "5288014d kit",
@@ -18659,6 +18773,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   "kit: src/kit/outgoing.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
@@ -18841,6 +18956,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
@@ -28448,10 +28564,26 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
 import { asc } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
+import { lookedFor, namesHolding } from "#/kit/people-match";
+import { BadInput } from "#/kit/refusal";
 
 /** Everyone who can be chosen in a User field, by name. */
 export const userChoices = () =>
   db.select({ value: user.id, label: user.name }).from(user).orderBy(asc(user.name)).all();
+
+/**
+ * People by name, for a key whose role may set a field that refers to a user (docs/design/api-only.md
+ * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
+ * never an address.
+ */
+export function peopleNamed(words: string): { id: string; name: string }[] {
+  const text = lookedFor(words);
+  if (!text) throw new BadInput("Give two letters or more of the name.");
+  return namesHolding(
+    db.select({ id: user.id, name: user.name }).from(user).orderBy(asc(user.name)).all(),
+    text,
+  );
+}
 "
 `;
 
@@ -33723,6 +33855,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/outgoing.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
@@ -33899,7 +34032,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "9e37548f generated",
   "src/generated/uploads.ts": "11494e99 generated",
-  "src/generated/user-choices.server.ts": "725a8b84 generated",
+  "src/generated/user-choices.server.ts": "a4a73a74 generated",
   "src/generated/users.ts": "91c319ce generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -33969,6 +34102,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
@@ -40237,10 +40371,26 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code > sr
 import { asc } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
+import { lookedFor, namesHolding } from "#/kit/people-match";
+import { BadInput } from "#/kit/refusal";
 
 /** Everyone who can be chosen in a User field, by name. */
 export const userChoices = () =>
   db.select({ value: user.id, label: user.name }).from(user).orderBy(asc(user.name)).all();
+
+/**
+ * People by name, for a key whose role may set a field that refers to a user (docs/design/api-only.md
+ * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
+ * never an address.
+ */
+export function peopleNamed(words: string): { id: string; name: string }[] {
+  const text = lookedFor(words);
+  if (!text) throw new BadInput("Give two letters or more of the name.");
+  return namesHolding(
+    db.select({ id: user.id, name: user.name }).from(user).orderBy(asc(user.name)).all(),
+    text,
+  );
+}
 "
 `;
 
@@ -43497,6 +43647,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/origin.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -43618,7 +43769,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "bd5ac85e generated",
-  "src/generated/user-choices.server.ts": "725a8b84 generated",
+  "src/generated/user-choices.server.ts": "a4a73a74 generated",
   "src/generated/users.server.ts": "aedee060 generated",
   "src/generated/users.test.ts": "18f42451 generated",
   "src/generated/users.ts": "91c319ce generated",
@@ -43680,6 +43831,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -52812,6 +52964,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/outgoing.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
@@ -53003,6 +53156,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
@@ -62046,6 +62200,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/outgoing.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/push-crypto.server.ts",
   "kit: src/kit/push.server.ts",
@@ -62242,6 +62397,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/push-crypto.server.ts": "5d88f4a0 kit",
   "src/kit/push.server.ts": "38f4b235 kit",
@@ -67444,6 +67600,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/origin.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
@@ -67607,6 +67764,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",
@@ -71493,6 +71651,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/origin.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -71636,6 +71795,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -84484,6 +84644,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/origin.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/refusal.ts",
   "kit: src/kit/search.ts",
@@ -84689,6 +84850,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/origin.ts": "f45ae6cf kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/refusal.ts": "644706e8 kit",
   "src/kit/search.ts": "080eb55b kit",
@@ -89865,10 +90027,26 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
 import { asc } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
+import { lookedFor, namesHolding } from "#/kit/people-match";
+import { BadInput } from "#/kit/refusal";
 
 /** Everyone who can be chosen in a User field, by name. */
 export const userChoices = () =>
   db.select({ value: user.id, label: user.name }).from(user).orderBy(asc(user.name)).all();
+
+/**
+ * People by name, for a key whose role may set a field that refers to a user (docs/design/api-only.md
+ * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
+ * never an address.
+ */
+export function peopleNamed(words: string): { id: string; name: string }[] {
+  const text = lookedFor(words);
+  if (!text) throw new BadInput("Give two letters or more of the name.");
+  return namesHolding(
+    db.select({ id: user.id, name: user.name }).from(user).orderBy(asc(user.name)).all(),
+    text,
+  );
+}
 "
 `;
 
@@ -92466,6 +92644,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   "kit: src/kit/outgoing.ts",
   "kit: src/kit/page-guard.ts",
   "kit: src/kit/params.ts",
+  "kit: src/kit/people-match.ts",
   "kit: src/kit/person-time.server.ts",
   "kit: src/kit/receipts.server.ts",
   "kit: src/kit/refusal.ts",
@@ -92578,7 +92757,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.server.ts": "6bad6e7b generated",
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
-  "src/generated/user-choices.server.ts": "725a8b84 generated",
+  "src/generated/user-choices.server.ts": "a4a73a74 generated",
   "src/generated/users.server.ts": "a6b70aa0 generated",
   "src/generated/users.test.ts": "5cb4d084 generated",
   "src/generated/users.ts": "91c319ce generated",
@@ -92642,6 +92821,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/outgoing.ts": "e1f82237 kit",
   "src/kit/page-guard.ts": "d8974971 kit",
   "src/kit/params.ts": "65a69da0 kit",
+  "src/kit/people-match.ts": "09a0f7dc kit",
   "src/kit/person-time.server.ts": "5d9e216d kit",
   "src/kit/receipts.server.ts": "23b63f60 kit",
   "src/kit/refusal.ts": "644706e8 kit",

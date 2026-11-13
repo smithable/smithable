@@ -386,10 +386,26 @@ export function userChoicesModule(): string {
   return `${HEADER}import { asc } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
+import { lookedFor, namesHolding } from "#/kit/people-match";
+import { BadInput } from "#/kit/refusal";
 
 /** Everyone who can be chosen in a User field, by name. */
 export const userChoices = () =>
   db.select({ value: user.id, label: user.name }).from(user).orderBy(asc(user.name)).all();
+
+/**
+ * People by name, for a key whose role may set a field that refers to a user (docs/design/api-only.md
+ * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
+ * never an address.
+ */
+export function peopleNamed(words: string): { id: string; name: string }[] {
+  const text = lookedFor(words);
+  if (!text) throw new BadInput("Give two letters or more of the name.");
+  return namesHolding(
+    db.select({ id: user.id, name: user.name }).from(user).orderBy(asc(user.name)).all(),
+    text,
+  );
+}
 `;
 }
 
