@@ -1,0 +1,74 @@
+{
+ "date": "2026-11-13",
+ "retrieval": {
+  "questions": 28,
+  "top3": 17,
+  "top5": 20,
+  "missed": [
+   "d-publish",
+   "d-cost",
+   "d-selfhost",
+   "d-apps",
+   "d-fi-finnish",
+   "d-sv-publish",
+   "d-sv-data",
+   "d-fi-cost"
+  ]
+ },
+ "prompt": {
+  "ambiguous": {
+   "requests": 25,
+   "byRule": 0,
+   "medianTokens": 26623,
+   "maxTokens": 44272
+  },
+  "change": {
+   "requests": 114,
+   "byRule": 14,
+   "medianTokens": 34212,
+   "maxTokens": 46072
+  },
+  "custom-code": {
+   "requests": 13,
+   "byRule": 0,
+   "medianTokens": 34210,
+   "maxTokens": 44465
+  },
+  "data": {
+   "requests": 23,
+   "byRule": 0,
+   "medianTokens": 34385,
+   "maxTokens": 45868
+  },
+  "docs-question": {
+   "requests": 28,
+   "byRule": 0,
+   "medianTokens": 1448,
+   "maxTokens": 38627
+  },
+  "off-topic": {
+   "requests": 10,
+   "byRule": 0,
+   "medianTokens": 26075,
+   "maxTokens": 34368
+  },
+  "smalltalk": {
+   "requests": 17,
+   "byRule": 13,
+   "medianTokens": 27316,
+   "maxTokens": 27362
+  },
+  "spec-question": {
+   "requests": 38,
+   "byRule": 2,
+   "medianTokens": 1964,
+   "maxTokens": 38841
+  },
+  "two-things": {
+   "requests": 17,
+   "byRule": 0,
+   "medianTokens": 44132,
+   "maxTokens": 45440
+  }
+ }
+}
