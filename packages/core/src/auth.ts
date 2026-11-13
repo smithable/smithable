@@ -1,5 +1,5 @@
 import { isMap, isScalar, isSeq, LineCounter, type ParsedNode, parseDocument } from "yaml";
-import { listReaderProblem, modelAccess, uniqueScope } from "./access.js";
+import { adminOnly, listReaderProblem, modelAccess, uniqueScope } from "./access.js";
 import { readCondition } from "./condition.js";
 import {
   type At,
@@ -819,10 +819,16 @@ function readPublicRead(
     return [];
   }
   const names: { name: string; at: At }[] = [];
+  // A kind listed twice is open by one entry and conditional by another: which wins is unclear.
+  const add = (name: string, at: At) => {
+    if (names.some((n) => n.name === name))
+      ctx.error(at, "duplicate-name", `${name} is listed twice in ${what}; list it once.`);
+    else names.push({ name, at });
+  };
   for (const item of node.items as ParsedNode[]) {
     if (!isMap(item)) {
       const name = readString(ctx, item, `Each item in ${what}`);
-      if (name !== undefined) names.push({ name, at: item });
+      if (name !== undefined) add(name, item);
       continue;
     }
     const entries = mapEntries(ctx, item, what) ?? [];
@@ -845,8 +851,21 @@ function readPublicRead(
     const condition = where
       ? readCondition(ctx, where.value, `"where" of "${entry.key}" in ${what}`)
       : undefined;
-    if (condition) readWhere[entry.key] = condition;
-    names.push({ name: entry.key, at: entry.keyNode });
+    // A mapping says the records are read only where a condition holds: without a real one
+    // (none, or an empty one) it would open every record, which a plain name says plainly.
+    const empty =
+      (where && isMap(where.value) && !where.value.items.length) ||
+      (condition && !Object.keys(condition).length);
+    if (!where || empty)
+      ctx.error(
+        where?.value ?? entry.keyNode,
+        "missing-key",
+        `"${entry.key}" in ${what} needs a "where" that names a condition, like { where: { status: published } }; to let visitors read every ${entry.key}, list the name alone.`,
+      );
+    // A condition refused (said where it was read) or empty: the kind is not opened.
+    if (!condition || !Object.keys(condition).length) continue;
+    readWhere[entry.key] = condition;
+    add(entry.key, entry.keyNode);
   }
   return names;
 }
@@ -1043,6 +1062,18 @@ function checkAgainstSpec(
       }
     }
   }
+  // The pages an administrator's work is done on (users, data, review) are never public: their
+  // server functions would answer whoever opens them.
+  for (const { name, at } of publicNodes.pages ?? []) {
+    const page = ir.pages.find((p) => p.id === name);
+    // (Without sign-in such a page is refused already, as needing it.)
+    if (page && adminOnly(page) && auth.signIn !== "none")
+      ctx.error(
+        at,
+        "invalid-value",
+        `${name} is a ${page.pattern.kind} page, which only those granted it may open: take it out of public.pages.`,
+      );
+  }
   // A public page's contact form is sent by visitors: they must be allowed to add its records.
   for (const { name, at } of publicNodes.pages ?? []) {
     const page = ir.pages.find((p) => p.id === name);
@@ -1148,7 +1179,7 @@ function checkAgainstSpec(
       const read = modelAccess(model, auth).read;
       // A list of fields chosen for a reader who may not see them is a mistake, not an oversight
       // (docs/design/outgoing-templates.md §4): an error where the default body is a warning.
-      if (!read.public && !read.roles.includes(r.role))
+      if (!(read.public && !read.where) && !read.roles.includes(r.role))
         (Array.isArray(o.show) ? ctx.error : ctx.warning).call(
           ctx,
           accessAt,
