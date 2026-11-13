@@ -55,13 +55,20 @@ test("a condition must name a choice value or a yes/no field", () => {
   expect(check("Post: { where: { pinned: [x] } }").diagnostics.map((d) => d.code)).toEqual([
     "invalid-where",
   ]);
+  // A condition refused leaves the kind closed, not open to all: the public page shows none (T803).
   expect(check("Post: { where: { status: [] } }").diagnostics.map((d) => d.code)).toEqual([
+    "public-page-closed-records",
     "invalid-value",
   ]);
   expect(
     check("Post: { where: { status: [draft, draft] } }").diagnostics.map((d) => d.code),
   ).toEqual(["invalid-where"]);
-  expect(check("Post: { limit: 3 }").diagnostics.map((d) => d.code)).toEqual(["unknown-key"]);
+  // A mapping without a where opened every post; now it is said and the kind stays closed (T803).
+  expect(check("Post: { limit: 3 }").diagnostics.map((d) => d.code)).toEqual([
+    "public-page-closed-records",
+    "missing-key",
+    "unknown-key",
+  ]);
 });
 
 test("the condition follows a rename and refuses to lose its field or value", () => {
