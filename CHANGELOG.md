@@ -22,6 +22,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: the mail library nodemailer 10.4.1 (from 10.1.7), for two published advisories where an address with an unusual domain or a comment was read differently from how it was shown; with it better-auth 1.7.22 and vite 8.3.8, patch releases (`fixes/nodemailer-address-parsing.yml`).
 - Generated apps: adding or changing a record whose reference names a record that does not exist is refused as bad input that names the field, in the API, Ask and the forms, instead of as a record still in use (`fixes/missing-reference.yml`).
 - Generated apps: the page of one article finds it and the ones just newer and older in the query, a row each (`fixes/article-neighbours.yml`).
 - Generated apps read less: a settings or onboarding page reads the one record it shows, a page of articles reads that page in the query, and a list's conversation counts are counted in the query (`fixes/bounded-reads.yml`).
