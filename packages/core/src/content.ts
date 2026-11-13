@@ -76,6 +76,8 @@ export interface PageContent {
     keeps?: Record<string, string>;
     services?: { name: string; for?: string; where?: string }[];
     custom?: string;
+    /** The owner's review (§6.4): the fingerprint of the facts reviewed and the day, UTC. */
+    reviewed?: { facts: string; on: string };
   };
   title?: string;
   /** A line under the title, e.g. "Keep every relationship in view." */
@@ -681,6 +683,28 @@ function readPage(ctx: ParseContext, node: ParsedNode | null, id: string, ir: Sp
             ["title"],
           );
       }
+      continue;
+    }
+    if (page?.pattern.kind === "legal" && entry.key === "reviewed") {
+      const at = `"reviewed" of ${where}`;
+      const keys = checkKeys(ctx, mapEntries(ctx, entry.value, at) ?? [], at, {
+        allowed: ["facts", "on"],
+      });
+      const text = (key: string) => {
+        const found = keys.find((e) => e.key === key);
+        return found ? readString(ctx, found.value, `"${key}" of ${at}`) : undefined;
+      };
+      const facts = text("facts");
+      const on = text("on");
+      if (facts && on) {
+        result.privacy = result.privacy ?? {};
+        result.privacy.reviewed = { facts, on };
+      } else
+        ctx.error(
+          entry.keyNode,
+          "invalid-value",
+          `${at} is { facts: <fingerprint>, on: <date> }, written by reviewPrivacyPage.`,
+        );
       continue;
     }
     if (page?.pattern.kind === "legal" && ["keeps", "services", "custom"].includes(entry.key)) {

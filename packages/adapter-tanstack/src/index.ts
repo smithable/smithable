@@ -2,7 +2,13 @@ export { humanize, kebab, plural } from "@smithable/core";
 export { type SampleUser, samplePeople } from "./dev-door.js";
 export { FONT_ASSET_VERSION, FONT_ASSETS, fontImportRuntime, fontImportUrls } from "./fonts.js";
 export type { GeneratedFile, GenerateOptions, Zone } from "./generate.js";
-export { customPageFromEdit, customPageSource, generateApp, readme } from "./generate.js";
+export {
+  customPageFromEdit,
+  customPageSource,
+  generateApp,
+  privacyReviews,
+  readme,
+} from "./generate.js";
 export type { GeneratedEntry } from "./implementation.js";
 export { implementationIndex } from "./implementation.js";
 export { fieldColumn, insertRecord, recordTable, type StoredValue } from "./import.js";

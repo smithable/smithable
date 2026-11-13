@@ -674,6 +674,8 @@ export const w = {
   legalKeptUntil: "De sparas tills ägaren tar bort dem eller du ber om att de tas bort.",
   legalOwnServices: "Appens ägare använder också:",
   legalCustomTitle: "Ägarens egna funktioner",
+  legalReviewed: (on: string) =>
+    `Den som driver appen granskade den här beskrivningen av appen ${on}.`,
   legalCustom: (actions: string[]) =>
     `Appen kör också funktioner som dess ägare har skrivit för den${actions.length ? ` (${actions.join(", ")})` : ""}. Den här sidan beskriver inte vad de gör.`,
   legalRecordsTitle: "Uppgifter i poster",

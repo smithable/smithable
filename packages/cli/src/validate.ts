@@ -1,10 +1,12 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { privacyReviews } from "@smithable/adapter-tanstack";
 import {
   ASK_FILE,
   type AskIR,
   type AuthIR,
   actionAccess,
+  analyticsOf,
   type ContentIR,
   type Diagnostic,
   DUE_WITHIN,
@@ -16,7 +18,9 @@ import {
   type PersonIR,
   pageModel,
   parseTheme,
+  paymentProviderOf,
   paymentsProviderNote,
+  privacyCheck,
   recordPicture,
   recordSummary,
   type SamplesIR,
@@ -293,13 +297,21 @@ export function validate(
     // For a program: every finding with its code, file and place, and whether the project is
     // valid. Nothing else is printed, so the output is one JSON document.
     const found: Diagnostic[] = [];
-    const { ir } = loadSpec(target, { ...io, err: () => {} }, extraPlugins, found);
+    const { ir, path, auth, content, ux } = loadSpec(
+      target,
+      { ...io, err: () => {} },
+      extraPlugins,
+      found,
+    );
+    if (ir && path) found.push(...privacyFindings(path, ir, auth, content, ux));
     io.out(`${JSON.stringify({ valid: Boolean(ir), diagnostics: found }, null, 2)}\n`);
     return ir ? 0 : 1;
   }
   const found: Diagnostic[] = [];
   const { ir, path, auth, ux, content } = loadSpec(target, io, extraPlugins, found);
   if (!ir) return 1;
+  // Warnings after loading, from validate alone: the privacy page's completeness and review.
+  for (const d of privacyFindings(path, ir, auth, content, ux)) io.err(`${formatDiagnostic(d)}\n`);
   io.out(
     `${path} is valid: ${count(ir.models.length, "model")}, ${count(ir.pages.length, "page")}.\n`,
   );
@@ -325,6 +337,56 @@ export function validate(
     for (const d of notes) io.out(`${formatDiagnostic(d)}\n`);
   }
   return 0;
+}
+
+/**
+ * The privacy page's completeness (legal-page.md §6.3): what is missing and whether its operator
+ * reviewed it, said by `smithable validate` alone, not by every command that loads the project.
+ */
+function privacyFindings(
+  path: string,
+  ir: SpecIR,
+  auth: AuthIR | undefined,
+  content: ContentIR | undefined,
+  ux: UxIR | undefined,
+): Diagnostic[] {
+  const contextPath = join(dirname(path), "smithable.context.yml");
+  // The privacy page's completeness (legal-page.md §6.3): what is missing, and its review.
+  const contentFile = join(dirname(path), "smithable.content.yml");
+  const contextText = existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined;
+  const analytics = contextText ? analyticsOf(contextText) : undefined;
+  const privacy = privacyCheck(
+    ir,
+    auth,
+    content,
+    { spec: path, content: contentFile },
+    { analytics: Boolean(analytics) },
+  );
+  if (auth)
+    for (const r of privacyReviews(ir, {
+      smithableVersion: "0.0.0",
+      auth,
+      ...(content ? { content } : {}),
+      ...(ux ? { ux } : {}),
+      ...(analytics ? { analytics } : {}),
+      ...(paymentProviderOf(contextText)
+        ? { paymentProvider: paymentProviderOf(contextText) }
+        : {}),
+    }))
+      if (r.state !== "reviewed")
+        privacy.push({
+          severity: "warning",
+          code: "privacy-unreviewed",
+          message:
+            r.state === "never"
+              ? `The privacy page "${r.page}" has never been reviewed by its operator.`
+              : `The privacy page "${r.page}" changed since its operator reviewed it on ${r.reviewed?.on}.`,
+          hint: `Read it in Studio and review it, or smithable op reviewPrivacyPage ${r.page} ${r.facts} <today>.`,
+          file: contentFile,
+          line: 1,
+          column: 1,
+        });
+  return privacy;
 }
 
 export function isDirectory(path: string): boolean {

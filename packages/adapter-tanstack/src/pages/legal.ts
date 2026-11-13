@@ -11,6 +11,7 @@ import {
   type SpecIR,
 } from "@smithable/core";
 import { pushEntries, smsEntries } from "../outgoing.js";
+import { sha256Hex } from "../sha256.js";
 import type { GenContext } from "../shared.js";
 import {
   code,
@@ -23,6 +24,7 @@ import {
   names,
   type Texts,
 } from "../shared.js";
+import { TEMPLATES } from "../templates.gen.js";
 
 const PAYMENT_NAMES: Record<string, string> = { stripe: "Stripe", mollie: "Mollie" };
 
@@ -209,14 +211,70 @@ export function legalFacts(
 /** "mobileNumber" → "mobile number", for a field without a label. */
 const humanLabel = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
 
-export function legalRoute(
-  page: PageIR & { pattern: { kind: "legal"; legal: "privacy" } },
-  ctx: GenContext,
-): string {
+type LegalPageIR = PageIR & { pattern: { kind: "legal"; legal: "privacy" } };
+
+/**
+ * What the page describes, as the project's files give it (§6.4): the facts frozen into the
+ * route, with the operator's details and the maker's own parts; not the review record itself.
+ */
+export function privacyFacts(page: LegalPageIR, ctx: GenContext) {
   const { ir, auth, t } = ctx;
   const facts = legalFacts(ir, auth, t, ctx, page.id);
   const operator = t.section(page.id, "operator") as Record<string, string | undefined>;
   const more = t.section(page.id, "more") as { title?: string; text?: string };
+  const given = Object.fromEntries(Object.entries(operator).filter(([, v]) => v));
+  return {
+    ...facts,
+    ...(Object.keys(given).length ? { operator: given } : {}),
+    ...(more.text ? { more } : {}),
+  };
+}
+
+/** The page's sentences in the app's language, as the kit's words file writes them (legal*). */
+function legalSentences(language: string): string {
+  const source = TEMPLATES[`src/kit/words/${language}.ts`] ?? "";
+  const kept: string[] = [];
+  let on = false;
+  for (const line of source.split("\n")) {
+    const key = /^ {2}([A-Za-z]+)\s*:/.exec(line)?.[1];
+    if (key) on = key.startsWith("legal");
+    else if (/^ {2}\/\*\*|^\}/.test(line)) on = false;
+    if (on) kept.push(line);
+  }
+  return kept.join("\n");
+}
+
+/** A value as JSON with its keys sorted, so the same facts always write the same text. */
+const sorted = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(sorted)
+    : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.keys(value as object)
+            .sort()
+            .map((k) => [k, sorted((value as Record<string, unknown>)[k])]),
+        )
+      : value;
+
+/**
+ * The fingerprint of what the owner reviews (§6.4): SHA-256 over the facts as JSON with sorted
+ * keys, a line end, and the sentences the page uses in the app's language; sixteen hex digits.
+ */
+export function privacyFingerprint(page: LegalPageIR, ctx: GenContext): string {
+  const text = `${JSON.stringify(sorted(privacyFacts(page, ctx)))}\n${legalSentences(ctx.t.language)}`;
+  return sha256Hex(text).slice(0, 16);
+}
+
+export function legalRoute(
+  page: PageIR & { pattern: { kind: "legal"; legal: "privacy" } },
+  ctx: GenContext,
+): string {
+  const { ir, t } = ctx;
+  const facts = privacyFacts(page, ctx);
+  // The review line, only while the facts are the ones reviewed (§6.4).
+  const reviewed = t.privacy(page.id).reviewed;
+  const reviewedOn =
+    reviewed && reviewed.facts === privacyFingerprint(page, ctx) ? reviewed.on : undefined;
   // The root frames a public page for visitors in the site's layout and for signed-in people in
   // the app's shell (root.ts, visitorRoutes): the page renders itself alone.
   const imports = importList()
@@ -229,7 +287,6 @@ export function legalRoute(
   for (const m of ir.models)
     if (facts.records.some((r) => r.label.text === `${names(m, t).ui}.pluralLabel`))
       imports.add(names(m, t).module, names(m, t).ui);
-  const given = Object.fromEntries(Object.entries(operator).filter(([, v]) => v));
   // What only the running app knows (§6.1): read when the page is shown, never frozen in.
   const ai = Boolean(facts.assistant);
   const sms = Boolean(facts.smsAbout);
@@ -240,11 +297,7 @@ export function legalRoute(
   const page_ = `<LegalPage title={${t.pageTitleOf(page.id)}} facts={facts}${running ? " running={Route.useLoaderData()}" : ""} />`;
   return `${HEADER}${imports.render()}
 /** What the page says, from the app's definition when it was generated. */
-const facts: LegalFacts = ${literal({
-    ...facts,
-    ...(Object.keys(given).length ? { operator: given } : {}),
-    ...(more.text ? { more } : {}),
-  })};
+const facts: LegalFacts = ${literal({ ...facts, ...(reviewedOn ? { reviewedOn } : {}) })};
 
 ${
   running

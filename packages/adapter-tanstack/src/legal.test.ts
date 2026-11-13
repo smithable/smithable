@@ -1,5 +1,6 @@
 import {
   type AuthIR,
+  applyOperation,
   emptyContent,
   type SpecIR,
   validateAuth,
@@ -7,7 +8,7 @@ import {
   validateSpec,
 } from "@smithable/core";
 import { expect, test } from "vitest";
-import { generateApp } from "./generate.js";
+import { generateApp, privacyReviews } from "./generate.js";
 
 test("the privacy page's facts are typed, so a public model with a personal field type-checks", () => {
   // The stranger walk of 2026-10-07: a phone on the public Instructor made `readers: "visitors"`,
@@ -186,4 +187,61 @@ pages:
   expect(route).toContain(
     'custom: { actions: [], text: "The waiting list mails the next person." }',
   );
+});
+
+test("the owner's review: recorded by reviewPrivacyPage, shown while the facts are the ones reviewed (legal-page.md §6.4)", () => {
+  const spec = `smithable: 0.1
+app: { name: X }
+models:
+  Message:
+    fields: { name: string!, email: email! }
+pages:
+  home: { route: /, landing: { hero: {}, footer: {} } }
+  messages: { crud: Message }
+  privacy: { route: /privacy, legal: privacy }
+`;
+  const auth =
+    "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\npublic: { pages: [home, privacy] }\n";
+  const contentText =
+    "smithableContent: 0.1\npages:\n  privacy:\n    operator: { name: Calm Ab }\n";
+  const build = (specText: string, content: string) => {
+    const ir = validateSpec({ path: "smithable.yml", text: specText }).ir as SpecIR;
+    const a = validateAuth({ path: "smithable.auth.yml", text: auth }, ir).auth as AuthIR;
+    const c = validateContent({ path: "smithable.content.yml", text: content }, ir)
+      .content as NonNullable<ReturnType<typeof validateContent>["content"]>;
+    return { ir, options: { smithableVersion: "0.0.0", auth: a, content: c } };
+  };
+  const before = build(spec, contentText);
+  const [review] = privacyReviews(before.ir, before.options);
+  expect(review).toMatchObject({ page: "privacy", state: "never" });
+  expect(review?.facts).toMatch(/^[0-9a-f]{16}$/);
+  // The operation writes the record; the page then says the description was reviewed.
+  const applied = applyOperation({ spec, auth, content: contentText }, "reviewPrivacyPage", {
+    page: "privacy",
+    facts: review?.facts,
+    on: "2026-11-13",
+  });
+  expect(applied.ok).toBe(true);
+  const files = applied.ok ? applied.files : { spec, content: contentText };
+  expect(files.content).toContain("reviewed:");
+  const reviewed = build(spec, files.content ?? "");
+  expect(privacyReviews(reviewed.ir, reviewed.options)[0]?.state).toBe("reviewed");
+  const route = (b: ReturnType<typeof build>) =>
+    generateApp(b.ir, b.options).find((f) => f.path === "src/routes/privacy/index.tsx")?.content ??
+    "";
+  expect(route(reviewed)).toContain('reviewedOn: "2026-11-13"');
+  // A new personal field changes the facts: no review line, and the review is "changed".
+  const changed = build(
+    spec.replace("email: email! }", "email: email!, phone: phone }"),
+    files.content ?? "",
+  );
+  expect(privacyReviews(changed.ir, changed.options)[0]?.state).toBe("changed");
+  expect(route(changed)).not.toContain("reviewedOn");
+  // Not a privacy page: refused.
+  const refused = applyOperation({ spec, auth, content: contentText }, "reviewPrivacyPage", {
+    page: "messages",
+    facts: review?.facts,
+    on: "2026-11-13",
+  });
+  expect(refused.ok).toBe(false);
 });

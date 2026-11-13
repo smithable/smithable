@@ -53,6 +53,7 @@ import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.
 import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
+import { privacyFingerprint } from "./pages/legal.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
 import { paymentRoutes, paymentsFunctions, paymentsServerModule } from "./payments.js";
 import { manifest, pushModule, SERVICE_WORKER, smsModule } from "./push.js";
@@ -104,6 +105,36 @@ function wordsIfUsed(content: string): string {
   return /\bw\./.test(content.replace(WORDS_IMPORT, ""))
     ? content
     : content.replace(WORDS_IMPORT, "");
+}
+
+/**
+ * Each privacy page's review (legal-page.md §6.4): the fingerprint of its facts now, the review
+ * the content file records, and whether that review is of these facts. For validate, Studio and
+ * the hosted service's publish card.
+ */
+export function privacyReviews(
+  spec: SpecIR,
+  options: GenerateOptions,
+): {
+  page: string;
+  facts: string;
+  reviewed?: { facts: string; on: string };
+  state: "reviewed" | "changed" | "never";
+}[] {
+  const ctx: GenContext = {
+    ir: spec,
+    t: texts(options.content ?? emptyContent()),
+    auth: options.auth,
+    ux: options.ux ?? emptyUx(),
+    options,
+  };
+  return spec.pages.flatMap((page) => {
+    if (page.pattern.kind !== "legal") return [];
+    const facts = privacyFingerprint(page as Parameters<typeof privacyFingerprint>[0], ctx);
+    const reviewed = ctx.t.privacy(page.id).reviewed;
+    const state = !reviewed ? "never" : reviewed.facts === facts ? "reviewed" : "changed";
+    return [{ page: page.id, facts, ...(reviewed ? { reviewed } : {}), state }];
+  });
 }
 
 /** Generates a complete TanStack Start app from the IR. Pure and deterministic. */

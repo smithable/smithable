@@ -53,6 +53,8 @@ export interface LegalFacts {
   custom?: { actions: string[]; text?: string };
   /** Other services the operator uses that the files do not show, in the maker's words. */
   ownServices?: { name: string; for?: string; where?: string }[];
+  /** The day the operator reviewed this description, while it is the one reviewed (§6.4). */
+  reviewedOn?: string;
   /** The maker's own words under the generated text. */
   more?: { title?: string; text?: string };
 }
@@ -227,6 +229,9 @@ export function LegalPage({
         <Part title={facts.more.title ?? w.legalMoreTitle}>
           <p className="whitespace-pre-line">{facts.more.text}</p>
         </Part>
+      )}
+      {facts.reviewedOn && (
+        <p className="text-sm text-muted-foreground">{w.legalReviewed(facts.reviewedOn)}</p>
       )}
     </article>
   );

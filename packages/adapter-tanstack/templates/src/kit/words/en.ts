@@ -709,6 +709,7 @@ export const w = {
   legalKeptUntil: "They are kept until the owner removes them or you ask for their removal.",
   legalOwnServices: "The app's owner also uses:",
   legalCustomTitle: "The owner's own functions",
+  legalReviewed: (on: string) => `The operator reviewed this description of the app on ${on}.`,
   legalCustom: (actions: string[]) =>
     `The app also runs functions written for it by its owner${actions.length ? ` (${actions.join(", ")})` : ""}. This page does not describe what they do.`,
   legalRecordsTitle: "Information in records",
