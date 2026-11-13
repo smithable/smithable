@@ -214,7 +214,9 @@ pages:
   const chips = route("chips");
   expect(chips).toMatch(/name: "instructor"[^}]*chips: true/);
   expect(chips).toMatch(/name: "level"[^}]*chips: true/);
-  expect(chips).toContain("picture: r.portrait ? `/files/instructor/${r.id}/portrait?v=${r.portrait.file.slice(-29, -5)}` : undefined");
+  expect(chips).toContain(
+    "picture: r.portrait ? `/files/instructor/${r.id}/portrait?v=${r.portrait.file.slice(-29, -5)}` : undefined",
+  );
   // Unsaid: today's controls, no pictures asked for.
   const plain = route();
   expect(plain).not.toContain("chips: true");
