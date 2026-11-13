@@ -356,7 +356,8 @@ try {
       await frame.waitFor();
       if ((await width()) > 392) throw new Error("the phone width was not kept after a reload");
       await pick("Desktop");
-      if (Math.abs((await width()) - full) > 2) throw new Error("Desktop did not give the pane back");
+      if (Math.abs((await width()) - full) > 2)
+        throw new Error("Desktop did not give the pane back");
     },
   );
   await step(
