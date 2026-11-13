@@ -198,6 +198,10 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.yml", ["models", "Order", "fields", "note", "unique"], "owner"],
     ["smithable.yml", ["models", "Order", "fields", "note", "locked"], true],
     ["smithable.yml", ["models", "Order", "fields", "note", "required"], { status: "paid" }],
+    ["smithable.yml", ["models", "Order", "fields", "minutes", "default"], 60],
+    ["smithable.yml", ["models", "Order", "fields", "minutes", "min"], 15],
+    ["smithable.yml", ["models", "Order", "fields", "minutes", "max"], undefined],
+    ["smithable.yml", ["models", "Order", "fields", "number", "sequence"], true],
     ["smithable.yml", ["models", "Order", "thread"], undefined],
     ["smithable.yml", ["models", "Order", "capacity"], undefined],
     ["smithable.yml", ["models", "Order", "schedule"], undefined],
@@ -713,4 +717,10 @@ test("Who can: sign-in, the administrators, the roles, Ask and the API, each thr
   ]);
   expect(operationFor(a, ["api", "models"], "all", auth)?.[1]).toMatchObject({ models: ["all"] });
   expect(operationFor(a, ["api"], undefined, auth)).toEqual(["setApi", {}]);
+});
+
+test("an emptied default box takes the default away", () => {
+  expect(
+    operationFor("smithable.yml", ["models", "Order", "fields", "minutes", "default"], ""),
+  ).toEqual(["setFieldDefault", { model: "Order", field: "minutes", remove: true }]);
 });
