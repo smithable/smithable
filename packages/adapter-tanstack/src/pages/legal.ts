@@ -233,7 +233,8 @@ export function privacyFacts(page: LegalPageIR, ctx: GenContext) {
 /** The page's sentences in the app's language, as the kit's words file writes them (legal*). */
 function legalSentences(language: string): string {
   // The kit's own default (English) for a language it has no file for, as it falls back itself.
-  const source = TEMPLATES[`src/kit/words/${language}.ts`] ?? TEMPLATES["src/kit/words/en.ts"] ?? "";
+  const source =
+    TEMPLATES[`src/kit/words/${language}.ts`] ?? TEMPLATES["src/kit/words/en.ts"] ?? "";
   const kept: string[] = [];
   let on = false;
   for (const line of source.split("\n")) {
