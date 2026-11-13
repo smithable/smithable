@@ -1,5 +1,6 @@
 import type { ThemeIR, Verification } from "@smithable/core";
 import type { ConceptInfo } from "@smithable/index";
+import { showCosts } from "./receipt";
 
 /** The change trace (ARCHITECTURE §9.7), as `smithable studio` reports it. */
 export interface TraceEntry {
@@ -140,6 +141,8 @@ export interface Project {
   };
   /** Where Smith's requests may go, in words, one per model the AI policy allows (U6). */
   ai?: string[];
+  /** The hosted service pays for the model (its workspaces): change lines show no amounts (T750). */
+  servicePays?: true;
   /** Where Smith may hear and speak (smith-speech.md §3); empty: speech is off. */
   speech?: { name: "browser" | "service"; onDeviceOnly?: true }[];
   /** A described app being made: until it is gone, `files` and `name` are a placeholder's. */
@@ -320,7 +323,11 @@ export interface PeopleState {
 }
 
 export const api = {
-  project: () => call<Project>("/api/project"),
+  project: () =>
+    call<Project>("/api/project").then((p) => {
+      showCosts(!p.servicePays);
+      return p;
+    }),
   releaseReview: () => call<ReleaseReview>("/api/release-review"),
   /** The app card as Markdown and HTML (app-card.md), or what stops it. */
   card: () => call<{ md: string; html: string } | { error: string }>("/api/card"),
