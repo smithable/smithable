@@ -19,7 +19,7 @@ import { repo } from "./dev-app.mjs";
 
 const args = process.argv.slice(2);
 const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
-const files = args.filter((a, i) => a.endsWith(".jsonl") && !args[i - 1]?.startsWith("--"));
+const files = args.filter((a, i) => a.endsWith(".jsonl") && args[i - 1] !== "--note");
 if (!files.length) throw new Error("Give the round's bench-smith .jsonl files.");
 const set = JSON.parse(readFileSync(join(repo, "docs/benchmarks/smith-requests.json"), "utf8"));
 const labelled = new Map(set.requests.map((r) => [r.id, r]));
