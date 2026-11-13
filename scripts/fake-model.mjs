@@ -133,6 +133,22 @@ export async function startFakeModel() {
     const user = body.messages?.find((m) => m.role === "user")?.content ?? "";
     const system = body.messages?.find((m) => m.role === "system")?.content ?? "";
     const request = /^Request: (.*)$/m.exec(user)?.[1] ?? "";
+    // The hosted gateway's refusal when free building is paused (T746): 402, its own type.
+    if (/the paused gateway/i.test(request)) {
+      res.writeHead(402, { "Content-Type": "application/json", "Retry-After": "3600" });
+      res.end(
+        JSON.stringify({
+          error: {
+            type: "paused",
+            reason: "day",
+            until: new Date(Date.now() + 3600_000).toISOString(),
+            message: "Today's free building is used up.",
+            invite: "https://smithable.example/invite-request",
+          },
+        }),
+      );
+      return;
+    }
     const answer = system.includes("first version of a web app as a list of Smithable operations")
       ? operationsDraft()
       : system.includes("first version of a web app")

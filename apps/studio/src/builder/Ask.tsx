@@ -257,7 +257,9 @@ export function Ask({
             ? next.reason
             : next.kind === "failed"
               ? next.message
-              : undefined;
+              : next.kind === "paused"
+                ? pausedWords(next.paused)
+                : undefined;
       if (trace && reply) {
         say(text, reply);
         setProposal(undefined);
@@ -1567,8 +1569,50 @@ export function ProposalView({
       )}
       {proposal.kind === "none" && <p className="text-sm">{proposal.reason}</p>}
       {proposal.kind === "failed" && <p className="text-sm text-red-700">{proposal.message}</p>}
+      {proposal.kind === "paused" && (
+        <p className="text-sm" role="status" data-paused={proposal.paused.reason}>
+          {pausedWords({ ...proposal.paused, invite: undefined })}
+          {proposal.paused.invite && (
+            <>
+              {" "}
+              <a
+                href={proposal.paused.invite}
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                Invite someone
+              </a>
+            </>
+          )}
+        </p>
+      )}
     </section>
   );
+}
+
+/**
+ * Free building paused (T746), said in Smith's place, not as an error: what happened, when it
+ * continues in the person's own time, and that changes made by rule still work.
+ */
+export function pausedWords(paused: {
+  reason: "day" | "month" | "shared";
+  until: string;
+  invite?: string;
+}): string {
+  // The date in full: a month's pause may lift weeks away.
+  const until = new Date(paused.until).toLocaleString([], {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const why =
+    paused.reason === "shared"
+      ? "Free building with a model is paused for everyone for a while"
+      : `You have used this ${paused.reason}'s free building with a model`;
+  return `${why}. It continues ${until}. Changes I can make by rule, without a model, still work: try a plain one, like adding a field.${paused.invite ? ` Invite someone: ${paused.invite}` : ""}`;
 }
 
 /**

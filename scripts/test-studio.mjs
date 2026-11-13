@@ -1604,6 +1604,14 @@ try {
       await trace
         .getByText("Customers: added a mobile (a phone number)")
         .waitFor({ timeout: 60000 * P });
+      // Free building paused on the hosted service (T746): said in Smith's place, with when it
+      // continues and an invite link, not as an error; and a change by rule still works after.
+      await page.getByLabel("Describe a change").fill("Make the paused gateway answer this");
+      await page.getByRole("button", { name: "Send", exact: true }).click();
+      await page
+        .getByText(/You have used this day's free building with a model\. It continues /)
+        .first()
+        .waitFor({ timeout: 60000 * P });
       // The history says who made it and what it cost, as the confirmation did (T721).
       await trace
         .locator("[data-receipt]")

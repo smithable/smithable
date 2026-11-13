@@ -167,6 +167,11 @@ export type Proposal = { usage: string; id: string } & (
   | { kind: "answer"; text: string; concepts: string[] }
   | { kind: "none"; reason: string }
   | { kind: "failed"; message: string }
+  /** Free building paused on the hosted service (B's T745): why, until when, where to invite. */
+  | {
+      kind: "paused";
+      paused: { reason: "day" | "month" | "shared"; until: string; invite?: string };
+    }
 );
 
 export interface Result {

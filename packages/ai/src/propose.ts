@@ -24,7 +24,14 @@ import {
   matchRequest,
   refusalOf,
 } from "@smithable/index";
-import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
+import {
+  completeJson,
+  type Paused,
+  PausedError,
+  type Provider,
+  REPAIRS,
+  type Usage,
+} from "./provider.js";
 import { smallTalk } from "./small-talk.js";
 
 export interface ProposedOperation {
@@ -48,7 +55,9 @@ export type Proposal =
   /** A question about the app, answered rather than applied (docs/design/studio-v2.md §4). */
   | { kind: "answer"; text: string; concepts: string[]; usage: Usage[]; generator?: string }
   | { kind: "none"; reason: string; usage: Usage[] }
-  | { kind: "failed"; message: string; usage: Usage[] };
+  | { kind: "failed"; message: string; usage: Usage[] }
+  /** Free building is paused on the hosted service: what, until when, and where to invite. */
+  | { kind: "paused"; paused: Paused; usage: Usage[] };
 
 const SYSTEM = `You change a Smithable app. Smithable apps are described by a spec, and change only through operations.
 Answer with JSON only:
@@ -305,6 +314,8 @@ export async function proposeChange(options: {
           usage,
         )) as Answer;
       } catch (error) {
+        // Paused: no other model on the same service would answer; said as such, not as a fault.
+        if (error instanceof PausedError) return { kind: "paused", paused: error.paused, usage };
         // Unreachable or not JSON: the next tier gets the request.
         problem = error instanceof Error ? error.message : String(error);
         break;

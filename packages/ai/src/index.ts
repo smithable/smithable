@@ -41,7 +41,10 @@ export {
   completeJson,
   listPrice,
   openAICompatible,
+  type Paused,
+  PausedError,
   parsePolicy,
+  pausedOf,
   route,
 } from "./provider.js";
 export {

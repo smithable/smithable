@@ -6,6 +6,7 @@ import { kitSummary } from "@smithable/adapter-tanstack";
 import {
   cached,
   openAICompatible,
+  type Paused,
   type Proposal,
   type Provider,
   parsePolicy,
@@ -308,6 +309,19 @@ export async function confirm(io: Io, question: string, yes: boolean): Promise<t
   return 0;
 }
 
+/** Free building paused, said plainly: why, until when, and that changes by rule still work. */
+export function pausedText(paused: Paused): string {
+  const until = new Date(paused.until).toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  const why =
+    paused.reason === "shared"
+      ? "Free building is paused for everyone for now"
+      : `Your free building for this ${paused.reason} is used up`;
+  return `${why}; it continues on ${until}. Changes made by rule, with no model, still work.${paused.invite ? ` Invite someone: ${paused.invite}` : ""}`;
+}
+
 /**
  * `smithable ask "<request>"`: a model proposes the operations a request means; they are
  * shown in plain language and applied only after confirmation (ARCHITECTURE §9.4).
@@ -353,6 +367,9 @@ export async function ask(
     case "answer":
       io.out(`${proposal.text}\n`);
       return 0;
+    case "paused":
+      io.err(`${pausedText(proposal.paused)}\n`);
+      return 1;
   }
   io.out("Proposed change:\n");
   for (const [i, o] of proposal.operations.entries())

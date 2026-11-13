@@ -82,6 +82,42 @@ export interface OpenAICompatibleOptions {
  * A provider for any OpenAI-compatible chat completions API: Ollama, llama.cpp, vLLM, Mistral
  * and most EU hosts. The answer is constrained to the JSON schema where the server supports it.
  */
+/** Why free building is paused, and until when (the hosted gateway's refusal, B's T745). */
+export interface Paused {
+  /** The account's own day or month, or the ceiling over every free account. */
+  reason: "day" | "month" | "shared";
+  /** When it lifts, as an exact UTC time. */
+  until: string;
+  /** The service's page for inviting someone: an absolute address, shown as a link. */
+  invite?: string;
+}
+
+/** A model call refused because free building is paused: not an error of the model's. */
+export class PausedError extends Error {
+  constructor(readonly paused: Paused) {
+    super(`Free building is paused (${paused.reason}) until ${paused.until}.`);
+  }
+}
+
+/** The gateway's paused refusal from a 402's body, or nothing when it is another 402. */
+export function pausedOf(text: string): Paused | undefined {
+  try {
+    const error = (JSON.parse(text) as { error?: Record<string, unknown> }).error;
+    if (error?.type !== "paused") return undefined;
+    const reason = error.reason;
+    if (reason !== "day" && reason !== "month" && reason !== "shared") return undefined;
+    if (typeof error.until !== "string" || Number.isNaN(Date.parse(error.until))) return undefined;
+    // Only a well-formed https address is shown as the invite link.
+    const invite =
+      typeof error.invite === "string" && URL.parse(error.invite)?.protocol === "https:"
+        ? error.invite
+        : undefined;
+    return { reason, until: error.until, ...(invite ? { invite } : {}) };
+  } catch {
+    return undefined;
+  }
+}
+
 export function openAICompatible(options: OpenAICompatibleOptions): Provider {
   // Whether this server took the strict answer schema; unknown until the first call.
   let strict: boolean | undefined;
@@ -140,6 +176,14 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
         const after = Number(response.headers.get("retry-after"));
         await new Promise((r) => setTimeout(r, after > 0 ? after * 1000 : 1000 * 2 ** retry));
         response = await post(current);
+      }
+      if (response.status === 402) {
+        // Free building paused (the hosted gateway, 402 so no client retries it): its own error,
+        // by its type; any other 402 stays an ordinary one.
+        const text = await response.text();
+        const paused = pausedOf(text);
+        if (paused) throw new PausedError(paused);
+        throw new Error(`${options.name} answered 402: ${text}`);
       }
       if (!response.ok)
         throw new Error(`${options.name} answered ${response.status}: ${await response.text()}`);
