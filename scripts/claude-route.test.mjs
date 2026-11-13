@@ -29,11 +29,31 @@ test("a chat request becomes a Messages request: system apart, turns joined, sch
       { role: "user", content: "U1" },
       { role: "user", content: "U2" },
     ],
-    response_format: { type: "json_schema", json_schema: { name: "answer", schema: { type: "object", properties: { a: { type: "string" } } } } },
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "answer",
+        schema: { type: "object", properties: { a: { type: "string" } } },
+      },
+    },
   });
   assert.equal(body.model, "claude-haiku-5-5");
   assert.equal(body.temperature, undefined);
-  assert.deepEqual(body.system, [{ type: "text", text: "S", cache_control: { type: "ephemeral" } }]);
-  assert.deepEqual(body.messages, [{ role: "user", content: [{ type: "text", text: "U1" }, { type: "text", text: "U2" }] }]);
-  assert.deepEqual(body.output_config.format.schema, { type: "object", properties: { a: { type: "string" } }, additionalProperties: false });
+  assert.deepEqual(body.system, [
+    { type: "text", text: "S", cache_control: { type: "ephemeral" } },
+  ]);
+  assert.deepEqual(body.messages, [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "U1" },
+        { type: "text", text: "U2" },
+      ],
+    },
+  ]);
+  assert.deepEqual(body.output_config.format.schema, {
+    type: "object",
+    properties: { a: { type: "string" } },
+    additionalProperties: false,
+  });
 });

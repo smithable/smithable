@@ -24,11 +24,18 @@ const variants = process.argv.slice(2).length ? process.argv.slice(2) : ["S", "A
 // route (scripts/claude-route.mjs, Johan's API key, never printed). A model set up in the
 // environment (docs/ai.md) is used instead, Mistral among them.
 const route =
-  variants.includes("M") && !process.env.SMITHABLE_MODEL && !process.env.SMITHABLE_LOCAL_MODEL && !process.env.SMITHABLE_FRONTIER
+  variants.includes("M") &&
+  !process.env.SMITHABLE_MODEL &&
+  !process.env.SMITHABLE_LOCAL_MODEL &&
+  !process.env.SMITHABLE_FRONTIER
     ? await (await import("./claude-route.mjs")).claudeRoute()
     : undefined;
 if (route)
-  Object.assign(process.env, { SMITHABLE_MODEL: "claude-haiku-5-5", SMITHABLE_MODEL_URL: route.url, SMITHABLE_MODEL_LOCATION: "elsewhere" });
+  Object.assign(process.env, {
+    SMITHABLE_MODEL: "claude-haiku-5-5",
+    SMITHABLE_MODEL_URL: route.url,
+    SMITHABLE_MODEL_LOCATION: "elsewhere",
+  });
 const PORT = 4750;
 
 // The starting point: the CRM without phone numbers and orders, so every task is a change.

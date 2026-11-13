@@ -19,7 +19,9 @@ import { repo } from "./dev-app.mjs";
 
 const { validateSpec } = await import(join(repo, "packages/core/dist/index.js"));
 const { buildContext, buildIndex } = await import(join(repo, "packages/index/dist/index.js"));
-const { proposeChange, openAICompatible, listPrice } = await import(join(repo, "packages/ai/dist/index.js"));
+const { proposeChange, openAICompatible, listPrice } = await import(
+  join(repo, "packages/ai/dist/index.js")
+);
 
 const args = process.argv.slice(2);
 const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -41,18 +43,30 @@ const mistralKey = () => {
   return key;
 };
 const provider = option("--provider") ?? "claude";
-if (!["claude", "mistral"].includes(provider)) throw new Error("--provider takes claude or mistral.");
+if (!["claude", "mistral"].includes(provider))
+  throw new Error("--provider takes claude or mistral.");
 const route = provider === "claude" && !rulesOnly ? await claudeRoute() : undefined;
 const model = (name, tier) => {
   if (provider === "mistral")
-    return openAICompatible({ name, baseUrl: "https://api.mistral.ai/v1", model: name, apiKey: mistralKey(), tier, location: "eu" });
+    return openAICompatible({
+      name,
+      baseUrl: "https://api.mistral.ai/v1",
+      model: name,
+      apiKey: mistralKey(),
+      tier,
+      location: "eu",
+    });
   if (!listPrice(name)) throw new Error(`No list price for ${name} in packages/ai (listPrice)`);
   return openAICompatible({ name, baseUrl: route.url, model: name, tier, location: "elsewhere" });
 };
-const SMALL = process.env.BENCH_SMALL ?? (provider === "claude" ? "claude-haiku-5-5" : "mistral-small-latest");
-const BETTER = process.env.BENCH_BETTER ?? (provider === "claude" ? "claude-sonnet-5-5" : "mistral-medium-latest");
+const SMALL =
+  process.env.BENCH_SMALL ?? (provider === "claude" ? "claude-haiku-5-5" : "mistral-small-latest");
+const BETTER =
+  process.env.BENCH_BETTER ??
+  (provider === "claude" ? "claude-sonnet-5-5" : "mistral-medium-latest");
 const JUDGE = process.env.BENCH_JUDGE ?? BETTER;
-if (!rulesOnly && JUDGE === SMALL) throw new Error("The judge must not be the small model under test.");
+if (!rulesOnly && JUDGE === SMALL)
+  throw new Error("The judge must not be the small model under test.");
 const providersOf = (setup) =>
   setup === "small"
     ? [model(SMALL, "smithable")]
