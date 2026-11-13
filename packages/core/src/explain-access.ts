@@ -234,15 +234,6 @@ function explainPage(page: PageIR, auth: AuthIR, role: RoleIR | undefined): Acce
     );
   if (role.name === "admin" || role.grants === "all")
     return allowed(whyGranted(role, "pages", page.id, name) as AccessReason);
-  if (role.grants.pages === "all" && patternInfo(page).access !== undefined)
-    return denied(
-      inAuth(
-        `roles.${role.name}.pages`,
-        `${role.name}'s pages grant is all, which leaves out the pages kept for administrators, ${name} among them; a role opens one by naming it.`,
-      ),
-    );
-  const why = whyGranted(role, "pages", page.id, name);
-  if (why) return allowed(why);
   // The review page opens for the roles that approve files of any of its models.
   if (page.pattern.kind === "review") {
     const reviewed = page.pattern.models.find((m) => reviewRoles(m, auth).includes(role.name));
@@ -254,6 +245,15 @@ function explainPage(page: PageIR, auth: AuthIR, role: RoleIR | undefined): Acce
         ),
       );
   }
+  if (role.grants.pages === "all" && patternInfo(page).access !== undefined)
+    return denied(
+      inAuth(
+        `roles.${role.name}.pages`,
+        `${role.name}'s pages grant is all, which leaves out the pages kept for administrators, ${name} among them; a role opens one by naming it.`,
+      ),
+    );
+  const why = whyGranted(role, "pages", page.id, name);
+  if (why) return allowed(why);
   return denied(notGranted(role, "pages", page.id));
 }
 
@@ -501,20 +501,35 @@ function explainAction(
       at,
       `${humanize(action.name)} copies a ${record(model.name)}: whoever may add one runs it.`,
     );
-    if (create.public)
-      return onWhen(
-        [
-          copies,
-          inAuth("public.create", `Anyone may add ${what}: public.create names ${model.name}.`),
-        ],
-        action,
-        model,
-        scenario,
+    // As actionAccess decides it: actions: none first, then create on the model, then on each
+    // list it copies.
+    if (role.actionsNone)
+      return denied(
+        copies,
+        inAuth(
+          `roles.${role.name}.actions`,
+          `${role.name}'s actions grant is none: ${plural(role.name)} run no action, a copy neither.`,
+        ),
       );
-    const why = whyGranted(role, "create", model.name, what);
-    return why && a.roles.includes(role.name)
-      ? onWhen([copies, why], action, model, scenario)
-      : denied(copies, notGranted(role, "create", model.name));
+    const why = create.public
+      ? inAuth("public.create", `Anyone may add ${what}: public.create names ${model.name}.`)
+      : whyGranted(role, "create", model.name, what);
+    if (!why) return denied(copies, notGranted(role, "create", model.name));
+    if (!a.roles.includes(role.name)) {
+      const added = addedModels(action, model).find((name) => {
+        const list = ir.models.find((m) => m.name === name);
+        const create = list && modelAccess(list, auth).create;
+        return create && !create.public && !create.roles.includes(role.name);
+      });
+      return denied(
+        copies,
+        inSpec(
+          `${at}.with`,
+          `${humanize(action.name)} also copies ${records(added ?? "")}, which ${role.name} may not add: its create grant does not name ${added}.`,
+        ),
+      );
+    }
+    return onWhen([copies, why as AccessReason], action, model, scenario);
   }
   const changes = inSpec(
     at,
