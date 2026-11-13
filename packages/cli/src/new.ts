@@ -435,7 +435,7 @@ export async function create(
     files = website ? replaceWebsitePersonalFiles(draft.files, website) : draft.files;
     // Kept private where the description names no visitors, whatever the draft kept (T767).
     if (!website && description) {
-      const kept = keptPrivate(files, description);
+      const kept = keptPrivate(files, description, STARTERS[name] as Record<string, string>);
       files = kept.files;
       if (kept.assumption) draft.assumptions = [...(draft.assumptions ?? []), kept.assumption];
     }
@@ -751,16 +751,22 @@ export function publicNote(name: string, description?: string): string | undefin
 }
 
 /**
- * A first build kept private where its description names no visitors (T767): whatever the draft
- * kept of its starter, when the no-model reader read no visitors and the result lets anyone read a
- * kind of record, setPublic closes it in the same build (the pages that list those records too),
- * and an assumption says so with how to open it again.
+ * A first build as private as its description (T767), after the draft, whatever made it, when the
+ * result lets anyone read a kind of record:
+ * - the no-model reader settled that the description names no visitors: closed by setPublic in the
+ *   same build (the pages that list those records too), said as an assumption;
+ * - the reader could not tell, and the result reads exactly what the starter did (inherited, not
+ *   decided): closed the same way;
+ * - the reader could not tell, and the draft changed what is public (the model or the answers
+ *   decided it): kept, and said as an assumption the other way round, so it is seen.
  */
 export function keptPrivate(
   files: Record<string, string>,
   description: string,
+  starter?: Record<string, string>,
 ): { files: Record<string, string>; assumption?: Assumption } {
-  if (readDescription(description).visitors === "read") return { files };
+  const visitors = readDescription(description).visitors;
+  if (visitors === "read") return { files };
   const spec = files["smithable.yml"];
   const authText = files["smithable.auth.yml"];
   if (!spec || !authText) return { files };
@@ -768,6 +774,21 @@ export function keptPrivate(
   const auth = ir && validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth;
   if (!ir || !auth || auth.signIn === "none" || !auth.public.read.length) return { files };
   const read = auth.public.read;
+  const kinds = read.join(", ");
+  if (visitors === undefined) {
+    const inherited = publicReadOf(starter);
+    const same = [...inherited].sort().join() === [...read].sort().join();
+    if (!same)
+      return {
+        files,
+        assumption: {
+          part: "visitors",
+          question: `Who may read the ${kinds} records without signing in?`,
+          chosen: `Anyone can read the ${kinds} records without signing in.`,
+          options: ["Keep them private"],
+        },
+      };
+  }
   const pages = auth.public.pages.filter((id) => {
     const page = ir.pages.find((p) => p.id === id);
     return !(page && "model" in page.pattern && read.includes(String(page.pattern.model)));
@@ -795,11 +816,25 @@ export function keptPrivate(
     },
     assumption: {
       part: "visitors",
-      question: `Who may read the ${read.join(", ")} records without signing in?`,
-      chosen: "Nobody: kept private, since your description names no visitors.",
-      options: [`Visitors may read the ${read.join(", ")} records`],
+      question: `Who may read the ${kinds} records without signing in?`,
+      chosen:
+        visitors === "nothing"
+          ? "Nobody: kept private, since your description names no visitors."
+          : "Nobody: kept private, since your description does not say anyone may.",
+      options: [`Visitors may read the ${kinds} records`],
     },
   };
+}
+
+/** The kinds of record a starter's files let anyone read, or none. */
+function publicReadOf(files: Record<string, string> | undefined): string[] {
+  const spec = files?.["smithable.yml"];
+  const authText = files?.["smithable.auth.yml"];
+  if (!spec || !authText) return [];
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
+  return (
+    (ir && validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth?.public.read) ?? []
+  );
 }
 
 /**

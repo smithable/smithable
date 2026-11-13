@@ -66,22 +66,16 @@ const readable = (files: Record<string, string>) => {
   );
 };
 
-test("a first build for a private description keeps no record readable without sign-in, in both draft modes", async () => {
+test("a first build is as private as its description, in both draft modes", async () => {
   const records = STARTERS.records as Record<string, string>;
-  for (const description of [
-    "A recipe collection for a family, with ingredients and shopping lists",
-    // Unattended: the default answers folded in, as new --yes does.
-    describedWith("A place for my team to track the equipment we lend out", [
-      { question: "Who signs in?", answer: "Only the team" },
-    ]),
-  ]) {
+  const drafts = async (description: string) => {
     // Whole files adapted from the starter: the model keeps its public read as it was.
     const whole = await draftProject({
       description,
       starter: records,
       providers: [answering(records)],
     });
-    // As operations: the model makes the records public itself.
+    // As operations: the model makes a record of its own public.
     const ops = await draftProjectByOperations({
       description,
       providers: [
@@ -95,21 +89,38 @@ test("a first build for a private description keeps no record readable without s
       ],
       starter: { name: "records", files: records },
     });
-    for (const draft of [whole, ops]) {
-      if (draft.kind !== "draft") throw new Error(`no draft: ${draft.message}`);
-      const drafted = draft.files as Record<string, string>;
-      expect(readable(drafted).length, `${description}: the draft itself`).toBeGreaterThan(0);
-      const kept = keptPrivate(drafted, description);
-      expect(readable(kept.files), description).toEqual([]);
-      expect(kept.assumption?.chosen).toMatch(
-        /kept private, since your description names no visitors/,
-      );
-    }
+    for (const d of [whole, ops]) if (d.kind !== "draft") throw new Error(`no draft: ${d.message}`);
+    return [whole, ops].map((d) => (d as { files: Record<string, string> }).files);
+  };
+  // (a) The reader settled no visitors: closed in both modes, and said.
+  const recipe = "A recipe collection for a family, with ingredients and shopping lists";
+  for (const drafted of await drafts(recipe)) {
+    expect(readable(drafted).length, "the draft itself").toBeGreaterThan(0);
+    const kept = keptPrivate(drafted, recipe, records);
+    expect(readable(kept.files)).toEqual([]);
+    expect(kept.assumption?.chosen).toMatch(
+      /kept private, since your description names no visitors/,
+    );
   }
-  // A description that asks for visitors keeps what it asked for.
+  // The reader cannot tell for this one (unattended, its default answers folded in).
+  const team = describedWith("A place for my team to track the equipment we lend out", [
+    { question: "Who signs in?", answer: "Only the team" },
+  ]);
+  const [whole, ops] = await drafts(team);
+  // (b) Unsettled, and the public read is the starter's own (inherited): closed.
+  const inherited = keptPrivate(whole as Record<string, string>, team, records);
+  expect(readable(inherited.files)).toEqual([]);
+  expect(inherited.assumption?.chosen).toMatch(/kept private/);
+  // (c) Unsettled, and the draft decided what is public: kept, and said the other way round.
+  const decided = keptPrivate(ops as Record<string, string>, team, records);
+  expect(readable(decided.files)).toEqual(["Thing"]);
+  expect(decided.assumption?.chosen).toBe("Anyone can read the Thing records without signing in.");
+  expect(decided.assumption?.options).toEqual(["Keep them private"]);
+  // A description that asks for visitors keeps what it asked for, unsaid.
   const open = keptPrivate(
     records,
     "A public catalogue of our museum's objects for visitors to browse online",
+    records,
   );
   expect(readable(open.files)).toEqual(["Item"]);
   expect(open.assumption).toBeUndefined();
