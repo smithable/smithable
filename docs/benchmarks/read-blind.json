@@ -24,7 +24,7 @@
     "text": "My recipes with ingredients and steps, and a page where friends can browse them.",
     "kind": ["records"],
     "audience": ["me"],
-    "visitors": ["read"],
+    "visitors": ["read", "nothing"],
     "notice": ["ingredients", "steps", "friends browse"]
   },
   {
