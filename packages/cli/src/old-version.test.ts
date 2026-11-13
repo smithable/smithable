@@ -111,3 +111,28 @@ test("closing leaves no worktree, folder or record behind, and touches nothing e
   expect(git(dir, ["worktree", "list"]).out.trim().split("\n")).toHaveLength(1);
   expect(existsSync(join(dir, "smithable.yml"))).toBe(true);
 });
+
+test("closing never removes a folder outside Studio's own, whatever the record says", () => {
+  const dir = tempDir("old-version-");
+  expect(git(dir, ["init", "-q"]).ok).toBe(true);
+  const victim = tempDir("victim-");
+  const named = join(victim, `${"b".repeat(12)}-${"c".repeat(12)}`);
+  mkdirSync(named);
+  mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
+  const escaping = join(cache, "smithable", "old-versions", "..", "..", "..", named.slice(1));
+  for (const folder of [named, escaping]) {
+    writeFileSync(
+      join(dir, "data", ".smithable", "old-version.json"),
+      JSON.stringify({
+        commit: "x",
+        folder,
+        home: `${folder}.home`,
+        port: 1,
+        data: "samples",
+        pictures: "none",
+      }),
+    );
+    closeOldVersion(dir);
+    expect(existsSync(named)).toBe(true);
+  }
+});

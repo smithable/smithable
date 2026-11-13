@@ -7,6 +7,7 @@ import { createHash, randomBytes } from "node:crypto";
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -17,7 +18,7 @@ import {
 } from "node:fs";
 import { createServer } from "node:net";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { tool } from "./io.js";
 
@@ -148,12 +149,16 @@ export async function openOldVersion(
   const project = createHash("sha256").update(realpathSync(dir)).digest("hex").slice(0, 12);
   const folder = join(base(), `${project}-${sha.slice(0, 12)}`);
   const home = `${folder}.home`;
+  const port = await freePort();
+  // Recorded before anything is made, so a crash or a second open finds it and removes it.
+  const record: OldVersion = { commit: sha, folder, home, port, data: "samples", pictures: "none" };
+  mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
+  writeFileSync(recordPath(dir), JSON.stringify(record));
   rmSync(folder, { recursive: true, force: true });
   rmSync(home, { recursive: true, force: true });
   mkdirSync(base(), { recursive: true });
   git(dir, ["worktree", "add", "--detach", folder, sha]);
   mkdirSync(home, { recursive: true });
-  const port = await freePort();
   const url = `http://${options.host ?? "localhost"}:${port}`;
   const dataDir = join(folder, "data");
   const env = oldEnvironment(process.env, {
@@ -163,9 +168,6 @@ export async function openOldVersion(
     ...(options.lookKey ? { lookKey: options.lookKey } : {}),
     doorSecret: randomBytes(24).toString("hex"),
   });
-  const record: OldVersion = { commit: sha, folder, home, port, data: "samples", pictures: "none" };
-  mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-  writeFileSync(recordPath(dir), JSON.stringify(record));
   try {
     options.log?.("Installing the old version's packages.\n");
     run("pnpm", ["install", "--frozen-lockfile", "--prefer-offline"], folder, env);
@@ -184,7 +186,11 @@ export async function openOldVersion(
     // Today's pictures, copied (never linked: the old app may delete or replace a record's file).
     const uploads = join(dir, "data", "uploads");
     if (existsSync(uploads) && sizeOf(uploads, UPLOADS_MAX) <= UPLOADS_MAX) {
-      cpSync(uploads, join(dataDir, "uploads"), { recursive: true, dereference: true });
+      // Files only: a link is neither counted nor followed (it could point anywhere, any size).
+      cpSync(uploads, join(dataDir, "uploads"), {
+        recursive: true,
+        filter: (source) => !lstatSync(source).isSymbolicLink(),
+      });
       record.pictures = "today";
     }
     // The worktree's own vite, started directly so it leads its process group and closing stops
@@ -222,13 +228,23 @@ export function openVersion(dir: string): OldVersion | undefined {
 export function closeOldVersion(dir: string): void {
   const open = openVersion(dir);
   if (!open) return;
-  if (open.pid)
+  // Only folders under Studio's own, by the shape it names them, resolved first: nothing else is
+  // ever removed.
+  const inside = (path: string) => {
+    const full = resolve(path);
+    return (
+      full.startsWith(`${resolve(base())}/`) &&
+      /\/[0-9a-f]{12}-[0-9a-f]{12}(\.home)?$/.test(full) &&
+      dirname(full) === resolve(base())
+    );
+  };
+  // Its server, only while that process is still the one started in the copy: after a restart
+  // of the machine the number may be another program's.
+  if (open.pid && inside(open.folder))
     try {
-      process.kill(-open.pid, "SIGKILL");
+      if (realpathSync(`/proc/${open.pid}/cwd`).startsWith(resolve(open.folder)))
+        process.kill(-open.pid, "SIGKILL");
     } catch {}
-  // Only folders under Studio's own, by the shape it names them: nothing else is ever removed.
-  const inside = (path: string) =>
-    path.startsWith(`${base()}/`) && /\/[0-9a-f]{12}-[0-9a-f]{12}(\.home)?$/.test(path);
   if (inside(open.folder)) {
     try {
       git(dir, ["worktree", "remove", "--force", open.folder]);
