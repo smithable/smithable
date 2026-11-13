@@ -541,6 +541,20 @@ ${othersOk ? "" : unchanged("others")}${role !== null && !ownOk ? unchanged("own
           ? !wanted
           : undefined;
     const runner = roles.find((role) => role !== null && allowed.roles.includes(role));
+    // A role that runs the action without changing everyone's records leaves the record its
+    // owner's: running it never hands the record over (T819).
+    const nonWriter = roles.find(
+      (role) => role !== null && allowed.roles.includes(role) && !access.write.roles.includes(role),
+    );
+    const ownerColumn =
+      model.ownedBy && model.ownerKind === "user" ? `${model.ownedBy}Id` : undefined;
+    if (signedIn && nonWriter && ownerColumn && !action.add?.length && !action.copy)
+      tests.push(`  test("run by ${nonWriter}, the record stays its owner's", async () => {
+${counter}    const viewer = signedIn(${JSON.stringify(nonWriter)});
+    const record = insert${model.name}(stranger.id, ${values});
+    if (await can(() => ${run}(viewer, record.id${asked})))
+      expect(db.select({ owner: ${table}.${ownerColumn} }).from(${table}).where(eq(${table}.id, record.id)).get()?.owner).toBe(stranger.id);
+  });`);
     if (field !== undefined && other !== undefined && runner)
       tests.push(`  test("refused on a record where ${field} is not ${Array.isArray(wanted) ? wanted.join(" or ") : String(wanted)}", async () => {
 ${counter}    const viewer = signedIn(${JSON.stringify(runner)});

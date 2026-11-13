@@ -1542,6 +1542,17 @@ ${loose
     : "";
   const titleOf = (row: string, id: string) =>
     titleField(model) === "id" ? `\`#\${${id}}\`` : `String(${row}.${titleField(model)} ?? ${id})`;
+  // Past cancelUntil (docs/design/booking.md §6), only a role that deletes everyone's records
+  // deletes one: the same check for one record and for many (T819).
+  const cancelCheck = (id: string, indent: string) =>
+    capacity?.cancelUntil
+      ? `
+${indent}if (!(!!viewer && (!!viewer.system || ${n.access}.delete.roles.includes(viewer.role)))) {
+${indent}  const perId = tx.select({ p: ${n.table}.${capacity.per}Id }).from(${n.table}).where(eq(${n.table}.id, ${id})).get()?.p;
+${indent}  const cancelUntilAt = perId == null ? undefined : ${deadlineOf("cancelUntil", "perId")};
+${indent}  if (cancelUntilAt && now().getTime() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+${indent}}`
+      : "";
   const groupCheck = (id: string, row: string, indent: string) =>
     group.length
       ? `${indent}const used = usedBy(tx, ${id}, ${titleOf(row, id)});\n${indent}if (used${together ? " && !together" : ""}) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);\n`
@@ -2818,23 +2829,29 @@ ${
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(${n.access}.write, viewer, ${rowOwner});
 ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
-    const updated = ${
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (current: typeof ${n.table}.$inferSelect) => ${
       addressOwned(model) && signedIn
         ? // Left out it stays; given, a chooser's address as written; anyone else keeps the record's own: ownership never passes to them (support-portal-path.md §2).
-          `{ ...values, ${owner}: values.${owner} === undefined || !chooses(viewer) ? row.${owner} : ownerFor(viewer, values.${owner}) }`
+          `({ ...values, ${owner}: values.${owner} === undefined || !chooses(viewer) ? current.${owner} : ownerFor(viewer, values.${owner}) })`
         : ownerField && signedIn
-          ? ownerRequired
-            ? `{ ...values, ${owner}: ownerFor(viewer, values.${owner} ?? row.${owner}) }`
-            : // A change keeps who is in it, as given: left out the record's own, empty stays empty (a
-              // writer never takes it by changing it); anyone else changes only their own.
-              `{ ...values, ${owner}: (!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? (values.${owner} === undefined ? row.${owner} : values.${owner}) : personOf(viewer) }`
+          ? // A writer (a role that changes everyone's, or the app) names it, or leaves it as it is;
+            // anyone else, by a form or an action, keeps the record's own: it never passes to them (T819).
+            `((!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))) ? { ...values, ${owner}: ${ownerRequired ? `ownerFor(viewer, values.${owner} ?? current.${owner})` : `values.${owner} === undefined ? current.${owner} : values.${owner}`} } : { ...values, ${owner}: current.${owner} })`
           : "values"
     };
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
-        if (!before) throw new AccessDenied(viewer !== null);
+        if (!before) throw new AccessDenied(viewer !== null);${
+          signedIn
+            ? `
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(${n.access}.write, viewer, ${ownerOf(model, n, "before")});`
+            : ""
+        }
+        const updated = withOwner(before);
         const checked = ${self}.checkUpdate(tx, viewer, id, updated, before${loadComputed ? ", loaded" : ""}${locks.length ? ", what, frees" : ""});
         const after = tx.update(${n.table}).set(checked).where(eq(${n.table}.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "${model.name}", record: id, fields: before && changedFields(before, after, Object.keys(updated)${computedKeys.length ? `.filter((k) => !${literal(computedKeys)}.includes(k))` : ""}) });${queue("id", "before", "after")}${tell("what", "after", "before")}
@@ -2863,17 +2880,7 @@ ${dropPictures(
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         if (!tx.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);${
-            capacity?.cancelUntil
-              ? `
-        // Past cancelUntil (docs/design/booking.md §6), only a role that deletes everyone's records does.
-        if (!(!!viewer && (!!viewer.system || ${n.access}.delete.roles.includes(viewer.role)))) {
-          const perId = tx.select({ p: ${n.table}.${capacity.per}Id }).from(${n.table}).where(eq(${n.table}.id, id)).get()?.p;
-          const cancelUntilAt = perId == null ? undefined : ${deadlineOf("cancelUntil", "perId")};
-          if (cancelUntilAt && now().getTime() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
-        }`
-              : ""
-          }
+          throw new AccessDenied(viewer !== null);${cancelCheck("id", "        ")}
 ${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
           audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
@@ -2906,6 +2913,10 @@ ${
     db.transaction((tx) => {${trashing ? "\n      const when = new Date();" : ""}
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          if (!tx.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.id, row.id), ${self}.readable(viewer))).get())
+            throw new AccessDenied(viewer !== null);${cancelCheck("row.id", "          ")}
 ${groupCheck("row.id", "row", "          ")}          const gone = ${goneBy("row.id")};
           if (gone) {
             audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${groupTrash("row.id", "            ")}
@@ -3201,7 +3212,8 @@ export function refinement(field: FieldIR, visitors = false, folder = ""): strin
     case "email":
       return `z.email(w.enterValidEmail)${optional}`;
     case "url":
-      return `z.url(w.enterValidUrl)${optional}`;
+      // A web address only: never javascript:, data: or a scheme of an app (T819).
+      return `z.url({ protocol: /^https?$/, error: w.enterValidUrl })${optional}`;
     case "phone":
       return `(s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, w.enterValidPhone)`;
     case "date":
