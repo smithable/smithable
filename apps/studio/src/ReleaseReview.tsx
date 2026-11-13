@@ -1,19 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type ReleaseReview as Review } from "./api";
 import { Button } from "./ui";
+
+/** The release review as the server reads it now, or why it could not be read. */
+const read = (setReview: (r: Review) => void, setError: (e: string) => void) =>
+  api
+    .releaseReview()
+    .then(setReview)
+    .catch((error: Error) => setError(error.message));
+
 export function ReleaseReview({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [review, setReview] = useState<Review>();
   const [error, setError] = useState<string>();
   const [refused, setRefused] = useState<string>();
-  const load = () =>
-    api
-      .releaseReview()
-      .then(setReview)
-      .catch((error: Error) => setError(error.message));
+  const load = () => read(setReview, setError);
   useEffect(() => {
     dialog.current?.showModal();
-    void load();
+    void read(setReview, setError);
   }, []);
   // The owner reads the privacy page and says so: the facts as they are now, today (UTC).
   const reviewPrivacy = async (page: string, facts: string) => {
