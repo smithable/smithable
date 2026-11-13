@@ -8,9 +8,12 @@
 // starter's texts, sample records), for the reader to judge. `--score <kept dir>` scores a run's
 // kept files again without calling a model, and puts the table into that run's report.
 //
-// What it may cost (Johan, 2026-10-04): runs draft with Claude through Claude Code (his
-// subscription, no money) unless `--model` names another. Nothing on this machine calls Mistral or
-// OpenAI unless a run names the model; its key file (~/.config/smithable) is read only then.
+// Which models (Johan, 2026-11-13, fact decisions.bench-models): with no `--model`, the ones the
+// hosted service answers with, Claude Haiku 5.5 and Sonnet 5.5 through Anthropic's API
+// ("claude-haiku-5-5>claude-sonnet-5-5"; the key in ~/.config/smithable/claude.env, never printed).
+// `--model claude-code` drafts through Claude Code (Johan's subscription, no money), as before
+// 2026-11-13. Nothing on this machine calls Mistral or OpenAI unless a run names the model; its key
+// file (~/.config/smithable) is read only then.
 // - Daily, after the day's merges: the first set on Claude (20 hours apart). Its second set
 //   (--set wide) once a week (Sundays), or when a pull request changes the drafting or clarify
 //   prompts (say so in the report).
@@ -91,7 +94,8 @@ const keyFile = (file) =>
       .filter(Boolean)
       .map(([, key, value]) => [key, value.replace(/^["']|["']$/g, "")]),
   );
-if (!args.model) {
+args.model ??= "claude-haiku-5-5>claude-sonnet-5-5";
+if (args.model === "claude-code") {
   process.env.SMITHABLE_FRONTIER = "claude-code";
   process.env.SMITHABLE_AI_POLICY = "best-available";
 } else if (args.model.startsWith("mistral-")) {
@@ -130,7 +134,7 @@ if (!args.model) {
   });
 } else
   throw new Error(
-    `--model ${args.model}: a mistral-…, gpt-…, eu.anthropic.… or claude-… model, or none for Claude.`,
+    `--model ${args.model}: a mistral-…, gpt-…, eu.anthropic.… or claude-… model, claude-code, or none for Claude Haiku then Sonnet.`,
   );
 // A harness round the drafting model (backlog Experiments 7): `alone` is one call with no
 // corrections, `critique` one draft and one call to mend it, `vote3` the best-shared of three.
@@ -403,7 +407,7 @@ if (args.score) {
   process.exit(0);
 }
 
-const model = args.model ?? "claude-code";
+const model = args.model;
 
 const DESCRIPTIONS = [
   "A booking site for a yoga studio, with classes, teachers and online booking.",
