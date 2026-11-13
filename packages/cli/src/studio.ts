@@ -42,6 +42,7 @@ import {
   startGeneration,
 } from "./generation-job.js";
 import { git, ownRepository, trailer, uncommittedRefusal } from "./git.js";
+import { hostedLevel } from "./hosted-level.js";
 import { type Io, tool } from "./io.js";
 import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
@@ -846,6 +847,9 @@ export async function studio(
       ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
       // Where Smith's requests may go, for his AI notice (legal-1.0 U6).
       ai: aiDestinations(),
+      // The hosted service's workspaces (it sets the level) run on its model, which it pays for:
+      // Studio's change lines then show no amounts (T750, Johan 2026-11-13).
+      ...(hostedLevel() ? { servicePays: true as const } : {}),
       // Where Smith may hear and speak, from the same policy (smith-speech.md §3).
       speech: speechProviders(),
       ...(notice ? { notice } : {}),

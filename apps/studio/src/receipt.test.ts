@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { TraceEntry } from "./api";
-import { receipt, usageReceipt } from "./receipt";
+import { receipt, showCosts, usageReceipt } from "./receipt";
 
 const entry = (over: Partial<TraceEntry>): TraceEntry =>
   ({
@@ -57,4 +57,22 @@ test("the receipt of a request reads the engine's usage line", () => {
   );
   expect(usageReceipt("No model was used", "nothing")).toBe("Nothing changed, cost 0");
   expect(usageReceipt("", "nothing")).toBe("Nothing changed, cost 0");
+});
+
+test("where the service pays for the model, the line names who made it and no amount", () => {
+  showCosts(false);
+  try {
+    expect(receipt([entry({})])).toBe("Done by rule, no AI");
+    const paid = entry({ engine: "Smithable model", model: "mistral-medium", cost: 0.002 });
+    expect(receipt([paid])).toBe("Done by mistral-medium");
+    expect(usageReceipt("Smithable model (mistral-medium): 1200 tokens, €0.0021", "proposed")).toBe(
+      "Proposed by mistral-medium",
+    );
+    expect(usageReceipt("Smithable model (mistral-medium): €0.0021", "nothing")).toBe(
+      "Nothing changed; mistral-medium was asked",
+    );
+    expect(usageReceipt("No model was used", "nothing")).toBe("Nothing changed");
+  } finally {
+    showCosts(true);
+  }
 });

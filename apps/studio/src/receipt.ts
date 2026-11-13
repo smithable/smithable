@@ -1,11 +1,21 @@
 /**
  * The receipt line on a change (T721): who made it, a rule or which model, and what it cost.
  * Johan, 2026-11-12: shown on every change, in the history and after Apply. It states what was
- * recorded and promises nothing about prices.
+ * recorded and promises nothing about prices. Where the service pays for the model (Studio on its
+ * domains, T750) the line names who made the change and no amount: amounts show only to the
+ * person who pays the model.
  */
 import type { TraceEntry } from "./api";
 
 type Spent = { model?: string; costs: Map<string, number> };
+
+/** Whether the line says amounts: not where the service pays for the model. */
+let priced = true;
+
+/** Set from the project's state: amounts shown, or not (the service pays). */
+export function showCosts(shown: boolean) {
+  priced = shown;
+}
 
 /** An amount as people read it: 0, or a symbol and enough decimals to show a small one. */
 function money(amount: number, currency: string): string {
@@ -20,6 +30,7 @@ function cost(spent: Spent): string {
 }
 
 function by(spent: Spent): string {
+  if (!priced) return spent.model || "rule, no AI";
   return spent.model ? `${spent.model}, cost ${cost(spent)}` : "rule, no AI, cost 0";
 }
 
@@ -59,8 +70,8 @@ export function usageReceipt(
   const spent = spentOn(usage);
   if (state === "nothing")
     return spent.model
-      ? `Nothing changed; ${spent.model} was asked, cost ${cost(spent)}`
-      : "Nothing changed, cost 0";
+      ? `Nothing changed; ${spent.model} was asked${priced ? `, cost ${cost(spent)}` : ""}`
+      : `Nothing changed${priced ? ", cost 0" : ""}`;
   // "by" follows a sentence that already says Done (after Apply).
   const verb = { done: "Done by", by: "By", proposed: "Proposed by", answered: "Answered by" }[
     state
