@@ -5645,6 +5645,8 @@ export const noteData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(noteAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.notes.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -6395,6 +6397,8 @@ export const projectData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(projectAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.projects.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -7150,6 +7154,8 @@ export const taskData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(taskAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.tasks.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -11196,19 +11202,19 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/note.import.server.ts": "7b3f75d9 generated",
   "src/generated/note.import.ts": "13466794 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "0ddade98 generated",
+  "src/generated/note.server.ts": "032f1889 generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "3984a4bc generated",
   "src/generated/project.import.server.ts": "a327a846 generated",
   "src/generated/project.import.ts": "972cb779 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "25d8c228 generated",
+  "src/generated/project.server.ts": "a19c27d3 generated",
   "src/generated/project.ts": "1c4b37f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.import.server.ts": "6df64d29 generated",
   "src/generated/task.import.ts": "1c316273 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "c57e688e generated",
+  "src/generated/task.server.ts": "53968eeb generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "a4a73a74 generated",
@@ -13125,6 +13131,8 @@ export const appointmentData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(appointmentAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.appointments.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -13724,6 +13732,8 @@ export const barberData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(barberAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.barbers.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -15470,6 +15480,8 @@ export const serviceData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(serviceAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.services.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -16022,6 +16034,8 @@ export const timeOffData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(timeOffAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.timeOffs.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -18892,12 +18906,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.import.server.ts": "eee34c8a generated",
   "src/generated/appointment.import.ts": "bd211139 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "5dca62ac generated",
+  "src/generated/appointment.server.ts": "161b3a41 generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
-  "src/generated/barber.server.ts": "fd7d1002 generated",
+  "src/generated/barber.server.ts": "fce447d9 generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/card.server.ts": "86f8f526 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -18911,13 +18925,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/service.import.server.ts": "b222252e generated",
   "src/generated/service.import.ts": "647b7017 generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
-  "src/generated/service.server.ts": "204666aa generated",
+  "src/generated/service.server.ts": "f2c24a3d generated",
   "src/generated/service.ts": "dd2b9287 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.import.server.ts": "2d8ccb72 generated",
   "src/generated/time-off.import.ts": "b7017dfb generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "70238ed9 generated",
+  "src/generated/time-off.server.ts": "82ac622a generated",
   "src/generated/time-off.ts": "94851289 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -22096,6 +22110,8 @@ export const bookingData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(bookingAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.bookings.attendeeId, viewer.id) : sql\`false\`;
   },
 
@@ -23427,6 +23443,8 @@ export const classTypeData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(classTypeAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.classTypes.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -25057,6 +25075,8 @@ export const instructorData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(instructorAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.instructors.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -25826,6 +25846,8 @@ export const messageData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(messageAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.messages.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -26858,6 +26880,8 @@ export const postData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(postAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     if (scope === "public") return and(eq(schema.posts.status, "published"));
     return scope === "own" && viewer ? or(eq(schema.posts.ownerId, viewer.id), and(eq(schema.posts.status, "published"))) : sql\`false\`;
   },
@@ -27759,6 +27783,8 @@ export const sessionData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(sessionAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.sessions.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -34029,14 +34055,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "befd36d1 generated",
+  "src/generated/booking.server.ts": "6871a768 generated",
   "src/generated/booking.ts": "fc39a336 generated",
   "src/generated/card.server.ts": "72496fa8 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/class-type.import.server.ts": "e71ffddd generated",
   "src/generated/class-type.import.ts": "584de0f9 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "7766d47e generated",
+  "src/generated/class-type.server.ts": "59ba9893 generated",
   "src/generated/class-type.ts": "ada91c5e generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "1afdb5ab generated",
@@ -34047,12 +34073,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.import.server.ts": "fccf980a generated",
   "src/generated/instructor.import.ts": "73c07c95 generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "8cd9a171 generated",
+  "src/generated/instructor.server.ts": "6263adf4 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.import.server.ts": "529f366e generated",
   "src/generated/message.import.ts": "63ded8df generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "08286028 generated",
+  "src/generated/message.server.ts": "fef02393 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "b3b41ca7 generated",
@@ -34060,7 +34086,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "d92be115 generated",
+  "src/generated/post.server.ts": "e9ba4ffc generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -34068,7 +34094,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.import.ts": "4b3e59f0 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "f7b47a29 generated",
+  "src/generated/session.server.ts": "190cdf38 generated",
   "src/generated/session.ts": "e2a3ab62 generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "9e37548f generated",
@@ -37046,6 +37072,8 @@ export const customerData = {
   scoped(viewer: Viewer | null) {
     const scope = readScope(customerAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.customers.accountManagerId, viewer.id) : sql\`false\`;
   },
 
@@ -38543,6 +38571,8 @@ export const followUpData = {
   scoped(viewer: Viewer | null) {
     const scope = readScope(followUpAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.followUps.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -39639,6 +39669,8 @@ export const orderData = {
   scoped(viewer: Viewer | null) {
     const scope = readScope(orderAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.orders.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -43806,14 +43838,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
   "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "69dbb3f9 generated",
+  "src/generated/customer.server.ts": "0e7300a8 generated",
   "src/generated/customer.ts": "8c21bca9 generated",
   "src/generated/dev-door.server.ts": "c6582e43 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "4393010c generated",
-  "src/generated/follow-up.server.ts": "c30824a8 generated",
+  "src/generated/follow-up.server.ts": "a403bbd9 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -43822,7 +43854,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "67ece6a0 generated",
+  "src/generated/order.server.ts": "9bfc962d generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -46462,6 +46494,8 @@ export const businessProfileData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(businessProfileAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.businessProfiles.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -47574,6 +47608,8 @@ export const clientData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(clientAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.clients.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -49094,6 +49130,8 @@ export const invoiceData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(invoiceAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.invoices.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -49871,6 +49909,8 @@ export const invoiceLineData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(invoiceLineAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.invoiceLines.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -53132,14 +53172,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "d41af9ad generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "32f93e49 generated",
+  "src/generated/business-profile.server.ts": "f612575c generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/card.server.ts": "5992cd52 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/client.import.server.ts": "254b9c3a generated",
   "src/generated/client.import.ts": "343dac71 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "6a86c3ab generated",
+  "src/generated/client.server.ts": "a1f7fcba generated",
   "src/generated/client.ts": "ef4091ce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "a5c670df generated",
@@ -53147,13 +53187,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "ef56bd3d generated",
+  "src/generated/invoice-line.server.ts": "77541e54 generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "1b676a8a generated",
+  "src/generated/invoice.server.ts": "d4862d59 generated",
   "src/generated/invoice.ts": "f4863bb7 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "d19f0751 generated",
@@ -56879,6 +56919,8 @@ export const dishData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(dishAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.dishes.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -57603,6 +57645,8 @@ export const orderData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(orderAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.orders.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -58136,6 +58180,8 @@ export const orderLineData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(orderLineAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.orderLines.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -58918,6 +58964,8 @@ export const stopData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(stopAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.stops.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -62394,19 +62442,19 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dish.import.server.ts": "aee46d8b generated",
   "src/generated/dish.import.ts": "44be2252 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "87dbb61d generated",
+  "src/generated/dish.server.ts": "ec903ad4 generated",
   "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "aa01e065 generated",
+  "src/generated/order-line.server.ts": "ec1fd4ce generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.import.server.ts": "c25ea634 generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "916eed82 generated",
+  "src/generated/order.server.ts": "be5d0697 generated",
   "src/generated/order.ts": "db4c9478 generated",
   "src/generated/outgoing.server.ts": "4615ff1f generated",
   "src/generated/pages.ts": "7d21451f generated",
@@ -62416,7 +62464,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/stop.import.server.ts": "5aca6a4a generated",
   "src/generated/stop.import.ts": "1d2a5d38 generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
-  "src/generated/stop.server.ts": "55e3c3f4 generated",
+  "src/generated/stop.server.ts": "4d5fae09 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "875974ba generated",
@@ -64584,6 +64632,8 @@ export const itemData = {
   scoped(viewer: Viewer | null) {
     const scope = readScope(itemAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.items.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -67783,7 +67833,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "4d1567da generated",
+  "src/generated/item.server.ts": "745cf059 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "85e88911 generated",
@@ -69756,6 +69806,8 @@ export const itemData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(itemAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.items.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -71824,7 +71876,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "0dc11389 generated",
-  "src/generated/item.server.ts": "f0a6ec3e generated",
+  "src/generated/item.server.ts": "6880483b generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "e4262913 generated",
@@ -76009,6 +76061,8 @@ export const componentData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(componentAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.components.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -77495,6 +77549,8 @@ export const incidentData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(incidentAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     if (scope === "public") return and(inArray(schema.incidents.status, ["investigating","identified","monitoring","resolved"]));
     return scope === "own" && viewer ? eq(schema.incidents.ownerId, viewer.id) : sql\`false\`;
   },
@@ -78333,6 +78389,8 @@ export const incidentUpdateData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(incidentUpdateAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.incidentUpdates.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -79255,6 +79313,8 @@ export const maintenanceData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(maintenanceAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.maintenances.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -84858,7 +84918,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "1e364781 generated",
+  "src/generated/component.server.ts": "0bdfa6ce generated",
   "src/generated/component.ts": "59b2f88c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "62de424a generated",
@@ -84866,19 +84926,19 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident-update.import.server.ts": "05597fda generated",
   "src/generated/incident-update.import.ts": "2512bea4 generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "d5b751e6 generated",
+  "src/generated/incident-update.server.ts": "cc3b065f generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.import.server.ts": "f466f13d generated",
   "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "964bac97 generated",
+  "src/generated/incident.server.ts": "19520bdc generated",
   "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "50bbd5b3 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",
   "src/generated/maintenance.import.server.ts": "7f9a3b5d generated",
   "src/generated/maintenance.import.ts": "d0b5690b generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "cc094f88 generated",
+  "src/generated/maintenance.server.ts": "109de27d generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "c95c523a generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -88464,6 +88524,8 @@ export const messageData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(messageAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.messages.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -89522,6 +89584,8 @@ export const supportCaseData = {
   readable(viewer: Viewer | null) {
     const scope = readScope(supportCaseAccess.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
     return scope === "own" && viewer ? eq(schema.supportCases.ownerId, viewer.id) : sql\`false\`;
   },
 
@@ -92861,7 +92925,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3782a982 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "585c6649 generated",
+  "src/generated/message.server.ts": "d57d9bbe generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "8956b93c generated",
@@ -92870,7 +92934,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
   "src/generated/support-case.import.ts": "84512c28 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "6bad6e7b generated",
+  "src/generated/support-case.server.ts": "1a93021c generated",
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "a4a73a74 generated",
