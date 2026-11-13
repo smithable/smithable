@@ -19,6 +19,7 @@ import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
 import { projectThemes } from "./validate.js";
+import { installing } from "./vite-cache.js";
 
 /** A change in the history that can still be undone, newest first. */
 interface Change {
@@ -384,7 +385,7 @@ function undoLocked(dir: string, io: Io): number {
   // restored package.json needs them back.
   const touched = git(dir, ["show", "--name-only", "--format=", target.sha]).out.split("\n");
   if (touched.some((f) => f === "package.json" || f === "pnpm-lock.yaml")) {
-    if (exec("pnpm", ["install", "--silent"], dir) !== 0)
+    if (installing(dir, () => exec("pnpm", ["install", "--silent"], dir)) !== 0)
       io.err("Reinstalling the packages failed: run pnpm install.\n");
   }
   const restored = target.snapshot ? restoreDatabase(dir, target.snapshot) : false;
