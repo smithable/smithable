@@ -158,6 +158,8 @@ export function texts(content: ContentIR) {
     section: (page: string, name: string) => content.pages[page]?.sections?.[name] ?? {},
     /** A form section's heading, from smithable.content.yml (pages.<page>.form.sections.<name>). */
     formSection: (page: string, name: string) => content.pages[page]?.formSections?.[name] ?? {},
+    /** A privacy page's facts only the maker knows (legal-page.md §6.2). */
+    privacy: (page: string) => content.pages[page]?.privacy ?? {},
     /** A calculator field's label and help: the page's, or a landing section's. */
     calculatorField: (page: string, field: string, section?: string) =>
       (section

@@ -839,6 +839,55 @@ export const CONTENT_SCHEMA: JsonSchema = {
           description: text(
             "What search engines show under the page's name, one or two sentences; for a public page.",
           ),
+          reviewed: {
+            type: "object",
+            description:
+              "A privacy page: the owner's review of its description of the app, written by reviewPrivacyPage: the facts' fingerprint and the day.",
+            additionalProperties: false,
+            properties: {
+              facts: {
+                type: "string",
+                pattern: "^[0-9a-f]{16}$",
+                description: "The fingerprint of the facts reviewed: sixteen hexadecimal digits.",
+              },
+              on: {
+                type: "string",
+                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                description: "The day it was reviewed, UTC.",
+              },
+            },
+          },
+          keeps: {
+            type: "object",
+            description:
+              "A privacy page: how long each kind of record is kept, in your words, by its name: { Booking: Two years after the class, for the bookkeeping. }.",
+            additionalProperties: { type: "string" },
+          },
+          services: {
+            description:
+              "A privacy page: other services you use that the app's files do not show, e.g. a mail service. Elsewhere, a section named services.",
+            oneOf: [
+              { type: "object" },
+              {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["name"],
+                  additionalProperties: false,
+                  properties: {
+                    name: { type: "string", description: "The service's name." },
+                    for: { type: "string", description: "What it is used for." },
+                    where: { type: "string", description: 'Where it runs, e.g. "in the EU".' },
+                  },
+                },
+              },
+            ],
+          },
+          custom: {
+            description:
+              "A privacy page: what your own functions (custom code and custom actions) do with people's details, in your words. Elsewhere, a section named custom.",
+            oneOf: [{ type: "string" }, { type: "object" }],
+          },
           form: {
             type: "object",
             description:

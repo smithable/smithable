@@ -11265,7 +11265,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2eab1363 generated",
@@ -17681,6 +17681,7 @@ const facts: LegalFacts = {
   mailAbout: ["appointments"],
 };
 
+
 export const Route = createFileRoute("/privacy/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["privacy"], context.viewer, location.href),
   head: () => pageHead("privacy"),
@@ -18915,7 +18916,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/ImportDialog.tsx": "d65da47a kit",
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Landing.tsx": "76c38edd kit",
-  "src/kit/LegalPage.tsx": "c96e25bb kit",
+  "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
@@ -18969,7 +18970,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "649401c3 generated",
@@ -18995,7 +18996,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/routes/files/$model.$id.$field.ts": "93378bd7 kit",
   "src/routes/health.ts": "362c9904 kit",
   "src/routes/index.tsx": "e1786bfd generated",
-  "src/routes/privacy/index.tsx": "016616e0 generated",
+  "src/routes/privacy/index.tsx": "9fcb262e generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/services/$id.tsx": "bddd0cd6 generated",
   "src/routes/services/index.tsx": "d980917e generated",
@@ -32682,12 +32683,15 @@ import { guardPage } from "#/kit/page-guard";
 import { LegalPage, type LegalFacts } from "#/kit/LegalPage";
 import { bookingUi } from "#/generated/booking";
 import { messageUi } from "#/generated/message";
+import { createServerFn } from "@tanstack/react-start";
+import { aiFacts } from "#/kit/assistant.server";
 
 /** What the page says, from the app's definition when it was generated. */
 const facts: LegalFacts = {
   app: app.name,
   purpose: "Class schedule and online booking for a small yoga studio.",
   signIn: { email: true, google: false, invitedOnly: false },
+  assistant: { for: "members", changes: false },
   records: [
     {
       label: bookingUi.pluralLabel,
@@ -32696,14 +32700,22 @@ const facts: LegalFacts = {
     },
     { label: messageUi.pluralLabel, fields: ["email"], readers: ["admin", "staff"] },
   ],
+  forms: [{ label: messageUi.pluralLabel, fields: ["name", "email", "message"] }],
   uploads: true,
   mailAbout: ["bookings", "sessions"],
 };
 
+
+/** What the app is set up with now: the AI model's provider and region, the SMS provider. */
+const runningFacts = createServerFn().handler(async () => ({
+  ai: aiFacts(),
+}));
+
 export const Route = createFileRoute("/privacy/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["privacy"], context.viewer, location.href),
   head: () => pageHead("privacy"),
-  component: () => <LegalPage title={pageUi["privacy"].title} facts={facts} />,
+  loader: () => runningFacts(),
+  component: () => <LegalPage title={pageUi["privacy"].title} facts={facts} running={Route.useLoaderData()} />,
 });
 "
 `;
@@ -34054,7 +34066,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Inspector.tsx": "5bd2746f kit",
   "src/kit/Landing.tsx": "76c38edd kit",
-  "src/kit/LegalPage.tsx": "c96e25bb kit",
+  "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/Markdown.tsx": "24e2fcd2 kit",
   "src/kit/MarkdownFormatted.tsx": "e222328f kit",
@@ -34116,7 +34128,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c99217ec generated",
@@ -34178,7 +34190,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/posts/$id.tsx": "f83087d3 generated",
   "src/routes/posts/index.tsx": "ce0f7be9 generated",
   "src/routes/posts/new.tsx": "7be9f470 generated",
-  "src/routes/privacy/index.tsx": "c7ef14eb generated",
+  "src/routes/privacy/index.tsx": "6236ed29 generated",
   "src/routes/robots[.]txt.ts": "ded77c86 generated",
   "src/routes/schedule/index.tsx": "79cdbac7 generated",
   "src/routes/sessions/$id.tsx": "10f389eb generated",
@@ -43842,7 +43854,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2745c4de generated",
@@ -52177,21 +52189,31 @@ import { pageAccess, pageUi, pageHead } from "#/generated/pages";
 import { guardPage } from "#/kit/page-guard";
 import { LegalPage, type LegalFacts } from "#/kit/LegalPage";
 import { clientUi } from "#/generated/client";
+import { createServerFn } from "@tanstack/react-start";
+import { aiFacts } from "#/kit/assistant.server";
 
 /** What the page says, from the app's definition when it was generated. */
 const facts: LegalFacts = {
   app: app.name,
   purpose: "Simple invoicing for freelancers. Each user manages their own clients and invoices.",
   signIn: { email: true, google: false, invitedOnly: false },
+  assistant: { for: "members", changes: false },
   records: [{ label: clientUi.pluralLabel, fields: ["email"], readers: ["admin"] }],
   uploads: true,
   mailAbout: ["invoices"],
 };
 
+
+/** What the app is set up with now: the AI model's provider and region, the SMS provider. */
+const runningFacts = createServerFn().handler(async () => ({
+  ai: aiFacts(),
+}));
+
 export const Route = createFileRoute("/privacy/")({
   beforeLoad: ({ context, location }) => guardPage(pageAccess["privacy"], context.viewer, location.href),
   head: () => pageHead("privacy"),
-  component: () => <LegalPage title={pageUi["privacy"].title} facts={facts} />,
+  loader: () => runningFacts(),
+  component: () => <LegalPage title={pageUi["privacy"].title} facts={facts} running={Route.useLoaderData()} />,
 });
 "
 `;
@@ -53109,7 +53131,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/InlineRows.tsx": "dd000032 kit",
   "src/kit/Inspector.tsx": "5bd2746f kit",
   "src/kit/Landing.tsx": "76c38edd kit",
-  "src/kit/LegalPage.tsx": "c96e25bb kit",
+  "src/kit/LegalPage.tsx": "f9a9df1e kit",
   "src/kit/Live.tsx": "fbaa47cd kit",
   "src/kit/ModelForm.tsx": "176651ad kit",
   "src/kit/ModelTable.tsx": "ee69b8e3 kit",
@@ -53170,7 +53192,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9efad3d1 generated",
@@ -53197,7 +53219,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/routes/invoices/index.tsx": "892a7477 generated",
   "src/routes/invoices/new.tsx": "8fcd2b9f generated",
   "src/routes/overview/index.tsx": "254c2c93 generated",
-  "src/routes/privacy/index.tsx": "a2c437ac generated",
+  "src/routes/privacy/index.tsx": "6ef06b81 generated",
   "src/routes/robots[.]txt.ts": "a6b36402 generated",
   "src/routes/settings/index.tsx": "9fdd2b64 generated",
   "src/routes/sign-in.tsx": "f931fe7c generated",
@@ -62412,7 +62434,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "c0f319c8 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "f3bb0c63 generated",
@@ -67778,7 +67800,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "9b0d3c8e generated",
@@ -71806,7 +71828,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "aa8f6008 generated",
@@ -84861,7 +84883,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "d318c79d generated",
@@ -92835,7 +92857,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "c1eb2f8a kit",
+  "src/kit/words/en.ts": "0dcde610 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "bcfaa919 generated",

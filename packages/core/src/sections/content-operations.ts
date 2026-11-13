@@ -77,6 +77,46 @@ const setText: Operation<{ path: string[]; text: string; language?: string }> = 
  * Several visible texts at once, each as setText would set it, in one change that one undo takes
  * back: a language file's first draft (docs/design/languages.md §1) is a hundred of them.
  */
+/**
+ * The owner's review of a privacy page (legal-page.md §6.4): records that they read its
+ * description of the app as it is now. The host computes the facts' fingerprint and the day; the
+ * record names nobody, and undo takes it back like any change.
+ */
+const reviewPrivacyPage: Operation<{ page: string; facts: string; on: string }> = {
+  name: "reviewPrivacyPage",
+  sets: ["smithable.content.yml:pages.*.reviewed", "smithable.content.yml:pages.*.reviewed.*"],
+  summary:
+    "Record that the owner reviewed the privacy page's description of the app as it is now: the fingerprint of its facts and the day (UTC). It asks again when the facts change.",
+  schema: {
+    type: "object",
+    required: ["page", "facts", "on"],
+    additionalProperties: false,
+    properties: {
+      page: refTo({ ref: "page", label: "Privacy page" }),
+      facts: {
+        type: "string",
+        pattern: "^[0-9a-f]{16}$",
+        description: "The fingerprint of the page's facts, as the host computes it.",
+      },
+      on: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "The day, UTC." },
+    },
+  },
+  positional: ["page", "facts", "on"],
+  describe: ({ page }) => `Reviewed the ${page} page's description of the app`,
+  destructive: () => false,
+  apply(editors, { page, facts, on }, ir) {
+    const found = ir.pages.find((p) => p.id === page);
+    if (found?.pattern.kind !== "legal")
+      throw new OperationError(`"${page}" is not a privacy page.`);
+    if (!/^[0-9a-f]{16}$/.test(facts))
+      throw new OperationError("The facts' fingerprint is sixteen hexadecimal digits.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(on)) throw new OperationError("The day is written 2026-11-13.");
+    put(editors.content, ["pages", page, "reviewed", "facts"], facts);
+    put(editors.content, ["pages", page, "reviewed", "on"], on);
+    return [];
+  },
+};
+
 const setTexts: Operation<{ texts: Record<string, string>; language?: string }> = {
   name: "setTexts",
   summary:
@@ -491,6 +531,7 @@ const setItems: Operation<{
 };
 
 export const contentOperations: AnyOperation[] = [
+  reviewPrivacyPage,
   setText,
   setTexts,
   setItems,

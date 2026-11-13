@@ -258,6 +258,7 @@ export {
 export type { Patch, PluginApi, PluginModule, SpecPlugin } from "./plugin.js";
 export { checkJson, PLUGIN_API, resolvePlugin } from "./plugin.js";
 export { type PreviewPage, previewPages, previewRecordPath } from "./preview-pages.js";
+export { privacyCheck } from "./privacy-check.js";
 export {
   SUMMARY_PARTS,
   type SummaryFields,

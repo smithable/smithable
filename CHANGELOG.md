@@ -22,6 +22,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: the privacy page states what the app's files and its running settings show (the assistant, signing in with Google, the payment provider, public forms, mail and calls coming in, services records go to, the owner's own functions, the AI model and the SMS provider as set now) and what only the maker knows (keeps, services, custom), and says when its operator reviewed it (`reviewPrivacyPage`; `validate` warns `privacy-unreviewed`, `privacy-missing`, `privacy-custom`). **Its sentences changed: owners are asked to review their privacy page again.**
 - Generated apps: the mail library nodemailer 10.4.1 (from 10.1.7), for two published advisories where an address with an unusual domain or a comment was read differently from how it was shown; with it better-auth 1.7.22 and vite 8.3.8, patch releases (`fixes/nodemailer-address-parsing.yml`).
 - Generated apps: adding or changing a record whose reference names a record that does not exist is refused as bad input that names the field, in the API, Ask and the forms, instead of as a record still in use (`fixes/missing-reference.yml`).
 - Generated apps: the page of one article finds it and the ones just newer and older in the query, a row each (`fixes/article-neighbours.yml`).
