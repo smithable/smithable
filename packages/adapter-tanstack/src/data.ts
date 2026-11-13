@@ -2782,7 +2782,7 @@ ${
 `
     : ""
 }  async create(viewer: Viewer | null, values: ${n.settableValues}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}${payEntry ? ", pay = false" : ""}) {
-    check(${n.access}.create, viewer);${payEntry ? "\n    // A visitor makes one only by paying: no other way in skips it (payments.md §4.7).\n    if (viewer === null && !pay) throw new AccessDenied(false);" : ""}
+    check(${n.access}.create, viewer);${payEntry ? "\n    // A visitor makes one only by paying: no other way in skips it (payments.md §4.7).\n    if (viewer === null && !pay) throw new AccessDenied(false);\n    // Unheld and unpaid only for the app itself and the roles that change everyone's (staff\n    // entering one by hand); anyone else's, by whichever function, is held until it is paid.\n    if (!(viewer?.system || (viewer && " + n.access + ".write.roles.includes(viewer.role)))) pay = true;" : ""}
 ${
   access.create.public
     ? `    // Visitors add these without an account: at most ${VISITOR_ROWS.toLocaleString("en")} of theirs, so a flood stops here.
