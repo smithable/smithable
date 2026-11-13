@@ -25,6 +25,7 @@ import {
 import { cn } from "#/lib/utils";
 import { AiMarked } from "./AiMark";
 import { csvName, csvOf, download } from "./csv";
+import { versioned } from "./file-address";
 import { displayValue, formatValue, numberText } from "./format";
 import { MoreOnScroll } from "./MoreOnScroll";
 import { type AppUi, editorMarker, type RecordFieldUi, type RecordUi, type Row } from "./model";
@@ -301,8 +302,13 @@ export function ModelTable<R extends Row>({
   const description = ui.fields.find((f) => f.name === ui.descriptionField);
   const pictureField = ui.fields.find((f) => f.kind === "picture" || f.kind === "pictures");
   // A picture's address; for several pictures, the cover's (the first).
-  const pictureSrc = (field: RecordFieldUi<R>, row: R) =>
-    `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}${field.kind === "pictures" ? "/0" : ""}`;
+  const pictureSrc = (field: RecordFieldUi<R>, row: R) => {
+    const value = (row as Record<string, unknown>)[field.name];
+    return versioned(
+      `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${row.id}/${field.name}${field.kind === "pictures" ? "/0" : ""}`,
+      (Array.isArray(value) ? value[0] : value) as { file?: string } | undefined,
+    );
+  };
   // The mark before a title: a picture where asked and there is one, else initials on a hue of the
   // chart's, the same for the same name everywhere.
   const markOf = (row: R) => {
