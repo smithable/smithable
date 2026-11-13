@@ -676,8 +676,8 @@ export const w = {
   legalCustomTitle: "Ägarens egna funktioner",
   legalReviewed: (on: string) =>
     `Den som driver appen granskade den här beskrivningen av appen ${on}.`,
-  legalCustom: (actions: string[]) =>
-    `Appen kör också funktioner som dess ägare har skrivit för den${actions.length ? ` (${actions.join(", ")})` : ""}. Den här sidan beskriver inte vad de gör.`,
+  legalCustom: (actions: string[], described: boolean) =>
+    `Appen kör också funktioner som dess ägare har skrivit för den${actions.length ? ` (${actions.join(", ")})` : ""}. ${described ? "Ägaren beskriver dem här nedan." : "Den här sidan beskriver inte vad de gör."}`,
   legalRecordsTitle: "Uppgifter i poster",
   legalRecordsIntro: "Utöver konton har appen dessa slags poster med personuppgifter:",
   legalReadBy: (readers: "visitors" | "members" | string[]) =>

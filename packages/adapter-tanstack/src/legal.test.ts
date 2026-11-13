@@ -9,6 +9,7 @@ import {
 } from "@smithable/core";
 import { expect, test } from "vitest";
 import { generateApp, privacyReviews } from "./generate.js";
+import { TEMPLATES as TEMPLATES_FOR_TEST } from "./templates.gen.js";
 
 test("the privacy page's facts are typed, so a public model with a personal field type-checks", () => {
   // The stranger walk of 2026-10-07: a phone on the public Instructor made `readers: "visitors"`,
@@ -244,4 +245,38 @@ pages:
     on: "2026-11-13",
   });
   expect(refused.ok).toBe(false);
+});
+
+test("the owner's functions: 'described below' with the maker's text, and the fingerprint's sentences fall back as the kit does", () => {
+  const en = TEMPLATES_FOR_TEST["src/kit/words/en.ts"] ?? "";
+  expect(en).toContain(
+    '${described ? "The owner describes them below." : "This page does not describe what they do."}',
+  );
+  const spec = `smithable: 0.1
+app: { name: X }
+models:
+  Message:
+    fields: { name: string!, email: email! }
+pages:
+  home: { route: /, landing: { hero: {}, footer: {} } }
+  messages: { crud: Message }
+  privacy: { route: /privacy, legal: privacy }
+`;
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all, member: { pages: all } }\npublic: { pages: [home, privacy] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const fingerprint = (language: string) =>
+    privacyReviews(ir, {
+      smithableVersion: "0.0.0",
+      auth,
+      content: { ...emptyContent(), language } as ReturnType<typeof emptyContent>,
+    })[0]?.facts;
+  // A language the kit has no words file for counts English's sentences, as the kit shows them.
+  expect(fingerprint("zz")).toBe(fingerprint("en"));
+  expect(fingerprint("sv")).not.toBe(fingerprint("en"));
 });

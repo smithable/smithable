@@ -214,7 +214,7 @@ export function LegalPage({
       )}
       {facts.custom && (
         <Part title={w.legalCustomTitle}>
-          <p>{w.legalCustom(facts.custom.actions)}</p>
+          <p>{w.legalCustom(facts.custom.actions, Boolean(facts.custom.text))}</p>
           {facts.custom.text && <p className="whitespace-pre-line">{facts.custom.text}</p>}
         </Part>
       )}

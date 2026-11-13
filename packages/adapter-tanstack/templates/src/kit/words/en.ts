@@ -710,8 +710,8 @@ export const w = {
   legalOwnServices: "The app's owner also uses:",
   legalCustomTitle: "The owner's own functions",
   legalReviewed: (on: string) => `The operator reviewed this description of the app on ${on}.`,
-  legalCustom: (actions: string[]) =>
-    `The app also runs functions written for it by its owner${actions.length ? ` (${actions.join(", ")})` : ""}. This page does not describe what they do.`,
+  legalCustom: (actions: string[], described: boolean) =>
+    `The app also runs functions written for it by its owner${actions.length ? ` (${actions.join(", ")})` : ""}. ${described ? "The owner describes them below." : "This page does not describe what they do."}`,
   legalRecordsTitle: "Information in records",
   legalRecordsIntro:
     "Besides accounts, the app keeps these kinds of records with personal details:",
