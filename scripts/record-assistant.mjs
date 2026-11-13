@@ -6,7 +6,9 @@
 // never printed or saved. Uses the user's Claude usage (a few cents a take), so ask before
 // running. Writes the video (WebM), the transcript (JSONL, the key masked) and a JSON of when each
 // moment starts with its caption, to --out.
-// Run after `pnpm build`: `node scripts/record-assistant.mjs [--out <dir>] [--port 8413]`. Not part of `check`.
+// Run after `pnpm build`: `node scripts/record-assistant.mjs [--out <dir>] [--port 8413] [--dry-run]`.
+// --dry-run prints what a take would do and changes nothing. The demo app lives in a temporary
+// folder and is removed at the end of the take. Not part of `check`.
 import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,13 +17,14 @@ import { createInterface } from "node:readline";
 import { DatabaseSync } from "node:sqlite";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
-import { newApp, op, serveDev, signIn, open } from "./dev-app.mjs";
+import { newApp, op, open, serveDev, signIn } from "./dev-app.mjs";
 
 const { values: opts } = parseArgs({
   options: {
     out: { type: "string", default: join(process.cwd(), "recordings/assistant") },
     port: { type: "string", default: process.env.RECORD_PORT ?? "8413" },
     model: { type: "string", default: "claude-opus-5-5" },
+    "dry-run": { type: "boolean", default: false },
   },
 });
 const port = Number(opts.port);
@@ -33,6 +36,21 @@ mkdirSync(opts.out, { recursive: true });
 const ask =
   "Add a Yin class this Saturday at 10:00 with Emma Lindqvist. Also change Emma's bio to say she is away in December.";
 
+if (opts["dry-run"]) {
+  console.log(`A take would:
+  1. make a new booking app from the starter (sample data only) in a temporary folder, with a Team
+     page and its records offered to assistants (setApi all --assistants true);
+  2. serve it at ${base} and, signed in as its development administrator, make a reception key on
+     the Team page (kept in a temporary file, never printed or saved);
+  3. run Claude Code headless (${opts.model}, your Claude usage, a few cents) with only the app's
+     /mcp, asking: "${ask}";
+  4. film the live app beside Claude Code's events at ${size.width}x${size.height};
+  5. check in the database that one session was added and the bio was refused, unchanged;
+  6. write assistant.webm, transcript.jsonl (the key masked) and assistant.json to ${opts.out};
+  7. stop the app and remove its folder and the key file.
+Nothing was done.`);
+  process.exit(0);
+}
 const dir = newApp("booking", "record-assistant");
 // The owner's set-up: a team page to make keys on, and the app offered to programs and assistants.
 op(dir, "addUsersPage", "team", "/team", "--setup");
@@ -275,6 +293,8 @@ try {
   await context.close();
   await browser.close();
   stopApp();
+  // The demo app goes with the take: its whole temporary folder.
+  rmSync(join(dir, ".."), { recursive: true, force: true });
   if (video) renameSync(await video.path(), join(opts.out, "assistant.webm"));
   writeFileSync(join(opts.out, "transcript.jsonl"), lines.map((l) => `${l}\n`).join(""));
   writeFileSync(
