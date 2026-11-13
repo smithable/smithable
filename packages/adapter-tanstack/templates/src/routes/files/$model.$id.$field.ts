@@ -19,7 +19,8 @@ export const Route = createFileRoute("/files/$model/$id/$field")({
           string,
           unknown
         > | null;
-        return uploadResponse(request, entry.kind, row?.[entry.key]);
+        const everyone = entry.access.read.public && !entry.access.read.where;
+        return uploadResponse(request, entry.kind, row?.[entry.key], everyone);
       },
     },
   },

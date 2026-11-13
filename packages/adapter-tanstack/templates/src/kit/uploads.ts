@@ -559,14 +559,33 @@ export function fileHeaders(stored: StoredFile): Record<string, string> {
 }
 
 /**
- * A record's stored picture or document as the file routes send it, or "Not found": asked again
- * each time (no-cache, with its ETag: a short 304 when it has not changed), so a replaced or
+ * How long a file may be kept: a day, by anyone, only where that is safe by the address: a file
+ * anyone may read, not a demo visitor's own (`shared`), asked for by its content's tag
+ * (src/kit/file-address.ts), so a replaced file has a new address. Otherwise asked again each
+ * time; the ETag makes that cheap.
+ */
+export function cacheControl(
+  request: Request,
+  tag: string,
+  everyone: boolean,
+  shared: boolean,
+): string {
+  return everyone && shared && `"${new URL(request.url).searchParams.get("v")}"` === tag
+    ? "public, max-age=86400, immutable"
+    : "private, no-cache";
+}
+
+/**
+ * A record's stored picture or document as the file routes send it, or "Not found": kept for a
+ * day when anyone may read the model and the address carries the content's tag; otherwise asked
+ * again each time (no-cache, with its ETag: a short 304 when it has not changed), so a replaced or
  * removed file, or one after a sign-out or access taken away, is no longer shown.
  */
 export function uploadResponse(
   request: Request,
   kind: "picture" | "file",
   stored: unknown,
+  everyone: boolean,
 ): Response {
   const found = stored as (Picture & StoredFile) | null | undefined;
   const bytes = found && (kind === "picture" ? readPicture(found) : readFile(found));
@@ -576,9 +595,7 @@ export function uploadResponse(
     ...(kind === "picture"
       ? { "Content-Type": "image/webp", "X-Content-Type-Options": "nosniff" }
       : fileHeaders(found)),
-    // The address names the record, not the content: a replaced or removed file, or a demo
-    // visitor's own, must not be kept by a cache in between. The ETag makes asking again cheap.
-    "Cache-Control": "private, no-cache",
+    "Cache-Control": cacheControl(request, tag, everyone, ownDataDir() === dataDir),
     ETag: tag,
   };
   if (request.headers.get("if-none-match") === tag)

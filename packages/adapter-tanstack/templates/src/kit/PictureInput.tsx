@@ -7,6 +7,7 @@ import { useId, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
 import { AiMarked } from "./AiMark";
+import { versioned } from "./file-address";
 import type { FieldControlProps } from "./model";
 import { w } from "./words";
 
@@ -93,7 +94,10 @@ export function PictureInput({
 
   // A stored picture shows from its record's address; a picture just chosen from the browser's copy.
   const src =
-    preview ?? (picture && record !== undefined ? `/files/${model}/${record}/${field}` : undefined);
+    preview ??
+    (picture && record !== undefined
+      ? versioned(`/files/${model}/${record}/${field}`, picture)
+      : undefined);
   return (
     <div className="space-y-3" {...aria}>
       {picture ? (
@@ -249,7 +253,7 @@ export function PicturesInput({
   const src = (p: PictureValue) =>
     previews.get(p.file) ??
     (record !== undefined && stored.has(p.file)
-      ? `/files/${model}/${record}/${field}/${stored.get(p.file)}`
+      ? versioned(`/files/${model}/${record}/${field}/${stored.get(p.file)}`, p)
       : undefined);
   return (
     <div className="space-y-3" {...aria}>

@@ -408,8 +408,8 @@ export function landingRoute(
             picture: ${
               isPictures(picture)
                 ? // Several pictures: the cover, the first.
-                  `row.${picture.name}?.[0] ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}/0\`, alt: row.${picture.name}[0].alt, width: row.${picture.name}[0].width, height: row.${picture.name}[0].height, generated: row.${picture.name}[0].generated } : undefined`
-                : `row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height, generated: row.${picture.name}.generated } : undefined`
+                  `row.${picture.name}?.[0] ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}/0?v=\${row.${picture.name}[0].file.slice(-29, -5)}\`, alt: row.${picture.name}[0].alt, width: row.${picture.name}[0].width, height: row.${picture.name}[0].height, generated: row.${picture.name}[0].generated } : undefined`
+                : `row.${picture.name} ? { src: \`/files/${kebab(model.name)}/\${row.id}/${picture.name}?v=\${row.${picture.name}.file.slice(-29, -5)}\`, alt: row.${picture.name}.alt, width: row.${picture.name}.width, height: row.${picture.name}.height, generated: row.${picture.name}.generated } : undefined`
             },`
                 : ""
             }${
