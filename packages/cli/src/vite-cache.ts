@@ -11,11 +11,16 @@ const lockOf = (dir: string) => {
   return existsSync(path) ? readFileSync(path, "utf8") : undefined;
 };
 
-/** Runs an install; when it changed the lockfile, the old pre-bundle goes. Returns its result. */
+/** Runs an install (synchronous); when it changed the lockfile, the old pre-bundle goes. */
 export function installing<T>(dir: string, install: () => T): T {
   const before = lockOf(dir);
-  const result = install();
-  if (lockOf(dir) !== before)
-    rmSync(join(dir, "node_modules", ".vite"), { recursive: true, force: true });
-  return result;
+  try {
+    return install();
+  } finally {
+    // Also after a failed install that already rewrote the lock; and never a failure of its own.
+    if (lockOf(dir) !== before)
+      try {
+        rmSync(join(dir, "node_modules", ".vite"), { recursive: true, force: true });
+      } catch {}
+  }
 }
