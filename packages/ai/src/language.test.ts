@@ -3,6 +3,7 @@ import { describedWith } from "./clarify.js";
 import {
   languageNote,
   languageQuestion,
+  languageTag,
   otherLanguages,
   PAGE_START,
   textLanguage,
@@ -99,4 +100,30 @@ test("a numbered answer may name two languages, the main one first (--answers)",
   const numbered = "A booking app for our customers.\n\nAnswers:\n- (1) Swedish and English";
   expect(textLanguage(numbered)).toBe("sv");
   expect(otherLanguages(numbered, "sv")).toEqual(["en"]);
+});
+
+test("a page's own tag settles its language only where its words cannot tell", () => {
+  const page = (frame: string, body: string) =>
+    `${PAGE_START} (https://x.example/)${frame}. Derive.\n${body}`;
+  // Too few words: the tag decides, for a language the kit has.
+  expect(textLanguage(page(" [lang sv]", "Elbolaget Åland"))).toBe("sv");
+  expect(textLanguage(page(" [lang de]", "Elbolaget Åland"))).toBeUndefined();
+  expect(textLanguage(page("", "Elbolaget Åland"))).toBeUndefined();
+  // The words say English: the tag does not overrule them.
+  expect(
+    textLanguage(
+      page(
+        " [lang sv]",
+        "We sell power to homes and firms, and you can see all of the outages here.",
+      ),
+    ),
+  ).toBe("en");
+});
+
+test("a language tag's primary subtag, lower case", () => {
+  expect(languageTag("sv-SE")).toBe("sv");
+  expect(languageTag("sv_FI")).toBe("sv");
+  expect(languageTag("EN")).toBe("en");
+  expect(languageTag("svenska")).toBeUndefined();
+  expect(languageTag(undefined)).toBeUndefined();
 });

@@ -253,3 +253,20 @@ test("cached duplicate picture URLs never produce duplicate saved files", async 
 test("ordinary public hostname errors retain their actual port diagnostic", async () => {
   await expect(fetchPage("http://public.invalid:8080/")).rejects.toThrow("usual ports");
 });
+
+test("a page's own language tag is read, and asks about a page whose few words cannot tell", () => {
+  const short = (lang: string) =>
+    `<html lang="${lang}"><head><title>Elbolaget</title></head><body><h1>Elavbrott Åland</h1></body></html>`;
+  expect(readPage(short("sv-SE"), "https://el.ax/").lang).toBe("sv");
+  expect(describePage(readPage(short("sv-SE"), "https://el.ax/"))).toContain(
+    "(https://el.ax/) [lang sv].",
+  );
+  expect(languageAsked(describePage(readPage(short("sv-SE"), "https://el.ax/")))?.options).toEqual([
+    "Swedish",
+    "English",
+  ]);
+  // From og:locale when the html element says nothing.
+  const og = `<html><head><meta property="og:locale" content="sv_FI"><title>x</title></head><body></body></html>`;
+  expect(readPage(og, "https://el.ax/").lang).toBe("sv");
+  expect(readPage(PAGE, "https://cafe.example/").lang).toBeUndefined();
+});
