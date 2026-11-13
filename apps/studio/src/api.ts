@@ -186,6 +186,8 @@ export type Proposal = { usage: string; id: string } & (
       }[];
       /** What it will do, before Apply: its consequences, every check not run (change-verified.md). */
       verification?: Verification;
+      /** What to know about the plan, e.g. that only administrators open a new page (T760). */
+      note?: string;
     }
   | { kind: "question"; question: string; options: string[] }
   /** A question about the app, answered (docs/design/studio-v2.md §4). */

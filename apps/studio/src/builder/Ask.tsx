@@ -1476,6 +1476,11 @@ export function ProposalView({
       {proposal.kind === "change" && (
         <>
           <p className="text-sm font-medium">Proposed change</p>
+          {proposal.note && (
+            <p data-proposal-note className="text-sm text-muted">
+              {proposal.note}
+            </p>
+          )}
           <ol className="list-decimal space-y-1 pl-5 text-sm">
             {proposal.operations.map((o) => (
               <li key={o.description}>

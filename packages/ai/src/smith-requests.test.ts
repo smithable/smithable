@@ -67,24 +67,52 @@ const project = (starter: string) => {
 };
 
 /** What the rules did with a request: nothing (a model is needed), or what they answered. */
-function ruled(p: Proposal): { by: string; operations?: string[] } | undefined {
+function ruled(p: Proposal): { by: string; operations?: string[]; roles?: string[] } | undefined {
   if (p.kind === "failed") return undefined;
   if (p.kind === "answer")
-    return { by: p.generator === "small talk" ? "smalltalk" : "spec-question" };
-  if (p.kind === "change") return { by: "change", operations: p.operations.map((o) => o.op) };
+    return {
+      by:
+        p.generator === "small talk"
+          ? "smalltalk"
+          : p.generator === "same page"
+            ? `same page: ${p.text}`
+            : "spec-question",
+    };
+  if (p.kind === "change")
+    return {
+      by: "change",
+      operations: p.operations.map((o) => o.op),
+      roles: p.operations.filter((o) => o.op === "grant").map((o) => String(o.args.role)),
+    };
   if (p.kind === "none") return { by: "none" };
   return { by: p.kind };
 }
 
 /** Whether what a rule answered is right for the request's label. */
-function right(r: Request, got: { by: string; operations?: string[] }): boolean {
+function right(r: Request, got: { by: string; operations?: string[]; roles?: string[] }): boolean {
   if (got.by === "smalltalk") return r.kind === "smalltalk";
   if (got.by === "spec-question") return r.kind === "spec-question";
+  // The app's own page pointed to, instead of a second one (T760).
+  if (got.by.startsWith("same page: "))
+    return (
+      typeof r.outcome.existingPage === "string" && got.by.includes(`"${r.outcome.existingPage}"`)
+    );
   // A rule's "cannot as asked" is right only where nothing was to be added (already there).
   if (got.by === "none")
     return (r.kind === "change" || r.kind === "two-things") && !r.outcome.operations?.length;
   if (got.by === "change") {
     if (r.kind !== "change" && r.kind !== "two-things") return false;
+    // A plan that must hold these, whatever else it has (T760: a page's access).
+    const include = r.outcome.operationsInclude as string[] | undefined;
+    if (include) return include.every((op) => got.operations?.includes(op));
+    // Who the plan grants pages to (T760): the roles it must and must never.
+    const granted = r.outcome.granted as string[] | undefined;
+    const notGranted = r.outcome.notGranted as string[] | undefined;
+    if (granted || notGranted)
+      return (
+        (granted ?? []).every((role) => got.roles?.includes(role)) &&
+        !(notGranted ?? []).some((role) => got.roles?.includes(role))
+      );
     const wanted = r.outcome.operations ?? [];
     return (
       wanted.length > 0 &&

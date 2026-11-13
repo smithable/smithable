@@ -1,0 +1,8 @@
+{"setup":"haiku","id":"bk-instructors-for-staff","kind":"change","language":"en","byRule":false,"got":"question","right":false,"why":"question","tokens":53417,"cost":0.054205,"ms":3023}
+{"setup":"haiku","id":"bk-sv-instructors-for-staff","kind":"change","language":"sv","byRule":false,"got":"question","right":false,"why":"question","tokens":45638,"cost":0.046226,"ms":2169}
+{"setup":"haiku","id":"bk-staff-today-again","kind":"change","language":"en","byRule":false,"got":"none","right":false,"why":"none","tokens":52990,"cost":0.053494,"ms":2369}
+{"setup":"haiku","id":"bk-sv-staff-today-again","kind":"change","language":"sv","byRule":false,"got":"question","right":true,"why":"question","tokens":45976,"cost":0.046624,"ms":2566}
+{"setup":"haiku","id":"bk-members-for-staff","kind":"change","language":"en","byRule":false,"got":"question","right":false,"why":"question","tokens":46440,"cost":0.047068,"ms":2664}
+{"setup":"haiku","id":"bk-sv-members-for-staff","kind":"change","language":"sv","byRule":false,"got":"question","right":false,"why":"question","tokens":45566,"cost":0.046526,"ms":3173}
+{"setup":"haiku","id":"bk-classtypes-staff-members","kind":"change","language":"en","byRule":false,"got":"question","right":false,"why":"question","tokens":53568,"cost":0.054332,"ms":2643}
+{"setup":"haiku","id":"bk-sv-classtypes-staff-members","kind":"change","language":"sv","byRule":false,"got":"question","right":false,"why":"question","tokens":45406,"cost":0.046202,"ms":2678}
