@@ -1,7 +1,7 @@
 // Who a new page is for (T760), on the booking starter: staff's page of today's bookings exists.
 import { applyOperation, type ProjectFiles } from "@smithable/core";
 import { expect, test } from "vitest";
-import { checkAudience, rolesFor, rolesNamed } from "./audience.js";
+import { checkAudience, rolesExcluded, rolesFor, rolesNamed } from "./audience.js";
 
 const raw = import.meta.glob("../../../examples/booking/smithable*.yml", {
   query: "?raw",
@@ -124,4 +124,123 @@ test("a plan that does more than add the same page keeps its change and says so"
   expect(more && "note" in more && more.note).toMatch(
     /The app has that page already: "Bookings" \(bookings\)/,
   );
+});
+
+// T781: negated or excluding wording never makes a role the audience, and a plan that lets that
+// role in is sent back.
+const granting = (from: ProjectFiles, role: string, page: string, pages: string[]) =>
+  apply(from, "grant", { role, what: "pages", names: [...pages, page] });
+
+test("a role under a negation or an exclusion is never granted for, and letting it in is sent back", () => {
+  const staffPages = ["sessions", "bookings", "messages"];
+  const withPage = apply(files, "addPage", { page: "today", model: "Booking" });
+  const memberIn = granting(withPage, "member", "today", ["my-bookings"]);
+  for (const request of [
+    "Add an admin-only page of bookings, not for members",
+    "a page of bookings that is not visible to members",
+    "a page of bookings hidden from members",
+    "a page of bookings for everyone except members",
+    "a page of bookings for staff but not members",
+    "a page of bookings without members",
+    "a page of bookings, no members",
+  ]) {
+    const auth = { roles: [{ name: "admin" }, { name: "staff" }, { name: "member" }] } as never;
+    expect(rolesFor(auth, request), request).not.toContain("member");
+    // The plan that keeps members out passes; one that lets them in goes back.
+    const kept = checkAudience(files, withPage, request);
+    expect(kept && "problem" in kept, request).toBe(false);
+    const wrong = checkAudience(files, memberIn, request);
+    expect(wrong && "problem" in wrong && wrong.problem, request).toMatch(
+      /not for member, but member can open "Today" \(today\)/,
+    );
+  }
+  // Admin-only alone: nobody else is asked for, and letting staff in is sent back too.
+  const staffIn = granting(withPage, "staff", "today", staffPages);
+  const adminOnly = checkAudience(files, staffIn, "an admin-only page of bookings");
+  expect(adminOnly && "problem" in adminOnly && adminOnly.problem).toMatch(
+    /only for admin, but staff can open/,
+  );
+});
+
+test("only for staff: staff granted, member not", () => {
+  const auth = { roles: [{ name: "admin" }, { name: "staff" }, { name: "member" }] } as never;
+  expect(rolesFor(auth, "a page of today's bookings only for staff")).toEqual(["staff"]);
+  const withPage = apply(files, "addPage", { page: "today", model: "Booking" });
+  const staffOnly = granting(withPage, "staff", "today", ["sessions", "bookings", "messages"]);
+  expect(checkAudience(files, staffOnly, "a page of all bookings only for staff")).toBeUndefined();
+  const both = granting(staffOnly, "member", "today", ["my-bookings"]);
+  const check = checkAudience(files, both, "a page of all bookings only for staff");
+  expect(check && "problem" in check && check.problem).toMatch(
+    /only for staff, but member can open/,
+  );
+  // Asked for staff only and not given to them: the missing access, as before.
+  const none = checkAudience(files, withPage, "a page of all bookings only for staff");
+  expect(none && "problem" in none && none.problem).toMatch(/staff, who cannot open/);
+});
+
+test("the Swedish negations and 'bara för' read the same way", () => {
+  const sv = { roles: [{ name: "admin" }, { name: "personal" }, { name: "medlem" }] } as never;
+  for (const request of [
+    "en sida med bokningar, inte för medlemmar",
+    "en sida med bokningar, ej för medlemmarna",
+    "en sida med bokningar för alla utom medlemmar",
+    "en sida med bokningar förutom medlemmarna",
+    "en sida med bokningar för personalen men inte medlemmar",
+    "en sida med bokningar, dold för medlemmar",
+  ])
+    expect(rolesFor(sv, request), request).not.toContain("medlem");
+  expect(rolesFor(sv, "en sida med dagens bokningar, bara för personalen")).toEqual(["personal"]);
+  expect(rolesExcluded(sv, "en sida bara för personalen").only).toEqual(["personal"]);
+});
+
+test("negation read where it keeps a role out, and nowhere else", () => {
+  const auth = { roles: [{ name: "admin" }, { name: "staff" }, { name: "member" }] } as never;
+  // Said after the role.
+  expect(
+    rolesExcluded(auth, "Create a page of bookings for members; members must not see it").excluded,
+  ).toEqual(["member"]);
+  expect(rolesFor(auth, "Create a page of bookings for members; members must not see it")).toEqual(
+    [],
+  );
+  // Not about seeing the page: no exclusion.
+  expect(
+    rolesExcluded(auth, "Create a page of bookings for members, and do not email members").excluded,
+  ).toEqual([]);
+  expect(rolesFor(auth, "Create a page of bookings for members, and do not email members")).toEqual(
+    ["member"],
+  );
+  // "Not only for members": neither excluded nor the only ones.
+  const notOnly = rolesExcluded(auth, "a page of bookings, not only for members");
+  expect(notOnly.excluded).toEqual([]);
+  expect(notOnly.only).toEqual([]);
+  // A public page lets in a role the request keeps out: sent back.
+  const open = apply(apply(files, "addPage", { page: "today", model: "Booking" }), "setPublic", {
+    pages: ["home", "schedule", "blog", "about", "privacy", "today"],
+  });
+  const check = checkAudience(files, open, "a page of bookings, not for members");
+  expect(check && "problem" in check && check.problem).toMatch(
+    /not for member, but member can open/,
+  );
+});
+
+test("the wordings a second reviewer named: articles, 'only' after the role, contractions, and no false limits", () => {
+  const auth = { roles: [{ name: "admin" }, { name: "staff" }, { name: "member" }] } as never;
+  expect(rolesExcluded(auth, "a page of bookings, not for the members").excluded).toEqual([
+    "member",
+  ]);
+  expect(rolesExcluded(auth, "a page of bookings for staff only").only).toEqual(["staff"]);
+  expect(rolesExcluded(auth, "a page of bookings visible to only staff").only).toEqual(["staff"]);
+  expect(
+    rolesExcluded(auth, "a page of bookings for staff; members shouldn't see it").excluded,
+  ).toEqual(["member"]);
+  expect(
+    rolesExcluded(auth, "a page of bookings; members are not allowed to see it").excluded,
+  ).toEqual(["member"]);
+  // Allowed is not denied.
+  expect(rolesExcluded(auth, "a page of bookings; members are allowed to see it").excluded).toEqual(
+    [],
+  );
+  // A bare "no" or "without" about something else limits nothing.
+  expect(rolesFor(auth, "a page of bookings for members with no sidebar")).toEqual(["member"]);
+  expect(rolesFor(auth, "a page of bookings for staff without pagination")).toEqual(["staff"]);
 });

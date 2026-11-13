@@ -37,8 +37,14 @@ const parsed = (files: ProjectFiles) => {
   return { ir, auth, content };
 };
 
-/** A role's name as a request may write it: itself, a plural, or a Swedish definite or plural form. */
-const ENDINGS = "(?:s|es|en|et|er|erna|ens|arna|orna|na)?";
+/**
+ * A role's name as a request may write it: itself, a plural, or a Swedish definite or plural form,
+ * its last letter doubled where Swedish does ("medlem", "medlemmar", "medlemmarna", "personalen").
+ */
+const forms = (name: string) => {
+  const n = name.toLowerCase();
+  return `${n}(?:${n.at(-1) ?? ""})?(?:s|es|en|et|er|ar|or|na|erna|arna|orna|ens)?`;
+};
 
 /** The roles a request mentions at all, by their own names (a role has no label of its own). */
 export function rolesNamed(auth: AuthIR, request: string): string[] {
@@ -47,7 +53,7 @@ export function rolesNamed(auth: AuthIR, request: string): string[] {
     .map((r) => r.name)
     .filter((name) => name !== "admin")
     .filter((name) => {
-      const form = new RegExp(`^${name.toLowerCase()}${ENDINGS}$`, "u");
+      const form = new RegExp(`^${forms(name)}$`, "u");
       return words.some((w) => form.test(w));
     });
 }
@@ -74,7 +80,7 @@ export function rolesFor(auth: AuthIR, request: string): string[] {
   ].map((m) => m[1]?.match(/\p{L}+/gu) ?? []);
   const inList = (list: string[], r: string) => list.some((w) => new RegExp(`^${r}$`, "u").test(w));
   const found = rolesNamed(auth, request).filter((name) => {
-    const r = `${name.toLowerCase()}${ENDINGS}`;
+    const r = `${forms(name)}`;
     if (listed.some((list) => inList(list, r))) return true;
     return [
       `\\bso\\s+(?:that\\s+)?${the}${r}\\s+can\\b`,
@@ -87,10 +93,103 @@ export function rolesFor(auth: AuthIR, request: string): string[] {
   // Roles from more than one phrase ("bookings for members, for staff"): the words do not settle
   // who it is for, so no grant is asked for and the note asks. One list in one phrase ("for staff
   // and members") is one audience.
-  const oneList = listed.some((list) =>
-    found.every((name) => inList(list, `${name.toLowerCase()}${ENDINGS}`)),
+  const oneList = listed.some((list) => found.every((name) => inList(list, `${forms(name)}`)));
+  const plain = found.length > 1 && !oneList ? [] : found;
+  // Only plainly positive wording makes an audience (T781): never a role under a negation, and
+  // with a negation or "only" about who may see it, none beyond the roles "only" names.
+  const { excluded, only, limited } = rolesExcluded(auth, request);
+  return plain.filter((r) => !excluded.includes(r) && (!limited || only.includes(r)));
+}
+
+/**
+ * Words that put what follows them out of a page's audience, in English and Swedish: a negation
+ * only with a word of access after it ("not for", "not visible to"), never alone ("do not email
+ * members" keeps nobody out of anything).
+ */
+const NEGATION = [
+  "(?:not|never)\\s+(?:for|to|by|(?:visible|shown|open|available|accessible)\\s+to)",
+  "no",
+  "without",
+  "except",
+  "excluding",
+  "but\\s+not",
+  "hidden\\s+from",
+  "hide\\s+it\\s+from",
+  "kept\\s+from",
+  "(?:inte|ej|aldrig)\\s+(?:för|åt|(?:synlig|synliga|öppen|öppna)\\s+för)",
+  "utan",
+  "utom",
+  "förutom",
+  "men\\s+inte",
+  "dolda?\\s+för",
+  "döljs\\s+för",
+  "ingen",
+  "inga",
+].join("|");
+
+/** A role followed by words that keep it out ("members must not see it", "medlemmar ska inte se"). */
+const DENIED_AFTER = [
+  "(?:\\s+(?:must|should|can|may|will|do|does|shall|ska|skall|får|kan))?\\s+(?:not|never|cannot|inte|ej|aldrig)\\s+(?:be\\s+able\\s+to\\s+)?(?:see|open|use|read|access|get|have|se|öppna|använda|läsa|få|ha)",
+  // Contractions: "members shouldn't see", "members can't open", "members don't get".
+  "\\s+(?:mustn't|shouldn't|can't|won't|don't|doesn't|shan't)\\s+(?:see|open|use|read|access|get|have)",
+  // "members are not allowed to see", "members are excluded", "medlemmar är inte tillåtna".
+  "\\s+(?:(?:are|is)\\s+not|aren't|isn't)\\s+allowed\\s+to",
+  "\\s+(?:are|is)\\s+(?:excluded|kept\\s+out)",
+  "\\s+(?:är|får)\\s+(?:inte|ej)\\s+(?:tillåtna|tillåten|se|öppna)",
+]
+  .map((p) => `(?:${p})`)
+  .join("|");
+
+/**
+ * Words that limit a page's audience to what follows them ("only for staff", "bara för
+ * personalen"); never after a negation ("not only for members" limits nothing).
+ */
+const ONLY = "(?<!not\\s)(?<!inte\\s)(?:only|just|solely|bara|endast|enbart)";
+
+/**
+ * Who a request keeps out of a page and whom it limits it to (T781): a role under a negation or an
+ * exclusion anywhere in it ("not for members", "everyone except members", "hidden from members",
+ * "inte för medlemmar", "utom medlemmar"), and the roles "only" names ("only for staff",
+ * "staff-only", "admin-only", "bara för personalen"); `limited` when the request says either.
+ */
+export function rolesExcluded(
+  auth: AuthIR,
+  request: string,
+): { excluded: string[]; only: string[]; limited: boolean } {
+  const text = request.toLowerCase();
+  const the = "(?:(?:the|our|all|any|every|de|alla|våra|vår|några)\\s+)?";
+  const roles = auth.roles.map((r) => r.name);
+  const form = (name: string) => `${forms(name)}`;
+  // Right after the head: an article, a list ("staff and members"), then the role.
+  const near = (head: string, name: string) =>
+    new RegExp(
+      `(?:^|[^\\p{L}])(?:${head})\\s+(?:(?:for|för|to)\\s+)?${the}(?:\\p{L}+\\s*(?:,|and|or|och|eller)\\s*)*${form(name)}(?![\\p{L}])`,
+      "u",
+    ).test(text);
+  const denied = (name: string) =>
+    new RegExp(`(?:^|[^\\p{L}])${form(name)}(?:${DENIED_AFTER})(?![\\p{L}])`, "u").test(text);
+  const excluded = roles.filter(
+    (name) => name !== "admin" && (near(NEGATION, name) || denied(name)),
   );
-  return found.length > 1 && !oneList ? [] : found;
+  const only = roles.filter(
+    (name) =>
+      near(ONLY, name) ||
+      // "for staff only", "visible to only members", "för bara medlemmar", "staff-only".
+      near(`(?:for|to|för|åt)\\s+${ONLY}`, name) ||
+      new RegExp(`(?:^|[^\\p{L}])${form(name)}(?:[- ]|\\s+)only(?![\\p{L}])`, "u").test(text) ||
+      (name === "admin" &&
+        /(?:^|[^\p{L}])(?:admin|administrators?)[- ]only(?![\p{L}])/u.test(text)),
+  );
+  const limited =
+    excluded.length > 0 ||
+    only.length > 0 ||
+    // A negation about who may see it, whoever it names ("not for everyone", "inte för alla"):
+    // only with its word of access, never a bare "no" or "without" ("no sidebar").
+    /(?:^|[^\p{L}])(?:(?:not|never)\s+(?:for|to|(?:visible|shown|open|available|accessible)\s+to)|(?:inte|ej)\s+(?:för|åt))\s/u.test(
+      text,
+    ) ||
+    /(?:^|[^\p{L}])(?:admin|administrators?)[- ]only(?![\p{L}])/u.test(text);
+  return { excluded, only, limited };
 }
 
 /** Whether a request asks for another page outright, beside one the app has. */
@@ -148,6 +247,32 @@ export function checkAudience(
   };
   // 1. Each role the request makes the audience opens a page it adds (first, so that a plan which
   // left a role out is repaired before it is compared with the app's pages).
+  // A role the request keeps out, or leaves out by "only", that can open a new page: sent back.
+  const { excluded, only } = rolesExcluded(auth, request);
+  const outside = [
+    ...excluded,
+    ...(only.length
+      ? auth.roles.map((r) => r.name).filter((r) => r !== "admin" && !only.includes(r))
+      : []),
+  ];
+  // A public page lets everyone in, a role kept out included.
+  const let_in = [...new Set(outside)].flatMap((role) =>
+    added
+      .filter((p) => audience(p, auth).everyone || audience(p, auth).roles.includes(role))
+      .map((p) => ({ role, page: p })),
+  );
+  if (let_in.length)
+    return {
+      problem: let_in
+        .map(({ role, page }) =>
+          excluded.includes(role)
+            ? `the request says not for ${role}, but ${role} can open ${titled(page)}`
+            : `the request says only for ${only.join(" and ")}, but ${role} can open ${titled(page)}`,
+        )
+        .join("; ")
+        .replace(/^./, (c) => c.toUpperCase())
+        .concat(": take it out of their pages."),
+    };
   const wanted = rolesFor(auth, request);
   const shut = wanted.filter((role) => !added.some((p) => opens(p, role)));
   if (shut.length)
@@ -180,7 +305,9 @@ export function checkAudience(
   }
   // 3. Who can open each new page, when the request did not make that plain: a page only the
   // administrator opens, and a role it mentions without making it the audience.
-  const mentioned = rolesNamed(auth, request).filter((r) => !wanted.includes(r));
+  const mentioned = rolesNamed(auth, request).filter(
+    (r) => !wanted.includes(r) && !excluded.includes(r),
+  );
   for (const p of added) {
     const who = audience(p, auth);
     if (who.everyone) continue;

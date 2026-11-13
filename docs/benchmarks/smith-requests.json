@@ -4803,6 +4803,233 @@
         ]
       },
       "noModel": false
+    },
+    {
+      "id": "bk-neg-not-for",
+      "starter": "booking",
+      "text": "Add an admin-only page of bookings, not for members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-neg-not-visible",
+      "starter": "booking",
+      "text": "A page of all bookings that is not visible to members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-neg-hidden",
+      "starter": "booking",
+      "text": "A page of all bookings, hidden from members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-neg-except",
+      "starter": "booking",
+      "text": "A page of all bookings for everyone except members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-neg-but-not",
+      "starter": "booking",
+      "text": "A page of all bookings for staff but not members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-neg-without",
+      "starter": "booking",
+      "text": "A page of all bookings without members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-neg-no",
+      "starter": "booking",
+      "text": "A page of all bookings, no members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-neg-admin-only",
+      "starter": "booking",
+      "text": "An admin-only page of all bookings",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-neg-inte-for",
+      "starter": "booking",
+      "text": "En sida med alla bokningar, inte för medlemmar",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-neg-ej-for",
+      "starter": "booking",
+      "text": "En sida med alla bokningar, ej för medlemmar",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-neg-utom",
+      "starter": "booking",
+      "text": "En sida med alla bokningar för alla utom medlemmar",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-neg-forutom",
+      "starter": "booking",
+      "text": "En sida med alla bokningar förutom medlemmarna",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-neg-men-inte",
+      "starter": "booking",
+      "text": "En sida med alla bokningar för personalen men inte medlemmar",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-neg-dold",
+      "starter": "booking",
+      "text": "En sida med alla bokningar, dold för medlemmar",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-neg-bara-for",
+      "starter": "booking",
+      "text": "En sida med alla bokningar, bara för personalen",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-only-staff",
+      "starter": "booking",
+      "text": "A page of all bookings only for staff",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-only-staff",
+      "starter": "booking",
+      "text": "En sida med alla bokningar, endast för personalen",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
     }
   ]
 }
