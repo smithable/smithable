@@ -319,10 +319,11 @@ async function answered(question: string, parts: Parts): Promise<Answer> {
       messages.push({
         role: "tool",
         tool_call_id: c.id,
-        // Records hold what anybody wrote: fenced as data, any such tag inside them dropped.
+        // Records hold what anybody wrote: fenced as data, every "<" in them escaped (still JSON),
+        // so no tag of any kind can be made from them, however it is folded.
         content: `<untrusted_record_data>${JSON.stringify(content ?? null)
-          .slice(0, RESULT_MAX)
-          .replace(/<\s*\/?\s*untrusted_record_data[^>]*>/gi, "")}</untrusted_record_data>`,
+          .replace(/</g, "\\u003c")
+          .slice(0, RESULT_MAX)}</untrusted_record_data>`,
       });
     }
     // A proposed change ends the question: the person decides, not another model call.
