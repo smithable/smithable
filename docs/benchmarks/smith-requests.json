@@ -5030,6 +5030,70 @@
         ]
       },
       "noModel": false
+    },
+    {
+      "id": "bk-staff-excluding-members",
+      "starter": "booking",
+      "text": "A page of all bookings for staff, excluding members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-staff-not-members",
+      "starter": "booking",
+      "text": "A page of all bookings for staff, not for members",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-staff-utom-members",
+      "starter": "booking",
+      "text": "En sida med alla bokningar för personalen, utom medlemmar",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-staff-inte-members",
+      "starter": "booking",
+      "text": "En sida med alla bokningar för personalen, inte för medlemmar",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
     }
   ]
 }

@@ -146,9 +146,14 @@ test("a role under a negation or an exclusion is never granted for, and letting 
   ]) {
     const auth = { roles: [{ name: "admin" }, { name: "staff" }, { name: "member" }] } as never;
     expect(rolesFor(auth, request), request).not.toContain("member");
-    // The plan that keeps members out passes; one that lets them in goes back.
-    const kept = checkAudience(files, withPage, request);
-    expect(kept && "problem" in kept, request).toBe(false);
+    // The plan that keeps members out (staff in, as some wordings ask) passes; one that lets
+    // members in goes back.
+    const kept = checkAudience(
+      files,
+      request.includes("admin-only") ? withPage : granting(withPage, "staff", "today", staffPages),
+      request,
+    );
+    expect(Boolean(kept && "problem" in kept), request).toBe(false);
     const wrong = checkAudience(files, memberIn, request);
     expect(wrong && "problem" in wrong && wrong.problem, request).toMatch(
       /not for member, but member can open "Today" \(today\)/,
@@ -243,4 +248,24 @@ test("the wordings a second reviewer named: articles, 'only' after the role, con
   // A bare "no" or "without" about something else limits nothing.
   expect(rolesFor(auth, "a page of bookings for members with no sidebar")).toEqual(["member"]);
   expect(rolesFor(auth, "a page of bookings for staff without pagination")).toEqual(["staff"]);
+});
+
+test("an exclusion takes a role out, not the roles named positively", () => {
+  const auth = { roles: [{ name: "admin" }, { name: "staff" }, { name: "member" }] } as never;
+  const withPage = apply(files, "addPage", { page: "today", model: "Booking" });
+  for (const request of [
+    "a page of all bookings for staff, excluding members",
+    "a page of all bookings for staff, not for members",
+  ]) {
+    expect(rolesFor(auth, request), request).toEqual(["staff"]);
+    // Staff asked for and shut out: the missing access, as T760 asks.
+    const shut = checkAudience(files, withPage, request);
+    expect(shut && "problem" in shut && shut.problem, request).toMatch(/staff, who cannot open/);
+  }
+  const sv = { roles: [{ name: "admin" }, { name: "personal" }, { name: "medlem" }] } as never;
+  for (const request of [
+    "en sida med alla bokningar för personalen, utom medlemmar",
+    "en sida med alla bokningar för personalen, inte för medlemmar",
+  ])
+    expect(rolesFor(sv, request), request).toEqual(["personal"]);
 });

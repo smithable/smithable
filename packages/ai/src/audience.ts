@@ -4,6 +4,10 @@
 // note asks about it; a page only the administrator opens is said so; and a plan that only adds a
 // page the app already has (the same kind of record, the same filter, for the same people) is
 // answered with that page instead.
+//
+// A limit to know: this is a rule over words and will miss wordings. Its misses must fall on the side
+// of asking in the note, never of demanding a grant; and the proposal always lists the access it
+// changes, for the person to see before it is applied.
 import {
   type AuthIR,
   humanize,
@@ -90,15 +94,18 @@ export function rolesFor(auth: AuthIR, request: string): string[] {
       `(?:^|[^\\p{L}])${r}\\s+(?:ska|skall|kan|får)\\s+(?:se|få|ha|använda|öppna|läsa)(?![\\p{L}])`,
     ].some((pattern) => new RegExp(pattern, "u").test(text));
   });
+  // Only plainly positive wording makes an audience (T781): the roles named so, minus those the
+  // request keeps out (an exclusion takes roles out, it does not cancel the others: "for staff,
+  // excluding members" still asks for staff), and limited to what "only" names when it says so.
+  const { excluded, only } = rolesExcluded(auth, request);
+  const kept = found.filter((r) => !excluded.includes(r) && (!only.length || only.includes(r)));
   // Roles from more than one phrase ("bookings for members, for staff"): the words do not settle
   // who it is for, so no grant is asked for and the note asks. One list in one phrase ("for staff
-  // and members") is one audience.
-  const oneList = listed.some((list) => found.every((name) => inList(list, `${forms(name)}`)));
-  const plain = found.length > 1 && !oneList ? [] : found;
-  // Only plainly positive wording makes an audience (T781): never a role under a negation, and
-  // with a negation or "only" about who may see it, none beyond the roles "only" names.
-  const { excluded, only, limited } = rolesExcluded(auth, request);
-  return plain.filter((r) => !excluded.includes(r) && (!limited || only.includes(r)));
+  // and members") is one audience. A role kept out is no phrase of the audience ("for staff, not
+  // for members").
+  const oneList = listed.some((list) => kept.every((name) => inList(list, `${forms(name)}`)));
+  const plain = kept.length > 1 && !oneList ? [] : kept;
+  return plain;
 }
 
 /**
@@ -150,12 +157,12 @@ const ONLY = "(?<!not\\s)(?<!inte\\s)(?:only|just|solely|bara|endast|enbart)";
  * Who a request keeps out of a page and whom it limits it to (T781): a role under a negation or an
  * exclusion anywhere in it ("not for members", "everyone except members", "hidden from members",
  * "inte för medlemmar", "utom medlemmar"), and the roles "only" names ("only for staff",
- * "staff-only", "admin-only", "bara för personalen"); `limited` when the request says either.
+ * "staff-only", "admin-only", "bara för personalen").
  */
 export function rolesExcluded(
   auth: AuthIR,
   request: string,
-): { excluded: string[]; only: string[]; limited: boolean } {
+): { excluded: string[]; only: string[] } {
   const text = request.toLowerCase();
   const the = "(?:(?:the|our|all|any|every|de|alla|våra|vår|några)\\s+)?";
   const roles = auth.roles.map((r) => r.name);
@@ -180,16 +187,7 @@ export function rolesExcluded(
       (name === "admin" &&
         /(?:^|[^\p{L}])(?:admin|administrators?)[- ]only(?![\p{L}])/u.test(text)),
   );
-  const limited =
-    excluded.length > 0 ||
-    only.length > 0 ||
-    // A negation about who may see it, whoever it names ("not for everyone", "inte för alla"):
-    // only with its word of access, never a bare "no" or "without" ("no sidebar").
-    /(?:^|[^\p{L}])(?:(?:not|never)\s+(?:for|to|(?:visible|shown|open|available|accessible)\s+to)|(?:inte|ej)\s+(?:för|åt))\s/u.test(
-      text,
-    ) ||
-    /(?:^|[^\p{L}])(?:admin|administrators?)[- ]only(?![\p{L}])/u.test(text);
-  return { excluded, only, limited };
+  return { excluded, only };
 }
 
 /** Whether a request asks for another page outright, beside one the app has. */
