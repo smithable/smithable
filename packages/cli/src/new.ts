@@ -392,11 +392,10 @@ export async function create(
     // description below (keptPrivate), rather than a refusal that sends the person to build the
     // starter alone, public as it is.
     const starterOnly = providers.length === 0 && !website;
-    io.out(
-      starterOnly
-        ? `No model is set up: the ${name} starter as it is, for your description.\n`
-        : `Starting from the ${name} starter.\n`,
-    );
+    // Said as what the person got and what not (Fable M647): the starter unchanged, not an app made
+    // from the description; in Studio too, as the first of the draft's assumptions.
+    const unchanged = `No model is set up, so this is the ${name} starter unchanged, not an app made from your description. To have it drafted, set up a model (docs.smithable.ai/ai.html).`;
+    io.out(starterOnly ? `${unchanged}\n` : `Starting from the ${name} starter.\n`);
     // What a public starter means, said before the draft; without one, what was done is said with
     // the assumptions below.
     if (starter === undefined && !starterOnly) {
@@ -407,7 +406,19 @@ export async function create(
     // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
     options.onStage?.("drafting");
     const draft: Awaited<ReturnType<typeof draftProject>> = starterOnly
-      ? { kind: "draft", files, usage: [] }
+      ? {
+          kind: "draft",
+          files,
+          usage: [],
+          assumptions: [
+            {
+              part: "app",
+              question: "What was made?",
+              chosen: unchanged,
+              options: ["Set up a model and describe the app again"],
+            },
+          ],
+        }
       : process.env.SMITHABLE_DRAFT === "files"
         ? await draftProject({ description, starter: files, providers })
         : await draftProjectByOperations({

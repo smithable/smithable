@@ -213,7 +213,13 @@ test("without a model, new --describe builds the starter as private as the descr
     ]) {
       const made = await build(description);
       expect(made.read, description).toEqual([]);
-      expect(made.told).toMatch(/No model is set up: the records starter as it is/);
+      expect(made.told).toMatch(
+        /No model is set up, so this is the records starter unchanged, not an app made from your description/,
+      );
+      // In Studio, the first of the assumptions; the kept-private one after it.
+      expect(made.assumed[0]).toMatch(
+        /^No model is set up, so this is the records starter unchanged/,
+      );
       expect(made.assumed.join(" ")).toMatch(/Nobody: kept private/);
     }
     // A description that asks for visitors keeps the starter public.
