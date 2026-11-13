@@ -19,7 +19,8 @@ pages:
 }).ir;
 if (!ir) throw new Error("spec");
 const auth = (text: string) =>
-  validateAuth({ path: "smithable.auth.yml", text: `smithableAuth: 0.1\n${text}` }, ir).auth as AuthIR;
+  validateAuth({ path: "smithable.auth.yml", text: `smithableAuth: 0.1\n${text}` }, ir)
+    .auth as AuthIR;
 
 test("no sign-in: what anyone can use, and that nothing else works for anyone until it has sign-in", () => {
   const open = auth(
