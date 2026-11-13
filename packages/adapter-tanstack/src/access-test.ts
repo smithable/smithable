@@ -18,6 +18,7 @@ import {
   USER_MODEL,
 } from "@smithable/core";
 import { askedKeys } from "./actions.js";
+import { systemKeys } from "./data.js";
 import { aggregatedLists } from "./formulas.js";
 import { isTestLength, TEST_MINUTES, testStart } from "./occupies.js";
 import { creatorOwned, dataKey, lists as listFields, literal, references } from "./shared.js";
@@ -371,6 +372,68 @@ ${Object.entries(expected(access, role))
 ${tests.join("\n\n")}
 });`;
   });
+  // What the app keeps about a record itself (its trash, its payment hold) is never taken from
+  // values, on a create or a change, even from an administrator (T817).
+  for (const model of signedIn ? ir.models : []) {
+    const keys = systemKeys(model);
+    if (!keys.length) continue;
+    const data = `${camel(model.name)}Data`;
+    const table = `schema.${camel(plural(model.name))}`;
+    const given = `{ ${keys
+      .map(
+        (k) =>
+          `${k}: ${k === "deletedBy" ? "stranger.id" : k === "deletedWith" ? '"Other:1"' : "new Date()"}`,
+      )
+      .join(", ")} }`;
+    const none = `{ ${keys.map((k) => `${k}: null`).join(", ")} }`;
+    const picked = `{ ${keys.map((k) => `${k}: ${table}.${k}`).join(", ")} }`;
+    describes.push(`describe(${JSON.stringify(`${model.name}: what the app keeps itself`)}, () => {
+  test("is not taken from a create or a change", async () => {
+    const viewer = signedIn("admin");
+    const made = (await ${data}.create(viewer, { ...${camel(model.name)}Values(viewer.id${sendsFiles(model) ? ", viewer.id" : ""}), ...${given} } as never)) as { id: number };
+    expect(db.select(${picked}).from(${table}).where(eq(${table}.id, made.id)).get()).toEqual(${none});
+    await ${data}.update(viewer, made.id, ${given} as never);
+    expect(db.select(${picked}).from(${table}).where(eq(${table}.id, made.id)).get()).toEqual(${none});
+  });
+});`);
+  }
+  // Erasing a trashed record for good takes what is in the trash pointing to it, only when the
+  // viewer may delete each of those too: another person's trashed record stops it (T817).
+  for (const parent of signedIn ? ir.models.filter((m) => m.trash) : []) {
+    const del = modelAccess(parent, auth).delete;
+    for (const child of ir.models.filter((m) => m.trash)) {
+      const via = child.fields.find(
+        (f) =>
+          f.type.kind === "relation" && !f.type.many && f.type.model === parent.name && f.required,
+      );
+      if (!via || child === parent) continue;
+      const childDelete = modelAccess(child, auth).delete;
+      // A role that deletes its own records of the parent, and not everyone's of the child.
+      const role = auth.roles.find(
+        (r) =>
+          del.owner &&
+          !del.roles.includes(r.name) &&
+          !childDelete.public &&
+          !childDelete.roles.includes(r.name),
+      )?.name;
+      if (!role) continue;
+      const pt = `schema.${camel(plural(parent.name))}`;
+      const ct = `schema.${camel(plural(child.name))}`;
+      describes.push(`describe(${JSON.stringify(`erasing a ${parent.name} for good`)}, () => {
+  test("another person's trashed ${child.name} pointing to it stops it", async () => {
+    const viewer = signedIn(${JSON.stringify(role)});
+    const parent = insert${parent.name}(viewer.id);
+    const child = insert${child.name}(stranger.id, { ${via.name}Id: parent.id });
+    db.update(${pt}).set({ deletedAt: new Date() }).where(eq(${pt}.id, parent.id)).run();
+    db.update(${ct}).set({ deletedAt: new Date() }).where(eq(${ct}.id, child.id)).run();
+    expect(await can(() => ${camel(parent.name)}Data.erase(viewer, [parent.id]))).toBe(false);
+    expect(db.select({ id: ${ct}.id }).from(${ct}).where(eq(${ct}.id, child.id)).get()).toBeDefined();
+    expect(db.select({ id: ${pt}.id }).from(${pt}).where(eq(${pt}.id, parent.id)).get()).toBeDefined();
+  });
+});`);
+      break;
+    }
+  }
   // A standard action: who may run it on others' records and on their own (whoever may edit,
   // narrowed by "allow"), and that it is refused on a record its condition does not fit.
   // A condition on a computed field (LAST of a list, record-rules.md §5) is fitted by related
