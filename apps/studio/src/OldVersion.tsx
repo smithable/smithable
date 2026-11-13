@@ -67,7 +67,7 @@ export function OldVersion({
       <div className="m-auto max-w-md space-y-3 p-6 text-center text-sm">
         <p>
           The old version is open in a tab of its own, where you can sign in and click through it.
-          Back to now closes it and removes the copy.
+          Back to now removes the copy; close its tab when you are done there.
         </p>
         <Button variant="ghost" onClick={onOpenAgain}>
           Show its tab
