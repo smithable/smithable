@@ -539,16 +539,14 @@ export function fileHeaders(stored: StoredFile): Record<string, string> {
 }
 
 /**
- * A record's stored picture or document as the file routes send it, or "Not found": cached by
- * browsers for a day when anyone may read the model (the address changes with the content);
- * otherwise asked again each time (no-cache, with its ETag: a short 304 when it has not
- * changed), so after a sign-out or access taken away the browser no longer shows it.
+ * A record's stored picture or document as the file routes send it, or "Not found": asked again
+ * each time (no-cache, with its ETag: a short 304 when it has not changed), so a replaced or
+ * removed file, or one after a sign-out or access taken away, is no longer shown.
  */
 export function uploadResponse(
   request: Request,
   kind: "picture" | "file",
   stored: unknown,
-  everyone: boolean,
 ): Response {
   const found = stored as (Picture & StoredFile) | null | undefined;
   const bytes = found && (kind === "picture" ? readPicture(found) : readFile(found));
@@ -558,7 +556,9 @@ export function uploadResponse(
     ...(kind === "picture"
       ? { "Content-Type": "image/webp", "X-Content-Type-Options": "nosniff" }
       : fileHeaders(found)),
-    "Cache-Control": everyone ? "public, max-age=86400" : "private, no-cache",
+    // The address names the record, not the content: a replaced or removed file, or a demo
+    // visitor's own, must not be kept by a cache in between. The ETag makes asking again cheap.
+    "Cache-Control": "private, no-cache",
     ETag: tag,
   };
   if (request.headers.get("if-none-match") === tag)

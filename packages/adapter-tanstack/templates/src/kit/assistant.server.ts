@@ -5,6 +5,7 @@
 import { type AskKind, readQuestion, smallTalk, suggestions, type Turn } from "./ask";
 import { asked, foundNone, type Spread, spreadField, spreadWords } from "./asked";
 import { ungrounded } from "./grounded";
+import { log, refusal } from "./log.server";
 import { type Offer, offered } from "./tools";
 import { w } from "./words";
 import { wallTime } from "./zoned";
@@ -161,7 +162,7 @@ async function answered(question: string, parts: Parts): Promise<Answer> {
     const kind = parts.kinds.find((k) => k.model === step.args.kind);
     if (!kind) return;
     // Not for the trash: its records are not the live ones a spread would count.
-    const counted = (step.tool === "find" || step.tool === "measure") && !step.args.trash;
+    const counted = (step.tool === "find" || step.tool === "measure") && !step.args.trashed;
     const field =
       counted && foundNone(step.result) ? spreadField(kind, step.args.where) : undefined;
     let split: Spread | undefined;
@@ -191,7 +192,9 @@ async function answered(question: string, parts: Parts): Promise<Answer> {
         step.proposed = true;
       } else step.result = (await parts.call(tool, args)) as Json;
     } catch (error) {
-      step.error = error instanceof Error ? error.message : String(error);
+      // The app's own refusals in its words; anything else (a database's, a file's) is logged and
+      // said plainly, never shown or sent to the model as it was.
+      step.error = refusal(error).message;
     }
     // The words about the result never cost the result: a fault here is swallowed.
     if (step.result !== undefined) await explain(step).catch(() => undefined);
@@ -273,7 +276,15 @@ async function answered(question: string, parts: Parts): Promise<Answer> {
       usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
     if (!response.ok) {
-      const said = body.error?.message ?? w.modelAnswered(response.status);
+      // The model's own words only for 402 (the host's questions used up, said for people); any
+      // other answer's text may name the key or the account: logged, and said by its status.
+      if (response.status !== 402 && body.error?.message)
+        log.warn("The assistant's model refused", {
+          status: response.status,
+          said: body.error.message,
+        });
+      const said =
+        (response.status === 402 && body.error?.message) || w.modelAnswered(response.status);
       // 402: the host's questions are used up; the rules still answer what they read.
       const note = response.status === 402 ? `${said} ${w.rulesStillAnswer}` : said;
       return done({ source: steps.length ? "ai" : "none", note, tokens });
@@ -326,8 +337,18 @@ async function answered(question: string, parts: Parts): Promise<Answer> {
           .slice(0, RESULT_MAX)}</untrusted_record_data>`,
       });
     }
-    // A proposed change ends the question: the person decides, not another model call.
-    if (proposed) return done({ source: "ai", text, tokens });
+    // A proposed change ends the question: the person decides, not another model call. What the
+    // words beside it claim is checked all the same, and said when the records do not bear it out.
+    if (proposed) {
+      const earlier = [...(parts.turns ?? []).map((t) => t.question), question];
+      const why = text ? ungrounded(text, earlier.join("\n"), steps, parts.kinds) : undefined;
+      return done({
+        source: "ai",
+        text,
+        tokens,
+        ...(why ? { note: w.notConfirmed, unconfirmed: true } : {}),
+      });
+    }
   }
   return done({ source: "ai", note: w.stoppedAfter(ROUNDS), tokens });
 }

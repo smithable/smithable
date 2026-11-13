@@ -13,7 +13,10 @@ import { generateApp } from "./generate.js";
 // The kit file is the app's own; it is loaded as the app would have it, not compiled here.
 const path: string = "../templates/src/kit/assistant.server.ts";
 const { answer } = (await import(path)) as {
-  answer: (question: string, parts: Record<string, unknown>) => Promise<{ note?: string }>;
+  answer: (
+    question: string,
+    parts: Record<string, unknown>,
+  ) => Promise<{ note?: string; unconfirmed?: boolean }>;
 };
 
 const spec = `smithable: 0.1
@@ -139,4 +142,103 @@ test("tool results returned to the model are wrapped in <untrusted_record_data> 
   // No tag inside the records: every "<" in them is escaped, so the app's own two are the only ones.
   expect(toolMsg?.content.match(/</g)).toHaveLength(2);
   expect(toolMsg?.content).toContain("\\u003c/untrusted_");
+});
+
+test("only the app's own refusals and a used-up allowance are shown in their words (T812)", async () => {
+  const offer = {
+    summary: "Orders.",
+    tools: [
+      {
+        name: "find",
+        description: "Find orders.",
+        inputSchema: { type: "object", properties: { kind: { type: "string" } } },
+        annotations: { readOnlyHint: true },
+      },
+    ],
+  };
+  const model = { url: "http://model.invalid", key: "k", model: "m", person: "p" };
+  // A tool that fails in the database: the model is told plainly, never the SQL.
+  const bodies: { messages: { role: string; content: string }[] }[] = [];
+  let turn = 0;
+  await answer("find orders", {
+    offer,
+    kinds: [],
+    call: async () => {
+      throw new Error("SQLITE_ERROR: no such column: secret_notes in SELECT * FROM orders");
+    },
+    model,
+    fetch: async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return new Response(
+        JSON.stringify(
+          ++turn === 1
+            ? {
+                choices: [
+                  {
+                    message: {
+                      tool_calls: [
+                        { id: "c1", function: { name: "find", arguments: '{"kind":"orders"}' } },
+                      ],
+                    },
+                  },
+                ],
+              }
+            : { choices: [{ message: { content: "Sorry." } }] },
+        ),
+      );
+    },
+  });
+  expect(JSON.stringify(bodies[1])).not.toContain("SQLITE");
+  // The model's host refusing the key: said by its status, not in its words.
+  const refused = (status: number) =>
+    answer("find orders", {
+      offer,
+      kinds: [],
+      call: async () => null,
+      model,
+      fetch: async () =>
+        new Response(
+          JSON.stringify({ error: { message: "Incorrect API key provided: sk-abc123" } }),
+          { status },
+        ),
+    });
+  expect((await refused(401)).note).not.toContain("sk-abc123");
+  // 402 is the host's own word for questions used up, said for people: shown.
+  expect((await refused(402)).note).toContain("Incorrect API key provided");
+});
+
+test("the words beside a proposed change are checked against the records too (T812)", async () => {
+  const offer = {
+    summary: "Orders.",
+    tools: [
+      {
+        name: "add",
+        description: "Add an order.",
+        inputSchema: { type: "object", properties: { kind: { type: "string" } } },
+      },
+    ],
+  };
+  const said = await answer("add an order", {
+    offer,
+    kinds: [],
+    call: async () => null,
+    propose: async () => ({ id: "p1", card: {} }),
+    model: { url: "http://model.invalid", key: "k", model: "m", person: "p" },
+    fetch: async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: "The balance is 4200, so I prepared an order for 5000.",
+                tool_calls: [
+                  { id: "c1", function: { name: "add", arguments: '{"kind":"orders"}' } },
+                ],
+              },
+            },
+          ],
+        }),
+      ),
+  });
+  expect(said).toMatchObject({ unconfirmed: true });
 });
