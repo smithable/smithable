@@ -1,6 +1,14 @@
 export { describeChange } from "./change-words.js";
 export type { ContextOptions, ContextSlice } from "./context.js";
 export { buildContext, estimateTokens } from "./context.js";
+export {
+  appParts,
+  DOCS_SITE,
+  type DocsHit,
+  type DocsIndex,
+  searchDocs,
+  searchWords,
+} from "./docs-search.js";
 export type { PhraseMatch, PhraseOperation, PhraseRefusal } from "./phrases.js";
 export { matchRequest, refusalOf } from "./phrases.js";
 export { type Part, present } from "./present.js";
