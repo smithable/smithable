@@ -27,6 +27,7 @@ import {
 import { maintenanceInfo } from "./maintenance.js";
 import { lostFields } from "./op.js";
 import { loadPlugins } from "./plugins.js";
+import { privacyStates } from "./privacy-review.js";
 import type { Level, Result } from "./security.js";
 import { loadSpec } from "./validate.js";
 import { assetReview } from "./website-assets.js";
@@ -432,6 +433,8 @@ export function releaseReview(dir: string) {
     latestDeployment?.run !== baseline?.run || latestDeployment?.at !== baseline?.at;
   return {
     assets: assetReview(dir),
+    // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
+    privacy: privacyStates(dir),
     baseline: baseline?.at,
     maintenance: maintenanceInfo(dir),
     comparison:

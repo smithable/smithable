@@ -1,17 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type ReleaseReview as Review } from "./api";
 import { Button } from "./ui";
+
+/** The release review as the server reads it now, or why it could not be read. */
+const read = (setReview: (r: Review) => void, setError: (e: string) => void) =>
+  api
+    .releaseReview()
+    .then(setReview)
+    .catch((error: Error) => setError(error.message));
+
 export function ReleaseReview({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [review, setReview] = useState<Review>();
   const [error, setError] = useState<string>();
+  const [refused, setRefused] = useState<string>();
+  const load = () => read(setReview, setError);
   useEffect(() => {
     dialog.current?.showModal();
-    void api
-      .releaseReview()
-      .then(setReview)
-      .catch((error: Error) => setError(error.message));
+    void read(setReview, setError);
   }, []);
+  // The owner reads the privacy page and says so: the facts as they are now, today (UTC).
+  const reviewPrivacy = async (page: string, facts: string) => {
+    setRefused(undefined);
+    const on = new Date().toISOString().slice(0, 10);
+    const result = await api
+      .operation("reviewPrivacyPage", { page, facts, on })
+      .catch((e: Error) => ({ ok: false, output: e.message }));
+    if (!result.ok) setRefused(result.output);
+    await load();
+  };
   const passed =
     review?.checks?.level === "release" &&
     review.checks.current &&
@@ -62,6 +79,42 @@ export function ReleaseReview({ onClose }: { onClose: () => void }) {
                 </>
               )}
             </section>
+            {review.privacy && review.privacy.length > 0 && (
+              <section className="space-y-2" aria-label="Privacy page">
+                <h3 className="font-semibold">Privacy page</h3>
+                {review.privacy.map((p) => (
+                  <div key={p.page} className="space-y-1" data-privacy={p.state}>
+                    <p>
+                      {p.state === "reviewed"
+                        ? `You reviewed the description of the app on the ${p.page} page on ${p.on}.`
+                        : p.state === "changed"
+                          ? `The description of the app on the ${p.page} page changed since your review on ${p.on}.`
+                          : `The description of the app on the ${p.page} page has not been reviewed yet.`}
+                    </p>
+                    {p.changed && (
+                      <ul className="list-disc pl-5">
+                        {p.changed.map((part) => (
+                          <li key={part}>{part}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {p.state !== "reviewed" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted">Read it in the preview first.</span>
+                        <Button onClick={() => void reviewPrivacy(p.page, p.facts)}>
+                          {p.state === "changed" ? "Review it again" : "Review it"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {refused && <p role="alert">{refused}</p>}
+                <p className="text-sm text-muted">
+                  Reviewing records that you read this description as it is now. The page says so
+                  until it changes; it is not legal advice.
+                </p>
+              </section>
+            )}
             <section className="space-y-2">
               <h3 className="font-semibold">Migration impact</h3>
               {review.comparison !== "available" ? (

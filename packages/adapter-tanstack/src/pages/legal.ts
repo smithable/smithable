@@ -230,6 +230,9 @@ export function privacyFacts(page: LegalPageIR, ctx: GenContext) {
   };
 }
 
+/** Every fact the privacy page can describe, by its key: what the review compares part by part. */
+export type PrivacyFactKey = keyof ReturnType<typeof privacyFacts>;
+
 /** The page's sentences in the app's language, as the kit's words file writes them (legal*). */
 function legalSentences(language: string): string {
   // The kit's own default (English) for a language it has no file for, as it falls back itself.

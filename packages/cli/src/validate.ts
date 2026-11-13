@@ -48,6 +48,7 @@ import {
 import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
 import { loadPlugins } from "./plugins.js";
+import { contextFacts, reviewsFor } from "./privacy-review.js";
 
 /**
  * Reads and validates the spec with its companions: smithable.auth.yml (required) and,
@@ -354,7 +355,7 @@ function privacyFindings(
   // The privacy page's completeness (legal-page.md §6.3): what is missing, and its review.
   const contentFile = join(dirname(path), "smithable.content.yml");
   const contextText = existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined;
-  const analytics = contextText ? analyticsOf(contextText) : undefined;
+  const { analytics } = contextFacts(contextText);
   const privacy = privacyCheck(
     ir,
     auth,
@@ -363,16 +364,7 @@ function privacyFindings(
     { analytics: Boolean(analytics) },
   );
   if (auth)
-    for (const r of privacyReviews(ir, {
-      smithableVersion: "0.0.0",
-      auth,
-      ...(content ? { content } : {}),
-      ...(ux ? { ux } : {}),
-      ...(analytics ? { analytics } : {}),
-      ...(paymentProviderOf(contextText)
-        ? { paymentProvider: paymentProviderOf(contextText) }
-        : {}),
-    }))
+    for (const r of reviewsFor(ir, auth, content, ux, contextText))
       if (r.state !== "reviewed")
         privacy.push({
           severity: "warning",

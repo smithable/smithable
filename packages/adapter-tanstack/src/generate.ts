@@ -53,7 +53,7 @@ import { CUSTOM_PROPS, customPageStub, customSectionStub } from "./pages/custom.
 import { activityModule, hasInspector } from "./pages/data.js";
 import { PAGE_GENERATORS, pageRoutes } from "./pages/index.js";
 import { siteModule } from "./pages/landing.js";
-import { privacyFingerprint } from "./pages/legal.js";
+import { privacyFacts, privacyFingerprint } from "./pages/legal.js";
 import { indexRoute, pagesModule, robotsRoute, rootRoute, sitemapRoute } from "./pages/root.js";
 import { paymentRoutes, paymentsFunctions, paymentsServerModule } from "./payments.js";
 import { manifest, pushModule, SERVICE_WORKER, smsModule } from "./push.js";
@@ -120,6 +120,8 @@ export function privacyReviews(
   facts: string;
   reviewed?: { facts: string; on: string };
   state: "reviewed" | "changed" | "never";
+  /** What the page describes now, as the files give it: what is compared with the reviewed. */
+  described: Record<string, unknown>;
 }[] {
   const ctx: GenContext = {
     ir: spec,
@@ -130,10 +132,15 @@ export function privacyReviews(
   };
   return spec.pages.flatMap((page) => {
     if (page.pattern.kind !== "legal") return [];
-    const facts = privacyFingerprint(page as Parameters<typeof privacyFingerprint>[0], ctx);
+    const legal = page as Parameters<typeof privacyFingerprint>[0];
+    const facts = privacyFingerprint(legal, ctx);
+    const described = JSON.parse(JSON.stringify(privacyFacts(legal, ctx))) as Record<
+      string,
+      unknown
+    >;
     const reviewed = ctx.t.privacy(page.id).reviewed;
     const state = !reviewed ? "never" : reviewed.facts === facts ? "reviewed" : "changed";
-    return [{ page: page.id, facts, ...(reviewed ? { reviewed } : {}), state }];
+    return [{ page: page.id, facts, ...(reviewed ? { reviewed } : {}), state, described }];
   });
 }
 
