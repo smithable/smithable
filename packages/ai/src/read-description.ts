@@ -125,6 +125,8 @@ const PEOPLE = set(`member neighbor neighbour customer anyone people everybody e
 const CONTRIBUTE = set(`post sell lend borrow offer claim book pick register apply upload
   submit swap themselves suggest vote rent buy pay reserve sign-up`);
 const LOOK = set("check browse see look view read follow find");
+// Whose records a look is at: the lookers' own, which they sign in to see.
+const OWN = set("their his her own");
 // What anyone may see.
 const OPEN = set("public site website online");
 const CLOSED = set("internal private");
@@ -243,7 +245,10 @@ export function readDescription(given: string): Reading {
       who.team++;
       as.push("team");
     }
-    if (LOOK.has(w)) {
+    // Looking at their own ("our clients see their invoices"): people who sign in, not visitors.
+    const after = words.slice(i + 1, i + 3).map((x) => x.toLowerCase());
+    if (LOOK.has(w) && after.some((x) => OWN.has(x))) as.push("own");
+    else if (LOOK.has(w)) {
       who.look++;
       as.push("looks");
     }

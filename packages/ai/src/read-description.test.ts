@@ -97,3 +97,16 @@ test("a language named, but not two together, asks which languages the app is in
   expect(asks("A booking app for my barbershop, in Swedish and English.")).toBe(false);
   expect(asks("A booking app for my barbershop.")).toBe(false);
 });
+
+test("people who see their own records sign in to see them; they are not visitors (T791)", () => {
+  for (const text of [
+    "A portal where our clients see their invoices and pay by card, and we track which are overdue.",
+    "A club where our members can check their bookings and their invoices.",
+    "A shop where customers view their own orders and track deliveries.",
+  ])
+    expect(readDescription(text).visitors, text).not.toBe("read");
+  // Looking without a possessive is still visitors looking.
+  expect(
+    readDescription("A tool library where neighbors browse the tools and borrow them.").visitors,
+  ).toBe("read");
+});
