@@ -383,9 +383,10 @@ export const userOptions = createServerFn().handler(async () => {
  * looked up as a request and not found).
  */
 export function userChoicesModule(): string {
-  return `${HEADER}import { asc, sql } from "drizzle-orm";
+  return `${HEADER}import { asc } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
+import { lookedFor, namesHolding } from "#/kit/people-match";
 import { BadInput } from "#/kit/refusal";
 
 /** Everyone who can be chosen in a User field, by name. */
@@ -398,15 +399,12 @@ export const userChoices = () =>
  * never an address.
  */
 export function peopleNamed(words: string): { id: string; name: string }[] {
-  const text = words.trim().toLowerCase();
-  if (text.length < 2) throw new BadInput("Give two letters or more of the name.");
-  return db
-    .select({ id: user.id, name: user.name })
-    .from(user)
-    .where(sql\`instr(lower(\${user.name}), \${text}) > 0\`)
-    .orderBy(asc(user.name))
-    .limit(10)
-    .all();
+  const text = lookedFor(words);
+  if (!text) throw new BadInput("Give two letters or more of the name.");
+  return namesHolding(
+    db.select({ id: user.id, name: user.name }).from(user).orderBy(asc(user.name)).all(),
+    text,
+  );
 }
 `;
 }

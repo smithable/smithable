@@ -32,9 +32,9 @@ test("the lookup gives id and name only, at most ten, and asks for two letters",
   );
   const choices = of("src/generated/user-choices.server.ts") ?? "";
   expect(choices).toContain(".select({ id: user.id, name: user.name })");
-  expect(choices).toContain(".limit(10)");
+  expect(choices).toContain("return namesHolding(");
   expect(choices).toContain(
-    'if (text.length < 2) throw new BadInput("Give two letters or more of the name.");',
+    'if (!text) throw new BadInput("Give two letters or more of the name.");',
   );
   // Never an address: the lookup selects no other column.
   const lookup = choices.slice(choices.indexOf("export function peopleNamed"));
@@ -69,4 +69,33 @@ test("a key whose role may set no user field gets nothing: an owner field counts
   const reader = offers.slice(offers.indexOf('"reader": {'));
   expect(offers.slice(0, offers.indexOf('"reader": {'))).toContain('"name": "people"');
   expect(reader.slice(0, reader.indexOf('"describe"'))).not.toContain('"name": "people"');
+});
+
+test("names outside ASCII are found as they are written, folded alike on both sides", async () => {
+  // The kit file itself, as the app runs it (outside this package's sources, so not type-checked here).
+  const kit = "../templates/src/kit/people-match.ts";
+  const { lookedFor, namesHolding } = (await import(/* @vite-ignore */ kit)) as {
+    lookedFor: (words: string) => string | undefined;
+    namesHolding: <T extends { name: string | null }>(people: T[], text: string) => T[];
+  };
+  const people = [
+    { id: "1", name: "Åsa Lind" },
+    { id: "2", name: "Örjan Berg" },
+    { id: "3", name: "Mats Ås" },
+    { id: "4", name: null },
+  ];
+  const find = (words: string) => namesHolding(people, lookedFor(words) ?? "").map((p) => p.id);
+  expect(find("ås")).toEqual(["1", "3"]);
+  expect(find("ÅS")).toEqual(["1", "3"]);
+  expect(find("örj")).toEqual(["2"]);
+  // Decomposed (o + combining diaeresis) as some keyboards send it.
+  expect(find("Örjan".toLowerCase())).toEqual(["2"]);
+  expect(lookedFor("å")).toBeUndefined();
+  expect(lookedFor("  ")).toBeUndefined();
+  expect(
+    namesHolding(
+      Array.from({ length: 30 }, (_, i) => ({ id: `${i}`, name: `Anna ${i}` })),
+      "an",
+    ),
+  ).toHaveLength(10);
 });

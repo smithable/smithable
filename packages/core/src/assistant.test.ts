@@ -391,4 +391,26 @@ test("people by name only for a key whose role may set a field that refers to a 
     ir,
   ).auth as AuthIR;
   expect(has(assistantOffer(ir, customersOnly, { role: "sales" }))).toBe(false);
+  // A user field the app fills (by: app) is never set in a form; one locked once made is set only
+  // when the record is added: a role that may only change the record does not look people up.
+  const filled = (rule: string, grants: string) => {
+    const model = validateSpec({
+      path: "smithable.yml",
+      text: spec.replace(
+        "      rush: bool\n",
+        `      rush: bool\n      handledBy: { type: User, ${rule} }\n`,
+      ),
+    }).ir as SpecIR;
+    const a = validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: shared\nroles: { admin: all, clerk: { pages: all, ${grants} } }\ndefaultRole: clerk\napi: { models: [Order], assistants: true }\n`,
+      },
+      model,
+    );
+    if (!a.auth) throw new Error(a.diagnostics.map((d) => d.message).join("\n"));
+    return has(assistantOffer(model, a.auth as AuthIR, { role: "clerk" }));
+  };
+  expect(filled("by: app", "create: [Order], write: [Order]")).toBe(false);
+  expect(filled("locked: true", "create: [Order], write: [Order]")).toBe(true);
 });

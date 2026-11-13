@@ -339,7 +339,8 @@ export function assistantOffer(
           !f.formula &&
           (f.name === model.ownedBy
             ? access.write.roles.includes(caller.role)
-            : k.may.add || k.may.change),
+            : // A field locked once made is set only when the record is added, as in the form.
+              k.may.add || (k.may.change && f.locked !== true)),
       );
     });
   if (setsPeople)
