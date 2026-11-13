@@ -40,6 +40,16 @@ export const writtenInEnglish = (text: string): boolean => writtenIn(text) === "
 /** Where a description is a page's (`new --from`, `read-page`): its first words. */
 export const PAGE_START = "The app behind a site like this one";
 
+/**
+ * A page's own language tag as its description's first line carries it ("[lang sv]"), from its
+ * `<html lang>` or `og:locale`: the primary subtag, lower case, when it is one.
+ */
+export const languageTag = (tag: string | undefined): string | undefined =>
+  /^([a-z]{2})(?:[-_][a-z0-9]+)*$/i.exec(tag?.trim() ?? "")?.[1]?.toLowerCase();
+
+/** The tag as the frame line writes it, or nothing. */
+export const tagged = (tag: string | undefined) => (tag ? ` [lang ${tag}]` : "");
+
 /** The question when a page's language is not the person's: which one the app's texts are in. */
 export function languageQuestion(site: Language, person: Language = "en") {
   return {
@@ -72,7 +82,13 @@ export function textLanguage(description: string): Language | undefined {
   );
   if (named) return named[0];
   const own = description.split("\n\nAnswers:\n")[0] ?? "";
-  return writtenIn(own.startsWith(PAGE_START) ? own.slice(own.indexOf("\n") + 1) : own);
+  if (!own.startsWith(PAGE_START)) return writtenIn(own);
+  // A page's words first; its own tag only where they cannot tell (little text, or a template's
+  // chrome in another language), never against them, and only for a language the kit has.
+  const frame = own.slice(0, own.indexOf("\n") >= 0 ? own.indexOf("\n") : own.length);
+  const tag = / \[lang ([a-z]{2})\]/.exec(frame)?.[1];
+  const kit = tag && tag in NAMES ? (tag as Language) : undefined;
+  return writtenIn(own.slice(frame.length + 1)) ?? kit;
 }
 
 /** A language's names as a description may write them: in English, in itself, in Finnish. */

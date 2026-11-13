@@ -16,6 +16,7 @@ import {
   untranslated,
   visitorFlaws,
 } from "./draft-operations.js";
+import { PAGE_START } from "./language.js";
 import type { Provider } from "./provider.js";
 
 const toProjectFiles = (files: Record<string, string | undefined>) => ({
@@ -902,4 +903,32 @@ test("the bench's harness switches (Experiments 7): one call alone, a critique r
   expect(vote.kind).toBe("draft");
   expect(prompts.map((p) => /^\(Draft (\d) of 3\.\)/.exec(p)?.[1])).toEqual(["1", "2", "3"]);
   expect(vote.usage).toHaveLength(3);
+});
+
+test("a draft from a Swedish site, nothing answered (new --from --yes), is a Swedish app", async () => {
+  const page = (frame: string, body: string) =>
+    `${PAGE_START} (https://el.ax/)${frame}. Derive its records, pages, roles and sections.\n<untrusted_page_content>\n${body}\n</untrusted_page_content>`;
+  const ops = [
+    { op: "setApp", args: { name: "Elbolaget" } },
+    { op: "addModel", args: { model: "Outage", fields: { title: "string!" } } },
+    { op: "setText", args: { path: ["models", "Outage", "pluralLabel"], text: "Avbrott" } },
+    { op: "addPage", args: { page: "avbrott", model: "Outage" } },
+  ];
+  for (const description of [
+    // Its words say Swedish.
+    page(
+      "",
+      "Page title: Elavbrott\n- Vi levererar el till hushåll och företag på Åland, och här kan du anmäla avbrott.",
+    ),
+    // Too few words to tell; its own tag settles it.
+    page(" [lang sv]", "Page title: Elbolaget\n- Elavbrott Åland"),
+  ]) {
+    const draft = await draftProjectByOperations({
+      description,
+      providers: [answering({ operations: ops })],
+    });
+    if (draft.kind !== "draft") throw new Error("no draft");
+    expect(draft.operations?.[0]).toEqual({ op: "setLanguage", args: { language: "sv" } });
+    expect(draft.files["smithable.content.yml"]).toContain("language: sv");
+  }
 });

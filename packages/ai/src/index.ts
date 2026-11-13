@@ -15,7 +15,9 @@ export {
 export {
   LANGUAGE_NAMES,
   languageQuestion,
+  languageTag,
   PAGE_START,
+  tagged,
   textLanguage,
   writtenIn,
 } from "./language.js";

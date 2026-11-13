@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { readPageCommand } from "./from-page.js";
-import { describeSiteFacts, extractSiteFacts, siteFactsResult } from "./site-facts.js";
+import {
+  describeSiteFacts,
+  extractSiteFacts,
+  parseSiteFacts,
+  siteFactsResult,
+} from "./site-facts.js";
 
 const url = "https://business.example/";
 describe("single-page factual context", () => {
@@ -196,4 +201,13 @@ test("explicitly different business URLs exclude their identity and loose contac
   );
   expect(result.facts.fields).toEqual([]);
   expect(result.tooLittle).toBe(true);
+});
+
+test("the page's own language tag is a fact, kept through parsing and carried in the description", () => {
+  const html = `<html lang="sv-SE"><head><title>Elbolaget</title></head><body><h1>Elavbrott</h1></body></html>`;
+  const facts = extractSiteFacts(html, "https://el.ax/");
+  expect(facts.language).toBe("sv");
+  expect(parseSiteFacts(JSON.parse(JSON.stringify(facts))).language).toBe("sv");
+  expect(parseSiteFacts({ ...facts, language: "not a tag" }).language).toBeUndefined();
+  expect(describeSiteFacts(facts).split("\n")[0]).toContain(" [lang sv].");
 });
