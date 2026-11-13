@@ -19,6 +19,7 @@ import { exec, execQuiet, type Io, lap, tool } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
+import { installing } from "./vite-cache.js";
 
 const RECORD = ".smithable/files.json";
 
@@ -235,7 +236,7 @@ export async function runTools(
     return code === 0;
   };
   lap("generate");
-  if (install && !run(["install", "--silent"])) return 1;
+  if (install && !installing(dir, () => run(["install", "--silent"]))) return 1;
   lap("install");
   if (schema) {
     const made = await createMigration(dir, migration);

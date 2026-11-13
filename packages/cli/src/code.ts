@@ -16,6 +16,7 @@ import { discardChanges, ensureRepository, git, uncommittedRefusal } from "./git
 import { exec, type Io } from "./io.js";
 import { projectIndex } from "./rules.js";
 import { loadSpec } from "./validate.js";
+import { installing } from "./vite-cache.js";
 
 /**
  * Something that writes code in a project, given instructions: Claude Code, or a command
@@ -352,7 +353,7 @@ function repair(dir: string, changed: string[]): string {
   }
   if (changed.some((p) => p.startsWith("node_modules/")))
     done.push(
-      exec("pnpm", ["install", "--force", "--frozen-lockfile"], dir) === 0
+      installing(dir, () => exec("pnpm", ["install", "--force", "--frozen-lockfile"], dir)) === 0
         ? "the packages were installed again"
         : "reinstall the packages with pnpm install --force",
     );
