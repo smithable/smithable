@@ -393,6 +393,18 @@ Between the beta and the launch: what the 2026-09-28 review found, fixed, and th
 - Random tests: a weekly long run, the undo round trip as a property, and the type check after random changes (#1087, #1091, #1094). An upgrade says what a destructive migration loses (#1092).
 - The stack: the sign-in library's security fixes (#1098), and TanStack Start and Vite bumps (#1099).
 
+**Progress (2026-11-11 to 2026-11-13):**
+- Studio's "What it does" writes every key of the spec through its operations: a kind of record's keys (#1128), schedules, occupancy and uniqueness (#1131), a page's lists and choices (#1132), sections and a page's look (#1134), timers, mail, payments, incoming, actions' meaning and the app's look (#1136), and Who can (#1137); which operation sets which key, with a coverage test (#1118). Custom code says where it stands, with Open in your editor (#1110); the Changes tab's unreachable forms are gone (#1111).
+- Studio: one receipt line on every change, who made it and what it cost (#1125), without amounts where the service pays for the model (#1151); free building paused is said in Smith's place (#1148), and the free level's limit beside Publish and share (#1158); every error report is shown and sent by hand, with the agreed notice (#1119, #1121); an old version can be looked at as a copy that reaches nothing outside (#1129, #1149).
+- The privacy page from the whole configuration, with the owner's review in the Release review (#1127, #1141, #1147).
+- Smith: a labelled set of 306 requests with a rule-tier test and a bench (#1139); rules with no wrong readings, bare undo and redo, greetings in Swedish and Finnish (#1142); the docs' and the app's parts found for every request (#1153); questions answered cheaply and better (#1161); who a new page is for, checked by rule before it is proposed (#1157).
+- Measured rounds: the benches answer with Claude Haiku and Sonnet by default, Mistral by name (#1154, #1165, #1166); Smith's scoreboard with the escalation's numbers, and a held-out set read only by the weekly round (#1159, #1162); what an app's assistant tools must refuse, as a role, a visitor and a signed-in person, with injections in records (#1156, #1160); first builds scored by rule against labelled facts, leaks apart (#1163).
+- First builds: the starter suggestion weighs who the app is for (#1164); a site's own language tag settles its language (#1155); an app with no sign-in says what anyone can use (#1168).
+- Hardening: spec text stays text in generated apps (#1112); app limits by network, and mail threads joined only from a known sender (#1116); only an administrator makes an administrator (#1115); Ask's own limit, private files asked for again, names that are object properties (#1117); a reference to a record that is not there is bad input (#1135); people by name for a key whose role may set a user field (#1138); replacing a list written one item per line keeps the next key (#1120).
+- Docs: every setting in one table, the operations the spec never named, the timers and queries pages (#1114); a managing role invites only within its own rights (#1133); Other projects by us (#1104).
+- Speed: settings, articles and conversation counts read only what they show (#1122, #1123); the app's dev server starts lighter (#1145, #1146).
+- CI and the stack: main's full check every four hours (#1124); merge-green updates a pull request that falls behind (#1113); nodemailer 10.4.1 for two address advisories, better-auth 1.7.22 and Vite 8.3.8 (#1140); superseded benchmark folders removed (#1126); the visual test stops its server (#1150).
+
 ---
 
 ## Later (not before M16)
