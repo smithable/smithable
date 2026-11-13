@@ -103,7 +103,9 @@ const browser = await chromium.launch();
 const context = await browser.newContext({
   viewport: size,
   deviceScaleFactor: 2,
-  recordVideo: { dir: opts.out, size: { width: size.width * 2, height: size.height * 2 } },
+  // The video at the viewport size: at twice it, Playwright put most frames at the viewport size in
+  // the top-left corner of a grey canvas and only some at full size (2026-11-13).
+  recordVideo: { dir: opts.out, size },
   colorScheme: "light",
   timezoneId: "Europe/Mariehamn",
 });
