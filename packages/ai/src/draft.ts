@@ -43,16 +43,19 @@ export type Draft =
 
 const FILES = ["smithable.yml", "smithable.auth.yml", "smithable.content.yml", "smithable.ux.yml"];
 
+/** How many of a description's words (longer than three letters) a starter's files hold. */
+export function starterScore(description: string, files: SpecFiles): number {
+  const wanted = new Set(words(description).map((w) => w.toLowerCase()));
+  const known = new Set(words(Object.values(files).join(" ")).map((w) => w.toLowerCase()));
+  return [...wanted].filter((w) => w.length > 3 && known.has(w)).length;
+}
+
 /**
  * The starter whose spec shares the most words with the description, e.g. "a booking site for
  * a yoga studio" → booking. Deterministic: no model needed to pick where to start.
  */
 export function closestStarter(description: string, starters: Record<string, SpecFiles>): string {
-  const wanted = new Set(words(description).map((w) => w.toLowerCase()));
-  const score = (files: SpecFiles) => {
-    const known = new Set(words(Object.values(files).join(" ")).map((w) => w.toLowerCase()));
-    return [...wanted].filter((w) => w.length > 3 && known.has(w)).length;
-  };
+  const score = (files: SpecFiles) => starterScore(description, files);
   const names = Object.keys(starters);
   const best = names.reduce(
     (b, name) => (score(starters[name] ?? {}) > score(starters[b] ?? {}) ? name : b),
