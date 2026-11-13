@@ -19,6 +19,7 @@ import { createServer } from "node:net";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { tool } from "./io.js";
 
 /** Uploads are copied for the old version only up to this size in all; above it, none. */
 export const UPLOADS_MAX = 200 * 1024 * 1024;
@@ -186,7 +187,9 @@ export async function openOldVersion(
       cpSync(uploads, join(dataDir, "uploads"), { recursive: true, dereference: true });
       record.pictures = "today";
     }
-    const child = spawn("pnpm", ["exec", "vite", "dev", "--port", String(port), "--strictPort"], {
+    // The worktree's own vite, started directly so it leads its process group and closing stops
+    // it: pnpm exec would start it in a group of its own, out of reach.
+    const child = spawn(...tool(folder, "vite", ["dev", "--port", String(port), "--strictPort"]), {
       cwd: folder,
       env,
       detached: true,
