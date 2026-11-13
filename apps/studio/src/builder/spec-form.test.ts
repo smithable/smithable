@@ -180,6 +180,12 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.auth.yml", ["public", "read"], ["Order"]],
     ["smithable.auth.yml", ["roles", "sales"], "all"],
     ["smithable.auth.yml", ["roles", "sales", "write"], ["Order"]],
+    ["smithable.auth.yml", ["signIn", "selfSignUp"], false],
+    ["smithable.auth.yml", ["signIn", "providers"], ["email"]],
+    ["smithable.auth.yml", ["signIn", "allowedDomains"], ["acme.com"]],
+    ["smithable.auth.yml", ["admins"], ["a@example.com"]],
+    ["smithable.auth.yml", ["assistant"], undefined],
+    ["smithable.auth.yml", ["api"], undefined],
     ["smithable.yml", ["app", "intent"], "Bookings without phone calls"],
     ["smithable.yml", ["models", "Order", "description"], "One order"],
     ["smithable.yml", ["models", "Order", "intent"], undefined],
@@ -618,4 +624,93 @@ test("the whole app's look goes through its operations", () => {
   ]);
   // Motion's "none" is no motion at all, so taking the key away stays with editSpec.
   expect(operationFor(u, ["theme", "motion"], undefined)).toBeUndefined();
+});
+
+test("Who can: sign-in, the administrators, the roles, Ask and the API, each through its operation", () => {
+  const a = "smithable.auth.yml";
+  const auth = {
+    signIn: { providers: ["email"], selfSignUp: false },
+    admins: ["owner@example.com"],
+    roles: { admin: "all", sales: { description: "Sells", read: ["Order"] }, member: {} },
+    assistant: { for: ["sales"], may: "change" },
+    api: { models: ["Order"], actions: ["ship"], assistants: { delete: true } },
+  };
+  expect(operationFor(a, ["signIn", "selfSignUp"], undefined)).toEqual([
+    "setSignUp",
+    { who: "anyone" },
+  ]);
+  expect(operationFor(a, ["signIn", "selfSignUp"], false)).toEqual([
+    "setSignUp",
+    { who: "invited" },
+  ]);
+  expect(operationFor(a, ["signIn", "providers"], ["email", "google"])).toEqual([
+    "setProviders",
+    { providers: ["email", "google"] },
+  ]);
+  // Without providers there is no sign-in: not a change a list control makes.
+  expect(operationFor(a, ["signIn", "providers"], undefined)).toBeUndefined();
+  expect(operationFor(a, ["signIn", "allowedDomains"], undefined)).toEqual([
+    "setDomains",
+    { domains: [] },
+  ]);
+  expect(operationFor(a, ["admins"], ["owner@example.com", "boss@example.com"])).toEqual([
+    "setAdmins",
+    { admins: ["owner@example.com", "boss@example.com"] },
+  ]);
+  // An app with sign-in keeps at least one administrator: an empty list is editSpec's to refuse.
+  expect(operationFor(a, ["admins"], undefined)).toBeUndefined();
+  // A role's description with every role as it is; setRoles keeps what each was granted.
+  expect(operationFor(a, ["roles", "member", "description"], "Books classes", auth)).toEqual([
+    "setRoles",
+    { roles: { admin: "", sales: "Sells", member: "Books classes" } },
+  ]);
+  expect(operationFor(a, ["roles", "sales", "description"], undefined, auth)).toBeUndefined();
+  expect(operationFor(a, ["defaultRole"], "member", auth)).toEqual([
+    "setRoles",
+    { roles: { admin: "", sales: "Sells", member: "" }, defaultRole: "member" },
+  ]);
+  // The new users' role the file has is given again with a description, never dropped or added.
+  const chosen = { ...auth, defaultRole: "member" };
+  expect(operationFor(a, ["roles", "sales", "description"], "Sells more", chosen)?.[1]).toEqual({
+    roles: { admin: "", sales: "Sells more", member: "" },
+    defaultRole: "member",
+  });
+  const one = { roles: { admin: "all", member: {} } };
+  expect(operationFor(a, ["roles", "member", "description"], "Books", one)).toBeUndefined();
+  // An edit of except beside a list writes nothing through setApi: editSpec says why not.
+  expect(operationFor(a, ["api", "except"], ["Secret"], auth)).toBeUndefined();
+  // A left-over except is dropped when models change from all to a list.
+  expect(
+    operationFor(a, ["api", "models"], ["Order"], {
+      ...auth,
+      api: { models: "all", except: ["Secret"] },
+    })?.[1],
+  ).not.toHaveProperty("except");
+  expect(operationFor(a, ["assistant", "may"], undefined, auth)).toEqual([
+    "setAssistant",
+    { for: ["sales"] },
+  ]);
+  expect(operationFor(a, ["assistant", "for"], "signed-in", auth)).toEqual([
+    "setAssistant",
+    { for: ["signed-in"], may: "change" },
+  ]);
+  expect(operationFor(a, ["assistant"], undefined, auth)).toEqual(["setAssistant", { for: [] }]);
+  expect(
+    operationFor(a, ["api", "except"], ["Secret"], {
+      ...auth,
+      api: { ...auth.api, models: "all" },
+    })?.[1],
+  ).toEqual({
+    models: ["all"],
+    actions: ["ship"],
+    except: ["Secret"],
+    assistants: true,
+    assistantsDelete: true,
+  });
+  expect(operationFor(a, ["api", "assistants"], undefined, auth)).toEqual([
+    "setApi",
+    { models: ["Order"], actions: ["ship"] },
+  ]);
+  expect(operationFor(a, ["api", "models"], "all", auth)?.[1]).toMatchObject({ models: ["all"] });
+  expect(operationFor(a, ["api"], undefined, auth)).toEqual(["setApi", {}]);
 });

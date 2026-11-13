@@ -382,6 +382,105 @@ export function operationFor(
     (Array.isArray(value) || value === undefined)
   )
     return ["setPublic", { [key]: value ?? [] }];
+  // Sign-in and roles: who may sign in and how, the administrators, the roles' descriptions and the
+  // new users' role, Ask, and what other programs reach with a key, each through its operation.
+  if (file === "smithable.auth.yml") {
+    const where = path.join(".");
+    const list = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === "string");
+    if (where === "signIn.selfSignUp" && (value === undefined || typeof value === "boolean"))
+      return ["setSignUp", { who: value === false ? "invited" : "anyone" }];
+    if (where === "signIn.providers" && list(value) && (value as string[]).length)
+      return ["setProviders", { providers: value }];
+    if (where === "signIn.allowedDomains" && (value === undefined || list(value)))
+      return ["setDomains", { domains: value ?? [] }];
+    if (where === "admins" && list(value) && (value as string[]).length)
+      return ["setAdmins", { admins: value }];
+    // The roles' descriptions and the new users' role, with every role as it is (setRoles keeps
+    // what each was granted, and a description it is given none for).
+    const roles = at(whole, ["roles"]);
+    if (
+      isCondition(roles) &&
+      (where === "defaultRole" || /^roles\.[^.]+\.description$/.test(where))
+    ) {
+      const described = Object.fromEntries(
+        Object.entries(roles).map(([name, r]) => [
+          name,
+          name === path[1] && path[2] === "description"
+            ? value
+            : isCondition(r) && typeof r.description === "string"
+              ? r.description
+              : undefined,
+        ]),
+      );
+      // setRoles keeps a description it is given none for, so one taken away stays with editSpec.
+      // It also writes the new users' role each time: the one the file has is given again, and
+      // with no such line and one role besides admin (which setRoles would write) editSpec writes it.
+      const kept = at(whole, ["defaultRole"]);
+      const others = Object.keys(roles).filter((r) => r !== "admin");
+      const fits =
+        typeof value === "string" &&
+        value.trim() !== "" &&
+        (where === "defaultRole" || typeof kept === "string" || others.length !== 1);
+      if (fits)
+        return [
+          "setRoles",
+          {
+            roles: Object.fromEntries(Object.entries(described).map(([n, d]) => [n, d ?? ""])),
+            ...(where === "defaultRole"
+              ? { defaultRole: value }
+              : typeof kept === "string"
+                ? { defaultRole: kept }
+                : {}),
+          },
+        ];
+    }
+    // Ask: who gets it and whether it may change things, written whole by setAssistant.
+    if (path[0] === "assistant" && path.length <= 2) {
+      if (path.length === 1 && value === undefined) return ["setAssistant", { for: [] }];
+      const next = setIn(at(whole, ["assistant"]), path.slice(1), value) as
+        | Record<string, unknown>
+        | undefined;
+      const who = next?.for;
+      const words = typeof who === "string" ? [who] : list(who) ? (who as string[]) : [];
+      if (words.length && (next?.may === undefined || next.may === "read" || next.may === "change"))
+        return [
+          "setAssistant",
+          { for: words, ...(next?.may === "change" ? { may: "change" } : {}) },
+        ];
+    }
+    // What other programs reach with a key, written whole by setApi; none of it turns it off.
+    if (path[0] === "api" && path.length <= 3) {
+      if (path.length === 1 && value === undefined) return ["setApi", {}];
+      const next = setIn(at(whole, ["api"]), path.slice(1), value) as
+        | Record<string, unknown>
+        | undefined;
+      const models =
+        next?.models === "all" ? ["all"] : list(next?.models) ? (next?.models as string[]) : [];
+      const assistants = next?.assistants;
+      // "except" is only with all: an edit of it beside a list is editSpec's to refuse, in its
+      // words, not an operation that writes nothing (a left-over one is dropped when models change).
+      if (path[1] === "except" && models[0] !== "all") return undefined;
+      if (
+        models.length &&
+        (next?.actions === undefined || list(next.actions) || next.actions === "all")
+      )
+        return [
+          "setApi",
+          {
+            models,
+            ...(next?.actions !== undefined
+              ? { actions: next.actions === "all" ? ["all"] : next.actions }
+              : {}),
+            // "except" belongs with all; left over beside a list, editSpec's checks say so.
+            ...(list(next?.except) && models[0] === "all" ? { except: next?.except } : {}),
+            ...(assistants ? { assistants: true } : {}),
+            ...(isCondition(assistants) && assistants.delete === true
+              ? { assistantsDelete: true }
+              : {}),
+          },
+        ];
+    }
+  }
   // A role: the whole app, or what it may do beyond the record rule, a grant at a time.
   if (file === "smithable.auth.yml" && first === "roles" && typeof key === "string") {
     if (path.length === 2 && value === "all") return ["grant", { role: key, what: "all" }];
