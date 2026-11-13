@@ -32,6 +32,7 @@ import {
 import { BETA, readBeta } from "./beta.js";
 import { cardTexts } from "./card.js";
 import { customize } from "./customize.js";
+import { devServerEnv } from "./dev.js";
 import { warmTools } from "./generate.js";
 import {
   generationId,
@@ -636,7 +637,7 @@ export async function studio(
       ]),
       {
         cwd: dir,
-        env: { ...previewEnv, BETTER_AUTH_URL: preview, NO_COLOR: "1" },
+        env: { ...devServerEnv(previewEnv), BETTER_AUTH_URL: preview, NO_COLOR: "1" },
         detached: true,
       },
     );
