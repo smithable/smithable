@@ -21,14 +21,19 @@ import {
   type Usage,
 } from "@smithable/ai";
 import {
-  applyOperation,
+  applyOperations,
   fitSamples,
+  pageModel,
+  partSections,
+  patternInfo,
   reservedDomain,
   type SpecIR,
   sampleFileText,
+  stagePage,
   validateAuth,
   validateContent,
   validateSpec,
+  validateUx,
   YamlEditor,
 } from "@smithable/core";
 import { noSignIn, summarize } from "@smithable/index";
@@ -829,21 +834,35 @@ export function keptPrivate(
         },
       };
   }
-  const pages = auth.public.pages.filter((id) => {
-    const page = ir.pages.find((p) => p.id === id);
-    return !(page && "model" in page.pattern && read.includes(String(page.pattern.model)));
-  });
-  const result = applyOperation(
-    {
-      spec,
-      auth: authText,
-      ...(files["smithable.content.yml"] ? { content: files["smithable.content.yml"] } : {}),
-      ...(files["smithable.ux.yml"] ? { ux: files["smithable.ux.yml"] } : {}),
-    },
-    "setPublic",
-    { pages, read: [] },
+  const { pages, steps, untouched } = closedParts(
+    ir,
+    auth.public.pages,
+    read,
+    files["smithable.ux.yml"],
   );
-  if (!result.ok) return { files };
+  const project = {
+    spec,
+    auth: authText,
+    ...(files["smithable.content.yml"] ? { content: files["smithable.content.yml"] } : {}),
+    ...(files["smithable.ux.yml"] ? { ux: files["smithable.ux.yml"] } : {}),
+  };
+  // Should a step be refused, the pages it was for close whole rather than stay public.
+  let result = applyOperations(project, [...steps, { op: "setPublic", args: { pages, read: [] } }]);
+  if (!result.ok && steps.length)
+    result = applyOperations(project, [{ op: "setPublic", args: { pages: untouched, read: [] } }]);
+  // Then everything closed; and should even that be refused, said, never kept quietly.
+  if (!result.ok)
+    result = applyOperations(project, [{ op: "setPublic", args: { pages: [], read: [] } }]);
+  if (!result.ok)
+    return {
+      files,
+      assumption: {
+        part: "visitors",
+        question: `Who may read the ${kinds} records without signing in?`,
+        chosen: `Anyone can read the ${kinds} records without signing in: they could not be closed (${result.message}).`,
+        options: ["Keep them private"],
+      },
+    };
   return {
     files: {
       ...files,
@@ -864,6 +883,76 @@ export function keptPrivate(
       options: [`Visitors may read the ${kinds} records`],
     },
   };
+}
+
+/**
+ * What closing kinds of record takes from the public pages (T791), by the spec's shape: a page
+ * whose own list is of a closed kind closes; on the others, the sections that show a closed kind
+ * go, a hero's facts lose it, and a stage hero that would show it takes its own layout. A page
+ * with nothing left but those sections closes too.
+ */
+function closedParts(
+  ir: SpecIR,
+  open: readonly string[],
+  closed: readonly string[],
+  uxText?: string,
+): {
+  pages: string[];
+  steps: { op: string; args: Record<string, string> }[];
+  /** The public pages that need no step: all that stays public if a step is refused. */
+  untouched: string[];
+} {
+  const looks = uxText ? validateUx({ path: "smithable.ux.yml", text: uxText }, ir).ux : undefined;
+  const pages: string[] = [];
+  const steps: { op: string; args: Record<string, string> }[] = [];
+  const untouched: string[] = [];
+  for (const id of open) {
+    const page = ir.pages.find((p) => p.id === id);
+    if (!page) continue;
+    const parts = partSections(page);
+    // The page's own records (its kind's, read without its parts): a list, a menu, an order form's.
+    const own = { ...page, sections: (page.sections ?? []).filter((s) => !parts.includes(s)) };
+    if (
+      ("model" in page.pattern && closed.includes(String(page.pattern.model))) ||
+      patternInfo(own)
+        .reads()
+        .some((m) => closed.includes(m))
+    )
+      continue;
+    const shows = parts.filter((s) => s.model && closed.includes(s.model));
+    if (parts.length && shows.length === parts.length) continue;
+    pages.push(id);
+    const before = steps.length;
+    for (const s of shows) steps.push({ op: "removeSection", args: { page: id, section: s.name } });
+    for (const [section, look] of Object.entries(looks?.pages[id]?.looks ?? {})) {
+      if (shows.some((s) => s.name === section)) continue;
+      const facts = look.facts?.filter((m) => !closed.includes(m));
+      if (facts && facts.length !== look.facts?.length)
+        steps.push({
+          op: "setSectionLook",
+          args: {
+            page: id,
+            section,
+            key: "facts",
+            value: facts.length ? facts.join(" ") : "default",
+          },
+        });
+      const stage = look.layout === "stage" ? stagePage(ir, look.stage) : undefined;
+      if (stage && closed.includes(pageModel(stage) ?? "")) {
+        if (look.stage !== undefined)
+          steps.push({
+            op: "setSectionLook",
+            args: { page: id, section, key: "stage", value: "default" },
+          });
+        steps.push({
+          op: "setSectionLook",
+          args: { page: id, section, key: "layout", value: "default" },
+        });
+      }
+    }
+    if (steps.length === before) untouched.push(id);
+  }
+  return { pages, steps, untouched };
 }
 
 /**

@@ -9,7 +9,7 @@ import {
   draftProjectByOperations,
   type Provider,
 } from "@smithable/ai";
-import { validateAuth, validateSpec } from "@smithable/core";
+import { validateAuth, validateSpec, validateUx } from "@smithable/core";
 import { expect, test, vi } from "vitest";
 import {
   create,
@@ -231,3 +231,57 @@ test("without a model, new --describe builds the starter as private as the descr
     vi.unstubAllEnvs();
   }
 }, 120_000);
+
+// Closing a kind takes it off the public pages too (T791): a public home keeps no count, stage or
+// list of what visitors may not read, and the whole app still validates.
+function closedFindings(files: Record<string, string>): string[] {
+  const spec = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] ?? "" });
+  if (!spec.ir) return spec.diagnostics.map((d) => d.message);
+  const auth = validateAuth(
+    { path: "smithable.auth.yml", text: files["smithable.auth.yml"] ?? "" },
+    spec.ir,
+  );
+  const ux = files["smithable.ux.yml"]
+    ? validateUx(
+        { path: "smithable.ux.yml", text: files["smithable.ux.yml"] },
+        spec.ir,
+        [],
+        auth.auth,
+      ).diagnostics
+    : [];
+  return [...spec.diagnostics, ...auth.diagnostics, ...ux]
+    .filter((d) => d.severity === "error" || d.code === "public-page-closed-records")
+    .map((d) => `${d.file}: ${d.message}`);
+}
+
+test("a kind kept private leaves the public pages valid and showing none of it", () => {
+  const nobody = "A tool library where neighbors lend each other tools.";
+  for (const [name, files] of Object.entries(STARTERS) as [string, Record<string, string>][]) {
+    if (!publicRecords(name).length) continue;
+    const kept = keptPrivate(files, nobody, files);
+    expect(readable(kept.files), name).toEqual([]);
+    expect(closedFindings(kept.files), name).toEqual([]);
+  }
+});
+
+test("the first builds the validator refused build and validate without a model", () => {
+  // Each with the starter the no-model build used for it (C's rerun after #1171).
+  for (const [description, name] of [
+    ["A tool library where neighbors lend each other tools.", "marketplace"],
+    ["A job board for a local union, with job posts and applications.", "marketplace"],
+    ["Event registration for a conference: talks, speakers and attendees.", "booking"],
+    [
+      "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
+      "booking",
+    ],
+    [
+      "A swap shelf for our office: colleagues offer things they no longer need and others claim them.",
+      "booking",
+    ],
+  ] as const) {
+    const files = STARTERS[name] as Record<string, string>;
+    const kept = keptPrivate(files, description, files);
+    expect(readable(kept.files), description).toEqual([]);
+    expect(closedFindings(kept.files), description).toEqual([]);
+  }
+});

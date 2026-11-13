@@ -125,6 +125,33 @@ const PEOPLE = set(`member neighbor neighbour customer anyone people everybody e
 const CONTRIBUTE = set(`post sell lend borrow offer claim book pick register apply upload
   submit swap themselves suggest vote rent buy pay reserve sign-up`);
 const LOOK = set("check browse see look view read follow find");
+// Whose records a look is at: the lookers' own, which they sign in to see.
+const OWN = set("their his her own");
+
+/**
+ * The words (by their place among the description's words) that are a look at the lookers' own
+ * records: a possessive up to four words on, in the same clause (not past a comma, a full stop
+ * or "and"), as in "our clients can see all of their invoices".
+ */
+function lookingAtOwn(description: string): Set<number> {
+  const tokens = description.match(/[\p{L}\p{N}][\p{L}\p{N}’'-]*|[,.;:!?]/gu) ?? [];
+  const own = new Set<number>();
+  let at = -1;
+  tokens.forEach((token, i) => {
+    if (!/^[\p{L}\p{N}]/u.test(token)) return;
+    at++;
+    if (!LOOK.has(stem(token))) return;
+    for (const next of tokens.slice(i + 1, i + 5)) {
+      const word = next.toLowerCase();
+      if (!/^[\p{L}\p{N}]/u.test(next) || word === "and") return;
+      if (OWN.has(word)) {
+        own.add(at);
+        return;
+      }
+    }
+  });
+  return own;
+}
 // What anyone may see.
 const OPEN = set("public site website online");
 const CLOSED = set("internal private");
@@ -188,6 +215,7 @@ const PHRASES: [RegExp, string][] = [
 export function readDescription(given: string): Reading {
   const description = PHRASES.reduce((text, [phrase, as]) => text.replace(phrase, as), given);
   const words = description.match(/[\p{L}\p{N}][\p{L}\p{N}’'-]*/gu) ?? [];
+  const ownLooks = lookingAtOwn(description);
   const reading: Reading = {
     read: false,
     things: [],
@@ -243,7 +271,9 @@ export function readDescription(given: string): Reading {
       who.team++;
       as.push("team");
     }
-    if (LOOK.has(w)) {
+    // Looking at their own ("our clients see their invoices"): people who sign in, not visitors.
+    if (LOOK.has(w) && ownLooks.has(i)) as.push("own");
+    else if (LOOK.has(w)) {
       who.look++;
       as.push("looks");
     }
