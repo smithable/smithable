@@ -220,7 +220,9 @@ async function scored(r, p) {
   if (r.outcome.existingPage)
     return {
       right:
-        p.kind === "question" || (p.kind === "answer" && p.text.includes(r.outcome.existingPage)),
+        p.kind === "question" ||
+        (p.kind === "answer" && p.text.includes(r.outcome.existingPage)) ||
+        (p.kind === "none" && p.reason.includes(r.outcome.existingPage)),
       why: p.kind,
     };
   if (kind === "change" || kind === "two-things") {
@@ -229,6 +231,18 @@ async function scored(r, p) {
       return { right: !(r.outcome.operations ?? []).length, why: `none: ${p.reason}` };
     if (p.kind !== "change") return { right: false, why: `${p.kind}` };
     // A plan that must hold these, whatever else it has (T760: a page's access).
+    // Who the plan grants pages to (T760): the roles it must and must never.
+    if (r.outcome.granted || r.outcome.notGranted) {
+      const roles = p.operations.filter((o) => o.op === "grant").map((o) => String(o.args.role));
+      const missing = (r.outcome.granted ?? []).filter((x) => !roles.includes(x));
+      const wrong = (r.outcome.notGranted ?? []).filter((x) => roles.includes(x));
+      return {
+        right: !missing.length && !wrong.length,
+        why: [missing.length && `not granted ${missing}`, wrong.length && `granted ${wrong}`]
+          .filter(Boolean)
+          .join("; "),
+      };
+    }
     if (r.outcome.operationsInclude) {
       const ops = p.operations.map((o) => o.op);
       const missing = r.outcome.operationsInclude.filter((op) => !ops.includes(op));

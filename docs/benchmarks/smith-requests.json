@@ -4717,6 +4717,66 @@
         "existingPage": "bookings"
       },
       "noModel": false
+    },
+    {
+      "starter": "booking",
+      "kind": "change",
+      "noModel": false,
+      "id": "bk-members-for-staff",
+      "text": "a page listing members, for staff",
+      "language": "en",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      }
+    },
+    {
+      "starter": "booking",
+      "kind": "change",
+      "noModel": false,
+      "id": "bk-sv-members-for-staff",
+      "text": "en sida som listar medlemmarna, för personalen",
+      "language": "sv",
+      "outcome": {
+        "granted": [
+          "staff"
+        ],
+        "notGranted": [
+          "member"
+        ]
+      }
+    },
+    {
+      "starter": "booking",
+      "kind": "change",
+      "noModel": false,
+      "id": "bk-classtypes-staff-members",
+      "text": "a page of the class types for staff and members",
+      "language": "en",
+      "outcome": {
+        "granted": [
+          "staff",
+          "member"
+        ]
+      }
+    },
+    {
+      "starter": "booking",
+      "kind": "change",
+      "noModel": false,
+      "id": "bk-sv-classtypes-staff-members",
+      "text": "en sida med passtyperna för personalen och medlemmarna",
+      "language": "sv",
+      "outcome": {
+        "granted": [
+          "staff",
+          "member"
+        ]
+      }
     }
   ]
 }

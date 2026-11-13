@@ -279,7 +279,9 @@ export async function proposeChange(options: {
     const refused = checked.ok ? options.check?.(files, checked.files, checked.effects) : undefined;
     // Who the new pages are for (T760): a missing access goes on to a model, which can add it.
     const audience =
-      checked.ok && !refused ? checkAudience(files, checked.files, options.request) : undefined;
+      checked.ok && !refused
+        ? checkAudience(files, checked.files, options.request, checked.operations)
+        : undefined;
     if (audience && "answer" in audience)
       return { kind: "answer", text: audience.answer, concepts: [], usage, generator: "same page" };
     if (checked.ok && !refused && !(audience && "problem" in audience))
@@ -357,7 +359,9 @@ export async function proposeChange(options: {
         : undefined;
       // Who the new pages are for (T760): the app's own page, or the access the request named.
       const audience =
-        checked.ok && !refused ? checkAudience(files, checked.files, options.request) : undefined;
+        checked.ok && !refused
+          ? checkAudience(files, checked.files, options.request, checked.operations)
+          : undefined;
       if (audience && "answer" in audience)
         return {
           kind: "answer",
