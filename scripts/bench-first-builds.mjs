@@ -15,14 +15,15 @@
 //   node scripts/bench-first-builds.mjs [reader] [small] [small>better] [--set PATH] [--only fb-01,fb-02]
 //     [--label today] [--max-cost USD]
 // reader: no model, free: the description reader alone, or (when it cannot build) the starter `new`
-// names instead, as a person without a model would start. small: Claude Haiku 5.5 through
-// scripts/claude-route.mjs. small>better: Haiku, then Claude Sonnet 5.5 through Amazon Bedrock's EU
-// profile. Ask before a paid run. Writes docs/benchmarks/first-builds-<label>.md and .jsonl.
+// names instead, as a person without a model would start. small: Claude Haiku 5.5. small>better:
+// Haiku and Sonnet 5.5, as the hosted service drafts (a first build takes the strongest first, so
+// Sonnet drafts and Haiku stands behind it). Both through Anthropic's API (SMITHABLE_FRONTIER=
+// anthropic; the key in ~/.config/smithable/claude.env, never printed). Ask before a paid run.
+// Writes docs/benchmarks/first-builds-<label>.md and .jsonl.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { claudeRoute } from "./claude-route.mjs";
 import { repo } from "./dev-app.mjs";
 
 const { validateAuth, validateContent, validateSpec } = await import(
@@ -43,24 +44,30 @@ const label = option("--label") ?? new Date().toISOString().slice(0, 10);
 const maxCost = option("--max-cost") ? Number(option("--max-cost")) : Number.POSITIVE_INFINITY;
 let stopped = false;
 
-const route = tiers.some((t) => t !== "reader") ? await claudeRoute() : undefined;
-/** The environment of a tier: no model, Haiku through the route, or Haiku then Sonnet. */
+/** Anthropic's key, read from its file when a paid tier runs, never printed. */
+const claudeKey = () => {
+  const text = readFileSync(join(homedir(), ".config/smithable/claude.env"), "utf8");
+  const key = /^claude_smithable_api_key=["']?([^"'\n]+)/m.exec(text)?.[1];
+  if (!key) throw new Error("No Anthropic key in ~/.config/smithable/claude.env");
+  return key;
+};
+/** The environment of a tier: no model, Haiku, or Haiku and Sonnet. */
 function envOf(tier) {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([k]) => !/^SMITHABLE_(MODEL|FRONTIER|LOCAL|CODER)/.test(k)),
   );
   if (tier === "reader") return env;
+  const models = {
+    small: "claude-haiku-5-5",
+    "small>better": "claude-haiku-5-5,claude-sonnet-5-5",
+  };
+  if (!models[tier]) throw new Error(`Unknown tier ${tier}: reader, small, small>better.`);
   Object.assign(env, {
-    SMITHABLE_MODEL: "claude-haiku-5-5",
-    SMITHABLE_MODEL_URL: route.url,
-    SMITHABLE_MODEL_LOCATION: "elsewhere",
+    SMITHABLE_FRONTIER: "anthropic",
+    SMITHABLE_FRONTIER_MODEL: models[tier],
+    ANTHROPIC_API_KEY: claudeKey(),
+    SMITHABLE_AI_POLICY: "best-available",
   });
-  if (tier === "small>better")
-    Object.assign(env, {
-      SMITHABLE_FRONTIER: "bedrock",
-      SMITHABLE_FRONTIER_MODEL: "eu.anthropic.claude-sonnet-5-5",
-    });
-  else if (tier !== "small") throw new Error(`Unknown tier ${tier}: reader, small, small>better.`);
   return env;
 }
 
@@ -353,7 +360,6 @@ for (const tier of tiers) {
     );
   }
 }
-await route?.close();
 if (stopped) console.log(`Stopped at the cost ceiling of $${maxCost}: ${rows.length} builds done.`);
 
 const out = join(repo, `docs/benchmarks/first-builds-${label}`);
