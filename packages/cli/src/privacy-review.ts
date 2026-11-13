@@ -154,6 +154,9 @@ export function privacyStates(dir: string): PrivacyState[] {
     const then = recorded
       ? reviewsOf(filesAt(dir, recorded)).find((x) => x.page === r.page)?.described
       : undefined;
+    // Without the reviewed change in the history (squashed, or merged in from elsewhere) the
+    // parts that changed cannot be told: none are named, rather than a guess.
+    if (!then) return state;
     const parts = changedParts(then, r.described);
     return { ...state, changed: parts.length ? parts : ["The page's wording"] };
   });
