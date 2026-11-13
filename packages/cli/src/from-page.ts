@@ -391,10 +391,17 @@ export function describePage(
   reading: PageReading,
   pictures: { file: string; alt: string }[] = [],
 ): string {
-  const sanitize = (s: string) =>
-    s
-      .replace(/<\s*\/?\s*untrusted_page_content[^>]*>/gi, "")
-      .replace(new RegExp(PAGE_START, "g"), "");
+  // Until nothing changes: a tag folded into itself would be left whole by one pass. Each pass
+  // makes the text shorter, so it ends.
+  const sanitize = (s: string): string => {
+    for (;;) {
+      const next = s
+        .replace(/<\s*\/?\s*untrusted_page_content[^>]*>/gi, "")
+        .replace(new RegExp(PAGE_START, "g"), "");
+      if (next === s) return s;
+      s = next;
+    }
+  };
   const section = (title: string, lines: string[]) =>
     lines.length ? `\n${title}:\n${lines.map((l) => `- ${sanitize(l)}`).join("\n")}` : "";
   let text = reading.text.join("\n");

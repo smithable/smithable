@@ -329,3 +329,63 @@ describe("every example agrees with the rules the generated app enforces", () =>
     }
   });
 });
+
+describe("the explanation says what the app does (T803, T809)", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: X }
+models:
+  Invoice:
+    fields:
+      number: string
+      lines: Line[]
+  Line:
+    fields: { text: string!, invoice: Invoice }
+  Document:
+    fields:
+      title: string!
+      files: pictures
+    review: [files]
+actions:
+  duplicate:
+    on: Invoice
+    copy: { number: "" }
+    with: [lines]
+pages:
+  waiting:
+    review: all
+`,
+  }).ir as SpecIR;
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles:\n  admin: {}\n  clerk: { create: [Invoice] }\n  idle: { create: [Invoice, Line], actions: none }\n  editor: { pages: all, review: [Document] }\ndefaultRole: clerk\npublic: { create: [Invoice] }\n",
+    },
+    ir,
+  ).auth as AuthIR;
+  const ask = (as: string, resource: Parameters<typeof explainAccess>[3], verb: AccessVerb) =>
+    explainAccess(ir, auth, { as }, resource, verb);
+
+  test("a copy is denied to a role that may not add the lists it copies, or runs no action", () => {
+    const action = { kind: "action", action: "duplicate" } as Parameters<typeof explainAccess>[3];
+    // Each for its own reason: clerk may not add the lines, idle runs no action.
+    for (const [as, why] of [
+      ["clerk", "actions.duplicate.with"],
+      ["idle", "roles.idle.actions"],
+    ] as const) {
+      const run = ask(as, action, "run");
+      expect(run.verdict, as).toBe("denied");
+      expect(paths(run), as).toContain(why);
+      expect(
+        actionAccess(ir.actions[0] as SpecIR["actions"][number], auth, ir.models).roles,
+      ).not.toContain(as);
+    }
+  });
+
+  test("a review page opens for a role that approves its files, whatever its pages grant", () => {
+    const page = ask("editor", { kind: "page", page: "waiting" }, "open");
+    expect(page.verdict).toBe("allowed");
+    expect(pageAccess(ir.pages[0] as SpecIR["pages"][number], auth).roles).toContain("editor");
+  });
+});

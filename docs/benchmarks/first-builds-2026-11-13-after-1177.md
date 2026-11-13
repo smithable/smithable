@@ -1,0 +1,697 @@
+# First builds: 2026-11-13-after-1177
+
+2026-11-13, 27 descriptions of first-builds.json, labelled by a model of another family than the builder's and checked. Scored by rule on the spec each build made (bench-first-builds.mjs). A leak (a kind that must not be public made public, or a refusal the rules do not make) fails its build and is listed apart.
+
+| Tier | Built | Must | Must not | Leaks | Open points asked | Questions | Extra models | Cost per build |
+|---|---|---|---|---|---|---|---|---|
+| reader | 27 / 27 | 166 / 496 (33 %) | 13 / 14 (93 %) | 0 in 0 builds | 0 / 54 (0 %) | 0 | 57 | $0.0000 |
+| allowance-used | 27 / 27 | 162 / 496 (33 %) | 13 / 14 (93 %) | 0 in 0 builds | 0 / 54 (0 %) | 0 | 64 | $0.0000 |
+
+## Leaks
+
+None.
+
+## Missed
+
+- reader fb-01: field Class|Session.name|title
+- reader fb-02: model Company|Account
+- reader fb-02: field Company|Account.name|title
+- reader fb-02: field Company|Account.industry|sector
+- reader fb-02: model Contact|Person
+- reader fb-02: field Contact|Person.name|fullname
+- reader fb-02: field Contact|Person.email|address
+- reader fb-02: field Contact|Person.company|account
+- reader fb-02: model Deal|Opportunity
+- reader fb-02: field Deal|Opportunity.name|title
+- reader fb-02: field Deal|Opportunity.value|amount
+- reader fb-02: field Deal|Opportunity.status|stage
+- reader fb-02: field Follow-up|Task.notes|description
+- reader fb-02: field Follow-up|Task.deal|opportunity
+- reader fb-02: page Dashboard|Home
+- reader fb-02: page Companies|Accounts
+- reader fb-02: page Contacts|People
+- reader fb-02: page Deals|Pipeline
+- reader fb-02: access: Sales|Agent|User may create Deal|Opportunity (no such kind)
+- reader fb-02: no model Cart|Order
+- reader fb-03: model Payment|Transaction
+- reader fb-03: field Payment|Transaction.date|received
+- reader fb-03: field Payment|Transaction.amount|value
+- reader fb-03: field Payment|Transaction.invoice|bill
+- reader fb-03: page Payments|Transactions
+- reader fb-03: sign-in required (got optional)
+- reader fb-04: field Tool|Item.owner|lender
+- reader fb-04: model Loan|Borrowing
+- reader fb-04: field Loan|Borrowing.tool|item
+- reader fb-04: field Loan|Borrowing.borrower|user
+- reader fb-04: field Loan|Borrowing.startDate|date
+- reader fb-04: page My Tools|Inventory
+- reader fb-04: page Borrowings|Loans
+- reader fb-04: access: visitor may read Tool|Item
+- reader fb-04: access: Neighbor|Member|User may create Loan|Borrowing (no such kind)
+- reader fb-05: field Ingredient|Item.stockLevel|quantity
+- reader fb-05: field Ingredient|Item.supplier|vendor
+- reader fb-05: model Supplier|Vendor
+- reader fb-05: field Supplier|Vendor.name|company
+- reader fb-05: field Supplier|Vendor.phone|contact
+- reader fb-05: field Supplier|Vendor.email|address
+- reader fb-05: page Inventory|Stock
+- reader fb-05: page Suppliers|Vendors
+- reader fb-05: sign-in required (got optional)
+- reader fb-06: model Job|Post|Listing
+- reader fb-06: field Job|Post|Listing.title|role
+- reader fb-06: field Job|Post|Listing.description|details
+- reader fb-06: field Job|Post|Listing.date|posted
+- reader fb-06: model Application|Submission
+- reader fb-06: field Application|Submission.applicant|candidate
+- reader fb-06: field Application|Submission.resume|cv
+- reader fb-06: field Application|Submission.job|listing
+- reader fb-06: page Job Board|Listings
+- reader fb-06: page Apply|Submit
+- reader fb-06: page Applications|Candidates
+- reader fb-06: access: visitor may read Job|Post|Listing (no such kind)
+- reader fb-06: access: Member|Applicant may create Application|Submission (no such kind)
+- reader fb-07: model Team|Squad
+- reader fb-07: field Team|Squad.name|title
+- reader fb-07: field Team|Squad.ageGroup|category
+- reader fb-07: model Player|Member
+- reader fb-07: field Player|Member.name|fullname
+- reader fb-07: field Player|Member.number|jersey
+- reader fb-07: field Player|Member.team|squad
+- reader fb-07: model Match|Game
+- reader fb-07: field Match|Game.date|time
+- reader fb-07: field Match|Game.opponent|team
+- reader fb-07: field Match|Game.result|score
+- reader fb-07: page Teams|Squads
+- reader fb-07: page Fixtures|Matches
+- reader fb-07: page Results|Scores
+- reader fb-07: access: visitor may read Team|Squad (no such kind)
+- reader fb-07: access: visitor may read Match|Game (no such kind)
+- reader fb-08: field Talk|Session.title|topic
+- reader fb-08: field Talk|Session.speaker|presenter
+- reader fb-08: model Speaker|Presenter
+- reader fb-08: field Speaker|Presenter.name|fullname
+- reader fb-08: field Speaker|Presenter.bio|background
+- reader fb-08: model Attendee|Participant
+- reader fb-08: field Attendee|Participant.name|fullname
+- reader fb-08: field Attendee|Participant.email|contact
+- reader fb-08: page Speakers|Lineup
+- reader fb-08: page Register|Tickets
+- reader fb-08: role Attendee|User
+- reader fb-08: access: visitor may read Talk|Session
+- reader fb-08: access: visitor may read Speaker|Presenter (no such kind)
+- reader fb-08: access: visitor may create Attendee|Participant (no such kind)
+- reader fb-09: model Ticket|Issue
+- reader fb-09: field Ticket|Issue.title|subject
+- reader fb-09: field Ticket|Issue.description|details
+- reader fb-09: field Ticket|Issue.priority|urgency
+- reader fb-09: field Ticket|Issue.assignee|handler
+- reader fb-09: page Tickets|Queue
+- reader fb-09: page Dashboard|Home
+- reader fb-09: page Submit Ticket|New Issue
+- reader fb-09: access: IT|Agent|Staff may change Ticket|Issue (no such kind)
+- reader fb-10: model Recipe|Dish
+- reader fb-10: field Recipe|Dish.name|title
+- reader fb-10: field Recipe|Dish.instructions|steps
+- reader fb-10: field Ingredient|Item.quantity|amount
+- reader fb-10: field Ingredient|Item.recipe|dish
+- reader fb-10: model Shopping List|Groceries
+- reader fb-10: field Shopping List|Groceries.name|title
+- reader fb-10: field Shopping List|Groceries.date|for
+- reader fb-10: page Recipes|Cookbook
+- reader fb-10: page Shopping List|Groceries
+- reader fb-10: access: Family Member|User may create Recipe|Dish (no such kind)
+- reader fb-10: access: Family Member|User may create Shopping List|Groceries (no such kind)
+- reader fb-10: sign-in required (got optional)
+- reader fb-11: access: visitor may read Incident|Outage
+- reader fb-11: access: visitor may read Maintenance|Planned Work
+- reader fb-12: model Service|System
+- reader fb-12: field Service|System.name|component
+- reader fb-12: field Service|System.status|state
+- reader fb-12: field Outage|Incident.service|system
+- reader fb-12: field Outage|Incident.description|details
+- reader fb-12: page Status|Uptime
+- reader fb-12: access: visitor may read Service|System (no such kind)
+- reader fb-13: field Client|Company.contact|email
+- reader fb-13: model Quote|Estimate
+- reader fb-13: field Quote|Estimate.amount|price
+- reader fb-13: field Quote|Estimate.document|details
+- reader fb-13: field Quote|Estimate.client|company
+- reader fb-13: page Quotes|Estimates
+- reader fb-13: access: Freelancer|Admin may create Quote|Estimate (no such kind)
+- reader fb-13: sign-in required (got optional)
+- reader fb-14: model Lead|Prospect
+- reader fb-14: field Lead|Prospect.name|company
+- reader fb-14: field Lead|Prospect.contact|email
+- reader fb-14: model Deal|Project
+- reader fb-14: field Deal|Project.title|name
+- reader fb-14: field Deal|Project.value|amount
+- reader fb-14: field Deal|Project.status|stage
+- reader fb-14: field Follow-up|Task.agent|owner
+- reader fb-14: field Follow-up|Task.lead|prospect
+- reader fb-14: page Pipeline|Board
+- reader fb-14: page Leads|Prospects
+- reader fb-14: access: Agent|Sales|Team may read Deal|Project (no such kind)
+- reader fb-15: model Stylist|Hairdresser
+- reader fb-15: field Stylist|Hairdresser.name|fullname
+- reader fb-15: field Stylist|Hairdresser.picture|photo
+- reader fb-15: model Timeslot|Availability
+- reader fb-15: field Timeslot|Availability.time|date
+- reader fb-15: field Timeslot|Availability.stylist|hairdresser
+- reader fb-15: field Timeslot|Availability.isBooked|available
+- reader fb-15: field Appointment|Booking.slot|time
+- reader fb-15: page Stylists|Team
+- reader fb-15: role Customer|Client
+- reader fb-15: access: visitor may read Stylist|Hairdresser (no such kind)
+- reader fb-15: access: Customer|Client may create Appointment|Booking
+- reader fb-16: model Pupil|Student
+- reader fb-16: field Pupil|Student.name|fullname
+- reader fb-16: field Pupil|Student.email|contact
+- reader fb-16: model Lesson|Slot
+- reader fb-16: field Lesson|Slot.time|schedule
+- reader fb-16: field Lesson|Slot.pupil|student
+- reader fb-16: model Practice|Assignment
+- reader fb-16: field Practice|Assignment.description|notes
+- reader fb-16: field Practice|Assignment.piece|song
+- reader fb-16: field Practice|Assignment.pupil|student
+- reader fb-16: page Students|Pupils
+- reader fb-16: page Assignments|Practice
+- reader fb-16: sign-in required (got optional)
+- reader fb-17: model Household|Customer
+- reader fb-17: field Household|Customer.name|family
+- reader fb-17: field Household|Customer.address|location
+- reader fb-17: field Invoice|Bill.household|customer
+- reader fb-17: page Customers|Households
+- reader fb-17: sign-in required (got optional)
+- reader fb-18: model Item|Thing
+- reader fb-18: field Item|Thing.name|title
+- reader fb-18: field Item|Thing.picture|photo
+- reader fb-18: field Item|Thing.status|state
+- reader fb-18: model Claim|Request
+- reader fb-18: field Claim|Request.item|thing
+- reader fb-18: field Claim|Request.user|colleague
+- reader fb-18: page Shelf|Items
+- reader fb-18: page My Claims|Requests
+- reader fb-18: page Offer Item|Add
+- reader fb-18: role Colleague|User
+- reader fb-18: access: Colleague|User may create Item|Thing (no such kind)
+- reader fb-18: access: Colleague|User may create Claim|Request (no such kind)
+- reader fb-18: sign-in required (got optional)
+- reader fb-19: model Object|Artifact
+- reader fb-19: field Object|Artifact.title|name
+- reader fb-19: field Object|Artifact.picture|photo
+- reader fb-19: field Object|Artifact.description|details
+- reader fb-19: field Object|Artifact.year|era
+- reader fb-19: model Story|History
+- reader fb-19: field Story|History.text|content
+- reader fb-19: field Story|History.object|artifact
+- reader fb-19: page Collection|Gallery
+- reader fb-19: page Object Details|Story
+- reader fb-19: access: visitor may read Object|Artifact (no such kind)
+- reader fb-19: access: visitor may read Story|History (no such kind)
+- reader fb-20: model Guest|Invitee
+- reader fb-20: field Guest|Invitee.name|fullname
+- reader fb-20: field Guest|Invitee.rsvp|attending
+- reader fb-20: field Guest|Invitee.meal|food
+- reader fb-20: model Table|Seating
+- reader fb-20: field Table|Seating.name|number
+- reader fb-20: field Table|Seating.capacity|seats
+- reader fb-20: field Table|Seating.guests|invitees
+- reader fb-20: page Guest List|RSVPs
+- reader fb-20: page Seating Plan|Tables
+- reader fb-20: access: Couple|Admin may change Table|Seating (no such kind)
+- reader fb-21: model Tid|Timeslot|Slot
+- reader fb-21: field Tid|Timeslot|Slot.tid|time
+- reader fb-21: field Tid|Timeslot|Slot.ledig|available
+- reader fb-21: model Bokning|Appointment|Booking
+- reader fb-21: field Bokning|Appointment|Booking.kundnamn|customer
+- reader fb-21: field Bokning|Appointment|Booking.tid|time
+- reader fb-21: page Boka|Book
+- reader fb-21: page Tider|Schedule
+- reader fb-21: role Kund|Customer|Client
+- reader fb-21: access: visitor may read Tid|Timeslot|Slot (no such kind)
+- reader fb-21: access: Kund|Customer|Client may create Bokning|Appointment|Booking (no such kind)
+- reader fb-21: language sv (got en)
+- reader fb-22: model Kund|Client|Customer
+- reader fb-22: field Kund|Client|Customer.namn|name
+- reader fb-22: field Kund|Client|Customer.telefon|phone
+- reader fb-22: model Offert|Quote|Estimate
+- reader fb-22: field Offert|Quote|Estimate.summa|amount
+- reader fb-22: field Offert|Quote|Estimate.status|stage
+- reader fb-22: field Offert|Quote|Estimate.kund|client
+- reader fb-22: model Faktura|Invoice|Bill
+- reader fb-22: field Faktura|Invoice|Bill.belopp|amount
+- reader fb-22: field Faktura|Invoice|Bill.betald|paid
+- reader fb-22: field Faktura|Invoice|Bill.kund|client
+- reader fb-22: page Kunder|Clients
+- reader fb-22: page Offerter|Quotes
+- reader fb-22: page Fakturor|Invoices
+- reader fb-22: access: Byggare|Builder|Admin may create Offert|Quote|Estimate (no such kind)
+- reader fb-22: sign-in required (got optional)
+- reader fb-22: language sv (got en)
+- reader fb-23: field Sak|Item|Product.namn|title
+- reader fb-23: field Sak|Item|Product.bild|picture
+- reader fb-23: field Sak|Item|Product.pris|price
+- reader fb-23: field Sak|Item|Product.säljare|seller
+- reader fb-23: page Annonser|Listings
+- reader fb-23: page Lägg upp|Post
+- reader fb-23: role Säljare|Seller|User
+- reader fb-23: access: visitor may read Sak|Item|Product
+- reader fb-23: access: Säljare|Seller|User may create Sak|Item|Product
+- reader fb-23: language sv (got en)
+- reader fb-24: model Dog|Pet
+- reader fb-24: field Dog|Pet.name|title
+- reader fb-24: field Dog|Pet.owner|parent
+- reader fb-24: field Dog|Pet.vaccinationExpiry|date
+- reader fb-24: model Log|ReportCard|Entry
+- reader fb-24: field Log|ReportCard|Entry.type|activity
+- reader fb-24: field Log|ReportCard|Entry.time|date
+- reader fb-24: field Log|ReportCard|Entry.photo|picture
+- reader fb-24: field Log|ReportCard|Entry.dog|pet
+- reader fb-24: model Contact|Owner
+- reader fb-24: field Contact|Owner.name|fullname
+- reader fb-24: field Contact|Owner.emergencyPhone|phone
+- reader fb-24: model Waitlist|Application
+- reader fb-24: field Waitlist|Application.name|fullname
+- reader fb-24: field Waitlist|Application.email|contact
+- reader fb-24: page Waitlist|Apply
+- reader fb-24: page Dashboard|Dogs
+- reader fb-24: page Report Cards|Logs
+- reader fb-24: role Parent|Owner
+- reader fb-24: access: visitor may create Waitlist|Application (no such kind)
+- reader fb-24: access: Parent|Owner may read Log|ReportCard|Entry (no such kind)
+- reader fb-24: access: Staff|Admin may create Log|ReportCard|Entry (no such kind)
+- reader fb-25: model Reservation|Wheel Time
+- reader fb-25: field Reservation|Wheel Time.time|slot
+- reader fb-25: field Reservation|Wheel Time.member|user
+- reader fb-25: model Piece|Submission
+- reader fb-25: field Piece|Submission.clayType|clay
+- reader fb-25: field Piece|Submission.glazes|finish
+- reader fb-25: field Piece|Submission.status|state
+- reader fb-25: field Piece|Submission.member|user
+- reader fb-25: model Firing|Schedule
+- reader fb-25: field Firing|Schedule.date|time
+- reader fb-25: field Firing|Schedule.pieces|items
+- reader fb-25: model Glaze|Inventory
+- reader fb-25: field Glaze|Inventory.name|title
+- reader fb-25: field Glaze|Inventory.stock|quantity
+- reader fb-25: page My Pieces|Submissions
+- reader fb-25: page Inventory|Glazes
+- reader fb-25: access: Member|User may create Reservation|Wheel Time (no such kind)
+- reader fb-25: access: Manager|Admin may change Glaze|Inventory (no such kind)
+- reader fb-26: model Medlem|Singer|Member
+- reader fb-26: field Medlem|Singer|Member.namn|name
+- reader fb-26: field Medlem|Singer|Member.stämma|part
+- reader fb-26: field Medlem|Singer|Member.kontakt|contact
+- reader fb-26: model Rep|Rehearsal|Session
+- reader fb-26: field Rep|Rehearsal|Session.datum|date
+- reader fb-26: field Rep|Rehearsal|Session.plats|location
+- reader fb-26: model Noter|Sheet Music|File
+- reader fb-26: field Noter|Sheet Music|File.titel|title
+- reader fb-26: field Noter|Sheet Music|File.fil|file
+- reader fb-26: field Noter|Sheet Music|File.ljud|audio
+- reader fb-26: model Närvaro|RSVP|Attendance
+- reader fb-26: field Närvaro|RSVP|Attendance.medlem|singer
+- reader fb-26: field Närvaro|RSVP|Attendance.rep|rehearsal
+- reader fb-26: field Närvaro|RSVP|Attendance.kommer|attending
+- reader fb-26: model Konsert|Concert|Event
+- reader fb-26: field Konsert|Concert|Event.datum|date
+- reader fb-26: field Konsert|Concert|Event.biljetter|tickets
+- reader fb-26: page Repertoar|Music
+- reader fb-26: page Kalender|Calendar
+- reader fb-26: page Medlemmar|Directory
+- reader fb-26: role Medlem|Singer|User
+- reader fb-26: access: visitor may read Konsert|Concert|Event (no such kind)
+- reader fb-26: access: Medlem|Singer|User may read Noter|Sheet Music|File (no such kind)
+- reader fb-26: access: Styrelse|Board|Admin may read Närvaro|RSVP|Attendance (no such kind)
+- reader fb-26: language sv (got en)
+- reader fb-27: model Spel|Game|Boardgame
+- reader fb-27: field Spel|Game|Boardgame.namn|name
+- reader fb-27: field Spel|Game|Boardgame.skick|condition
+- reader fb-27: model Lån|Borrowing|Loan
+- reader fb-27: field Lån|Borrowing|Loan.spel|game
+- reader fb-27: field Lån|Borrowing|Loan.medlem|member
+- reader fb-27: field Lån|Borrowing|Loan.datum|date
+- reader fb-27: model Bokning|Table|Reservation
+- reader fb-27: field Bokning|Table|Reservation.datum|date
+- reader fb-27: field Bokning|Table|Reservation.bord|table
+- reader fb-27: model Medlem|Member|User
+- reader fb-27: field Medlem|Member|User.namn|name
+- reader fb-27: field Medlem|Member|User.betalt|paid
+- reader fb-27: page Spelbibliotek|Games
+- reader fb-27: page Mina Lån|My Loans
+- reader fb-27: page Boka|Book
+- reader fb-27: access: visitor may read Spel|Game|Boardgame (no such kind)
+- reader fb-27: access: Medlem|Member|User may create Lån|Borrowing|Loan (no such kind)
+- reader fb-27: access: Kassör|Treasurer|Admin may change Medlem|Member|User (no such kind)
+- reader fb-27: language sv (got en)
+- allowance-used fb-01: field Class|Session.name|title
+- allowance-used fb-02: model Company|Account
+- allowance-used fb-02: field Company|Account.name|title
+- allowance-used fb-02: field Company|Account.industry|sector
+- allowance-used fb-02: model Contact|Person
+- allowance-used fb-02: field Contact|Person.name|fullname
+- allowance-used fb-02: field Contact|Person.email|address
+- allowance-used fb-02: field Contact|Person.company|account
+- allowance-used fb-02: model Deal|Opportunity
+- allowance-used fb-02: field Deal|Opportunity.name|title
+- allowance-used fb-02: field Deal|Opportunity.value|amount
+- allowance-used fb-02: field Deal|Opportunity.status|stage
+- allowance-used fb-02: field Follow-up|Task.notes|description
+- allowance-used fb-02: field Follow-up|Task.deal|opportunity
+- allowance-used fb-02: page Dashboard|Home
+- allowance-used fb-02: page Companies|Accounts
+- allowance-used fb-02: page Contacts|People
+- allowance-used fb-02: page Deals|Pipeline
+- allowance-used fb-02: access: Sales|Agent|User may create Deal|Opportunity (no such kind)
+- allowance-used fb-02: no model Cart|Order
+- allowance-used fb-03: model Payment|Transaction
+- allowance-used fb-03: field Payment|Transaction.date|received
+- allowance-used fb-03: field Payment|Transaction.amount|value
+- allowance-used fb-03: field Payment|Transaction.invoice|bill
+- allowance-used fb-03: page Payments|Transactions
+- allowance-used fb-03: sign-in required (got optional)
+- allowance-used fb-04: field Tool|Item.owner|lender
+- allowance-used fb-04: model Loan|Borrowing
+- allowance-used fb-04: field Loan|Borrowing.tool|item
+- allowance-used fb-04: field Loan|Borrowing.borrower|user
+- allowance-used fb-04: field Loan|Borrowing.startDate|date
+- allowance-used fb-04: page My Tools|Inventory
+- allowance-used fb-04: page Borrowings|Loans
+- allowance-used fb-04: access: visitor may read Tool|Item
+- allowance-used fb-04: access: Neighbor|Member|User may create Loan|Borrowing (no such kind)
+- allowance-used fb-05: field Ingredient|Item.stockLevel|quantity
+- allowance-used fb-05: field Ingredient|Item.supplier|vendor
+- allowance-used fb-05: model Supplier|Vendor
+- allowance-used fb-05: field Supplier|Vendor.name|company
+- allowance-used fb-05: field Supplier|Vendor.phone|contact
+- allowance-used fb-05: field Supplier|Vendor.email|address
+- allowance-used fb-05: page Inventory|Stock
+- allowance-used fb-05: page Suppliers|Vendors
+- allowance-used fb-05: sign-in required (got optional)
+- allowance-used fb-06: model Job|Post|Listing
+- allowance-used fb-06: field Job|Post|Listing.title|role
+- allowance-used fb-06: field Job|Post|Listing.description|details
+- allowance-used fb-06: field Job|Post|Listing.date|posted
+- allowance-used fb-06: model Application|Submission
+- allowance-used fb-06: field Application|Submission.applicant|candidate
+- allowance-used fb-06: field Application|Submission.resume|cv
+- allowance-used fb-06: field Application|Submission.job|listing
+- allowance-used fb-06: page Job Board|Listings
+- allowance-used fb-06: page Apply|Submit
+- allowance-used fb-06: page Applications|Candidates
+- allowance-used fb-06: access: visitor may read Job|Post|Listing (no such kind)
+- allowance-used fb-06: access: Member|Applicant may create Application|Submission (no such kind)
+- allowance-used fb-07: model Team|Squad
+- allowance-used fb-07: field Team|Squad.name|title
+- allowance-used fb-07: field Team|Squad.ageGroup|category
+- allowance-used fb-07: model Player|Member
+- allowance-used fb-07: field Player|Member.name|fullname
+- allowance-used fb-07: field Player|Member.number|jersey
+- allowance-used fb-07: field Player|Member.team|squad
+- allowance-used fb-07: model Match|Game
+- allowance-used fb-07: field Match|Game.date|time
+- allowance-used fb-07: field Match|Game.opponent|team
+- allowance-used fb-07: field Match|Game.result|score
+- allowance-used fb-07: page Teams|Squads
+- allowance-used fb-07: page Fixtures|Matches
+- allowance-used fb-07: page Results|Scores
+- allowance-used fb-07: access: visitor may read Team|Squad (no such kind)
+- allowance-used fb-07: access: visitor may read Match|Game (no such kind)
+- allowance-used fb-08: field Talk|Session.title|topic
+- allowance-used fb-08: field Talk|Session.speaker|presenter
+- allowance-used fb-08: model Speaker|Presenter
+- allowance-used fb-08: field Speaker|Presenter.name|fullname
+- allowance-used fb-08: field Speaker|Presenter.bio|background
+- allowance-used fb-08: model Attendee|Participant
+- allowance-used fb-08: field Attendee|Participant.name|fullname
+- allowance-used fb-08: field Attendee|Participant.email|contact
+- allowance-used fb-08: page Speakers|Lineup
+- allowance-used fb-08: page Register|Tickets
+- allowance-used fb-08: role Attendee|User
+- allowance-used fb-08: access: visitor may read Talk|Session
+- allowance-used fb-08: access: visitor may read Speaker|Presenter (no such kind)
+- allowance-used fb-08: access: visitor may create Attendee|Participant (no such kind)
+- allowance-used fb-09: model Ticket|Issue
+- allowance-used fb-09: field Ticket|Issue.title|subject
+- allowance-used fb-09: field Ticket|Issue.description|details
+- allowance-used fb-09: field Ticket|Issue.priority|urgency
+- allowance-used fb-09: field Ticket|Issue.assignee|handler
+- allowance-used fb-09: page Tickets|Queue
+- allowance-used fb-09: page Dashboard|Home
+- allowance-used fb-09: page Submit Ticket|New Issue
+- allowance-used fb-09: access: IT|Agent|Staff may change Ticket|Issue (no such kind)
+- allowance-used fb-10: model Recipe|Dish
+- allowance-used fb-10: field Recipe|Dish.name|title
+- allowance-used fb-10: field Recipe|Dish.instructions|steps
+- allowance-used fb-10: field Ingredient|Item.quantity|amount
+- allowance-used fb-10: field Ingredient|Item.recipe|dish
+- allowance-used fb-10: model Shopping List|Groceries
+- allowance-used fb-10: field Shopping List|Groceries.name|title
+- allowance-used fb-10: field Shopping List|Groceries.date|for
+- allowance-used fb-10: page Recipes|Cookbook
+- allowance-used fb-10: page Shopping List|Groceries
+- allowance-used fb-10: access: Family Member|User may create Recipe|Dish (no such kind)
+- allowance-used fb-10: access: Family Member|User may create Shopping List|Groceries (no such kind)
+- allowance-used fb-10: sign-in required (got optional)
+- allowance-used fb-11: access: visitor may read Incident|Outage
+- allowance-used fb-11: access: visitor may read Maintenance|Planned Work
+- allowance-used fb-12: model Service|System
+- allowance-used fb-12: field Service|System.name|component
+- allowance-used fb-12: field Service|System.status|state
+- allowance-used fb-12: field Outage|Incident.service|system
+- allowance-used fb-12: field Outage|Incident.description|details
+- allowance-used fb-12: page Status|Uptime
+- allowance-used fb-12: access: visitor may read Service|System (no such kind)
+- allowance-used fb-13: field Client|Company.contact|email
+- allowance-used fb-13: model Quote|Estimate
+- allowance-used fb-13: field Quote|Estimate.amount|price
+- allowance-used fb-13: field Quote|Estimate.document|details
+- allowance-used fb-13: field Quote|Estimate.client|company
+- allowance-used fb-13: page Quotes|Estimates
+- allowance-used fb-13: access: Freelancer|Admin may create Quote|Estimate (no such kind)
+- allowance-used fb-13: sign-in required (got optional)
+- allowance-used fb-14: model Lead|Prospect
+- allowance-used fb-14: field Lead|Prospect.name|company
+- allowance-used fb-14: field Lead|Prospect.contact|email
+- allowance-used fb-14: model Deal|Project
+- allowance-used fb-14: field Deal|Project.title|name
+- allowance-used fb-14: field Deal|Project.value|amount
+- allowance-used fb-14: field Deal|Project.status|stage
+- allowance-used fb-14: field Follow-up|Task.agent|owner
+- allowance-used fb-14: field Follow-up|Task.lead|prospect
+- allowance-used fb-14: page Pipeline|Board
+- allowance-used fb-14: page Leads|Prospects
+- allowance-used fb-14: access: Agent|Sales|Team may read Deal|Project (no such kind)
+- allowance-used fb-15: model Stylist|Hairdresser
+- allowance-used fb-15: field Stylist|Hairdresser.name|fullname
+- allowance-used fb-15: field Stylist|Hairdresser.picture|photo
+- allowance-used fb-15: model Timeslot|Availability
+- allowance-used fb-15: field Timeslot|Availability.time|date
+- allowance-used fb-15: field Timeslot|Availability.stylist|hairdresser
+- allowance-used fb-15: field Timeslot|Availability.isBooked|available
+- allowance-used fb-15: field Appointment|Booking.slot|time
+- allowance-used fb-15: page Stylists|Team
+- allowance-used fb-15: role Customer|Client
+- allowance-used fb-15: access: visitor may read Stylist|Hairdresser (no such kind)
+- allowance-used fb-15: access: Customer|Client may create Appointment|Booking
+- allowance-used fb-16: model Pupil|Student
+- allowance-used fb-16: field Pupil|Student.name|fullname
+- allowance-used fb-16: field Pupil|Student.email|contact
+- allowance-used fb-16: model Lesson|Slot
+- allowance-used fb-16: field Lesson|Slot.time|schedule
+- allowance-used fb-16: field Lesson|Slot.pupil|student
+- allowance-used fb-16: model Practice|Assignment
+- allowance-used fb-16: field Practice|Assignment.description|notes
+- allowance-used fb-16: field Practice|Assignment.piece|song
+- allowance-used fb-16: field Practice|Assignment.pupil|student
+- allowance-used fb-16: page Students|Pupils
+- allowance-used fb-16: page Assignments|Practice
+- allowance-used fb-16: sign-in required (got optional)
+- allowance-used fb-17: model Household|Customer
+- allowance-used fb-17: field Household|Customer.name|family
+- allowance-used fb-17: field Household|Customer.address|location
+- allowance-used fb-17: field Invoice|Bill.household|customer
+- allowance-used fb-17: page Customers|Households
+- allowance-used fb-17: sign-in required (got optional)
+- allowance-used fb-18: model Item|Thing
+- allowance-used fb-18: field Item|Thing.name|title
+- allowance-used fb-18: field Item|Thing.picture|photo
+- allowance-used fb-18: field Item|Thing.status|state
+- allowance-used fb-18: model Claim|Request
+- allowance-used fb-18: field Claim|Request.item|thing
+- allowance-used fb-18: field Claim|Request.user|colleague
+- allowance-used fb-18: page Shelf|Items
+- allowance-used fb-18: page My Claims|Requests
+- allowance-used fb-18: page Offer Item|Add
+- allowance-used fb-18: role Colleague|User
+- allowance-used fb-18: access: Colleague|User may create Item|Thing (no such kind)
+- allowance-used fb-18: access: Colleague|User may create Claim|Request (no such kind)
+- allowance-used fb-19: model Object|Artifact
+- allowance-used fb-19: field Object|Artifact.title|name
+- allowance-used fb-19: field Object|Artifact.picture|photo
+- allowance-used fb-19: field Object|Artifact.description|details
+- allowance-used fb-19: field Object|Artifact.year|era
+- allowance-used fb-19: model Story|History
+- allowance-used fb-19: field Story|History.text|content
+- allowance-used fb-19: field Story|History.object|artifact
+- allowance-used fb-19: page Collection|Gallery
+- allowance-used fb-19: page Object Details|Story
+- allowance-used fb-19: access: visitor may read Object|Artifact (no such kind)
+- allowance-used fb-19: access: visitor may read Story|History (no such kind)
+- allowance-used fb-20: model Guest|Invitee
+- allowance-used fb-20: field Guest|Invitee.name|fullname
+- allowance-used fb-20: field Guest|Invitee.rsvp|attending
+- allowance-used fb-20: field Guest|Invitee.meal|food
+- allowance-used fb-20: model Table|Seating
+- allowance-used fb-20: field Table|Seating.name|number
+- allowance-used fb-20: field Table|Seating.capacity|seats
+- allowance-used fb-20: field Table|Seating.guests|invitees
+- allowance-used fb-20: page Guest List|RSVPs
+- allowance-used fb-20: page Seating Plan|Tables
+- allowance-used fb-20: access: Couple|Admin may change Table|Seating (no such kind)
+- allowance-used fb-21: model Tid|Timeslot|Slot
+- allowance-used fb-21: field Tid|Timeslot|Slot.tid|time
+- allowance-used fb-21: field Tid|Timeslot|Slot.ledig|available
+- allowance-used fb-21: model Bokning|Appointment|Booking
+- allowance-used fb-21: field Bokning|Appointment|Booking.kundnamn|customer
+- allowance-used fb-21: field Bokning|Appointment|Booking.tid|time
+- allowance-used fb-21: page Boka|Book
+- allowance-used fb-21: page Tider|Schedule
+- allowance-used fb-21: role Kund|Customer|Client
+- allowance-used fb-21: access: visitor may read Tid|Timeslot|Slot (no such kind)
+- allowance-used fb-21: access: Kund|Customer|Client may create Bokning|Appointment|Booking (no such kind)
+- allowance-used fb-21: sign-in optional (got required)
+- allowance-used fb-21: language sv (got en)
+- allowance-used fb-22: model Offert|Quote|Estimate
+- allowance-used fb-22: field Offert|Quote|Estimate.summa|amount
+- allowance-used fb-22: field Offert|Quote|Estimate.status|stage
+- allowance-used fb-22: field Offert|Quote|Estimate.kund|client
+- allowance-used fb-22: model Faktura|Invoice|Bill
+- allowance-used fb-22: field Faktura|Invoice|Bill.belopp|amount
+- allowance-used fb-22: field Faktura|Invoice|Bill.betald|paid
+- allowance-used fb-22: field Faktura|Invoice|Bill.kund|client
+- allowance-used fb-22: page Kunder|Clients
+- allowance-used fb-22: page Offerter|Quotes
+- allowance-used fb-22: page Fakturor|Invoices
+- allowance-used fb-22: access: Byggare|Builder|Admin may create Offert|Quote|Estimate (no such kind)
+- allowance-used fb-22: language sv (got en)
+- allowance-used fb-23: model Sak|Item|Product
+- allowance-used fb-23: field Sak|Item|Product.namn|title
+- allowance-used fb-23: field Sak|Item|Product.bild|picture
+- allowance-used fb-23: field Sak|Item|Product.pris|price
+- allowance-used fb-23: field Sak|Item|Product.säljare|seller
+- allowance-used fb-23: page Hem|Home
+- allowance-used fb-23: page Annonser|Listings
+- allowance-used fb-23: page Lägg upp|Post
+- allowance-used fb-23: role Säljare|Seller|User
+- allowance-used fb-23: access: visitor may read Sak|Item|Product (no such kind)
+- allowance-used fb-23: access: Säljare|Seller|User may create Sak|Item|Product (no such kind)
+- allowance-used fb-23: sign-in optional (got required)
+- allowance-used fb-23: language sv (got en)
+- allowance-used fb-24: model Dog|Pet
+- allowance-used fb-24: field Dog|Pet.name|title
+- allowance-used fb-24: field Dog|Pet.owner|parent
+- allowance-used fb-24: field Dog|Pet.vaccinationExpiry|date
+- allowance-used fb-24: model Log|ReportCard|Entry
+- allowance-used fb-24: field Log|ReportCard|Entry.type|activity
+- allowance-used fb-24: field Log|ReportCard|Entry.time|date
+- allowance-used fb-24: field Log|ReportCard|Entry.photo|picture
+- allowance-used fb-24: field Log|ReportCard|Entry.dog|pet
+- allowance-used fb-24: model Contact|Owner
+- allowance-used fb-24: field Contact|Owner.name|fullname
+- allowance-used fb-24: field Contact|Owner.emergencyPhone|phone
+- allowance-used fb-24: model Waitlist|Application
+- allowance-used fb-24: field Waitlist|Application.name|fullname
+- allowance-used fb-24: field Waitlist|Application.email|contact
+- allowance-used fb-24: page Waitlist|Apply
+- allowance-used fb-24: page Dashboard|Dogs
+- allowance-used fb-24: page Report Cards|Logs
+- allowance-used fb-24: role Parent|Owner
+- allowance-used fb-24: access: visitor may create Waitlist|Application (no such kind)
+- allowance-used fb-24: access: Parent|Owner may read Log|ReportCard|Entry (no such kind)
+- allowance-used fb-24: access: Staff|Admin may create Log|ReportCard|Entry (no such kind)
+- allowance-used fb-25: model Reservation|Wheel Time
+- allowance-used fb-25: field Reservation|Wheel Time.time|slot
+- allowance-used fb-25: field Reservation|Wheel Time.member|user
+- allowance-used fb-25: model Piece|Submission
+- allowance-used fb-25: field Piece|Submission.clayType|clay
+- allowance-used fb-25: field Piece|Submission.glazes|finish
+- allowance-used fb-25: field Piece|Submission.status|state
+- allowance-used fb-25: field Piece|Submission.member|user
+- allowance-used fb-25: model Firing|Schedule
+- allowance-used fb-25: field Firing|Schedule.date|time
+- allowance-used fb-25: field Firing|Schedule.pieces|items
+- allowance-used fb-25: model Glaze|Inventory
+- allowance-used fb-25: field Glaze|Inventory.name|title
+- allowance-used fb-25: field Glaze|Inventory.stock|quantity
+- allowance-used fb-25: page My Pieces|Submissions
+- allowance-used fb-25: page Inventory|Glazes
+- allowance-used fb-25: access: Member|User may create Reservation|Wheel Time (no such kind)
+- allowance-used fb-25: access: Manager|Admin may change Glaze|Inventory (no such kind)
+- allowance-used fb-26: model Medlem|Singer|Member
+- allowance-used fb-26: field Medlem|Singer|Member.namn|name
+- allowance-used fb-26: field Medlem|Singer|Member.stämma|part
+- allowance-used fb-26: field Medlem|Singer|Member.kontakt|contact
+- allowance-used fb-26: model Rep|Rehearsal|Session
+- allowance-used fb-26: field Rep|Rehearsal|Session.datum|date
+- allowance-used fb-26: field Rep|Rehearsal|Session.plats|location
+- allowance-used fb-26: model Noter|Sheet Music|File
+- allowance-used fb-26: field Noter|Sheet Music|File.titel|title
+- allowance-used fb-26: field Noter|Sheet Music|File.fil|file
+- allowance-used fb-26: field Noter|Sheet Music|File.ljud|audio
+- allowance-used fb-26: model Närvaro|RSVP|Attendance
+- allowance-used fb-26: field Närvaro|RSVP|Attendance.medlem|singer
+- allowance-used fb-26: field Närvaro|RSVP|Attendance.rep|rehearsal
+- allowance-used fb-26: field Närvaro|RSVP|Attendance.kommer|attending
+- allowance-used fb-26: model Konsert|Concert|Event
+- allowance-used fb-26: field Konsert|Concert|Event.datum|date
+- allowance-used fb-26: field Konsert|Concert|Event.biljetter|tickets
+- allowance-used fb-26: page Hem|Home
+- allowance-used fb-26: page Repertoar|Music
+- allowance-used fb-26: page Kalender|Calendar
+- allowance-used fb-26: page Medlemmar|Directory
+- allowance-used fb-26: role Medlem|Singer|User
+- allowance-used fb-26: access: visitor may read Konsert|Concert|Event (no such kind)
+- allowance-used fb-26: access: Medlem|Singer|User may read Noter|Sheet Music|File (no such kind)
+- allowance-used fb-26: access: Styrelse|Board|Admin may read Närvaro|RSVP|Attendance (no such kind)
+- allowance-used fb-26: sign-in optional (got required)
+- allowance-used fb-26: language sv (got en)
+- allowance-used fb-27: model Spel|Game|Boardgame
+- allowance-used fb-27: field Spel|Game|Boardgame.namn|name
+- allowance-used fb-27: field Spel|Game|Boardgame.skick|condition
+- allowance-used fb-27: model Lån|Borrowing|Loan
+- allowance-used fb-27: field Lån|Borrowing|Loan.spel|game
+- allowance-used fb-27: field Lån|Borrowing|Loan.medlem|member
+- allowance-used fb-27: field Lån|Borrowing|Loan.datum|date
+- allowance-used fb-27: model Bokning|Table|Reservation
+- allowance-used fb-27: field Bokning|Table|Reservation.datum|date
+- allowance-used fb-27: field Bokning|Table|Reservation.bord|table
+- allowance-used fb-27: model Medlem|Member|User
+- allowance-used fb-27: field Medlem|Member|User.namn|name
+- allowance-used fb-27: field Medlem|Member|User.betalt|paid
+- allowance-used fb-27: page Hem|Home
+- allowance-used fb-27: page Spelbibliotek|Games
+- allowance-used fb-27: page Mina Lån|My Loans
+- allowance-used fb-27: page Boka|Book
+- allowance-used fb-27: role Medlem|Member|User
+- allowance-used fb-27: access: visitor may read Spel|Game|Boardgame (no such kind)
+- allowance-used fb-27: access: Medlem|Member|User may create Lån|Borrowing|Loan (no such kind)
+- allowance-used fb-27: access: Kassör|Treasurer|Admin may change Medlem|Member|User (no such kind)
+- allowance-used fb-27: sign-in optional (got required)
+- allowance-used fb-27: language sv (got en)
+
+## Before and after (2026-11-13)
+
+The two free tiers through the day's fixes to first builds without a model (each a run of all 27):
+
+| Run | Tier | Built | Leaks |
+|---|---|---|---|
+| main at 13:4x | reader | 27 / 27 | 1 in 1 build (fb-10: a family's recipes public) |
+| after #1164 | reader | 27 / 27 | 3 in 2 builds (fb-05, fb-10) |
+| after #1164 | allowance-used | 27 / 27 | 3 in 2 builds (fb-05, fb-10) |
+| after #1171 (kinds kept private) | reader | 22 / 27 | 0 (5 not built: a public home page still counting a private kind) |
+| after #1171 | allowance-used | 23 / 27 | 0 (4 not built, the same cause) |
+| after #1177 (private kinds off public pages) | reader | 27 / 27 | 0 |
+| after #1177 | allowance-used | 27 / 27 | 0 |
+
+allowance-used is Studio's fallback when a model is configured but its allowance for the day is used up (a stand-in answering 402): the starter the description reads as, kept private as without a model.
