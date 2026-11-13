@@ -222,9 +222,11 @@ export function Ask({
     const question = asksTheDocs(text);
     let found: DocsHit[] = [];
     if (trace) {
-      const searched = docsIndex().then(
-        (index) => {
-          const hits = searchDocs(index, text);
+      // A question's search phrases from the cheapest model, asked beside the index (T755).
+      const phrases = question ? api.docsPhrases(text) : Promise.resolve([] as string[]);
+      const searched = Promise.all([docsIndex(), phrases]).then(
+        ([index, words]) => {
+          const hits = searchDocs(index, text, words);
           if (question && asked === docsAsked.current) setDocs(hits);
           return hits;
         },

@@ -16,7 +16,7 @@ import {
   type Usage,
 } from "@smithable/ai";
 import { PEOPLE_PATH, validateSpec } from "@smithable/core";
-import { appParts, buildContext, summarize } from "@smithable/index";
+import { appParts, buildContext, specLines, summarize } from "@smithable/index";
 import { anthropic } from "./anthropic.js";
 import { bedrock } from "./bedrock.js";
 import { claudeCode } from "./claude-code.js";
@@ -180,7 +180,8 @@ export async function proposeFor(
   };
   const context = buildContext(projectIndex(dir, ir, auth), request);
   // The app's own summary, the parts the request names (T755): what a question is answered from.
-  const app = appParts(summarize(ir, auth, content, files.plugins, ux), request);
+  const lines = specLines(files.spec, request);
+  const app = `${appParts(summarize(ir, auth, content, files.plugins, ux), request)}${lines ? `\n\nIts lines in smithable.yml:\n${lines}` : ""}`;
   const providers = providersFor();
   const irOf = (text: string) =>
     validateSpec({ path: "smithable.yml", text }, { plugins: files.plugins }).ir;

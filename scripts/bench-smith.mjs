@@ -25,10 +25,10 @@ import { repo } from "./dev-app.mjs";
 const { validateAuth, validateContent, validateSpec, validateUx } = await import(
   join(repo, "packages/core/dist/index.js")
 );
-const { appParts, buildContext, buildIndex, searchDocs, summarize } = await import(
+const { appParts, buildContext, buildIndex, searchDocsWith, specLines, summarize } = await import(
   join(repo, "packages/index/dist/index.js")
 );
-const { proposeChange, openAICompatible, listPrice } = await import(
+const { proposeChange, openAICompatible, listPrice, searchPhrases } = await import(
   join(repo, "packages/ai/dist/index.js")
 );
 
@@ -269,7 +269,16 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
     if (r.kind === "undo" || r.kind === "feedback") continue;
     if (rows.some((x) => x.setup === setup && x.id === r.id)) continue;
     const { files: f, index, summary } = project(r.starter);
-    const docs = searchDocs(docsIndex, r.text);
+    // As Studio: a question's search phrases from the cheapest model, the docs searched with them.
+    const phraseUsage = [];
+    const asked =
+      /\?\s*$/.test(r.text) ||
+      /^(how|where|what|why|can i|is there|hur|var|vad|varför|kan jag|finns det)\b/i.test(
+        r.text.trim(),
+      );
+    const phrases =
+      asked && providers[0] ? await searchPhrases(providers[0], r.text, phraseUsage) : [];
+    const docs = searchDocsWith(docsIndex, r.text, phrases);
     const before = r.after ? requests.find((x) => x.id === r.after) : undefined;
     const started = Date.now();
     // A provider's rate limit (429) is the bench's pace, not the model's answer: the request is
@@ -281,7 +290,10 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
         context: buildContext(index, r.text),
         providers,
         docs,
-        app: appParts(summary, r.text),
+        app: ((lines) =>
+          `${appParts(summary, r.text)}${lines ? `\n\nIts lines in smithable.yml:\n${lines}` : ""}`)(
+          specLines(f.spec, r.text),
+        ),
         ...(before ? { conversation: [{ request: before.text, reply: "" }] } : {}),
       });
     let p = await ask();
@@ -306,7 +318,7 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
               why: p.generator ?? "",
             }
           : await scored(r, p);
-    const usage = [...p.usage, ...(score.usage ?? [])];
+    const usage = [...phraseUsage, ...p.usage, ...(score.usage ?? [])];
     const row = {
       setup,
       id: r.id,

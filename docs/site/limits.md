@@ -6,6 +6,8 @@ An app you run yourself has none of these: it has what your machine gives it ([s
 
 ## Per account
 
+How many apps you can have, how much AI you can use, and how many emails your apps can send in all:
+
 | | Limit |
 |---|---|
 | Apps | 10, each with a live and a staging copy |
@@ -16,7 +18,7 @@ The service also has its own caps on what it spends with each AI provider in a m
 
 ## Per app
 
-Each published app runs with these, and so does its staging copy, separately:
+Each published app runs with these, and so does its staging copy, separately: its memory, its storage (the space for its photos and other files), how many emails it can send, its calls out and its traffic.
 
 | | Limit |
 |---|---|

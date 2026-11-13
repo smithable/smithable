@@ -1,5 +1,12 @@
 import { expect, test } from "vitest";
-import { appParts, type DocsIndex, searchDocs, searchWords } from "./docs-search.js";
+import {
+  appParts,
+  type DocsIndex,
+  searchDocs,
+  searchDocsWith,
+  searchWords,
+  specLines,
+} from "./docs-search.js";
 import type { SummarySection } from "./summary.js";
 
 const index: DocsIndex = {
@@ -37,4 +44,35 @@ test("the app's parts the request names, else its whole summary", () => {
   expect(appParts(sections, "what is this?")).toBe(
     "Bookings: A member books a place.\n\nPages: The schedule is public.",
   );
+});
+
+test("a request's own best part first, then each phrase's, none twice", () => {
+  const own = searchDocs(index, "can I use my own domain")[0]?.url;
+  const hits = searchDocsWith(index, "can I use my own domain", ["publish", "API key"]);
+  expect(hits[0]?.url).toBe(own);
+  expect(hits.map((h) => h.url)).toContain("https://docs.smithable.ai/keys.html");
+  expect(new Set(hits.map((h) => h.url)).size).toBe(hits.length);
+  expect(hits.length).toBeLessThanOrEqual(3);
+});
+
+test("the spec's own entries a question names, as written", () => {
+  const spec = `smithable: 0.1
+app: { name: Studio }
+models:
+  Session:
+    fields:
+      capacity: int!
+  Booking:
+    fields:
+      session: Session!
+timers:
+  reminder:
+    every: day
+pages:
+  sessions: { crud: Session }
+`;
+  const lines = specLines(spec, "what happens when a session is full, is there a reminder?");
+  expect(lines).toContain("  Session:\n    fields:\n      capacity: int!");
+  expect(lines).toContain("timers:\n  reminder:");
+  expect(specLines(spec, "the weather")).toBe("");
 });

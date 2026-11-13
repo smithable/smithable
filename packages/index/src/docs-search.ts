@@ -21,8 +21,8 @@ export interface DocsHit {
 
 export const DOCS_SITE = "https://docs.smithable.ai";
 
-/** Characters of a part sent to the model. */
-const TEXT = 1200;
+/** Characters of a part sent to the model: the whole part, as a rule (three in full beat five cut short, T755). */
+const TEXT = 3000;
 
 /** Words that say nothing of a request's subject, in English and Swedish. */
 const PLAIN = new Set(
@@ -74,7 +74,7 @@ const weighted = (heading: string, text: string) => {
 };
 
 /** The docs' parts that answer a request best, at most `count`, best first. */
-export function searchDocs(index: DocsIndex, request: string, count = 5): DocsHit[] {
+export function searchDocs(index: DocsIndex, request: string, count = 3): DocsHit[] {
   const query = searchWords(request);
   if (!query.length) return [];
   const scores = bm25(
@@ -96,6 +96,26 @@ export function searchDocs(index: DocsIndex, request: string, count = 5): DocsHi
         text: text.slice(0, TEXT),
       };
     });
+}
+
+/**
+ * The docs' parts for a request and the search phrases written for it (T755 step 2): the request's
+ * own best first, then each phrase's best in turn, at most `count`, none twice.
+ */
+export function searchDocsWith(
+  index: DocsIndex,
+  request: string,
+  phrases: readonly string[],
+  count = 3,
+): DocsHit[] {
+  const lists = [request, ...phrases].map((text) => searchDocs(index, text, count));
+  const out: DocsHit[] = [];
+  for (let i = 0; out.length < count && i < count; i++)
+    for (const list of lists) {
+      const hit = list[i];
+      if (hit && out.length < count && !out.some((h) => h.url === hit.url)) out.push(hit);
+    }
+  return out;
 }
 
 /** Characters of the whole summary given when no part of it matches a request. */
@@ -130,4 +150,53 @@ export function appParts(sections: SummarySection[], request: string, count = 4)
   if (found.length) return found.map(({ s }) => sectionText(s)).join("\n\n");
   const whole = sections.map(sectionText).join("\n\n");
   return whole.length > SUMMARY ? `${whole.slice(0, SUMMARY)}…` : whole;
+}
+
+/** The spec's sections whose entries a question may name (T755): what the summary leaves out. */
+const SPEC_SECTIONS = ["models", "pages", "timers", "outgoing", "incoming", "actions"];
+
+/**
+ * The entries of smithable.yml a request names, as written: each kind of record, page, timer,
+ * outgoing or incoming call or action whose name and lines share the most words with it, at most
+ * `count`, cut at `max` characters in all. Beside the summary, they carry the rules it leaves
+ * out (until when, who is told, how often).
+ */
+export function specLines(spec: string, request: string, count = 3, max = 2500): string {
+  const blocks: { section: string; key: string; text: string }[] = [];
+  let section: string | undefined;
+  let current: { section: string; key: string; lines: string[] } | undefined;
+  const close = () => {
+    if (current)
+      blocks.push({ section: current.section, key: current.key, text: current.lines.join("\n") });
+    current = undefined;
+  };
+  for (const line of spec.split("\n")) {
+    const top = /^([A-Za-z]+):/.exec(line);
+    if (top) {
+      close();
+      section = SPEC_SECTIONS.includes(top[1] as string) ? top[1] : undefined;
+      continue;
+    }
+    if (!section) continue;
+    const entry = /^ {2}([A-Za-z0-9_-]+):/.exec(line);
+    if (entry) {
+      close();
+      current = { section, key: entry[1] as string, lines: [line] };
+    } else if (current && (line.startsWith("   ") || !line.trim())) current.lines.push(line);
+  }
+  close();
+  const query = searchWords(request);
+  if (!query.length || !blocks.length) return "";
+  const scores = bm25(
+    blocks.map((b) => weighted(b.key.replace(/([a-z])([A-Z])/g, "$1 $2"), b.text)),
+    query,
+  );
+  const chosen = blocks
+    .map((b, i) => ({ b, score: scores[i] ?? 0 }))
+    .filter((h) => h.score > 0)
+    .sort((a, z) => z.score - a.score)
+    .slice(0, count)
+    .map(({ b }) => `${b.section}:\n${b.text.trimEnd()}`)
+    .join("\n\n");
+  return chosen.length > max ? `${chosen.slice(0, max)}…` : chosen;
 }
