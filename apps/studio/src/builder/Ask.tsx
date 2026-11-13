@@ -1576,7 +1576,8 @@ export function ProposalView({
  * "I want to leave feedback"), or undefined when it is not one.
  */
 export function feedbackRequest(text: string): string | undefined {
-  const words = /^feedback\s*:\s*([\s\S]+)$/i.exec(text);
+  // "palaute:" is feedback in Finnish (T731); Swedish says feedback too.
+  const words = /^(?:feedback|palaute)\s*:\s*([\s\S]+)$/i.exec(text);
   if (words) return (words[1] ?? "").trim();
   if (
     /^(?:i(?:'d| would)? (?:want|like) to |can i |let me |i want to |please )?(?:leave|give|send) (?:you |some |my )?feedback[.!?]*$/i.test(

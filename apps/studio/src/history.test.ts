@@ -154,3 +154,26 @@ test("the last line in place, what undoing it puts back, and a line by its words
     two: [[{ number: 2 }], [{ number: 1 }]],
   });
 });
+
+test("undo and redo in a word or two, in English, Swedish and Finnish; a slip only in a long word (T731)", () => {
+  for (const text of [
+    "undo",
+    "Undo!",
+    "revert",
+    "ångra",
+    "Ångra det",
+    "ångra senaste ändringen",
+    "kumoa",
+    "kumoa viimeisin",
+  ])
+    expect(readHistory(text), text).toEqual({ kind: "undo", last: true });
+  for (const text of ["redo", "Gör om", "tee uudelleen"])
+    expect(readHistory(text), text).toEqual({ kind: "redo" });
+  // A one-letter slip in a word of five letters or more; "undo" has four, so "undoo" is not read.
+  expect(readHistory("revet")).toEqual({ kind: "undo", last: true });
+  expect(readHistory("kumooa")).toEqual({ kind: "undo", last: true });
+  expect(readHistory("undoo")).toBeUndefined();
+  expect(readHistory("redu")).toBeUndefined();
+  // Not a bare word: a change that only starts like one goes on.
+  expect(readHistory("revert the colours to blue")).toBeUndefined();
+});

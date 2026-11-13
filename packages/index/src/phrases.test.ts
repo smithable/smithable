@@ -223,6 +223,13 @@ describe("the seven benchmark tasks", () => {
       { op: "setSortable", args: { page: "customers", fields: ["name", "creditLimit"] } },
     ]);
   });
+  test("a sort or filter by a name no field has goes to the model, not a refusal (T731)", () => {
+    // "start time" for startsAt, "cheapest first" for an order: the rule may have matched the
+    // wrong words, so it neither refuses nor guesses.
+    const read = (text: string) => matchRequest(ir(), text, ROLES);
+    expect(read("Customers should be sortable by start time")).toBeUndefined();
+    expect(read("Let people filter customers by cheapest first")).toBeUndefined();
+  });
   test("Let people save customers as favorites; let visitors contact the account manager of a customer", () => {
     expect(ops("Let people save customers as favorites.")).toEqual([
       { op: "setFavorites", args: { page: "customers", mode: "on" } },
@@ -474,6 +481,10 @@ describe("the words box, as a first-time owner types into it (studio-review-2026
     expect(ops("rename the customer's notes to remarks")).toEqual([
       { op: "renameField", args: { model: "Customer", from: "notes", to: "remarks" } },
     ]);
+  });
+  test("a page renamed is never what its records are called (T731)", () => {
+    // The page's title or address: the model's to read, not nameRecords.
+    expect(ops("rename the products page to Catalogue")).toBeUndefined();
   });
 });
 

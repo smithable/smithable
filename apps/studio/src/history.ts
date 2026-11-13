@@ -82,12 +82,41 @@ export type HistoryRequest =
   | { kind: "undo"; last: true }
   | { kind: "undo"; from: number; to: number }
   | { kind: "undo"; words: string }
+  | { kind: "redo" }
   | { kind: "what"; number: number }
   | { kind: "name"; number?: number; name: string }
   | { kind: "rename"; from: string; to: string }
   | { kind: "unname"; name: string };
 
 const NUMBER = String.raw`(?:#|change\s+)?(\d+)`;
+
+/** Undo and redo in a word or two, in English, Swedish and Finnish (T731). */
+const UNDO_WORDS = [
+  "undo",
+  "revert",
+  "undo please",
+  "ångra",
+  "ångra det",
+  "ångra det där",
+  "ångra senaste",
+  "ångra senaste ändringen",
+  "kumoa",
+  "kumoa se",
+  "kumoa viimeisin",
+  "kumoa viimeisin muutos",
+];
+const REDO_WORDS = ["redo", "gör om", "gör om det", "tee uudelleen"];
+
+/** One letter more, less or different: a slip, counted only for words of five letters or more. */
+function slip(a: string, b: string): boolean {
+  if (b.length < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  const rest = (x: string, n: number) => x.slice(i + n);
+  return rest(a, 1) === rest(b, 1) || rest(a, 1) === rest(b, 0) || rest(a, 0) === rest(b, 1);
+}
+const said = (text: string, words: string[]) =>
+  words.some((w) => text === w || (!w.includes(" ") && slip(text, w)));
 const unquote = (text: string) => {
   const t = text.trim().replace(/[.!?]+$/, "");
   const quoted = /^["'“‘](.*)["'”’]$/.exec(t);
@@ -125,6 +154,9 @@ export function readHistory(request: string): HistoryRequest | undefined {
   // What did #12 do.
   m = new RegExp(`^what did ${NUMBER} do$`).exec(lower);
   if (m) return { kind: "what", number: Number(m[1]) };
+  // Undo and redo in a word or two (T731).
+  if (said(lower, UNDO_WORDS)) return { kind: "undo", last: true };
+  if (said(lower, REDO_WORDS)) return { kind: "redo" };
   // Undo.
   if (/^(?:undo|take back) (?:the last change|that|it|the last one)$|^take that back$/.test(lower))
     return { kind: "undo", last: true };

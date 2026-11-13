@@ -2,18 +2,8 @@
 
 exports[`undo by words and feedback: what Studio's rules catch is right, and what needs no model is caught > needs no model, not caught by Studio's rules yet 1`] = `
 [
-  "u-undo: undo",
-  "u-redo: undo",
-  "u-sv-angra: undo",
-  "u-sv-angra-senaste: undo",
-  "u-fi-kumoa: undo",
-  "u-fi-viimeisin: undo",
   "u-typo: undo",
-  "u-revert: undo",
   "u-after-phone: undo",
-  "u-after-sv: undo",
-  "u-after-fi: undo",
-  "f-fi: feedback",
 ]
 `;
 
