@@ -9421,18 +9421,27 @@ if (examples.includes("booking")) {
   const dir = join(mkdtempSync(join(tmpdir(), "smithable-describe-")), "app");
   dirs.push(dir);
   try {
-    await asyncStep("without a model, it says how to start from a starter instead", async () => {
-      const result = await smithableAsync(
-        dir,
-        { SMITHABLE_LOCAL_MODEL: "" },
-        "new",
-        dir,
-        "--describe",
-        "A booking site for a pilates studio",
-      );
-      if (result.code === 0 || !result.out.includes("--starter booking"))
-        throw new Error(result.out);
-    });
+    // Without a model it is the starter unchanged, said as such (T778); asked to confirm here
+    // without --yes, so nothing is made in the folder the next steps use.
+    await asyncStep(
+      "without a model, it says the starter is used unchanged, not drafted",
+      async () => {
+        const result = await smithableAsync(
+          dir,
+          { SMITHABLE_LOCAL_MODEL: "" },
+          "new",
+          dir,
+          "--describe",
+          "A booking site for a pilates studio",
+        );
+        if (
+          !result.out.includes(
+            "No model is set up, so this is the booking starter unchanged, not an app made from your description",
+          )
+        )
+          throw new Error(result.out);
+      },
+    );
     await asyncStep(
       "clarify --json: the model's questions and starter for a program; no model means no questions",
       async () => {

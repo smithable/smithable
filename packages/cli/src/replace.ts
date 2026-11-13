@@ -293,8 +293,13 @@ export async function replaceProject(
     if (existsSync(lock)) copyFileSync(lock, join(beside, "pnpm-lock.yaml"));
   };
   let said = "";
+  // What the build said, for the line it gives when no model is set up (T778).
+  let told = "";
   const kept: Io = {
-    out: io.out,
+    out: (text) => {
+      told += text;
+      io.out(text);
+    },
     err: (text) => {
       said += text;
     },
@@ -336,19 +341,37 @@ export async function replaceProject(
       fresh();
       progress("building");
       const starter = to.starter ?? "crm";
-      made = await create(beside, io, starter, options);
-      if (made !== 0) return made;
       const why = /allowance/i.test(said)
         ? "the AI allowance is used up"
         : said.includes("No model is available")
           ? "no AI model is available"
           : "the AI model did not produce a working app from it";
+      // The starter as it is, kept as private as the description asks (T778), never plain.
+      made = await create(beside, io, starter, {
+        ...options,
+        ...(to.describe
+          ? {
+              describe: to.describe,
+              yes: true,
+              starterOnly: why.replace(/^./, (c) => c.toUpperCase()),
+            }
+          : {}),
+      });
+      if (made !== 0) return made;
       io.err(`Could not make the app from the description (${why}); starting from ${starter}.\n`);
       mkdirSync(join(beside, "data", ".smithable"), { recursive: true });
       writeFileSync(
         join(beside, "data", ".smithable", "notice.txt"),
         `The description could not be used this time: ${why}. This is the ${starter} starter; describe changes to it below.\n`,
       );
+    }
+    // No model: the starter unchanged, said in Studio as its notice too (T778, Fable M647).
+    const unchanged = /No model is set up, so this is the [a-z-]+ starter unchanged[^\n]*/.exec(
+      told,
+    )?.[0];
+    if (made === 0 && unchanged) {
+      mkdirSync(join(beside, "data", ".smithable"), { recursive: true });
+      writeFileSync(join(beside, "data", ".smithable", "notice.txt"), `${unchanged}\n`);
     }
     control?.beforeArrival();
     progress("arriving");
