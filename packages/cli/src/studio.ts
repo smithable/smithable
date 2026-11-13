@@ -4,7 +4,7 @@ import { existsSync, readFileSync, rmSync, statSync, watchFile } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { type Assumption, describedWith, type Proposal } from "@smithable/ai";
+import { type Assumption, describedWith, type Proposal, searchPhrases } from "@smithable/ai";
 import {
   applyOperations,
   BUILT_IN_THEMES,
@@ -31,6 +31,7 @@ import {
 } from "./ask.js";
 import { BETA, readBeta } from "./beta.js";
 import { cardTexts } from "./card.js";
+import { logTokens } from "./context.js";
 import { customize } from "./customize.js";
 import { devServerEnv } from "./dev.js";
 import { backFromFix, rememberBeforeFix } from "./fix-open.js";
@@ -1441,6 +1442,18 @@ export async function studio(
         }
         return json({ said });
       }
+      // Search phrases for a question (T755): the page searches the docs with them beside the
+      // question. The cheapest model the AI policy allows; with none, the question alone.
+      if (req.method === "POST" && url.pathname === "/api/docs-phrases") {
+        const { text } = await body();
+        const cheapest = providersFor()[0];
+        if (!cheapest || typeof text !== "string" || !text.trim()) return json({ phrases: [] });
+        const usage: Parameters<typeof searchPhrases>[2] = [];
+        const phrases = await searchPhrases(cheapest, text, usage);
+        if (usage.length)
+          logTokens(dir, { source: "docs-phrases", request: text.slice(0, 200), usage });
+        return json({ phrases });
+      }
       if (req.method === "POST" && url.pathname === "/api/ask") {
         // A model proposes; nothing changes until the proposal is applied. The conversation so
         // far and the docs' parts the page found go with the request (A 152), each cut short.
@@ -1458,7 +1471,7 @@ export async function studio(
             const [title, at, words] = [
               text(part?.title, 200),
               text(part?.url, 300),
-              text(part?.text, 1200),
+              text(part?.text, 3000),
             ];
             return title && at && words ? [{ title, url: at, text: words }] : [];
           },

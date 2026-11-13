@@ -34,7 +34,7 @@ An invite comes by mail as a link. Opening it makes your account, with Google or
 
 The app's page has these sections:
 
-- **Publish.** **Publish live** checks the app (type check and tests), builds it and puts it online with backups. Its address is `a-<app id>.smithable.app`. **Publish to staging** makes a separate copy with its own data, for checking a version or showing it to a client first. A problem the check finds, such as an administrator address nobody can receive mail at, is listed before you publish.
+- **Publish.** **Publish live** checks the app (type check and tests), builds it and puts it online with backups. Its address is `a-<app id>.smithable.app`. **Publish to staging** makes a staging copy: a separate copy with its own data, for checking a version or showing it to a client first. A problem the check finds, such as an administrator address nobody can receive mail at, is listed before you publish.
 - **Your own domain.** Once the app is live, enter the domain and save; the section then shows an A record and a TXT record to add at your domain's provider. The certificate is made at the first visit.
 - **Mail.** The service sends the published app's mail, its sign-in codes included, so you don't need mail settings. The app's page tells you if mail is paused or addresses bounce.
 - **Sign in with Google.** Under Connections, for a "Continue with Google" button beside the code by email. [Sign in with Google](google-sign-in.md) shows how.

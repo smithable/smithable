@@ -21,6 +21,7 @@ export {
   textLanguage,
   writtenIn,
 } from "./language.js";
+export { searchPhrases } from "./phrases.js";
 export type { PickedPictures, PictureCredit, PictureEntry } from "./pictures.js";
 export { pickPictures } from "./pictures.js";
 export type { Proposal, ProposedOperation } from "./propose.js";

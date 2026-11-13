@@ -437,6 +437,12 @@ export const api = {
   /** Starts the preview's server again; `why` goes to the log. */
   previewRestart: (why?: string) => call<{ ok: boolean }>("/api/preview/restart", { why }),
   /** A request, with the conversation so far and the docs' parts found for it (A 152). */
+  /** Search phrases for a question (T755): none when no model is set up. */
+  docsPhrases: (text: string) =>
+    call<{ phrases: string[] }>("/api/docs-phrases", { text }).then(
+      (r) => r.phrases,
+      () => [] as string[],
+    ),
   ask: (
     request: string,
     around: {

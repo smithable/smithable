@@ -300,6 +300,28 @@ export async function proposeChange(options: {
   const docs = (options.docs ?? []).map((d) => `${d.title} (${d.url}): ${d.text}`).join("\n");
   // Both searches run for every request that reaches a model, each labelled (T755).
   const around = `${said ? `\n\nThe conversation so far:\n${said}` : ""}${options.app ? `\n\nFrom this app:\n${options.app}` : ""}${docs ? `\n\nFrom the docs:\n${docs}` : ""}`;
+  // A question, as the rules read it (T755): answered by the cheapest model from the app's parts
+  // and the docs, with no operations to choose from (most of a change's prompt). When it is a
+  // change after all, the model says so and the normal path below runs.
+  const first = providers[0];
+  if (first && looksLikeQuestion(options.request)) {
+    try {
+      const answer = (await completeJson(
+        first,
+        {
+          system: questionSystem(options.kit),
+          user: `${withoutOperations(context.text)}${around}`,
+          schema: QUESTION_SCHEMA,
+        },
+        usage,
+      )) as { kind?: string; text?: string };
+      if (answer.kind === "answer" && answer.text)
+        return { kind: "answer", text: answer.text, concepts: context.concepts, usage };
+    } catch (error) {
+      if (error instanceof PausedError) return { kind: "paused", paused: error.paused, usage };
+      // Unreachable or not JSON: the normal path gets it.
+    }
+  }
   for (const [index, provider] of providers.entries()) {
     const prompted = promptFor(provider, context, files.plugins, options.kit);
     const { system, operations } = prompted;
@@ -354,6 +376,35 @@ export async function proposeChange(options: {
   }
   if (none !== undefined && !problem) return { kind: "none", reason: none, usage };
   return { kind: "failed", message: `No model found a change that applies. ${problem}`, usage };
+}
+
+/** What a question is answered by (T755): the app's parts and the docs, never an operation. */
+const QUESTION = `You are Smith, the assistant in Smithable's Studio, where a person builds a web app by asking for changes. The person asked a question. Answer it in one to three plain sentences, in the language of the question, as JSON {"kind":"answer","text":"…"}:
+- about this app (who can do what, what something is, whether it is public, what happens when): from "From this app" and the parts of the app (smithable.yml), as they are; never as they could be;
+- about how Smithable works (publishing, hosting, limits, keys, data, import and export, languages, integrations): from "From the docs", in up to four sentences, with the names the docs give (commands, buttons, pages, places in the app) and each way they offer, naming the page it comes from;
+- a greeting, thanks or other small talk: one or two friendly sentences, then something to change or ask about this app;
+- not about this app or Smithable: one sentence, then lead back to this app.
+When neither says it, say you do not know rather than guess. When the request is really a change to make, not a question, answer {"kind":"change"} and nothing else.`;
+
+const QUESTION_SCHEMA = {
+  type: "object",
+  required: ["kind"],
+  additionalProperties: false,
+  properties: { kind: { enum: ["answer", "change"] }, text: { type: "string" } },
+};
+
+/** The question's system text: stable for every question in every app (its kit is the same). */
+const questionSystem = (kit: readonly string[] = []) =>
+  kit.length
+    ? `${QUESTION}\n\nWhat every app does by itself (its kit, the same in every app):\n${kit.map((line) => `- ${line}`).join("\n")}`
+    : QUESTION;
+
+/** The context without its list of operations, which a question does not choose from. */
+export function withoutOperations(text: string): string {
+  const at = text.indexOf("\n\nOperations (change the app only through these):");
+  if (at < 0) return text;
+  const code = text.indexOf("\n\nCustom code:", at);
+  return text.slice(0, at) + (code < 0 ? "" : text.slice(code));
 }
 
 /** Why the rules cannot make a request they read, when that is so (tier 0). */

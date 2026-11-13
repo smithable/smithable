@@ -7,7 +7,9 @@ export {
   type DocsHit,
   type DocsIndex,
   searchDocs,
+  searchDocsWith,
   searchWords,
+  specLines,
 } from "./docs-search.js";
 export type { PhraseMatch, PhraseOperation, PhraseRefusal } from "./phrases.js";
 export { matchRequest, refusalOf } from "./phrases.js";

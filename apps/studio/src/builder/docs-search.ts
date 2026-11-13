@@ -1,7 +1,7 @@
 // Smith's answers from the docs (studio-v3.md §2): docs.smithable.ai's own search index, read in
 // the person's browser on first use (a hosted workspace has no internet, the browser has), kept
 // for the tab, and searched by the same ranking the bench measures (@smithable/index, T755).
-import { DOCS_SITE, type DocsIndex, searchDocs as search } from "@smithable/index";
+import { DOCS_SITE, type DocsIndex, searchDocsWith } from "@smithable/index";
 
 export type { DocsIndex };
 
@@ -36,9 +36,14 @@ export const asksTheDocs = (text: string) =>
   /\?\s*$/.test(text) ||
   /^(how|where|what|why|can i|is there|hur|var|vad|varför|kan jag|finns det)\b/i.test(text.trim());
 
-/** The parts that answer a request best, at most `count`. */
-export function searchDocs(index: DocsIndex, request: string, count = 5): DocsHit[] {
-  return search(index, request, count).map((h) => ({
+/** The parts that answer a request best, with its search phrases beside it, at most `count`. */
+export function searchDocs(
+  index: DocsIndex,
+  request: string,
+  phrases: readonly string[] = [],
+  count = 3,
+): DocsHit[] {
+  return searchDocsWith(index, request, phrases, count).map((h) => ({
     ...h,
     line: h.text.length > 180 ? `${h.text.slice(0, 180)}…` : h.text,
   }));

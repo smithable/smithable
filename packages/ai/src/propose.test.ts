@@ -7,6 +7,7 @@ import {
   promptFor,
   proposeChange,
   relevantOperations,
+  withoutOperations,
 } from "./propose.js";
 import { allowedBy, type Provider, parsePolicy, route } from "./provider.js";
 
@@ -360,4 +361,13 @@ describe("small talk (A 151)", () => {
     expect(system).toContain("also for a greeting, thanks or other small talk");
     expect(system).toContain('Never answer "none" to small talk.');
   });
+});
+
+test("a question's context leaves out the operations, and keeps the custom code after them", () => {
+  const text =
+    "Request: who can?\n\nRelevant parts\n\nOperations (change the app only through these):\n- addField x\n- grant y\n\nCustom code:\n--- a.ts\ncode";
+  expect(withoutOperations(text)).toBe(
+    "Request: who can?\n\nRelevant parts\n\nCustom code:\n--- a.ts\ncode",
+  );
+  expect(withoutOperations("no list")).toBe("no list");
 });
