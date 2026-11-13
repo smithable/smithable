@@ -4,6 +4,7 @@ exports[`what the rules answer is right, and what needs no model is caught (the 
 [
   "bk-bio-required: change",
   "bk-capacity-default: change",
+  "bk-sort-sessions: change",
   "crm-email-required: change",
   "crm-followups-no-trash: change",
   "crm-followup-priority: change",
@@ -12,6 +13,7 @@ exports[`what the rules answer is right, and what needs no model is caught (the 
   "inv-vat-required: change",
   "inv-sort-newest: change",
   "mp-price-required: change",
+  "mp-sort-price: change",
   "rec-link-required: change",
   "rec-cafe: change",
   "st-severity: change",
@@ -31,20 +33,9 @@ exports[`what the rules answer is right, and what needs no model is caught (the 
   "q-api-roles: spec-question",
   "s-hello: smalltalk",
   "s-thnks: smalltalk",
-  "s-tack: smalltalk",
-  "s-kiitos: smalltalk",
-  "s-moi: smalltalk",
   "s-great: smalltalk",
-  "s-fi-morning: smalltalk",
-  "s-sv-morning: smalltalk",
   "s-thank-you-much: smalltalk",
 ]
 `;
 
-exports[`what the rules answer is right, and what needs no model is caught (the lists only shrink) > read wrongly by a rule 1`] = `
-[
-  "bk-sort-sessions: change read as none",
-  "crm-followups-rename-page: change read as change nameRecords",
-  "mp-sort-price: change read as none",
-]
-`;
+exports[`what the rules answer is right, and what needs no model is caught (the lists only shrink) > read wrongly by a rule 1`] = `[]`;

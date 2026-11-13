@@ -791,7 +791,10 @@ const RULES: Rule[] = [
       // "Rename orders to jobs" names the kind of record, not a field: the operation that
       // calls its records by other names, which follows them into its pages' titles and the
       // fields that refer to it, all as texts (the names in the spec stay, so nothing else moves).
-      const bare = dropArticles(m.groups.subject ?? "").replace(/ (?:page|list|records?)$/, "");
+      // "Rename the follow ups page" is the page (its title or address), never what its records
+      // are called: the model's to read (T731).
+      if (/ page$/.test(m.groups.subject ?? "")) return null;
+      const bare = dropArticles(m.groups.subject ?? "").replace(/ (?:list|records?)$/, "");
       const kind = / (?:of|on|in|for|from) |'s? /.test(bare) ? undefined : modelFor(scope.ir, bare);
       if (kind && kind.name !== USER_MODEL) {
         const many = sentence(plural(singular(dropArticles(m.groups.to ?? ""))));
@@ -1410,13 +1413,9 @@ function listKeyChange(
   const fields: string[] = [];
   for (const phrase of list(fieldsText)) {
     const field = fieldFor(model, phrase);
-    if (!field)
-      return {
-        refusal: `${sentence(plural(words(model.name)))} have no field called "${phrase}". They have: ${model.fields
-          .filter(fits)
-          .map((f) => words(f.name))
-          .join(", ")}.`,
-      };
+    // A name the rule cannot resolve ("start time", "cheapest first") is the model's to read,
+    // not a refusal: the rule may have matched the wrong words (T731).
+    if (!field) return null;
     if (!fits(field)) return null;
     fields.push(field.name);
   }

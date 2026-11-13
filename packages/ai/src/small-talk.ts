@@ -13,10 +13,11 @@ const plain = (request: string) =>
     .trim()
     .replace(/ (smith|agent smith|there)$/, "");
 
+// In Swedish and Finnish too (T731): a word list, never a guess at other words.
 const GREETING =
-  /^(hi|hello|hey|hej|hiya|howdy|yo|greetings|good (morning|afternoon|evening|day))$/;
+  /^(hi|hello|hey|hej|hiya|howdy|yo|greetings|good (morning|afternoon|evening|day)|hejsan|hallå|tjena|god (morgon|dag|kväll|eftermiddag)|moi|moikka|hei|terve|huomenta|(hyvää )?(huomenta|päivää|iltaa))$/;
 const THANKS =
-  /^((many )?thanks|thank you|thx|ty|cheers|(great|perfect|nice|cool) thanks)( (so|very) much| a lot)?$/;
+  /^((many )?thanks|thank you|thx|ty|cheers|(great|perfect|nice|cool) thanks)( (so|very) much| a lot)?$|^(tack|tackar|tusen tack|tack så mycket|kiitos|kiitti|kiitos paljon|paljon kiitoksia)$/;
 const HOW = /^how are you( doing| today)?$|^how's it going$/;
 const WHO =
   /^(who are you|what are you|what can you do|what do you do|help|what can i (ask|do)|what now)$/;

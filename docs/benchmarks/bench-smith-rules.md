@@ -1,17 +1,17 @@
 # What people say to Smith: rules
 
-2026-11-12, 306 requests of docs/benchmarks/smith-requests.json (undo and feedback are Studio's rules, not here). Judge: none.
+2026-11-13, 306 requests of docs/benchmarks/smith-requests.json (undo and feedback are Studio's rules, not here). Judge: none.
 
 | Setup | Kind | Right | Of | By rule | Tokens | Cost | Seconds |
 |---|---|---|---|---|---|---|---|
-| rules | ambiguous | 0 | 25 | 0 | 0 | 0.0000 | 0.2 |
-| rules | change | 14 | 104 | 17 | 0 | 0.0000 | 2.1 |
+| rules | ambiguous | 0 | 25 | 0 | 0 | 0.0000 | 0.1 |
+| rules | change | 14 | 104 | 14 | 0 | 0.0000 | 0.9 |
 | rules | custom-code | 0 | 13 | 0 | 0 | 0.0000 | 0.1 |
-| rules | data | 0 | 23 | 0 | 0 | 0.0000 | 0.2 |
-| rules | docs-question | 0 | 28 | 0 | 0 | 0.0000 | 0.3 |
-| rules | off-topic | 0 | 10 | 0 | 0 | 0.0000 | 0.1 |
-| rules | smalltalk | 8 | 17 | 8 | 0 | 0.0000 | 0.1 |
-| rules | spec-question | 2 | 38 | 2 | 0 | 0.0000 | 0.6 |
+| rules | data | 0 | 23 | 0 | 0 | 0.0000 | 0.1 |
+| rules | docs-question | 0 | 28 | 0 | 0 | 0.0000 | 0.1 |
+| rules | off-topic | 0 | 10 | 0 | 0 | 0.0000 | 0.0 |
+| rules | smalltalk | 13 | 17 | 13 | 0 | 0.0000 | 0.0 |
+| rules | spec-question | 2 | 38 | 2 | 0 | 0.0000 | 0.2 |
 | rules | two-things | 0 | 17 | 0 | 0 | 0.0000 | 0.1 |
 
 Wrong ones:
@@ -23,7 +23,7 @@ Wrong ones:
 - rules bk-schedule-agenda (change): failed, needs a model
 - rules bk-schedule-color-level (change): failed, needs a model
 - rules bk-reminder-2h (change): failed, needs a model
-- rules bk-sort-sessions (change): none, none: Sessions have no field called "start time". They have: starts at, capacity.
+- rules bk-sort-sessions (change): failed, needs a model
 - rules bk-sv-phone-instructors (change): failed, needs a model
 - rules bk-fi-phone-messages (change): failed, needs a model
 - rules bk-cancel-2h (change): failed, needs a model
@@ -32,7 +32,7 @@ Wrong ones:
 - rules crm-status-returned (change): failed, needs a model
 - rules crm-orders-columns (change): failed, needs a model
 - rules crm-followups-no-trash (change): failed, needs a model
-- rules crm-followups-rename-page (change): change, nameRecords for renamePage
+- rules crm-followups-rename-page (change): failed, needs a model
 - rules crm-tones (change): failed, needs a model
 - rules crm-sv-segment-required (change): failed, needs a model
 - rules crm-followup-priority (change): failed, needs a model
@@ -69,7 +69,7 @@ Wrong ones:
 - rules mp-price-required (change): failed, needs a model
 - rules mp-no-favorites (change): failed, needs a model
 - rules mp-no-review (change): failed, needs a model
-- rules mp-sort-price (change): none, none: Items have no field called "cheapest first". They have: title, price, category, condition, place, available.
+- rules mp-sort-price (change): failed, needs a model
 - rules mp-sv-delivery (change): failed, needs a model
 - rules mp-fi-phone (change): failed, needs a model
 - rules rec-kind-wishlist (change): failed, needs a model
@@ -250,12 +250,7 @@ Wrong ones:
 - rules o-sv-recipe (off-topic): failed, needs a model
 - rules s-hello (smalltalk): failed, needs a model
 - rules s-thnks (smalltalk): failed, needs a model
-- rules s-tack (smalltalk): failed, needs a model
-- rules s-kiitos (smalltalk): failed, needs a model
-- rules s-moi (smalltalk): failed, needs a model
 - rules s-great (smalltalk): failed, needs a model
-- rules s-fi-morning (smalltalk): failed, needs a model
-- rules s-sv-morning (smalltalk): failed, needs a model
 - rules s-thank-you-much (smalltalk): failed, needs a model
 - rules long-bk-change (change): failed, needs a model
 - rules long-crm-ambig (ambiguous): failed, needs a model

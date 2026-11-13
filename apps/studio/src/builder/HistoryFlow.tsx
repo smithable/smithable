@@ -168,6 +168,14 @@ export function useHistoryFlow({
       ].filter(Boolean);
       return say({ text: "", lines: [{ text: parts.join(" "), id: e.id }] });
     }
+    // Redo: the last undo taken back, as the Redo button does.
+    if (read.kind === "redo") {
+      setBusy(true);
+      const result = await api.redo().catch((e: Error) => ({ ok: false, output: e.message }));
+      setBusy(false);
+      if (result.ok) onDone?.();
+      return say({ text: result.ok ? "Done: the last undo is taken back." : result.output });
+    }
     if (read.kind === "undo") {
       if ("last" in read) {
         const group = lastLine(entries);
