@@ -93,6 +93,12 @@ test("a role is the audience only where the words make it so", () => {
   ]);
   expect(rolesFor(auth, "en sida för memberna")).toEqual(["member"]);
   expect(rolesFor(auth, "a list of every member")).toEqual([]);
+  // A bare "to X" is no audience; "visible to X" is.
+  expect(rolesFor(auth, "a page to send reminders to members")).toEqual([]);
+  expect(rolesFor(auth, "a page of sessions visible to members")).toEqual(["member"]);
+  // Two phrases: the words do not settle it.
+  expect(rolesFor(auth, "a page of bookings for members, for staff")).toEqual([]);
+  expect(rolesFor(auth, "en sida med bokningar för memberna, för staffen")).toEqual([]);
 });
 
 test("a role only mentioned is never granted for: the note asks", () => {

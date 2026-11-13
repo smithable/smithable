@@ -4777,6 +4777,32 @@
           "member"
         ]
       }
+    },
+    {
+      "id": "bk-bookings-members-staff",
+      "starter": "booking",
+      "text": "a page of bookings for members, for staff",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-bookings-members-staff",
+      "starter": "booking",
+      "text": "en sida med bokningar för medlemmarna, för personalen",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "notGranted": [
+          "member"
+        ]
+      },
+      "noModel": false
     }
   ]
 }

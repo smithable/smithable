@@ -53,26 +53,29 @@ export function rolesNamed(auth: AuthIR, request: string): string[] {
 }
 
 /**
- * The roles a request names as the page's audience, where its words say so: for X, to X, so (that)
- * X can, X should (or can) see, get or have, X's page; Swedish för X, åt X, så att X kan, X ska (or
- * kan) se or få. A role mentioned any other way ("a page listing members, for staff": members) is
- * not one.
+ * The roles a request names as the page's audience, where its words say so: for X (and Y), visible
+ * (available, open, shown) to X, so (that) X can, X should (or can) see, get or have, X's page;
+ * Swedish för X, åt X, så att X kan, X ska (or kan) se or få. A role mentioned any other way ("a
+ * page listing members, for staff": members) is not one, and roles from two phrases are none.
  */
 export function rolesFor(auth: AuthIR, request: string): string[] {
   const text = request.toLowerCase();
-  // For X (and Y, Z): the words after for, to, för or åt, as a list joined by commas or "and".
+  // For X (and Y, Z): the words after for, för, åt, or "visible to" ("available", "open",
+  // "shown", "show"), as a list joined by commas or "and"; a bare "to X" is not an audience
+  // ("send reminders to members"), nor "till X".
   const the = "(?:(?:the|our|all|every|de|alla|våra|vår)\\s+)?";
   const listed = [
     ...text.matchAll(
       new RegExp(
-        `(?:^|[^\\p{L}])(?:for|to|för|åt)\\s+(${the}\\p{L}+(?:\\s*(?:,|&|\\band\\b|\\bor\\b|\\boch\\b|\\beller\\b)\\s*${the}\\p{L}+)*)`,
+        `(?:^|[^\\p{L}])(?:for|för|åt|(?:visible|available|open|shown|show(?:\\s+it)?)\\s+to)\\s+(${the}\\p{L}+(?:\\s*(?:,|&|\\band\\b|\\bor\\b|\\boch\\b|\\beller\\b)\\s*(?!(?:for|för|åt|to)(?![\\p{L}]))${the}\\p{L}+)*)`,
         "gu",
       ),
     ),
-  ].flatMap((m) => m[1]?.match(/\p{L}+/gu) ?? []);
-  return rolesNamed(auth, request).filter((name) => {
+  ].map((m) => m[1]?.match(/\p{L}+/gu) ?? []);
+  const inList = (list: string[], r: string) => list.some((w) => new RegExp(`^${r}$`, "u").test(w));
+  const found = rolesNamed(auth, request).filter((name) => {
     const r = `${name.toLowerCase()}${ENDINGS}`;
-    if (listed.some((w) => new RegExp(`^${r}$`, "u").test(w))) return true;
+    if (listed.some((list) => inList(list, r))) return true;
     return [
       `\\bso\\s+(?:that\\s+)?${the}${r}\\s+can\\b`,
       `\\b${r}\\s+(?:should|can|could|must|will|may)\\s+(?:see|get|have|use|open|read)\\b`,
@@ -81,6 +84,13 @@ export function rolesFor(auth: AuthIR, request: string): string[] {
       `(?:^|[^\\p{L}])${r}\\s+(?:ska|skall|kan|får)\\s+(?:se|få|ha|använda|öppna|läsa)(?![\\p{L}])`,
     ].some((pattern) => new RegExp(pattern, "u").test(text));
   });
+  // Roles from more than one phrase ("bookings for members, for staff"): the words do not settle
+  // who it is for, so no grant is asked for and the note asks. One list in one phrase ("for staff
+  // and members") is one audience.
+  const oneList = listed.some((list) =>
+    found.every((name) => inList(list, `${name.toLowerCase()}${ENDINGS}`)),
+  );
+  return found.length > 1 && !oneList ? [] : found;
 }
 
 /** Whether a request asks for another page outright, beside one the app has. */
