@@ -1,0 +1,50 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`what the rules answer is right, and what needs no model is caught (the lists only shrink) > needs no model, not caught by a rule yet 1`] = `
+[
+  "bk-bio-required: change",
+  "bk-capacity-default: change",
+  "crm-email-required: change",
+  "crm-followups-no-trash: change",
+  "crm-followup-priority: change",
+  "crm-no-export: change",
+  "bb-phone-required: change",
+  "inv-vat-required: change",
+  "inv-sort-newest: change",
+  "mp-price-required: change",
+  "rec-link-required: change",
+  "rec-cafe: change",
+  "st-severity: change",
+  "st-component-required: change",
+  "sp-category: change",
+  "sp-newest: change",
+  "q-bk-session-fields: spec-question",
+  "q-crm-shared: spec-question",
+  "q-bb-hours: spec-question",
+  "q-inv-overdue: spec-question",
+  "q-inv-private: spec-question",
+  "q-ki-decline: spec-question",
+  "q-rec-who-adds: spec-question",
+  "q-st-api: spec-question",
+  "q-sp-close: spec-question",
+  "q-api-assistant-delete: spec-question",
+  "q-api-roles: spec-question",
+  "s-hello: smalltalk",
+  "s-thnks: smalltalk",
+  "s-tack: smalltalk",
+  "s-kiitos: smalltalk",
+  "s-moi: smalltalk",
+  "s-great: smalltalk",
+  "s-fi-morning: smalltalk",
+  "s-sv-morning: smalltalk",
+  "s-thank-you-much: smalltalk",
+]
+`;
+
+exports[`what the rules answer is right, and what needs no model is caught (the lists only shrink) > read wrongly by a rule 1`] = `
+[
+  "bk-sort-sessions: change read as none",
+  "crm-followups-rename-page: change read as change nameRecords",
+  "mp-sort-price: change read as none",
+]
+`;

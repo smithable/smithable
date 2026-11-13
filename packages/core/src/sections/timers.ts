@@ -564,6 +564,14 @@ const addTimer: Operation<TimerArgs> = {
 
 const setTimer: Operation<TimerArgs> = {
   name: "setTimer",
+  sets: [
+    "smithable.yml:timers.*.on",
+    "smithable.yml:timers.*.at",
+    "smithable.yml:timers.*.every",
+    "smithable.yml:timers.*.cron",
+    "smithable.yml:timers.*.run",
+    "smithable.yml:timers.*.where",
+  ],
   summary:
     'Change a timer: its records, time, condition or action. "none" takes a key away (where, run, on); a new time form replaces the old.',
   schema: {
@@ -613,6 +621,7 @@ const setTimer: Operation<TimerArgs> = {
 
 const removeTimer: Operation<{ name: string }> = {
   name: "removeTimer",
+  sets: ["smithable.yml:timers.*"],
   summary: "Remove a timer. An outgoing entry that listens to it is removed first.",
   schema: {
     type: "object",

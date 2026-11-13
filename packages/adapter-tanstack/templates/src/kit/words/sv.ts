@@ -578,6 +578,8 @@ export const w = {
   removeFilter: (label: string) => `Ta bort filtret ${label.toLowerCase()}`,
   cannotChangeNow: (label: string) => `${label} kan inte ändras nu.`,
   requiredNow: (label: string) => `${label} måste fyllas i nu.`,
+  notThere: (label: string) => `${label}: det finns ingen sådan post. Ange id för en som finns.`,
+  someNotThere: "En post den hänvisar till finns inte. Ange id för poster som finns.",
   removePicture: (n: number) => `Ta bort bild ${n}`,
   removeWho: (name: string) => `Ta bort ${name}?`,
   revokeKey: (name: string) =>

@@ -511,6 +511,16 @@ const addPayment: Operation<PaymentArgs> = {
 
 const setPayment: Operation<PaymentArgs> = {
   name: "setPayment",
+  sets: [
+    "smithable.yml:payments.*.on",
+    "smithable.yml:payments.*.amount",
+    "smithable.yml:payments.*.description",
+    "smithable.yml:payments.*.paid",
+    "smithable.yml:payments.*.paid.set",
+    "smithable.yml:payments.*.refund",
+    "smithable.yml:payments.*.refund.by",
+    "smithable.yml:payments.*.refund.by.*",
+  ],
   summary:
     'Change a payments entry: each part given replaces the old one; "none" removes paid.set, refund (--refund-by none) or the description.',
   schema: {
@@ -569,6 +579,7 @@ const setPayment: Operation<PaymentArgs> = {
 
 const removePayment: Operation<{ name: string }> = {
   name: "removePayment",
+  sets: ["smithable.yml:payments.*"],
   summary:
     "Stop taking a payments entry's payments. The Payment lines already made stay until the owner removes their table.",
   schema: {

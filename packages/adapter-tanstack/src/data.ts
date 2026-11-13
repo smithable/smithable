@@ -1470,6 +1470,27 @@ ${updateBody}
     const up = group.filter((e) => e.model === parent.name && e.depth === 1);
     return `tx.select({ n: count() }).from(${te}).innerJoin(${tp}, ${anyOf(via.map((e) => `eq(${te}.${e.via}Id, ${tp}.id)`))}).where(and(${anyOf(up.map((e) => `eq(${tp}.${e.via}Id, id)`))}${liveIn(parent)}${liveIn(m)})).get()?.n ?? 0`;
   };
+  // A refused add or change: the reference that names a record not there, by its label, so the
+  // answer says which field to correct (the database says only that one is wrong).
+  const pointers = model.fields.filter(
+    (f) => f.type.kind === "relation" && !f.type.many && !f.formula,
+  );
+  const missingReference = pointers.length
+    ? `
+/** The reference of an add or a change that names no record, by its label, once the database refused one. */
+function missingReference(values: Record<string, unknown>): string | undefined {
+${pointers
+  .map((f) => {
+    const target = f.type.kind === "relation" ? f.type.model : "";
+    const table = target === USER_MODEL ? "schema.user" : tableRef(modelNamed(ir, target));
+    const key = dataKey(f);
+    return `  if (values.${key} != null && !db.select({ id: ${table}.id }).from(${table}).where(eq(${table}.id, values.${key} as never)).get()) return ${label(f)};`;
+  })
+  .join("\n")}
+  return undefined;
+}
+`
+    : "";
   const usedBy = group.length
     ? `
 /**
@@ -1863,7 +1884,7 @@ ${occ ? occupiesImports() : ""}${unmerge ? unmergeImports(ir, model, t) : ""}${[
 ${formulas ? `import { ${withFormulasName(model)} } from "./${kebab(model.name)}.formulas";\n` : ""}${counted.length ? 'import { nextInSequence } from "#/kit/sequence.server";\n' : ""}${trashing ? 'import "./trash.server";\n' : ""}${ir.timers.length ? 'import "./timers.server";\n' : ""}
 /** A transaction, as the write checks and the group's functions are called inside one. */
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-${usedBy}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
+${usedBy}${missingReference}${rootInTrash}${unmerge}${occ ? occupiesHelpers(model, ir, occ) : ""}
 ${
   model.review
     ? `/**
@@ -2749,7 +2770,7 @@ ${
         ${insertAudited}
       });
     } catch (error) {
-      throw ${capacity || occ ? "error instanceof Conflict ? error : " : ""}refusal(error);
+      throw ${capacity || occ ? "error instanceof Conflict ? error : " : ""}refusal(error${pointers.length ? ", () => missingReference(values)" : ""});
     }
     ${payEntry ? "if (!row.payHeldAt) " : ""}await afterChange("afterCreate", "${model.name}", row, viewer);
     return row;
@@ -2791,7 +2812,7 @@ ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
         return after;
       });
     } catch (error) {
-      throw ${capacity || holds.length || occ ? "error instanceof Conflict ? error : " : ""}refusal(error);
+      throw ${capacity || holds.length || occ ? "error instanceof Conflict ? error : " : ""}refusal(error${pointers.length ? ", () => missingReference(values)" : ""});
     }
 ${dropPictures(
   (k) => `changed.${k}?.file`,

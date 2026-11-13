@@ -878,6 +878,14 @@ const setUnique: Operation<{
   remove?: boolean;
 }> = {
   name: "setUnique",
+  sets: [
+    "smithable.yml:models.*.unique",
+    "smithable.yml:models.*.unique.*",
+    "smithable.yml:models.*.unique.*.*",
+    "smithable.yml:models.*.unique.*.fields",
+    "smithable.yml:models.*.unique.*.fields.*",
+    "smithable.yml:models.*.unique.*.scope",
+  ],
   summary:
     "Make two or more fields of a model unique together: no two records hold the same values in all of them, among one owner's records (owner), in the whole app (app), or as the access says; --remove takes the rule away. One field alone is unique through setFieldRules.",
   schema: {
@@ -1163,6 +1171,10 @@ const setMeaning: Operation<{ concept: string; description?: string; intent?: st
     "smithable.yml:models.*.intent",
     "smithable.yml:models.*.fields.*.description",
     "smithable.yml:models.*.fields.*.intent",
+    "smithable.yml:pages.*.description",
+    "smithable.yml:pages.*.intent",
+    "smithable.yml:actions.*.description",
+    "smithable.yml:actions.*.intent",
   ],
   summary:
     "Explain what something means, for the assistant and developers, never shown to visitors: the app, a model, a field (Model.field), an action or a page gets a description (what it is) or an intent (what it should achieve). A choice field's short description goes in the assistant's summary, so a word that is both a value and a word people use loosely is read as the app means it. An empty text removes the key.",

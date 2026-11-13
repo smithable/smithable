@@ -184,24 +184,51 @@ export function wordOrList(options: JsonSchema[]): { word: string; list: JsonSch
 }
 
 /** A new entry of a named map, as the form's Add writes it: an empty map. */
+/**
+ * A page's look keys (smithable.ux.yml) and the operation that sets each: its name, its argument,
+ * the value that takes the key away (none: the argument left out), and whether it is a list.
+ */
+const UX_PAGE_KEYS: Record<string, [string, string, unknown, boolean?]> = {
+  "table.columns": ["setColumns", "columns", undefined, true],
+  "table.totals": ["setTotals", "totals", undefined, true],
+  "table.view": ["setView", "view", "table"],
+  "table.sort": ["setSort", "field", "none"],
+  "table.actions": ["setRowActions", "actions", "inherit"],
+  "filters.shown": ["setFiltersShown", "fields", [], true],
+  "filters.look": ["setFiltersLook", "look", "inherit"],
+  "calendar.colorBy": ["setCalendarColor", "field", "none"],
+  "calendar.view": ["setCalendarView", "view", "inherit"],
+  "calendar.filters": ["setCalendarFilters", "filters", undefined, true],
+  frame: ["setFrame", "frame", "default"],
+  width: ["setLandingWidth", "width", "inherit"],
+  "record.pictures": ["setRecordPictures", "look", "inherit"],
+  "record.first": ["setRecordFirst", "first", "inherit"],
+  "form.fieldOrder": ["setFieldOrder", "fields", undefined, true],
+  "form.columns": ["setFormColumns", "columns", 1],
+};
+
 /** The value at a path of a parsed file. */
 const at = (whole: unknown, path: (string | number)[]): unknown =>
   path.reduce<unknown>((v, k) => (v as Record<string | number, unknown> | undefined)?.[k], whole);
 
-/** A group with one key set (or taken away), or the given group when no key is named. */
-function withKey(
+/** A copy of a group or list with the value at a path inside it set (or taken away). */
+function setIn(
   current: unknown,
-  key: string | number | undefined,
+  path: (string | number)[],
   value: unknown,
 ): Record<string, unknown> | undefined {
-  if (key === undefined)
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : undefined;
-  const next = { ...((current ?? {}) as Record<string, unknown>) };
-  if (value === undefined) delete next[String(key)];
-  else next[String(key)] = value;
-  return next;
+  const [step, ...rest] = path;
+  if (step === undefined)
+    return value === undefined ? undefined : (value as Record<string, unknown>);
+  const copy: Record<string | number, unknown> = Array.isArray(current)
+    ? ([...current] as unknown as Record<number, unknown>)
+    : { ...((current ?? {}) as Record<string, unknown>) };
+  const inner = rest.length ? setIn(copy[step], rest, value) : value;
+  if (inner === undefined) {
+    if (Array.isArray(copy)) (copy as unknown[]).splice(Number(step), 1);
+    else delete copy[step];
+  } else copy[step] = inner;
+  return copy as Record<string, unknown>;
 }
 
 /** A condition on a record's values ({ status: closed }). */
@@ -282,6 +309,53 @@ export function operationFor(
     if (first === "pages") return ["removePage", { page: key }];
     if (first === "actions") return ["removeAction", { action: key }];
   }
+  // A page's look, one key to one operation: [operation, its argument, what takes the key away
+  // (undefined: the argument left out)].
+  if (file === "smithable.ux.yml" && first === "pages" && typeof key === "string") {
+    const look = UX_PAGE_KEYS[path.slice(2).join(".")];
+    if (look) {
+      const [name, arg, away, list] = look;
+      const fits =
+        value === undefined ||
+        (list ? Array.isArray(value) : !Array.isArray(value) && typeof value !== "object");
+      if (fits)
+        return [
+          name,
+          {
+            page: key,
+            ...(value !== undefined ? { [arg]: value } : away !== undefined ? { [arg]: away } : {}),
+          },
+        ];
+    }
+  }
+  // The whole app's look: the AI badge, the menu, the chrome, the assistant's voice and the theme.
+  if (
+    file === "smithable.ux.yml" &&
+    (typeof value === "string" || value === undefined || typeof value === "boolean")
+  ) {
+    const where = path.join(".");
+    const text = typeof value === "string" ? value : undefined;
+    if (where === "aiBadge" && typeof value !== "string")
+      return ["setAiBadge", { shown: String(value ?? true) }];
+    if (where === "menuActive" && value !== true && value !== false)
+      return ["setMenuActive", { active: text ?? "inherit" }];
+    if (where === "chrome" && value !== true && value !== false)
+      return ["setChrome", { chrome: text ?? "inherit" }];
+    if (where === "navigation" && value !== true && value !== false)
+      return ["setMenuLayout", { navigation: text ?? "inherit" }];
+    if (where === "assistant.voice" && text) return ["setAssistantVoice", { voice: text }];
+    // A theme key taken away is "none" where setTheme has it (motion's "none" is no motion at all).
+    if ((where === "theme.preset" || where === "theme.motion") && text)
+      return ["setTheme", { [where.slice(6)]: text }];
+    const brand = {
+      "theme.density": "density",
+      "theme.brand.primary": "primary",
+      "theme.brand.background": "background",
+      "theme.brand.font": "font",
+    }[where];
+    if (brand && value !== true && value !== false)
+      return ["setTheme", { [brand]: text ?? "none" }];
+  }
   // A page's icon in the menu.
   if (
     file === "smithable.ux.yml" &&
@@ -336,6 +410,122 @@ export function operationFor(
         ? (["setMeaning", { concept, [which]: value ?? "" }] as [string, Record<string, unknown>])
         : undefined;
     if (path.length === 2 && first === "app" && key === "intent") return meaning("app", "intent");
+    // What an action means; timers, outgoing mail, payments and incoming calls taken away, and
+    // their keys set, each through its own operation.
+    if (
+      first === "actions" &&
+      model &&
+      path.length === 3 &&
+      (path[2] === "description" || path[2] === "intent")
+    )
+      return meaning(model, path[2]);
+    if (model && path.length === 2 && value === undefined) {
+      if (first === "timers") return ["removeTimer", { name: model }];
+      if (first === "outgoing") return ["removeOutgoing", { outgoing: model }];
+      if (first === "payments") return ["removePayment", { name: model }];
+      if (first === "incoming") return ["removeIncoming", { name: model }];
+    }
+    if (first === "timers" && model && path.length === 3) {
+      const which = String(path[2]);
+      if (which === "where" && (value === undefined || isCondition(value)))
+        return ["setTimer", { name: model, where: value ?? {} }];
+      if (
+        ["on", "at", "every", "cron", "run"].includes(which) &&
+        (value === undefined || typeof value === "string")
+      )
+        return ["setTimer", { name: model, [which]: value ?? "none" }];
+    }
+    if (first === "outgoing" && model && path.length === 3 && path[2] === "to")
+      if (typeof value === "string" || (Array.isArray(value) && value.length))
+        return ["setOutgoingTo", { outgoing: model, to: value }];
+    if (first === "payments" && model) {
+      const which = path.slice(2).join(".");
+      const pay = (args: Record<string, unknown>) =>
+        ["setPayment", { name: model, ...args }] as [string, Record<string, unknown>];
+      if ((which === "on" || which === "amount") && typeof value === "string")
+        return pay({ [which]: value });
+      if (which === "description" && (value === undefined || typeof value === "string"))
+        return pay({ description: value || "none" });
+      if (which === "paid.set" && (value === undefined || isCondition(value)))
+        return pay({ paidSet: value ?? "none" });
+      if (which === "refund.by" && (value === undefined || (Array.isArray(value) && value.length)))
+        return pay({ refundBy: value ?? ["none"] });
+    }
+    // A page's lists, filters and choices, each through its own operation (the lists written whole).
+    if (first === "pages" && model) {
+      const page = model;
+      const own = path[2];
+      const op = (name: string, args: Record<string, unknown>) =>
+        [name, { page, ...args }] as [string, Record<string, unknown>];
+      if (path.length === 3) {
+        const list = { search: "setSearch", filters: "setFilters", sortable: "setSortable" }[
+          String(own)
+        ];
+        if (list && (value === undefined || Array.isArray(value)))
+          return op(list, { fields: value ?? [] });
+        if (own === "export" && (value === undefined || value === false))
+          return op("setExport", { offered: value === false ? "off" : "on" });
+        if (
+          own === "favorites" &&
+          (value === undefined || typeof value === "boolean" || value === "only")
+        )
+          return op("setFavorites", { mode: value === "only" ? "only" : value ? "on" : "off" });
+        if (own === "mine" && (value === undefined || typeof value === "boolean"))
+          return op("setMine", { mode: value ? "on" : "off" });
+        if (own === "period") {
+          if (value === undefined) return op("setPeriod", { field: "none" });
+          if (typeof value === "string") return op("setPeriod", { field: value });
+          if (isCondition(value)) return op("setPeriod", { byModel: value });
+        }
+        // What the page means; an action of the same name would take setMeaning's concept.
+        const actions = (whole as { actions?: Record<string, unknown> } | undefined)?.actions;
+        if ((own === "description" || own === "intent") && !actions?.[page])
+          return meaning(page, own);
+      }
+      if (own === "contact" && path.length <= 4) {
+        if (path.length === 3 && value === undefined) return op("setContact", {});
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value) as unknown;
+        const contact = typeof next === "string" ? { to: next } : (next as Record<string, unknown>);
+        if (typeof contact?.to === "string")
+          return op("setContact", {
+            to: contact.to,
+            ...(typeof contact.keep === "string" ? { keep: contact.keep } : {}),
+          });
+      }
+      // A landing page's or a page of sections' parts: one taken away, and which records one shows.
+      // (The hero's buttons and shortcuts stay with editSpec: their keys are every section's.)
+      const section = path[3];
+      if ((own === "landing" || own === "sections") && typeof section === "string") {
+        if (path.length === 4 && value === undefined) return op("removeSection", { section });
+        const key = path[4];
+        if (path.length === 5 && key === "where" && (value === undefined || isCondition(value)))
+          return op("setSectionWhere", { section, where: value ?? {} });
+      }
+      // A filter's value until the viewer chooses: one filter at a time, "none" taking it away.
+      if (own === "defaultFilter" && path.length <= 4) {
+        // setDefaultFilter reads several values from one text by its commas: a value with a comma
+        // of its own stays with editSpec.
+        const comma = (v: unknown): boolean =>
+          Array.isArray(v)
+            ? v.some((x) => String(x).includes(","))
+            : isCondition(v) && Object.values(v).some(comma);
+        if (comma(value)) return undefined;
+        const asText = (v: unknown) =>
+          Array.isArray(v) ? v.map(String).join(",") : v === undefined ? "none" : String(v);
+        if (path.length === 4)
+          return op("setDefaultFilter", { field: path[3], value: asText(value) });
+        const before = (at(whole, path) ?? {}) as Record<string, unknown>;
+        const after = (isCondition(value) ? value : {}) as Record<string, unknown>;
+        const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+          (k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]),
+        );
+        if (changed.length === 1)
+          return op("setDefaultFilter", {
+            field: changed[0],
+            value: asText(after[changed[0] ?? ""]),
+          });
+      }
+    }
     if (first === "models" && model) {
       const own = path[2];
       if (path.length === 3 && (own === "description" || own === "intent"))
@@ -393,7 +583,7 @@ export function operationFor(
       // A conversation's fields, the whole setting or one of its keys, through setThread.
       if (own === "thread" && path.length >= 3 && path.length <= 4) {
         if (path.length === 3 && value === undefined) return ["setThread", { model, none: true }];
-        const next = withKey(at(whole, path.slice(0, 3)), path[3], value);
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
         // A key taken away is left to editSpec: setThread keeps what it is not given.
         if (next && (path.length === 3 || value !== undefined)) {
           const side = next.side as { field?: unknown; ours?: unknown } | undefined;
@@ -409,10 +599,10 @@ export function operationFor(
         }
       }
       // A limit per referenced record, written whole by setCapacity.
-      if (own === "capacity" && path.length >= 3 && path.length <= 4) {
+      if (own === "capacity" && path.length >= 3) {
         if (path.length === 3 && value === undefined)
           return ["setCapacity", { model, per: "none" }];
-        const next = withKey(at(whole, path.slice(0, 3)), path[3], value);
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
         if (next && typeof next.per === "string" && next.max !== undefined)
           return [
             "setCapacity",
@@ -423,6 +613,75 @@ export function operationFor(
               ...(isCondition(next.where) ? { where: next.where } : {}),
               ...(typeof next.closes === "string" ? { closes: next.closes } : {}),
               ...(typeof next.cancelUntil === "string" ? { cancelUntil: next.cancelUntil } : {}),
+            },
+          ];
+      }
+      // When a booked record is free, written whole by setSchedule (its hours, breaks, gap, time away).
+      if (own === "schedule" && path.length >= 3) {
+        if (path.length === 3 && value === undefined)
+          return ["setSchedule", { model, hours: "none" }];
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
+        if (next && isCondition(next.hours) && Object.keys(next.hours).length)
+          return [
+            "setSchedule",
+            {
+              model,
+              hours: next.hours,
+              ...(next.breaks !== undefined ? { breaks: next.breaks } : {}),
+              ...(next.gap !== undefined ? { gap: String(next.gap) } : {}),
+              ...(next.away !== undefined ? { away: next.away } : {}),
+            },
+          ];
+      }
+      // Whose time a record takes, written whole by setOccupies.
+      if (own === "occupies" && path.length >= 3) {
+        if (path.length === 3 && value === undefined)
+          return ["setOccupies", { model, resource: "none" }];
+        const next = setIn(at(whole, path.slice(0, 3)), path.slice(3), value);
+        const text = (key: string) => (typeof next?.[key] === "string" ? next[key] : undefined);
+        if (next && text("resource") && text("starts") && text("duration"))
+          return [
+            "setOccupies",
+            {
+              model,
+              resource: text("resource"),
+              starts: text("starts"),
+              duration: text("duration"),
+              ...(isCondition(next.while) ? { while: next.while } : {}),
+              ...(text("cancelUntil") ? { cancelUntil: text("cancelUntil") } : {}),
+              ...(text("cancelTo") ? { cancelTo: text("cancelTo") } : {}),
+            },
+          ];
+      }
+      // Fields unique together: one rule added, taken away or given another scope is one setUnique.
+      if (own === "unique" && path.length >= 3) {
+        const rules = (list: unknown) =>
+          (Array.isArray(list) ? list : []).map((e) =>
+            Array.isArray(e)
+              ? { fields: e.map(String) }
+              : {
+                  fields: ((e as { fields?: unknown[] })?.fields ?? []).map(String),
+                  scope: (e as { scope?: string })?.scope,
+                },
+          );
+        const before = rules(at(whole, path.slice(0, 3)));
+        const after = rules(
+          path.length === 3 ? value : setIn(at(whole, path.slice(0, 3)), path.slice(3), value),
+        );
+        const key = (r: { fields: string[] }) => [...r.fields].sort().join(" ");
+        const gone = before.filter((b) => !after.some((a) => key(a) === key(b)));
+        const added = after.filter(
+          (a) => !before.some((b) => key(a) === key(b) && a.scope === b.scope),
+        );
+        if (gone.length === 1 && !added.length)
+          return ["setUnique", { model, fields: gone[0]?.fields, remove: true }];
+        if (added.length === 1 && !gone.length && (added[0]?.fields.length ?? 0) >= 2)
+          return [
+            "setUnique",
+            {
+              model,
+              fields: added[0]?.fields,
+              ...(added[0]?.scope ? { scope: added[0].scope } : {}),
             },
           ];
       }

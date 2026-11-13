@@ -194,6 +194,44 @@ test("every operation a control writes through is one core lists for its key", (
     ["smithable.yml", ["models", "Order", "fields", "note", "required"], { status: "paid" }],
     ["smithable.yml", ["models", "Order", "thread"], undefined],
     ["smithable.yml", ["models", "Order", "capacity"], undefined],
+    ["smithable.yml", ["models", "Order", "schedule"], undefined],
+    ["smithable.yml", ["models", "Order", "occupies"], undefined],
+    ["smithable.yml", ["models", "Order", "unique"], [["customer", "number"]]],
+    ["smithable.yml", ["pages", "orders", "search"], ["name"]],
+    ["smithable.yml", ["pages", "orders", "filters"], ["status"]],
+    ["smithable.yml", ["pages", "orders", "export"], false],
+    ["smithable.yml", ["pages", "orders", "favorites"], true],
+    ["smithable.yml", ["pages", "orders", "mine"], true],
+    ["smithable.yml", ["pages", "orders", "period"], "placedAt"],
+    ["smithable.yml", ["pages", "orders", "contact"], "owner"],
+    ["smithable.yml", ["pages", "orders", "defaultFilter", "status"], "open"],
+    ["smithable.yml", ["pages", "orders", "description"], "Every order"],
+    ["smithable.yml", ["timers", "reminder"], undefined],
+    ["smithable.yml", ["timers", "reminder", "cron"], "0 8 * * *"],
+    ["smithable.yml", ["outgoing", "receipt"], undefined],
+    ["smithable.yml", ["outgoing", "receipt", "to"], "owner"],
+    ["smithable.yml", ["payments", "deposit"], undefined],
+    ["smithable.yml", ["payments", "deposit", "amount"], "total"],
+    ["smithable.yml", ["payments", "deposit", "paid", "set"], { paid: true }],
+    ["smithable.yml", ["incoming", "mail"], undefined],
+    ["smithable.yml", ["actions", "ship", "description"], "Sends the order"],
+    ["smithable.ux.yml", ["pages", "orders", "table", "columns"], ["total"]],
+    ["smithable.ux.yml", ["pages", "orders", "table", "totals"], ["total"]],
+    ["smithable.ux.yml", ["pages", "orders", "table", "view"], "cards"],
+    ["smithable.ux.yml", ["pages", "orders", "table", "sort"], "-total"],
+    ["smithable.ux.yml", ["pages", "orders", "table", "actions"], "menu"],
+    ["smithable.ux.yml", ["pages", "orders", "filters", "shown"], ["status"]],
+    ["smithable.ux.yml", ["pages", "orders", "filters", "look"], "chips"],
+    ["smithable.ux.yml", ["pages", "orders", "calendar", "colorBy"], "status"],
+    ["smithable.ux.yml", ["pages", "orders", "calendar", "view"], "agenda"],
+    ["smithable.ux.yml", ["pages", "orders", "calendar", "filters"], ["timeOfDay"]],
+    ["smithable.ux.yml", ["pages", "orders", "frame"], "site"],
+    ["smithable.ux.yml", ["pages", "orders", "width"], "wide"],
+    ["smithable.ux.yml", ["pages", "orders", "record", "pictures"], "top"],
+    ["smithable.ux.yml", ["pages", "orders", "record", "first"], "thread"],
+    ["smithable.ux.yml", ["pages", "orders", "form", "fieldOrder"], ["total"]],
+    ["smithable.ux.yml", ["pages", "orders", "form", "columns"], 2],
+    ["smithable.yml", ["pages", "home", "landing", "faq"], undefined],
   ];
   for (const [file, path, value] of cases) {
     const [op] = operationFor(file, path, value) ?? [];
@@ -280,4 +318,304 @@ test("the Data keys go through their operations, a group's key written with the 
     "setReview",
     { model: "Booking", fields: ["none"] },
   ]);
+});
+
+test("a schedule, what a booking occupies and fields unique together, each through its operation", () => {
+  const spec = {
+    models: {
+      Barber: {
+        fields: { name: "string!" },
+        schedule: { hours: { "mon-fri": "09:00-17:00" }, gap: 10 },
+      },
+      Visit: {
+        fields: {
+          barber: "Barber!",
+          startsAt: "datetime!",
+          minutes: "int!",
+          customer: "string!",
+          day: "date!",
+        },
+        occupies: {
+          resource: "barber",
+          starts: "startsAt",
+          duration: "minutes",
+          cancelUntil: "12h",
+        },
+        unique: [["barber", "startsAt"]],
+      },
+    },
+  };
+  const schedule = ["models", "Barber", "schedule"];
+  expect(operationFor("smithable.yml", [...schedule, "hours", "sat"], "10:00-14:00", spec)).toEqual(
+    [
+      "setSchedule",
+      { model: "Barber", hours: { "mon-fri": "09:00-17:00", sat: "10:00-14:00" }, gap: "10" },
+    ],
+  );
+  // setSchedule writes it whole, so a key taken away goes with it.
+  expect(operationFor("smithable.yml", [...schedule, "gap"], undefined, spec)).toEqual([
+    "setSchedule",
+    { model: "Barber", hours: { "mon-fri": "09:00-17:00" } },
+  ]);
+  expect(operationFor("smithable.yml", schedule, undefined, spec)).toEqual([
+    "setSchedule",
+    { model: "Barber", hours: "none" },
+  ]);
+  const occupies = ["models", "Visit", "occupies"];
+  expect(operationFor("smithable.yml", [...occupies, "cancelUntil"], undefined, spec)).toEqual([
+    "setOccupies",
+    { model: "Visit", resource: "barber", starts: "startsAt", duration: "minutes" },
+  ]);
+  expect(operationFor("smithable.yml", [...occupies, "starts"], undefined, spec)).toBeUndefined();
+  const unique = ["models", "Visit", "unique"];
+  expect(
+    operationFor(
+      "smithable.yml",
+      unique,
+      [
+        ["barber", "startsAt"],
+        ["customer", "day"],
+      ],
+      spec,
+    ),
+  ).toEqual(["setUnique", { model: "Visit", fields: ["customer", "day"] }]);
+  expect(operationFor("smithable.yml", unique, undefined, spec)).toEqual([
+    "setUnique",
+    { model: "Visit", fields: ["barber", "startsAt"], remove: true },
+  ]);
+  expect(
+    operationFor(
+      "smithable.yml",
+      [...unique, 0],
+      { fields: ["barber", "startsAt"], scope: "app" },
+      spec,
+    ),
+  ).toEqual(["setUnique", { model: "Visit", fields: ["barber", "startsAt"], scope: "app" }]);
+  // Two rules changed at once are more than one operation: editSpec writes them.
+  expect(operationFor("smithable.yml", unique, [["customer", "day"]], spec)).toBeUndefined();
+});
+
+test("a page's lists, filters and choices each go through their own operation", () => {
+  const spec = {
+    pages: {
+      orders: {
+        crud: "Order",
+        filters: ["status", "placedAt"],
+        defaultFilter: { placedAt: "upcoming" },
+        contact: { to: "owner", keep: "Note" },
+      },
+    },
+    actions: { report: { on: "Order" } },
+  };
+  const page = (...rest: (string | number)[]) => ["pages", "orders", ...rest];
+  expect(operationFor("smithable.yml", page("search"), ["name", "email"])).toEqual([
+    "setSearch",
+    { page: "orders", fields: ["name", "email"] },
+  ]);
+  expect(operationFor("smithable.yml", page("filters"), undefined)).toEqual([
+    "setFilters",
+    { page: "orders", fields: [] },
+  ]);
+  expect(operationFor("smithable.yml", page("sortable"), ["total"])?.[0]).toBe("setSortable");
+  expect(operationFor("smithable.yml", page("export"), false)).toEqual([
+    "setExport",
+    { page: "orders", offered: "off" },
+  ]);
+  expect(operationFor("smithable.yml", page("favorites"), "only")?.[1]).toEqual({
+    page: "orders",
+    mode: "only",
+  });
+  expect(operationFor("smithable.yml", page("mine"), undefined)?.[1]).toEqual({
+    page: "orders",
+    mode: "off",
+  });
+  expect(operationFor("smithable.yml", page("period"), { Invoice: "issuedOn" })).toEqual([
+    "setPeriod",
+    { page: "orders", byModel: { Invoice: "issuedOn" } },
+  ]);
+  expect(operationFor("smithable.yml", page("contact", "keep"), undefined, spec)).toEqual([
+    "setContact",
+    { page: "orders", to: "owner" },
+  ]);
+  expect(operationFor("smithable.yml", page("contact"), undefined, spec)).toEqual([
+    "setContact",
+    { page: "orders" },
+  ]);
+  // One filter's value at a time; a list of values is written as setDefaultFilter reads it.
+  expect(
+    operationFor(
+      "smithable.yml",
+      page("defaultFilter"),
+      { placedAt: "upcoming", status: ["open", "paid"] },
+      spec,
+    ),
+  ).toEqual(["setDefaultFilter", { page: "orders", field: "status", value: "open,paid" }]);
+  expect(operationFor("smithable.yml", page("defaultFilter", "placedAt"), undefined, spec)).toEqual(
+    ["setDefaultFilter", { page: "orders", field: "placedAt", value: "none" }],
+  );
+  expect(operationFor("smithable.yml", page("intent"), "Find an order fast", spec)).toEqual([
+    "setMeaning",
+    { concept: "orders", intent: "Find an order fast" },
+  ]);
+  // A page named like an action: setMeaning would explain the action, so editSpec writes it.
+  expect(
+    operationFor("smithable.yml", ["pages", "report", "intent"], "Monthly figures", spec),
+  ).toBeUndefined();
+});
+
+test("a default filter value with a comma of its own stays with editSpec", () => {
+  expect(
+    operationFor(
+      "smithable.yml",
+      ["pages", "orders", "defaultFilter", "status"],
+      ["on hold, waiting"],
+    ),
+  ).toBeUndefined();
+});
+
+test("a section taken away, and which records one shows, through their operations", () => {
+  const home = (...rest: string[]) => ["pages", "home", "landing", ...rest];
+  expect(operationFor("smithable.yml", home("faq"), undefined)).toEqual([
+    "removeSection",
+    { page: "home", section: "faq" },
+  ]);
+  expect(operationFor("smithable.yml", home("items", "where"), { featured: "true" })).toEqual([
+    "setSectionWhere",
+    { page: "home", section: "items", where: { featured: "true" } },
+  ]);
+  expect(
+    operationFor("smithable.yml", ["pages", "about", "sections", "team", "where"], undefined),
+  ).toEqual(["setSectionWhere", { page: "about", section: "team", where: {} }]);
+  // The hero's buttons are any section's key in the schema: editSpec writes them.
+  expect(operationFor("smithable.yml", home("hero", "button"), "items")).toBeUndefined();
+});
+
+test("a page's look, one key to one operation, and each taken away as that operation says", () => {
+  const ux = (...rest: string[]) => ["pages", "orders", ...rest];
+  expect(operationFor("smithable.ux.yml", ux("table", "columns"), ["customer", "total"])).toEqual([
+    "setColumns",
+    { page: "orders", columns: ["customer", "total"] },
+  ]);
+  expect(operationFor("smithable.ux.yml", ux("table", "columns"), undefined)).toEqual([
+    "setColumns",
+    { page: "orders" },
+  ]);
+  expect(operationFor("smithable.ux.yml", ux("table", "sort"), undefined)).toEqual([
+    "setSort",
+    { page: "orders", field: "none" },
+  ]);
+  expect(operationFor("smithable.ux.yml", ux("table", "view"), "cards")?.[1]).toEqual({
+    page: "orders",
+    view: "cards",
+  });
+  expect(operationFor("smithable.ux.yml", ux("calendar", "view"), undefined)?.[1]).toEqual({
+    page: "orders",
+    view: "inherit",
+  });
+  expect(operationFor("smithable.ux.yml", ux("frame"), undefined)?.[1]).toEqual({
+    page: "orders",
+    frame: "default",
+  });
+  expect(operationFor("smithable.ux.yml", ux("form", "columns"), 2)?.[1]).toEqual({
+    page: "orders",
+    columns: 2,
+  });
+  expect(operationFor("smithable.ux.yml", ux("filters", "shown"), undefined)?.[1]).toEqual({
+    page: "orders",
+    fields: [],
+  });
+  // A list where a word is expected (or the other way round) is left to editSpec's checks.
+  expect(operationFor("smithable.ux.yml", ux("table", "sort"), ["total"])).toBeUndefined();
+  expect(operationFor("smithable.ux.yml", ux("table", "header"), "x")).toBeUndefined();
+});
+
+test("timers, outgoing mail, payments, incoming calls and an action's meaning through their operations", () => {
+  const y = "smithable.yml";
+  expect(operationFor(y, ["timers", "reminder"], undefined)).toEqual([
+    "removeTimer",
+    { name: "reminder" },
+  ]);
+  expect(operationFor(y, ["outgoing", "receipt"], undefined)).toEqual([
+    "removeOutgoing",
+    { outgoing: "receipt" },
+  ]);
+  expect(operationFor(y, ["payments", "deposit"], undefined)).toEqual([
+    "removePayment",
+    { name: "deposit" },
+  ]);
+  expect(operationFor(y, ["incoming", "mail"], undefined)).toEqual([
+    "removeIncoming",
+    { name: "mail" },
+  ]);
+  expect(operationFor(y, ["timers", "reminder", "every"], "1 day")).toEqual([
+    "setTimer",
+    { name: "reminder", every: "1 day" },
+  ]);
+  expect(operationFor(y, ["timers", "reminder", "at"], undefined)?.[1]).toEqual({
+    name: "reminder",
+    at: "none",
+  });
+  expect(operationFor(y, ["timers", "reminder", "where"], { status: "open" })?.[1]).toEqual({
+    name: "reminder",
+    where: { status: "open" },
+  });
+  expect(operationFor(y, ["outgoing", "receipt", "to"], "customer.email")).toEqual([
+    "setOutgoingTo",
+    { outgoing: "receipt", to: "customer.email" },
+  ]);
+  expect(operationFor(y, ["payments", "deposit", "description"], undefined)?.[1]).toEqual({
+    name: "deposit",
+    description: "none",
+  });
+  expect(operationFor(y, ["payments", "deposit", "paid", "set"], { paid: true })?.[1]).toEqual({
+    name: "deposit",
+    paidSet: { paid: true },
+  });
+  expect(operationFor(y, ["payments", "deposit", "refund", "by"], ["staff"])?.[1]).toEqual({
+    name: "deposit",
+    refundBy: ["staff"],
+  });
+  expect(operationFor(y, ["actions", "merge", "intent"], "One customer, not two")).toEqual([
+    "setMeaning",
+    { concept: "merge", intent: "One customer, not two" },
+  ]);
+  expect(operationFor(y, ["payments", "deposit", "refund", "by"], undefined)?.[1]).toEqual({
+    name: "deposit",
+    refundBy: ["none"],
+  });
+  // A payment's amount taken away has no "none": editSpec writes it, and the checks say why not.
+  expect(operationFor(y, ["payments", "deposit", "amount"], undefined)).toBeUndefined();
+});
+
+test("the whole app's look goes through its operations", () => {
+  const u = "smithable.ux.yml";
+  expect(operationFor(u, ["aiBadge"], false)).toEqual(["setAiBadge", { shown: "false" }]);
+  expect(operationFor(u, ["aiBadge"], undefined)).toEqual(["setAiBadge", { shown: "true" }]);
+  expect(operationFor(u, ["chrome"], undefined)).toEqual(["setChrome", { chrome: "inherit" }]);
+  expect(operationFor(u, ["navigation"], "topbar")).toEqual([
+    "setMenuLayout",
+    { navigation: "topbar" },
+  ]);
+  expect(operationFor(u, ["menuActive"], "subtle")).toEqual([
+    "setMenuActive",
+    { active: "subtle" },
+  ]);
+  expect(operationFor(u, ["assistant", "voice"], "formal")).toEqual([
+    "setAssistantVoice",
+    { voice: "formal" },
+  ]);
+  expect(operationFor(u, ["theme", "preset"], "minimal")).toEqual([
+    "setTheme",
+    { preset: "minimal" },
+  ]);
+  expect(operationFor(u, ["theme", "brand", "primary"], undefined)).toEqual([
+    "setTheme",
+    { primary: "none" },
+  ]);
+  expect(operationFor(u, ["theme", "density"], "compact")).toEqual([
+    "setTheme",
+    { density: "compact" },
+  ]);
+  // Motion's "none" is no motion at all, so taking the key away stays with editSpec.
+  expect(operationFor(u, ["theme", "motion"], undefined)).toBeUndefined();
 });
