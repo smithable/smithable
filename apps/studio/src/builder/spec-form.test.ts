@@ -677,7 +677,15 @@ test("Who can: sign-in, the administrators, the roles, Ask and the API, each thr
   });
   const one = { roles: { admin: "all", member: {} } };
   expect(operationFor(a, ["roles", "member", "description"], "Books", one)).toBeUndefined();
-  expect(operationFor(a, ["api", "except"], ["Secret"], auth)?.[1]).not.toHaveProperty("except");
+  // An edit of except beside a list writes nothing through setApi: editSpec says why not.
+  expect(operationFor(a, ["api", "except"], ["Secret"], auth)).toBeUndefined();
+  // A left-over except is dropped when models change from all to a list.
+  expect(
+    operationFor(a, ["api", "models"], ["Order"], {
+      ...auth,
+      api: { models: "all", except: ["Secret"] },
+    })?.[1],
+  ).not.toHaveProperty("except");
   expect(operationFor(a, ["assistant", "may"], undefined, auth)).toEqual([
     "setAssistant",
     { for: ["sales"] },

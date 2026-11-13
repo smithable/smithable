@@ -457,6 +457,9 @@ export function operationFor(
       const models =
         next?.models === "all" ? ["all"] : list(next?.models) ? (next?.models as string[]) : [];
       const assistants = next?.assistants;
+      // "except" is only with all: an edit of it beside a list is editSpec's to refuse, in its
+      // words, not an operation that writes nothing (a left-over one is dropped when models change).
+      if (path[1] === "except" && models[0] !== "all") return undefined;
       if (
         models.length &&
         (next?.actions === undefined || list(next.actions) || next.actions === "all")
