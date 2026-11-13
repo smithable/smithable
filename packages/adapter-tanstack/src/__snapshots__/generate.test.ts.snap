@@ -37542,11 +37542,11 @@ export const customerData = {
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
     let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        after = customerData.eraseIn(tx, viewer, ids);
+        after = customerData.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
@@ -37558,20 +37558,21 @@ export const customerData = {
   /**
    * The erase, in a transaction of the caller's: what is in the trash pointing to the records
    * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
-   * delete every record (the daily job, no viewer, may); returns what to do once it commits.
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
    */
-  eraseIn(tx: Tx, viewer: Viewer | null, ids: number[]): (() => void)[] {
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
     const after: (() => void)[] = [];
     if (ids.length === 0) return after;
-    after.push(...followUpData.eraseIn(tx, viewer, tx.select({ id: schema.followUps.id }).from(schema.followUps).where(and(isNotNull(schema.followUps.deletedAt), inArray(schema.followUps.customerId, ids))).all().map((r) => r.id)));
-    after.push(...orderData.eraseIn(tx, viewer, tx.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id)));
+    after.push(...followUpData.eraseIn(tx, viewer, app, tx.select({ id: schema.followUps.id }).from(schema.followUps).where(and(isNotNull(schema.followUps.deletedAt), inArray(schema.followUps.customerId, ids))).all().map((r) => r.id)));
+    after.push(...orderData.eraseIn(tx, viewer, app, tx.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id)));
 
     const rows = tx
       .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
       .from(schema.customers)
       .where(and(inArray(schema.customers.id, ids), isNotNull(schema.customers.deletedAt)))
       .all();
-    if (viewer && rows.some((row) => !allows(customerAccess.delete, viewer, row.accountManagerId))) throw new AccessDenied(true);
+    if (!app && rows.some((row) => !allows(customerAccess.delete, viewer, row.accountManagerId))) throw new AccessDenied(viewer !== null);
     for (const row of rows) {
       const gone = tx.delete(schema.customers).where(eq(schema.customers.id, row.id)).returning().get();
       if (gone) audit(tx, viewer, { action: "removed", model: "Customer", record: row.id, title: gone.name });
@@ -37587,7 +37588,7 @@ export const customerData = {
       .where(lt(schema.customers.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    customerData.erase(null, old);
+    customerData.erase(null, old, true);
     return old.length;
   },
 
@@ -39037,11 +39038,11 @@ export const followUpData = {
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
     let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        after = followUpData.eraseIn(tx, viewer, ids);
+        after = followUpData.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
@@ -39053,9 +39054,10 @@ export const followUpData = {
   /**
    * The erase, in a transaction of the caller's: what is in the trash pointing to the records
    * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
-   * delete every record (the daily job, no viewer, may); returns what to do once it commits.
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
    */
-  eraseIn(tx: Tx, viewer: Viewer | null, ids: number[]): (() => void)[] {
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
     const after: (() => void)[] = [];
     if (ids.length === 0) return after;
     const rows = tx
@@ -39063,7 +39065,7 @@ export const followUpData = {
       .from(schema.followUps)
       .where(and(inArray(schema.followUps.id, ids), isNotNull(schema.followUps.deletedAt)))
       .all();
-    if (viewer && rows.some((row) => !allows(followUpAccess.delete, viewer, row.ownerId))) throw new AccessDenied(true);
+    if (!app && rows.some((row) => !allows(followUpAccess.delete, viewer, row.ownerId))) throw new AccessDenied(viewer !== null);
     for (const row of rows) {
       const gone = tx.delete(schema.followUps).where(eq(schema.followUps.id, row.id)).returning().get();
       if (gone) audit(tx, viewer, { action: "removed", model: "FollowUp", record: row.id, title: titleOf(gone.note) });
@@ -39079,7 +39081,7 @@ export const followUpData = {
       .where(lt(schema.followUps.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    followUpData.erase(null, old);
+    followUpData.erase(null, old, true);
     return old.length;
   },
 
@@ -40148,11 +40150,11 @@ export const orderData = {
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
     let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        after = orderData.eraseIn(tx, viewer, ids);
+        after = orderData.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
@@ -40164,9 +40166,10 @@ export const orderData = {
   /**
    * The erase, in a transaction of the caller's: what is in the trash pointing to the records
    * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
-   * delete every record (the daily job, no viewer, may); returns what to do once it commits.
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
    */
-  eraseIn(tx: Tx, viewer: Viewer | null, ids: number[]): (() => void)[] {
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
     const after: (() => void)[] = [];
     if (ids.length === 0) return after;
     const rows = tx
@@ -40174,7 +40177,7 @@ export const orderData = {
       .from(schema.orders)
       .where(and(inArray(schema.orders.id, ids), isNotNull(schema.orders.deletedAt)))
       .all();
-    if (viewer && rows.some((row) => !allows(orderAccess.delete, viewer, row.ownerId))) throw new AccessDenied(true);
+    if (!app && rows.some((row) => !allows(orderAccess.delete, viewer, row.ownerId))) throw new AccessDenied(viewer !== null);
     for (const row of rows) {
       const gone = tx.delete(schema.orders).where(eq(schema.orders.id, row.id)).returning().get();
       if (gone) audit(tx, viewer, { action: "removed", model: "Order", record: row.id, title: gone.number });
@@ -40190,7 +40193,7 @@ export const orderData = {
       .where(lt(schema.orders.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    orderData.erase(null, old);
+    orderData.erase(null, old, true);
     return old.length;
   },
 
@@ -43847,14 +43850,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
   "src/generated/customer.schema.ts": "e6ad7cbe generated",
-  "src/generated/customer.server.ts": "dbf11f26 generated",
+  "src/generated/customer.server.ts": "a268d361 generated",
   "src/generated/customer.ts": "8c21bca9 generated",
   "src/generated/dev-door.server.ts": "c6582e43 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "a4599e2b generated",
-  "src/generated/follow-up.server.ts": "5506692e generated",
+  "src/generated/follow-up.server.ts": "2af58e63 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -43863,7 +43866,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "0a39b791 generated",
-  "src/generated/order.server.ts": "9989d042 generated",
+  "src/generated/order.server.ts": "948153ed generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",

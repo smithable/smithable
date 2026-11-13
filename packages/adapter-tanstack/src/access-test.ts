@@ -406,7 +406,8 @@ ${tests.join("\n\n")}
         (f) =>
           f.type.kind === "relation" && !f.type.many && f.type.model === parent.name && f.required,
       );
-      if (!via || child === parent) continue;
+      // A child owned through this parent is its owner's too: not another person's record.
+      if (!via || child === parent || child.ownedBy === via.name) continue;
       const childDelete = modelAccess(child, auth).delete;
       // A role that deletes its own records of the parent, and not everyone's of the child.
       const role = auth.roles.find(

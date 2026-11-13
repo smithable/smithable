@@ -1587,7 +1587,7 @@ ${loose
         .filter((m) => m.trash)
         .map((m) => {
           const tm = tableRef(m);
-          return `    after.push(...${dataOf(m)}.eraseIn(tx, viewer, tx.select({ id: ${tm}.id }).from(${tm}).where(and(isNotNull(${tm}.deletedAt), ${pointsAt(m.name, [m.name])})).all().map((r) => r.id)));\n`;
+          return `    after.push(...${dataOf(m)}.eraseIn(tx, viewer, app, tx.select({ id: ${tm}.id }).from(${tm}).where(and(isNotNull(${tm}.deletedAt), ${pointsAt(m.name, [m.name])})).all().map((r) => r.id)));\n`;
         })
         .join("")
     : "";
@@ -1744,11 +1744,11 @@ ${members.map((m) => `          ${dataOf(m)}.restoreWith(tx, viewer, \`${model.n
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
     let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        after = ${self}.eraseIn(tx, viewer, ids);
+        after = ${self}.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
@@ -1760,9 +1760,10 @@ ${members.map((m) => `          ${dataOf(m)}.restoreWith(tx, viewer, \`${model.n
   /**
    * The erase, in a transaction of the caller's: what is in the trash pointing to the records
    * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
-   * delete every record (the daily job, no viewer, may); returns what to do once it commits.
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
    */
-  eraseIn(tx: Tx, viewer: Viewer | null, ids: number[]): (() => void)[] {
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
     const after: (() => void)[] = [];
     if (ids.length === 0) return after;${
       eraseMembers
@@ -1775,7 +1776,7 @@ ${eraseMembers}`
       .from(${n.table})
       .where(and(inArray(${n.table}.id, ids), isNotNull(${n.table}.deletedAt)))
       .all();
-    if (viewer && rows.some((row) => !allows(${n.access}.delete, viewer, ${rowOwner}))) throw new AccessDenied(true);
+    if (!app && rows.some((row) => !allows(${n.access}.delete, viewer, ${rowOwner}))) throw new AccessDenied(viewer !== null);
     for (const row of rows) {
       const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
       if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });
@@ -1802,7 +1803,7 @@ ${dropPictures(
       .where(lt(${n.table}.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    ${self}.erase(null, old);
+    ${self}.erase(null, old, true);
     return old.length;
   },${
     roots.length
