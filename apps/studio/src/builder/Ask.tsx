@@ -215,20 +215,21 @@ export function Ask({
     setOutput("");
     setLocal(undefined);
     setDocs(undefined);
-    // Smith looks in the docs too for a question (studio-v3.md §2): the parts found are shown
-    // beside the answer, and go with the question so the model answers from them (A 152).
+    // Smith looks in the docs for every request (studio-v3.md §2, T755): the parts found go with
+    // it so the model answers from them (A 152), and are shown beside the answer to a question.
     // Only the latest question's hits are shown, however the index's loading falls.
     const asked = ++docsAsked.current;
+    const question = asksTheDocs(text);
     let found: DocsHit[] = [];
-    if (trace && asksTheDocs(text)) {
+    if (trace) {
       const searched = docsIndex().then(
         (index) => {
           const hits = searchDocs(index, text);
-          if (asked === docsAsked.current) setDocs(hits);
+          if (question && asked === docsAsked.current) setDocs(hits);
           return hits;
         },
         () => {
-          if (asked === docsAsked.current) setDocs("unreachable");
+          if (question && asked === docsAsked.current) setDocs("unreachable");
           return [];
         },
       );

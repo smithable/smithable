@@ -65,7 +65,7 @@ Answer with JSON only:
 - {"kind":"question","question":"…","options":["…","…"]} when the request could mean different changes, or it is unclear what it is about. Never guess.
 - {"kind":"answer","text":"…"} when the request is a question about the app (who can do what, what something is, whether it is public, what happens when), answered in one to three plain sentences from the app as described; never a change.
 - {"kind":"answer","text":"…"} also for a greeting, thanks or other small talk: one or two friendly sentences, like a chat, that suggest something to change or ask about this app. Never answer "none" to small talk.
-- {"kind":"answer","text":"…"} for a question about how Smithable works when parts of its docs come with the request: answer from them in one to three sentences and name the page.
+- {"kind":"answer","text":"…"} for a question about how Smithable works (publishing, keys, data, costs, the editor): answer from the parts "From the docs" in one to three sentences and name the page; a question about this app is answered from "From this app" and the parts of the app.
 - {"kind":"answer","text":"…"} for a question not about this app or Smithable: one sentence, then lead back with something to change or ask about this app.
 - {"kind":"none","reason":"…"} when the request is a change no operation can do. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
 The reason is said to the person, as you, in one to three friendly sentences: what cannot be done here, then the nearest thing that can (an operation that comes close, or custom code; a look the app has no setting for is custom CSS in src/custom/styles.css on the kit's hooks, naming the selector, e.g. [data-kit="app-shell"] [data-part="menu"]). When the app already does it by itself (the kit's list below), say so and how, not that it cannot be done.
@@ -235,8 +235,10 @@ export async function proposeChange(options: {
   check?: (before: ProjectFiles, after: ProjectFiles, effects: Effect[]) => string | undefined;
   /** The conversation so far, oldest first (A 152): what a follow-up is read by. */
   conversation?: { request: string; reply: string }[];
-  /** Parts of docs.smithable.ai the person's browser found for a question, to answer from. */
+  /** Parts of docs.smithable.ai the person's browser found for the request, to answer from. */
   docs?: { title: string; url: string; text: string }[];
+  /** The parts of the app's plain-language summary the request names, or the whole (T755). */
+  app?: string;
   /** What every app does by itself, in the kit's words (the adapter's kitSummary). */
   kit?: readonly string[];
 }): Promise<Proposal> {
@@ -296,7 +298,8 @@ export async function proposeChange(options: {
     .map((turn) => `Person: ${turn.request}\nSmith: ${turn.reply}`)
     .join("\n");
   const docs = (options.docs ?? []).map((d) => `${d.title} (${d.url}): ${d.text}`).join("\n");
-  const around = `${said ? `\n\nThe conversation so far:\n${said}` : ""}${docs ? `\n\nFrom Smithable's docs:\n${docs}` : ""}`;
+  // Both searches run for every request that reaches a model, each labelled (T755).
+  const around = `${said ? `\n\nThe conversation so far:\n${said}` : ""}${options.app ? `\n\nFrom this app:\n${options.app}` : ""}${docs ? `\n\nFrom the docs:\n${docs}` : ""}`;
   for (const [index, provider] of providers.entries()) {
     const prompted = promptFor(provider, context, files.plugins, options.kit);
     const { system, operations } = prompted;
