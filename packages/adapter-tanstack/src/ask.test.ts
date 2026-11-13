@@ -190,3 +190,11 @@ test("a chat: small talk by rule, questions to try that the rules read, earlier 
   expect(turns[0]?.answer.length).toBe(500);
   expect(turnsOf("nope")).toEqual([]);
 });
+
+test("three values of one choice field are any of the three, not the last (T812)", () => {
+  expect(ask("How many draft, placed, shipped orders do we have?")).toEqual({
+    tool: "measure",
+    kind: "Order",
+    where: { status: ["draft", "placed", "shipped"] },
+  });
+});

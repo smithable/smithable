@@ -348,6 +348,7 @@ export const w = {
   results: "Resultat",
   revoke: "Återkalla",
   role: "Roll",
+  questionsUsedUp: "Assistenten har svarat på alla frågor den får just nu.",
   rulesStillAnswer: "Frågor som reglerna kan läsa besvaras fortfarande.",
   saveChanges: "Spara ändringar",
   saveTheChange: "Spara ändringen?",

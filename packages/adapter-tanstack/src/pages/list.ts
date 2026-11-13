@@ -276,7 +276,7 @@ export function filterCode(
       // The related records the viewer may read, by their names.
       // With chips, a related record's picture on its chip when its model has one.
       const picture = look === "chips" ? scalarField(target, "picture") : undefined;
-      const all = `(await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)}${picture ? `, picture: r.${dataKey(picture)} ? \`/files/${kebab(target.name)}/\${r.id}/${picture.name}\` : undefined` : ""} }))`;
+      const all = `(await ${tn.data}.list(viewer)).map((r) => ({ value: String(r.id), label: ${shownTitle(target, "r." + title)}${picture ? `, picture: r.${dataKey(picture)} ? \`/files/${kebab(target.name)}/\${r.id}/${picture.name}?v=\${r.${dataKey(picture)}.file.slice(-29, -5)}\` : undefined` : ""} }))`;
       const how = pick?.[name];
       if (how === "list" || titleField(target) === "id") {
         // Said to be a list (the ux file's filters.pick), or titled by number: every related

@@ -10,6 +10,7 @@ import { Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
 import { AiMarked } from "./AiMark";
 import { FieldInput } from "./FieldInput";
+import { versioned } from "./file-address";
 import { fileSize, formatValue, fromInput, toInput } from "./format";
 import {
   type AppUi,
@@ -850,7 +851,7 @@ function picturesOf(ui: ModelUi, field: FieldUi, record: Record<string, unknown>
     generated?: boolean;
   }[];
   return list.map((p, i) => ({
-    src: field.kind === "picture" ? base : `${base}/${i}`,
+    src: versioned(field.kind === "picture" ? base : `${base}/${i}`, p as { file?: string }),
     alt: p.alt ?? "",
     generated: p.generated,
   }));
@@ -904,7 +905,7 @@ function shown(ui: ModelUi, field: FieldUi, record: Record<string, unknown>, app
   if (field.kind === "picture")
     return value ? (
       <img
-        src={base}
+        src={versioned(base, value as { file?: string })}
         alt={String((value as { alt?: string }).alt ?? "")}
         className="max-h-96 rounded-md object-contain"
       />
@@ -918,7 +919,7 @@ function shown(ui: ModelUi, field: FieldUi, record: Record<string, unknown>, app
         {pictures.map((p, i) => (
           <li key={`${base}/${i}`} className="shrink-0 snap-start">
             <img
-              src={`${base}/${i}`}
+              src={versioned(`${base}/${i}`, p as { file?: string })}
               alt={p.alt ?? ""}
               loading="lazy"
               className="h-56 w-auto rounded-md object-cover"
@@ -943,7 +944,10 @@ function shown(ui: ModelUi, field: FieldUi, record: Record<string, unknown>, app
         {list.map((f, i) => (
           <li key={`${base}/${i}`}>
             <a
-              href={field.kind === "file" ? base : `${base}/${i}`}
+              href={versioned(
+                field.kind === "file" ? base : `${base}/${i}`,
+                f as { file?: string },
+              )}
               className="underline underline-offset-4"
             >
               {f.name}
