@@ -452,7 +452,27 @@ test("with sign-up open, an address nobody invited gets the default role", async
   const created = await signUp("users-test-stranger@${domain}");
   expect(created?.role).toBe(${JSON.stringify(auth.defaultRole)});
 });
+${
+  other && other !== auth.defaultRole
+    ? `
+test("an invitation withheld from a sign-in that had not proven the address is the address's once proven", async () => {
+  const address = "users-test-unproven@${domain}";
+  await invite(admin, address, ${JSON.stringify(other)}, ORIGIN);
+  // A provider's sign-in with an address it has not confirmed: the account, but not the invited role.
+  const context = await auth.$context;
+  const made = await context.internalAdapter.createUser({ email: address, name: "unproven", emailVerified: false }, { path: "/callback/google" } as never);
+  expect(db.select().from(user).where(eq(user.id, made.id)).get()?.role).toBe(${JSON.stringify(auth.defaultRole)});
+  expect(db.select().from(invitation).where(eq(invitation.email, address)).get()).toBeDefined();
+  // The address proven (a code by mail), then a sign-in: the invitation's role, and it is used up.
+  db.update(user).set({ emailVerified: true }).where(eq(user.id, made.id)).run();
+  await auth.options.databaseHooks?.session?.create?.after?.({ userId: made.id } as never, null as never);
+  expect(db.select().from(user).where(eq(user.id, made.id)).get()?.role).toBe(${JSON.stringify(other)});
+  expect(db.select().from(invitation).where(eq(invitation.email, address)).get()).toBeUndefined();
+  expect(audited("invitation accepted").at(-1)).toMatchObject({ who: made.id, details: { role: ${JSON.stringify(other)} } });
+});
 `
+    : ""
+}`
 }
 test("a role the ${usersPage(ir)} page does not give, and a key whatever its role, is refused every change to who has access", async () => {
   const rule = pageAccess[${JSON.stringify(usersPage(ir))}];

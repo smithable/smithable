@@ -28,7 +28,7 @@ Keys are made in the running app, by an administrator, on the users page (the st
 
 ![The Keys part of the team page: a key for "Uptime monitor" with the role Staff, shown once with a Copy button](api/keys.webp)
 
-Give a key the smallest role that does the job. Here **Staff** may report and resolve incidents but not manage the team. What a key creates has no owner (so `mine=true` finds nothing for a key); a key can never make keys or manage people (whatever its role), and stops working when it is revoked, when its end date passes, or when the administrator who made it is removed. Every key made or revoked is in the app's activity log, by name, never the key itself.
+Give a key the smallest role that does the job. Here **Staff** may report and resolve incidents but not manage the team. A key owns nothing: where its role reads a kind it lists every record, where it does not it lists what anyone may read (with the public condition, when there is one), and where nothing is public the answer is `403`, not an empty list. What a key creates has no owner (so `mine=true` finds nothing for a key); a key can never make keys or manage people (whatever its role), and stops working when it is revoked, when its end date passes, or when the administrator who made it is removed. Every key made or revoked is in the app's activity log, by name, never the key itself.
 
 ## 3. Call the API
 

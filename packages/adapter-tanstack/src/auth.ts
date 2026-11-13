@@ -380,13 +380,19 @@ export async function currentViewer(): Promise<Viewer | null> {
 /** Everyone who can be chosen in a User field, e.g. an account manager. */
 export function usersModule(): string {
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
-import { AccessDenied } from "#/kit/access";
+import { AccessDenied, personOf } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { userChoices } from "./user-choices.server";
 
-/** Choices for fields that refer to a user; for signed-in users only. */
+/**
+ * Choices for fields that refer to a user: everyone's name, for a person whose address is proven
+ * (any role that adds such a record may also change its own, so the role does not narrow it);
+ * anyone else signed in gets none.
+ */
 export const userOptions = createServerFn().handler(async () => {
-  if (!(await currentViewer())) throw new AccessDenied(false);
+  const viewer = await currentViewer();
+  if (!viewer) throw new AccessDenied(false);
+  if (!personOf(viewer) || !viewer.proven) return [];
   return userChoices();
 });
 `;
