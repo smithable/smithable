@@ -126,6 +126,8 @@ const claude = (name) => ({
     };
   },
 });
+/** A provider's tier as the scoreboard names it. */
+const TIERS = { smithable: "small", frontier: "better", local: "local" };
 const providersOf = (setup) =>
   setup === "haiku"
     ? [claude(HAIKU)]
@@ -316,6 +318,11 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
       why: score.why ?? "",
       tokens: usage.reduce((n, u) => n + u.inputTokens + u.outputTokens, 0),
       cost: usage.reduce((n, u) => n + u.cost, 0),
+      // Who answered (the scoreboard's escalation numbers): the rules, the small model or the
+      // better one, and what Smith's own calls cost, the judge's apart.
+      tier: byRule ? "rules" : p.kind === "failed" ? "none" : TIERS[p.usage.at(-1)?.tier] ?? p.usage.at(-1)?.tier,
+      model: byRule ? "" : (p.usage.at(-1)?.model ?? ""),
+      smithCost: p.usage.reduce((n, u) => n + u.cost, 0),
       ms: Date.now() - started,
       ...(r.docs ? { found: docs.some((d) => isLabelled(d.url, r.docs)) } : {}),
     };
@@ -354,3 +361,6 @@ for (const r of rows.filter((x) => !x.right))
 writeFileSync(`${out}.md`, `${lines.join("\n")}\n`);
 await route?.close();
 console.log(`${out}.md`);
+console.log(
+  `For the scoreboard, once the round's runs are in: node scripts/smith-scoreboard.mjs ${out}.jsonl [other runs' .jsonl] --note "what changed"`,
+);

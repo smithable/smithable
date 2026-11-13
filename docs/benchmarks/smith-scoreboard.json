@@ -1,0 +1,241 @@
+[
+ {
+  "date": "2026-11-13",
+  "commit": "291b18fd",
+  "set": 1,
+  "requests": 275,
+  "runs": [
+   "bench-smith-2026-11-13.jsonl",
+   "bench-smith-2026-11-13-small.jsonl"
+  ],
+  "note": "Mistral (mistral-small-latest, mistral-medium-latest), before Smith read docs parts (#1153); rows record no tier, so 'paid for nothing' reads 0",
+  "setups": {
+   "small": {
+    "of": 275,
+    "right": 139,
+    "wrong": 136,
+    "asked": 27,
+    "share": 50.5,
+    "perRequest": 0.00434,
+    "models": [],
+    "kinds": {
+     "ambiguous": {
+      "of": 25,
+      "right": 14,
+      "wrong": 11,
+      "asked": 14,
+      "share": 56,
+      "perRequest": 0.00457
+     },
+     "change": {
+      "of": 104,
+      "right": 58,
+      "wrong": 46,
+      "asked": 5,
+      "share": 55.8,
+      "perRequest": 0.00502
+     },
+     "custom-code": {
+      "of": 13,
+      "right": 6,
+      "wrong": 7,
+      "asked": 2,
+      "share": 46.2,
+      "perRequest": 0.0029
+     },
+     "data": {
+      "of": 23,
+      "right": 11,
+      "wrong": 12,
+      "asked": 4,
+      "share": 47.8,
+      "perRequest": 0.00721
+     },
+     "docs-question": {
+      "of": 28,
+      "right": 2,
+      "wrong": 26,
+      "asked": 0,
+      "share": 7.1,
+      "perRequest": 0.00346
+     },
+     "off-topic": {
+      "of": 10,
+      "right": 8,
+      "wrong": 2,
+      "asked": 1,
+      "share": 80,
+      "perRequest": 0.0024
+     },
+     "smalltalk": {
+      "of": 17,
+      "right": 17,
+      "wrong": 0,
+      "asked": 0,
+      "share": 100,
+      "perRequest": 0.00055
+     },
+     "spec-question": {
+      "of": 38,
+      "right": 12,
+      "wrong": 26,
+      "asked": 1,
+      "share": 31.6,
+      "perRequest": 0.0035
+     },
+     "two-things": {
+      "of": 17,
+      "right": 11,
+      "wrong": 6,
+      "asked": 0,
+      "share": 64.7,
+      "perRequest": 0.00537
+     }
+    },
+    "languages": {
+     "en": {
+      "of": 204,
+      "right": 102,
+      "wrong": 102,
+      "asked": 14,
+      "share": 50,
+      "perRequest": 0.00469
+     },
+     "fi": {
+      "of": 27,
+      "right": 18,
+      "wrong": 9,
+      "asked": 5,
+      "share": 66.7,
+      "perRequest": 0.00297
+     },
+     "sv": {
+      "of": 44,
+      "right": 19,
+      "wrong": 25,
+      "asked": 8,
+      "share": 43.2,
+      "perRequest": 0.00358
+     }
+    }
+   },
+   "small>better": {
+    "of": 275,
+    "right": 155,
+    "wrong": 120,
+    "asked": 34,
+    "share": 56.4,
+    "perRequest": 0.01853,
+    "models": [],
+    "kinds": {
+     "ambiguous": {
+      "of": 25,
+      "right": 16,
+      "wrong": 9,
+      "asked": 16,
+      "share": 64,
+      "perRequest": 0.01261
+     },
+     "change": {
+      "of": 104,
+      "right": 62,
+      "wrong": 42,
+      "asked": 10,
+      "share": 59.6,
+      "perRequest": 0.02507
+     },
+     "custom-code": {
+      "of": 13,
+      "right": 8,
+      "wrong": 5,
+      "asked": 1,
+      "share": 61.5,
+      "perRequest": 0.01985
+     },
+     "data": {
+      "of": 23,
+      "right": 17,
+      "wrong": 6,
+      "asked": 4,
+      "share": 73.9,
+      "perRequest": 0.0259
+     },
+     "docs-question": {
+      "of": 28,
+      "right": 3,
+      "wrong": 25,
+      "asked": 0,
+      "share": 10.7,
+      "perRequest": 0.00874
+     },
+     "off-topic": {
+      "of": 10,
+      "right": 8,
+      "wrong": 2,
+      "asked": 1,
+      "share": 80,
+      "perRequest": 0.00914
+     },
+     "smalltalk": {
+      "of": 17,
+      "right": 17,
+      "wrong": 0,
+      "asked": 0,
+      "share": 100,
+      "perRequest": 0.00178
+     },
+     "spec-question": {
+      "of": 38,
+      "right": 12,
+      "wrong": 26,
+      "asked": 2,
+      "share": 31.6,
+      "perRequest": 0.01279
+     },
+     "two-things": {
+      "of": 17,
+      "right": 12,
+      "wrong": 5,
+      "asked": 0,
+      "share": 70.6,
+      "perRequest": 0.0275
+     }
+    },
+    "languages": {
+     "en": {
+      "of": 204,
+      "right": 117,
+      "wrong": 87,
+      "asked": 16,
+      "share": 57.4,
+      "perRequest": 0.02187
+     },
+     "fi": {
+      "of": 27,
+      "right": 16,
+      "wrong": 11,
+      "asked": 7,
+      "share": 59.3,
+      "perRequest": 0.00786
+     },
+     "sv": {
+      "of": 44,
+      "right": 22,
+      "wrong": 22,
+      "asked": 11,
+      "share": 50,
+      "perRequest": 0.0096
+     }
+    }
+   }
+  },
+  "escalation": {
+   "rulesWrong": 0,
+   "rulesAnswered": 29,
+   "ruleCouldHave": 33,
+   "shouldHaveGoneUp": 29,
+   "paidForNothing": 0,
+   "compared": 275
+  }
+ }
+]
