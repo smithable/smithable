@@ -33,6 +33,7 @@ import { BETA, readBeta } from "./beta.js";
 import { cardTexts } from "./card.js";
 import { customize } from "./customize.js";
 import { devServerEnv } from "./dev.js";
+import { backFromFix, rememberBeforeFix } from "./fix-open.js";
 import { warmTools } from "./generate.js";
 import {
   generationId,
@@ -1054,6 +1055,8 @@ export async function studio(
         }
       }
       if (url.pathname === "/api/project") {
+        // Back from a held fix's branch: the dev data as it was before it (fix-open.ts).
+        if (backFromFix(dir)) reopenDatabase(dir);
         const answer = state();
         notice = undefined;
         return json(answer);
@@ -1649,6 +1652,8 @@ export async function studio(
         const dirty = uncommittedRefusal(dir, "before the fix is opened");
         if (dirty) return json({ ok: false, message: dirty }, 409);
         const packages = installed();
+        // Today's dev data kept, so the held version's migrations go when the owner leaves.
+        rememberBeforeFix(dir, branch);
         // The branch as the owner left it when it is there already; else made at the held version.
         const done = git(dir, there ? ["checkout", branch] : ["checkout", "-b", branch, ref]);
         if (!done.ok) return json({ ok: false, message: done.out.trim() }, 500);

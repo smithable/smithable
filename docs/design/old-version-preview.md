@@ -56,6 +56,10 @@ While an old version is open the Builder and the forms are not offered for it: c
 
 The workspace's proxy has to pass the second port, and the copy counts against the workspace's disk and memory, so one at a time holds there too. That is a change of the service and is planned with it.
 
+## 6b. A held fix opened on its branch
+
+A held fix (fixes-reach-apps §5) is opened to be edited, not looked at, so it is checked out on its own branch in the project's folder as before. Its code and its migrations meet the project's one dev database, though: so opening it keeps a snapshot of that database, and once the project is on another branch again (the owner switched back, or published), Studio puts the database back as it was before the fix was opened. The held version's migrations never stay on today's dev data. Opening a fix in a copy like an old version, with the owner's edits brought back into the project as one change, is an open design question.
+
 ## 7. Not in this note
 
 The rule for a proposal made against an older state (the stale plan) is in change-verified.md. Comparing two versions side by side, and keeping an old version open as a second app, are not planned.
