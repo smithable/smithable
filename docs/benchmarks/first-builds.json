@@ -1,0 +1,1967 @@
+{
+ "version": 1,
+ "about": "What a first build from a description must and must not have (T756 point 7): each description labelled from its text alone by a model of another family than the builder's, then checked by hand. Names are alternatives (|), in both languages for Swedish descriptions. Scored by scripts/bench-first-builds.mjs. The held-out ten are kept outside this repository.",
+ "descriptions": [
+  {
+   "text": "A booking site for a yoga studio, with classes, teachers and online booking.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Class|Session",
+      "fields": [
+       "name|title:text",
+       "time|date:datetime",
+       "teacher|instructor:reference"
+      ]
+     },
+     {
+      "name": "Teacher|Instructor",
+      "fields": [
+       "name|fullname:text",
+       "bio|description:text"
+      ]
+     },
+     {
+      "name": "Booking|Reservation",
+      "fields": [
+       "student|customer:person",
+       "class|session:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Home|Landing",
+     "Schedule|Classes",
+     "Teachers|Instructors",
+     "Book|Booking"
+    ],
+    "roles": [
+     "Admin|Manager",
+     "Student|Customer|Member"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Class|Session"
+     },
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Teacher|Instructor"
+     },
+     {
+      "who": "Student|Customer|Member",
+      "may": "create",
+      "what": "Booking|Reservation"
+     },
+     {
+      "who": "Student|Customer|Member",
+      "mayNot": "read",
+      "what": "others Booking|Reservation"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Product|Inventory"
+    ],
+    "public": [
+     "Booking|Reservation"
+    ]
+   },
+   "open": [
+    "payments: pay|price|card",
+    "cancellations: refund|cancel|late"
+   ],
+   "taste": "Calm, inviting, and focused on wellness.",
+   "id": "fb-01"
+  },
+  {
+   "text": "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Company|Account",
+      "fields": [
+       "name|title:text",
+       "industry|sector:text"
+      ]
+     },
+     {
+      "name": "Contact|Person",
+      "fields": [
+       "name|fullname:text",
+       "email|address:email",
+       "company|account:reference"
+      ]
+     },
+     {
+      "name": "Deal|Opportunity",
+      "fields": [
+       "name|title:text",
+       "value|amount:money",
+       "status|stage:choice"
+      ]
+     },
+     {
+      "name": "Follow-up|Task",
+      "fields": [
+       "date|deadline:datetime",
+       "notes|description:text",
+       "deal|opportunity:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Dashboard|Home",
+     "Companies|Accounts",
+     "Contacts|People",
+     "Deals|Pipeline"
+    ],
+    "roles": [
+     "Sales|Agent|User",
+     "Admin|Manager"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Company|Account"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Contact|Person"
+     },
+     {
+      "who": "Sales|Agent|User",
+      "may": "create",
+      "what": "Deal|Opportunity"
+     },
+     {
+      "who": "Sales|Agent|User",
+      "may": "change",
+      "what": "Follow-up|Task"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Cart|Order"
+    ],
+    "public": [
+     "Company|Account",
+     "Contact|Person",
+     "Deal|Opportunity",
+     "Follow-up|Task"
+    ]
+   },
+   "open": [
+    "deal stages: steps|pipeline|stages",
+    "assignment: owner|assignee|agent"
+   ],
+   "taste": "Professional, efficient, and action-oriented.",
+   "id": "fb-02"
+  },
+  {
+   "text": "Invoicing for freelancers, with clients, invoices and payments.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Client|Customer",
+      "fields": [
+       "name|company:text",
+       "email|contact:email"
+      ]
+     },
+     {
+      "name": "Invoice|Bill",
+      "fields": [
+       "number|id:text",
+       "amount|total:money",
+       "client|customer:reference"
+      ]
+     },
+     {
+      "name": "Payment|Transaction",
+      "fields": [
+       "date|received:date",
+       "amount|value:money",
+       "invoice|bill:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Dashboard|Home",
+     "Clients|Customers",
+     "Invoices|Billing",
+     "Payments|Transactions"
+    ],
+    "roles": [
+     "Freelancer|Owner|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Client|Customer"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Invoice|Bill"
+     },
+     {
+      "who": "Freelancer|Owner|Admin",
+      "may": "create",
+      "what": "Invoice|Bill"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Employee|Timesheet"
+    ],
+    "public": [
+     "Client|Customer",
+     "Invoice|Bill",
+     "Payment|Transaction"
+    ]
+   },
+   "open": [
+    "payment methods: stripe|bank|paypal",
+    "invoice lines: items|hours|rate"
+   ],
+   "taste": "Clear, professional, and trustworthy.",
+   "id": "fb-03"
+  },
+  {
+   "text": "A tool library where neighbors lend each other tools.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Tool|Item",
+      "fields": [
+       "name|title:text",
+       "description|details:text",
+       "owner|lender:person"
+      ]
+     },
+     {
+      "name": "Loan|Borrowing",
+      "fields": [
+       "tool|item:reference",
+       "borrower|user:person",
+       "startDate|date:date"
+      ]
+     }
+    ],
+    "pages": [
+     "Catalog|Tools",
+     "My Tools|Inventory",
+     "Borrowings|Loans"
+    ],
+    "roles": [
+     "Neighbor|Member|User",
+     "Admin|Manager"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Tool|Item"
+     },
+     {
+      "who": "Neighbor|Member|User",
+      "may": "create",
+      "what": "Loan|Borrowing"
+     },
+     {
+      "who": "Neighbor|Member|User",
+      "mayNot": "change",
+      "what": "others Tool|Item"
+     },
+     {
+      "who": "Neighbor|Member|User",
+      "mayNot": "read",
+      "what": "others Loan|Borrowing"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Sale|Price"
+    ],
+    "public": [
+     "Loan|Borrowing"
+    ]
+   },
+   "open": [
+    "terms: limit|duration|days",
+    "condition: broken|lost|deposit"
+   ],
+   "taste": "Friendly, community-driven, and practical.",
+   "id": "fb-04"
+  },
+  {
+   "text": "An inventory app for a small bakery: ingredients, suppliers and stock levels.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Ingredient|Item",
+      "fields": [
+       "name|title:text",
+       "stockLevel|quantity:number",
+       "supplier|vendor:reference"
+      ]
+     },
+     {
+      "name": "Supplier|Vendor",
+      "fields": [
+       "name|company:text",
+       "phone|contact:phone",
+       "email|address:email"
+      ]
+     }
+    ],
+    "pages": [
+     "Inventory|Stock",
+     "Suppliers|Vendors",
+     "Dashboard|Home"
+    ],
+    "roles": [
+     "Baker|Staff|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Ingredient|Item"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Supplier|Vendor"
+     },
+     {
+      "who": "Baker|Staff|Admin",
+      "may": "change",
+      "what": "Ingredient|Item"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Customer|Order"
+    ],
+    "public": [
+     "Ingredient|Item",
+     "Supplier|Vendor"
+    ]
+   },
+   "open": [
+    "units: kg|liters|grams",
+    "alerts: low|reorder|minimum"
+   ],
+   "taste": "Warm but functionally efficient.",
+   "id": "fb-05"
+  },
+  {
+   "text": "A job board for a local union, with job posts and applications.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Job|Post|Listing",
+      "fields": [
+       "title|role:text",
+       "description|details:text",
+       "date|posted:date"
+      ]
+     },
+     {
+      "name": "Application|Submission",
+      "fields": [
+       "applicant|candidate:person",
+       "resume|cv:file",
+       "job|listing:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Job Board|Listings",
+     "Apply|Submit",
+     "Applications|Candidates"
+    ],
+    "roles": [
+     "Admin|Union Rep",
+     "Member|Applicant"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Job|Post|Listing"
+     },
+     {
+      "who": "Member|Applicant",
+      "may": "create",
+      "what": "Application|Submission"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Application|Submission"
+     },
+     {
+      "who": "Member|Applicant",
+      "mayNot": "read",
+      "what": "others Application|Submission"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Salary|Invoice"
+    ],
+    "public": [
+     "Application|Submission"
+    ]
+   },
+   "open": [
+    "eligibility: union|member|dues",
+    "employers: companies|posters|external"
+   ],
+   "taste": "Supportive, professional, and empowering.",
+   "id": "fb-06"
+  },
+  {
+   "text": "A football club's site: teams, players, matches and results.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Team|Squad",
+      "fields": [
+       "name|title:text",
+       "ageGroup|category:text"
+      ]
+     },
+     {
+      "name": "Player|Member",
+      "fields": [
+       "name|fullname:text",
+       "number|jersey:number",
+       "team|squad:reference"
+      ]
+     },
+     {
+      "name": "Match|Game",
+      "fields": [
+       "date|time:datetime",
+       "opponent|team:text",
+       "result|score:text"
+      ]
+     }
+    ],
+    "pages": [
+     "Home|News",
+     "Teams|Squads",
+     "Fixtures|Matches",
+     "Results|Scores"
+    ],
+    "roles": [
+     "Admin|Manager",
+     "Player|Member"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Team|Squad"
+     },
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Match|Game"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "create",
+      "what": "Match|Game"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": []
+   },
+   "open": [
+    "privacy: age|youth|parents",
+    "stats: goals|assists|cards"
+   ],
+   "taste": "Energetic, proud, and community-centered.",
+   "id": "fb-07"
+  },
+  {
+   "text": "Event registration for a conference: talks, speakers and attendees.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Talk|Session",
+      "fields": [
+       "title|topic:text",
+       "time|schedule:datetime",
+       "speaker|presenter:reference"
+      ]
+     },
+     {
+      "name": "Speaker|Presenter",
+      "fields": [
+       "name|fullname:text",
+       "bio|background:text"
+      ]
+     },
+     {
+      "name": "Attendee|Participant",
+      "fields": [
+       "name|fullname:text",
+       "email|contact:email"
+      ]
+     }
+    ],
+    "pages": [
+     "Schedule|Talks",
+     "Speakers|Lineup",
+     "Register|Tickets"
+    ],
+    "roles": [
+     "Admin|Organizer",
+     "Attendee|User"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Talk|Session"
+     },
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Speaker|Presenter"
+     },
+     {
+      "who": "visitor",
+      "may": "create",
+      "what": "Attendee|Participant"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Attendee|Participant"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Review|Rating"
+    ],
+    "public": [
+     "Attendee|Participant"
+    ]
+   },
+   "open": [
+    "tickets: price|pay|free",
+    "limits: capacity|sold out|max"
+   ],
+   "taste": "Exciting, informative, and professional.",
+   "id": "fb-08"
+  },
+  {
+   "text": "A help desk for an IT team: tickets, priorities and who handles them.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Ticket|Issue",
+      "fields": [
+       "title|subject:text",
+       "description|details:text",
+       "priority|urgency:choice",
+       "assignee|handler:person"
+      ]
+     }
+    ],
+    "pages": [
+     "Tickets|Queue",
+     "Dashboard|Home",
+     "Submit Ticket|New Issue"
+    ],
+    "roles": [
+     "IT|Agent|Staff"
+    ],
+    "access": [
+     {
+      "who": "IT|Agent|Staff",
+      "may": "change",
+      "what": "Ticket|Issue"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Invoice|Quote"
+    ],
+    "public": [
+     "Ticket|Issue"
+    ]
+   },
+   "open": [
+    "SLAs: time|deadline|hours",
+    "categories: hardware|software|network"
+   ],
+   "taste": "Helpful, clear, and reassuring.",
+   "id": "fb-09"
+  },
+  {
+   "text": "A recipe collection for a family, with ingredients and shopping lists.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Recipe|Dish",
+      "fields": [
+       "name|title:text",
+       "instructions|steps:text"
+      ]
+     },
+     {
+      "name": "Ingredient|Item",
+      "fields": [
+       "name|product:text",
+       "quantity|amount:text",
+       "recipe|dish:reference"
+      ]
+     },
+     {
+      "name": "Shopping List|Groceries",
+      "fields": [
+       "name|title:text",
+       "date|for:date"
+      ]
+     }
+    ],
+    "pages": [
+     "Recipes|Cookbook",
+     "Shopping List|Groceries"
+    ],
+    "roles": [
+     "Family Member|User"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Recipe|Dish"
+     },
+     {
+      "who": "Family Member|User",
+      "may": "create",
+      "what": "Recipe|Dish"
+     },
+     {
+      "who": "Family Member|User",
+      "may": "create",
+      "what": "Shopping List|Groceries"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Order|Customer"
+    ],
+    "public": [
+     "Recipe|Dish",
+     "Ingredient|Item"
+    ]
+   },
+   "open": [
+    "sharing: public|friends|link",
+    "units: metric|imperial|cups"
+   ],
+   "taste": "Cozy, appetizing, and personal.",
+   "id": "fb-10"
+  },
+  {
+   "text": "A status page for our API, with incidents and planned maintenance.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Incident|Outage",
+      "fields": [
+       "title|name:text",
+       "status|state:choice",
+       "update|time:datetime"
+      ]
+     },
+     {
+      "name": "Maintenance|Planned Work",
+      "fields": [
+       "description|details:text",
+       "date|schedule:datetime"
+      ]
+     }
+    ],
+    "pages": [
+     "Status|Home",
+     "History|Past Incidents"
+    ],
+    "roles": [
+     "Admin|Engineer"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Incident|Outage"
+     },
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Maintenance|Planned Work"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "create",
+      "what": "Incident|Outage"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Ticket|Billing"
+    ],
+    "public": []
+   },
+   "open": [
+    "notifications: email|sms|subscribe",
+    "metrics: uptime|ping|latency"
+   ],
+   "taste": "Transparent, technical, and highly reliable.",
+   "id": "fb-11"
+  },
+  {
+   "text": "A public uptime page for a web shop: which services work, outages and their updates.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Service|System",
+      "fields": [
+       "name|component:text",
+       "status|state:choice"
+      ]
+     },
+     {
+      "name": "Outage|Incident",
+      "fields": [
+       "service|system:reference",
+       "description|details:text"
+      ]
+     },
+     {
+      "name": "Update|Message",
+      "fields": [
+       "outage|incident:reference",
+       "time|date:datetime",
+       "text|message:text"
+      ]
+     }
+    ],
+    "pages": [
+     "Status|Uptime"
+    ],
+    "roles": [
+     "Admin|Staff"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Service|System"
+     },
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Outage|Incident"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "change",
+      "what": "Service|System"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Product|Cart"
+    ],
+    "public": []
+   },
+   "open": [
+    "auto-updates: monitor|ping|automatic",
+    "history: past|thirty|days"
+   ],
+   "taste": "Clear, reassuring, and immediate.",
+   "id": "fb-12"
+  },
+  {
+   "text": "My clients as a freelance translator: who they are, what I quoted and what they paid.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Client|Company",
+      "fields": [
+       "name|title:text",
+       "contact|email:text"
+      ]
+     },
+     {
+      "name": "Quote|Estimate",
+      "fields": [
+       "amount|price:money",
+       "document|details:text",
+       "client|company:reference"
+      ]
+     },
+     {
+      "name": "Payment|Invoice",
+      "fields": [
+       "amount|total:money",
+       "date|paid:date",
+       "client|company:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Clients|Customers",
+     "Quotes|Estimates",
+     "Payments|Invoices"
+    ],
+    "roles": [
+     "Freelancer|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Client|Company"
+     },
+     {
+      "who": "Freelancer|Admin",
+      "may": "read",
+      "what": "Payment|Invoice"
+     },
+     {
+      "who": "Freelancer|Admin",
+      "may": "create",
+      "what": "Quote|Estimate"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Client|Company",
+     "Quote|Estimate",
+     "Payment|Invoice"
+    ]
+   },
+   "open": [
+    "languages: pairs|source|target",
+    "word count: words|rate|pages"
+   ],
+   "taste": "Professional, organized, and secure.",
+   "id": "fb-13"
+  },
+  {
+   "text": "A sales pipeline for our six-person web agency: leads, deals and who follows up when.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Lead|Prospect",
+      "fields": [
+       "name|company:text",
+       "contact|email:email"
+      ]
+     },
+     {
+      "name": "Deal|Project",
+      "fields": [
+       "title|name:text",
+       "value|amount:money",
+       "status|stage:choice"
+      ]
+     },
+     {
+      "name": "Follow-up|Task",
+      "fields": [
+       "date|deadline:datetime",
+       "agent|owner:person",
+       "lead|prospect:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Pipeline|Board",
+     "Leads|Prospects",
+     "Tasks|Follow-ups"
+    ],
+    "roles": [
+     "Agent|Sales|Team",
+     "Admin|Manager"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Lead|Prospect"
+     },
+     {
+      "who": "Agent|Sales|Team",
+      "may": "read",
+      "what": "Deal|Project"
+     },
+     {
+      "who": "Agent|Sales|Team",
+      "may": "create",
+      "what": "Follow-up|Task"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Lead|Prospect",
+     "Deal|Project",
+     "Follow-up|Task"
+    ]
+   },
+   "open": [
+    "assignment: round-robin|manual|claim",
+    "won deals: handover|next|invoice"
+   ],
+   "taste": "Dynamic, collaborative, and results-focused.",
+   "id": "fb-14"
+  },
+  {
+   "text": "Online booking for a hair salon: customers pick a stylist and a free time themselves.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Stylist|Hairdresser",
+      "fields": [
+       "name|fullname:text",
+       "picture|photo:picture"
+      ]
+     },
+     {
+      "name": "Timeslot|Availability",
+      "fields": [
+       "time|date:datetime",
+       "stylist|hairdresser:reference",
+       "isBooked|available:yesno"
+      ]
+     },
+     {
+      "name": "Appointment|Booking",
+      "fields": [
+       "customer|client:person",
+       "slot|time:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Home|Landing",
+     "Book|Appointments",
+     "Stylists|Team"
+    ],
+    "roles": [
+     "Customer|Client",
+     "Stylist|Staff",
+     "Admin|Owner"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Stylist|Hairdresser"
+     },
+     {
+      "who": "Customer|Client",
+      "may": "create",
+      "what": "Appointment|Booking"
+     },
+     {
+      "who": "Customer|Client",
+      "mayNot": "read",
+      "what": "others Appointment|Booking"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Appointment|Booking"
+    ]
+   },
+   "open": [
+    "services: cut|color|price",
+    "cancellations: rules|hours|fee"
+   ],
+   "taste": "Stylish, welcoming, and convenient.",
+   "id": "fb-15"
+  },
+  {
+   "text": "A piano teacher's lessons: my pupils, their weekly times and what each one practises.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Pupil|Student",
+      "fields": [
+       "name|fullname:text",
+       "email|contact:email"
+      ]
+     },
+     {
+      "name": "Lesson|Slot",
+      "fields": [
+       "time|schedule:datetime",
+       "pupil|student:reference"
+      ]
+     },
+     {
+      "name": "Practice|Assignment",
+      "fields": [
+       "description|notes:text",
+       "piece|song:text",
+       "pupil|student:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Students|Pupils",
+     "Schedule|Lessons",
+     "Assignments|Practice"
+    ],
+    "roles": [
+     "Teacher|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Pupil|Student"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Pupil|Student",
+     "Lesson|Slot",
+     "Practice|Assignment"
+    ]
+   },
+   "open": [
+    "billing: pay|monthly|invoice",
+    "rescheduling: cancel|sick|makeup"
+   ],
+   "taste": "Encouraging, structured, and musical.",
+   "id": "fb-16"
+  },
+  {
+   "text": "Our cleaning company of three sends invoices to households every month; we need one place for them.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Household|Customer",
+      "fields": [
+       "name|family:text",
+       "address|location:text"
+      ]
+     },
+     {
+      "name": "Invoice|Bill",
+      "fields": [
+       "month|date:date",
+       "amount|total:money",
+       "household|customer:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Customers|Households",
+     "Invoices|Billing"
+    ],
+    "roles": [
+     "Cleaner|Staff|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Household|Customer"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Invoice|Bill"
+     },
+     {
+      "who": "Cleaner|Staff|Admin",
+      "may": "create",
+      "what": "Invoice|Bill"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Household|Customer",
+     "Invoice|Bill"
+    ]
+   },
+   "open": [
+    "recurring: automatic|subscription|monthly",
+    "payment tracking: paid|unpaid|bank"
+   ],
+   "taste": "Tidy, professional, and reliable.",
+   "id": "fb-17"
+  },
+  {
+   "text": "A swap shelf for our office: colleagues offer things they no longer need and others claim them.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Item|Thing",
+      "fields": [
+       "name|title:text",
+       "picture|photo:picture",
+       "status|state:choice"
+      ]
+     },
+     {
+      "name": "Claim|Request",
+      "fields": [
+       "item|thing:reference",
+       "user|colleague:person"
+      ]
+     }
+    ],
+    "pages": [
+     "Shelf|Items",
+     "My Claims|Requests",
+     "Offer Item|Add"
+    ],
+    "roles": [
+     "Colleague|User",
+     "Admin|Manager"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Item|Thing"
+     },
+     {
+      "who": "Colleague|User",
+      "may": "create",
+      "what": "Item|Thing"
+     },
+     {
+      "who": "Colleague|User",
+      "may": "create",
+      "what": "Claim|Request"
+     }
+    ],
+    "signIn": "required",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [
+     "Price|Payment"
+    ],
+    "public": [
+     "Item|Thing",
+     "Claim|Request"
+    ]
+   },
+   "open": [
+    "categories: books|electronics|mugs",
+    "disputes: who|first|rules"
+   ],
+   "taste": "Friendly, generous, and casual.",
+   "id": "fb-18"
+  },
+  {
+   "text": "Our local museum's collection online, so visitors can browse the objects and their stories.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Object|Artifact",
+      "fields": [
+       "title|name:text",
+       "picture|photo:picture",
+       "description|details:text",
+       "year|era:number"
+      ]
+     },
+     {
+      "name": "Story|History",
+      "fields": [
+       "text|content:text",
+       "object|artifact:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Home|Landing",
+     "Collection|Gallery",
+     "Object Details|Story"
+    ],
+    "roles": [
+     "Curator|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Object|Artifact"
+     },
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Story|History"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "change",
+      "what": "Object|Artifact"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": []
+   },
+   "open": [
+    "search: filter|era|type",
+    "audio: guide|listen|voice"
+   ],
+   "taste": "Educational, visual, and engaging.",
+   "id": "fb-19"
+  },
+  {
+   "text": "The guest list and seating plan for our wedding, with who has answered and their meal choices.",
+   "language": "en",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Guest|Invitee",
+      "fields": [
+       "name|fullname:text",
+       "rsvp|attending:yesno",
+       "meal|food:choice"
+      ]
+     },
+     {
+      "name": "Table|Seating",
+      "fields": [
+       "name|number:text",
+       "capacity|seats:number",
+       "guests|invitees:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Guest List|RSVPs",
+     "Seating Plan|Tables"
+    ],
+    "roles": [
+     "Couple|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Guest|Invitee"
+     },
+     {
+      "who": "Couple|Admin",
+      "may": "change",
+      "what": "Table|Seating"
+     }
+    ],
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Guest|Invitee",
+     "Table|Seating"
+    ]
+   },
+   "open": [
+    "plus ones: partner|kids|allow",
+    "dietary: allergies|vegan|nuts"
+   ],
+   "taste": "Joyful, elegant, and organized.",
+   "id": "fb-20"
+  },
+  {
+   "text": "Bokning för min frisörsalong, kunderna ska kunna boka tid själva på nätet.",
+   "language": "sv",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Tid|Timeslot|Slot",
+      "fields": [
+       "tid|time:datetime",
+       "ledig|available:yesno"
+      ]
+     },
+     {
+      "name": "Bokning|Appointment|Booking",
+      "fields": [
+       "kundnamn|customer:text",
+       "tid|time:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Boka|Book",
+     "Tider|Schedule"
+    ],
+    "roles": [
+     "Frisör|Hairdresser|Admin",
+     "Kund|Customer|Client"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Tid|Timeslot|Slot"
+     },
+     {
+      "who": "Kund|Customer|Client",
+      "may": "create",
+      "what": "Bokning|Appointment|Booking"
+     },
+     {
+      "who": "Kund|Customer|Client",
+      "mayNot": "read",
+      "what": "others Bokning|Appointment|Booking"
+     }
+    ],
+    "signIn": "optional",
+    "language": "sv"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Bokning|Appointment|Booking"
+    ]
+   },
+   "open": [
+    "tjänster: klippning|färg|pris",
+    "avbokning: regler|timmar|avgift"
+   ],
+   "taste": "Snygg, välkomnande och smidig.",
+   "id": "fb-21"
+  },
+  {
+   "text": "Vi är en liten byggfirma och behöver hålla koll på offerter, kunder och fakturor.",
+   "language": "sv",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Kund|Client|Customer",
+      "fields": [
+       "namn|name:text",
+       "telefon|phone:phone"
+      ]
+     },
+     {
+      "name": "Offert|Quote|Estimate",
+      "fields": [
+       "summa|amount:money",
+       "status|stage:choice",
+       "kund|client:reference"
+      ]
+     },
+     {
+      "name": "Faktura|Invoice|Bill",
+      "fields": [
+       "belopp|amount:money",
+       "betald|paid:yesno",
+       "kund|client:reference"
+      ]
+     }
+    ],
+    "pages": [
+     "Kunder|Clients",
+     "Offerter|Quotes",
+     "Fakturor|Invoices"
+    ],
+    "roles": [
+     "Byggare|Builder|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Kund|Client|Customer"
+     },
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Faktura|Invoice|Bill"
+     },
+     {
+      "who": "Byggare|Builder|Admin",
+      "may": "create",
+      "what": "Offert|Quote|Estimate"
+     }
+    ],
+    "signIn": "required",
+    "language": "sv"
+   },
+   "mustNot": {
+    "models": [
+     "Tidrapportering|Timesheet"
+    ],
+    "public": [
+     "Kund|Client|Customer",
+     "Offert|Quote|Estimate",
+     "Faktura|Invoice|Bill"
+    ]
+   },
+   "open": [
+    "moms: skatt|moms|vat",
+    "rot-avdrag: rot|avdrag|skatteverket"
+   ],
+   "taste": "Professionell, pålitlig och tydlig.",
+   "id": "fb-22"
+  },
+  {
+   "text": "En sida för vår loppis där folk kan lägga upp saker de vill sälja, med bilder och pris.",
+   "language": "sv",
+   "length": "short",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Sak|Item|Product",
+      "fields": [
+       "namn|title:text",
+       "bild|picture:picture",
+       "pris|price:money",
+       "säljare|seller:person"
+      ]
+     }
+    ],
+    "pages": [
+     "Hem|Home",
+     "Annonser|Listings",
+     "Lägg upp|Post"
+    ],
+    "roles": [
+     "Säljare|Seller|User",
+     "Admin|Manager"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Sak|Item|Product"
+     },
+     {
+      "who": "Säljare|Seller|User",
+      "may": "create",
+      "what": "Sak|Item|Product"
+     },
+     {
+      "who": "Säljare|Seller|User",
+      "mayNot": "change",
+      "what": "others Sak|Item|Product"
+     }
+    ],
+    "signIn": "optional",
+    "language": "sv"
+   },
+   "mustNot": {
+    "models": [
+     "Kundvagn|Cart"
+    ],
+    "public": []
+   },
+   "open": [
+    "betalning: swish|kontant|kort",
+    "kontakt: chatt|mail|telefon"
+   ],
+   "taste": "Hemtrevlig, lokal och inbjudande.",
+   "id": "fb-23"
+  },
+  {
+   "text": "I run a dog daycare and need an app to manage our daily furry guests. My staff needs to log feeding times, medications, and potty breaks for each dog. We keep records of vaccinations, owner emergency contacts, and behavioral notes. Parents should be able to log in and see a daily report card with photos of their own dog, but no one else's. The public facing side just needs to show our location, hours, and a form to join the waiting list. It would be amazing if the app could automatically alert staff when a dog's vaccination record is about to expire based on photo uploads.",
+   "language": "en",
+   "length": "long",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Dog|Pet",
+      "fields": [
+       "name|title:text",
+       "owner|parent:person",
+       "vaccinationExpiry|date:date"
+      ]
+     },
+     {
+      "name": "Log|ReportCard|Entry",
+      "fields": [
+       "type|activity:choice",
+       "time|date:datetime",
+       "photo|picture:picture",
+       "dog|pet:reference"
+      ]
+     },
+     {
+      "name": "Contact|Owner",
+      "fields": [
+       "name|fullname:text",
+       "emergencyPhone|phone:phone"
+      ]
+     },
+     {
+      "name": "Waitlist|Application",
+      "fields": [
+       "name|fullname:text",
+       "email|contact:email"
+      ]
+     }
+    ],
+    "pages": [
+     "Home|Landing",
+     "Waitlist|Apply",
+     "Dashboard|Dogs",
+     "Report Cards|Logs"
+    ],
+    "roles": [
+     "Staff|Admin",
+     "Parent|Owner"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "create",
+      "what": "Waitlist|Application"
+     },
+     {
+      "who": "Parent|Owner",
+      "may": "read",
+      "what": "Log|ReportCard|Entry"
+     },
+     {
+      "who": "Parent|Owner",
+      "mayNot": "read",
+      "what": "others Log|ReportCard|Entry"
+     },
+     {
+      "who": "Staff|Admin",
+      "may": "create",
+      "what": "Log|ReportCard|Entry"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Dog|Pet",
+     "Log|ReportCard|Entry",
+     "Contact|Owner"
+    ]
+   },
+   "open": [
+    "alerts: scan|ocr|auto-read",
+    "meds: dosage|frequency|vet"
+   ],
+   "taste": "Playful, trustworthy, and caring.",
+   "id": "fb-24"
+  },
+  {
+   "text": "We have a community pottery studio where members share kilns and wheels. I need a system where our 50 members can reserve wheel time and submit pieces for firing. We keep track of the clay types used, glaze inventory, and firing schedules. Members should only see available slots and their own firing status, while the studio managers can see everyone's data and manage the inventory. The general public shouldn't see anything inside the app, just a landing page with our membership prices. Is it possible to integrate a feature that estimates the exact kiln temperature needed based on the mix of glazes submitted that day?",
+   "language": "en",
+   "length": "long",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Reservation|Wheel Time",
+      "fields": [
+       "time|slot:datetime",
+       "member|user:person"
+      ]
+     },
+     {
+      "name": "Piece|Submission",
+      "fields": [
+       "clayType|clay:text",
+       "glazes|finish:text",
+       "status|state:choice",
+       "member|user:person"
+      ]
+     },
+     {
+      "name": "Firing|Schedule",
+      "fields": [
+       "date|time:datetime",
+       "pieces|items:reference"
+      ]
+     },
+     {
+      "name": "Glaze|Inventory",
+      "fields": [
+       "name|title:text",
+       "stock|quantity:number"
+      ]
+     }
+    ],
+    "pages": [
+     "Home|Landing",
+     "Reservations|Booking",
+     "My Pieces|Submissions",
+     "Inventory|Glazes"
+    ],
+    "roles": [
+     "Member|User",
+     "Manager|Admin"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "mayNot": "read",
+      "what": "Reservation|Wheel Time"
+     },
+     {
+      "who": "Member|User",
+      "may": "create",
+      "what": "Reservation|Wheel Time"
+     },
+     {
+      "who": "Member|User",
+      "mayNot": "read",
+      "what": "others Piece|Submission"
+     },
+     {
+      "who": "Manager|Admin",
+      "may": "change",
+      "what": "Glaze|Inventory"
+     }
+    ],
+    "signIn": "optional",
+    "language": "en"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Piece|Submission",
+     "Firing|Schedule",
+     "Glaze|Inventory"
+    ]
+   },
+   "open": [
+    "AI temp: calculate|mix|estimate",
+    "payments: dues|membership|fee"
+   ],
+   "taste": "Creative, organized, and community-focused.",
+   "id": "fb-25"
+  },
+  {
+   "text": "Jag är dirigent för en lokal manskör och vi behöver en app för att hålla ordning på allt. Våra medlemmar ska kunna logga in för att ladda ner noter, lyssna på stämfiler och anmäla om de kommer på nästa rep. Vi sparar kontaktuppgifter till alla sångare, närvarostatistik och en lista över vår repertoar. Styrelsen behöver kunna se närvaron för alla, men vanliga medlemmar ska bara se sina egna uppgifter och kontaktlistan. För allmänheten vill vi ha en öppen kalender där de kan se våra kommande konserter och köpa biljetter. En svår grej vi önskar vore om appen kunde lyssna när medlemmarna övar hemma och ge feedback på om de sjunger rent.",
+   "language": "sv",
+   "length": "long",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Medlem|Singer|Member",
+      "fields": [
+       "namn|name:text",
+       "stämma|part:choice",
+       "kontakt|contact:text"
+      ]
+     },
+     {
+      "name": "Rep|Rehearsal|Session",
+      "fields": [
+       "datum|date:datetime",
+       "plats|location:text"
+      ]
+     },
+     {
+      "name": "Noter|Sheet Music|File",
+      "fields": [
+       "titel|title:text",
+       "fil|file:file",
+       "ljud|audio:file"
+      ]
+     },
+     {
+      "name": "Närvaro|RSVP|Attendance",
+      "fields": [
+       "medlem|singer:reference",
+       "rep|rehearsal:reference",
+       "kommer|attending:yesno"
+      ]
+     },
+     {
+      "name": "Konsert|Concert|Event",
+      "fields": [
+       "datum|date:datetime",
+       "biljetter|tickets:url"
+      ]
+     }
+    ],
+    "pages": [
+     "Hem|Home",
+     "Repertoar|Music",
+     "Kalender|Calendar",
+     "Medlemmar|Directory"
+    ],
+    "roles": [
+     "Styrelse|Board|Admin",
+     "Medlem|Singer|User"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Konsert|Concert|Event"
+     },
+     {
+      "who": "Medlem|Singer|User",
+      "may": "read",
+      "what": "Noter|Sheet Music|File"
+     },
+     {
+      "who": "Styrelse|Board|Admin",
+      "may": "read",
+      "what": "Närvaro|RSVP|Attendance"
+     }
+    ],
+    "signIn": "optional",
+    "language": "sv"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Medlem|Singer|Member",
+     "Närvaro|RSVP|Attendance",
+     "Rep|Rehearsal|Session"
+    ]
+   },
+   "open": [
+    "AI feedback: mikrofon|lyssna|tonhöjd",
+    "biljetter: betala|extern|system"
+   ],
+   "taste": "Musikalisk, gemytlig och välorganiserad.",
+   "id": "fb-26"
+  },
+  {
+   "text": "Vår brädspelsförening växer så det knakar och vi måste ha ett system för våra medlemmar. Vi behöver en databas över alla hundratals spel vi äger, vem som har lånat hem vad, och vilket skick spelen är i. Medlemmarna ska använda appen för att låna spel, recensera dem och boka bord för spelkvällar. Kassören och jag ska kunna se vilka som betalat medlemsavgiften och kunna skicka ut påminnelser. Utåt mot nätet vill vi bara visa upp vår topplista över de populäraste spelen för att locka nya medlemmar. Det hade varit fantastiskt om appen automatiskt kunde para ihop spelare som gillar samma typ av spel inför våra träffar.",
+   "language": "sv",
+   "length": "long",
+   "from": "text",
+   "must": {
+    "models": [
+     {
+      "name": "Spel|Game|Boardgame",
+      "fields": [
+       "namn|name:text",
+       "skick|condition:text"
+      ]
+     },
+     {
+      "name": "Lån|Borrowing|Loan",
+      "fields": [
+       "spel|game:reference",
+       "medlem|member:reference",
+       "datum|date:date"
+      ]
+     },
+     {
+      "name": "Bokning|Table|Reservation",
+      "fields": [
+       "datum|date:datetime",
+       "bord|table:text"
+      ]
+     },
+     {
+      "name": "Medlem|Member|User",
+      "fields": [
+       "namn|name:text",
+       "betalt|paid:yesno"
+      ]
+     }
+    ],
+    "pages": [
+     "Hem|Home",
+     "Spelbibliotek|Games",
+     "Mina Lån|My Loans",
+     "Boka|Book"
+    ],
+    "roles": [
+     "Kassör|Treasurer|Admin",
+     "Medlem|Member|User"
+    ],
+    "access": [
+     {
+      "who": "visitor",
+      "may": "read",
+      "what": "Spel|Game|Boardgame"
+     },
+     {
+      "who": "Medlem|Member|User",
+      "may": "create",
+      "what": "Lån|Borrowing|Loan"
+     },
+     {
+      "who": "Medlem|Member|User",
+      "mayNot": "change",
+      "what": "others Medlem|Member|User"
+     },
+     {
+      "who": "Kassör|Treasurer|Admin",
+      "may": "change",
+      "what": "Medlem|Member|User"
+     }
+    ],
+    "signIn": "optional",
+    "language": "sv"
+   },
+   "mustNot": {
+    "models": [],
+    "public": [
+     "Lån|Borrowing|Loan",
+     "Medlem|Member|User",
+     "Bokning|Table|Reservation"
+    ]
+   },
+   "open": [
+    "AI matchning: algoritmer|smak|föreslå",
+    "påminnelser: auto|mail|sms"
+   ],
+   "taste": "Nördig, social och strukturerad.",
+   "id": "fb-27"
+  }
+ ]
+}
