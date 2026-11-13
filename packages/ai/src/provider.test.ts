@@ -86,6 +86,7 @@ test("a known model without a price of its own costs its list price, in dollars"
   await completeJson(mistral, { system: "s", user: "u", schema: {} }, usage);
   expect(usage[0]).toMatchObject({ cost: 1.5 + 0.75, currency: "USD" });
   expect(listPrice("a-model-nobody-knows")).toBeUndefined();
+  expect(listPrice("claude-haiku-5-5")).toEqual({ input: 0.1, output: 0.5 });
 });
 
 test("a response cache answers a request it has seen, for nothing", async () => {
