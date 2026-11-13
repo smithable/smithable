@@ -37,7 +37,11 @@ const raw = import.meta.glob("../../../examples/*/smithable*.yml", {
 const fileOf = (starter: string, name: string) => raw[`../../../examples/${starter}/${name}`];
 const projects = new Map<
   string,
-  { files: Parameters<typeof proposeChange>[0]["files"]; ir: SpecIR }
+  {
+    files: Parameters<typeof proposeChange>[0]["files"];
+    ir: SpecIR;
+    index: ReturnType<typeof buildIndex>;
+  }
 >();
 const project = (starter: string) => {
   let found = projects.get(starter);
@@ -53,7 +57,10 @@ const project = (starter: string) => {
         : {}),
       ...(fileOf(starter, "smithable.ux.yml") ? { ux: fileOf(starter, "smithable.ux.yml") } : {}),
     };
-    found = { files, ir: validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR };
+    const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as SpecIR;
+    // Built once per starter: three hundred requests on a loaded machine (a gate) stay well
+    // inside the time.
+    found = { files, ir, index: buildIndex({ ir, generated: {}, custom: [] }) };
     projects.set(starter, found);
   }
   return found;
@@ -102,8 +109,7 @@ test("what the rules answer is right, and what needs no model is caught (the lis
   // Follow-ups are read with their turn before; the rules read one request at a time, so they
   // count only where the set says a rule should catch them.
   for (const r of set.requests) {
-    const { files, ir } = project(r.starter);
-    const index = buildIndex({ ir, generated: {}, custom: [] });
+    const { files, index } = project(r.starter);
     const proposal = await proposeChange({
       request: r.text,
       files,
@@ -121,4 +127,5 @@ test("what the rules answer is right, and what needs no model is caught (the lis
   }
   expect(wrong).toMatchSnapshot("read wrongly by a rule");
   expect(missed).toMatchSnapshot("needs no model, not caught by a rule yet");
-});
+  // Three hundred requests through every rule tier: seconds alone, longer beside a gate.
+}, 60_000);
