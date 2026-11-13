@@ -82,3 +82,23 @@ test("a choice with a default keeps it as its own key when its bounds change", (
   expect(after).not.toContain("= sent");
   expect(after).toMatch(/default: sent/);
 });
+
+test("a choice's default stays its own key when its rules or its meaning change", () => {
+  const withDefault = apply("setFieldDefault", { model: "Order", field: "status", value: "sent" });
+  const unlocked = apply(
+    "setFieldRules",
+    { model: "Order", field: "status", by: "app" },
+    withDefault,
+  );
+  const back = apply("setFieldRules", { model: "Order", field: "status", by: "" }, unlocked);
+  expect(back).not.toContain("= sent");
+  expect(back).toMatch(/default: sent/);
+  const meant = apply(
+    "setMeaning",
+    { concept: "Order.status", description: "Where it is" },
+    withDefault,
+  );
+  const unmeant = apply("setMeaning", { concept: "Order.status", description: "" }, meant);
+  expect(unmeant).not.toContain("= sent");
+  expect(unmeant).toMatch(/default: sent/);
+});

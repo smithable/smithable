@@ -851,7 +851,9 @@ const setFieldRules: Operation<{
       long.type = `${String(long.type)} unique`;
       delete long.unique;
     }
-    const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
+    // A choice's default stays its own key: "=" on a choice is refused.
+    const choice = found.type.kind === "choice";
+    const keys = Object.keys(long).filter((k) => k !== "type" && (choice || k !== "default"));
     spec.set(
       path,
       keys.length
@@ -1382,7 +1384,11 @@ const setMeaning: Operation<{ concept: string; description?: string; intent?: st
         if (value.trim()) long[key] = value.trim();
         else delete long[key];
       }
-      const keys = Object.keys(long).filter((k) => k !== "type" && k !== "default");
+      // A choice's default stays its own key: "=" on a choice is refused.
+      const choice =
+        ir.models.find((x) => x.name === field.model)?.fields.find((x) => x.name === field.name)
+          ?.type.kind === "choice";
+      const keys = Object.keys(long).filter((k) => k !== "type" && (choice || k !== "default"));
       spec.set(
         path,
         keys.length
