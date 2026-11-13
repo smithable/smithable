@@ -28,6 +28,20 @@ test("a change needs Studio's header, JSON and no other site's origin", () => {
   expect(post({ ...json, origin: "https://evil.example" })?.status).toBe(403);
   expect(post({ "content-type": "text/plain" })?.status).toBe(403);
   expect(post({ "content-type": "application/json" })?.status).toBe(403);
+  // Opening and closing an old version are changes like any other.
+  for (const method of ["POST", "DELETE"]) {
+    const at = (headers: Record<string, string>) =>
+      refusal(
+        { host: "localhost:4321", ...headers },
+        undefined,
+        undefined,
+        method,
+        "/api/old-version",
+      );
+    expect(at(json)).toBeUndefined();
+    expect(at({ "content-type": "application/json" })?.status).toBe(403);
+    expect(at({ ...json, origin: "https://evil.example" })?.status).toBe(403);
+  }
   // MCP clients are not pages; a page on another site that calls /mcp is refused.
   expect(post({ "content-type": "application/json" }, "/mcp")).toBeUndefined();
   expect(

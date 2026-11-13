@@ -33,6 +33,7 @@ import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { grouped, line } from "./history";
 import { logStore } from "./logs";
 import { Making } from "./Making";
+import { OLD_TAB, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
 import { OwnerCheck } from "./OwnerCheck";
 import { PeoplePanel } from "./People";
@@ -260,6 +261,40 @@ export function App() {
   // Smith's window on a phone: Smith or, under him, Changes, chosen by the tabs or a swipe.
   const [phoneSub, setPhoneSub] = useState<"smith" | "changes">("smith");
   const [changesAt, setChangesAt] = useState<{ id: string; at: number }>();
+  // An old version open in the preview's place (old-version-preview.md §4), or being prepared.
+  const [old, setOld] = useState<OpenOld>();
+  const [opening, setOpening] = useState<string>();
+  // The old version's own tab (OldVersion.tsx): opened at the click, closed by Back to now.
+  const oldTab = useRef<Window | null>(null);
+  const seeVersion = async (id: string) => {
+    const entry = project?.trace.find((e) => e.id === id);
+    if (!entry) return;
+    oldTab.current = openOldTab();
+    setOpening(entry.description);
+    const result = await api
+      .openOldVersion(id)
+      .catch((e: Error) => ({ ok: false as const, message: e.message }));
+    setOpening(undefined);
+    if (!result.ok) {
+      oldTab.current?.close();
+      oldTab.current = null;
+      return setMessage({ ok: false, text: result.message });
+    }
+    if (oldTab.current && !oldTab.current.closed) oldTab.current.location.href = result.url;
+    else oldTab.current = window.open(result.url, OLD_TAB, "noopener");
+    setOld({ url: result.url, entry, data: result.data, pictures: result.pictures });
+  };
+  const backToNow = () => {
+    oldTab.current?.close();
+    oldTab.current = null;
+    setOld(undefined);
+    void api.closeOldVersion();
+  };
+  const showOldTab = () => {
+    if (!old) return;
+    if (oldTab.current && !oldTab.current.closed) oldTab.current.focus();
+    else window.open(old.url, OLD_TAB, "noopener");
+  };
   // The preview's arrows hide the window left or right of it for a while, for a bigger preview.
   // Floating, Smith leaves the first place and the preview takes the width: the window there
   // (Changes) comes back by the arrow or its tab (smith-first.md §12.3).
@@ -1417,17 +1452,28 @@ export function App() {
                 )}
                 style={{ gridArea: area(placed("preview")) }}
               >
-                <Preview
-                  url={project.preview}
-                  version={version}
-                  updating={updating || busy}
-                  selecting={selecting}
-                  inCode={slotOf("code") !== undefined && slotOf("nocode") === undefined}
-                  onSelecting={setSelecting}
-                  highlight={highlight}
-                  pages={pages}
-                  go={go}
-                />
+                {old ? (
+                  <OldVersion open={old} onBack={backToNow} onOpenAgain={showOldTab} />
+                ) : opening ? (
+                  <p
+                    role="status"
+                    className="grid h-full place-items-center p-6 text-sm text-quiet"
+                  >
+                    Preparing the app as it was after "{opening}"…
+                  </p>
+                ) : (
+                  <Preview
+                    url={project.preview}
+                    version={version}
+                    updating={updating || busy}
+                    selecting={selecting}
+                    inCode={slotOf("code") !== undefined && slotOf("nocode") === undefined}
+                    onSelecting={setSelecting}
+                    highlight={highlight}
+                    pages={pages}
+                    go={go}
+                  />
+                )}
                 {!narrow && (
                   <PreviewArrows
                     left={
@@ -1583,6 +1629,9 @@ export function App() {
                                 words={words}
                                 plugins={spec.plugins}
                                 onUndo={(ids) => void undoChanges(ids)}
+                                {...(project.oldVersions
+                                  ? { onSee: (id: string) => void seeVersion(id) }
+                                  : {})}
                                 {...(changesAt ? { openAt: changesAt } : {})}
                                 onMilestone={async (id, name) => {
                                   const named = await api

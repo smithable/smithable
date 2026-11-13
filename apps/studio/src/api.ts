@@ -69,6 +69,11 @@ export interface Making {
   error?: string;
 }
 
+/** An old version opened as a copy, or why not. */
+export type OldVersionResult =
+  | { ok: true; commit: string; url: string; data: "then" | "samples"; pictures: "today" | "none" }
+  | { ok: false; message: string };
+
 export interface ReleaseReview {
   maintenance: {
     generatedEngine?: string;
@@ -134,6 +139,8 @@ export interface Project {
    * when Studio runs on the person's own machine (never on a host, whose paths mean nothing there).
    */
   localDir?: string;
+  /** Changes offers "See this version": on the person's own machine, not when hosted. */
+  oldVersions?: true;
   /** Where the project's publishing and settings live, when Studio is hosted. */
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */
@@ -344,6 +351,15 @@ export const api = {
       return p;
     }),
   releaseReview: () => call<ReleaseReview>("/api/release-review"),
+  /** An old version as a copy (old-version-preview.md): open it, close it. */
+  openOldVersion: (commit: string) => call<OldVersionResult>("/api/old-version", { commit }),
+  closeOldVersion: () =>
+    // A change like any other: Studio's header and JSON, or the daemon refuses it (refusal()).
+    fetch("/api/old-version", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "X-Smithable": "1" },
+      body: "{}",
+    }).then(() => undefined),
   /** The app card as Markdown and HTML (app-card.md), or what stops it. */
   card: () => call<{ md: string; html: string } | { error: string }>("/api/card"),
   logs: () => call<string[]>("/api/logs"),
