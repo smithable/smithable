@@ -4518,7 +4518,7 @@ async function pictureFlow(dir, base) {
     await open(page, `${base}/instructors`);
     // The list is a table on a wide screen and cards on a phone: both carry the picture.
     await page
-      .locator('img[src="/files/instructor/1/portrait"]:visible')
+      .locator('img[src^="/files/instructor/1/portrait"]:visible')
       .waitFor({ timeout: 10000 * P });
     await open(page, `${base}/instructors/1`);
     const before = new Set(readdirSync(uploads));
