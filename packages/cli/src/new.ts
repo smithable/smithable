@@ -17,9 +17,11 @@ import {
   readDescription,
   readEdit,
   STARTER_TEXTS,
+  starterScore,
   type Usage,
 } from "@smithable/ai";
 import {
+  applyOperation,
   fitSamples,
   reservedDomain,
   type SpecIR,
@@ -255,7 +257,17 @@ export async function create(
       );
     }
   }
-  let name = starter ?? (options.describe ? closestStarter(options.describe, STARTERS) : "crm");
+  // The kind of app the no-model reader settled, as the questions step and Studio take it; else
+  // the starter that shares the most words. A model, when there is one, still picks below.
+  const settled = options.describe ? readDescription(options.describe) : undefined;
+  let name =
+    starter ??
+    (settled?.read && settled.kind && STARTERS[settled.kind]
+      ? settled.kind
+      : options.describe
+        ? closestStarter(options.describe, STARTERS)
+        : "crm");
+  if (starter === undefined && options.describe) name = starterFor(options.describe, name).name;
   if (starter !== undefined && STARTERS[starter] === undefined) {
     io.err(`Unknown starter "${starter}". Available: ${Object.keys(STARTERS).join(", ")}.\n`);
     return 2;
@@ -341,6 +353,8 @@ export async function create(
       askIn: askIn(description),
     });
     if (asked.starter && starter === undefined) name = asked.starter;
+    // Who it is for weighed against a public starter, whoever picked it (T767).
+    if (starter === undefined && description) name = starterFor(description, name).name;
     const questions = withLanguage(asked.questions, description);
     if (options.unattended && questions.length) {
       const assumptions = defaultAssumptions(name, questions);
@@ -375,6 +389,10 @@ export async function create(
   }
   if (description) {
     io.out(`Starting from the ${name} starter.\n`);
+    if (starter === undefined) {
+      const note = publicNote(name, description);
+      if (note) io.out(`${note}\n`);
+    }
     // Drafting as operations (an empty app, one checked operation at a time; the default, see
     // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
     options.onStage?.("drafting");
@@ -415,6 +433,12 @@ export async function create(
     )
       throw new Error("Website drafting returned an unexpected source file.");
     files = website ? replaceWebsitePersonalFiles(draft.files, website) : draft.files;
+    // Kept private where the description names no visitors, whatever the draft kept (T767).
+    if (!website && description) {
+      const kept = keptPrivate(files, description, STARTERS[name] as Record<string, string>);
+      files = kept.files;
+      if (kept.assumption) draft.assumptions = [...(draft.assumptions ?? []), kept.assumption];
+    }
     // From a page: the site's own name, not the draft's reading of the page's title (which is
     // often a sentence); a name someone typed still wins below.
     const site =
@@ -677,6 +701,169 @@ export async function clarify(io: Io, description: string, json: boolean): Promi
   return 0;
 }
 
+/** What a starter lets anyone use without signing in: the kinds of record and the pages. */
+function publicOf(name: string): {
+  read: string[];
+  pages: { id: string; model?: string }[];
+  signIn?: false;
+} {
+  const files = STARTERS[name] as Record<string, string> | undefined;
+  if (!files?.["smithable.yml"] || !files["smithable.auth.yml"]) return { read: [], pages: [] };
+  const ir = validateSpec({ path: "smithable.yml", text: files["smithable.yml"] }).ir;
+  if (!ir) return { read: [], pages: [] };
+  const auth = validateAuth(
+    { path: "smithable.auth.yml", text: files["smithable.auth.yml"] },
+    ir,
+  ).auth;
+  if (!auth) return { read: [], pages: [] };
+  const pages = ir.pages.filter((p) => auth.signIn === "none" || auth.public.pages.includes(p.id));
+  return {
+    ...(auth.signIn === "none" ? { signIn: false as const } : {}),
+    read: auth.signIn === "none" ? ir.models.map((m) => m.name) : auth.public.read,
+    pages: pages.map((p) => ({
+      id: p.id,
+      ...("model" in p.pattern ? { model: String(p.pattern.model) } : {}),
+    })),
+  };
+}
+
+/** The kinds of record a starter lets anyone read without signing in (its `public: read`). */
+export function publicRecords(name: string): string[] {
+  return publicOf(name).read;
+}
+
+/**
+ * What a starter that lets anyone read records says with its suggestion: which, and the operation
+ * that keeps them private (nothing read without signing in; the pages that list them closed too).
+ */
+export function publicNote(name: string, description?: string): string | undefined {
+  const { read, pages, signIn } = publicOf(name);
+  if (!read.length) return undefined;
+  if (signIn === false)
+    return `The ${name} starter has no sign-in: anyone can read its ${read.join(", ")} records. Before anything private goes in, give it sign-in (smithable op setProviders email).`;
+  const kept = pages.filter((p) => !p.model || !read.includes(p.model)).map((p) => p.id);
+  // Led with the case when the description names no visitors (the reader read none).
+  const lead =
+    description !== undefined && readDescription(description).visitors !== "read"
+      ? `Your description names no visitors, and the ${name} starter is a public site`
+      : `The ${name} starter is a public site`;
+  return `${lead}: anyone can read its ${read.join(", ")} records without signing in. To keep them private: smithable op setPublic --pages ${kept.length ? kept.join(",") : '""'} --read ""`;
+}
+
+/**
+ * A first build as private as its description (T767), after the draft, whatever made it, when the
+ * result lets anyone read a kind of record:
+ * - the no-model reader settled that the description names no visitors: closed by setPublic in the
+ *   same build (the pages that list those records too), said as an assumption;
+ * - the reader could not tell, and the result reads exactly what the starter did (inherited, not
+ *   decided): closed the same way;
+ * - the reader could not tell, and the draft changed what is public (the model or the answers
+ *   decided it): kept, and said as an assumption the other way round, so it is seen.
+ */
+export function keptPrivate(
+  files: Record<string, string>,
+  description: string,
+  starter?: Record<string, string>,
+): { files: Record<string, string>; assumption?: Assumption } {
+  const visitors = readDescription(description).visitors;
+  if (visitors === "read") return { files };
+  const spec = files["smithable.yml"];
+  const authText = files["smithable.auth.yml"];
+  if (!spec || !authText) return { files };
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
+  const auth = ir && validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth;
+  if (!ir || !auth || auth.signIn === "none" || !auth.public.read.length) return { files };
+  const read = auth.public.read;
+  const kinds = read.join(", ");
+  if (visitors === undefined) {
+    const inherited = publicReadOf(starter);
+    const same = [...inherited].sort().join() === [...read].sort().join();
+    if (!same)
+      return {
+        files,
+        assumption: {
+          part: "visitors",
+          question: `Who may read the ${kinds} records without signing in?`,
+          chosen: `Anyone can read the ${kinds} records without signing in.`,
+          options: ["Keep them private"],
+        },
+      };
+  }
+  const pages = auth.public.pages.filter((id) => {
+    const page = ir.pages.find((p) => p.id === id);
+    return !(page && "model" in page.pattern && read.includes(String(page.pattern.model)));
+  });
+  const result = applyOperation(
+    {
+      spec,
+      auth: authText,
+      ...(files["smithable.content.yml"] ? { content: files["smithable.content.yml"] } : {}),
+      ...(files["smithable.ux.yml"] ? { ux: files["smithable.ux.yml"] } : {}),
+    },
+    "setPublic",
+    { pages, read: [] },
+  );
+  if (!result.ok) return { files };
+  return {
+    files: {
+      ...files,
+      "smithable.yml": result.files.spec,
+      ...(result.files.auth !== undefined ? { "smithable.auth.yml": result.files.auth } : {}),
+      ...(result.files.content !== undefined
+        ? { "smithable.content.yml": result.files.content }
+        : {}),
+      ...(result.files.ux !== undefined ? { "smithable.ux.yml": result.files.ux } : {}),
+    },
+    assumption: {
+      part: "visitors",
+      question: `Who may read the ${kinds} records without signing in?`,
+      chosen:
+        visitors === "nothing"
+          ? "Nobody: kept private, since your description names no visitors."
+          : "Nobody: kept private, since your description does not say anyone may.",
+      options: [`Visitors may read the ${kinds} records`],
+    },
+  };
+}
+
+/** The kinds of record a starter's files let anyone read, or none. */
+function publicReadOf(files: Record<string, string> | undefined): string[] {
+  const spec = files?.["smithable.yml"];
+  const authText = files?.["smithable.auth.yml"];
+  if (!spec || !authText) return [];
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
+  return (
+    (ir && validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth?.public.read) ?? []
+  );
+}
+
+/**
+ * The starter for a description, weighing who it is for (T767). A starter that lets anyone read its
+ * records is never suggested unsaid: its note says so, and how to keep them private. When the
+ * no-model reader does not read visitors who look at the app, it is also ranked below every starter
+ * that keeps them private and shares at least as many of the description's words, unless the
+ * reader settled the kind of app as that starter's (then it is the fit, said with its note).
+ */
+export function starterFor(description: string, picked: string): { name: string; note?: string } {
+  if (!publicRecords(picked).length) return { name: picked };
+  const reading = readDescription(description);
+  if (reading.visitors === "read" || (reading.read && reading.kind === picked))
+    return { name: picked, ...noteOf(picked, description) };
+  const closed = Object.fromEntries(
+    Object.entries(STARTERS).filter(([name]) => !publicRecords(name).length),
+  ) as Record<string, Record<string, string>>;
+  const other = closestStarter(description, closed);
+  const score = (name: string) =>
+    starterScore(description, (STARTERS[name] ?? {}) as Record<string, string>);
+  return score(other) > 0 && score(other) >= score(picked)
+    ? { name: other }
+    : { name: picked, ...noteOf(picked, description) };
+}
+const noteOf = (name: string, description: string) => {
+  const note = publicNote(name, description);
+  return note ? { note } : {};
+};
+
 /**
  * What a description leaves open before a draft, and the starter that is its example
  * (docs/design/while-it-is-made.md). Read without a model where that can be done: a starter's
@@ -686,23 +873,36 @@ export async function clarify(io: Io, description: string, json: boolean): Promi
  */
 export async function openQuestions(description: string): Promise<{
   starter?: string;
+  /** Said with the starter when anyone can read its records without signing in (T767). */
+  note?: string;
   questions: { about?: string; question: string; options: string[] }[];
   /** Whether a model was asked: its call takes a few seconds. */
   asked: boolean;
 }> {
   const known = knownStart(description);
-  if (known) return { starter: known.name, questions: [], asked: false };
+  if (known) {
+    const note = publicNote(known.name, description);
+    return { starter: known.name, ...(note ? { note } : {}), questions: [], asked: false };
+  }
   const reading = readDescription(description);
-  if (reading.read && reading.kind && STARTERS[reading.kind])
-    return { starter: reading.kind, questions: reading.questions, asked: false };
+  if (reading.read && reading.kind && STARTERS[reading.kind]) {
+    const chosen = starterFor(description, reading.kind);
+    return {
+      starter: chosen.name,
+      ...(chosen.note ? { note: chosen.note } : {}),
+      questions: reading.questions,
+      asked: false,
+    };
+  }
   const answer = await clarifyProject({
     description,
     starters: starterSummaries(),
     providers: providersFor(),
     askIn: askIn(description),
   }).catch(() => ({ questions: [], usage: [] }) as Awaited<ReturnType<typeof clarifyProject>>);
+  const chosen = answer.starter ? starterFor(description, answer.starter) : undefined;
   return {
-    ...(answer.starter ? { starter: answer.starter } : {}),
+    ...(chosen ? { starter: chosen.name, ...(chosen.note ? { note: chosen.note } : {}) } : {}),
     questions: withLanguage(answer.questions, description),
     asked: true,
   };

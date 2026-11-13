@@ -1,7 +1,13 @@
 export type { Clarification, Question } from "./clarify.js";
 export { clarifyProject, describedWith } from "./clarify.js";
 export type { Assumption, Draft, SpecFiles } from "./draft.js";
-export { checkSpecFiles, closestStarter, draftProject, REFERENCE } from "./draft.js";
+export {
+  checkSpecFiles,
+  closestStarter,
+  draftProject,
+  REFERENCE,
+  starterScore,
+} from "./draft.js";
 export {
   BLANK,
   closeShared,
