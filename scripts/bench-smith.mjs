@@ -4,18 +4,22 @@
 // facts it must and must not state. Per kind: right, wrong, tokens, cost, time.
 //   node scripts/bench-smith.mjs [small] [small>better] [better] [--label today] [--only id,id]
 //   node scripts/bench-smith.mjs --rules    the rules alone, no model, free
-// The models are Mistral's (the key in ~/.config/smithable/mistral.env, never printed):
-// BENCH_SMALL (mistral-small-latest), BENCH_BETTER (mistral-medium-latest), BENCH_JUDGE (BENCH_BETTER).
+// The models are Claude's by default, as the hosted service answers: small claude-haiku-5-5, better
+// and judge claude-sonnet-5-5, through scripts/claude-route.mjs (the key in ~/.config/smithable/claude.env,
+// never printed). --provider mistral: small mistral-small-latest, better and judge mistral-medium-latest
+// (the key in ~/.config/smithable/mistral.env). BENCH_SMALL, BENCH_BETTER and BENCH_JUDGE name others.
+// The judge is never the small model under test.
 // Not part of check; ask before a paid run (C runs it daily within the bench budget).
 // Writes docs/benchmarks/bench-smith-<label>.md and .jsonl.
 import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { claudeRoute } from "./claude-route.mjs";
 import { repo } from "./dev-app.mjs";
 
 const { validateSpec } = await import(join(repo, "packages/core/dist/index.js"));
 const { buildContext, buildIndex } = await import(join(repo, "packages/index/dist/index.js"));
-const { proposeChange, openAICompatible } = await import(join(repo, "packages/ai/dist/index.js"));
+const { proposeChange, openAICompatible, listPrice } = await import(join(repo, "packages/ai/dist/index.js"));
 
 const args = process.argv.slice(2);
 const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -36,18 +40,19 @@ const mistralKey = () => {
   if (!key) throw new Error("No Mistral key in ~/.config/smithable/mistral.env");
   return key;
 };
-const model = (name, tier) =>
-  openAICompatible({
-    name,
-    baseUrl: "https://api.mistral.ai/v1",
-    model: name,
-    apiKey: mistralKey(),
-    tier,
-    location: "eu",
-  });
-const SMALL = process.env.BENCH_SMALL ?? "mistral-small-latest";
-const BETTER = process.env.BENCH_BETTER ?? "mistral-medium-latest";
+const provider = option("--provider") ?? "claude";
+if (!["claude", "mistral"].includes(provider)) throw new Error("--provider takes claude or mistral.");
+const route = provider === "claude" && !rulesOnly ? await claudeRoute() : undefined;
+const model = (name, tier) => {
+  if (provider === "mistral")
+    return openAICompatible({ name, baseUrl: "https://api.mistral.ai/v1", model: name, apiKey: mistralKey(), tier, location: "eu" });
+  if (!listPrice(name)) throw new Error(`No list price for ${name} in packages/ai (listPrice)`);
+  return openAICompatible({ name, baseUrl: route.url, model: name, tier, location: "elsewhere" });
+};
+const SMALL = process.env.BENCH_SMALL ?? (provider === "claude" ? "claude-haiku-5-5" : "mistral-small-latest");
+const BETTER = process.env.BENCH_BETTER ?? (provider === "claude" ? "claude-sonnet-5-5" : "mistral-medium-latest");
 const JUDGE = process.env.BENCH_JUDGE ?? BETTER;
+if (!rulesOnly && JUDGE === SMALL) throw new Error("The judge must not be the small model under test.");
 const providersOf = (setup) =>
   setup === "small"
     ? [model(SMALL, "smithable")]
@@ -251,7 +256,7 @@ const kinds = [...new Set(rows.map((r) => r.kind))].sort();
 const lines = [
   `# What people say to Smith: ${label}`,
   "",
-  `${new Date().toISOString().slice(0, 10)}, ${requests.length} requests of docs/benchmarks/smith-requests.json (undo and feedback are Studio's rules, not here). Judge: ${rulesOnly ? "none" : JUDGE}.`,
+  `${new Date().toISOString().slice(0, 10)}, ${requests.length} requests of docs/benchmarks/smith-requests.json (undo and feedback are Studio's rules, not here). ${rulesOnly ? "No model." : `Small: ${SMALL}; better: ${BETTER}; judge: ${JUDGE}. Cost in US dollars at the models' list prices.`}`,
   "",
   "| Setup | Kind | Right | Of | By rule | Tokens | Cost | Seconds |",
   "|---|---|---|---|---|---|---|---|",
@@ -269,4 +274,5 @@ lines.push("", "Wrong ones:", "");
 for (const r of rows.filter((x) => !x.right))
   lines.push(`- ${r.setup} ${r.id} (${r.kind}): ${r.got}${r.why ? `, ${r.why}` : ""}`);
 writeFileSync(`${out}.md`, `${lines.join("\n")}\n`);
+await route?.close();
 console.log(`${out}.md`);

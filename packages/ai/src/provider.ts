@@ -52,14 +52,17 @@ export interface Provider {
 }
 
 /**
- * Mistral's list prices per million tokens (mistral.ai/pricing/api, 2026-10-04), in US dollars,
- * for a model given no price of its own. A "-latest" name follows Mistral's current version
- * (mistral-medium-latest is Mistral Medium 3.5).
+ * List prices per million tokens, in US dollars, for a model given no price of its own: Mistral's
+ * (mistral.ai/pricing/api, 2026-10-04; a "-latest" name follows Mistral's current version, so
+ * mistral-medium-latest is Mistral Medium 3.5) and Anthropic's for the Claude models the hosted
+ * service answers with (2026-11).
  */
 const LIST_PRICES: [RegExp, { input: number; output: number }][] = [
   [/^mistral-medium/, { input: 1.5, output: 7.5 }],
   [/^mistral-large/, { input: 0.5, output: 1.5 }],
   [/^mistral-small/, { input: 0.15, output: 0.6 }],
+  [/^claude-haiku-5-5/, { input: 0.1, output: 0.5 }],
+  [/^claude-sonnet-5-5/, { input: 2, output: 10 }],
 ];
 
 /** A model's list price in US dollars per million tokens, when it is one Smithable knows. */
