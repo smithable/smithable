@@ -107,8 +107,9 @@ export function pausedOf(text: string): Paused | undefined {
     const reason = error.reason;
     if (reason !== "day" && reason !== "month" && reason !== "shared") return undefined;
     if (typeof error.until !== "string" || Number.isNaN(Date.parse(error.until))) return undefined;
+    // Only a well-formed https address is shown as the invite link.
     const invite =
-      typeof error.invite === "string" && /^https:\/\//.test(error.invite)
+      typeof error.invite === "string" && URL.parse(error.invite)?.protocol === "https:"
         ? error.invite
         : undefined;
     return { reason, until: error.until, ...(invite ? { invite } : {}) };
