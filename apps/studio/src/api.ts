@@ -146,6 +146,13 @@ export interface Project {
     /** The service's state (legal-1.0 item 1.11): test-only, or live within the AUP at `aup`. */
     data?: "test" | "live";
     aup?: string;
+    /** The account at a limit of its level (T762), in the service's own words. */
+    limit?: {
+      limit: "projects" | "published";
+      message: string;
+      blocking: { id: string; name: string }[];
+      apps: string;
+    };
   };
   /** Where Smith's requests may go, in words, one per model the AI policy allows (U6). */
   ai?: string[];

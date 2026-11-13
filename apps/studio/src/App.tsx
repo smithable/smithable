@@ -1098,6 +1098,21 @@ export function App() {
                 How to publish
               </a>
             )}
+            {!project.making && project.home && project.beta?.limit && (
+              // The account at a limit of its level (T762): the service's own words, before the
+              // person presses Publish, and where to delete or unpublish a project.
+              <span data-part="limit" role="note" className="text-xs text-muted">
+                {project.beta.limit.message}{" "}
+                <a
+                  href={project.beta.limit.apps}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-accent hover:underline"
+                >
+                  Your apps
+                </a>
+              </span>
+            )}
             {!project.making && project.home && project.beta?.data === "test" && (
               // The service's state beside its publishing, as it is (legal-1.0 U4).
               <span
