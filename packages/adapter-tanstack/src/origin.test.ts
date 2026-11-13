@@ -32,6 +32,12 @@ test("without an address set, a forwarded host is used only when it is one", () 
   // No port past 65535, no empty labels: the request's own origin instead.
   for (const host of ["shop.example.com:99999", "a..b", "shop.example.com:0"])
     expect(kit.originOf(asked({ "x-forwarded-host": host })), host).toBe("http://10.0.0.5:3000");
+  // Written as a browser writes an origin, so an Origin header compares equal.
+  expect(
+    kit.originOf(
+      asked({ "x-forwarded-host": "Shop.Example.com:443", "x-forwarded-proto": "https" }),
+    ),
+  ).toBe("https://shop.example.com");
   delete process.env.TRUST_PROXY;
   expect(kit.originOf(asked({ "x-forwarded-host": "shop.example.com" }))).toBe(
     "http://10.0.0.5:3000",

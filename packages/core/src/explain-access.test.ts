@@ -369,8 +369,14 @@ pages:
 
   test("a copy is denied to a role that may not add the lists it copies, or runs no action", () => {
     const action = { kind: "action", action: "duplicate" } as Parameters<typeof explainAccess>[3];
-    for (const as of ["clerk", "idle"]) {
-      expect(ask(as, action, "run").verdict, as).toBe("denied");
+    // Each for its own reason: clerk may not add the lines, idle runs no action.
+    for (const [as, why] of [
+      ["clerk", "actions.duplicate.with"],
+      ["idle", "roles.idle.actions"],
+    ] as const) {
+      const run = ask(as, action, "run");
+      expect(run.verdict, as).toBe("denied");
+      expect(paths(run), as).toContain(why);
       expect(
         actionAccess(ir.actions[0] as SpecIR["actions"][number], auth, ir.models).roles,
       ).not.toContain(as);

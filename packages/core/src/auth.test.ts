@@ -664,6 +664,8 @@ actions:
   expect(access("  clerk: { create: [Invoice] }\n")).toEqual(["admin"]);
   // A role that runs no action does not copy either.
   expect(access("  viewer: { create: [Invoice, Line], actions: none }\n")).toEqual(["admin"]);
+  // One that may add both copies.
+  expect(access("  clerk: { create: [Invoice, Line] }\n")).toEqual(["admin", "clerk"]);
 });
 
 test("public read with a mapping needs a real condition, and a kind is listed once (T803)", () => {
@@ -695,11 +697,19 @@ test("public read with a mapping needs a real condition, and a kind is listed on
   expect(read("    - Post\n    - Post: { where: { status: published } }\n").errors).toContain(
     "duplicate-name",
   );
-  // A real condition still reads.
+  // A real condition still reads, and keeps its condition.
   expect(read("    - Post: { where: { status: published } }\n")).toEqual({
     errors: [],
     open: ["Post"],
   });
+  const kept = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {} }\npublic:\n  read:\n    - Post: { where: { status: published } }\n",
+    },
+    ir,
+  ).auth;
+  expect(kept?.public.readWhere).toEqual({ Post: { status: "published" } });
 });
 
 test("a users or review page is never public, whatever public.pages says (T803)", () => {

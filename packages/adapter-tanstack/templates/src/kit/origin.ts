@@ -18,8 +18,7 @@ const HOST =
 
 /**
  * The origin the request was made to: the proxy's forwarded host when the app trusts it and it is
- * a host, else the request's own. For comparing with a browser's Origin header, which a page
- * cannot set; links use originOf.
+ * a host, else the request's own; what originOf answers when the app's address is not set.
  */
 export function requestOrigin(request: Request): string {
   const url = new URL(request.url);
@@ -31,7 +30,10 @@ export function requestOrigin(request: Request): string {
   if (forwardedHost && host && port >= 1 && port <= 65535) {
     const said = last("x-forwarded-proto")?.toLowerCase();
     const proto = said === "http" || said === "https" ? said : url.protocol.replace(":", "");
-    return `${proto}://${forwardedHost}`;
+    try {
+      // As a browser writes an origin: lower case, without the scheme's own port.
+      return new URL(`${proto}://${forwardedHost}`).origin;
+    } catch {}
   }
   return url.origin;
 }
