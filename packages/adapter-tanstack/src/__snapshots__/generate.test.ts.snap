@@ -34951,7 +34951,8 @@ describe("Customer: what the app keeps itself", () => {
     const viewer = signedIn("admin");
     const made = (await customerData.create(viewer, { ...customerValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never)) as { id: number };
     expect(db.select({ deletedAt: schema.customers.deletedAt, deletedBy: schema.customers.deletedBy, deletedWith: schema.customers.deletedWith }).from(schema.customers).where(eq(schema.customers.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
-    await customerData.update(viewer, made.id, { deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } as never);
+    // A change with the record's own values beside them: those are written, these are not.
+    await customerData.update(viewer, made.id, { ...customerValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never);
     expect(db.select({ deletedAt: schema.customers.deletedAt, deletedBy: schema.customers.deletedBy, deletedWith: schema.customers.deletedWith }).from(schema.customers).where(eq(schema.customers.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
   });
 });
@@ -34961,7 +34962,8 @@ describe("Order: what the app keeps itself", () => {
     const viewer = signedIn("admin");
     const made = (await orderData.create(viewer, { ...orderValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never)) as { id: number };
     expect(db.select({ deletedAt: schema.orders.deletedAt, deletedBy: schema.orders.deletedBy, deletedWith: schema.orders.deletedWith }).from(schema.orders).where(eq(schema.orders.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
-    await orderData.update(viewer, made.id, { deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } as never);
+    // A change with the record's own values beside them: those are written, these are not.
+    await orderData.update(viewer, made.id, { ...orderValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never);
     expect(db.select({ deletedAt: schema.orders.deletedAt, deletedBy: schema.orders.deletedBy, deletedWith: schema.orders.deletedWith }).from(schema.orders).where(eq(schema.orders.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
   });
 });
@@ -34971,7 +34973,8 @@ describe("FollowUp: what the app keeps itself", () => {
     const viewer = signedIn("admin");
     const made = (await followUpData.create(viewer, { ...followUpValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never)) as { id: number };
     expect(db.select({ deletedAt: schema.followUps.deletedAt, deletedBy: schema.followUps.deletedBy, deletedWith: schema.followUps.deletedWith }).from(schema.followUps).where(eq(schema.followUps.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
-    await followUpData.update(viewer, made.id, { deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } as never);
+    // A change with the record's own values beside them: those are written, these are not.
+    await followUpData.update(viewer, made.id, { ...followUpValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never);
     expect(db.select({ deletedAt: schema.followUps.deletedAt, deletedBy: schema.followUps.deletedBy, deletedWith: schema.followUps.deletedWith }).from(schema.followUps).where(eq(schema.followUps.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
   });
 });
@@ -43835,7 +43838,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "53da9b50 generated",
   "src/db/seed.ts": "962bef0c generated",
-  "src/generated/access.test.ts": "49a377ef generated",
+  "src/generated/access.test.ts": "0e8a6036 generated",
   "src/generated/actions/merge-customers.server.ts": "672ac5eb generated",
   "src/generated/actions/merge-customers.ts": "68575f8a generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",

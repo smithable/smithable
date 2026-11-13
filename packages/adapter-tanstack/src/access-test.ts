@@ -392,7 +392,8 @@ ${tests.join("\n\n")}
     const viewer = signedIn("admin");
     const made = (await ${data}.create(viewer, { ...${camel(model.name)}Values(viewer.id${sendsFiles(model) ? ", viewer.id" : ""}), ...${given} } as never)) as { id: number };
     expect(db.select(${picked}).from(${table}).where(eq(${table}.id, made.id)).get()).toEqual(${none});
-    await ${data}.update(viewer, made.id, ${given} as never);
+    // A change with the record's own values beside them: those are written, these are not.
+    await ${data}.update(viewer, made.id, { ...${camel(model.name)}Values(viewer.id${sendsFiles(model) ? ", viewer.id" : ""}), ...${given} } as never);
     expect(db.select(${picked}).from(${table}).where(eq(${table}.id, made.id)).get()).toEqual(${none});
   });
 });`);
