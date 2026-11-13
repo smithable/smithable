@@ -23,11 +23,7 @@ export const Route = createFileRoute("/files/$model/$id/$field/$n")({
           unknown
         > | null;
         const list = row?.[entry.key];
-        return uploadResponse(
-          request,
-          entry.kind,
-          Array.isArray(list) ? list[n] : undefined,
-        );
+        return uploadResponse(request, entry.kind, Array.isArray(list) ? list[n] : undefined);
       },
     },
   },

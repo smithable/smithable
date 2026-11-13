@@ -206,3 +206,18 @@ test("room held for an upload stops a second one, and an upload refused gives it
     else process.env.UPLOADS_MAX_BYTES = before;
   }
 });
+
+test("a storage limit written with a unit lets nothing in rather than switching the limit off (T812)", () => {
+  const before = process.env.UPLOADS_MAX_BYTES;
+  try {
+    process.env.UPLOADS_MAX_BYTES = "500MB";
+    expect(kit.roomFor(1)).toBeUndefined();
+    process.env.UPLOADS_MAX_BYTES = "";
+    const free = kit.roomFor(1);
+    expect(free).toBeTruthy();
+    kit.release(free);
+  } finally {
+    if (before === undefined) delete process.env.UPLOADS_MAX_BYTES;
+    else process.env.UPLOADS_MAX_BYTES = before;
+  }
+});
