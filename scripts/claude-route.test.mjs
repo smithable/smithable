@@ -57,3 +57,42 @@ test("a chat request becomes a Messages request: system apart, turns joined, sch
     additionalProperties: false,
   });
 });
+
+test("an assistant's tools and tool calls go across: tool results join the user's turn", () => {
+  const body = messagesBody({
+    model: "claude-haiku-5-5",
+    messages: [
+      { role: "system", content: "S" },
+      { role: "user", content: "How many?" },
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "t1",
+            type: "function",
+            function: { name: "measure", arguments: '{"kind":"Booking"}' },
+          },
+        ],
+      },
+      { role: "tool", tool_call_id: "t1", content: '{"total":2}' },
+    ],
+    tools: [
+      {
+        type: "function",
+        function: { name: "measure", description: "Count", parameters: { type: "object" } },
+      },
+    ],
+  });
+  assert.deepEqual(body.messages[1], {
+    role: "assistant",
+    content: [{ type: "tool_use", id: "t1", name: "measure", input: { kind: "Booking" } }],
+  });
+  assert.deepEqual(body.messages[2], {
+    role: "user",
+    content: [{ type: "tool_result", tool_use_id: "t1", content: '{"total":2}' }],
+  });
+  assert.equal(body.tools[0].name, "measure");
+  assert.deepEqual(body.tool_choice, { type: "auto" });
+  assert.equal(body.output_config, undefined);
+});

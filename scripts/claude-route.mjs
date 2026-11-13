@@ -1,7 +1,7 @@
 // A loopback route to Claude for the benches (T754): the engine's providers speak OpenAI-style chat
 // completions; this turns each call into a call to Anthropic's Messages API, as the hosted service's
 // gateway does (system text apart, structured output with every object closed, no temperature), and
-// the answer back. Its cost is counted at the model's list price (packages/ai listPrice), in dollars;
+// the answer back; an app's assistant's tools and tool calls go across too, as the gateway takes them. Its cost is counted at the model's list price (packages/ai listPrice), in dollars;
 // cached input is counted as plain input, so a little high. The key is read from ~/.config/smithable/claude.env and never printed or logged.
 //   const route = await claudeRoute(); … openAICompatible({ baseUrl: route.url, model: "claude-haiku-5-5", … }); route.close();
 import { readFileSync } from "node:fs";
@@ -70,15 +70,50 @@ export function messagesBody(body, maxTokens = 16000) {
     .filter((m) => m.role === "system")
     .map((m) => text(m.content))
     .join("\n\n");
+  // Turns alternate, so a tool's results join the user turn they belong to.
   const turns = [];
-  for (const m of messages) {
-    if (m.role !== "user" && m.role !== "assistant") continue;
+  const add = (role, blocks) => {
     const last = turns.at(-1);
-    if (last?.role === m.role) last.content.push({ type: "text", text: text(m.content) || " " });
-    else turns.push({ role: m.role, content: [{ type: "text", text: text(m.content) || " " }] });
+    if (last?.role === role) last.content.push(...blocks);
+    else turns.push({ role, content: blocks });
+  };
+  const parsed = (args) => {
+    try {
+      const value = JSON.parse(args || "{}");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch {
+      return {};
+    }
+  };
+  for (const m of messages) {
+    if (m.role === "tool")
+      add("user", [
+        { type: "tool_result", tool_use_id: m.tool_call_id ?? "", content: text(m.content) || " " },
+      ]);
+    else if (m.role === "assistant" && m.tool_calls?.length)
+      add("assistant", [
+        ...(text(m.content) ? [{ type: "text", text: text(m.content) }] : []),
+        ...m.tool_calls.map((c) => ({
+          type: "tool_use",
+          id: c.id ?? "",
+          name: c.function?.name ?? "",
+          input: parsed(c.function?.arguments),
+        })),
+      ]);
+    else if (m.role === "user" || m.role === "assistant")
+      add(m.role, [{ type: "text", text: text(m.content) || " " }]);
   }
   const format = body.response_format;
   const schema = format?.type === "json_schema" ? closed(format.json_schema?.schema) : undefined;
+  // An app's assistant calls its tools: given as Anthropic tools, the list cached with the system text.
+  const tools = (Array.isArray(body.tools) ? body.tools : [])
+    .filter((t) => t.function?.name)
+    .map((t) => ({
+      name: t.function.name,
+      description: t.function.description || t.function.name,
+      input_schema: t.function.parameters ?? { type: "object" },
+    }));
+  if (tools.length) tools[tools.length - 1].cache_control = { type: "ephemeral" };
   return {
     model: body.model,
     max_tokens: maxTokens,
@@ -86,7 +121,11 @@ export function messagesBody(body, maxTokens = 16000) {
       ? { system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }] }
       : {}),
     messages: turns.length ? turns : [{ role: "user", content: [{ type: "text", text: " " }] }],
-    ...(schema ? { output_config: { format: { type: "json_schema", schema } } } : {}),
+    ...(schema
+      ? { output_config: { format: { type: "json_schema", schema } } }
+      : tools.length
+        ? { tools, tool_choice: { type: body.tool_choice === "none" ? "none" : "auto" } }
+        : {}),
   };
 }
 
@@ -158,12 +197,25 @@ export async function claudeRoute() {
         );
       const answer = JSON.parse(text);
       const u = answer.usage ?? {};
+      const uses = (answer.content ?? []).filter((b) => b.type === "tool_use");
       send(200, {
         model: answer.model,
         choices: [
           {
-            message: { role: "assistant", content: content ?? textOf(answer) },
-            finish_reason: answer.stop_reason,
+            message: {
+              role: "assistant",
+              content: content ?? (textOf(answer) || (uses.length ? null : "")),
+              ...(uses.length
+                ? {
+                    tool_calls: uses.map((t) => ({
+                      id: t.id,
+                      type: "function",
+                      function: { name: t.name, arguments: JSON.stringify(t.input ?? {}) },
+                    })),
+                  }
+                : {}),
+            },
+            finish_reason: uses.length ? "tool_calls" : answer.stop_reason,
           },
         ],
         usage: {
