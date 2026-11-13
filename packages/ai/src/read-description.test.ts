@@ -103,9 +103,16 @@ test("people who see their own records sign in to see them; they are not visitor
     "A portal where our clients see their invoices and pay by card, and we track which are overdue.",
     "A club where our members can check their bookings and their invoices.",
     "A shop where customers view their own orders and track deliveries.",
+    "A portal where our clients can see all of their invoices.",
+    "A shop where customers view each of their orders.",
   ])
     expect(readDescription(text).visitors, text).not.toBe("read");
-  // Looking without a possessive is still visitors looking.
+  // Looking without a possessive is still visitors looking, also with one past the clause.
+  expect(
+    readDescription("A gallery where visitors browse the pictures, and artists sell their work.")
+      .visitors,
+  ).toBe("read");
+  // And with none at all.
   expect(
     readDescription("A tool library where neighbors browse the tools and borrow them.").visitors,
   ).toBe("read");

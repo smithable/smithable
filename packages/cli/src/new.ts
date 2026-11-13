@@ -850,7 +850,19 @@ export function keptPrivate(
   let result = applyOperations(project, [...steps, { op: "setPublic", args: { pages, read: [] } }]);
   if (!result.ok && steps.length)
     result = applyOperations(project, [{ op: "setPublic", args: { pages: untouched, read: [] } }]);
-  if (!result.ok) return { files };
+  // Then everything closed; and should even that be refused, said, never kept quietly.
+  if (!result.ok)
+    result = applyOperations(project, [{ op: "setPublic", args: { pages: [], read: [] } }]);
+  if (!result.ok)
+    return {
+      files,
+      assumption: {
+        part: "visitors",
+        question: `Who may read the ${kinds} records without signing in?`,
+        chosen: `Anyone can read the ${kinds} records without signing in: they could not be closed (${result.message}).`,
+        options: ["Keep them private"],
+      },
+    };
   return {
     files: {
       ...files,
