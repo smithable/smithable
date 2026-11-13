@@ -31,7 +31,7 @@ import {
   validateSpec,
   YamlEditor,
 } from "@smithable/core";
-import { summarize } from "@smithable/index";
+import { noSignIn, summarize } from "@smithable/index";
 import { confirm, providersFor, usageLine } from "./ask.js";
 import { askIn, languageAsked, PageError, siteNameOf } from "./from-page.js";
 import { generate } from "./generate.js";
@@ -438,6 +438,8 @@ export async function create(
       const kept = keptPrivate(files, description, STARTERS[name] as Record<string, string>);
       files = kept.files;
       if (kept.assumption) draft.assumptions = [...(draft.assumptions ?? []), kept.assumption];
+      const closed = noSignInAssumption(files, description);
+      if (closed) draft.assumptions = [...(draft.assumptions ?? []), closed];
     }
     // From a page: the site's own name, not the draft's reading of the page's title (which is
     // often a sentence); a name someone typed still wins below.
@@ -706,6 +708,8 @@ function publicOf(name: string): {
   read: string[];
   pages: { id: string; model?: string }[];
   signIn?: false;
+  /** For a starter with no sign-in: what anyone can use, and that nothing else works (T769). */
+  closed?: string;
 } {
   const files = STARTERS[name] as Record<string, string> | undefined;
   if (!files?.["smithable.yml"] || !files["smithable.auth.yml"]) return { read: [], pages: [] };
@@ -716,10 +720,12 @@ function publicOf(name: string): {
     ir,
   ).auth;
   if (!auth) return { read: [], pages: [] };
-  const pages = ir.pages.filter((p) => auth.signIn === "none" || auth.public.pages.includes(p.id));
+  // Without sign-in too, only what public names is open (core's access; T769).
+  const pages = ir.pages.filter((p) => auth.public.pages.includes(p.id));
+  const closed = noSignIn(ir, auth);
   return {
-    ...(auth.signIn === "none" ? { signIn: false as const } : {}),
-    read: auth.signIn === "none" ? ir.models.map((m) => m.name) : auth.public.read,
+    ...(closed ? { signIn: false as const, closed } : {}),
+    read: auth.public.read,
     pages: pages.map((p) => ({
       id: p.id,
       ...("model" in p.pattern ? { model: String(p.pattern.model) } : {}),
@@ -737,10 +743,10 @@ export function publicRecords(name: string): string[] {
  * that keeps them private (nothing read without signing in; the pages that list them closed too).
  */
 export function publicNote(name: string, description?: string): string | undefined {
-  const { read, pages, signIn } = publicOf(name);
+  const { read, pages, signIn, closed } = publicOf(name);
+  // No sign-in: said whether or not anything is public, since nothing else works for anyone.
+  if (signIn === false && closed) return closed.replace(/^This app/, `The ${name} starter`);
   if (!read.length) return undefined;
-  if (signIn === false)
-    return `The ${name} starter has no sign-in: anyone can read its ${read.join(", ")} records. Before anything private goes in, give it sign-in (smithable op setProviders email).`;
   const kept = pages.filter((p) => !p.model || !read.includes(p.model)).map((p) => p.id);
   // Led with the case when the description names no visitors (the reader read none).
   const lead =
@@ -824,6 +830,31 @@ export function keptPrivate(
       options: [`Visitors may read the ${kinds} records`],
     },
   };
+}
+
+/**
+ * A first build that comes out with no sign-in (T769): what anyone can use and that nothing else
+ * works, for its owner too, until it has sign-in, said as an assumption the person sees, whatever
+ * the description says of visitors (an open site without sign-in locks its owner out too).
+ */
+export function noSignInAssumption(
+  files: Record<string, string>,
+  description: string,
+): Assumption | undefined {
+  const spec = files["smithable.yml"];
+  const authText = files["smithable.auth.yml"];
+  if (!spec || !authText) return undefined;
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
+  const auth = ir && validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth;
+  const closed = ir && auth ? noSignIn(ir, auth) : undefined;
+  return closed
+    ? {
+        part: "signedIn",
+        question: "Who signs in?",
+        chosen: closed,
+        options: ["People sign in with a code sent to their email"],
+      }
+    : undefined;
 }
 
 /** The kinds of record a starter's files let anyone read, or none. */

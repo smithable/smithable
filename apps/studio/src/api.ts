@@ -89,6 +89,8 @@ export interface ReleaseReview {
   baseline?: string;
   comparison: string;
   comparisonReason?: string;
+  /** An app with no sign-in: what anyone can use, and that nothing else works until it has sign-in (T769). */
+  noSignIn?: string;
   access: string[];
   migrations: string[];
   checks?: {

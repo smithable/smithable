@@ -24,6 +24,7 @@ import {
   validateAuth,
   validateSpec,
 } from "@smithable/core";
+import { noSignIn } from "@smithable/index";
 import { maintenanceInfo } from "./maintenance.js";
 import { lostFields } from "./op.js";
 import { loadPlugins } from "./plugins.js";
@@ -456,6 +457,10 @@ export function releaseReview(dir: string) {
                 : !before || !beforeAuth
                   ? "The recorded deployment files could not be validated for comparison."
                   : undefined,
+    // An app with no sign-in, said on every review, the first publish included (T769).
+    ...((closed) => (closed ? { noSignIn: closed } : {}))(
+      current.ir && current.auth ? noSignIn(current.ir, current.auth, current.content) : undefined,
+    ),
     access,
     migrations,
     checks: latestChecks

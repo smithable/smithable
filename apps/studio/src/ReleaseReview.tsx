@@ -54,6 +54,11 @@ export function ReleaseReview({ onClose }: { onClose: () => void }) {
           <>
             <section className="space-y-2">
               <h3 className="font-semibold">Access changes</h3>
+              {review.noSignIn && (
+                <p role="note" className="font-medium">
+                  {review.noSignIn}
+                </p>
+              )}
               {review.comparison !== "available" ? (
                 <p>
                   {review.comparisonReason ?? "Comparison is unavailable."} Review the current
