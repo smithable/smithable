@@ -659,7 +659,7 @@ export function summarize(
     sections.push({
       concept: "auth",
       title: "Sign-in and access",
-      sentences: [...access(auth), ...api, ...asking],
+      sentences: [...access(auth, noSignIn(ir, auth, content)), ...api, ...asking],
     });
   }
   return sections;
@@ -755,10 +755,40 @@ export function wordsFor(ir: SpecIR, content: ContentIR = emptyContent()) {
   return { label, pluralLabel, one, many, fieldLabel, choice, modelNamed, words, item };
 }
 
-function access(auth: AuthIR): string[] {
+/**
+ * An app with no sign-in, as its owner must hear it first (T769): it is not open, only what
+ * `public` names is; nothing else can be used by anyone, its owner included, until it has sign-in.
+ */
+export function noSignIn(
+  ir: SpecIR,
+  auth: AuthIR,
+  content: ContentIR = emptyContent(),
+): string | undefined {
+  if (auth.signIn !== "none") return undefined;
+  const { many, modelNamed } = wordsFor(ir, content);
+  const pages = ir.pages
+    .filter((p) => auth.public.pages.includes(p.id))
+    .map((p) => content.pages[p.id]?.title ?? humanize(p.id));
+  const kinds = auth.public.read.flatMap((name) => {
+    const model = modelNamed(name);
+    return model ? [`${many(model)}${auth.public.readWhere[name] ? " (some of them)" : ""}`] : [];
+  });
+  const open =
+    pages.length || kinds.length
+      ? `Anyone with the address can ${[
+          pages.length ? `use the ${list(pages)} page${pages.length > 1 ? "s" : ""}` : "",
+          kinds.length ? `read ${list(kinds)}` : "",
+        ]
+          .filter(Boolean)
+          .join(" and ")}; nothing else`
+      : "Nothing in it";
+  return `This app has no sign-in. ${open} can be used by anyone, you included, until you add sign-in (smithable op setProviders email).`;
+}
+
+function access(auth: AuthIR, closed?: string): string[] {
   const sentences: string[] = [];
   if (auth.signIn === "none") {
-    sentences.push("Nobody signs in: only public pages can be used.");
+    sentences.push(closed ?? "Nobody signs in: only public pages can be used.");
   } else {
     const domains = auth.signIn.allowedDomains;
     sentences.push(

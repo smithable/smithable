@@ -36,4 +36,4 @@ export {
 export type { Answer } from "./questions.js";
 export { answerQuestion, looksLikeQuestion } from "./questions.js";
 export type { SummarySection } from "./summary.js";
-export { summarize, wordsFor } from "./summary.js";
+export { noSignIn, summarize, wordsFor } from "./summary.js";
