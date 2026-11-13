@@ -203,8 +203,10 @@ test("only the app's own refusals and a used-up allowance are shown in their wor
         ),
     });
   expect((await refused(401)).note).not.toContain("sk-abc123");
-  // 402 is the host's own word for questions used up, said for people: shown.
-  expect((await refused(402)).note).toContain("Incorrect API key provided");
+  // 402, questions used up: said in the app's words, never the host's.
+  const usedUp = (await refused(402)).note;
+  expect(usedUp).not.toContain("sk-abc123");
+  expect(usedUp).toContain("answered all the questions");
 });
 
 test("the words beside a proposed change are checked against the records too (T812)", async () => {

@@ -357,6 +357,7 @@ export const w = {
   results: "Results",
   revoke: "Revoke",
   role: "Role",
+  questionsUsedUp: "The assistant has answered all the questions it may for now.",
   rulesStillAnswer: "Questions the rules read are still answered.",
   saveChanges: "Save changes",
   /** The question before saving a change that mails people (a session moved). */

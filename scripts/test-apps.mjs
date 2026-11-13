@@ -8631,7 +8631,7 @@ test("measure sums, averages and sums per value", async () => {
     // The inspector's answering loop (docs/design/assistant.md §4), with a stand-in for the host's
     // model: the app runs the model's calls through the role's own tools and sends the results
     // back, a change is only proposed, a kind the role is not offered is refused, and a used-up
-    // allowance (402) is said in the host's words.
+    // allowance (402) is said in the app's words, never the host's.
     if (example === "api")
       step(
         "the inspector's model loop: tools run as the role and their results go back, tokens add up, a change is only proposed, a kind not offered is refused, an answer no result bears out is sent back, marked, then shown as not confirmed, a 402 is said",
@@ -8720,13 +8720,15 @@ test("the model's tool loop", async () => {
   expect(counted2.unconfirmed).toBeUndefined();
   expect(counted2.text).toBe(\`There are \${await tasks()} tasks.\`);
 
-  // The host's allowance used up: said in its words, and the rules still answer.
+  // The host's allowance used up: said in the app's words (the host's may name the key), and the
+  // rules still answer.
   const spent = await answer("anything", {
     offer: offerFor(viewer), kinds: [], call, model,
     fetch: (async () => new Response(JSON.stringify({ error: { message: "Used up for today." } }), { status: 402 })) as unknown as typeof fetch,
   });
   expect(spent).toMatchObject({ source: "none" });
-  expect(spent.note).toContain("Used up for today.");
+  expect(spent.note).not.toContain("Used up for today.");
+  expect(spent.note).toContain("answered all the questions");
 });
 `,
           );

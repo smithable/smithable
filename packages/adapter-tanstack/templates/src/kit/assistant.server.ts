@@ -276,15 +276,13 @@ async function answered(question: string, parts: Parts): Promise<Answer> {
       usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
     if (!response.ok) {
-      // The model's own words only for 402 (the host's questions used up, said for people); any
-      // other answer's text may name the key or the account: logged, and said by its status.
-      if (response.status !== 402 && body.error?.message)
+      // The host's own text may name the key or the account: logged, and said in the app's words.
+      if (body.error?.message)
         log.warn("The assistant's model refused", {
           status: response.status,
           said: body.error.message,
         });
-      const said =
-        (response.status === 402 && body.error?.message) || w.modelAnswered(response.status);
+      const said = response.status === 402 ? w.questionsUsedUp : w.modelAnswered(response.status);
       // 402: the host's questions are used up; the rules still answer what they read.
       const note = response.status === 402 ? `${said} ${w.rulesStillAnswer}` : said;
       return done({ source: steps.length ? "ai" : "none", note, tokens });

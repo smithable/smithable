@@ -244,14 +244,15 @@ export function fileKind(
 
 /**
  * The most all stored pictures and documents may take (UPLOADS_MAX_BYTES), in bytes; 0 when it is
- * not set. Written as anything but a whole number ("500MB") it lets nothing in, said once in the
- * log, rather than no limit at all.
+ * not set. Written as anything but a number of bytes ("500MB", or one too large to be one) it lets
+ * nothing in, said once in the log, rather than no limit at all.
  */
 let badMaxSaid = false;
 export function uploadsMax(): number {
   const text = process.env.UPLOADS_MAX_BYTES?.trim() ?? "";
   if (!text) return 0;
-  if (/^\d+$/.test(text)) return Number(text);
+  const bytes = Number(text);
+  if (Number.isFinite(bytes) && bytes >= 0) return Math.floor(bytes);
   if (!badMaxSaid) {
     badMaxSaid = true;
     log.error("UPLOADS_MAX_BYTES is not a number of bytes; no file is stored until it is", {

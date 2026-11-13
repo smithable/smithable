@@ -210,8 +210,15 @@ test("room held for an upload stops a second one, and an upload refused gives it
 test("a storage limit written with a unit lets nothing in rather than switching the limit off (T812)", () => {
   const before = process.env.UPLOADS_MAX_BYTES;
   try {
-    process.env.UPLOADS_MAX_BYTES = "500MB";
-    expect(kit.roomFor(1)).toBeUndefined();
+    for (const written of ["500MB", "9".repeat(400)]) {
+      process.env.UPLOADS_MAX_BYTES = written;
+      expect(kit.roomFor(1), written).toBeUndefined();
+    }
+    // A number written another way is still one.
+    process.env.UPLOADS_MAX_BYTES = "1e6";
+    const fits = kit.roomFor(1);
+    expect(fits).toBeTruthy();
+    kit.release(fits);
     process.env.UPLOADS_MAX_BYTES = "";
     const free = kit.roomFor(1);
     expect(free).toBeTruthy();
