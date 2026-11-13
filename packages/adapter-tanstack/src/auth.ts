@@ -276,11 +276,26 @@ export const auth = betterAuth({
       create: {
         after: async (session) => {
           // An address the auth file lists becomes an admin when it signs in, also one added
-          // after its account was made; never one its sign-in has not proven.
+          // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+          const who = signedInAs(session.userId);
+          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-          audit(db, signedInAs(session.userId), { action: "signed in" });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+          }${
+            invitations
+              ? `
+          // An invitation withheld from a sign-in that had not proven the address (user.create.after)
+          // is the address's once it is proven: its role, while the account still has the default.
+          const left = current?.verified && current.role === ${defaultRole} ? openInvitation(current.email.toLowerCase()) : undefined;
+          if (left) {
+            db.update(user).set({ role: left.role }).where(eq(user.id, session.userId)).run();
+            db.delete(invitation).where(eq(invitation.email, left.email)).run();
+            audit(db, who, { action: "invitation accepted", model: "User", details: { role: left.role } });
+          }`
+              : ""
+          }
+          audit(db, who, { action: "signed in" });
         },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
