@@ -2,7 +2,7 @@
 // rules pass on put to the configured models, per setup: small alone, small then better, better
 // alone. A change is judged by rule (the operations' names); an answer by a judging model on the
 // facts it must and must not state. Per kind: right, wrong, tokens, cost, time.
-//   node scripts/bench-smith.mjs [small] [small>better] [better] [haiku] [--label today] [--only id,id]
+//   node scripts/bench-smith.mjs [small] [small>better] [better] [haiku] [--label today] [--only id,id] [--set PATH]
 //   node scripts/bench-smith.mjs --rules    the rules alone, no model, free
 // The models are Claude's by default, as the hosted service answers: small claude-haiku-5-5, better
 // and judge claude-sonnet-5-5, through scripts/claude-route.mjs (the key in ~/.config/smithable/claude.env,
@@ -18,7 +18,7 @@
 // Writes docs/benchmarks/bench-smith-<label>.md and .jsonl.
 import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { claudeRoute } from "./claude-route.mjs";
 import { repo } from "./dev-app.mjs";
 
@@ -41,7 +41,11 @@ const only = option("--only")?.split(",");
 if (!rulesOnly && !setups.length)
   throw new Error("Name the setups: small, small>better, better (or --rules for no model).");
 
-const set = JSON.parse(readFileSync(join(repo, "docs/benchmarks/smith-requests.json"), "utf8"));
+// --set PATH: another file of labelled requests in the same form, such as the held-out set the
+// weekly run reads (kept outside this repository so nobody tunes against it).
+const setPath = option("--set") ?? join(repo, "docs/benchmarks/smith-requests.json");
+const setName = option("--set") ? basename(setPath) : "docs/benchmarks/smith-requests.json";
+const set = JSON.parse(readFileSync(setPath, "utf8"));
 const requests = set.requests.filter((r) => !only || only.includes(r.id));
 
 /** Mistral's key, read from its file and never printed. */
@@ -382,7 +386,7 @@ const kinds = [...new Set(rows.map((r) => r.kind))].sort();
 const lines = [
   `# What people say to Smith: ${label}`,
   "",
-  `${new Date().toISOString().slice(0, 10)}, ${requests.length} requests of docs/benchmarks/smith-requests.json (undo and feedback are Studio's rules, not here). ${rulesOnly ? "No model." : `Small: ${SMALL}; better: ${BETTER}; judge: ${JUDGE}. Cost in US dollars at the models' list prices.`}`,
+  `${new Date().toISOString().slice(0, 10)}, ${requests.length} requests of ${setName} (undo and feedback are Studio's rules, not here). ${rulesOnly ? "No model." : `Small: ${SMALL}; better: ${BETTER}; judge: ${JUDGE}. Cost in US dollars at the models' list prices.`}`,
   "",
   "| Setup | Kind | Right | Of | By rule | Docs found | Tokens | Cost | Seconds |",
   "|---|---|---|---|---|---|---|---|---|",
