@@ -71,3 +71,14 @@ test("setFieldRules numbers a whole-number field in turn, and stops", () => {
     apply("setFieldRules", { model: "Order", field: "number", sequence: false }, numbered),
   ).toContain("      number: int!\n");
 });
+
+test("a choice with a default keeps it as its own key when its bounds change", () => {
+  const withDefault = apply("setFieldDefault", { model: "Order", field: "status", value: "sent" });
+  const after = apply(
+    "setFieldRange",
+    { model: "Order", field: "status", none: true },
+    withDefault,
+  );
+  expect(after).not.toContain("= sent");
+  expect(after).toMatch(/default: sent/);
+});

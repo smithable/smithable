@@ -995,14 +995,19 @@ const setFieldRange: Operation<{
       throw new OperationError("Say min, max or both (or none: true to take them away).");
     if (min !== undefined && max !== undefined && min > max)
       throw new OperationError(`The smallest (${min}) is above the largest (${max}).`);
-    withLong(spec, fieldPath(m, f, ir), (long) => {
-      if (none) {
-        delete long.min;
-        delete long.max;
-      }
-      if (min !== undefined) long.min = min;
-      if (max !== undefined) long.max = max;
-    });
+    withLong(
+      spec,
+      fieldPath(m, f, ir),
+      (long) => {
+        if (none) {
+          delete long.min;
+          delete long.max;
+        }
+        if (min !== undefined) long.min = min;
+        if (max !== undefined) long.max = max;
+      },
+      found.type.kind === "choice",
+    );
     return [];
   },
 };
