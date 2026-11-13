@@ -102,3 +102,26 @@ test("a choice's default stays its own key when its rules or its meaning change"
   expect(unmeant).not.toContain("= sent");
   expect(unmeant).toMatch(/default: sent/);
 });
+
+test("what the spec cannot hold is refused in readable words", () => {
+  const said = (op: string, args: Record<string, unknown>) => {
+    const result = applyOperation({ spec }, op, args);
+    expect(result.ok, `${op} ${JSON.stringify(args)}`).toBe(false);
+    if (result.ok) return;
+    // Words for a person that name the field, from the operation or the check after it.
+    const words = [result.message, ...(result.diagnostics ?? []).map((d) => d.message)].join(" ");
+    expect(words).toContain(`Order.${args.field}`);
+    expect(words).not.toMatch(/Error:|\bat \w+ \(|\/models\//);
+  };
+  // Numbering on a field that is not a required whole number.
+  said("setFieldRules", { model: "Order", field: "note", sequence: true });
+  // A default a field cannot hold.
+  said("setFieldDefault", { model: "Order", field: "status", value: "lost" });
+  said("setFieldDefault", { model: "Order", field: "minutes", value: "soon" });
+  // Bounds on a choice or a yes/no.
+  said("setFieldRange", { model: "Order", field: "status", min: 1 });
+  said("setFieldRange", { model: "Order", field: "rush", max: 1 });
+  // A text's length is a whole number from 0.
+  said("setFieldRange", { model: "Order", field: "note", max: 2.5 });
+  said("setFieldRange", { model: "Order", field: "note", min: -1 });
+});

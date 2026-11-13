@@ -997,6 +997,14 @@ const setFieldRange: Operation<{
       throw new OperationError("Say min, max or both (or none: true to take them away).");
     if (min !== undefined && max !== undefined && min > max)
       throw new OperationError(`The smallest (${min}) is above the largest (${max}).`);
+    // A text's length counts characters: a whole number, 0 or more.
+    const number =
+      found.type.kind === "scalar" && ["int", "decimal", "money"].includes(found.type.name);
+    for (const bound of [min, max])
+      if (!number && bound !== undefined && !(Number.isInteger(bound) && bound >= 0))
+        throw new OperationError(
+          `${m}.${f} is not a number, so its bounds are its length: a whole number, 0 or more (not ${bound}).`,
+        );
     withLong(
       spec,
       fieldPath(m, f, ir),

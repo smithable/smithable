@@ -718,3 +718,9 @@ test("Who can: sign-in, the administrators, the roles, Ask and the API, each thr
   expect(operationFor(a, ["api", "models"], "all", auth)?.[1]).toMatchObject({ models: ["all"] });
   expect(operationFor(a, ["api"], undefined, auth)).toEqual(["setApi", {}]);
 });
+
+test("an emptied default box takes the default away", () => {
+  expect(
+    operationFor("smithable.yml", ["models", "Order", "fields", "minutes", "default"], ""),
+  ).toEqual(["setFieldDefault", { model: "Order", field: "minutes", remove: true }]);
+});

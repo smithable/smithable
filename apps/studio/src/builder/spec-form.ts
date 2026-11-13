@@ -666,7 +666,9 @@ export function operationFor(
           return rules({ sequence: value === true });
         // Its default and bounds, each through its own operation.
         if (which === "default") {
-          if (value === undefined) return ["setFieldDefault", { model, field, remove: true }];
+          // An emptied box ("") takes the default away, as no value does.
+          if (value === undefined || value === "")
+            return ["setFieldDefault", { model, field, remove: true }];
           if (["string", "number", "boolean"].includes(typeof value))
             return ["setFieldDefault", { model, field, value: String(value) }];
         }
