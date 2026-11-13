@@ -8,7 +8,7 @@
 // BENCH_SMALL (mistral-small-latest), BENCH_BETTER (mistral-medium-latest), BENCH_JUDGE (BENCH_BETTER).
 // Not part of check; ask before a paid run (C runs it daily within the bench budget).
 // Writes docs/benchmarks/bench-smith-<label>.md and .jsonl.
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { repo } from "./dev-app.mjs";
@@ -162,23 +162,56 @@ async function scored(r, p) {
   return { right: p.kind === "answer", why: p.kind };
 }
 
-const rows = [];
+// Each row is written as it comes (<out>.partial.jsonl), so a stopped run keeps its work: the next
+// run with the same label takes those rows and asks only the rest (2026-11-13: 245 of 275 were lost).
+const out = join(repo, `docs/benchmarks/bench-smith-${label}`);
+const partial = `${out}.partial.jsonl`;
+const rows = existsSync(partial)
+  ? readFileSync(partial, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .flatMap((line) => {
+        // A run stopped mid-write leaves a cut last line: that request is asked again.
+        try {
+          return [JSON.parse(line)];
+        } catch {
+          return [];
+        }
+      })
+  : [];
+// Written back whole, so a cut line is gone before new rows follow it.
+if (existsSync(partial)) writeFileSync(partial, rows.map((r) => `${JSON.stringify(r)}\n`).join(""));
+if (rows.length) console.log(`${rows.length} rows kept from ${partial}`);
 for (const setup of rulesOnly ? ["rules"] : setups) {
   const providers = rulesOnly ? [] : providersOf(setup);
   for (const r of requests) {
     // Undo, redo and feedback are Studio's own rules before Smith (apps/studio's test).
     if (r.kind === "undo" || r.kind === "feedback") continue;
+    if (rows.some((x) => x.setup === setup && x.id === r.id)) continue;
     const { files: f, index } = project(r.starter);
     const before = r.after ? requests.find((x) => x.id === r.after) : undefined;
     const started = Date.now();
-    const p = await proposeChange({
-      request: r.text,
-      files: f,
-      context: buildContext(index, r.text),
-      providers,
-      docs: docsFor(r.text),
-      ...(before ? { conversation: [{ request: before.text, reply: "" }] } : {}),
-    });
+    // A provider's rate limit (429) is the bench's pace, not the model's answer: the request is
+    // asked again after a wait, up to four times (2026-11-13: 119 of small's 275 hit it).
+    const ask = () =>
+      proposeChange({
+        request: r.text,
+        files: f,
+        context: buildContext(index, r.text),
+        providers,
+        docs: docsFor(r.text),
+        ...(before ? { conversation: [{ request: before.text, reply: "" }] } : {}),
+      });
+    let p = await ask();
+    for (
+      let wait = 10;
+      p.kind === "failed" && /\b429\b|rate limit/i.test(JSON.stringify(p));
+      wait *= 2
+    ) {
+      if (wait > 80) break;
+      await new Promise((done) => setTimeout(done, wait * 1000));
+      p = await ask();
+    }
     const byRule = !p.usage.length && p.kind !== "failed";
     // --rules is free: a rule's answer is scored by its kind, as the unit test does, no judge.
     const score = !rulesOnly
@@ -192,7 +225,7 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
             }
           : await scored(r, p);
     const usage = [...p.usage, ...(score.usage ?? [])];
-    rows.push({
+    const row = {
       setup,
       id: r.id,
       kind: r.kind,
@@ -204,14 +237,16 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
       tokens: usage.reduce((n, u) => n + u.inputTokens + u.outputTokens, 0),
       cost: usage.reduce((n, u) => n + u.cost, 0),
       ms: Date.now() - started,
-    });
+    };
+    rows.push(row);
+    appendFileSync(partial, `${JSON.stringify(row)}\n`);
     process.stdout.write(score.right ? "." : "x");
   }
   process.stdout.write("\n");
 }
 
-const out = join(repo, `docs/benchmarks/bench-smith-${label}`);
 writeFileSync(`${out}.jsonl`, `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`);
+rmSync(partial, { force: true });
 const kinds = [...new Set(rows.map((r) => r.kind))].sort();
 const lines = [
   `# What people say to Smith: ${label}`,
