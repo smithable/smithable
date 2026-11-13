@@ -1,8 +1,9 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { PrivacyFactKey } from "@smithable/adapter-tanstack";
 import { expect, test } from "vitest";
 import { git } from "./git.js";
-import { privacyStates } from "./privacy-review.js";
+import { PARTS, privacyStates } from "./privacy-review.js";
 import { tempDir } from "./test-dir.js";
 
 const spec = `smithable: 0.1
@@ -55,4 +56,16 @@ test("Studio's view of the privacy page's review: never, reviewed, and what chan
     on: "2026-11-13",
     changed: ["Information in records"],
   });
+});
+
+// Every fact the page can describe is in one of the parts: a new one outside them would be told
+// as "The page's wording" when it changed. Checked by the type checker (the build fails), and
+// here for the parts' own keys.
+type Named = (typeof PARTS)[number][1][number];
+const everyFactNamed: [Exclude<PrivacyFactKey, Named>] extends [never] ? true : false = true;
+
+test("every fact the privacy page describes belongs to one of its parts", () => {
+  expect(everyFactNamed).toBe(true);
+  const keys = PARTS.flatMap(([, k]) => [...k]);
+  expect(new Set(keys).size).toBe(keys.length);
 });

@@ -22,6 +22,7 @@ export {
   renameModelInSnapshot,
   renameModelSql,
 } from "./migrations.js";
+export type { PrivacyFactKey } from "./pages/legal.js";
 export { dataKey, pageTitle, tableNames, titleField } from "./shared.js";
 export { STACK_PROFILE } from "./stack.js";
 export { TEMPLATES as kitSources } from "./templates.gen.js";

@@ -2,7 +2,6 @@
 // for one that changed since its review, the parts that changed, by comparing its description
 // now with the one the project's files gave at the change that recorded the review. No stored
 // copy: the facts as reviewed are computed again from that change's files.
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { privacyReviews } from "@smithable/adapter-tanstack";
@@ -18,10 +17,11 @@ import {
   validateSpec,
   validateUx,
 } from "@smithable/core";
+import { git as run } from "./git.js";
 import { loadSpec } from "./validate.js";
 
 /** Each of the page's parts, by the facts it says, in the page's own headings. */
-const PARTS: [string, string[]][] = [
+export const PARTS = [
   ["Who runs it", ["app", "purpose", "operator"]],
   ["Your account", ["signIn"]],
   ["The assistant", ["assistant"]],
@@ -36,7 +36,7 @@ const PARTS: [string, string[]][] = [
   ["Notifications in your browser", ["pushAbout"]],
   ["The owner's own functions", ["custom"]],
   ["More", ["more"]],
-];
+] as const satisfies readonly (readonly [string, readonly string[]])[];
 
 export interface PrivacyState {
   page: string;
@@ -71,35 +71,38 @@ function reviewsOf(files: Files) {
   return reviewsFor(ir, auth, content, ux, files.context);
 }
 
-function reviewsFor(
+/**
+ * What smithable.context.yml says that the generated app and its privacy page depend on: the
+ * analytics and the payment provider. One reading for generate, validate and Studio, so the page
+ * and its fingerprint can never disagree.
+ */
+export function contextFacts(context: string | undefined) {
+  const analytics = context ? analyticsOf(context) : undefined;
+  const paymentProvider = paymentProviderOf(context);
+  return { ...(analytics ? { analytics } : {}), ...(paymentProvider ? { paymentProvider } : {}) };
+}
+
+/** Each privacy page's review state, from the project's parts and its context file's text. */
+export function reviewsFor(
   ir: SpecIR,
   auth: AuthIR,
   content: ContentIR | undefined,
   ux: UxIR | undefined,
   context: string | undefined,
 ) {
-  const analytics = context ? analyticsOf(context) : undefined;
-  const paymentProvider = paymentProviderOf(context);
   return privacyReviews(ir, {
     smithableVersion: "0.0.0",
     auth,
     ...(content ? { content } : {}),
     ...(ux ? { ux } : {}),
-    ...(analytics ? { analytics } : {}),
-    ...(paymentProvider ? { paymentProvider } : {}),
+    ...contextFacts(context),
   });
 }
 
+/** Git's output, or nothing when it fails (a file not in that commit). */
 const git = (dir: string, args: string[]): string | undefined => {
-  try {
-    return execFileSync("git", ["-c", "core.hooksPath=/dev/null", ...args], {
-      cwd: dir,
-      stdio: ["ignore", "pipe", "ignore"],
-      maxBuffer: 16 * 1024 * 1024,
-    }).toString("utf8");
-  } catch {
-    return undefined;
-  }
+  const result = run(dir, args);
+  return result.ok ? result.out : undefined;
 };
 
 /** The project's files at a commit, as they were. */
@@ -121,7 +124,7 @@ export function changedParts(
 ): string[] {
   if (!then) return [];
   const differs = (key: string) => JSON.stringify(then[key]) !== JSON.stringify(now[key]);
-  return PARTS.filter(([, keys]) => keys.some(differs)).map(([title]) => title);
+  return PARTS.filter(([, keys]) => keys.some(differs)).map(([title]) => title as string);
 }
 
 /** Each privacy page's review for Studio: its state, and what changed since its review. */

@@ -13,10 +13,11 @@ import {
   renameModelSql,
   STACK_PROFILE,
 } from "@smithable/adapter-tanstack";
-import { analyticsOf, paymentProviderOf, YamlEditor } from "@smithable/core";
+import { YamlEditor } from "@smithable/core";
 import { cardFiles } from "./card.js";
 import { exec, execQuiet, type Io, lap, tool } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
+import { contextFacts } from "./privacy-review.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 import { installing } from "./vite-cache.js";
@@ -97,17 +98,11 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     return 1;
   }
   const contextPath = join(dir, "smithable.context.yml");
-  const analytics = existsSync(contextPath)
-    ? analyticsOf(readFileSync(contextPath, "utf8"))
-    : undefined;
-  const paymentProvider = existsSync(contextPath)
-    ? paymentProviderOf(readFileSync(contextPath, "utf8"))
-    : undefined;
   const files = generateApp(ir, {
     smithableVersion: VERSION,
     kitRevision: templateKitRevision,
-    ...(analytics ? { analytics } : {}),
-    ...(paymentProvider ? { paymentProvider } : {}),
+    // The same reading as the privacy page's review (privacy-review.ts), so they agree.
+    ...contextFacts(existsSync(contextPath) ? readFileSync(contextPath, "utf8") : undefined),
     ...(Object.keys(packages).length ? { packages } : {}),
     auth,
     ...(plugins?.length ? { plugins } : {}),
