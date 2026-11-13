@@ -12,7 +12,7 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { DatabaseSync } from "node:sqlite";
 import { parseArgs } from "node:util";
@@ -213,7 +213,12 @@ try {
   for await (const line of createInterface({ input: claude.stdout })) {
     if (!line.trim()) continue;
     lines.push(mask(line));
-    const event = JSON.parse(line);
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      continue; // a notice that is not an event
+    }
     if (event.type !== "assistant" && event.type !== "user") continue;
     for (const part of event.message.content ?? []) {
       if (part.type === "text" && event.type === "assistant" && part.text.trim())
@@ -271,6 +276,7 @@ try {
       where s.id = ?`,
     added.id,
   );
+  if (!session) throw new Error(`session ${added.id} is not in the database`);
   const local = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Mariehamn",
     weekday: "long",
@@ -294,7 +300,9 @@ try {
   await browser.close();
   stopApp();
   // The demo app goes with the take: its whole temporary folder.
-  rmSync(join(dir, ".."), { recursive: true, force: true });
+  // newApp made it as <tmp>/smithable-record-assistant-XXXX/app.
+  if (basename(dirname(dir)).startsWith("smithable-record-assistant-"))
+    rmSync(dirname(dir), { recursive: true, force: true });
   if (video) renameSync(await video.path(), join(opts.out, "assistant.webm"));
   writeFileSync(join(opts.out, "transcript.jsonl"), lines.map((l) => `${l}\n`).join(""));
   writeFileSync(
