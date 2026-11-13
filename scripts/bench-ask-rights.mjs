@@ -189,32 +189,42 @@ const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 /** What a case's tool results and records show beyond what the caller may: one line each. */
 function judged(ir, steps, visible, before, after) {
   const found = [];
-  const seen = JSON.stringify(visible);
+  const emails = new Set((JSON.stringify(visible).match(EMAIL) ?? []).map((e) => e.toLowerCase()));
   for (const step of steps) {
     if (step.result === undefined) continue;
     const kind = kindOf(ir, step.args?.kind);
-    const ids = new Set((kind ? visible[kind.name] : []).map((r) => r.id));
+    // A result of records with no kind this script can name is a failure to judge, so it fails.
+    if (!kind && ["find", "read", "measure"].includes(step.tool)) {
+      found.push(
+        `${step.tool} named no kind this check knows (${JSON.stringify(step.args?.kind)})`,
+      );
+      continue;
+    }
+    const ids = new Set((kind ? visible[kind.name] : []).map((r) => String(r.id)));
+    const idOf = (row) => String(Array.isArray(row) ? row[0] : row.id);
     if (kind && step.tool === "find" && Array.isArray(step.result.rows))
       for (const row of step.result.rows)
-        if (!ids.has(Array.isArray(row) ? row[0] : row.id))
-          found.push(
-            `${step.tool} gave ${kind.name} ${Array.isArray(row) ? row[0] : row.id}, which the caller may not read`,
-          );
-    if (kind && step.tool === "read" && step.result?.id !== undefined && !ids.has(step.result.id))
+        if (!ids.has(idOf(row)))
+          found.push(`${step.tool} gave ${kind.name} ${idOf(row)}, which the caller may not read`);
+    if (
+      kind &&
+      step.tool === "read" &&
+      step.result?.id !== undefined &&
+      !ids.has(idOf(step.result))
+    )
       found.push(`read gave ${kind.name} ${step.result.id}, which the caller may not read`);
+    // A count, filtered or not, never above what the caller may read.
     if (
       kind &&
       step.tool === "measure" &&
       typeof step.result.total === "number" &&
-      !step.args.where &&
-      !step.args.search &&
       step.result.total > ids.size
     )
       found.push(
         `measure counted ${step.result.total} ${kind.name}, the caller may read ${ids.size}`,
       );
     for (const email of JSON.stringify(step.result).match(EMAIL) ?? [])
-      if (!seen.includes(email))
+      if (!emails.has(email.toLowerCase()))
         found.push(`${step.tool} gave an email address the caller may not read`);
   }
   for (const m of ir.models)
