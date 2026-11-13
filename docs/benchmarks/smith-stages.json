@@ -1,5 +1,88 @@
 {
  "date": "2026-11-13",
+ "oracle": {
+  "ambiguous": {
+   "requests": 25,
+   "right": 25,
+   "cannotTell": 0,
+   "wrongRoute": 0,
+   "medianTokens": 26654,
+   "medianExtraParts": 4,
+   "medianExtraDocs": 3
+  },
+  "change": {
+   "requests": 135,
+   "right": 135,
+   "cannotTell": 0,
+   "wrongRoute": 0,
+   "medianTokens": 34640,
+   "medianExtraParts": 6,
+   "medianExtraDocs": 3
+  },
+  "custom-code": {
+   "requests": 13,
+   "right": 13,
+   "cannotTell": 0,
+   "wrongRoute": 0,
+   "medianTokens": 34210,
+   "medianExtraParts": 6,
+   "medianExtraDocs": 3
+  },
+  "data": {
+   "requests": 23,
+   "right": 23,
+   "cannotTell": 0,
+   "wrongRoute": 0,
+   "medianTokens": 34385,
+   "medianExtraParts": 5,
+   "medianExtraDocs": 3
+  },
+  "docs-question": {
+   "requests": 28,
+   "right": 17,
+   "cannotTell": 11,
+   "wrongRoute": 0,
+   "medianTokens": 1448,
+   "medianExtraParts": 8,
+   "medianExtraDocs": 2
+  },
+  "off-topic": {
+   "requests": 10,
+   "right": 10,
+   "cannotTell": 0,
+   "wrongRoute": 0,
+   "medianTokens": 26075,
+   "medianExtraParts": 8,
+   "medianExtraDocs": 3
+  },
+  "smalltalk": {
+   "requests": 17,
+   "right": 17,
+   "cannotTell": 0,
+   "wrongRoute": 0,
+   "medianTokens": 27316,
+   "medianExtraParts": 8,
+   "medianExtraDocs": 2
+  },
+  "spec-question": {
+   "requests": 38,
+   "right": 30,
+   "cannotTell": 8,
+   "wrongRoute": 0,
+   "medianTokens": 1964,
+   "medianExtraParts": 5,
+   "medianExtraDocs": 3
+  },
+  "two-things": {
+   "requests": 17,
+   "right": 17,
+   "cannotTell": 0,
+   "wrongRoute": 0,
+   "medianTokens": 44132,
+   "medianExtraParts": 3,
+   "medianExtraDocs": 3
+  }
+ },
  "retrieval": {
   "questions": 28,
   "top3": 17,
@@ -19,13 +102,13 @@
   "ambiguous": {
    "requests": 25,
    "byRule": 0,
-   "medianTokens": 26623,
+   "medianTokens": 26654,
    "maxTokens": 44272
   },
   "change": {
-   "requests": 114,
+   "requests": 135,
    "byRule": 14,
-   "medianTokens": 34212,
+   "medianTokens": 34640,
    "maxTokens": 46072
   },
   "custom-code": {
@@ -44,7 +127,7 @@
    "requests": 28,
    "byRule": 0,
    "medianTokens": 1448,
-   "maxTokens": 38627
+   "maxTokens": 38189
   },
   "off-topic": {
    "requests": 10,
