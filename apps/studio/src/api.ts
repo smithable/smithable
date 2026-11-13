@@ -92,6 +92,14 @@ export interface ReleaseReview {
     results: { what: string; ok: boolean; checked: boolean }[];
   };
   verifiedRestore?: string;
+  /** Each privacy page's review (legal-page.md §6.4). */
+  privacy?: {
+    page: string;
+    state: "reviewed" | "changed" | "never";
+    facts: string;
+    on?: string;
+    changed?: string[];
+  }[];
 }
 
 export interface Project {
