@@ -320,7 +320,11 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
       cost: usage.reduce((n, u) => n + u.cost, 0),
       // Who answered (the scoreboard's escalation numbers): the rules, the small model or the
       // better one, and what Smith's own calls cost, the judge's apart.
-      tier: byRule ? "rules" : p.kind === "failed" ? "none" : TIERS[p.usage.at(-1)?.tier] ?? p.usage.at(-1)?.tier,
+      tier: byRule
+        ? "rules"
+        : p.kind === "failed"
+          ? "none"
+          : (TIERS[p.usage.at(-1)?.tier] ?? p.usage.at(-1)?.tier),
       model: byRule ? "" : (p.usage.at(-1)?.model ?? ""),
       smithCost: p.usage.reduce((n, u) => n + u.cost, 0),
       ms: Date.now() - started,
