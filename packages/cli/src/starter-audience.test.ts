@@ -1,5 +1,8 @@
 // The starter suggestion weighs who the app is for (T767): a private description never gets a starter
 // that lets anyone read its records unsaid, and a public catalogue still gets the collection starter.
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   describedWith,
   draftProject,
@@ -7,8 +10,9 @@ import {
   type Provider,
 } from "@smithable/ai";
 import { validateAuth, validateSpec } from "@smithable/core";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import {
+  create,
   keptPrivate,
   noSignInAssumption,
   openQuestions,
@@ -17,6 +21,7 @@ import {
   starterFor,
 } from "./new.js";
 import { STARTERS } from "./starters.gen.js";
+import { tempDir } from "./test-dir.js";
 
 const PRIVATE = [
   "A recipe collection for a family, with ingredients and shopping lists",
@@ -172,3 +177,57 @@ public: { pages: [posts], read: [{ Post: { where: { status: published } } }] }
     /you included/,
   );
 });
+
+test("without a model, new --describe builds the starter as private as the description", async () => {
+  vi.stubEnv("SMITHABLE_MODEL", "");
+  vi.stubEnv("SMITHABLE_MODEL_URL", "");
+  vi.stubEnv("SMITHABLE_FRONTIER", "");
+  vi.stubEnv("SMITHABLE_LOCAL_MODEL", "");
+  vi.stubEnv("SMITHABLE_NO_PICTURES", "1");
+  const quiet = { out: () => {}, err: () => {} };
+  // The files as the build writes them, from onDraft (after keptPrivate, before anything is
+  // installed or migrated; the rest of the build needs installed packages and is not this test's).
+  const build = async (describe: string) => {
+    const dir = join(tempDir("no-model-"), "app");
+    const told: string[] = [];
+    let drafted: Record<string, string> | undefined;
+    let assumed: string[] = [];
+    await create(dir, { out: (t) => told.push(t), err: quiet.err }, undefined, {
+      describe,
+      yes: true,
+      unattended: true,
+      installed: true,
+      sampleData: false,
+      onDraft: (files, assumptions) => {
+        drafted = files as Record<string, string>;
+        assumed = (assumptions ?? []).map((a) => a.chosen);
+      },
+    });
+    if (!drafted) throw new Error(told.join(""));
+    return { read: readable(drafted), told: told.join(""), assumed };
+  };
+  try {
+    for (const description of [
+      "A recipe collection for a family, with ingredients and shopping lists",
+      "An inventory app for a small bakery: ingredients, suppliers and stock levels",
+    ]) {
+      const made = await build(description);
+      expect(made.read, description).toEqual([]);
+      expect(made.told).toMatch(
+        /No model is set up, so this is the records starter unchanged, not an app made from your description/,
+      );
+      // In Studio, the first of the assumptions; the kept-private one after it.
+      expect(made.assumed[0]).toMatch(
+        /^No model is set up, so this is the records starter unchanged/,
+      );
+      expect(made.assumed.join(" ")).toMatch(/Nobody: kept private/);
+    }
+    // A description that asks for visitors keeps the starter public.
+    const open = await build(
+      "A public catalogue of our museum's objects for visitors to browse online",
+    );
+    expect(open.read).toEqual(["Item"]);
+  } finally {
+    vi.unstubAllEnvs();
+  }
+}, 120_000);

@@ -16,7 +16,14 @@
 // docs question the row says whether its labelled part ("docs") was among those found.
 // Not part of check; ask before a paid run (C runs it daily within the bench budget).
 // Writes docs/benchmarks/bench-smith-<label>.md and .jsonl.
-import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { claudeRoute } from "./claude-route.mjs";
@@ -28,7 +35,7 @@ const { validateAuth, validateContent, validateSpec, validateUx } = await import
 const { appParts, buildContext, buildIndex, searchDocsWith, specLines, summarize } = await import(
   join(repo, "packages/index/dist/index.js")
 );
-const { proposeChange, openAICompatible, listPrice, searchPhrases } = await import(
+const { proposeChange, openAICompatible, listPrice, searchPhrases, cached } = await import(
   join(repo, "packages/ai/dist/index.js")
 );
 
@@ -59,7 +66,45 @@ const provider = option("--provider") ?? "claude";
 if (!["claude", "mistral"].includes(provider))
   throw new Error("--provider takes claude or mistral.");
 const route = provider === "claude" && !rulesOnly ? await claudeRoute() : undefined;
-const model = (name, tier) => {
+// --record DIR keeps every model call's answer (the judge's too) in DIR by a hash of the model and
+// the exact request (packages/ai's cached()); --replay DIR answers from DIR and never asks a
+// model: a request not recorded is a miss, counted on its row with what it would have cost (its
+// prompt's size at the model's list price), so a change that alters requests says its price.
+const recordDir = option("--record");
+const replayDir = option("--replay");
+if (recordDir && replayDir) throw new Error("--record or --replay, not both.");
+const folderStore = (dir) => {
+  mkdirSync(dir, { recursive: true });
+  return {
+    get: async (key) =>
+      existsSync(join(dir, `${key}.json`))
+        ? readFileSync(join(dir, `${key}.json`), "utf8")
+        : undefined,
+    set: async (key, value) => writeFileSync(join(dir, `${key}.json`), value),
+  };
+};
+/** The misses of the request being asked: each model call the recording did not have. */
+let misses = [];
+const wrapped = (p) => {
+  if (recordDir) return cached(p, folderStore(recordDir));
+  if (!replayDir) return p;
+  const refusing = {
+    ...p,
+    async complete(request) {
+      const chars = `${request.system}${request.user}${JSON.stringify(request.schema ?? "")}`
+        .length;
+      const price = listPrice(p.model ?? p.name) ?? { input: 0, output: 0 };
+      misses.push({
+        model: p.model ?? p.name,
+        cost: ((chars / 4) * price.input + 1000 * price.output) / 1e6,
+      });
+      throw new Error("not recorded: this request was not in the recording");
+    },
+  };
+  return cached(refusing, folderStore(replayDir));
+};
+const model = (name, tier) => wrapped(rawModel(name, tier));
+const rawModel = (name, tier) => {
   if (provider === "mistral")
     return openAICompatible({
       name,
@@ -312,6 +357,7 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
     const docs = searchDocsWith(docsIndex, r.text, phrases);
     const before = r.after ? requests.find((x) => x.id === r.after) : undefined;
     const started = Date.now();
+    misses = [];
     // A provider's rate limit (429) is the bench's pace, not the model's answer: the request is
     // asked again after a wait, up to four times (2026-11-13: 119 of small's 275 hit it).
     const ask = () =>
@@ -363,6 +409,12 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
       cost: usage.reduce((n, u) => n + u.cost, 0),
       // Who answered (the scoreboard's escalation numbers): the rules, the small model or the
       // better one, and what Smith's own calls cost, the judge's apart.
+      ...(replayDir
+        ? {
+            missed: misses.length,
+            missCost: Math.round(misses.reduce((n, m) => n + m.cost, 0) * 1e5) / 1e5,
+          }
+        : {}),
       tier: byRule
         ? "rules"
         : p.kind === "failed"
@@ -400,6 +452,16 @@ for (const setup of [...new Set(rows.map((r) => r.setup))])
       `| ${setup} | ${kind} | ${of.filter((r) => r.right).length} | ${of.length} | ${of.filter((r) => r.byRule).length} | ${of.some((r) => "found" in r) ? of.filter((r) => r.found).length : ""} | ${sum("tokens")} | ${sum("cost").toFixed(4)} | ${(sum("ms") / 1000).toFixed(1)} |`,
     );
   }
+if (replayDir) {
+  const missed = rows.filter((r) => r.missed);
+  const byKind = Object.entries(Object.groupBy(missed, (r) => r.kind)).map(
+    ([k, of]) => `${k} ${of.length}`,
+  );
+  lines.push(
+    "",
+    `Replayed from a recording: ${missed.length} of ${rows.length} requests asked a model call the recording did not have${byKind.length ? ` (${byKind.join(", ")})` : ""}; those calls would cost about $${missed.reduce((n, r) => n + r.missCost, 0).toFixed(4)} at list prices. The rest are scored as the recorded run answered them.`,
+  );
+}
 lines.push("", "Wrong ones:", "");
 for (const r of rows.filter((x) => !x.right))
   lines.push(

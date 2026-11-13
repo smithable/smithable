@@ -3340,7 +3340,7 @@ try {
       },
     );
     await step(
-      "from a description without a model the starter comes in under the running preview, and Studio says why",
+      "from a description without a model the starter comes in under the running preview, and Studio says it is the starter unchanged",
       async () => {
         const pool = join(root, "pool");
         process.kill(-waiting.pid);
@@ -3360,11 +3360,14 @@ try {
           name: "Dogs",
           admin: "tester@example.org",
         });
-        if (!done.ok || !done.output.includes("no AI model is available); starting from records"))
+        if (
+          !done.ok ||
+          !done.output.includes("No model is set up, so this is the records starter unchanged")
+        )
           throw new Error(done.output);
         const project = await (await fetch(`${other}/api/project`)).json();
         if (project.name !== "Dogs") throw new Error(`Studio shows ${project.name}`);
-        if (!project.notice?.includes("could not be used this time"))
+        if (!project.notice?.includes("starter unchanged, not an app made from your description"))
           throw new Error(`no notice: ${project.notice}`);
         if (
           readFileSync(join(pool, "smithable.yml"), "utf8").includes("ClassType") ||

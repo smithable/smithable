@@ -118,6 +118,12 @@ export async function create(
     timezone?: string;
     /** The packages are in place (a link to another project's): nothing is installed. */
     installed?: boolean;
+    /**
+     * Build the starter as it is for the description, with no draft, why given (T778): when a
+     * model could not make it (the allowance used up, no working draft), the starter still comes
+     * in as private as the description asks.
+     */
+    starterOnly?: string;
     unattended?: boolean;
     onStage?: (stage: "preparing" | "drafting" | "building") => void;
     onAssumptions?: (assumptions: Assumption[]) => void;
@@ -345,7 +351,11 @@ export async function create(
   // way the model still picks the starter when none was named: skipping the questions is not
   // skipping the choice (the word match knows only English).
   const asking = !options.unattended && !options.yes && !options.answers;
-  if (description && (asking || starter === undefined || options.unattended)) {
+  if (
+    description &&
+    !options.starterOnly &&
+    (asking || starter === undefined || options.unattended)
+  ) {
     const asked = await clarifyProject({
       description,
       starters: starterSummaries(),
@@ -388,16 +398,40 @@ export async function create(
     return 1;
   }
   if (description) {
-    io.out(`Starting from the ${name} starter.\n`);
-    if (starter === undefined) {
+    // No model set up (T778): the starter as it is, built here and kept as private as the
+    // description below (keptPrivate), rather than a refusal that sends the person to build the
+    // starter alone, public as it is.
+    const starterOnly = (providers.length === 0 || Boolean(options.starterOnly)) && !website;
+    // Said as what the person got and what not (Fable M647): the starter unchanged, not an app made
+    // from the description; in Studio too, as the first of the draft's assumptions.
+    const unchanged = options.starterOnly
+      ? `${options.starterOnly}, so this is the ${name} starter unchanged, not an app made from your description.`
+      : `No model is set up, so this is the ${name} starter unchanged, not an app made from your description. To have it drafted, set up a model (docs.smithable.ai/ai.html).`;
+    io.out(starterOnly ? `${unchanged}\n` : `Starting from the ${name} starter.\n`);
+    // What a public starter means, said before the draft; without one, what was done is said with
+    // the assumptions below.
+    if (starter === undefined && !starterOnly) {
       const note = publicNote(name, description);
       if (note) io.out(`${note}\n`);
     }
     // Drafting as operations (an empty app, one checked operation at a time; the default, see
     // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
     options.onStage?.("drafting");
-    const draft =
-      process.env.SMITHABLE_DRAFT === "files"
+    const draft: Awaited<ReturnType<typeof draftProject>> = starterOnly
+      ? {
+          kind: "draft",
+          files,
+          usage: [],
+          assumptions: [
+            {
+              part: "app",
+              question: "What was made?",
+              chosen: unchanged,
+              options: ["Set up a model and describe the app again"],
+            },
+          ],
+        }
+      : process.env.SMITHABLE_DRAFT === "files"
         ? await draftProject({ description, starter: files, providers })
         : await draftProjectByOperations({
             description,
