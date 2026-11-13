@@ -100,3 +100,36 @@ export function countValues(
     db.close();
   }
 }
+
+/**
+ * How many rows of a table have a column outside bounds, as a number or as a text's length;
+ * undefined without a database. Bounds are given in the column's own units.
+ */
+export function countOutside(
+  dir: string,
+  table: string,
+  column: string,
+  bounds: { min?: number; max?: number; length?: boolean },
+): number | undefined {
+  if (!existsSync(databasePath(dir))) return undefined;
+  const value = bounds.length ? `length("${column}")` : `"${column}"`;
+  const where = [
+    bounds.min !== undefined ? `${value} < ?` : "",
+    bounds.max !== undefined ? `${value} > ?` : "",
+  ].filter(Boolean);
+  if (!where.length) return 0;
+  const db = new DatabaseSync(databasePath(dir), { readOnly: true, timeout: BUSY_MS });
+  try {
+    const params = [bounds.min, bounds.max].filter((b): b is number => b !== undefined);
+    const row = db
+      .prepare(
+        `SELECT count(*) AS n FROM "${table}" WHERE "${column}" IS NOT NULL AND (${where.join(" OR ")})`,
+      )
+      .get(...params) as { n: number };
+    return Number(row.n);
+  } catch {
+    return undefined;
+  } finally {
+    db.close();
+  }
+}
