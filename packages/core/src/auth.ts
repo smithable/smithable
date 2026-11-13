@@ -1148,7 +1148,7 @@ function checkAgainstSpec(
       const read = modelAccess(model, auth).read;
       // A list of fields chosen for a reader who may not see them is a mistake, not an oversight
       // (docs/design/outgoing-templates.md §4): an error where the default body is a warning.
-      if (!read.public && !read.roles.includes(r.role))
+      if (!(read.public && !read.where) && !read.roles.includes(r.role))
         (Array.isArray(o.show) ? ctx.error : ctx.warning).call(
           ctx,
           accessAt,

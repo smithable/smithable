@@ -603,3 +603,27 @@ defaultRole: customer
     owner: true,
   });
 });
+
+test("a role told about records visitors read only where a condition holds must read them itself (T803)", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: X }
+models:
+  Post:
+    fields: { title: string!, status: draft | published }
+outgoing:
+  told: { when: Post created, to: mail, recipient: staff }
+`,
+  }).ir;
+  if (!ir) throw new Error("spec");
+  const codes = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles: { admin: {}, staff: {} }\ndefaultRole: staff\npublic:\n  read: [{ Post: { where: { status: published } } }]\n",
+    },
+    ir,
+  ).diagnostics.map((d) => d.code);
+  // Visitors read only published posts; staff are told of drafts too.
+  expect(codes).toContain("recipient-cannot-read");
+});

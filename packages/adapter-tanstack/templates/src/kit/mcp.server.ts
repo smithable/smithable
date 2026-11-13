@@ -6,7 +6,7 @@
 import type { Viewer } from "./access";
 import { bodyOf, callerOf, problem, refusalOf } from "./api.server";
 import { writeAllowed } from "./limit";
-import { originOf } from "./origin";
+import { originOf, requestOrigin } from "./origin";
 import { type Offer, offered } from "./tools";
 
 export type { Offer, Tool } from "./tools";
@@ -49,7 +49,7 @@ export async function handleMcp(
       try {
         from = new URL(origin).origin;
       } catch {}
-      if (from !== originOf(request))
+      if (from !== requestOrigin(request) && from !== originOf(request))
         return problem(403, "Visitors may not call /mcp from another origin.");
     }
     body = await bodyOf(request);
