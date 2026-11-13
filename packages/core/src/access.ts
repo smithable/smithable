@@ -97,6 +97,11 @@ export function modelAccess(model: ModelIR, auth: AuthIR): ModelAllowed {
  * `all` is every page but those a pattern keeps for administrators (the users page, a data
  * page), which a role gets by naming them.
  */
+/** A page of an administrator's work: users and data (reserved) and review; never public. */
+export function adminOnly(page: PageIR): boolean {
+  return patternInfo(page).access !== undefined || page.pattern.kind === "review";
+}
+
 export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
   const reserved = patternInfo(page).access !== undefined;
   // The review page opens too for the roles granted review on any of its models.
@@ -111,7 +116,8 @@ export function pageAccess(page: PageIR, auth: AuthIR): Allowed {
       return pages === "all" ? !reserved : (pages?.includes(page.id) ?? false);
     })
     .map((r) => r.name);
-  const isPublic = auth.public.pages.includes(page.id);
+  // An administrator's page (users, data, review) is never public, whatever public.pages says.
+  const isPublic = !adminOnly(page) && auth.public.pages.includes(page.id);
   return {
     public: isPublic,
     roles: auth.signIn === "none" ? [] : isPublic ? auth.roles.map((r) => r.name) : roles,
@@ -172,9 +178,20 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
   }
   const write = modelAccess(model, auth).write;
   const named = granted(auth, "actions", action.name);
+  // A role whose block writes `actions: none` runs no action at all: not as owner, not by its
+  // write grant, not a copy (support-portal-path.md §3); a list, or an empty one, keeps today's
+  // meaning.
+  const none = auth.roles.filter((r) => r.actionsNone).map((r) => r.name);
+  // A copy changes nothing: it needs to read the record (its data function checks) and to
+  // create one like it, not to write the original; the lists it copies are created too (below).
+  const create = action.copy ? modelAccess(model, auth).create : undefined;
   let roles = auth.roles
     .map((r) => r.name)
-    .filter((r) => write.roles.includes(r) || named.includes(r));
+    .filter((r) =>
+      create
+        ? create.public || create.roles.includes(r)
+        : write.roles.includes(r) || named.includes(r),
+    );
   const lists = (action.with ?? []).map(
     (l) => (model.fields.find((f) => f.name === l)?.type as { model?: string } | undefined)?.model,
   );
@@ -184,19 +201,7 @@ export function actionAccess(action: ActionIR, auth: AuthIR, models: ModelIR[] =
     if (!create || create.public) continue;
     roles = roles.filter((r) => create.roles.includes(r));
   }
-  // A copy changes nothing: it needs to read the record (its data function checks) and to
-  // create one like it, not to write the original.
-  if (action.copy) {
-    const create = modelAccess(model, auth).create;
-    return {
-      public: false,
-      roles: create.public ? auth.roles.map((r) => r.name) : create.roles,
-      owner: false,
-    };
-  }
-  // A role whose block writes `actions: none` runs no action at all: not as owner, not by its
-  // write grant (support-portal-path.md §3); a list, or an empty one, keeps today's meaning.
-  const none = auth.roles.filter((r) => r.actionsNone).map((r) => r.name);
+  if (create) return { public: false, roles: roles.filter((r) => !none.includes(r)), owner: false };
   const among =
     write.owner && none.length
       ? auth.roles.map((r) => r.name).filter((r) => !none.includes(r))
