@@ -2,7 +2,13 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { git } from "./git.js";
-import { closeOldVersion, oldEnvironment, openVersion, snapshotAfter } from "./old-version.js";
+import {
+  closeOldVersion,
+  oldEnvironment,
+  oldVersionsOffered,
+  openVersion,
+  snapshotAfter,
+} from "./old-version.js";
 import { tempDir } from "./test-dir.js";
 
 const commit = (dir: string, message: string) => {
@@ -135,4 +141,17 @@ test("closing never removes a folder outside Studio's own, whatever the record s
     closeOldVersion(dir);
     expect(existsSync(named)).toBe(true);
   }
+});
+
+test("a hosted Studio neither offers nor opens an old version; a local one does", () => {
+  expect(oldVersionsOffered(undefined)).toBe(true);
+  expect(oldVersionsOffered("0.0.0.0")).toBe(false);
+});
+
+test("the copy's packages come from the project's store", () => {
+  const env = oldEnvironment(
+    { PATH: "/bin" },
+    { home: "/h", dataDir: "/d", url: "http://127.0.0.1:1", doorSecret: "s", store: "/store" },
+  );
+  expect(env.pnpm_config_store_dir).toBe("/store");
 });

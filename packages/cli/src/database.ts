@@ -47,12 +47,15 @@ export function restoreDatabase(dir: string, id: string): boolean {
 
 /**
  * Deletes the snapshots undo can no longer reach: all but those `keep` names (the snapshots of
- * the latest changes). Returns how many it deleted.
+ * the latest changes). The one kept while a held fix is open (fix-open.ts) is never one of them:
+ * it is what the dev data goes back to. Returns how many it deleted.
  */
 export function pruneSnapshots(dir: string, keep: Set<string>): number {
   const folder = join(dir, "data", ".smithable", "snapshots");
   if (!existsSync(folder)) return 0;
-  const old = readdirSync(folder).filter((f) => f.endsWith(".db") && !keep.has(f.slice(0, -3)));
+  const old = readdirSync(folder).filter(
+    (f) => f.endsWith(".db") && !keep.has(f.slice(0, -3)) && !f.startsWith("fix-open-"),
+  );
   for (const f of old) rmSync(join(folder, f), { force: true });
   return old.length;
 }

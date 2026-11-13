@@ -49,7 +49,14 @@ import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
 import { milestones, nameMilestone } from "./milestones.js";
 import { openQuestions } from "./new.js";
-import { closeOldVersion, openOldVersion, openVersion } from "./old-version.js";
+import {
+  closeOldVersion,
+  OLD_HOST,
+  oldVersionsOffered,
+  openOldVersion,
+  openVersion,
+  SUPERSEDED,
+} from "./old-version.js";
 import { projectFiles, runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
@@ -694,11 +701,14 @@ export async function studio(
     }
   };
   startApp();
-  // An old version a crash left open is removed before anything else (old-version-preview.md §3.6).
-  closeOldVersion(dir);
+  // An old version a crash left open is removed before anything else (old-version-preview.md §3.6);
+  // a server of it that cannot be told for its own (no /proc) is named below, once notice is there.
+  const leftover = closeOldVersion(dir).unstopped;
   process.once("exit", () => closeOldVersion(dir));
-  /** The old version being prepared, so asking for another cancels it. */
-  let opening: string | undefined;
+  // Old versions run beside the preview on this machine's ports, which a hosted workspace has not
+  // got (a visitor's own localhost) and whose memory it has not got either: there, until the
+  // service passes a second port (old-version-preview.md §6), none is offered or opened.
+  const oldVersions = oldVersionsOffered(options.host);
   // The first operation then finds its tools loaded.
   void warmTools(dir);
 
@@ -801,6 +811,14 @@ export async function studio(
   // workspace says why a description could not be used), shown once.
   const noticeFile = join(dir, NOTICE);
   let notice = existsSync(noticeFile) ? readFileSync(noticeFile, "utf8").trim() : undefined;
+  // A leftover server Studio could not stop: if its port still answers, the person is told.
+  if (leftover)
+    void fetch(`http://${OLD_HOST}:${leftover.port}/`, { signal: AbortSignal.timeout(3000) }).then(
+      () => {
+        notice = `An old version's server from before may still be running (process ${leftover.pid}, port ${leftover.port}). Studio cannot tell it is its own on this system, so it left it; stop it if it is.`;
+      },
+      () => {},
+    );
   rmSync(noticeFile, { force: true });
 
   const state = () => {
@@ -850,6 +868,8 @@ export async function studio(
       ...(options.home ? { home: options.home } : {}),
       // On the person's own machine, where their editor can open the project's files.
       ...(options.host ? {} : { localDir: resolve(dir) }),
+      // Whether Changes offers "See this version" (old-version-preview.md): not when hosted.
+      ...(oldVersions ? { oldVersions: true as const } : {}),
       ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
       // Where Smith's requests may go, for his AI notice (legal-1.0 U6).
       ai: aiDestinations(),
@@ -1055,8 +1075,12 @@ export async function studio(
         }
       }
       if (url.pathname === "/api/project") {
-        // Back from a held fix's branch: the dev data as it was before it (fix-open.ts).
-        if (backFromFix(dir)) reopenDatabase(dir);
+        // Back from a held fix's branch: the dev data as it was before it (fix-open.ts), said.
+        if (backFromFix(dir)) {
+          reopenDatabase(dir);
+          notice =
+            "The dev data is back as it was before the fix was opened: what changed in it while the fix was open is gone.";
+        }
         const answer = state();
         notice = undefined;
         return json(answer);
@@ -1064,30 +1088,43 @@ export async function studio(
       // The app card, written from the spec files as `smithable card` writes it (A 233).
       if (url.pathname === "/api/card" && req.method === "GET") return json(cardTexts(dir));
       // An old version, as a copy (old-version-preview.md): open one, close it, or say which is.
+      // Its writing methods pass refusal() above like every other route: Studio's header, JSON,
+      // its own origin, and the token behind a proxy.
       if (url.pathname === "/api/old-version") {
         if (req.method === "DELETE") {
-          opening = undefined;
           closeOldVersion(dir);
           return json({ ok: true });
         }
         if (req.method === "GET") {
           const open = openVersion(dir);
-          return json(open ? { ...open, url: `http://localhost:${open.port}` } : {});
+          return json(open ? { ...open, url: `http://${OLD_HOST}:${open.port}` } : {});
         }
         if (req.method === "POST") {
+          if (!oldVersions)
+            return json(
+              {
+                ok: false,
+                message: "An old version cannot be opened in a hosted workspace yet.",
+              },
+              409,
+            );
           const { commit } = await body();
           if (typeof commit !== "string" || !/^[0-9a-f]{7,40}$/.test(commit))
             return json({ ok: false, message: "There is no such change." }, 400);
-          opening = commit;
+          let open: Awaited<ReturnType<typeof openOldVersion>>;
           try {
-            const open = await openOldVersion(dir, commit, { lookKey, log });
-            // Another was asked for meanwhile: this one is not what the person waits for.
-            if (opening !== commit) {
-              closeOldVersion(dir);
-              return json({ ok: false, message: "Another version was asked for." }, 409);
-            }
-            const address = `http://localhost:${open.port}`;
+            // A newer request, or closing, stops this one's commands and removes its folders.
+            open = await openOldVersion(dir, commit, { lookKey, log });
+          } catch (error) {
+            const message = (error as Error).message;
+            return json({ ok: false, message }, message === SUPERSEDED ? 409 : 500);
+          }
+          try {
+            const address = open.url;
             await warmPreview(open.port, log);
+            // Another was asked for, or it was closed, while it started: not what is waited for.
+            if (openVersion(dir)?.commit !== open.commit || open.child.exitCode !== null)
+              return json({ ok: false, message: SUPERSEDED }, 409);
             return json({
               ok: true,
               commit: open.commit,

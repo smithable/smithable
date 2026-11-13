@@ -130,6 +130,8 @@ export interface Project {
    * when Studio runs on the person's own machine (never on a host, whose paths mean nothing there).
    */
   localDir?: string;
+  /** Changes offers "See this version": on the person's own machine, not when hosted. */
+  oldVersions?: true;
   /** Where the project's publishing and settings live, when Studio is hosted. */
   home?: string;
   /** A message for the first to open Studio, e.g. why a description could not be used. */

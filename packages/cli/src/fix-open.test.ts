@@ -1,8 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, test } from "vitest";
-import { databasePath } from "./database.js";
+import { databasePath, pruneSnapshots } from "./database.js";
 import { backFromFix, rememberBeforeFix } from "./fix-open.js";
 import { git } from "./git.js";
 import { tempDir } from "./test-dir.js";
@@ -62,4 +62,34 @@ test("a held fix's migrations do not stay on today's dev data once the owner lea
   expect(columns).toEqual(["id"]);
   // Once: a later read does nothing.
   expect(backFromFix(dir)).toBe(false);
+});
+
+test("opening another fix puts the first one's data back before keeping today's", () => {
+  const dir = tempDir("fix-open-");
+  writeFileSync(join(dir, ".gitignore"), "data/\n");
+  writeFileSync(join(dir, "smithable.yml"), "smithable: 0.1\n");
+  expect(git(dir, ["init", "-q", "-b", "main"]).ok).toBe(true);
+  commit(dir, "start");
+  mkdirSync(join(dir, "data", "db"), { recursive: true });
+  const today = new DatabaseSync(databasePath(dir));
+  today.exec("create table customers (id integer primary key);");
+  today.close();
+  rememberBeforeFix(dir, "fix/a");
+  expect(git(dir, ["checkout", "-q", "-b", "fix/a"]).ok).toBe(true);
+  const a = new DatabaseSync(databasePath(dir));
+  a.exec("create table a_only (id integer primary key);");
+  a.close();
+  // Fix B straight from fix A: A's tables are not what is kept for B.
+  rememberBeforeFix(dir, "fix/b");
+  expect(tables(dir)).toEqual(["customers"]);
+  expect(git(dir, ["checkout", "-q", "-b", "fix/b", "main"]).ok).toBe(true);
+  const b = new DatabaseSync(databasePath(dir));
+  b.exec("create table b_only (id integer primary key);");
+  b.close();
+  // Its snapshot outlives undo's pruning, and leaving B puts today's data back.
+  pruneSnapshots(dir, new Set());
+  expect(existsSync(join(dir, "data", ".smithable", "snapshots", "fix-open-fix-b.db"))).toBe(true);
+  expect(git(dir, ["checkout", "-q", "main"]).ok).toBe(true);
+  expect(backFromFix(dir)).toBe(true);
+  expect(tables(dir)).toEqual(["customers"]);
 });

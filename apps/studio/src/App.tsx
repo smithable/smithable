@@ -1598,7 +1598,9 @@ export function App() {
                                 words={words}
                                 plugins={spec.plugins}
                                 onUndo={(ids) => void undoChanges(ids)}
-                                onSee={(id) => void seeVersion(id)}
+                                {...(project.oldVersions
+                                  ? { onSee: (id: string) => void seeVersion(id) }
+                                  : {})}
                                 {...(changesAt ? { openAt: changesAt } : {})}
                                 onMilestone={async (id, name) => {
                                   const named = await api
