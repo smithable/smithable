@@ -11,7 +11,7 @@
 //     runs request by request, so they need both.
 // A kind that falls below the last line's right share for the same setup is marked ▼ in the page.
 // Spend totals stay out of this public file: cost per request is a product fact, totals are not.
-//   node scripts/smith-scoreboard.mjs <run.jsonl>… [--note "what changed"] [--dry-run]   (later files win)
+//   node scripts/smith-scoreboard.mjs <run.jsonl>… [--note "what changed"] [--set PATH] [--dry-run]   (later files win)
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -19,9 +19,12 @@ import { repo } from "./dev-app.mjs";
 
 const args = process.argv.slice(2);
 const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
-const files = args.filter((a, i) => a.endsWith(".jsonl") && args[i - 1] !== "--note");
+const files = args.filter((a, i) => a.endsWith(".jsonl") && !["--note", "--set"].includes(args[i - 1]));
 if (!files.length) throw new Error("Give the round's bench-smith .jsonl files.");
-const set = JSON.parse(readFileSync(join(repo, "docs/benchmarks/smith-requests.json"), "utf8"));
+// --set PATH: the round ran on another set (the held-out one): its labels and version are read from it.
+const set = JSON.parse(
+  readFileSync(option("--set") ?? join(repo, "docs/benchmarks/smith-requests.json"), "utf8"),
+);
 const labelled = new Map(set.requests.map((r) => [r.id, r]));
 // A setup run again in a later file replaces the earlier rows (a rerun after a cut or a limit).
 const rows = [
@@ -95,7 +98,7 @@ const git = (...a) => execFileSync("git", a, { cwd: repo, encoding: "utf8" }).tr
 const line = {
   date: new Date().toISOString().slice(0, 10),
   commit: git("rev-parse", "--short", "HEAD"),
-  set: set.version ?? 1,
+  set: `${option("--set") ? "held-out " : ""}${set.version ?? 1}`,
   requests: once.length,
   runs: files.map((f) => f.replace(/^.*\//, "")),
   note: option("--note") ?? "",
