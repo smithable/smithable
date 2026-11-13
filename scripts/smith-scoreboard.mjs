@@ -19,7 +19,9 @@ import { repo } from "./dev-app.mjs";
 
 const args = process.argv.slice(2);
 const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
-const files = args.filter((a, i) => a.endsWith(".jsonl") && !["--note", "--set"].includes(args[i - 1]));
+const files = args.filter(
+  (a, i) => a.endsWith(".jsonl") && !["--note", "--set"].includes(args[i - 1]),
+);
 if (!files.length) throw new Error("Give the round's bench-smith .jsonl files.");
 // --set PATH: the round ran on another set (the held-out one): its labels and version are read from it.
 const set = JSON.parse(
