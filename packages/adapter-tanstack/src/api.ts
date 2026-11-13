@@ -1597,17 +1597,27 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     const row = (args.id === undefined && Array.isArray(args.ids) ? await found(kind, viewer, args.ids[0]) : await found(kind, viewer, args.id, "change")) as Record<string, any>;
     if (!allows(run.access, viewer, ${ownerOfKind})) throw new AccessDenied(true);
     if (!run.fits(row as never, viewer)) throw new BadInput("This cannot be done now.");
-    // What the action asks for, checked now: a missing or wrong value is said here, not at Confirm.
+    // What the action asks for, checked now (a missing or wrong value is said here, not at
+    // Confirm) and kept as checked: the card shows every value, and Confirm runs exactly these.
+    let input: Record<string, unknown> | undefined;
     if (run.asks) {
       try {
-        run.asks.parse(args.input ?? {});
+        input = run.asks.parse(args.input ?? {}) as Record<string, unknown>;
       } catch (error) {
         const issues = (error as { issues?: { path: unknown[]; message: string }[] }).issues ?? [];
         throw new BadInput(\`\${run.label} needs: \${issues.map((i) => \`\${i.path.join(".")} (\${i.message})\`).join(", ") || "other values"}.\`);
       }
     }
-    kept = { ...args, id: row.id };
-    card = { title: \`\${run.label} \${kind.label} \${String(row[kind.title] ?? row.id)}\`, changes: [] };
+    kept = { ...args, id: row.id, ...(input ? { input } : {}) };
+    // A value of a record the action adds is named "Model.field"; its own, by the field.
+    const asked = (key: string) => {
+      const [model, field] = key.includes(".") ? key.split(".") : [run.kind, key];
+      return labelOf(viewer, String(model), String(field));
+    };
+    card = {
+      title: \`\${run.label} \${kind.label} \${String(row[kind.title] ?? row.id)}\`,
+      changes: Object.entries(input ?? {}).map(([k, v]) => ({ label: asked(k), to: cardValue(v) })),
+    };
   } else {
     const kind = kindOf(args);
     const values = { ...((args.values ?? {}) as Record<string, unknown>) };

@@ -8490,17 +8490,19 @@ for (const [index, example] of examples.entries()) {
     // Ask proposing an action that asks for a value: a missing one is said when proposing, never
     // at Confirm (the reopen action just added asks for the update's message).
     if (example === "status")
-      step("Ask checks what an action asks for when it proposes it", () => {
-        const done = smithable(dir, "op", "setAssistant", "staff", "--may", "change");
-        if (done.code !== 0) throw new Error(done.out);
-        const check = join(dir, "src/ask-asks.test.ts");
-        writeFileSync(
-          check,
-          `import { expect, test, vi } from "vitest";
+      step(
+        "Ask checks what an action asks for when it proposes it, shows each value on the card and runs exactly those",
+        () => {
+          const done = smithable(dir, "op", "setAssistant", "staff", "--may", "change");
+          if (done.code !== 0) throw new Error(done.out);
+          const check = join(dir, "src/ask-asks.test.ts");
+          writeFileSync(
+            check,
+            `import { expect, test, vi } from "vitest";
 import { db } from "#/db";
 import * as schema from "#/db/schema";
 import { traced } from "#/kit/trace.server";
-import { ask } from "./generated/ask.server";
+import { ask, confirm } from "./generated/ask.server";
 
 const staff = { id: "ask-staff", name: "S", email: "", role: "staff" };
 const inRequest = async <T,>(run: () => Promise<T>): Promise<T> => {
@@ -8525,17 +8527,23 @@ test("what an action asks for is checked when it is proposed", async () => {
   const given = await inRequest(() => ask(staff, "reopen Asks check, the errors are back"));
   expect(given.steps[0].proposal).toBeTruthy();
   expect(given.steps[0].card?.title).toContain("Asks check");
+  // The card shows every value the run will be given, and Confirm runs exactly those (T821).
+  expect(given.steps[0].card?.changes).toEqual([{ label: expect.any(String), to: "Back again" }]);
+  db.insert(schema.user).values({ id: staff.id, name: "S", email: "ask-staff@example.com", role: "staff" }).onConflictDoNothing().run();
+  await inRequest(() => confirm(staff, given.steps[0].proposal as string, new Headers()));
+  expect(db.select().from(schema.incidentUpdates).all().some((u) => u.message === "Back again")).toBe(true);
 });
 `,
-        );
-        try {
-          run("pnpm", ["exec", "vitest", "run", "src/ask-asks.test.ts"], dir);
-        } finally {
-          rmSync(check);
-        }
-        const undone = smithable(dir, "undo");
-        if (undone.code !== 0) throw new Error(undone.out);
-      });
+          );
+          try {
+            run("pnpm", ["exec", "vitest", "run", "src/ask-asks.test.ts"], dir);
+          } finally {
+            rmSync(check);
+          }
+          const undone = smithable(dir, "undo");
+          if (undone.code !== 0) throw new Error(undone.out);
+        },
+      );
     // Models whose tables have the names of generated locals (rows, values): the generated code
     // reaches tables through the schema namespace, so nothing shadows them.
     if (example === "status")
