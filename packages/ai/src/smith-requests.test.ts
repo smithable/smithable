@@ -70,7 +70,14 @@ const project = (starter: string) => {
 function ruled(p: Proposal): { by: string; operations?: string[] } | undefined {
   if (p.kind === "failed") return undefined;
   if (p.kind === "answer")
-    return { by: p.generator === "small talk" ? "smalltalk" : "spec-question" };
+    return {
+      by:
+        p.generator === "small talk"
+          ? "smalltalk"
+          : p.generator === "same page"
+            ? `same page: ${p.text}`
+            : "spec-question",
+    };
   if (p.kind === "change") return { by: "change", operations: p.operations.map((o) => o.op) };
   if (p.kind === "none") return { by: "none" };
   return { by: p.kind };
@@ -80,11 +87,19 @@ function ruled(p: Proposal): { by: string; operations?: string[] } | undefined {
 function right(r: Request, got: { by: string; operations?: string[] }): boolean {
   if (got.by === "smalltalk") return r.kind === "smalltalk";
   if (got.by === "spec-question") return r.kind === "spec-question";
+  // The app's own page pointed to, instead of a second one (T760).
+  if (got.by.startsWith("same page: "))
+    return (
+      typeof r.outcome.existingPage === "string" && got.by.includes(`"${r.outcome.existingPage}"`)
+    );
   // A rule's "cannot as asked" is right only where nothing was to be added (already there).
   if (got.by === "none")
     return (r.kind === "change" || r.kind === "two-things") && !r.outcome.operations?.length;
   if (got.by === "change") {
     if (r.kind !== "change" && r.kind !== "two-things") return false;
+    // A plan that must hold these, whatever else it has (T760: a page's access).
+    const include = r.outcome.operationsInclude as string[] | undefined;
+    if (include) return include.every((op) => got.operations?.includes(op));
     const wanted = r.outcome.operations ?? [];
     return (
       wanted.length > 0 &&

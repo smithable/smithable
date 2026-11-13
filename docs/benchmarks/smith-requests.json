@@ -4669,6 +4669,54 @@
         "mustNot": []
       },
       "noModel": false
+    },
+    {
+      "id": "bk-instructors-for-staff",
+      "starter": "booking",
+      "text": "add a page where staff can see the instructors",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "operationsInclude": [
+          "grant"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-instructors-for-staff",
+      "starter": "booking",
+      "text": "lägg till en sida där personalen kan se instruktörerna",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operationsInclude": [
+          "grant"
+        ]
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-staff-today-again",
+      "starter": "booking",
+      "text": "a page of today's bookings for staff",
+      "kind": "change",
+      "language": "en",
+      "outcome": {
+        "existingPage": "bookings"
+      },
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-staff-today-again",
+      "starter": "booking",
+      "text": "en sida med dagens bokningar för personalen",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "existingPage": "bookings"
+      },
+      "noModel": false
     }
   ]
 }

@@ -1,0 +1,4 @@
+{"setup":"haiku","id":"bk-instructors-for-staff","kind":"change","language":"en","byRule":false,"got":"question","right":false,"why":"question","tokens":53358,"cost":0.05391,"ms":2144}
+{"setup":"haiku","id":"bk-sv-instructors-for-staff","kind":"change","language":"sv","byRule":false,"got":"question","right":false,"why":"question","tokens":45645,"cost":0.046261,"ms":1984}
+{"setup":"haiku","id":"bk-staff-today-again","kind":"change","language":"en","byRule":false,"got":"answer","right":true,"why":"answer","tokens":53007,"cost":0.053579,"ms":2469}
+{"setup":"haiku","id":"bk-sv-staff-today-again","kind":"change","language":"sv","byRule":false,"got":"question","right":true,"why":"question","tokens":45962,"cost":0.046554,"ms":2193}

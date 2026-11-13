@@ -216,11 +216,24 @@ async function judge(r, text) {
 async function scored(r, p) {
   const kind = r.kind;
   if (p.kind === "failed") return { right: false, why: p.message };
+  // The app's own page, pointed to or asked about, instead of a second one (T760).
+  if (r.outcome.existingPage)
+    return {
+      right:
+        p.kind === "question" || (p.kind === "answer" && p.text.includes(r.outcome.existingPage)),
+      why: p.kind,
+    };
   if (kind === "change" || kind === "two-things") {
     // "Cannot as asked" is right only where nothing was to be added (already there).
     if (p.kind === "none")
       return { right: !(r.outcome.operations ?? []).length, why: `none: ${p.reason}` };
     if (p.kind !== "change") return { right: false, why: `${p.kind}` };
+    // A plan that must hold these, whatever else it has (T760: a page's access).
+    if (r.outcome.operationsInclude) {
+      const ops = p.operations.map((o) => o.op);
+      const missing = r.outcome.operationsInclude.filter((op) => !ops.includes(op));
+      return { right: !missing.length, why: missing.length ? `no ${missing.join(", ")}` : "" };
+    }
     const got = [...new Set(p.operations.map((o) => o.op))].sort().join();
     const wanted = [...new Set(r.outcome.operations ?? [])].sort().join();
     return { right: got === wanted, why: got === wanted ? "" : `${got} for ${wanted}` };

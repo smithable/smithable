@@ -24,6 +24,7 @@ import {
   matchRequest,
   refusalOf,
 } from "@smithable/index";
+import { checkAudience } from "./audience.js";
 import {
   completeJson,
   type Paused,
@@ -50,6 +51,8 @@ export type Proposal =
       usage: Usage[];
       /** Set when no model was needed: the wording rule that read the request (tier 0). */
       generator?: string;
+      /** What the person should know about the plan, said with it (T760: who can open a page). */
+      note?: string;
     }
   | { kind: "question"; question: string; options: string[]; usage: Usage[] }
   /** A question about the app, answered rather than applied (docs/design/studio-v2.md §4). */
@@ -274,13 +277,19 @@ export async function proposeChange(options: {
     if (checked.ok && unchanged(files, checked.files))
       return { kind: "none", reason: NOTHING, usage };
     const refused = checked.ok ? options.check?.(files, checked.files, checked.effects) : undefined;
-    if (checked.ok && !refused)
+    // Who the new pages are for (T760): a missing access goes on to a model, which can add it.
+    const audience =
+      checked.ok && !refused ? checkAudience(files, checked.files, options.request) : undefined;
+    if (audience && "answer" in audience)
+      return { kind: "answer", text: audience.answer, concepts: [], usage, generator: "same page" };
+    if (checked.ok && !refused && !(audience && "problem" in audience))
       return {
         kind: "change",
         operations: checked.operations,
         files: checked.files,
         usage,
         generator: phrased.rule,
+        ...(audience && "note" in audience ? { note: audience.note } : {}),
       };
   }
   // Said for the maker: what is missing and where to read how (the stranger walk, 2026-10-07).
@@ -346,9 +355,27 @@ export async function proposeChange(options: {
       const refused = checked.ok
         ? options.check?.(files, checked.files, checked.effects)
         : undefined;
-      if (checked.ok && !refused)
-        return { kind: "change", operations: checked.operations, files: checked.files, usage };
-      problem = checked.ok ? (refused as string) : checked.message;
+      // Who the new pages are for (T760): the app's own page, or the access the request named.
+      const audience =
+        checked.ok && !refused ? checkAudience(files, checked.files, options.request) : undefined;
+      if (audience && "answer" in audience)
+        return {
+          kind: "answer",
+          text: audience.answer,
+          concepts: [],
+          usage,
+          generator: "same page",
+        };
+      const shut = audience && "problem" in audience ? audience.problem : undefined;
+      if (checked.ok && !refused && !shut)
+        return {
+          kind: "change",
+          operations: checked.operations,
+          files: checked.files,
+          usage,
+          ...(audience && "note" in audience ? { note: audience.note } : {}),
+        };
+      problem = checked.ok ? ((refused ?? shut) as string) : checked.message;
       prompt = `${user}\n\nYour previous answer was:\n${JSON.stringify(answer)}\nIt cannot be applied: ${problem}\nAnswer again.`;
     }
   }

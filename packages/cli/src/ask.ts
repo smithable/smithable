@@ -377,6 +377,7 @@ export async function ask(
   io.out("Proposed change:\n");
   for (const [i, o] of proposal.operations.entries())
     io.out(`  ${i + 1}. ${o.description}${o.destructive ? " (loses data)" : ""}\n`);
+  if (proposal.note) io.out(`${proposal.note}\n`);
   const confirmed = await confirm(io, "Apply it?", flags.yes);
   if (confirmed !== true) {
     proposalOutcome(dir, id, "declined");
