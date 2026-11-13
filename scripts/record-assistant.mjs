@@ -33,8 +33,24 @@ const size = { width: 1280, height: 720 };
 mkdirSync(opts.out, { recursive: true });
 
 // What the receptionist asks: one thing reception may do, one it may not.
-const ask =
-  "Add a Yin class this Saturday at 10:00 with Emma Lindqvist. Also change Emma's bio to say she is away in December.";
+// The day is named, never "this Saturday": on a Saturday that is ambiguous, and Claude rightly asks
+// which one instead of adding it (a take on 2026-11-14). The next Saturday after today, in Mariehamn.
+const saturday = (() => {
+  const day = new Date();
+  do day.setDate(day.getDate() + 1);
+  while (
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Mariehamn", weekday: "long" }).format(
+      day,
+    ) !== "Saturday"
+  );
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Mariehamn",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(day);
+})();
+const ask = `Add a Yin class on ${saturday} at 10:00 with Emma Lindqvist. Also change Emma's bio to say she is away in December.`;
 
 if (opts["dry-run"]) {
   console.log(`A take would:
