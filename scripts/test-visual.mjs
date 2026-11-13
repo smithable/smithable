@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { chromium } from "playwright";
@@ -295,13 +296,21 @@ function domain() {
     db.close();
   }
 }
+// The running server's stop, from its spawn on, for the signal handlers below.
+let running;
 async function serve() {
   const env = Object.fromEntries(
     ["PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "PNPM_HOME"]
       .filter((key) => process.env[key] !== undefined)
       .map((key) => [key, process.env[key]]),
   );
-  const server = spawn("pnpm", ["exec", "vite", "dev", "--port", String(port), "--strictPort"], {
+  // Vite is started by node itself, not through `pnpm exec`: pnpm puts its child in a process
+  // group of its own, so killing pnpm's group left Vite running after the job (an orphan held
+  // about 0.5 GB on the CI host for 17 hours). Now the spawned process is Vite, the leader of its
+  // own group, and stop() reaches it and everything it started.
+  const vite = createRequire(join(dir, "package.json")).resolve("vite/package.json");
+  const bin = join(dirname(vite), JSON.parse(readFileSync(vite, "utf8")).bin.vite);
+  const server = spawn(process.execPath, [bin, "dev", "--port", String(port), "--strictPort"], {
     cwd: dir,
     detached: true,
     env: { ...env, PORT: String(port), TZ: "UTC" },
@@ -311,6 +320,7 @@ async function serve() {
   server.stdout.on("data", (data) => (log += data));
   server.stderr.on("data", (data) => (log += data));
   const stop = async () => {
+    if (running === stop) running = undefined;
     try {
       process.kill(-server.pid, "SIGTERM");
     } catch {}
@@ -324,6 +334,7 @@ async function serve() {
       } catch {}
     }
   };
+  running = stop;
   for (let attempt = 0; attempt < 240 * P; attempt++) {
     try {
       if ((await fetch(`${base}/health`, { signal: AbortSignal.timeout(2000) })).ok) return stop;
@@ -334,6 +345,18 @@ async function serve() {
   await stop();
   throw new Error(`Visual app did not start: ${log.slice(-3000)}`);
 }
+// A cancelled job (the runner sends SIGINT, then SIGTERM) skips the finally below; stop the
+// server on the way out all the same.
+for (const [signal, code] of [
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+  ["SIGHUP", 129],
+])
+  process.once(signal, () => {
+    const done = () => process.exit(code);
+    Promise.resolve(running?.()).then(done, done);
+    setTimeout(done, 5000).unref();
+  });
 const browser = await chromium.launch();
 let stop,
   context,
@@ -570,9 +593,10 @@ try {
   console.error(`Visual fixture retained: ${dir}; evidence ${output}`);
   throw error;
 } finally {
-  await context?.close();
+  // Each step on its own: a failing close must not leave the server running.
+  await context?.close().catch(() => {});
   await stop?.();
-  await browser.close();
+  await browser.close().catch(() => {});
 }
 if (passed && owned && !process.env.KEEP_VISUAL_APP)
   rmSync(dirname(dir), { recursive: true, force: true });
