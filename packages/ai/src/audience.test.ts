@@ -38,6 +38,9 @@ test("the roles a request names, by their names, in its words", () => {
   expect(rolesNamed(auth, "a page of today's bookings for staff")).toEqual(["staff"]);
   expect(rolesNamed(auth, "a list the members can see")).toEqual(["member"]);
   expect(rolesNamed(auth, "a page for the admins")).toEqual([]);
+  // A role's own forms, never a longer word that starts with it.
+  expect(rolesNamed(auth, "en sida för memberna")).toEqual(["member"]);
+  expect(rolesNamed(auth, "show the membership level")).toEqual([]);
 });
 
 test("a page for a named role that the role cannot open goes back, with what is missing", () => {
@@ -61,5 +64,15 @@ test("a page nobody was named for, which only administrators open, is said so", 
   const check = checkAudience(files, page(), "a page of all bookings");
   expect(check && "note" in check && check.note).toMatch(
     /Only administrators can open the page today/,
+  );
+});
+
+test("a page left out of a named role's reach is repaired before it is compared with the app's pages", () => {
+  // The instructors page opens for administrators only; a second one, for nobody else, is not
+  // "the same page" when the request is for staff: the access is what is missing.
+  const after = apply(files, "addPage", { page: "teachers", model: "Instructor" });
+  const check = checkAudience(files, after, "a page of the instructors for staff");
+  expect(check && "problem" in check && check.problem).toMatch(
+    /staff cannot open the new page teachers/,
   );
 });

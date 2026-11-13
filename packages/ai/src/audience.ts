@@ -1,5 +1,5 @@
 // Who a new page is for, checked by rule before a plan is proposed (T760), whichever tier made it:
-// a request that names a role must leave that role able to open the pages it adds; a page only the
+// a request that names a role must leave that role able to open a page it adds; a page only the
 // administrator can open is said so; and a page that is one the app already has (the same kind of
 // record, the same filter, for the same people) is answered with that page instead.
 import {
@@ -7,7 +7,6 @@ import {
   type PageIR,
   type ProjectFiles,
   pageAccess,
-  type SpecIR,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
@@ -30,10 +29,14 @@ const parsed = (files: ProjectFiles) => {
   return { ir, auth };
 };
 
+/** A role's name as a request may write it: itself, a plural, or a Swedish definite or plural form. */
+const ENDINGS = "(?:s|es|en|et|er|erna|ens|arna|orna|na)?";
+
 /**
  * The roles a request names, by their own names (the spec's identifiers; a role has no label of
- * its own): a word that is the name or starts with it (plural "staffs", Swedish "personalen").
- * Never the administrator, who opens everything anyway.
+ * its own): the name, or the name with a plural or Swedish ending ("staffs", "personalen"), never a
+ * longer word that merely starts with it ("membership"). Never the administrator, who opens
+ * everything anyway.
  */
 export function rolesNamed(auth: AuthIR, request: string): string[] {
   const words = request.toLowerCase().match(/\p{L}+/gu) ?? [];
@@ -41,8 +44,8 @@ export function rolesNamed(auth: AuthIR, request: string): string[] {
     .map((r) => r.name)
     .filter((name) => name !== "admin")
     .filter((name) => {
-      const role = name.toLowerCase();
-      return words.some((w) => w === role || (role.length >= 4 && w.startsWith(role)));
+      const form = new RegExp(`^${name.toLowerCase()}${ENDINGS}$`, "u");
+      return words.some((w) => form.test(w));
     });
 }
 
@@ -52,13 +55,21 @@ const another = (request: string) =>
     request,
   );
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+/** A value as JSON with its keys sorted, so the same filter in another order is the same. */
+const sorted = (value: unknown): string =>
+  JSON.stringify(
+    value && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)))
+      : (value ?? null),
+  );
 
-/** Who opens a page, as a sorted list (or "public"). */
+/** Who opens a page: everyone, or these roles (sorted). */
 const audience = (page: PageIR, auth: AuthIR) => {
   const access = pageAccess(page, auth);
-  return access.public ? ["public"] : [...access.roles].sort();
+  return { everyone: access.public, roles: [...access.roles].sort() };
 };
+const sameAudience = (a: ReturnType<typeof audience>, b: ReturnType<typeof audience>) =>
+  a.everyone === b.everyone && a.roles.join() === b.roles.join();
 
 /** The rule's reading of a plan's new pages against the request and the app before it. */
 export function checkAudience(
@@ -73,43 +84,41 @@ export function checkAudience(
   const had = new Set(was.ir.pages.map((p) => p.id));
   const added = now.ir.pages.filter((p) => !had.has(p.id));
   if (!added.length) return undefined;
-  // 1. A page that is one the app already has: that page, unless another was asked for.
+  const opens = (p: PageIR, role: string) => {
+    const who = audience(p, auth);
+    return who.everyone || who.roles.includes(role);
+  };
+  // 1. Each role the request names opens a page it adds (first, so that a plan which left a
+  // role out is repaired before it is compared with the app's pages).
+  const named = rolesNamed(auth, request);
+  const shut = named.filter((role) => !added.some((p) => opens(p, role)));
+  if (shut.length)
+    return {
+      problem: `The request is for ${shut.join(" and ")}, but ${shut.join(" and ")} cannot open ${added.map((p) => `the new page ${p.id}`).join(" or ")}: add it to their pages (grant <role> pages <the role's pages and the new one>).`,
+    };
+  // 2. A page that is one the app already has: that page, unless another was asked for.
   if (!another(request) && was.auth) {
+    const old = was.auth;
     for (const page of added) {
       if (page.pattern.kind !== "crud") continue;
       const model = page.pattern.model;
-      const twin = (was.ir as SpecIR).pages.find(
+      const twin = was.ir.pages.find(
         (p) =>
           p.pattern.kind === "crud" &&
           p.pattern.model === model &&
-          same(p.defaultFilter, page.defaultFilter) &&
-          same(audience(p, was.auth as AuthIR), audience(page, auth)),
+          sorted(p.defaultFilter) === sorted(page.defaultFilter) &&
+          sameAudience(audience(p, old), audience(page, auth)),
       );
       if (twin)
         return {
-          answer: `The app has that page already: "${twin.id}" (${twin.route}) lists the same records${twin.defaultFilter ? ` with the same filter` : ""}, for the same people. Open it from the menu, or ask for another page if you want a second one.`,
+          answer: `The app has that page already: "${twin.id}" (${twin.route}) lists the same records${twin.defaultFilter ? " with the same filter" : ""}, for the same people. Open it from the menu, or ask for another page if you want a second one.`,
         };
     }
   }
-  // 2. A role the request names opens every page it adds.
-  const named = rolesNamed(auth, request);
-  const shut = named.flatMap((role) =>
-    added
-      .filter((p) => !audience(p, auth).includes(role) && !audience(p, auth).includes("public"))
-      .map((p) => ({ role, page: p.id })),
-  );
-  if (shut.length)
-    return {
-      problem: `The request is for ${[...new Set(shut.map((s) => s.role))].join(" and ")}, but ${shut
-        .map((s) => `${s.role} cannot open the new page ${s.page}`)
-        .join(
-          "; ",
-        )}: add the page to their pages (grant <role> pages <the role's pages and the new one>).`,
-    };
   // 3. Nobody named: a page only the administrator opens is said so, not guessed at.
   const adminOnly = added.filter((p) => {
     const who = audience(p, auth);
-    return !who.includes("public") && who.every((r) => r === "admin");
+    return !who.everyone && who.roles.length > 0 && who.roles.every((r) => r === "admin");
   });
   if (adminOnly.length)
     return {
