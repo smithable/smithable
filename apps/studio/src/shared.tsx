@@ -459,6 +459,7 @@ export function Trace({
   plugins = [],
   onUndo,
   onMilestone,
+  onSee,
   openAt,
 }: {
   entries: TraceEntry[];
@@ -471,6 +472,8 @@ export function Trace({
   onUndo?: (ids: string[]) => void;
   /** Names a change as a milestone, or (an empty name) unnames it (A 232). */
   onMilestone?: (id: string, name: string) => Promise<void>;
+  /** Opens the app as it was at a change, as a copy (old-version-preview.md §4). */
+  onSee?: (id: string) => void;
 }) {
   const [open, setOpen] = useState<string>();
   const [onlyMilestones, setOnlyMilestones] = useState(false);
@@ -597,6 +600,11 @@ export function Trace({
                     <p data-undo-restores className="text-xs text-muted">
                       {restores(e, entries)}
                     </p>
+                  )}
+                  {onSee && e.id !== entries[0]?.id && (
+                    <Button variant="ghost" className="h-7" onClick={() => onSee(e.id)}>
+                      See this version
+                    </Button>
                   )}
                   {onMilestone && !e.isUndo && !e.undone && (
                     <MilestoneName

@@ -48,6 +48,7 @@ import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
 import { milestones, nameMilestone } from "./milestones.js";
 import { openQuestions } from "./new.js";
+import { closeOldVersion, openOldVersion, openVersion } from "./old-version.js";
 import { projectFiles, runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
@@ -692,6 +693,11 @@ export async function studio(
     }
   };
   startApp();
+  // An old version a crash left open is removed before anything else (old-version-preview.md §3.6).
+  closeOldVersion(dir);
+  process.once("exit", () => closeOldVersion(dir));
+  /** The old version being prepared, so asking for another cancels it. */
+  let opening: string | undefined;
   // The first operation then finds its tools loaded.
   void warmTools(dir);
 
@@ -1054,6 +1060,43 @@ export async function studio(
       }
       // The app card, written from the spec files as `smithable card` writes it (A 233).
       if (url.pathname === "/api/card" && req.method === "GET") return json(cardTexts(dir));
+      // An old version, as a copy (old-version-preview.md): open one, close it, or say which is.
+      if (url.pathname === "/api/old-version") {
+        if (req.method === "DELETE") {
+          opening = undefined;
+          closeOldVersion(dir);
+          return json({ ok: true });
+        }
+        if (req.method === "GET") {
+          const open = openVersion(dir);
+          return json(open ? { ...open, url: `http://localhost:${open.port}` } : {});
+        }
+        if (req.method === "POST") {
+          const { commit } = await body();
+          if (typeof commit !== "string" || !/^[0-9a-f]{7,40}$/.test(commit))
+            return json({ ok: false, message: "There is no such change." }, 400);
+          opening = commit;
+          try {
+            const open = await openOldVersion(dir, commit, { lookKey, log });
+            // Another was asked for meanwhile: this one is not what the person waits for.
+            if (opening !== commit) {
+              closeOldVersion(dir);
+              return json({ ok: false, message: "Another version was asked for." }, 409);
+            }
+            const address = `http://localhost:${open.port}`;
+            await warmPreview(open.port, log);
+            return json({
+              ok: true,
+              commit: open.commit,
+              url: address,
+              data: open.data,
+              pictures: open.pictures,
+            });
+          } catch (error) {
+            return json({ ok: false, message: (error as Error).message }, 500);
+          }
+        }
+      }
       if (url.pathname === "/api/release-review" && req.method === "GET")
         return json(releaseReview(dir));
       if (url.pathname === "/api/logs") return json(logs);
