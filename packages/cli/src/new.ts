@@ -388,16 +388,27 @@ export async function create(
     return 1;
   }
   if (description) {
-    io.out(`Starting from the ${name} starter.\n`);
-    if (starter === undefined) {
+    // No model set up (T778): the starter as it is, built here and kept as private as the
+    // description below (keptPrivate), rather than a refusal that sends the person to build the
+    // starter alone, public as it is.
+    const starterOnly = providers.length === 0 && !website;
+    io.out(
+      starterOnly
+        ? `No model is set up: the ${name} starter as it is, for your description.\n`
+        : `Starting from the ${name} starter.\n`,
+    );
+    // What a public starter means, said before the draft; without one, what was done is said with
+    // the assumptions below.
+    if (starter === undefined && !starterOnly) {
       const note = publicNote(name, description);
       if (note) io.out(`${note}\n`);
     }
     // Drafting as operations (an empty app, one checked operation at a time; the default, see
     // docs/benchmarks/draft-modes-*.md) or as whole files adapted from the starter.
     options.onStage?.("drafting");
-    const draft =
-      process.env.SMITHABLE_DRAFT === "files"
+    const draft: Awaited<ReturnType<typeof draftProject>> = starterOnly
+      ? { kind: "draft", files, usage: [] }
+      : process.env.SMITHABLE_DRAFT === "files"
         ? await draftProject({ description, starter: files, providers })
         : await draftProjectByOperations({
             description,
