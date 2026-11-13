@@ -1123,7 +1123,8 @@ export async function studio(
             const address = open.url;
             await warmPreview(open.port, log);
             // Another was asked for, or it was closed, while it started: not what is waited for.
-            if (openVersion(dir)?.commit !== open.commit || open.child.exitCode !== null)
+            const gone = open.child.exitCode !== null || open.child.signalCode !== null;
+            if (openVersion(dir)?.commit !== open.commit || gone)
               return json({ ok: false, message: SUPERSEDED }, 409);
             return json({
               ok: true,

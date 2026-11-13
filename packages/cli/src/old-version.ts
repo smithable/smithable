@@ -189,7 +189,10 @@ function run(
     child.stderr?.on("data", (d) => {
       err = `${err}${d}`.slice(-4000);
     });
-    child.once("error", fail);
+    child.once("error", (error) => {
+      children.delete(child);
+      fail(signal.aborted ? signal.reason : error);
+    });
     child.once("close", (code) => {
       children.delete(child);
       if (signal.aborted) fail(signal.reason);
@@ -216,24 +219,32 @@ export async function openOldVersion(
   const children = new Set<ChildProcess>();
   running.set(dir, { abort, children });
   const { signal } = abort;
-  const sha = git(dir, ["rev-parse", "--verify", `${commit}^{commit}`]);
-  const project = createHash("sha256").update(realpathSync(dir)).digest("hex").slice(0, 12);
-  const folder = join(base(), `${project}-${sha.slice(0, 12)}`);
-  const home = `${folder}.home`;
-  const port = await freePort();
-  signal.throwIfAborted();
-  // Recorded before anything is made, so a crash or a second open finds it and removes it.
-  const record: OldVersion = { commit: sha, folder, home, port, data: "samples", pictures: "none" };
-  mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
-  writeFileSync(recordPath(dir), JSON.stringify(record));
-  rmSync(folder, { recursive: true, force: true });
-  rmSync(home, { recursive: true, force: true });
-  mkdirSync(base(), { recursive: true });
-  git(dir, ["worktree", "add", "--detach", folder, sha]);
-  mkdirSync(home, { recursive: true });
-  const url = `http://${OLD_HOST}:${port}`;
-  const dataDir = join(folder, "data");
+  // Everything from here is undone by closing when it fails, the worktree's making included.
   try {
+    const sha = git(dir, ["rev-parse", "--verify", `${commit}^{commit}`]);
+    const project = createHash("sha256").update(realpathSync(dir)).digest("hex").slice(0, 12);
+    const folder = join(base(), `${project}-${sha.slice(0, 12)}`);
+    const home = `${folder}.home`;
+    const port = await freePort();
+    signal.throwIfAborted();
+    // Recorded before anything is made, so a crash or a second open finds it and removes it.
+    const record: OldVersion = {
+      commit: sha,
+      folder,
+      home,
+      port,
+      data: "samples",
+      pictures: "none",
+    };
+    mkdirSync(join(dir, "data", ".smithable"), { recursive: true });
+    writeFileSync(recordPath(dir), JSON.stringify(record));
+    rmSync(folder, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+    mkdirSync(base(), { recursive: true });
+    git(dir, ["worktree", "add", "--detach", folder, sha]);
+    mkdirSync(home, { recursive: true });
+    const url = `http://${OLD_HOST}:${port}`;
+    const dataDir = join(folder, "data");
     // The project's own store, asked as the project runs pnpm (its environment, not the copy's).
     const store = await run("pnpm", ["store", "path"], dir, process.env, children, signal).catch(
       (error) => {
