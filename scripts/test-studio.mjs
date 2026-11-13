@@ -343,6 +343,24 @@ try {
     },
   );
   await step(
+    "the preview shows the app as a phone or a tablet would, and keeps that choice after a reload",
+    async () => {
+      const frame = page.locator('iframe[title="App preview"]');
+      const width = async () => (await frame.boundingBox())?.width ?? 0;
+      const pick = (name) =>
+        page.getByRole("group", { name: "Preview width" }).getByRole("button", { name }).click();
+      const full = await width();
+      await pick("Phone");
+      if ((await width()) > 392) throw new Error(`the phone width is ${await width()} px`);
+      await page.reload();
+      await frame.waitFor();
+      if ((await width()) > 392) throw new Error("the phone width was not kept after a reload");
+      await pick("Desktop");
+      if (Math.abs((await width()) - full) > 2)
+        throw new Error("Desktop did not give the pane back");
+    },
+  );
+  await step(
     "the header has How to publish and Help, which open the docs (finding 14)",
     async () => {
       const header = page.locator("header").first();

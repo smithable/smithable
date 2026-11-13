@@ -21,6 +21,21 @@ export const keptPage = () => {
   }
 };
 
+type PreviewWidth = "desktop" | "tablet" | "phone";
+const WIDTH_KEY = "smithable:preview-width";
+/** A tablet's and a phone's width in CSS pixels, as the app's own breakpoints see them. */
+const WIDTHS: Record<Exclude<PreviewWidth, "desktop">, number> = { tablet: 820, phone: 390 };
+const WIDTH_LABELS: Record<PreviewWidth, string> = {
+  desktop: "Desktop",
+  tablet: "Tablet",
+  phone: "Phone",
+};
+const WIDTH_TITLES: Record<PreviewWidth, string> = {
+  desktop: "The app as wide as this pane",
+  tablet: "The app as a tablet shows it (820 px)",
+  phone: "The app as a phone shows it (390 px)",
+};
+
 export function Preview({
   url,
   version,
@@ -268,6 +283,22 @@ export function Preview({
   }, [go]);
   // Updating until the new frame is up: the last one stays meanwhile, dimmed, then is replaced.
   const reloading = updating || Boolean(stale);
+  // How wide the app is shown (T216 a): the pane's width as a rule, or a tablet's or a phone's, so
+  // a narrow pane beside Smith is not taken for the app; kept for this browser.
+  const [width, setWidth] = useState<PreviewWidth>(() => {
+    try {
+      const kept = localStorage.getItem(WIDTH_KEY);
+      return kept === "tablet" || kept === "phone" ? kept : "desktop";
+    } catch {
+      return "desktop";
+    }
+  });
+  const showAt = (next: PreviewWidth) => {
+    setWidth(next);
+    try {
+      localStorage.setItem(WIDTH_KEY, next);
+    } catch {}
+  };
   return (
     <Panel
       title="Preview"
@@ -276,6 +307,24 @@ export function Preview({
       actions={
         <div className="flex items-center gap-2">
           {reloading && <span className="text-xs text-quiet">Updating…</span>}
+          <fieldset className="flex items-center rounded-md border border-line">
+            <legend className="sr-only">Preview width</legend>
+            {(["desktop", "tablet", "phone"] as const).map((w) => (
+              <button
+                key={w}
+                type="button"
+                aria-pressed={width === w}
+                title={WIDTH_TITLES[w]}
+                onClick={() => showAt(w)}
+                className={cx(
+                  "h-7 px-2 text-xs first:rounded-l-md last:rounded-r-md",
+                  width === w ? "bg-accent-soft font-medium" : "hover:bg-subtle",
+                )}
+              >
+                {WIDTH_LABELS[w]}
+              </button>
+            ))}
+          </fieldset>
           {onSelecting && (
             <Button
               variant={selecting ? "primary" : "ghost"}
@@ -399,7 +448,9 @@ export function Preview({
             </div>
           ) : (
             <div
-              className="relative h-full"
+              data-preview-width={width}
+              className="relative mx-auto h-full"
+              style={width === "desktop" ? undefined : { maxWidth: WIDTHS[width] }}
               onPointerEnter={() => {
                 over.current = true;
               }}
