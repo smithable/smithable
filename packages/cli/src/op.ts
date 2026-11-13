@@ -38,6 +38,7 @@ import {
   YamlEditor,
 } from "@smithable/core";
 import {
+  countOutside,
   countValue,
   countValues,
   pruneSnapshots,
@@ -492,6 +493,10 @@ async function applyAndCheckpoint(
   const required = requiredButEmpty(dir, before, after, result.effects);
   // A required field over empty values is a consequence too, still refused (§4).
   if (required) v.consequences.push({ about: "records", says: required, undo: "full" });
+  // Records already outside a field's narrowed bounds (T758): said with the change, not refused;
+  // they keep their values until edited, when the new bounds apply.
+  for (const says of outsideBounds(dir, before, after))
+    v.consequences.push({ about: "records", says, undo: "full" });
   const blocker = required ?? choicesInUse(dir, before, after, result.effects);
   lap("required but empty");
   if (blocker) {
@@ -882,6 +887,55 @@ export function actionNote(action: string): string {
   import { sendMail } from "#/kit/mail";
   await sendMail({ to: "orders@example.com", subject: "New order", text: JSON.stringify(input) });
 `;
+}
+
+/**
+ * The records a narrowed bound leaves outside, for each field whose min or max now lets less in
+ * (T758): a number by its value (an amount in its stored cents), a text by its length.
+ */
+export function outsideBounds(dir: string, before: SpecIR, after: SpecIR): string[] {
+  const told: string[] = [];
+  for (const model of after.models)
+    for (const field of model.fields) {
+      if (field.min === undefined && field.max === undefined) continue;
+      const old = before.models
+        .find((m) => m.name === model.name)
+        ?.fields.find((f) => f.name === field.name);
+      if (!old) continue;
+      // Only the bounds that now let less in: a record already outside an unchanged one is not
+      // this change's doing.
+      const min =
+        field.min !== undefined && (old.min === undefined || field.min > old.min)
+          ? field.min
+          : undefined;
+      const max =
+        field.max !== undefined && (old.max === undefined || field.max < old.max)
+          ? field.max
+          : undefined;
+      if ((min === undefined && max === undefined) || field.type.kind !== "scalar") continue;
+      const name = field.type.name;
+      const text = ["string", "text", "markdown"].includes(name);
+      const scale = name === "money" ? 100 : 1;
+      if (!text && !["int", "decimal", "money"].includes(name)) continue;
+      const { table, column } = columnOf(model.name, field.name);
+      const n = countOutside(dir, table, column, {
+        // An amount in its stored cents, rounded (0.14 * 100 is 14.000000000000002).
+        ...(min !== undefined ? { min: Math.round(min * scale) } : {}),
+        ...(max !== undefined ? { max: Math.round(max * scale) } : {}),
+        length: text,
+      });
+      if (!n) continue;
+      const bounds = [
+        min !== undefined ? `${text ? "shorter than" : "below"} ${min}` : "",
+        max !== undefined ? `${text ? "longer than" : "above"} ${max}` : "",
+      ]
+        .filter(Boolean)
+        .join(" or ");
+      told.push(
+        `${n} ${n === 1 ? model.name.toLowerCase() : plural(model.name).toLowerCase()} already ${n === 1 ? "has" : "have"} ${field.name} ${bounds}${text ? " characters" : ""}; ${n === 1 ? "it keeps" : "they keep"} it until edited, when the new bounds apply.`,
+      );
+    }
+  return told;
 }
 
 /**
