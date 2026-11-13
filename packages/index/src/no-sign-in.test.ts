@@ -39,3 +39,16 @@ test("no sign-in: what anyone can use, and that nothing else works for anyone un
   // With sign-in, nothing to say.
   expect(noSignIn(ir, { ...open, signIn: { providers: ["email"] } } as AuthIR)).toBeUndefined();
 });
+
+test("what anyone can add is said too, and the summary does not repeat it", () => {
+  const withForm = auth(
+    "signIn: none\npublic: { pages: [posts], read: [{ Post: { where: { status: published } } }], create: [Note] }\n",
+  );
+  expect(noSignIn(ir, withForm)).toBe(
+    "This app has no sign-in. Anyone with the address can use the Posts page, read posts (some of them) and add notes; nothing else can be used by anyone, you included, until you add sign-in (smithable op setProviders email).",
+  );
+  const sentences = summarize(ir, withForm, emptyContent()).find(
+    (s) => s.concept === "auth",
+  )?.sentences;
+  expect(sentences?.some((s) => s.startsWith("Open to anyone"))).toBe(false);
+});

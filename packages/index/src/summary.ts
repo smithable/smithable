@@ -773,14 +773,20 @@ export function noSignIn(
     const model = modelNamed(name);
     return model ? [`${many(model)}${auth.public.readWhere[name] ? " (some of them)" : ""}`] : [];
   });
+  const adds = auth.public.create.flatMap((name) => {
+    const model = modelNamed(name);
+    return model ? [many(model)] : [];
+  });
   const open =
-    pages.length || kinds.length
+    pages.length || kinds.length || adds.length
       ? `Anyone with the address can ${[
           pages.length ? `use the ${list(pages)} page${pages.length > 1 ? "s" : ""}` : "",
           kinds.length ? `read ${list(kinds)}` : "",
+          adds.length ? `add ${list(adds)}` : "",
         ]
           .filter(Boolean)
-          .join(" and ")}; nothing else`
+          .join(", ")
+          .replace(/, ([^,]*)$/, " and $1")}; nothing else`
       : "Nothing in it";
   return `This app has no sign-in. ${open} can be used by anyone, you included, until you add sign-in (smithable op setProviders email).`;
 }
@@ -820,7 +826,8 @@ function access(auth: AuthIR, closed?: string): string[] {
     }),
     ...auth.public.create.map((m) => `adding ${humanize(plural(m)).toLowerCase()}`),
   ];
-  if (open.length) sentences.push(`Open to anyone without signing in: ${list(open)}.`);
+  // With no sign-in, the sentence above says it all (T769).
+  if (open.length && !closed) sentences.push(`Open to anyone without signing in: ${list(open)}.`);
   return sentences;
 }
 

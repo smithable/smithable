@@ -8,7 +8,14 @@ import {
 } from "@smithable/ai";
 import { validateAuth, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
-import { keptPrivate, openQuestions, publicNote, publicRecords, starterFor } from "./new.js";
+import {
+  keptPrivate,
+  noSignInAssumption,
+  openQuestions,
+  publicNote,
+  publicRecords,
+  starterFor,
+} from "./new.js";
 import { STARTERS } from "./starters.gen.js";
 
 const PRIVATE = [
@@ -124,4 +131,44 @@ test("a first build is as private as its description, in both draft modes", asyn
   );
   expect(readable(open.files)).toEqual(["Item"]);
   expect(open.assumption).toBeUndefined();
+});
+
+test("a starter or a first build with no sign-in says what anyone can use, and nothing else", () => {
+  const files = {
+    "smithable.yml": `smithable: 0.1
+app: { name: Blog }
+models:
+  Post:
+    fields: { title: string!, status: draft | published }
+  Note:
+    fields: { text: string! }
+pages:
+  posts: { crud: Post }
+  notes: { crud: Note }
+`,
+    "smithable.auth.yml": `smithableAuth: 0.1
+signIn: none
+public: { pages: [posts], read: [{ Post: { where: { status: published } } }] }
+`,
+  };
+  // As a starter (no real starter is without sign-in; a fixture stands in for one).
+  (STARTERS as Record<string, Record<string, string>>).nosignin = files;
+  try {
+    expect(publicRecords("nosignin")).toEqual(["Post"]);
+    expect(publicNote("nosignin")).toBe(
+      "The nosignin starter has no sign-in. Anyone with the address can use the Posts page and read posts (some of them); nothing else can be used by anyone, you included, until you add sign-in (smithable op setProviders email).",
+    );
+  } finally {
+    delete (STARTERS as Record<string, unknown>).nosignin;
+  }
+  // As a first build from a description that names no visitors: an assumption the person sees.
+  const said = noSignInAssumption(files, "My own notes and blog drafts, just for me");
+  expect(said?.chosen).toMatch(
+    /^This app has no sign-in\. Anyone with the address can use the Posts page/,
+  );
+  expect(said?.options).toEqual(["People sign in with a code sent to their email"]);
+  // Visitors asked for: said all the same, since without sign-in nobody can write the posts.
+  expect(noSignInAssumption(files, "A public blog for visitors to read online")?.chosen).toMatch(
+    /you included/,
+  );
 });
