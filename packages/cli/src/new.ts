@@ -21,6 +21,7 @@ import {
   type Usage,
 } from "@smithable/ai";
 import {
+  applyOperation,
   fitSamples,
   reservedDomain,
   type SpecIR,
@@ -389,7 +390,7 @@ export async function create(
   if (description) {
     io.out(`Starting from the ${name} starter.\n`);
     if (starter === undefined) {
-      const note = publicNote(name);
+      const note = publicNote(name, description);
       if (note) io.out(`${note}\n`);
     }
     // Drafting as operations (an empty app, one checked operation at a time; the default, see
@@ -432,6 +433,12 @@ export async function create(
     )
       throw new Error("Website drafting returned an unexpected source file.");
     files = website ? replaceWebsitePersonalFiles(draft.files, website) : draft.files;
+    // Kept private where the description names no visitors, whatever the draft kept (T767).
+    if (!website && description) {
+      const kept = keptPrivate(files, description);
+      files = kept.files;
+      if (kept.assumption) draft.assumptions = [...(draft.assumptions ?? []), kept.assumption];
+    }
     // From a page: the site's own name, not the draft's reading of the page's title (which is
     // often a sentence); a name someone typed still wins below.
     const site =
@@ -729,13 +736,70 @@ export function publicRecords(name: string): string[] {
  * What a starter that lets anyone read records says with its suggestion: which, and the operation
  * that keeps them private (nothing read without signing in; the pages that list them closed too).
  */
-export function publicNote(name: string): string | undefined {
+export function publicNote(name: string, description?: string): string | undefined {
   const { read, pages, signIn } = publicOf(name);
   if (!read.length) return undefined;
   if (signIn === false)
     return `The ${name} starter has no sign-in: anyone can read its ${read.join(", ")} records. Before anything private goes in, give it sign-in (smithable op setProviders email).`;
   const kept = pages.filter((p) => !p.model || !read.includes(p.model)).map((p) => p.id);
-  return `The ${name} starter is a public site: anyone can read its ${read.join(", ")} records without signing in. To keep them private: smithable op setPublic --pages ${kept.length ? kept.join(",") : '""'} --read ""`;
+  // Led with the case when the description names no visitors (the reader read none).
+  const lead =
+    description !== undefined && readDescription(description).visitors !== "read"
+      ? `Your description names no visitors, and the ${name} starter is a public site`
+      : `The ${name} starter is a public site`;
+  return `${lead}: anyone can read its ${read.join(", ")} records without signing in. To keep them private: smithable op setPublic --pages ${kept.length ? kept.join(",") : '""'} --read ""`;
+}
+
+/**
+ * A first build kept private where its description names no visitors (T767): whatever the draft
+ * kept of its starter, when the no-model reader read no visitors and the result lets anyone read a
+ * kind of record, setPublic closes it in the same build (the pages that list those records too),
+ * and an assumption says so with how to open it again.
+ */
+export function keptPrivate(
+  files: Record<string, string>,
+  description: string,
+): { files: Record<string, string>; assumption?: Assumption } {
+  if (readDescription(description).visitors === "read") return { files };
+  const spec = files["smithable.yml"];
+  const authText = files["smithable.auth.yml"];
+  if (!spec || !authText) return { files };
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
+  const auth = ir && validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth;
+  if (!ir || !auth || auth.signIn === "none" || !auth.public.read.length) return { files };
+  const read = auth.public.read;
+  const pages = auth.public.pages.filter((id) => {
+    const page = ir.pages.find((p) => p.id === id);
+    return !(page && "model" in page.pattern && read.includes(String(page.pattern.model)));
+  });
+  const result = applyOperation(
+    {
+      spec,
+      auth: authText,
+      ...(files["smithable.content.yml"] ? { content: files["smithable.content.yml"] } : {}),
+      ...(files["smithable.ux.yml"] ? { ux: files["smithable.ux.yml"] } : {}),
+    },
+    "setPublic",
+    { pages, read: [] },
+  );
+  if (!result.ok) return { files };
+  return {
+    files: {
+      ...files,
+      "smithable.yml": result.files.spec,
+      ...(result.files.auth !== undefined ? { "smithable.auth.yml": result.files.auth } : {}),
+      ...(result.files.content !== undefined
+        ? { "smithable.content.yml": result.files.content }
+        : {}),
+      ...(result.files.ux !== undefined ? { "smithable.ux.yml": result.files.ux } : {}),
+    },
+    assumption: {
+      part: "visitors",
+      question: `Who may read the ${read.join(", ")} records without signing in?`,
+      chosen: "Nobody: kept private, since your description names no visitors.",
+      options: [`Visitors may read the ${read.join(", ")} records`],
+    },
+  };
 }
 
 /**
@@ -749,7 +813,7 @@ export function starterFor(description: string, picked: string): { name: string;
   if (!publicRecords(picked).length) return { name: picked };
   const reading = readDescription(description);
   if (reading.visitors === "read" || (reading.read && reading.kind === picked))
-    return { name: picked, ...noteOf(picked) };
+    return { name: picked, ...noteOf(picked, description) };
   const closed = Object.fromEntries(
     Object.entries(STARTERS).filter(([name]) => !publicRecords(name).length),
   ) as Record<string, Record<string, string>>;
@@ -758,10 +822,10 @@ export function starterFor(description: string, picked: string): { name: string;
     starterScore(description, (STARTERS[name] ?? {}) as Record<string, string>);
   return score(other) > 0 && score(other) >= score(picked)
     ? { name: other }
-    : { name: picked, ...noteOf(picked) };
+    : { name: picked, ...noteOf(picked, description) };
 }
-const noteOf = (name: string) => {
-  const note = publicNote(name);
+const noteOf = (name: string, description: string) => {
+  const note = publicNote(name, description);
   return note ? { note } : {};
 };
 
@@ -782,7 +846,7 @@ export async function openQuestions(description: string): Promise<{
 }> {
   const known = knownStart(description);
   if (known) {
-    const note = publicNote(known.name);
+    const note = publicNote(known.name, description);
     return { starter: known.name, ...(note ? { note } : {}), questions: [], asked: false };
   }
   const reading = readDescription(description);
