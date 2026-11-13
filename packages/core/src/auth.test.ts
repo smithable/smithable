@@ -627,3 +627,130 @@ outgoing:
   // Visitors read only published posts; staff are told of drafts too.
   expect(codes).toContain("recipient-cannot-read");
 });
+
+test("a copy action needs create on each list it copies, and a role with actions: none runs none (T803)", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: X }
+models:
+  Invoice:
+    fields:
+      number: string
+      lines: Line[]
+  Line:
+    fields: { text: string!, invoice: Invoice }
+actions:
+  duplicate:
+    on: Invoice
+    copy: { number: "" }
+    with: [lines]
+`,
+  }).ir;
+  if (!ir) throw new Error("spec");
+  const access = (roles: string) => {
+    const auth = validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles:\n  admin: {}\n${roles}`,
+      },
+      ir,
+    ).auth;
+    if (!auth) throw new Error("auth");
+    return actionAccess(ir.actions.find((a) => a.name === "duplicate") as ActionIR, auth, ir.models)
+      .roles;
+  };
+  // Clerk may add invoices but not their lines: copying would add lines all the same.
+  expect(access("  clerk: { create: [Invoice] }\n")).toEqual(["admin"]);
+  // A role that runs no action does not copy either.
+  expect(access("  viewer: { create: [Invoice, Line], actions: none }\n")).toEqual(["admin"]);
+});
+
+test("public read with a mapping needs a real condition, and a kind is listed once (T803)", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: X }\nmodels:\n  Post:\n    fields: { title: string!, status: draft | published }\n",
+  }).ir;
+  if (!ir) throw new Error("spec");
+  const read = (list: string) => {
+    const result = validateAuth(
+      {
+        path: "smithable.auth.yml",
+        text: `smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {} }\npublic:\n  read:\n${list}`,
+      },
+      ir,
+    );
+    return {
+      errors: result.diagnostics.filter((d) => d.severity === "error").map((d) => d.code),
+      open: result.auth?.public.read ?? [],
+    };
+  };
+  // A mapping without a condition, or with an empty one, would open every post.
+  for (const list of ["    - Post: {}\n", "    - Post: { where: {} }\n"]) {
+    const { errors, open } = read(list);
+    expect(errors, list).toContain("missing-key");
+    expect(open, list).toEqual([]);
+  }
+  // Listed twice, open and conditional: refused.
+  expect(read("    - Post\n    - Post: { where: { status: published } }\n").errors).toContain(
+    "duplicate-name",
+  );
+  // A real condition still reads.
+  expect(read("    - Post: { where: { status: published } }\n")).toEqual({
+    errors: [],
+    open: ["Post"],
+  });
+});
+
+test("a users or review page is never public, whatever public.pages says (T803)", () => {
+  const ir = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: X }
+models:
+  Item:
+    fields:
+      title: string!
+      photos: pictures
+    review: [photos]
+pages:
+  home: { route: /, landing: { hero: {} } }
+  people:
+    users: manage
+  waiting:
+    review: all
+`,
+  }).ir;
+  if (!ir) throw new Error("spec");
+  const result = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {}, member: { pages: all } }\ndefaultRole: member\npublic: { pages: [home, people, waiting] }\n",
+    },
+    ir,
+  );
+  const refused = result.diagnostics
+    .filter((d) => d.severity === "error")
+    .map((d) => d.message)
+    .join("\n");
+  expect(refused).toMatch(/people is a users page/);
+  expect(refused).toMatch(/waiting is a review page/);
+  // And should an auth file get past the validator so (written by hand, read as it is),
+  // the access rule still keeps them closed.
+  const valid = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: shared\nroles: { admin: {}, member: { pages: all } }\ndefaultRole: member\npublic: { pages: [home] }\n",
+    },
+    ir,
+  ).auth;
+  if (!valid) throw new Error("auth");
+  const opened = { ...valid, public: { ...valid.public, pages: ["home", "people", "waiting"] } };
+  for (const id of ["people", "waiting"]) {
+    const page = ir.pages.find((p) => p.id === id);
+    if (!page) throw new Error(id);
+    const allowed = pageAccess(page, opened);
+    expect(allowed.public, id).toBe(false);
+    expect(allowed.roles, id).not.toContain("member");
+  }
+});

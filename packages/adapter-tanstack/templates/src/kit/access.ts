@@ -96,11 +96,15 @@ export function addressOwner(
 
 /** Whether the viewer may do something; `ownerId` is the owner of the record involved, if any. */
 export function allows(rule: Rule, viewer: Viewer | null, ownerId?: string | null): boolean {
-  if (rule.public || viewer?.system) return true;
+  // Public only where a condition holds is a question about the record, which this cannot see:
+  // that rule lets nobody in here (the scoped queries answer it, readScope).
+  if ((rule.public && !rule.where) || viewer?.system) return true;
   if (!viewer) return false;
   if (rule.among && !rule.among.includes(viewer.role)) return false;
   if (rule.roles.includes(viewer.role)) return true;
-  return rule.owner && ownerId != null && ownerId === viewer.id;
+  // Only a person owns records: a key acts for its role, never as an owner.
+  const person = personOf(viewer);
+  return rule.owner && ownerId != null && person !== null && ownerId === person;
 }
 
 export function check(rule: Rule, viewer: Viewer | null, ownerId?: string | null): void {
