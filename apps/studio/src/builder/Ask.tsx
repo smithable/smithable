@@ -1600,8 +1600,11 @@ export function pausedWords(paused: {
   until: string;
   invite?: string;
 }): string {
+  // The date in full: a month's pause may lift weeks away.
   const until = new Date(paused.until).toLocaleString([], {
     weekday: "long",
+    day: "numeric",
+    month: "long",
     hour: "2-digit",
     minute: "2-digit",
   });
