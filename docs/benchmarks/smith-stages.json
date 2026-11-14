@@ -1,5 +1,5 @@
 {
- "date": "2026-11-13",
+ "date": "2026-11-14",
  "oracle": {
   "ambiguous": {
    "requests": 25,
@@ -11,11 +11,11 @@
    "medianExtraDocs": 3
   },
   "change": {
-   "requests": 135,
-   "right": 135,
-   "cannotTell": 0,
+   "requests": 141,
+   "right": 139,
+   "cannotTell": 2,
    "wrongRoute": 0,
-   "medianTokens": 34640,
+   "medianTokens": 34404,
    "medianExtraParts": 6,
    "medianExtraDocs": 3
   },
@@ -38,11 +38,11 @@
    "medianExtraDocs": 3
   },
   "docs-question": {
-   "requests": 28,
+   "requests": 34,
    "right": 17,
-   "cannotTell": 11,
+   "cannotTell": 17,
    "wrongRoute": 0,
-   "medianTokens": 1448,
+   "medianTokens": 1450,
    "medianExtraParts": 8,
    "medianExtraDocs": 2
   },
@@ -65,12 +65,12 @@
    "medianExtraDocs": 2
   },
   "spec-question": {
-   "requests": 38,
-   "right": 30,
-   "cannotTell": 8,
+   "requests": 46,
+   "right": 35,
+   "cannotTell": 11,
    "wrongRoute": 0,
-   "medianTokens": 1964,
-   "medianExtraParts": 5,
+   "medianTokens": 1775,
+   "medianExtraParts": 6,
    "medianExtraDocs": 3
   },
   "two-things": {
@@ -84,9 +84,9 @@
   }
  },
  "retrieval": {
-  "questions": 28,
+  "questions": 34,
   "top3": 17,
-  "top5": 20,
+  "top5": 19,
   "missed": [
    "d-publish",
    "d-cost",
@@ -95,7 +95,14 @@
    "d-fi-finnish",
    "d-sv-publish",
    "d-sv-data",
-   "d-fi-cost"
+   "d-fi-cost",
+   "long-mp-docs",
+   "d-sv-export",
+   "d-sv-selfhost",
+   "d-sv-import",
+   "d-sv-need-ai",
+   "d-sv-sandbox",
+   "d-sv-mail-limit"
   ]
  },
  "prompt": {
@@ -106,9 +113,9 @@
    "maxTokens": 44272
   },
   "change": {
-   "requests": 135,
+   "requests": 141,
    "byRule": 14,
-   "medianTokens": 34640,
+   "medianTokens": 34404,
    "maxTokens": 46072
   },
   "custom-code": {
@@ -124,10 +131,10 @@
    "maxTokens": 45868
   },
   "docs-question": {
-   "requests": 28,
+   "requests": 34,
    "byRule": 0,
-   "medianTokens": 1448,
-   "maxTokens": 38189
+   "medianTokens": 1450,
+   "maxTokens": 38831
   },
   "off-topic": {
    "requests": 10,
@@ -142,9 +149,9 @@
    "maxTokens": 27362
   },
   "spec-question": {
-   "requests": 38,
+   "requests": 46,
    "byRule": 2,
-   "medianTokens": 1964,
+   "medianTokens": 1775,
    "maxTokens": 38841
   },
   "two-things": {
