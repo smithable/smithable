@@ -46,6 +46,7 @@ export type {
 } from "./provider.js";
 export {
   allowedBy,
+  CutOffAnswerError,
   cached,
   completeJson,
   listPrice,

@@ -38,6 +38,13 @@ export interface Completion {
   cached?: boolean;
 }
 
+/** An incomplete answer still consumed tokens; callers must account for it before retrying. */
+export class CutOffAnswerError extends Error {
+  constructor(readonly completion: Completion) {
+    super("The model's answer was cut off.");
+  }
+}
+
 export type Currency = "EUR" | "USD";
 
 export interface Provider {
@@ -195,15 +202,17 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
         throw new Error(`${options.name} answered ${response.status}: ${await response.text()}`);
       const body = (await response.json()) as {
         model?: string;
-        choices?: { message?: { content?: string } }[];
+        choices?: { message?: { content?: string }; finish_reason?: string }[];
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
-      return {
+      const completion = {
         text: body.choices?.[0]?.message?.content ?? "",
         model: body.model ?? options.model,
         inputTokens: body.usage?.prompt_tokens ?? 0,
         outputTokens: body.usage?.completion_tokens ?? 0,
       };
+      if (body.choices?.[0]?.finish_reason === "length") throw new CutOffAnswerError(completion);
+      return completion;
     },
   };
 }
@@ -289,7 +298,12 @@ export async function completeJson(
     throw new Error(
       `The request is too large for the model (about ${size} tokens; at most ${MAX_PROMPT_TOKENS}).`,
     );
-  const completion = await provider.complete(request);
+  let cutOff: CutOffAnswerError | undefined;
+  const completion = await provider.complete(request).catch((error) => {
+    if (!(error instanceof CutOffAnswerError)) throw error;
+    cutOff = error;
+    return error.completion;
+  });
   usage.push({
     provider: provider.name,
     model: completion.model,
@@ -305,6 +319,7 @@ export async function completeJson(
     currency: completion.cost?.currency ?? provider.currency ?? "EUR",
     ...(completion.cached ? { cached: true } : {}),
   });
+  if (cutOff) throw cutOff;
   try {
     return JSON.parse(completion.text);
   } catch (error) {

@@ -105,13 +105,20 @@ test("a cut-off answer is an error", async () => {
     "fetch",
     async () =>
       new Response(
-        JSON.stringify({ stop_reason: "max_tokens", content: [{ type: "text", text: '{"ki' }] }),
+        JSON.stringify({
+          stop_reason: "max_tokens",
+          content: [{ type: "text", text: '{"ki' }],
+          usage: { input_tokens: 10, output_tokens: 16000 },
+        }),
         { status: 200 },
       ),
   );
   await expect(
     anthropic("claude-haiku-5-5", "k").complete({ system: "", user: "", schema: {} } as never),
-  ).rejects.toThrow(/cut off/);
+  ).rejects.toMatchObject({
+    message: "The model's answer was cut off.",
+    completion: { inputTokens: 10, outputTokens: 16000 },
+  });
 });
 
 test("closed shuts every object schema, and only schemas: a field named properties, an enum", async () => {

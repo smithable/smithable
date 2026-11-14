@@ -1,5 +1,5 @@
 import { appendFileSync } from "node:fs";
-import type { Provider } from "@smithable/ai";
+import { CutOffAnswerError, type Provider } from "@smithable/ai";
 
 /**
  * Anthropic's list prices per million tokens for its own API (platform.claude.com, 2026-10-26),
@@ -75,8 +75,6 @@ export function anthropic(
           `Anthropic's API answered ${response.status}: ${body.error?.message ?? ""}`,
         );
       if (body.stop_reason === "refusal") throw new Error("The model declined the request.");
-      // Half an answer is no answer: the next model, or the person, hears so.
-      if (body.stop_reason === "max_tokens") throw new Error("The model's answer was cut off.");
       const u = body.usage ?? {};
       const fresh = u.input_tokens ?? 0;
       const read = u.cache_read_input_tokens ?? 0;
@@ -85,7 +83,7 @@ export function anthropic(
       // The bench's record of each call's tokens by kind (SMITHABLE_USAGE_LOG=<file>).
       if (usageLog)
         appendFileSync(usageLog, `${JSON.stringify({ model, fresh, read, write, output })}\n`);
-      return {
+      const completion = {
         // Without structured output a model may still fence its JSON (```json … ```): the JSON alone.
         text: unfenced(
           (body.content ?? [])
@@ -110,6 +108,8 @@ export function anthropic(
             }
           : {}),
       };
+      if (body.stop_reason === "max_tokens") throw new CutOffAnswerError(completion);
+      return completion;
     },
   };
 }

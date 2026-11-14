@@ -1,6 +1,12 @@
 import { expect, test } from "vitest";
 import { completeDraftJson, repairDraftJson } from "./draft-json.js";
-import { type CompletionRequest, cached, type Provider, type Usage } from "./provider.js";
+import {
+  type CompletionRequest,
+  CutOffAnswerError,
+  cached,
+  type Provider,
+  type Usage,
+} from "./provider.js";
 
 test.each([
   ['{"items":[{"name":"one"} {"name":"two"}]}', { items: [{ name: "one" }, { name: "two" }] }],
@@ -21,6 +27,11 @@ test.each([
   '{"value":tru}',
   '{"number":1.}',
   '{"text":"one "two""}',
+  '["width "100" px"]',
+  '["say "null" here"]',
+  '["say "true" here"]',
+  '["say "false" here"]',
+  "[1 2]",
   `{"items":[1${"}".repeat(10)}]}`,
 ])("leaves truncated, non-separator or excessive faults for retry: %s", (text) => {
   expect(repairDraftJson(text)).toBeUndefined();
@@ -28,8 +39,8 @@ test.each([
 
 test("preserves literal strings and valid documents exactly", () => {
   const literal = JSON.stringify('brackets }] comma, quote" and slash\\');
-  const text = `{"items":[${literal} ${literal}]}`;
-  expect(repairDraftJson(text)).toBe(`{"items":[${literal} ,${literal}]}`);
+  const text = `{"items":[{"text":${literal}} {"text":${literal}}]}`;
+  expect(repairDraftJson(text)).toBe(`{"items":[{"text":${literal}} ,{"text":${literal}}]}`);
   const valid = '{ "items": [1, 2] }';
   expect(repairDraftJson(valid)).toBe(valid);
 });
@@ -55,9 +66,9 @@ function fake(answers: (string | Error)[], model = "claude-haiku-5-5") {
 }
 
 test("a local punctuation repair uses one call and retains its usage", async () => {
-  const { provider, calls } = fake(['{"items":[1 2]}']);
+  const { provider, calls } = fake(['{"items":[{} {}]}']);
   const usage: Usage[] = [];
-  expect(await completeDraftJson(provider, request, usage)).toEqual({ items: [1, 2] });
+  expect(await completeDraftJson(provider, request, usage)).toEqual({ items: [{}, {}] });
   expect(calls).toHaveLength(1);
   expect(calls[0]?.maxOutputTokens).toBe(32000);
   expect(usage).toHaveLength(1);
@@ -90,8 +101,18 @@ test("a second malformed answer fails without a third request", async () => {
 });
 
 test("a cut-off answer gets one concise retry; unrelated provider failures do not", async () => {
-  const truncated = fake([new Error("The model's answer was cut off."), '{"items":[]}']);
-  expect(await completeDraftJson(truncated.provider, request, [])).toEqual({ items: [] });
+  const truncated = fake([
+    new CutOffAnswerError({
+      text: '{"items":[',
+      model: "claude-haiku-5-5",
+      inputTokens: 10,
+      outputTokens: 32000,
+    }),
+    '{"items":[]}',
+  ]);
+  const usage: Usage[] = [];
+  expect(await completeDraftJson(truncated.provider, request, usage)).toEqual({ items: [] });
+  expect(usage.map((entry) => entry.outputTokens)).toEqual([32000, 20]);
   expect(truncated.calls).toHaveLength(2);
   expect(truncated.calls[1]?.user).toContain("cut off");
   const refused = fake([new Error("The provider refused this request")]);
