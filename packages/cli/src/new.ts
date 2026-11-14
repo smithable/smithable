@@ -478,6 +478,10 @@ export async function create(
       const kept = keptPrivate(files, description, STARTERS[name] as Record<string, string>);
       files = kept.files;
       if (kept.assumption) draft.assumptions = [...(draft.assumptions ?? []), kept.assumption];
+      // And each person's records their own, where the draft made everyone's shared (T857).
+      const own = keptOwn(files, description, STARTERS[name] as Record<string, string>);
+      files = own.files;
+      if (own.assumption) draft.assumptions = [...(draft.assumptions ?? []), own.assumption];
       const closed = noSignInAssumption(files, description);
       if (closed) draft.assumptions = [...(draft.assumptions ?? []), closed];
     }
@@ -810,6 +814,74 @@ export function publicNote(name: string, description?: string): string | undefin
       ? `Your description names no visitors, and the ${name} starter is a public site`
       : `The ${name} starter is a public site`;
   return `${lead}: anyone can read its ${read.join(", ")} records without signing in. To keep them private: smithable op setPublic --pages ${kept.length ? kept.join(",") : '""'} --read ""`;
+}
+
+/**
+ * Each person's records their own where the description has people from outside (T857): after the
+ * draft, when it made every record readable by everyone signed in (shared) and the starter did not:
+ * - the reader settled that people from outside sign up (neighbours, members, customers): back to
+ *   private, said as an assumption, since they would otherwise read each other's records;
+ * - the reader settled a team or one person: kept, colleagues see each other's work;
+ * - the reader could not tell: kept, and said as an assumption so it is seen.
+ * A starter that is shared itself (a support desk, a CRM) is inherited, not decided: kept.
+ */
+export function keptOwn(
+  files: Record<string, string>,
+  description: string,
+  starter?: Record<string, string>,
+): { files: Record<string, string>; assumption?: Assumption } {
+  const spec = files["smithable.yml"];
+  const authText = files["smithable.auth.yml"];
+  if (!spec || !authText) return { files };
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
+  const auth = ir && validateAuth({ path: "smithable.auth.yml", text: authText }, ir).auth;
+  if (!ir || !auth || auth.signIn === "none" || auth.defaultAccess !== "shared") return { files };
+  const starterAuth = starter?.["smithable.auth.yml"];
+  const starterIr =
+    starter?.["smithable.yml"] &&
+    validateSpec({ path: "smithable.yml", text: starter["smithable.yml"] }).ir;
+  const inherited =
+    starterAuth !== undefined &&
+    starterIr &&
+    validateAuth({ path: "smithable.auth.yml", text: starterAuth }, starterIr).auth
+      ?.defaultAccess === "shared";
+  if (inherited) return { files };
+  const audience = readDescription(description).audience;
+  if (audience === "team" || audience === "me") return { files };
+  const question = "Who sees whose records?";
+  const shared = "Everyone who signs in sees every record";
+  if (audience === undefined)
+    return {
+      files,
+      assumption: {
+        part: "signedIn",
+        question,
+        chosen: `${shared}.`,
+        options: ["Each person sees only their own"],
+      },
+    };
+  const result = applyOperations({ spec, auth: authText }, [
+    { op: "setDefaultAccess", args: { access: "private" } },
+  ]);
+  if (!result.ok || result.files.auth === undefined)
+    return {
+      files,
+      assumption: {
+        part: "signedIn",
+        question,
+        chosen: `${shared}: it could not be made private (${result.ok ? "no rules file" : result.message}).`,
+        options: ["Each person sees only their own"],
+      },
+    };
+  return {
+    files: { ...files, "smithable.auth.yml": result.files.auth },
+    assumption: {
+      part: "signedIn",
+      question,
+      chosen: "Each person sees their own records, and what a role's grants open to it.",
+      options: [shared],
+    },
+  };
 }
 
 /**
