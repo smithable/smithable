@@ -18,6 +18,9 @@
           "type": "phone"
         }
       },
+      "needs": [
+        "model:Instructor"
+      ],
       "noModel": true
     },
     {
@@ -36,6 +39,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Instructor"
+      ],
       "noModel": true
     },
     {
@@ -91,6 +97,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "model:Instructor"
+      ],
       "noModel": false
     },
     {
@@ -112,6 +121,10 @@
           ]
         }
       },
+      "needs": [
+        "pages",
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -129,6 +142,9 @@
           "view": "agenda"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -146,6 +162,10 @@
           "by": "classType.level"
         }
       },
+      "needs": [
+        "pages",
+        "model:ClassType"
+      ],
       "noModel": false
     },
     {
@@ -165,6 +185,12 @@
           "recipient": "owner"
         }
       },
+      "needs": [
+        "model:Booking",
+        "model:Session",
+        "outgoing:reminder",
+        "timer:remind"
+      ],
       "noModel": false
     },
     {
@@ -184,6 +210,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Session"
+      ],
       "noModel": true
     },
     {
@@ -201,6 +231,10 @@
           "field": "-startsAt"
         }
       },
+      "needs": [
+        "pages",
+        "model:Session"
+      ],
       "noModel": true
     },
     {
@@ -255,6 +289,10 @@
           "cancelUntil": "2 hours before session.startsAt"
         }
       },
+      "needs": [
+        "model:Booking",
+        "model:Session"
+      ],
       "noModel": false
     },
     {
@@ -274,6 +312,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -350,6 +391,10 @@
           ]
         }
       },
+      "needs": [
+        "pages",
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -367,6 +412,9 @@
           "trash": false
         }
       },
+      "needs": [
+        "model:FollowUp"
+      ],
       "noModel": true
     },
     {
@@ -385,6 +433,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -406,6 +457,9 @@
           }
         }
       },
+      "needs": [
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -462,6 +516,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -479,6 +537,9 @@
           "export": "off"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": true
     },
     {
@@ -498,6 +559,10 @@
         },
         "unsure": true
       },
+      "needs": [
+        "model:Order",
+        "model:Customer"
+      ],
       "noModel": false
     },
     {
@@ -588,6 +653,9 @@
           }
         }
       },
+      "needs": [
+        "model:Barber"
+      ],
       "noModel": false
     },
     {
@@ -605,6 +673,9 @@
           "cancelUntil": "24h"
         }
       },
+      "needs": [
+        "model:Appointment"
+      ],
       "noModel": false
     },
     {
@@ -626,6 +697,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "outgoing:appointmentConfirmed"
+      ],
       "noModel": false
     },
     {
@@ -756,6 +830,10 @@
           "at": "3 days after dueOn"
         }
       },
+      "needs": [
+        "timer:markOverdue",
+        "model:Invoice"
+      ],
       "noModel": false
     },
     {
@@ -796,6 +874,10 @@
           ]
         }
       },
+      "needs": [
+        "pages",
+        "model:Invoice"
+      ],
       "noModel": false
     },
     {
@@ -847,6 +929,9 @@
           "currency": "SEK"
         }
       },
+      "needs": [
+        "app"
+      ],
       "noModel": false
     },
     {
@@ -863,6 +948,9 @@
           "language": "sv"
         }
       },
+      "needs": [
+        "app"
+      ],
       "noModel": false
     },
     {
@@ -899,6 +987,9 @@
           "to": "energy"
         }
       },
+      "needs": [
+        "model:Dish"
+      ],
       "noModel": false,
       "after": "ki-calories"
     },
@@ -956,6 +1047,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -973,6 +1067,9 @@
           "view": "cards"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1048,6 +1145,10 @@
           "value": "new"
         }
       },
+      "needs": [
+        "pages",
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -1101,6 +1202,9 @@
           "favorites": "off"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1118,6 +1222,9 @@
           "fields": "none"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": false
     },
     {
@@ -1294,6 +1401,7 @@
           "preset": "cafe"
         }
       },
+      "needs": [],
       "noModel": true
     },
     {
@@ -1428,6 +1536,11 @@
         },
         "unsure": true
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Maintenance"
+      ],
       "noModel": false
     },
     {
@@ -1463,6 +1576,9 @@
           "section": "uptime"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1480,6 +1596,9 @@
           "icon": "alert"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1520,6 +1639,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "action:monitoring"
+      ],
       "noModel": false
     },
     {
@@ -1575,6 +1698,10 @@
         },
         "unsure": true
       },
+      "needs": [
+        "model:SupportCase",
+        "action:close"
+      ],
       "noModel": false
     },
     {
@@ -1628,6 +1755,10 @@
           "as": "thread"
         }
       },
+      "needs": [
+        "pages",
+        "model:Message"
+      ],
       "noModel": false
     },
     {
@@ -1664,6 +1795,10 @@
           "control": "slider"
         }
       },
+      "needs": [
+        "pages",
+        "model:SupportCase"
+      ],
       "noModel": false
     },
     {
@@ -1753,6 +1888,10 @@
           "model": "Task"
         }
       },
+      "needs": [
+        "model:Task",
+        "pages"
+      ],
       "noModel": true
     },
     {

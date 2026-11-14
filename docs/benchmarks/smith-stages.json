@@ -1,5 +1,5 @@
 {
- "date": "2026-11-13",
+ "date": "2026-11-14",
  "oracle": {
   "ambiguous": {
    "requests": 25,
@@ -16,7 +16,7 @@
    "cannotTell": 0,
    "wrongRoute": 0,
    "medianTokens": 34640,
-   "medianExtraParts": 6,
+   "medianExtraParts": 5,
    "medianExtraDocs": 3
   },
   "custom-code": {
@@ -86,7 +86,7 @@
  "retrieval": {
   "questions": 28,
   "top3": 17,
-  "top5": 20,
+  "top5": 19,
   "missed": [
    "d-publish",
    "d-cost",
@@ -95,7 +95,8 @@
    "d-fi-finnish",
    "d-sv-publish",
    "d-sv-data",
-   "d-fi-cost"
+   "d-fi-cost",
+   "long-mp-docs"
   ]
  },
  "prompt": {
@@ -127,7 +128,7 @@
    "requests": 28,
    "byRule": 0,
    "medianTokens": 1448,
-   "maxTokens": 38189
+   "maxTokens": 38831
   },
   "off-topic": {
    "requests": 10,
