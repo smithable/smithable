@@ -13,6 +13,7 @@ import {
   draftProjectByOperations,
   draftSamples,
   type Edit,
+  nameFrom,
   type Question,
   readDescription,
   readEdit,
@@ -482,10 +483,26 @@ export async function create(
     }
     // From a page: the site's own name, not the draft's reading of the page's title (which is
     // often a sentence); a name someone typed still wins below.
+    // Without a model the starter keeps its own name, unless the description gives one by its
+    // shape ("Northside FC: …", "an app called …"; T826): said as an assumption to change.
+    const described = starterOnly ? nameFrom(description) : undefined;
     const site =
       (!options.websiteOwnerDescription ? website?.businessName : undefined) ??
-      siteNameOf(description);
-    if (site && !options.name?.trim()) files = named(files, site);
+      siteNameOf(description) ??
+      described;
+    if (site && !options.name?.trim()) {
+      files = named(files, site);
+      if (site === described)
+        draft.assumptions = [
+          ...(draft.assumptions ?? []),
+          {
+            part: "app",
+            question: "What is the app called?",
+            chosen: `${site}, as your description names it.`,
+            options: ["Another name"],
+          },
+        ];
+    }
     if (!website) options.onDraft?.(files, draft.assumptions);
     websiteAssumptions = draft.assumptions;
     if (draft.assumptions?.length) options.onAssumptions?.(draft.assumptions);

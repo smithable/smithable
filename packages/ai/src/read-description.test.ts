@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { readDescription, stem } from "./read-description.js";
+import { nameFrom, readDescription, stem } from "./read-description.js";
 
 test("words settle the shape, who signs in and what anyone sees; nothing is asked when all three are said", () => {
   const read = readDescription(
@@ -158,4 +158,23 @@ test("a kind word that is the record stays a thing; a word in capitals is never 
 test("a check is the app's only when its schedule follows it (T846)", () => {
   const looked = readDescription("Members check their bookings online. We back the data up daily.");
   expect(looked.leftover).not.toContain("check");
+});
+
+test("the app's name when the description gives one, by its shape; none invented (T826)", () => {
+  expect(nameFrom("Northside FC: a members app for the club, with fixtures and dues.")).toBe(
+    "Northside FC",
+  );
+  expect(nameFrom("The Ledger: shared costs for our house.")).toBe("The Ledger");
+  expect(nameFrom("An app called Pantry Pal to track what is in the fridge.")).toBe("Pantry Pal");
+  expect(nameFrom("A booking app for Studio Nord, a yoga studio.")).toBe("Studio Nord");
+  for (const none of [
+    "A small app for a bicycle repair shop: customers, their bikes and repair jobs.",
+    "My shop – orders and stock.",
+    "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
+    "A help desk for an IT team: tickets, priorities and who handles them.",
+    "Invoices for my photography work: clients, shoots and what is still unpaid.",
+    "A chat app for Android, with groups and photos.",
+    "Tools for HR: leave, contracts and reviews.",
+  ])
+    expect(nameFrom(none), none).toBeUndefined();
 });

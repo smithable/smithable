@@ -57,6 +57,7 @@ export {
   route,
 } from "./provider.js";
 export {
+  nameFrom,
   type Question as ReadQuestion,
   type Reading,
   readDescription,

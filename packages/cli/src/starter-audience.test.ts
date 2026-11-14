@@ -204,7 +204,12 @@ test("without a model, new --describe builds the starter as private as the descr
       },
     });
     if (!drafted) throw new Error(told.join(""));
-    return { read: readable(drafted), told: told.join(""), assumed };
+    return {
+      read: readable(drafted),
+      told: told.join(""),
+      assumed,
+      spec: drafted["smithable.yml"] ?? "",
+    };
   };
   try {
     for (const description of [
@@ -221,7 +226,15 @@ test("without a model, new --describe builds the starter as private as the descr
         /^No model is set up, so this is the records starter unchanged/,
       );
       expect(made.assumed.join(" ")).toMatch(/Nobody: kept private/);
+      // No name in the description: none invented, the starter's kept (T826).
+      expect(made.assumed.join(" ")).not.toMatch(/as your description names it/);
     }
+    // A name in the description's shape is the app's, said as an assumption (T826).
+    const northside = await build(
+      "Northside Recipes: a recipe collection for a family, with ingredients",
+    );
+    expect(northside.spec).toMatch(/^\s*name: Northside Recipes$/m);
+    expect(northside.assumed).toContain("Northside Recipes, as your description names it.");
     // A description that asks for visitors keeps the starter public.
     const open = await build(
       "A public catalogue of our museum's objects for visitors to browse online",

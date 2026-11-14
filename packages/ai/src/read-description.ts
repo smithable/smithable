@@ -464,3 +464,39 @@ export function readDescription(given: string): Reading {
     });
   return reading;
 }
+
+// Words that open a description but name nothing: "A small app: …", "My shop – …".
+const NOT_A_NAME = set(`a an my our this that its their your app apps application tool system
+  idea plan website site page`);
+
+/**
+ * The app's name when the description gives one (T826), by its shape only: a short name in
+ * capitals before a colon or a dash ("Northside FC: a members app"), or after "called", "named" or
+ * "for" ("a booking app for Studio Nord"). Undefined when none is given: no name is invented.
+ */
+export function nameFrom(description: string): string | undefined {
+  const name =
+    "([\\p{Lu}0-9][\\p{L}\\p{N}’'&.-]*(?:\\s+(?:[\\p{Lu}0-9][\\p{L}\\p{N}’'&.-]*|of|and|&)){0,4})";
+  const tidy = (found: string | undefined) => {
+    const words =
+      found
+        ?.trim()
+        .replace(/[.’']+$/u, "")
+        .split(/\s+/) ?? [];
+    while (words.length && /^(of|and|&)$/.test(words.at(-1) ?? "")) words.pop();
+    if (!words.length || NOT_A_NAME.has((words[0] ?? "").toLowerCase())) return undefined;
+    return words.join(" ");
+  };
+  const lead = new RegExp(`^\\s*${name}\\s*(?::|\\s[-–—])\\s+\\S`, "u").exec(description);
+  if (lead) {
+    const found = tidy(lead[1]);
+    if (found) return found;
+  }
+  const called = new RegExp(`\\b(?:called|named)\\s+["“”']?${name}`, "u").exec(description);
+  if (called) return tidy(called[1]);
+  const forWhom = new RegExp(`\\bfor\\s+(?:the\\s+)?${name}`, "u").exec(description);
+  // After "for", a name of two words or more (Studio Nord): one word is as often a platform or a
+  // team (for Android, for HR) as a name.
+  const after = forWhom ? tidy(forWhom[1]) : undefined;
+  return after && after.split(/\s+/).length >= 2 ? after : undefined;
+}
