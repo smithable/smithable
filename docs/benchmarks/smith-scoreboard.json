@@ -237,5 +237,243 @@
    "paidForNothing": 0,
    "compared": 275
   }
+ },
+ {
+  "date": "2026-11-14",
+  "commit": "e48dbe04",
+  "set": "1",
+  "requests": 326,
+  "runs": [
+   "bench-smith-2026-11-14-rules.jsonl",
+   "bench-smith-2026-11-14-small.jsonl"
+  ],
+  "note": "Claude Haiku 5.5 alone, judge Sonnet 5.5; hand labels on all 141 changes",
+  "setups": {
+   "rules": {
+    "of": 326,
+    "right": 29,
+    "wrong": 297,
+    "asked": 0,
+    "share": 8.9,
+    "perRequest": 0,
+    "models": [],
+    "kinds": {
+     "ambiguous": {
+      "of": 25,
+      "right": 0,
+      "wrong": 25,
+      "asked": 0,
+      "share": 0,
+      "perRequest": 0
+     },
+     "change": {
+      "of": 141,
+      "right": 14,
+      "wrong": 127,
+      "asked": 0,
+      "share": 9.9,
+      "perRequest": 0
+     },
+     "custom-code": {
+      "of": 13,
+      "right": 0,
+      "wrong": 13,
+      "asked": 0,
+      "share": 0,
+      "perRequest": 0
+     },
+     "data": {
+      "of": 23,
+      "right": 0,
+      "wrong": 23,
+      "asked": 0,
+      "share": 0,
+      "perRequest": 0
+     },
+     "docs-question": {
+      "of": 34,
+      "right": 0,
+      "wrong": 34,
+      "asked": 0,
+      "share": 0,
+      "perRequest": 0
+     },
+     "off-topic": {
+      "of": 10,
+      "right": 0,
+      "wrong": 10,
+      "asked": 0,
+      "share": 0,
+      "perRequest": 0
+     },
+     "smalltalk": {
+      "of": 17,
+      "right": 13,
+      "wrong": 4,
+      "asked": 0,
+      "share": 76.5,
+      "perRequest": 0
+     },
+     "spec-question": {
+      "of": 46,
+      "right": 2,
+      "wrong": 44,
+      "asked": 0,
+      "share": 4.3,
+      "perRequest": 0
+     },
+     "two-things": {
+      "of": 17,
+      "right": 0,
+      "wrong": 17,
+      "asked": 0,
+      "share": 0,
+      "perRequest": 0
+     }
+    },
+    "languages": {
+     "en": {
+      "of": 220,
+      "right": 23,
+      "wrong": 197,
+      "asked": 0,
+      "share": 10.5,
+      "perRequest": 0
+     },
+     "fi": {
+      "of": 27,
+      "right": 3,
+      "wrong": 24,
+      "asked": 0,
+      "share": 11.1,
+      "perRequest": 0
+     },
+     "sv": {
+      "of": 79,
+      "right": 3,
+      "wrong": 76,
+      "asked": 0,
+      "share": 3.8,
+      "perRequest": 0
+     }
+    }
+   },
+   "small": {
+    "of": 326,
+    "right": 251,
+    "wrong": 75,
+    "asked": 41,
+    "share": 77,
+    "perRequest": 0.00206,
+    "models": [
+     "claude-haiku-5-5"
+    ],
+    "kinds": {
+     "ambiguous": {
+      "of": 25,
+      "right": 20,
+      "wrong": 5,
+      "asked": 20,
+      "share": 80,
+      "perRequest": 0.0023
+     },
+     "change": {
+      "of": 141,
+      "right": 101,
+      "wrong": 40,
+      "asked": 18,
+      "share": 71.6,
+      "perRequest": 0.00294
+     },
+     "custom-code": {
+      "of": 13,
+      "right": 11,
+      "wrong": 2,
+      "asked": 0,
+      "share": 84.6,
+      "perRequest": 0.00266
+     },
+     "data": {
+      "of": 23,
+      "right": 23,
+      "wrong": 0,
+      "asked": 0,
+      "share": 100,
+      "perRequest": 0.00298
+     },
+     "docs-question": {
+      "of": 34,
+      "right": 23,
+      "wrong": 11,
+      "asked": 0,
+      "share": 67.6,
+      "perRequest": 0.00049
+     },
+     "off-topic": {
+      "of": 10,
+      "right": 8,
+      "wrong": 2,
+      "asked": 0,
+      "share": 80,
+      "perRequest": 0.00078
+     },
+     "smalltalk": {
+      "of": 17,
+      "right": 17,
+      "wrong": 0,
+      "asked": 0,
+      "share": 100,
+      "perRequest": 0.00007
+     },
+     "spec-question": {
+      "of": 46,
+      "right": 35,
+      "wrong": 11,
+      "asked": 0,
+      "share": 76.1,
+      "perRequest": 0.00043
+     },
+     "two-things": {
+      "of": 17,
+      "right": 13,
+      "wrong": 4,
+      "asked": 3,
+      "share": 76.5,
+      "perRequest": 0.00293
+     }
+    },
+    "languages": {
+     "en": {
+      "of": 220,
+      "right": 172,
+      "wrong": 48,
+      "asked": 33,
+      "share": 78.2,
+      "perRequest": 0.00214
+     },
+     "fi": {
+      "of": 27,
+      "right": 21,
+      "wrong": 6,
+      "asked": 3,
+      "share": 77.8,
+      "perRequest": 0.00175
+     },
+     "sv": {
+      "of": 79,
+      "right": 58,
+      "wrong": 21,
+      "asked": 5,
+      "share": 73.4,
+      "perRequest": 0.00192
+     }
+    }
+   }
+  },
+  "escalation": {
+   "rulesWrong": 0,
+   "rulesAnswered": 29,
+   "ruleCouldHave": 33
+  }
  }
 ]
