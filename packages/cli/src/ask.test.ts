@@ -47,7 +47,26 @@ test("Smith's AI notice names where the policy's models run, and nothing without
       SMITHABLE_FRONTIER: "bedrock",
       SMITHABLE_FRONTIER_MODEL: "eu.anthropic.claude-sonnet-5-5",
     }),
-  ).toEqual(["the Smithable model, in the EU", "Anthropic's Claude on Amazon Bedrock, in the EU"]);
+  ).toEqual([
+    "the Smithable model, where the Smithable service runs it",
+    "Anthropic's Claude on Amazon Bedrock, in the EU",
+  ]);
+  // The service's words for the hosted model, as given; never a place of the engine's own (T864).
+  expect(
+    aiDestinations({
+      SMITHABLE_MODEL: "m",
+      SMITHABLE_MODEL_URL: "https://x",
+      ASSISTANT_PROVIDER: "the provider the service names",
+      ASSISTANT_REGION: "the region it names",
+    }),
+  ).toEqual(["the provider the service names, in the region it names"]);
+  expect(
+    aiDestinations({
+      SMITHABLE_MODEL: "m",
+      SMITHABLE_MODEL_URL: "https://x",
+      SMITHABLE_MODEL_LOCATION: "eu",
+    }),
+  ).toEqual(["the Smithable model, where the Smithable service runs it"]);
   expect(
     aiDestinations({
       SMITHABLE_MODEL: "m",
