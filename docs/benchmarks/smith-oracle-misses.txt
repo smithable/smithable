@@ -1,3 +1,4 @@
+api-only-tasks (change, en): cannot tell: missing auth
 q-bk-mail-book (spec-question, en): cannot tell: missing outgoing:bookingMade, outgoing:reminder
 q-bk-sv-drafts (spec-question, sv): cannot tell: missing auth, model:Post
 q-bb-sv-delete-services (spec-question, sv): cannot tell: missing auth
@@ -17,6 +18,21 @@ d-sv-data (docs-question, sv): cannot tell: missing docs why.html#where-does-my-
 d-fi-cost (docs-question, fi): cannot tell: missing docs why.html#is-there-a-hosted-version
 d-handover (docs-question, en): cannot tell: missing docs start-hosted.html#take-it-with-you
 long-mp-docs (docs-question, en): cannot tell: missing docs why.html#where-does-my-data-live | start-hosted.html#where-it-runs | start-hosted.html#take-it-with-you | leave.html
+bk-sv-instructors-for-staff (change, sv): cannot tell: missing auth
+bk-sv-staff-today-again (change, sv): cannot tell: missing auth
+bk-sv-members-for-staff (change, sv): cannot tell: missing auth
+bk-sv-classtypes-staff-members (change, sv): cannot tell: missing auth
+bk-sv-bookings-members-staff (change, sv): cannot tell: missing auth
+bk-sv-neg-inte-for (change, sv): cannot tell: missing auth
+bk-sv-neg-ej-for (change, sv): cannot tell: missing auth
+bk-sv-neg-utom (change, sv): cannot tell: missing auth
+bk-sv-neg-forutom (change, sv): cannot tell: missing auth
+bk-sv-neg-men-inte (change, sv): cannot tell: missing auth
+bk-sv-neg-dold (change, sv): cannot tell: missing auth
+bk-sv-neg-bara-for (change, sv): cannot tell: missing auth
+bk-sv-only-staff (change, sv): cannot tell: missing auth
+bk-sv-staff-utom-members (change, sv): cannot tell: missing auth
+bk-sv-staff-inte-members (change, sv): cannot tell: missing auth
 q-bk-sv-staff-sessions (spec-question, sv): cannot tell: missing auth
 q-inv-sv-overdue (spec-question, sv): cannot tell: missing timer:markOverdue
 q-st-sv-public (spec-question, sv): cannot tell: missing auth

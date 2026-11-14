@@ -12,11 +12,11 @@
   },
   "change": {
    "requests": 141,
-   "right": 139,
-   "cannotTell": 2,
+   "right": 123,
+   "cannotTell": 18,
    "wrongRoute": 0,
    "medianTokens": 34404,
-   "medianExtraParts": 6,
+   "medianExtraParts": 4,
    "medianExtraDocs": 3
   },
   "custom-code": {

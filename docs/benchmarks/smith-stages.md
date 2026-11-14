@@ -37,7 +37,7 @@ A perfect model in place of the real one: right when the prompt holds everything
 | Kind | Requests | Right | Cannot tell | Wrong route | Median tokens sent | Median parts not needed | Median docs parts not needed |
 |---|---|---|---|---|---|---|---|
 | ambiguous | 25 | 25 | 0 | 0 | 26,654 | 4 | 3 |
-| change | 141 | 139 | 2 | 0 | 34,404 | 6 | 3 |
+| change | 141 | 123 | 18 | 0 | 34,404 | 4 | 3 |
 | custom-code | 13 | 13 | 0 | 0 | 34,210 | 6 | 3 |
 | data | 23 | 23 | 0 | 0 | 34,385 | 5 | 3 |
 | docs-question | 34 | 17 | 17 | 0 | 1,450 | 8 | 2 |
