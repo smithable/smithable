@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { proposalOutcome, speechProviders, usageLine } from "./ask.js";
+import { aiProviders, proposalOutcome, speechProviders, usageLine } from "./ask.js";
 import { tempDir } from "./test-dir.js";
 
 test("a change a wording rule read says so, not that no model was used", () => {
@@ -78,4 +78,37 @@ test("Smith hears and speaks where the AI policy lets his requests go (smith-spe
       SMITHABLE_SPEECH_SERVICE: "/_smithable/speech",
     }),
   ).toEqual([{ name: "browser", onDeviceOnly: true }, { name: "service" }]);
+});
+
+test("a replay answers from the recording only, and a fixture keeps what it read from it", async () => {
+  const fixture = tempDir("replay-fixture-");
+  const recording = tempDir("replay-recording-");
+  const env = {
+    SMITHABLE_FRONTIER: "anthropic",
+    SMITHABLE_FRONTIER_MODEL: "claude-haiku-5-5",
+    ANTHROPIC_API_KEY: "replay-asks-no-model",
+    SMITHABLE_LLM_CACHE: fixture,
+    SMITHABLE_LLM_REPLAY: "1",
+    SMITHABLE_LLM_CACHE_FROM: recording,
+  };
+  const request = { system: "s", user: "u", schema: { type: "object" } };
+  const [model] = aiProviders(env);
+  // Not recorded: the model is not asked.
+  await expect(model.complete(request)).rejects.toThrow("Not in the recording");
+  // Record the request's answer under its key by a fresh cache pointed at the recording.
+  const key = await crypto.subtle
+    .digest(
+      "SHA-256",
+      new TextEncoder().encode(
+        JSON.stringify(["anthropic", "claude-haiku-5-5", "s", "u", { type: "object" }, null]),
+      ),
+    )
+    .then((d) => [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join(""));
+  mkdirSync(join(recording, key.slice(0, 2)), { recursive: true });
+  writeFileSync(
+    join(recording, key.slice(0, 2), `${key}.json`),
+    JSON.stringify({ text: "{}", model: "claude-haiku-5-5", inputTokens: 1, outputTokens: 1 }),
+  );
+  expect(await model.complete(request)).toMatchObject({ text: "{}", cached: true });
+  expect(existsSync(join(fixture, key.slice(0, 2), `${key}.json`))).toBe(true);
 });
