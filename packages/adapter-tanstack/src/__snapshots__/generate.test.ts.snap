@@ -36566,19 +36566,19 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const id = Number(args.id);
       if (!customerData.restore(viewer, [id]).restored)
         throw new NotFound(\`No customer \${id} in the trash that you may restore.\`);
-      return customerToApi((await customerData.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? customerToApi(row) : { done: true, readable: false }))((await customerData.get(viewer, id)) as Record<string, any> | undefined);
     }
     case "restoreOrder": {
       const id = Number(args.id);
       if (!orderData.restore(viewer, [id]).restored)
         throw new NotFound(\`No order \${id} in the trash that you may restore.\`);
-      return orderToApi((await orderData.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? orderToApi(row) : { done: true, readable: false }))((await orderData.get(viewer, id)) as Record<string, any> | undefined);
     }
     case "restoreFollowUp": {
       const id = Number(args.id);
       if (!followUpData.restore(viewer, [id]).restored)
         throw new NotFound(\`No follow up \${id} in the trash that you may restore.\`);
-      return followUpToApi((await followUpData.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? followUpToApi(row) : { done: true, readable: false }))((await followUpData.get(viewer, id)) as Record<string, any> | undefined);
     }
         default:
           throw new NotFound(\`There is no action "\${String(args.action)}".\`);
@@ -44206,7 +44206,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "e1896b86 generated",
+  "src/generated/ask.server.ts": "2a9be3ad generated",
   "src/generated/card.server.ts": "a5f24452 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",

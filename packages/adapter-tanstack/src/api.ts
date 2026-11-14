@@ -902,7 +902,7 @@ ${combines
               if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "sum" || c === "join" || Number.isInteger(c))))
                 throw new BadInput("choices: for each field the records differ in, keep or the id of the record whose value is taken (sum or join where offered).");
               const made = await ${actionNames(a).run}(viewer, ids as number[], (choices ?? {}) as never, remove === true);
-              return ${camelName}ToApi((await ${n.data}.get(viewer, made)) as Record<string, any>);
+              return ((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, made)) as Record<string, any> | undefined);
             }`,
   )
   .join("\n")}
@@ -945,18 +945,18 @@ ${own
               if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "sum" || c === "join" || Number.isInteger(c))))
                 throw new BadInput("choices: for each field the records differ in, keep or the id of the record whose value is taken (sum or join where offered).");
               const merged = await ${actionNames(a).run}(viewer, [id, ...(others as number[])], (choices ?? {}) as never);
-              return ${camelName}ToApi((await ${n.data}.get(viewer, merged.kept)) as Record<string, any>);
+              return ((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, merged.kept)) as Record<string, any> | undefined);
             }`;
     if (a.split)
       return `            case ${JSON.stringify(a.name)}: {
               const { move } = (body ?? {}) as { move?: unknown };
               if (!Array.isArray(move) || !move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
-              return ${camelName}ToApi((await ${n.data}.get(viewer, await ${actionNames(a).run}(viewer, id, move as number[]))) as Record<string, any>);
+              return ((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, await ${actionNames(a).run}(viewer, id, move as number[]))) as Record<string, any> | undefined);
             }`;
     const ran = `await ${actionNames(a).run}(viewer, id${askedFields(a).length ? `, ${actionNames(a).asks}.parse(body)` : ""})`;
     // A copy gives the new record's id: the answer is that record.
     return `            case ${JSON.stringify(a.name)}:
-              return ${camelName}ToApi(${a.copy ? `(await ${n.data}.get(viewer, ${ran})) as Record<string, any>` : ran});`;
+              return ${a.copy ? `((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, ${ran})) as Record<string, any> | undefined)` : `${camelName}ToApi(${ran})`};`;
   })
   .join("\n")}
             default:
@@ -1153,7 +1153,7 @@ function toolsModule(
       const id = Number(args.id);
       if (!${n.data}.restore(viewer, [id]).restored)
         throw new NotFound(\`No ${templateText(n.label.toLowerCase())} \${id} in the trash that you may restore.\`);
-      return ${c}ToApi((await ${n.data}.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, id)) as Record<string, any> | undefined);
     }`;
     });
   const runs = actions.map((action) => {
@@ -1168,7 +1168,7 @@ function toolsModule(
       for (const one of args.ids) ids.push((await found(KINDS.${model.name}, viewer, one)).id as number);
       const choices = numbered(args.choices);
       const made = await ${actionNames(action).run}(keyed(viewer), ids, choices as never, args.remove === true);
-      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), made)) as Record<string, any>);
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), made)) as Record<string, any> | undefined);
     }`;
     // A merge keeps the record named and takes the others; a split answers with its new record.
     if (action.merge || action.split)
@@ -1182,9 +1182,9 @@ function toolsModule(
       for (const one of args.others) others.push((await found(KINDS.${model.name}, viewer, one, "merge")).id as number);
       const choices = numbered(args.choices);
       const merged = await ${actionNames(action).run}(keyed(viewer), [row.id, ...others], choices as never);
-      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), merged.kept)) as Record<string, any>);`
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), merged.kept)) as Record<string, any> | undefined);`
           : `if (!Array.isArray(args.move) || !args.move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
-      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), await ${actionNames(action).run}(keyed(viewer), row.id, args.move as number[]))) as Record<string, any>);`
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), await ${actionNames(action).run}(keyed(viewer), row.id, args.move as number[]))) as Record<string, any> | undefined);`
       }
     }`;
     // The record by its id or its title, as the other tools take it.
@@ -1192,7 +1192,7 @@ function toolsModule(
     // A copy gives the new record's id: the answer is that record.
     return `    case ${JSON.stringify(action.name)}: {
       const row = await found(KINDS.${model.name}, viewer, args.id, "change");
-      return ${c}ToApi(${action.copy ? `(await KINDS.${model.name}.data.get(keyed(viewer), ${ran})) as Record<string, any>` : ran});
+      return ${action.copy ? `((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), ${ran})) as Record<string, any> | undefined)` : `${c}ToApi(${ran})`};
     }`;
   });
   // A custom action on rows: on the ids given, with what else it asks for.
