@@ -33,7 +33,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
     model,
     price: price ? { input: price.input, output: price.output } : { input: 0, output: 0 },
     currency: "USD",
-    async complete({ system, user, schema }) {
+    async complete({ system, user, schema, maxOutputTokens }) {
       const dir = mkdtempSync(join(tmpdir(), "smithable-bedrock-"));
       try {
         const input = join(dir, "input.json");
@@ -55,7 +55,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
               ],
               toolChoice: { tool: { name: "answer" } },
             },
-            inferenceConfig: { maxTokens: 16000, temperature: 0 },
+            inferenceConfig: { maxTokens: maxOutputTokens ?? 16000, temperature: 0 },
           }),
         );
         const out = await new Promise<string>((resolve, reject) => {

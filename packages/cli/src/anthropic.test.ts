@@ -44,6 +44,26 @@ test("a request is a Messages call with the schema as structured output and the 
   expect(call?.body.system).toEqual([
     { type: "text", text: "You change a Smithable app.", cache_control: { type: "ephemeral" } },
   ]);
+  expect(call?.body.max_tokens).toBe(16000);
+});
+
+test("a draft can request a larger output allowance", async () => {
+  let maxTokens: unknown;
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    maxTokens = JSON.parse(String(init.body)).max_tokens;
+    return Response.json({
+      content: [{ type: "text", text: "{}" }],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 1, output_tokens: 1 },
+    });
+  });
+  await anthropic("claude-haiku-5-5", "test-key").complete({
+    system: "Return JSON",
+    user: "A draft",
+    schema: {},
+    maxOutputTokens: 32000,
+  });
+  expect(maxTokens).toBe(32000);
 });
 
 test("several models are tried cheapest first, each its own provider; without a key, none", () => {

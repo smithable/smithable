@@ -1,6 +1,25 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { cached, completeJson, listPrice, openAICompatible, type Usage } from "./provider.js";
 
+test("an explicit output allowance is forwarded without imposing one on other requests", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    bodies.push(JSON.parse(String(init.body)));
+    return Response.json({ model: "m", choices: [{ message: { content: "{}" } }], usage: {} });
+  });
+  const provider = openAICompatible({
+    name: "test",
+    baseUrl: "http://local.invalid",
+    model: "m",
+    tier: "local",
+    location: "local",
+  });
+  await provider.complete({ system: "s", user: "u", schema: {} });
+  await provider.complete({ system: "s", user: "u", schema: {}, maxOutputTokens: 32000 });
+  expect(bodies[0]).not.toHaveProperty("max_tokens");
+  expect(bodies[1]?.max_tokens).toBe(32000);
+});
+
 afterEach(() => vi.unstubAllGlobals());
 
 test("a rate-limited request waits as long as the server asks, then goes through", async () => {

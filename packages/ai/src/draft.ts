@@ -11,8 +11,9 @@ import {
   validateUx,
   words,
 } from "@smithable/core";
+import { completeDraftJson } from "./draft-json.js";
 import { languageNote } from "./language.js";
-import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
+import { type Provider, REPAIRS, type Usage } from "./provider.js";
 
 export type SpecFiles = Record<string, string>;
 
@@ -224,7 +225,7 @@ export async function draftProject(options: {
     for (let attempt = 0; attempt < 1 + REPAIRS; attempt++) {
       let files: SpecFiles;
       try {
-        files = (await completeJson(
+        files = (await completeDraftJson(
           provider,
           { system: SYSTEM, user: prompt, schema: answerSchema() },
           usage,

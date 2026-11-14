@@ -50,6 +50,27 @@ function scripted(answers: SpecFiles[], name = "frontier"): Provider & { prompts
 }
 
 describe("starting from a sentence", () => {
+  test("a file draft's missing separator is repaired before validating its files", async () => {
+    const text = JSON.stringify(starters.booking).replace(/,(?="smithable\.)/, " ");
+    expect(() => JSON.parse(text)).toThrow();
+    let calls = 0;
+    const provider: Provider = {
+      ...scripted([]),
+      async complete() {
+        calls++;
+        return { text, model: "fake", inputTokens: 1, outputTokens: 1 };
+      },
+    };
+    const draft = await draftProject({
+      description: "A booking app",
+      starter: starters.booking,
+      providers: [provider],
+    });
+    expect(draft.kind).toBe("draft");
+    expect(calls).toBe(1);
+    expect(draft.usage).toHaveLength(1);
+  });
+
   test("the closest starter is chosen without a model", () => {
     expect(
       closestStarter("A booking site for a yoga studio with classes and instructors", starters),

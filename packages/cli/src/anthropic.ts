@@ -33,7 +33,7 @@ export function anthropic(
     model,
     price: price ? { input: price.input, output: price.output } : { input: 0, output: 0 },
     currency: "USD",
-    async complete({ system, user, schema }) {
+    async complete({ system, user, schema, maxOutputTokens }) {
       const post = (format: boolean) =>
         fetch(url, {
           method: "POST",
@@ -44,7 +44,7 @@ export function anthropic(
           },
           body: JSON.stringify({
             model,
-            max_tokens: 16000,
+            max_tokens: maxOutputTokens ?? 16000,
             system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
             messages: [{ role: "user", content: user }],
             ...(format
