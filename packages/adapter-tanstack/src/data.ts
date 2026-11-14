@@ -2848,7 +2848,11 @@ ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
           signedIn
             ? `
         // The form's write check again, on the record as it is now: it may have changed hands.
-        if (what === "changed") check(${n.access}.write, viewer, ${ownerOf(model, n, "before")});`
+        if (what === "changed") check(${n.access}.write, viewer, ${ownerOf(model, n, "before")});
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.${owner} !== row.${owner} && !(!!viewer && (!!viewer.system || ${n.access}.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);`
             : ""
         }
         const updated = withOwner(before);
@@ -2879,8 +2883,8 @@ ${dropPictures(
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);${cancelCheck("id", "        ")}
+        const current = tx.select().from(${n.table}).where(and(eq(${n.table}.id, id), ${self}.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);${signedIn ? `\n        check(${n.access}.delete, viewer, ${ownerOf(model, n, "current")});` : ""}${cancelCheck("id", "        ")}
 ${groupCheck("id", "row", "        ")}${trashing ? "        const when = new Date();\n" : ""}        const gone = ${goneBy("id")};
         if (gone) {
           audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n          ")}${groupTrash("id", "          ")}
@@ -2915,8 +2919,8 @@ ${
         try {
           // Read again in the change itself, as one record's delete is: one that left the
           // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
-          if (!tx.select({ id: ${n.table}.id }).from(${n.table}).where(and(eq(${n.table}.id, row.id), ${self}.readable(viewer))).get())
-            throw new AccessDenied(viewer !== null);${cancelCheck("row.id", "          ")}
+          const current = tx.select().from(${n.table}).where(and(eq(${n.table}.id, row.id), ${self}.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);${signedIn ? `\n          check(${n.access}.delete, viewer, ${ownerOf(model, n, "current")});` : ""}${cancelCheck("row.id", "          ")}
 ${groupCheck("row.id", "row", "          ")}          const gone = ${goneBy("row.id")};
           if (gone) {
             audit(tx, viewer, { action: "${goneAction}", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });${tell('"deleted"', "gone").replace("\n        ", "\n            ")}${groupTrash("row.id", "            ")}
