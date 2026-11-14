@@ -92,6 +92,8 @@ export async function checkStudioLayout(browser, base, pictures) {
       assert.equal(geometry.coversPreviewControls, false, "Smith covers preview controls");
       if (pictures)
         await page.screenshot({ path: join(pictures, `after-${viewport.width}-smith.png`) });
+      // Escape belongs to focused controls; leave the phone's window radio before ending the tour.
+      await page.evaluate(() => document.activeElement?.blur());
       await page.keyboard.press("Escape");
       await page.locator("[data-guide-card]:visible").waitFor({ state: "detached" });
       if (viewport.width === 1600) {
@@ -104,6 +106,38 @@ export async function checkStudioLayout(browser, base, pictures) {
         await page.setViewportSize({ width: 1600, height: 900 });
         await page.getByRole("complementary", { name: "Smith" }).waitFor();
         await page.locator('[data-window="changes"]').waitFor({ state: "detached" });
+        await page
+          .locator("[data-studio-header]")
+          .getByRole("button", { name: "Guide", exact: true })
+          .click();
+        await page.getByRole("menuitem", { name: "Tour Studio", exact: true }).click();
+        const card = page.locator("[data-guide-card]:visible");
+        await card.waitFor();
+        const stops = [];
+        for (let i = 0; i < 10; i++) {
+          assert.equal(await card.count(), 1, "tour must have exactly one visible guide");
+          const anchor = await card.getAttribute("data-guide-card");
+          stops.push(anchor);
+          const done = card.getByRole("button", { name: "Done", exact: true });
+          if (await done.count()) {
+            await done.click();
+            break;
+          }
+          await card.getByRole("button", { name: "Next", exact: true }).click();
+          if (anchor === "change") {
+            await card.getByRole("button", { name: "Yes", exact: true }).waitFor();
+            await card.getByRole("button", { name: "Skip", exact: true }).click();
+          }
+          await page.waitForFunction(
+            (before) =>
+              [...document.querySelectorAll("[data-guide-card]")].some(
+                (el) => el.checkVisibility() && el.getAttribute("data-guide-card") !== before,
+              ),
+            anchor,
+          );
+        }
+        await card.waitFor({ state: "detached" });
+        assert.ok(stops.includes("publish"), `tour did not reach publishing: ${stops.join()}`);
       }
       console.log(
         `  ✓ Studio ${viewport.width}×${viewport.height} at 2×: one guide, one scroll region, reachable input and controls`,
