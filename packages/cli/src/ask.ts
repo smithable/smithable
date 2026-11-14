@@ -91,9 +91,26 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
       .filter(Boolean))
       providers.push(anthropic(model, env.ANTHROPIC_API_KEY, env.SMITHABLE_USAGE_LOG));
   // The benchmark's and tests' response cache (SMITHABLE_LLM_CACHE=<folder>): a request seen
-  // before is answered from the folder. Never on unless set.
+  // before is answered from the folder. Never on unless set. SMITHABLE_LLM_REPLAY=1 replays only:
+  // a request not in the folder fails and no model is asked. SMITHABLE_LLM_CACHE_FROM=<folder>
+  // answers from a second folder too and copies each answer used into the first (a fixture made
+  // from a whole recording keeps only what its runs read).
   const folder = env.SMITHABLE_LLM_CACHE;
-  return folder ? providers.map((p) => cached(p, folderStore(folder))) : providers;
+  if (!folder) return providers;
+  const store = folderStore(folder, env.SMITHABLE_LLM_CACHE_FROM);
+  return providers.map((p) => cached(env.SMITHABLE_LLM_REPLAY === "1" ? offline(p) : p, store));
+}
+
+/** A provider that never asks its model: for replays, where a request not recorded is an error. */
+function offline(provider: Provider): Provider {
+  return {
+    ...provider,
+    async complete() {
+      throw new Error(
+        `Not in the recording: ${provider.model ?? provider.name} was asked something it was not asked when recorded.`,
+      );
+    },
+  };
 }
 
 /**
@@ -143,16 +160,21 @@ export function speechProviders(
 }
 
 /** Answers kept as files in a folder, by their key. */
-function folderStore(folder: string): ResponseStore {
-  const path = (key: string) => join(folder, key.slice(0, 2), `${key}.json`);
+function folderStore(folder: string, from?: string): ResponseStore {
+  const path = (dir: string, key: string) => join(dir, key.slice(0, 2), `${key}.json`);
+  const set = async (key: string, value: string) => {
+    mkdirSync(dirname(path(folder, key)), { recursive: true });
+    writeFileSync(path(folder, key), value);
+  };
   return {
     async get(key) {
-      return existsSync(path(key)) ? readFileSync(path(key), "utf8") : undefined;
+      if (existsSync(path(folder, key))) return readFileSync(path(folder, key), "utf8");
+      if (!from || !existsSync(path(from, key))) return undefined;
+      const value = readFileSync(path(from, key), "utf8");
+      await set(key, value);
+      return value;
     },
-    async set(key, value) {
-      mkdirSync(dirname(path(key)), { recursive: true });
-      writeFileSync(path(key), value);
-    },
+    set,
   };
 }
 
