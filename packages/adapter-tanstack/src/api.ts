@@ -1608,15 +1608,19 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
         throw new BadInput(\`\${run.label} needs: \${issues.map((i) => \`\${i.path.join(".")} (\${i.message})\`).join(", ") || "other values"}.\`);
       }
     }
-    kept = { ...args, id: row.id, ...(input ? { input } : {}) };
+    // Only the checked values go on: an action that asks for nothing gets none.
+    const { input: _given, ...rest } = args;
+    kept = { ...rest, id: row.id, ...(input ? { input } : {}) };
     // A value of a record the action adds is named "Model.field"; its own, by the field.
     const asked = (key: string) => {
-      const [model, field] = key.includes(".") ? key.split(".") : [run.kind, key];
-      return labelOf(viewer, String(model), String(field));
+      const dot = key.indexOf(".");
+      return dot < 0 ? labelOf(viewer, String(run.kind), key) : labelOf(viewer, key.slice(0, dot), key.slice(dot + 1));
     };
     card = {
       title: \`\${run.label} \${kind.label} \${String(row[kind.title] ?? row.id)}\`,
-      changes: Object.entries(input ?? {}).map(([k, v]) => ({ label: asked(k), to: cardValue(v) })),
+      changes: Object.entries(input ?? {})
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => ({ label: asked(k), to: cardValue(v) })),
     };
   } else {
     const kind = kindOf(args);
