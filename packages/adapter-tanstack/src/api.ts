@@ -196,7 +196,9 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
             : []),
         ],
         responses: {
-          200: { description: `A page of ${n.pluralLabel.toLowerCase()}` },
+          200: {
+            description: `A page of ${n.pluralLabel.toLowerCase()}: every one the key's role reads, else those anyone may read; 403 when it may read none`,
+          },
           401: problem,
         },
       },
