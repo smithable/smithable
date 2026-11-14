@@ -1,6 +1,48 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { cached, completeJson, listPrice, openAICompatible, type Usage } from "./provider.js";
 
+test("an explicit output allowance is forwarded without imposing one on other requests", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+    bodies.push(JSON.parse(String(init.body)));
+    return Response.json({ model: "m", choices: [{ message: { content: "{}" } }], usage: {} });
+  });
+  const provider = openAICompatible({
+    name: "test",
+    baseUrl: "http://local.invalid",
+    model: "m",
+    tier: "local",
+    location: "local",
+  });
+  await provider.complete({ system: "s", user: "u", schema: {} });
+  await provider.complete({ system: "s", user: "u", schema: {}, maxOutputTokens: 32000 });
+  expect(bodies[0]).not.toHaveProperty("max_tokens");
+  expect(bodies[1]?.max_tokens).toBe(32000);
+});
+
+test("a compatible provider's length limit records usage even when the text parses", async () => {
+  vi.stubGlobal("fetch", async () =>
+    Response.json({
+      model: "m",
+      choices: [{ message: { content: "{}" }, finish_reason: "length" }],
+      usage: { prompt_tokens: 10, completion_tokens: 100 },
+    }),
+  );
+  const provider = openAICompatible({
+    name: "test",
+    baseUrl: "http://local.invalid",
+    model: "m",
+    tier: "local",
+    location: "local",
+  });
+  const usage: Usage[] = [];
+  await expect(
+    completeJson(provider, { system: "s", user: "u", schema: {} }, usage),
+  ).rejects.toThrow(/cut off/);
+  expect(usage).toHaveLength(1);
+  expect(usage[0]).toMatchObject({ inputTokens: 10, outputTokens: 100 });
+});
+
 afterEach(() => vi.unstubAllGlobals());
 
 test("a rate-limited request waits as long as the server asks, then goes through", async () => {

@@ -17,9 +17,10 @@ import {
   validateSpec,
 } from "@smithable/core";
 import type { Assumption, Draft, SpecFiles } from "./draft.js";
+import { completeDraftJson } from "./draft-json.js";
 import { LANGUAGE_NAMES, languageNote, otherLanguages, textLanguage } from "./language.js";
 import { plainSchema } from "./propose.js";
-import { completeJson, type Provider, REPAIRS, type Usage } from "./provider.js";
+import { type Provider, REPAIRS, type Usage } from "./provider.js";
 
 /** An app with nothing in it yet: what the operations start from. */
 export const BLANK: SpecFiles = {
@@ -844,7 +845,7 @@ export async function draftProjectByOperations(options: {
       round += 1;
       let answer: { operations?: Step[]; assumptions?: unknown };
       try {
-        answer = (await completeJson(provider, { system, user: prompt, schema }, usage)) as {
+        answer = (await completeDraftJson(provider, { system, user: prompt, schema }, usage)) as {
           operations?: Step[];
           assumptions?: unknown;
         };
@@ -854,8 +855,6 @@ export async function draftProjectByOperations(options: {
         problem = error instanceof Error ? error.message : String(error);
         // The round about a valid draft's flaws failing leaves the draft as it was.
         if (told.size > 0 && done.length > 0) return draftOf(droppedBefore);
-        // A broken answer (cut off, not JSON) is asked for once more.
-        if (/JSON|Unexpected|position/.test(problem) && round < MAX_ROUNDS) continue;
         break;
       }
       const steps = (answer.operations ?? []).slice(0, MAX_OPERATIONS - done.length);

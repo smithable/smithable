@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Provider } from "@smithable/ai";
+import { CutOffAnswerError, type Provider } from "@smithable/ai";
 
 /**
  * Prices per million tokens of Claude through Amazon Bedrock's EU inference profiles (eu-north-1,
@@ -33,7 +33,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
     model,
     price: price ? { input: price.input, output: price.output } : { input: 0, output: 0 },
     currency: "USD",
-    async complete({ system, user, schema }) {
+    async complete({ system, user, schema, maxOutputTokens }) {
       const dir = mkdtempSync(join(tmpdir(), "smithable-bedrock-"));
       try {
         const input = join(dir, "input.json");
@@ -55,7 +55,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
               ],
               toolChoice: { tool: { name: "answer" } },
             },
-            inferenceConfig: { maxTokens: 16000, temperature: 0 },
+            inferenceConfig: { maxTokens: maxOutputTokens ?? 16000, temperature: 0 },
           }),
         );
         const out = await new Promise<string>((resolve, reject) => {
@@ -85,6 +85,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
           );
         });
         const result = JSON.parse(out) as {
+          stopReason?: string;
           output?: { message?: { content?: { toolUse?: { input?: unknown }; text?: string }[] } };
           usage?: {
             inputTokens?: number;
@@ -103,7 +104,7 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
         // The bench's record of each call's tokens by kind (SMITHABLE_USAGE_LOG=<file>).
         if (usageLog)
           appendFileSync(usageLog, `${JSON.stringify({ model, fresh, read, write, output })}\n`);
-        return {
+        const completion = {
           text:
             answer !== undefined
               ? JSON.stringify(answer)
@@ -125,6 +126,8 @@ export function bedrock(model: string, region: string, usageLog?: string): Provi
               }
             : {}),
         };
+        if (result.stopReason === "max_tokens") throw new CutOffAnswerError(completion);
+        return completion;
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

@@ -23,6 +23,8 @@ export interface CompletionRequest {
    * so a gateway that cascades to a stronger model knows without reading the prompt.
    */
   repair?: boolean;
+  /** Output allowance for a first draft, which can contain many operations. */
+  maxOutputTokens?: number;
 }
 
 export interface Completion {
@@ -34,6 +36,13 @@ export interface Completion {
   cost?: { amount: number; currency: Currency };
   /** Answered from a response cache: nothing was paid for it. */
   cached?: boolean;
+}
+
+/** An incomplete answer still consumed tokens; callers must account for it before retrying. */
+export class CutOffAnswerError extends Error {
+  constructor(readonly completion: Completion) {
+    super("The model's answer was cut off.");
+  }
 }
 
 export type Currency = "EUR" | "USD";
@@ -136,7 +145,7 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
     model: options.model,
     price: options.price ?? listed ?? { input: 0, output: 0 },
     currency: listed ? "USD" : "EUR",
-    async complete({ system, user, schema, fallbackSchema, repair }) {
+    async complete({ system, user, schema, fallbackSchema, repair, maxOutputTokens }) {
       const post = (answerSchema: object) =>
         fetch(`${options.baseUrl.replace(/\/$/, "")}/chat/completions`, {
           method: "POST",
@@ -150,6 +159,7 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
           },
           body: JSON.stringify({
             model: options.model,
+            ...(maxOutputTokens ? { max_tokens: maxOutputTokens } : {}),
             ...(steady ? { temperature: 0 } : {}),
             messages: [
               { role: "system", content: system },
@@ -192,15 +202,17 @@ export function openAICompatible(options: OpenAICompatibleOptions): Provider {
         throw new Error(`${options.name} answered ${response.status}: ${await response.text()}`);
       const body = (await response.json()) as {
         model?: string;
-        choices?: { message?: { content?: string } }[];
+        choices?: { message?: { content?: string }; finish_reason?: string }[];
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
-      return {
+      const completion = {
         text: body.choices?.[0]?.message?.content ?? "",
         model: body.model ?? options.model,
         inputTokens: body.usage?.prompt_tokens ?? 0,
         outputTokens: body.usage?.completion_tokens ?? 0,
       };
+      if (body.choices?.[0]?.finish_reason === "length") throw new CutOffAnswerError(completion);
+      return completion;
     },
   };
 }
@@ -286,7 +298,12 @@ export async function completeJson(
     throw new Error(
       `The request is too large for the model (about ${size} tokens; at most ${MAX_PROMPT_TOKENS}).`,
     );
-  const completion = await provider.complete(request);
+  let cutOff: CutOffAnswerError | undefined;
+  const completion = await provider.complete(request).catch((error) => {
+    if (!(error instanceof CutOffAnswerError)) throw error;
+    cutOff = error;
+    return error.completion;
+  });
   usage.push({
     provider: provider.name,
     model: completion.model,
@@ -302,7 +319,25 @@ export async function completeJson(
     currency: completion.cost?.currency ?? provider.currency ?? "EUR",
     ...(completion.cached ? { cached: true } : {}),
   });
-  return JSON.parse(completion.text);
+  if (cutOff) throw cutOff;
+  try {
+    return JSON.parse(completion.text);
+  } catch (error) {
+    throw new JsonAnswerError(
+      error instanceof Error ? error.message : String(error),
+      completion.text,
+    );
+  }
+}
+
+/** A completed answer that was not JSON; a draft may repair punctuation or request it again. */
+export class JsonAnswerError extends SyntaxError {
+  constructor(
+    message: string,
+    readonly text: string,
+  ) {
+    super(message);
+  }
 }
 
 /** Where a response cache keeps its answers: the host decides (a folder, for the CLI). */
@@ -329,6 +364,7 @@ export function cached(provider: Provider, store: ResponseStore): Provider {
           request.user,
           request.schema,
           request.fallbackSchema ?? null,
+          ...(request.maxOutputTokens === undefined ? [] : [request.maxOutputTokens]),
         ]),
       );
       const kept = await store.get(key);

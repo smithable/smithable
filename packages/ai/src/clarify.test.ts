@@ -118,6 +118,7 @@ test("a draft as operations: slips are mended, refusals go back together, extras
         },
       ],
     },
+    new Error("No further model response"),
   ]);
   const draft = await draftProjectByOperations({
     description: "A site for my dogs",
@@ -143,7 +144,7 @@ test("a draft as operations: slips are mended, refusals go back together, extras
   expect(model.prompts[1]).toContain("These operations were refused:");
   expect(model.prompts[1]).toContain('"path" is missing');
   // Dogs are public and name their keeper: the valid draft goes back once with that, and since
-  // the script has no third answer, it stays as it was.
+  // the third request fails, it stays as it was.
   expect(model.prompts[2]).toContain("Anyone on the internet can read Dog");
   expect(model.prompts).toHaveLength(3);
 });

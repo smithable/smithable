@@ -26,6 +26,28 @@ const toProjectFiles = (files: Record<string, string | undefined>) => ({
   ux: files["smithable.ux.yml"],
 });
 
+test("an unrepairable JSON draft is retried once without another outer retry", async () => {
+  const prompts: string[] = [];
+  const provider: Provider = {
+    name: "fake",
+    tier: "frontier",
+    location: "eu",
+    price: { input: 0, output: 0 },
+    async complete({ user }) {
+      prompts.push(user);
+      return { text: '{"operations":[', model: "fake", inputTokens: 1, outputTokens: 1 };
+    },
+  };
+  const result = await draftProjectByOperations({
+    description: "A task list",
+    providers: [provider],
+  });
+  expect(result.kind).toBe("failed");
+  expect(prompts).toHaveLength(2);
+  expect(prompts[1]).toContain("Unexpected end of JSON input");
+  expect(result.usage).toHaveLength(2);
+});
+
 test("the empty app is valid, and the draft's operations leave out what a draft never needs", () => {
   expect(checkSpecFiles(BLANK)).toEqual([]);
   const names = draftOperations().map((o) => o.name);
