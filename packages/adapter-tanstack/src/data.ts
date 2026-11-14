@@ -2830,7 +2830,7 @@ ${
     if (what === "changed") check(${n.access}.write, viewer, ${rowOwner});
 ${loadComputed}    let changed: typeof ${n.table}.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof ${n.table}.$inferSelect) => ${
+    const withOwner = (${(addressOwned(model) || ownerField) && signedIn ? "current" : "_current"}: typeof ${n.table}.$inferSelect) => ${
       addressOwned(model) && signedIn
         ? // Left out it stays; given, a chooser's address as written; anyone else keeps the record's own: ownership never passes to them (support-portal-path.md §2).
           `({ ...values, ${owner}: values.${owner} === undefined || !chooses(viewer) ? current.${owner} : ownerFor(viewer, values.${owner}) })`

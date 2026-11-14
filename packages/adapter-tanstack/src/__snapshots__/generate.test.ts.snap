@@ -5941,7 +5941,7 @@ export const noteData = {
     if (what === "changed") check(noteAccess.write, viewer, row.ownerId);
     let changed: typeof schema.notes.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.notes.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.notes.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -6702,7 +6702,7 @@ export const projectData = {
     if (what === "changed") check(projectAccess.write, viewer, row.ownerId);
     let changed: typeof schema.projects.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.projects.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.projects.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -7474,7 +7474,7 @@ export const taskData = {
     if (what === "changed") check(taskAccess.write, viewer, row.ownerId);
     let changed: typeof schema.tasks.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.tasks.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.tasks.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -11222,19 +11222,19 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/note.import.server.ts": "7b3f75d9 generated",
   "src/generated/note.import.ts": "13466794 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "3d126df6 generated",
+  "src/generated/note.server.ts": "6b940d9f generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "3984a4bc generated",
   "src/generated/project.import.server.ts": "a327a846 generated",
   "src/generated/project.import.ts": "972cb779 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "a560fa69 generated",
+  "src/generated/project.server.ts": "7eb10e84 generated",
   "src/generated/project.ts": "1c4b37f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.import.server.ts": "6df64d29 generated",
   "src/generated/task.import.ts": "1c316273 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "433fdc79 generated",
+  "src/generated/task.server.ts": "2c1696b2 generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
   "src/generated/user-choices.server.ts": "a4a73a74 generated",
@@ -13303,7 +13303,7 @@ export const appointmentData = {
     if (what === "changed") check(appointmentAccess.write, viewer, row.ownerId);
     let changed: typeof schema.appointments.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.appointments.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.appointments.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -13873,7 +13873,7 @@ export const barberData = {
     if (what === "changed") check(barberAccess.write, viewer, row.ownerId);
     let changed: typeof schema.barbers.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.barbers.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.barbers.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -15632,7 +15632,7 @@ export const serviceData = {
     if (what === "changed") check(serviceAccess.write, viewer, row.ownerId);
     let changed: typeof schema.services.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.services.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.services.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -16202,7 +16202,7 @@ export const timeOffData = {
     if (what === "changed") check(timeOffAccess.write, viewer, row.ownerId);
     let changed: typeof schema.timeOffs.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.timeOffs.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.timeOffs.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -18973,12 +18973,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.import.server.ts": "eee34c8a generated",
   "src/generated/appointment.import.ts": "bd211139 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "d40e0943 generated",
+  "src/generated/appointment.server.ts": "e91fcdee generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
-  "src/generated/barber.server.ts": "4daa8de6 generated",
+  "src/generated/barber.server.ts": "bbb73c0b generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/card.server.ts": "86f8f526 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -18992,13 +18992,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/service.import.server.ts": "b222252e generated",
   "src/generated/service.import.ts": "647b7017 generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
-  "src/generated/service.server.ts": "2bca00d5 generated",
+  "src/generated/service.server.ts": "567d6ed0 generated",
   "src/generated/service.ts": "dd2b9287 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.import.server.ts": "2d8ccb72 generated",
   "src/generated/time-off.import.ts": "b7017dfb generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "b20a4ae9 generated",
+  "src/generated/time-off.server.ts": "18c8943a generated",
   "src/generated/time-off.ts": "94851289 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -23863,7 +23863,7 @@ export const classTypeData = {
     if (what === "changed") check(classTypeAccess.write, viewer, row.ownerId);
     let changed: typeof schema.classTypes.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.classTypes.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.classTypes.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -25507,7 +25507,7 @@ export const instructorData = {
     if (what === "changed") check(instructorAccess.write, viewer, row.ownerId);
     let changed: typeof schema.instructors.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.instructors.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.instructors.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -26269,7 +26269,7 @@ export const messageData = {
     if (what === "changed") check(messageAccess.write, viewer, row.ownerId);
     let changed: typeof schema.messages.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.messages.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.messages.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -27344,7 +27344,7 @@ export const postData = {
     if (what === "changed") check(postAccess.write, viewer, row.ownerId);
     let changed: typeof schema.posts.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.posts.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.posts.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -28229,7 +28229,7 @@ export const sessionData = {
     if (what === "changed") check(sessionAccess.write, viewer, row.ownerId);
     let changed: typeof schema.sessions.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.sessions.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.sessions.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -34198,7 +34198,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/class-type.import.server.ts": "e71ffddd generated",
   "src/generated/class-type.import.ts": "584de0f9 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "88da9f70 generated",
+  "src/generated/class-type.server.ts": "dbb34233 generated",
   "src/generated/class-type.ts": "ada91c5e generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "1afdb5ab generated",
@@ -34209,12 +34209,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.import.server.ts": "fccf980a generated",
   "src/generated/instructor.import.ts": "73c07c95 generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "04cf8668 generated",
+  "src/generated/instructor.server.ts": "89cd7397 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.import.server.ts": "529f366e generated",
   "src/generated/message.import.ts": "63ded8df generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "89d43eb9 generated",
+  "src/generated/message.server.ts": "556b1a7a generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "b3b41ca7 generated",
@@ -34222,7 +34222,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "e2d4bc6b generated",
+  "src/generated/post.server.ts": "5f3ff4ac generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -34230,7 +34230,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.import.ts": "4b3e59f0 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "0449fca1 generated",
+  "src/generated/session.server.ts": "3fc60ae2 generated",
   "src/generated/session.ts": "e2a3ab62 generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "9e37548f generated",
@@ -39090,7 +39090,7 @@ export const followUpData = {
     if (what === "changed") check(followUpAccess.write, viewer, row.ownerId);
     let changed: typeof schema.followUps.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.followUps.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.followUps.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -40216,7 +40216,7 @@ export const orderData = {
     if (what === "changed") check(orderAccess.write, viewer, row.ownerId);
     let changed: typeof schema.orders.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.orders.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.orders.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -44095,7 +44095,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "a4599e2b generated",
-  "src/generated/follow-up.server.ts": "d5bd66af generated",
+  "src/generated/follow-up.server.ts": "dcbbee7c generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -44104,7 +44104,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "0a39b791 generated",
-  "src/generated/order.server.ts": "cdbb470d generated",
+  "src/generated/order.server.ts": "9bd7a506 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -47041,7 +47041,7 @@ export const businessProfileData = {
     if (what === "changed") check(businessProfileAccess.write, viewer, row.ownerId);
     let changed: typeof schema.businessProfiles.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.businessProfiles.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.businessProfiles.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -48200,7 +48200,7 @@ export const clientData = {
     if (what === "changed") check(clientAccess.write, viewer, row.ownerId);
     let changed: typeof schema.clients.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.clients.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.clients.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -49734,7 +49734,7 @@ export const invoiceData = {
     if (what === "changed") check(invoiceAccess.write, viewer, row.ownerId);
     let changed: typeof schema.invoices.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.invoices.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.invoices.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -50485,7 +50485,7 @@ export const invoiceLineData = {
     if (what === "changed") check(invoiceLineAccess.write, viewer, row.ownerId);
     let changed: typeof schema.invoiceLines.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.invoiceLines.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.invoiceLines.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -53469,14 +53469,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "d41af9ad generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "fe8a011e generated",
+  "src/generated/business-profile.server.ts": "948ad30b generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/card.server.ts": "5992cd52 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/client.import.server.ts": "254b9c3a generated",
   "src/generated/client.import.ts": "343dac71 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "c8fd7e28 generated",
+  "src/generated/client.server.ts": "0fe7e5df generated",
   "src/generated/client.ts": "ef4091ce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "a5c670df generated",
@@ -53484,13 +53484,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "5dcb3eac generated",
+  "src/generated/invoice-line.server.ts": "8cc9d9b7 generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "cef8c7b5 generated",
+  "src/generated/invoice.server.ts": "11a2d51a generated",
   "src/generated/invoice.ts": "f4863bb7 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "d19f0751 generated",
@@ -57324,7 +57324,7 @@ export const dishData = {
     if (what === "changed") check(dishAccess.write, viewer, row.ownerId);
     let changed: typeof schema.dishes.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.dishes.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.dishes.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -58092,7 +58092,7 @@ export const orderData = {
     if (what === "changed") check(orderAccess.write, viewer, row.ownerId);
     let changed: typeof schema.orders.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.orders.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.orders.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -58596,7 +58596,7 @@ export const orderLineData = {
     if (what === "changed") check(orderLineAccess.write, viewer, row.ownerId);
     let changed: typeof schema.orderLines.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.orderLines.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.orderLines.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -59408,7 +59408,7 @@ export const stopData = {
     if (what === "changed") check(stopAccess.write, viewer, row.ownerId);
     let changed: typeof schema.stops.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.stops.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.stops.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -62781,19 +62781,19 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dish.import.server.ts": "aee46d8b generated",
   "src/generated/dish.import.ts": "44be2252 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "8cc28067 generated",
+  "src/generated/dish.server.ts": "98088dd4 generated",
   "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "ede070dd generated",
+  "src/generated/order-line.server.ts": "99959684 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.import.server.ts": "c25ea634 generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "8cbdd897 generated",
+  "src/generated/order.server.ts": "9af209d8 generated",
   "src/generated/order.ts": "db4c9478 generated",
   "src/generated/outgoing.server.ts": "4615ff1f generated",
   "src/generated/pages.ts": "7d21451f generated",
@@ -62803,7 +62803,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/stop.import.server.ts": "5aca6a4a generated",
   "src/generated/stop.import.ts": "1d2a5d38 generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
-  "src/generated/stop.server.ts": "ea10c9de generated",
+  "src/generated/stop.server.ts": "7bc901a3 generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "875974ba generated",
@@ -65322,7 +65322,7 @@ export const itemData = {
     if (what === "changed") check(itemAccess.write, viewer, row.ownerId);
     let changed: typeof schema.items.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.items.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.items.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -68183,7 +68183,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "aa70ac6d generated",
+  "src/generated/item.server.ts": "ba199882 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "85e88911 generated",
@@ -70461,7 +70461,7 @@ export const itemData = {
     if (what === "changed") check(itemAccess.write, viewer, row.ownerId);
     let changed: typeof schema.items.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.items.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.items.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -72237,7 +72237,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "0eb30681 generated",
-  "src/generated/item.server.ts": "68f0e45d generated",
+  "src/generated/item.server.ts": "d1a4af1a generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "e4262913 generated",
@@ -76728,7 +76728,7 @@ export const componentData = {
     if (what === "changed") check(componentAccess.write, viewer, row.ownerId);
     let changed: typeof schema.components.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.components.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.components.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -78266,7 +78266,7 @@ export const incidentData = {
     if (what === "changed") check(incidentAccess.write, viewer, row.ownerId);
     let changed: typeof schema.incidents.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.incidents.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.incidents.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -79084,7 +79084,7 @@ export const incidentUpdateData = {
     if (what === "changed") check(incidentUpdateAccess.write, viewer, row.ownerId);
     let changed: typeof schema.incidentUpdates.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.incidentUpdates.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.incidentUpdates.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -80020,7 +80020,7 @@ export const maintenanceData = {
     if (what === "changed") check(maintenanceAccess.write, viewer, row.ownerId);
     let changed: typeof schema.maintenances.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.maintenances.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.maintenances.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -85318,7 +85318,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "40856538 generated",
+  "src/generated/component.server.ts": "3a27d6e3 generated",
   "src/generated/component.ts": "59b2f88c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "62de424a generated",
@@ -85326,19 +85326,19 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident-update.import.server.ts": "05597fda generated",
   "src/generated/incident-update.import.ts": "2512bea4 generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "fe568d95 generated",
+  "src/generated/incident-update.server.ts": "d571f1fe generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.import.server.ts": "f466f13d generated",
   "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "f10e3d79 generated",
+  "src/generated/incident.server.ts": "3826d028 generated",
   "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "50bbd5b3 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",
   "src/generated/maintenance.import.server.ts": "7f9a3b5d generated",
   "src/generated/maintenance.import.ts": "d0b5690b generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "268fcffb generated",
+  "src/generated/maintenance.server.ts": "0b281e50 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "c95c523a generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -89215,7 +89215,7 @@ export const messageData = {
     if (what === "changed") check(messageAccess.write, viewer, row.ownerId);
     let changed: typeof schema.messages.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.messages.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.messages.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -90307,7 +90307,7 @@ export const supportCaseData = {
     if (what === "changed") check(supportCaseAccess.write, viewer, row.ownerId);
     let changed: typeof schema.supportCases.$inferSelect;
     // Whose it is after the change, from the record as it is in the change's transaction.
-    const withOwner = (current: typeof schema.supportCases.$inferSelect) => values;
+    const withOwner = (_current: typeof schema.supportCases.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
@@ -93334,7 +93334,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3782a982 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "06b63834 generated",
+  "src/generated/message.server.ts": "b9e95f3b generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "8956b93c generated",
@@ -93343,7 +93343,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
   "src/generated/support-case.import.ts": "84512c28 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "3b8d15ba generated",
+  "src/generated/support-case.server.ts": "2ac57f5b generated",
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
   "src/generated/user-choices.server.ts": "a4a73a74 generated",
