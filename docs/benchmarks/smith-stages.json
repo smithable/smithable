@@ -6,53 +6,53 @@
    "right": 25,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 26654,
-   "medianExtraParts": 4,
-   "medianExtraDocs": 3
+   "medianTokens": 2422,
+   "medianExtraParts": 9,
+   "medianExtraDocs": 0
   },
   "change": {
    "requests": 141,
-   "right": 123,
-   "cannotTell": 18,
+   "right": 141,
+   "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 34404,
-   "medianExtraParts": 4,
-   "medianExtraDocs": 3
+   "medianTokens": 33419,
+   "medianExtraParts": 10,
+   "medianExtraDocs": 0
   },
   "custom-code": {
    "requests": 13,
    "right": 13,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 34210,
-   "medianExtraParts": 6,
-   "medianExtraDocs": 3
+   "medianTokens": 33524,
+   "medianExtraParts": 11,
+   "medianExtraDocs": 0
   },
   "data": {
    "requests": 23,
    "right": 23,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 34385,
-   "medianExtraParts": 5,
-   "medianExtraDocs": 3
+   "medianTokens": 33590,
+   "medianExtraParts": 8,
+   "medianExtraDocs": 0
   },
   "docs-question": {
    "requests": 34,
-   "right": 17,
-   "cannotTell": 17,
+   "right": 29,
+   "cannotTell": 5,
    "wrongRoute": 0,
-   "medianTokens": 1450,
-   "medianExtraParts": 8,
-   "medianExtraDocs": 2
+   "medianTokens": 2198,
+   "medianExtraParts": 9,
+   "medianExtraDocs": 4
   },
   "off-topic": {
    "requests": 10,
    "right": 10,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 26075,
-   "medianExtraParts": 8,
+   "medianTokens": 2029,
+   "medianExtraParts": 11,
    "medianExtraDocs": 3
   },
   "smalltalk": {
@@ -60,105 +60,94 @@
    "right": 17,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 27316,
-   "medianExtraParts": 8,
+   "medianTokens": 2428,
+   "medianExtraParts": 9,
    "medianExtraDocs": 2
   },
   "spec-question": {
    "requests": 46,
-   "right": 35,
-   "cannotTell": 11,
+   "right": 46,
+   "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 1775,
-   "medianExtraParts": 6,
-   "medianExtraDocs": 3
+   "medianTokens": 2536,
+   "medianExtraParts": 8,
+   "medianExtraDocs": 5
   },
   "two-things": {
    "requests": 17,
    "right": 17,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 44132,
-   "medianExtraParts": 3,
-   "medianExtraDocs": 3
+   "medianTokens": 43675,
+   "medianExtraParts": 7,
+   "medianExtraDocs": 0
   }
  },
  "retrieval": {
   "questions": 34,
-  "top3": 17,
-  "top5": 19,
+  "top3": 25,
+  "top5": 30,
   "missed": [
-   "d-publish",
-   "d-cost",
-   "d-selfhost",
    "d-apps",
    "d-fi-finnish",
-   "d-sv-publish",
-   "d-sv-data",
    "d-fi-cost",
-   "long-mp-docs",
-   "d-sv-export",
-   "d-sv-selfhost",
-   "d-sv-import",
-   "d-sv-need-ai",
-   "d-sv-sandbox",
-   "d-sv-mail-limit"
+   "d-sv-selfhost"
   ]
  },
  "prompt": {
   "ambiguous": {
    "requests": 25,
    "byRule": 0,
-   "medianTokens": 26654,
-   "maxTokens": 44272
+   "medianTokens": 2422,
+   "maxTokens": 43538
   },
   "change": {
    "requests": 141,
    "byRule": 14,
-   "medianTokens": 34404,
-   "maxTokens": 46072
+   "medianTokens": 33419,
+   "maxTokens": 44416
   },
   "custom-code": {
    "requests": 13,
    "byRule": 0,
-   "medianTokens": 34210,
-   "maxTokens": 44465
+   "medianTokens": 33524,
+   "maxTokens": 43696
   },
   "data": {
    "requests": 23,
    "byRule": 0,
-   "medianTokens": 34385,
-   "maxTokens": 45868
+   "medianTokens": 33590,
+   "maxTokens": 44207
   },
   "docs-question": {
    "requests": 34,
    "byRule": 0,
-   "medianTokens": 1450,
-   "maxTokens": 38831
+   "medianTokens": 2198,
+   "maxTokens": 37744
   },
   "off-topic": {
    "requests": 10,
    "byRule": 0,
-   "medianTokens": 26075,
-   "maxTokens": 34368
+   "medianTokens": 2029,
+   "maxTokens": 33021
   },
   "smalltalk": {
    "requests": 17,
    "byRule": 13,
-   "medianTokens": 27316,
-   "maxTokens": 27362
+   "medianTokens": 2428,
+   "maxTokens": 2493
   },
   "spec-question": {
    "requests": 46,
    "byRule": 2,
-   "medianTokens": 1775,
-   "maxTokens": 38841
+   "medianTokens": 2536,
+   "maxTokens": 3935
   },
   "two-things": {
    "requests": 17,
    "byRule": 0,
-   "medianTokens": 44132,
-   "maxTokens": 45440
+   "medianTokens": 43675,
+   "maxTokens": 44127
   }
  }
 }

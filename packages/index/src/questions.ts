@@ -40,7 +40,9 @@ export function looksLikeQuestion(request: string): boolean {
   const text = request.trim().toLowerCase();
   return (
     text.endsWith("?") ||
-    /^(?:who|what|which|where|when|why|how|is|are|does|do|can|could|will|would|should)\b/.test(text)
+    /^(?:who|what|whats|which|where|when|why|how|is|are|does|do|can|could|will|would|should)\b/.test(
+      text,
+    )
   );
 }
 

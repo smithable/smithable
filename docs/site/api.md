@@ -173,6 +173,8 @@ A refusal is a JSON problem (`application/problem+json`) in the app's own words,
 
 ## 6. For AI assistants
 
+<!-- asked as: MCP, Model Context Protocol, connect Claude or ChatGPT -->
+
 With `assistants: true` in the `api` block (the status starter has it), the same offer is also there as tools for AI assistants, at `/mcp` in the Model Context Protocol, with the same keys. Point an assistant that speaks MCP over HTTP (Claude, ChatGPT and others) at `https://status.example.com/mcp` with the header `Authorization: Bearer <key>`.
 
 The tools are the same seven for every app, whatever its size, with `delete` where the auth file allows it and `people` for a key that sets a field referring to a user:

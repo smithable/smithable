@@ -94,6 +94,10 @@ const retrieval = requests
 // Beside it, what the prompt carries that no need names, so sending everything does not score best.
 
 const flat = (t) => t.replace(/\s+/g, " ").trim();
+// Studio's own test of a question (apps/studio/src/builder/docs-search.ts), as written there.
+const asksTheDocs = (text) =>
+  /\?\s*$/.test(text) ||
+  /^(how|where|what|why|can i|is there|hur|var|vad|varför|kan jag|finns det)\b/i.test(text.trim());
 const SPEC_OF = {
   model: "models",
   action: "actions",
@@ -195,7 +199,8 @@ const oracle = [];
 for (const r of requests) {
   const { files: f, index, summary } = project(r.starter);
   captured = [];
-  const docs = searchDocsWith(docsIndex, r.text, []);
+  // As Studio: five parts for a request that reads as a question, three otherwise (Ask.tsx).
+  const docs = searchDocsWith(docsIndex, r.text, [], asksTheDocs(r.text) ? 5 : 3);
   const p = await proposeChange({
     request: r.text,
     files: f,

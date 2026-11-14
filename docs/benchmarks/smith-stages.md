@@ -4,15 +4,15 @@
 
 ## Retrieval
 
-Docs questions whose labelled part is among the parts found, without the search phrases a model adds: top 3 17 / 34 (50 %), top 5 19 / 34 (56 %).
+Docs questions whose labelled part is among the parts found, without the search phrases a model adds: top 3 25 / 34 (74 %), top 5 30 / 34 (88 %).
 
 | Language | Top 3 | Top 5 |
 |---|---|---|
-| en | 16 / 22 (73 %) | 18 / 22 (82 %) |
+| en | 19 / 22 (86 %) | 22 / 22 (100 %) |
 | fi | 0 / 2 (0 %) | 0 / 2 (0 %) |
-| sv | 1 / 10 (10 %) | 1 / 10 (10 %) |
+| sv | 6 / 10 (60 %) | 8 / 10 (80 %) |
 
-Not in the top 5: d-publish, d-cost, d-selfhost, d-apps, d-fi-finnish, d-sv-publish, d-sv-data, d-fi-cost, long-mp-docs, d-sv-export, d-sv-selfhost, d-sv-import, d-sv-need-ai, d-sv-sandbox, d-sv-mail-limit.
+Not in the top 5: d-apps, d-fi-finnish, d-fi-cost, d-sv-selfhost.
 
 ## What would be sent
 
@@ -20,15 +20,15 @@ The first model call's prompt per kind of request, about four characters a token
 
 | Kind | Requests | Answered by a rule | Median tokens sent | Most |
 |---|---|---|---|---|
-| ambiguous | 25 | 0 | 26,654 | 44,272 |
-| change | 141 | 14 | 34,404 | 46,072 |
-| custom-code | 13 | 0 | 34,210 | 44,465 |
-| data | 23 | 0 | 34,385 | 45,868 |
-| docs-question | 34 | 0 | 1,450 | 38,831 |
-| off-topic | 10 | 0 | 26,075 | 34,368 |
-| smalltalk | 17 | 13 | 27,316 | 27,362 |
-| spec-question | 46 | 2 | 1,775 | 38,841 |
-| two-things | 17 | 0 | 44,132 | 45,440 |
+| ambiguous | 25 | 0 | 2,422 | 43,538 |
+| change | 141 | 14 | 33,419 | 44,416 |
+| custom-code | 13 | 0 | 33,524 | 43,696 |
+| data | 23 | 0 | 33,590 | 44,207 |
+| docs-question | 34 | 0 | 2,198 | 37,744 |
+| off-topic | 10 | 0 | 2,029 | 33,021 |
+| smalltalk | 17 | 13 | 2,428 | 2,493 |
+| spec-question | 46 | 2 | 2,536 | 3,935 |
+| two-things | 17 | 0 | 43,675 | 44,127 |
 
 ## The oracle
 
@@ -36,12 +36,12 @@ A perfect model in place of the real one: right when the prompt holds everything
 
 | Kind | Requests | Right | Cannot tell | Wrong route | Median tokens sent | Median parts not needed | Median docs parts not needed |
 |---|---|---|---|---|---|---|---|
-| ambiguous | 25 | 25 | 0 | 0 | 26,654 | 4 | 3 |
-| change | 141 | 123 | 18 | 0 | 34,404 | 4 | 3 |
-| custom-code | 13 | 13 | 0 | 0 | 34,210 | 6 | 3 |
-| data | 23 | 23 | 0 | 0 | 34,385 | 5 | 3 |
-| docs-question | 34 | 17 | 17 | 0 | 1,450 | 8 | 2 |
-| off-topic | 10 | 10 | 0 | 0 | 26,075 | 8 | 3 |
-| smalltalk | 17 | 17 | 0 | 0 | 27,316 | 8 | 2 |
-| spec-question | 46 | 35 | 11 | 0 | 1,775 | 6 | 3 |
-| two-things | 17 | 17 | 0 | 0 | 44,132 | 3 | 3 |
+| ambiguous | 25 | 25 | 0 | 0 | 2,422 | 9 | 0 |
+| change | 141 | 141 | 0 | 0 | 33,419 | 10 | 0 |
+| custom-code | 13 | 13 | 0 | 0 | 33,524 | 11 | 0 |
+| data | 23 | 23 | 0 | 0 | 33,590 | 8 | 0 |
+| docs-question | 34 | 29 | 5 | 0 | 2,198 | 9 | 4 |
+| off-topic | 10 | 10 | 0 | 0 | 2,029 | 11 | 3 |
+| smalltalk | 17 | 17 | 0 | 0 | 2,428 | 9 | 2 |
+| spec-question | 46 | 46 | 0 | 0 | 2,536 | 8 | 5 |
+| two-things | 17 | 17 | 0 | 0 | 43,675 | 7 | 0 |

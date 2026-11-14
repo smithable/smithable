@@ -45,6 +45,8 @@ Every app is hosted in Sweden, with its backups in the same region, within the b
 
 ## Take it with you
 
+<!-- asked as: hand over, give to a developer, take everything with us, export -->
+
 **Hand it over** on the app's page has two ways out:
 
 - **Download everything (.zip)**: the code with its whole history, the data (also as spreadsheet files), the uploads and a README, ready in under a minute.

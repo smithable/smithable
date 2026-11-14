@@ -226,7 +226,8 @@ export function Ask({
       const phrases = question ? api.docsPhrases(text) : Promise.resolve([] as string[]);
       const searched = Promise.all([docsIndex(), phrases]).then(
         ([index, words]) => {
-          const hits = searchDocs(index, text, words);
+          // A question gets five parts, a change three: its prompt is small (T844 D).
+          const hits = searchDocs(index, text, words, question ? 5 : 3);
           if (question && asked === docsAsked.current) setDocs(hits);
           return hits;
         },
@@ -248,7 +249,7 @@ export function Ask({
               .slice(-6)
               .map(({ request, reply }) => ({ request: request ?? "", reply }))
           : [],
-        docs: found.map(({ title, url, text }) => ({ title, url, text })),
+        docs: found.map(({ title, url, text, score }) => ({ title, url, text, score })),
       });
       last.current = { text, at: Date.now(), question: next.kind === "question" };
       setProposal(next);

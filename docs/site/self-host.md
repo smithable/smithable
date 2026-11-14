@@ -1,5 +1,7 @@
 # Run an app on your own machine
 
+<!-- asked as: own server, self-host, run it myself, my own hosting -->
+
 A Smithable app is an ordinary TypeScript project with a Dockerfile, and it depends on nothing from Smithable, so you can run it anywhere Docker runs. This page puts an app into a container, says what it needs, where its data lives, how to back it up and bring it back, and how to update it. Every command was run for real; the output is what it printed (a CRM made with `smithable new my-crm --starter crm`). `smithable deploy` deploys to Docker on this machine unless `--target` says otherwise, and names the image, its container and its volume after the app (`name` in its `package.json`, here `acme-crm`).
 
 ## Deploy to Docker

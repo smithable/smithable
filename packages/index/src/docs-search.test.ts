@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
   appParts,
+  asksRights,
   type DocsIndex,
   searchDocs,
   searchDocsWith,
@@ -23,7 +24,15 @@ const index: DocsIndex = {
 
 test("a request's words: no plain words, a plural's s dropped", () => {
   expect(searchWords("How do I add API keys?")).toEqual(["add", "api", "key"]);
-  expect(searchWords("Hur publicerar jag appen?")).toEqual(["publicerar", "appen"]);
+  expect(searchWords("Hur publicerar jag appen?")).toEqual(["publicerar", "publish", "appen"]);
+});
+
+test("a docs word of five letters or more is found with one letter wrong (T844 D)", () => {
+  expect(searchDocs(index, "how do I publsh")[0]?.url).toBe(
+    searchDocs(index, "how do I publish")[0]?.url,
+  );
+  // A short word is not guessed at.
+  expect(searchDocs(index, "kez")).toEqual([]);
 });
 
 test("the docs' parts by BM25, a heading's words counting more", () => {
@@ -44,6 +53,49 @@ test("the app's parts the request names, else its whole summary", () => {
   expect(appParts(sections, "what is this?")).toBe(
     "Bookings: A member books a place.\n\nPages: The schedule is public.",
   );
+});
+
+test("what the app does by itself is always there by its line: each action, outgoing call and timer (T844)", () => {
+  const app: SummarySection[] = [
+    ...sections,
+    {
+      concept: "outgoing:bookingMade",
+      title: "Mail when a booking is made",
+      sentences: ["To the member."],
+    },
+    { concept: "timer:remind", title: "Reminders every morning", sentences: ["At 08:00."] },
+  ];
+  // Found by the search: in full, the others by one line.
+  expect(appParts(app, "who can see the schedule?")).toBe(
+    "Pages: The schedule is public.\n\nAlso in the app:\n- outgoing:bookingMade: Mail when a booking is made\n- timer:remind: Reminders every morning",
+  );
+  // Found itself: in full, not listed again.
+  expect(appParts(app, "when is the booking mail sent?")).not.toContain("- outgoing:bookingMade:");
+});
+
+test("a question about who may do what, in English or Swedish, brings who may (T844 C)", () => {
+  for (const asked of [
+    "who can close cases",
+    "can customers see each other's orders?",
+    "let staff delete sessions",
+    "what does the api offer",
+    "får frisörerna ta bort tjänster?",
+    "kan vem som helst se incidenterna?",
+    "låt personalen ta bort pass",
+  ])
+    expect(asksRights(asked), asked).toBe(true);
+  for (const asked of [
+    "can you add a phone field",
+    "kan du lägga till ett fält",
+    "who are my customers",
+    "how many bookings are there",
+  ])
+    expect(asksRights(asked), asked).toBe(false);
+  const app: SummarySection[] = [
+    ...sections,
+    { concept: "auth", title: "Who may do what", sentences: ["Staff change bookings."] },
+  ];
+  expect(appParts(app, "can members see the schedule?")).toContain("Who may do what");
 });
 
 test("a request's own best part first, then each phrase's, none twice", () => {
