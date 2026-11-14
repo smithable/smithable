@@ -5942,12 +5942,20 @@ export const noteData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(noteAccess.write, viewer, row.ownerId);
     let changed: typeof schema.notes.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.notes.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.notes).where(and(eq(schema.notes.id, id), noteData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(noteAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || noteAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = noteData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.notes).set(checked).where(eq(schema.notes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Note", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -5975,8 +5983,9 @@ export const noteData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.notes.id }).from(schema.notes).where(and(eq(schema.notes.id, id), noteData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.notes).where(and(eq(schema.notes.id, id), noteData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(noteAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.notes).where(eq(schema.notes.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Note", record: id, title: gone.title });
@@ -6005,6 +6014,11 @@ export const noteData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.notes).where(and(eq(schema.notes.id, row.id), noteData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(noteAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.notes).where(eq(schema.notes.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Note", record: row.id, title: gone.title });
@@ -6691,12 +6705,20 @@ export const projectData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(projectAccess.write, viewer, row.ownerId);
     let changed: typeof schema.projects.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.projects.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.projects).where(and(eq(schema.projects.id, id), projectData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(projectAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || projectAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = projectData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.projects).set(checked).where(eq(schema.projects.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Project", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -6721,8 +6743,9 @@ export const projectData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.projects.id }).from(schema.projects).where(and(eq(schema.projects.id, id), projectData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.projects).where(and(eq(schema.projects.id, id), projectData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(projectAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.projects).where(eq(schema.projects.id, id)).returning().get();
@@ -6750,6 +6773,11 @@ export const projectData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.projects).where(and(eq(schema.projects.id, row.id), projectData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(projectAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.projects).where(eq(schema.projects.id, row.id)).returning().get();
@@ -7451,12 +7479,20 @@ export const taskData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(taskAccess.write, viewer, row.ownerId);
     let changed: typeof schema.tasks.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.tasks.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.tasks).where(and(eq(schema.tasks.id, id), taskData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(taskAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || taskAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = taskData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.tasks).set(checked).where(eq(schema.tasks.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Task", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -7481,8 +7517,9 @@ export const taskData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.tasks.id }).from(schema.tasks).where(and(eq(schema.tasks.id, id), taskData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.tasks).where(and(eq(schema.tasks.id, id), taskData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(taskAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.tasks).where(eq(schema.tasks.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Task", record: id, title: gone.title });
@@ -7508,6 +7545,11 @@ export const taskData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.tasks).where(and(eq(schema.tasks.id, row.id), taskData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(taskAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.tasks).where(eq(schema.tasks.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Task", record: row.id, title: gone.title });
@@ -7680,7 +7722,7 @@ export const UPLOADS: Record<string, Record<string, UploadField>> = {
 
 exports[`../../../examples/api/smithable.yml > file list and generated code > src/generated/user-choices.server.ts 1`] = `
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
 import { lookedFor, namesHolding } from "#/kit/people-match";
@@ -7695,6 +7737,10 @@ export const userChoices = () =>
  * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
  * never an address.
  */
+/** A person's name by their id, as a confirmation card shows a person asked for. */
+export const personName = (id: string): string | undefined =>
+  db.select({ name: user.name }).from(user).where(eq(user.id, id)).get()?.name;
+
 export function peopleNamed(words: string): { id: string; name: string }[] {
   const text = lookedFor(words);
   if (!text) throw new BadInput("Give two letters or more of the name.");
@@ -11203,22 +11249,22 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/note.import.server.ts": "7b3f75d9 generated",
   "src/generated/note.import.ts": "13466794 generated",
   "src/generated/note.schema.ts": "a44e751a generated",
-  "src/generated/note.server.ts": "032f1889 generated",
+  "src/generated/note.server.ts": "956dea24 generated",
   "src/generated/note.ts": "bf579f2a generated",
   "src/generated/pages.ts": "3984a4bc generated",
   "src/generated/project.import.server.ts": "a327a846 generated",
   "src/generated/project.import.ts": "972cb779 generated",
   "src/generated/project.schema.ts": "b7c6c8ff generated",
-  "src/generated/project.server.ts": "a19c27d3 generated",
+  "src/generated/project.server.ts": "ae63607f generated",
   "src/generated/project.ts": "1c4b37f3 generated",
   "src/generated/roles.ts": "03e26a94 generated",
   "src/generated/task.import.server.ts": "6df64d29 generated",
   "src/generated/task.import.ts": "1c316273 generated",
   "src/generated/task.schema.ts": "777642e1 generated",
-  "src/generated/task.server.ts": "53968eeb generated",
+  "src/generated/task.server.ts": "ce62692d generated",
   "src/generated/task.ts": "3e2082e7 generated",
   "src/generated/uploads.ts": "4c667ab4 generated",
-  "src/generated/user-choices.server.ts": "a4a73a74 generated",
+  "src/generated/user-choices.server.ts": "d953aad5 generated",
   "src/generated/users.server.ts": "69df2677 generated",
   "src/generated/users.test.ts": "8ad7ab74 generated",
   "src/generated/users.ts": "f77bb99b generated",
@@ -13285,12 +13331,20 @@ export const appointmentData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(appointmentAccess.write, viewer, row.ownerId);
     let changed: typeof schema.appointments.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.appointments.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.appointments).where(and(eq(schema.appointments.id, id), appointmentData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(appointmentAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || appointmentAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = appointmentData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.appointments).set(checked).where(eq(schema.appointments.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Appointment", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -13316,8 +13370,9 @@ export const appointmentData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.appointments.id }).from(schema.appointments).where(and(eq(schema.appointments.id, id), appointmentData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.appointments).where(and(eq(schema.appointments.id, id), appointmentData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(appointmentAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.appointments).where(eq(schema.appointments.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Appointment", record: id, title: gone.name });
@@ -13344,6 +13399,11 @@ export const appointmentData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.appointments).where(and(eq(schema.appointments.id, row.id), appointmentData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(appointmentAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.appointments).where(eq(schema.appointments.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Appointment", record: row.id, title: gone.name });
@@ -13843,12 +13903,20 @@ export const barberData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(barberAccess.write, viewer, row.ownerId);
     let changed: typeof schema.barbers.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.barbers.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.barbers).where(and(eq(schema.barbers.id, id), barberData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(barberAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || barberAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = barberData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.barbers).set(checked).where(eq(schema.barbers.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Barber", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -13876,8 +13944,9 @@ export const barberData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.barbers.id }).from(schema.barbers).where(and(eq(schema.barbers.id, id), barberData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.barbers).where(and(eq(schema.barbers.id, id), barberData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(barberAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.barbers).where(eq(schema.barbers.id, id)).returning().get();
@@ -13908,6 +13977,11 @@ export const barberData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.barbers).where(and(eq(schema.barbers.id, row.id), barberData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(barberAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.barbers).where(eq(schema.barbers.id, row.id)).returning().get();
@@ -15590,12 +15664,20 @@ export const serviceData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(serviceAccess.write, viewer, row.ownerId);
     let changed: typeof schema.services.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.services.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.services).where(and(eq(schema.services.id, id), serviceData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(serviceAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || serviceAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = serviceData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.services).set(checked).where(eq(schema.services.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Service", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -15620,8 +15702,9 @@ export const serviceData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.services.id }).from(schema.services).where(and(eq(schema.services.id, id), serviceData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.services).where(and(eq(schema.services.id, id), serviceData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(serviceAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.services).where(eq(schema.services.id, id)).returning().get();
@@ -15649,6 +15732,11 @@ export const serviceData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.services).where(and(eq(schema.services.id, row.id), serviceData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(serviceAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.services).where(eq(schema.services.id, row.id)).returning().get();
@@ -16148,12 +16236,20 @@ export const timeOffData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(timeOffAccess.write, viewer, row.ownerId);
     let changed: typeof schema.timeOffs.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.timeOffs.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.timeOffs).where(and(eq(schema.timeOffs.id, id), timeOffData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(timeOffAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || timeOffAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = timeOffData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.timeOffs).set(checked).where(eq(schema.timeOffs.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "TimeOff", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -16178,8 +16274,9 @@ export const timeOffData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.timeOffs.id }).from(schema.timeOffs).where(and(eq(schema.timeOffs.id, id), timeOffData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.timeOffs).where(and(eq(schema.timeOffs.id, id), timeOffData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(timeOffAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.timeOffs).where(eq(schema.timeOffs.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "TimeOff", record: id, title: gone.note });
@@ -16205,6 +16302,11 @@ export const timeOffData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.timeOffs).where(and(eq(schema.timeOffs.id, row.id), timeOffData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(timeOffAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.timeOffs).where(eq(schema.timeOffs.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "TimeOff", record: row.id, title: gone.note });
@@ -18909,12 +19011,12 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/appointment.import.server.ts": "eee34c8a generated",
   "src/generated/appointment.import.ts": "bd211139 generated",
   "src/generated/appointment.schema.ts": "bf958be1 generated",
-  "src/generated/appointment.server.ts": "161b3a41 generated",
+  "src/generated/appointment.server.ts": "cde51147 generated",
   "src/generated/appointment.ts": "1e72ecc9 generated",
   "src/generated/barber.import.server.ts": "ba93731a generated",
   "src/generated/barber.import.ts": "76b4b2ca generated",
   "src/generated/barber.schema.ts": "cb113b73 generated",
-  "src/generated/barber.server.ts": "fce447d9 generated",
+  "src/generated/barber.server.ts": "2fcd1fde generated",
   "src/generated/barber.ts": "dcdf162d generated",
   "src/generated/card.server.ts": "86f8f526 generated",
   "src/generated/card.ts": "5cab12e4 generated",
@@ -18928,13 +19030,13 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/generated/service.import.server.ts": "b222252e generated",
   "src/generated/service.import.ts": "647b7017 generated",
   "src/generated/service.schema.ts": "9c839b79 generated",
-  "src/generated/service.server.ts": "f2c24a3d generated",
+  "src/generated/service.server.ts": "7cc04613 generated",
   "src/generated/service.ts": "dd2b9287 generated",
   "src/generated/site.ts": "97fb8041 generated",
   "src/generated/time-off.import.server.ts": "2d8ccb72 generated",
   "src/generated/time-off.import.ts": "b7017dfb generated",
   "src/generated/time-off.schema.ts": "3c90c7ca generated",
-  "src/generated/time-off.server.ts": "82ac622a generated",
+  "src/generated/time-off.server.ts": "dd4540f1 generated",
   "src/generated/time-off.ts": "94851289 generated",
   "src/generated/uploads.ts": "40a253ac generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
@@ -22416,12 +22518,20 @@ export const bookingData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(bookingAccess.write, viewer, row.attendeeId);
     let changed: typeof schema.bookings.$inferSelect;
-    const updated = { ...values, attendeeId: (!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role))) ? (values.attendeeId === undefined ? row.attendeeId : values.attendeeId) : personOf(viewer) };
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (current: typeof schema.bookings.$inferSelect) => ((!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role))) ? { ...values, attendeeId: values.attendeeId === undefined ? current.attendeeId : values.attendeeId } : { ...values, attendeeId: current.attendeeId });
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(bookingAccess.write, viewer, before.attendeeId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.attendeeId !== row.attendeeId && !(!!viewer && (!!viewer.system || bookingAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = bookingData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.bookings).set(checked).where(eq(schema.bookings.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Booking", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -22447,9 +22557,9 @@ export const bookingData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.bookings.id }).from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
-        // Past cancelUntil (docs/design/booking.md §6), only a role that deletes everyone's records does.
+        const current = tx.select().from(schema.bookings).where(and(eq(schema.bookings.id, id), bookingData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(bookingAccess.delete, viewer, current.attendeeId);
         if (!(!!viewer && (!!viewer.system || bookingAccess.delete.roles.includes(viewer.role)))) {
           const perId = tx.select({ p: schema.bookings.sessionId }).from(schema.bookings).where(eq(schema.bookings.id, id)).get()?.p;
           const cancelUntilAt = perId == null ? undefined : (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
@@ -22481,6 +22591,16 @@ export const bookingData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.bookings).where(and(eq(schema.bookings.id, row.id), bookingData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(bookingAccess.delete, viewer, current.attendeeId);
+          if (!(!!viewer && (!!viewer.system || bookingAccess.delete.roles.includes(viewer.role)))) {
+            const perId = tx.select({ p: schema.bookings.sessionId }).from(schema.bookings).where(eq(schema.bookings.id, row.id)).get()?.p;
+            const cancelUntilAt = perId == null ? undefined : (() => { const at = tx.select({ t: schema.sessions.startsAt }).from(schema.sessions).where(eq(schema.sessions.id, perId)).get()?.t; return at ? new Date(at.getTime() - 0) : undefined; })();
+            if (cancelUntilAt && now().getTime() > cancelUntilAt.getTime()) throw new Conflict("cancel-closed");
+          }
           const gone = tx.delete(schema.bookings).where(eq(schema.bookings.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Booking", record: row.id, title: gone.id });
@@ -23784,12 +23904,20 @@ export const classTypeData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(classTypeAccess.write, viewer, row.ownerId);
     let changed: typeof schema.classTypes.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.classTypes.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.classTypes).where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(classTypeAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || classTypeAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = classTypeData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.classTypes).set(checked).where(eq(schema.classTypes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "ClassType", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -23814,8 +23942,9 @@ export const classTypeData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.classTypes.id }).from(schema.classTypes).where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.classTypes).where(and(eq(schema.classTypes.id, id), classTypeData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(classTypeAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.classTypes).where(eq(schema.classTypes.id, id)).returning().get();
@@ -23843,6 +23972,11 @@ export const classTypeData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.classTypes).where(and(eq(schema.classTypes.id, row.id), classTypeData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(classTypeAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.classTypes).where(eq(schema.classTypes.id, row.id)).returning().get();
@@ -25416,12 +25550,20 @@ export const instructorData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(instructorAccess.write, viewer, row.ownerId);
     let changed: typeof schema.instructors.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.instructors.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.instructors).where(and(eq(schema.instructors.id, id), instructorData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(instructorAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || instructorAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = instructorData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.instructors).set(checked).where(eq(schema.instructors.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Instructor", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -25449,8 +25591,9 @@ export const instructorData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.instructors.id }).from(schema.instructors).where(and(eq(schema.instructors.id, id), instructorData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.instructors).where(and(eq(schema.instructors.id, id), instructorData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(instructorAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.instructors).where(eq(schema.instructors.id, id)).returning().get();
@@ -25481,6 +25624,11 @@ export const instructorData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.instructors).where(and(eq(schema.instructors.id, row.id), instructorData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(instructorAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.instructors).where(eq(schema.instructors.id, row.id)).returning().get();
@@ -26166,12 +26314,20 @@ export const messageData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(messageAccess.write, viewer, row.ownerId);
     let changed: typeof schema.messages.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.messages.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(messageAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || messageAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = messageData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.messages).set(checked).where(eq(schema.messages.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Message", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -26196,8 +26352,9 @@ export const messageData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.messages.id }).from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(messageAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.messages).where(eq(schema.messages.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Message", record: id, title: gone.name });
@@ -26223,6 +26380,11 @@ export const messageData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.messages).where(and(eq(schema.messages.id, row.id), messageData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(messageAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.messages).where(eq(schema.messages.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Message", record: row.id, title: gone.name });
@@ -27229,12 +27391,20 @@ export const postData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(postAccess.write, viewer, row.ownerId);
     let changed: typeof schema.posts.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.posts.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.posts).where(and(eq(schema.posts.id, id), postData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(postAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || postAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = postData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.posts).set(checked).where(eq(schema.posts.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Post", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -27262,8 +27432,9 @@ export const postData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.posts.id }).from(schema.posts).where(and(eq(schema.posts.id, id), postData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.posts).where(and(eq(schema.posts.id, id), postData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(postAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.posts).where(eq(schema.posts.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Post", record: id, title: gone.title });
@@ -27292,6 +27463,11 @@ export const postData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.posts).where(and(eq(schema.posts.id, row.id), postData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(postAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.posts).where(eq(schema.posts.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Post", record: row.id, title: gone.title });
@@ -28102,12 +28278,20 @@ export const sessionData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(sessionAccess.write, viewer, row.ownerId);
     let changed: typeof schema.sessions.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.sessions.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.sessions).where(and(eq(schema.sessions.id, id), sessionData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(sessionAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || sessionAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = sessionData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.sessions).set(checked).where(eq(schema.sessions.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Session", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["placesLeft"].includes(k))) });
@@ -28133,8 +28317,9 @@ export const sessionData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.sessions.id }).from(schema.sessions).where(and(eq(schema.sessions.id, id), sessionData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.sessions).where(and(eq(schema.sessions.id, id), sessionData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(sessionAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, \`#\${id}\`);
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.sessions).where(eq(schema.sessions.id, id)).returning().get();
@@ -28163,6 +28348,11 @@ export const sessionData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.sessions).where(and(eq(schema.sessions.id, row.id), sessionData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(sessionAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, \`#\${row.id}\`);
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.sessions).where(eq(schema.sessions.id, row.id)).returning().get();
@@ -28612,7 +28802,7 @@ export const UPLOADS: Record<string, Record<string, UploadField>> = {
 
 exports[`../../../examples/booking/smithable.yml > file list and generated code > src/generated/user-choices.server.ts 1`] = `
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
 import { lookedFor, namesHolding } from "#/kit/people-match";
@@ -28627,6 +28817,10 @@ export const userChoices = () =>
  * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
  * never an address.
  */
+/** A person's name by their id, as a confirmation card shows a person asked for. */
+export const personName = (id: string): string | undefined =>
+  db.select({ name: user.name }).from(user).where(eq(user.id, id)).get()?.name;
+
 export function peopleNamed(words: string): { id: string; name: string }[] {
   const text = lookedFor(words);
   if (!text) throw new BadInput("Give two letters or more of the name.");
@@ -34060,14 +34254,14 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
   "src/generated/booking.schema.ts": "de61c042 generated",
-  "src/generated/booking.server.ts": "6871a768 generated",
+  "src/generated/booking.server.ts": "3335e5f7 generated",
   "src/generated/booking.ts": "fc39a336 generated",
   "src/generated/card.server.ts": "72496fa8 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/class-type.import.server.ts": "e71ffddd generated",
   "src/generated/class-type.import.ts": "584de0f9 generated",
   "src/generated/class-type.schema.ts": "c737b98d generated",
-  "src/generated/class-type.server.ts": "59ba9893 generated",
+  "src/generated/class-type.server.ts": "0ad3e2ee generated",
   "src/generated/class-type.ts": "ada91c5e generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "1afdb5ab generated",
@@ -34078,12 +34272,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/instructor.import.server.ts": "fccf980a generated",
   "src/generated/instructor.import.ts": "73c07c95 generated",
   "src/generated/instructor.schema.ts": "96eaebce generated",
-  "src/generated/instructor.server.ts": "6263adf4 generated",
+  "src/generated/instructor.server.ts": "cd793440 generated",
   "src/generated/instructor.ts": "f02243c8 generated",
   "src/generated/message.import.server.ts": "529f366e generated",
   "src/generated/message.import.ts": "63ded8df generated",
   "src/generated/message.schema.ts": "3ae9ea6f generated",
-  "src/generated/message.server.ts": "fef02393 generated",
+  "src/generated/message.server.ts": "9269a145 generated",
   "src/generated/message.ts": "f222d475 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "b3b41ca7 generated",
@@ -34091,7 +34285,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/post.import.server.ts": "779addc6 generated",
   "src/generated/post.import.ts": "d5299966 generated",
   "src/generated/post.schema.ts": "bc3914c3 generated",
-  "src/generated/post.server.ts": "e9ba4ffc generated",
+  "src/generated/post.server.ts": "99f7cd73 generated",
   "src/generated/post.ts": "3b8935b4 generated",
   "src/generated/roles.ts": "12ea3da4 generated",
   "src/generated/session.formulas.ts": "26cfcc26 generated",
@@ -34099,12 +34293,12 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/session.import.ts": "4b3e59f0 generated",
   "src/generated/session.name.ts": "81a9b22f generated",
   "src/generated/session.schema.ts": "ea859e10 generated",
-  "src/generated/session.server.ts": "190cdf38 generated",
+  "src/generated/session.server.ts": "6b5298f7 generated",
   "src/generated/session.ts": "e2a3ab62 generated",
   "src/generated/site.ts": "994514da generated",
   "src/generated/timers.server.ts": "9e37548f generated",
   "src/generated/uploads.ts": "11494e99 generated",
-  "src/generated/user-choices.server.ts": "a4a73a74 generated",
+  "src/generated/user-choices.server.ts": "d953aad5 generated",
   "src/generated/users.ts": "f77bb99b generated",
   "src/kit/ActionButton.tsx": "44a85b61 kit",
   "src/kit/ActivityLog.tsx": "e53a5289 kit",
@@ -37430,12 +37624,20 @@ export const customerData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(customerAccess.write, viewer, row.accountManagerId);
     let changed: typeof schema.customers.$inferSelect;
-    const updated = { ...values, accountManagerId: (!!viewer && (!!viewer.system || customerAccess.write.roles.includes(viewer.role))) ? (values.accountManagerId === undefined ? row.accountManagerId : values.accountManagerId) : personOf(viewer) };
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (current: typeof schema.customers.$inferSelect) => ((!!viewer && (!!viewer.system || customerAccess.write.roles.includes(viewer.role))) ? { ...values, accountManagerId: values.accountManagerId === undefined ? current.accountManagerId : values.accountManagerId } : { ...values, accountManagerId: current.accountManagerId });
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.customers).where(and(eq(schema.customers.id, id), customerData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(customerAccess.write, viewer, before.accountManagerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.accountManagerId !== row.accountManagerId && !(!!viewer && (!!viewer.system || customerAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = customerData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.customers).set(checked).where(eq(schema.customers.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Customer", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -37460,8 +37662,9 @@ export const customerData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.customers.id }).from(schema.customers).where(and(eq(schema.customers.id, id), customerData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.customers).where(and(eq(schema.customers.id, id), customerData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(customerAccess.delete, viewer, current.accountManagerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used && !together) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const when = new Date();
@@ -37496,6 +37699,11 @@ export const customerData = {
       const when = new Date();
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.customers).where(and(eq(schema.customers.id, row.id), customerData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(customerAccess.delete, viewer, current.accountManagerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used && !together) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.update(schema.customers).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.customers.id, row.id), isNull(schema.customers.deletedAt))).returning().get();
@@ -38948,12 +39156,20 @@ export const followUpData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(followUpAccess.write, viewer, row.ownerId);
     let changed: typeof schema.followUps.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.followUps.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.followUps).where(and(eq(schema.followUps.id, id), followUpData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(followUpAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || followUpAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = followUpData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.followUps).set(checked).where(eq(schema.followUps.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "FollowUp", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -38978,8 +39194,9 @@ export const followUpData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.followUps.id }).from(schema.followUps).where(and(eq(schema.followUps.id, id), followUpData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.followUps).where(and(eq(schema.followUps.id, id), followUpData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(followUpAccess.delete, viewer, current.ownerId);
         const when = new Date();
         const gone = tx.update(schema.followUps).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.followUps.id, id), isNull(schema.followUps.deletedAt))).returning().get();
         if (gone) {
@@ -39007,6 +39224,11 @@ export const followUpData = {
       const when = new Date();
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.followUps).where(and(eq(schema.followUps.id, row.id), followUpData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(followUpAccess.delete, viewer, current.ownerId);
           const gone = tx.update(schema.followUps).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.followUps.id, row.id), isNull(schema.followUps.deletedAt))).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "trashed", model: "FollowUp", record: row.id, title: titleOf(gone.note) });
@@ -40062,12 +40284,20 @@ export const orderData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(orderAccess.write, viewer, row.ownerId);
     let changed: typeof schema.orders.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.orders.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(orderAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || orderAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = orderData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["shippingCost"].includes(k))) });
@@ -40092,8 +40322,9 @@ export const orderData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.orders.id }).from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(orderAccess.delete, viewer, current.ownerId);
         const when = new Date();
         const gone = tx.update(schema.orders).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, id), isNull(schema.orders.deletedAt))).returning().get();
         if (gone) {
@@ -40121,6 +40352,11 @@ export const orderData = {
       const when = new Date();
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.orders).where(and(eq(schema.orders.id, row.id), orderData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(orderAccess.delete, viewer, current.ownerId);
           const gone = tx.update(schema.orders).set({ deletedAt: when, deletedBy: personOf(viewer) }).where(and(eq(schema.orders.id, row.id), isNull(schema.orders.deletedAt))).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "trashed", model: "Order", record: row.id, title: gone.number });
@@ -40540,7 +40776,7 @@ if (import.meta.env.SSR && import.meta.env.PROD) {
 
 exports[`../../../examples/crm/smithable.yml > file list and generated code > src/generated/user-choices.server.ts 1`] = `
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
 import { lookedFor, namesHolding } from "#/kit/people-match";
@@ -40555,6 +40791,10 @@ export const userChoices = () =>
  * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
  * never an address.
  */
+/** A person's name by their id, as a confirmation card shows a person asked for. */
+export const personName = (id: string): string | undefined =>
+  db.select({ name: user.name }).from(user).where(eq(user.id, id)).get()?.name;
+
 export function peopleNamed(words: string): { id: string; name: string }[] {
   const text = lookedFor(words);
   if (!text) throw new BadInput("Give two letters or more of the name.");
@@ -43938,14 +44178,14 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
   "src/generated/customer.schema.ts": "e6ad7cbe generated",
-  "src/generated/customer.server.ts": "053093ae generated",
+  "src/generated/customer.server.ts": "0670ff0a generated",
   "src/generated/customer.ts": "8c21bca9 generated",
   "src/generated/dev-door.server.ts": "c6582e43 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
   "src/generated/follow-up.schema.ts": "a4599e2b generated",
-  "src/generated/follow-up.server.ts": "fcd1b528 generated",
+  "src/generated/follow-up.server.ts": "13ca8621 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -43954,12 +44194,12 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "0a39b791 generated",
-  "src/generated/order.server.ts": "cad6759a generated",
+  "src/generated/order.server.ts": "774f5989 generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
   "src/generated/trash.server.ts": "bd5ac85e generated",
-  "src/generated/user-choices.server.ts": "a4a73a74 generated",
+  "src/generated/user-choices.server.ts": "d953aad5 generated",
   "src/generated/users.server.ts": "aedee060 generated",
   "src/generated/users.test.ts": "18f42451 generated",
   "src/generated/users.ts": "f77bb99b generated",
@@ -46892,12 +47132,20 @@ export const businessProfileData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(businessProfileAccess.write, viewer, row.ownerId);
     let changed: typeof schema.businessProfiles.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.businessProfiles.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.businessProfiles).where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(businessProfileAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || businessProfileAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = businessProfileData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.businessProfiles).set(checked).where(eq(schema.businessProfiles.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "BusinessProfile", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -46922,8 +47170,9 @@ export const businessProfileData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.businessProfiles.id }).from(schema.businessProfiles).where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.businessProfiles).where(and(eq(schema.businessProfiles.id, id), businessProfileData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(businessProfileAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.businessProfiles).where(eq(schema.businessProfiles.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "BusinessProfile", record: id, title: gone.businessName });
@@ -46949,6 +47198,11 @@ export const businessProfileData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.businessProfiles).where(and(eq(schema.businessProfiles.id, row.id), businessProfileData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(businessProfileAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.businessProfiles).where(eq(schema.businessProfiles.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "BusinessProfile", record: row.id, title: gone.businessName });
@@ -48039,12 +48293,20 @@ export const clientData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(clientAccess.write, viewer, row.ownerId);
     let changed: typeof schema.clients.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.clients.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.clients).where(and(eq(schema.clients.id, id), clientData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(clientAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || clientAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = clientData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.clients).set(checked).where(eq(schema.clients.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Client", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -48069,8 +48331,9 @@ export const clientData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.clients.id }).from(schema.clients).where(and(eq(schema.clients.id, id), clientData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.clients).where(and(eq(schema.clients.id, id), clientData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(clientAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.clients).where(eq(schema.clients.id, id)).returning().get();
@@ -48098,6 +48361,11 @@ export const clientData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.clients).where(and(eq(schema.clients.id, row.id), clientData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(clientAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.clients).where(eq(schema.clients.id, row.id)).returning().get();
@@ -49561,12 +49829,20 @@ export const invoiceData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(invoiceAccess.write, viewer, row.ownerId);
     let changed: typeof schema.invoices.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.invoices.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.invoices).where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(invoiceAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || invoiceAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = invoiceData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.invoices).set(checked).where(eq(schema.invoices.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Invoice", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
@@ -49595,8 +49871,9 @@ export const invoiceData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.invoices.id }).from(schema.invoices).where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.invoices).where(and(eq(schema.invoices.id, id), invoiceData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(invoiceAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.number ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.invoices).where(eq(schema.invoices.id, id)).returning().get();
@@ -49628,6 +49905,11 @@ export const invoiceData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.invoices).where(and(eq(schema.invoices.id, row.id), invoiceData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(invoiceAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.number ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.invoices).where(eq(schema.invoices.id, row.id)).returning().get();
@@ -50300,12 +50582,20 @@ export const invoiceLineData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(invoiceLineAccess.write, viewer, row.ownerId);
     let changed: typeof schema.invoiceLines.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.invoiceLines.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.invoiceLines).where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(invoiceLineAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || invoiceLineAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = invoiceLineData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.invoiceLines).set(checked).where(eq(schema.invoiceLines.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "InvoiceLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
@@ -50330,8 +50620,9 @@ export const invoiceLineData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.invoiceLines.id }).from(schema.invoiceLines).where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.invoiceLines).where(and(eq(schema.invoiceLines.id, id), invoiceLineData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(invoiceLineAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.invoiceLines).where(eq(schema.invoiceLines.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "InvoiceLine", record: id, title: gone.description });
@@ -50357,6 +50648,11 @@ export const invoiceLineData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.invoiceLines).where(and(eq(schema.invoiceLines.id, row.id), invoiceLineData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(invoiceLineAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.invoiceLines).where(eq(schema.invoiceLines.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "InvoiceLine", record: row.id, title: gone.description });
@@ -53274,14 +53570,14 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/app.ts": "74f19a10 generated",
   "src/generated/ask.server.ts": "d41af9ad generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
-  "src/generated/business-profile.server.ts": "f612575c generated",
+  "src/generated/business-profile.server.ts": "d7de1db6 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
   "src/generated/card.server.ts": "5992cd52 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/client.import.server.ts": "254b9c3a generated",
   "src/generated/client.import.ts": "343dac71 generated",
   "src/generated/client.schema.ts": "45fa8d56 generated",
-  "src/generated/client.server.ts": "a1f7fcba generated",
+  "src/generated/client.server.ts": "7af34fc4 generated",
   "src/generated/client.ts": "ef4091ce generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "a5c670df generated",
@@ -53289,13 +53585,13 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/invoice-line.formulas.test.ts": "f67cb44c generated",
   "src/generated/invoice-line.formulas.ts": "4e91f82f generated",
   "src/generated/invoice-line.schema.ts": "22398b2f generated",
-  "src/generated/invoice-line.server.ts": "77541e54 generated",
+  "src/generated/invoice-line.server.ts": "7abea06a generated",
   "src/generated/invoice-line.ts": "a4613cbb generated",
   "src/generated/invoice.formulas.ts": "7a58deb7 generated",
   "src/generated/invoice.import.server.ts": "5d63bdd7 generated",
   "src/generated/invoice.import.ts": "92bad053 generated",
   "src/generated/invoice.schema.ts": "9528011d generated",
-  "src/generated/invoice.server.ts": "d4862d59 generated",
+  "src/generated/invoice.server.ts": "4e3d35b9 generated",
   "src/generated/invoice.ts": "f4863bb7 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "d19f0751 generated",
@@ -57130,12 +57426,20 @@ export const dishData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(dishAccess.write, viewer, row.ownerId);
     let changed: typeof schema.dishes.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.dishes.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, id), dishData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(dishAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || dishAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = dishData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.dishes).set(checked).where(eq(schema.dishes.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Dish", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -57163,8 +57467,9 @@ export const dishData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.dishes.id }).from(schema.dishes).where(and(eq(schema.dishes.id, id), dishData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, id), dishData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(dishAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.dishes).where(eq(schema.dishes.id, id)).returning().get();
@@ -57195,6 +57500,11 @@ export const dishData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, row.id), dishData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(dishAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.dishes).where(eq(schema.dishes.id, row.id)).returning().get();
@@ -57886,12 +58196,20 @@ export const orderData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(orderAccess.write, viewer, row.ownerId);
     let changed: typeof schema.orders.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.orders.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(orderAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || orderAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = orderData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.orders).set(checked).where(eq(schema.orders.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Order", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["total"].includes(k))) });
@@ -57917,8 +58235,9 @@ export const orderData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.orders.id }).from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.orders).where(and(eq(schema.orders.id, id), orderData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(orderAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.name ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.orders).where(eq(schema.orders.id, id)).returning().get();
@@ -57947,6 +58266,11 @@ export const orderData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.orders).where(and(eq(schema.orders.id, row.id), orderData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(orderAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.name ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.orders).where(eq(schema.orders.id, row.id)).returning().get();
@@ -58378,12 +58702,20 @@ export const orderLineData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(orderLineAccess.write, viewer, row.ownerId);
     let changed: typeof schema.orderLines.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.orderLines.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.orderLines).where(and(eq(schema.orderLines.id, id), orderLineData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(orderLineAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || orderLineAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = orderLineData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.orderLines).set(checked).where(eq(schema.orderLines.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "OrderLine", record: id, fields: before && changedFields(before, after, Object.keys(updated).filter((k) => !["amount"].includes(k))) });
@@ -58408,8 +58740,9 @@ export const orderLineData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.orderLines.id }).from(schema.orderLines).where(and(eq(schema.orderLines.id, id), orderLineData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.orderLines).where(and(eq(schema.orderLines.id, id), orderLineData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(orderLineAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.orderLines).where(eq(schema.orderLines.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "OrderLine", record: id, title: gone.id });
@@ -58435,6 +58768,11 @@ export const orderLineData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.orderLines).where(and(eq(schema.orderLines.id, row.id), orderLineData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(orderLineAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.orderLines).where(eq(schema.orderLines.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "OrderLine", record: row.id, title: gone.id });
@@ -59178,12 +59516,20 @@ export const stopData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(stopAccess.write, viewer, row.ownerId);
     let changed: typeof schema.stops.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.stops.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.stops).where(and(eq(schema.stops.id, id), stopData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(stopAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || stopAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = stopData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.stops).set(checked).where(eq(schema.stops.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Stop", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -59208,8 +59554,9 @@ export const stopData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.stops.id }).from(schema.stops).where(and(eq(schema.stops.id, id), stopData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.stops).where(and(eq(schema.stops.id, id), stopData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(stopAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.stops).where(eq(schema.stops.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Stop", record: id, title: gone.place });
@@ -59235,6 +59582,11 @@ export const stopData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.stops).where(and(eq(schema.stops.id, row.id), stopData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(stopAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.stops).where(eq(schema.stops.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Stop", record: row.id, title: gone.place });
@@ -62549,19 +62901,19 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/dish.import.server.ts": "aee46d8b generated",
   "src/generated/dish.import.ts": "44be2252 generated",
   "src/generated/dish.schema.ts": "30168a95 generated",
-  "src/generated/dish.server.ts": "ec903ad4 generated",
+  "src/generated/dish.server.ts": "ed8a702b generated",
   "src/generated/dish.ts": "3b947d71 generated",
   "src/generated/hooks.ts": "5c440337 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/order-line.formulas.ts": "4cf8a58f generated",
   "src/generated/order-line.schema.ts": "2cf71e78 generated",
-  "src/generated/order-line.server.ts": "ec1fd4ce generated",
+  "src/generated/order-line.server.ts": "9b1403c7 generated",
   "src/generated/order-line.ts": "20d46e5a generated",
   "src/generated/order.formulas.ts": "53904802 generated",
   "src/generated/order.import.server.ts": "c25ea634 generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "5f21887e generated",
+  "src/generated/order.server.ts": "f436a1dd generated",
   "src/generated/order.ts": "db4c9478 generated",
   "src/generated/outgoing.server.ts": "4615ff1f generated",
   "src/generated/pages.ts": "7d21451f generated",
@@ -62571,7 +62923,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/stop.import.server.ts": "5aca6a4a generated",
   "src/generated/stop.import.ts": "1d2a5d38 generated",
   "src/generated/stop.schema.ts": "9b1cb273 generated",
-  "src/generated/stop.server.ts": "4d5fae09 generated",
+  "src/generated/stop.server.ts": "9cf61ddc generated",
   "src/generated/stop.ts": "c04abc46 generated",
   "src/generated/uploads.ts": "a35206c8 generated",
   "src/generated/users.server.ts": "875974ba generated",
@@ -65091,12 +65443,20 @@ export const itemData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(itemAccess.write, viewer, row.ownerId);
     let changed: typeof schema.items.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.items.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(itemAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || itemAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = itemData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.items).set(checked).where(eq(schema.items.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -65125,8 +65485,9 @@ export const itemData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.items.id }).from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(itemAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.items).where(eq(schema.items.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.title });
@@ -65155,6 +65516,11 @@ export const itemData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.items).where(and(eq(schema.items.id, row.id), itemData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(itemAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.items).where(eq(schema.items.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Item", record: row.id, title: gone.title });
@@ -67942,7 +68308,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
   "src/generated/item.schema.ts": "1585b602 generated",
-  "src/generated/item.server.ts": "745cf059 generated",
+  "src/generated/item.server.ts": "5c087807 generated",
   "src/generated/item.ts": "9051834d generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "85e88911 generated",
@@ -69809,7 +70175,7 @@ import { w } from "#/kit/words";
 export const itemSettable = createInsertSchema(schema.items, {
   name: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
   summary: (s) => s.max(10000, w.atMostCharacters(10000)),
-  link: z.url(w.enterValidUrl).nullish(),
+  link: z.url({ protocol: /^https?$/, error: w.enterValidUrl }).nullish(),
   addedOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
 }).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
 /** What a item's form sends, checked. */
@@ -70221,12 +70587,20 @@ export const itemData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(itemAccess.write, viewer, row.ownerId);
     let changed: typeof schema.items.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.items.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(itemAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || itemAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = itemData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.items).set(checked).where(eq(schema.items.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Item", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -70251,8 +70625,9 @@ export const itemData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.items.id }).from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.items).where(and(eq(schema.items.id, id), itemData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(itemAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.items).where(eq(schema.items.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Item", record: id, title: gone.name });
@@ -70278,6 +70653,11 @@ export const itemData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.items).where(and(eq(schema.items.id, row.id), itemData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(itemAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.items).where(eq(schema.items.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Item", record: row.id, title: gone.name });
@@ -71986,8 +72366,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/item.formulas.ts": "8ef8c196 generated",
   "src/generated/item.import.server.ts": "0fe6563a generated",
   "src/generated/item.import.ts": "0cb7ece1 generated",
-  "src/generated/item.schema.ts": "0dc11389 generated",
-  "src/generated/item.server.ts": "6880483b generated",
+  "src/generated/item.schema.ts": "0eb30681 generated",
+  "src/generated/item.server.ts": "9234dfad generated",
   "src/generated/item.ts": "380eeeef generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "e4262913 generated",
@@ -76479,12 +76859,20 @@ export const componentData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(componentAccess.write, viewer, row.ownerId);
     let changed: typeof schema.components.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.components.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.components).where(and(eq(schema.components.id, id), componentData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(componentAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || componentAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = componentData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.components).set(checked).where(eq(schema.components.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Component", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -76509,8 +76897,9 @@ export const componentData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.components.id }).from(schema.components).where(and(eq(schema.components.id, id), componentData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.components).where(and(eq(schema.components.id, id), componentData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(componentAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.components).where(eq(schema.components.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Component", record: id, title: gone.name });
@@ -76536,6 +76925,11 @@ export const componentData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.components).where(and(eq(schema.components.id, row.id), componentData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(componentAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.components).where(eq(schema.components.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Component", record: row.id, title: gone.name });
@@ -78005,12 +78399,20 @@ export const incidentData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(incidentAccess.write, viewer, row.ownerId);
     let changed: typeof schema.incidents.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.incidents.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.incidents).where(and(eq(schema.incidents.id, id), incidentData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(incidentAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || incidentAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = incidentData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.incidents).set(checked).where(eq(schema.incidents.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Incident", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -78035,8 +78437,9 @@ export const incidentData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.incidents.id }).from(schema.incidents).where(and(eq(schema.incidents.id, id), incidentData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.incidents).where(and(eq(schema.incidents.id, id), incidentData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(incidentAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.title ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.incidents).where(eq(schema.incidents.id, id)).returning().get();
@@ -78064,6 +78467,11 @@ export const incidentData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.incidents).where(and(eq(schema.incidents.id, row.id), incidentData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(incidentAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.title ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.incidents).where(eq(schema.incidents.id, row.id)).returning().get();
@@ -78811,12 +79219,20 @@ export const incidentUpdateData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(incidentUpdateAccess.write, viewer, row.ownerId);
     let changed: typeof schema.incidentUpdates.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.incidentUpdates.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(incidentUpdateAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || incidentUpdateAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = incidentUpdateData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.incidentUpdates).set(checked).where(eq(schema.incidentUpdates.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "IncidentUpdate", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -78841,8 +79257,9 @@ export const incidentUpdateData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.incidentUpdates.id }).from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.id, id), incidentUpdateData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(incidentUpdateAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: id, title: titleOf(gone.message) });
@@ -78868,6 +79285,11 @@ export const incidentUpdateData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.incidentUpdates).where(and(eq(schema.incidentUpdates.id, row.id), incidentUpdateData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(incidentUpdateAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.incidentUpdates).where(eq(schema.incidentUpdates.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "IncidentUpdate", record: row.id, title: titleOf(gone.message) });
@@ -79735,12 +80157,20 @@ export const maintenanceData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(maintenanceAccess.write, viewer, row.ownerId);
     let changed: typeof schema.maintenances.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.maintenances.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.maintenances).where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(maintenanceAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || maintenanceAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = maintenanceData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.maintenances).set(checked).where(eq(schema.maintenances.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Maintenance", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -79765,8 +80195,9 @@ export const maintenanceData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.maintenances.id }).from(schema.maintenances).where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.maintenances).where(and(eq(schema.maintenances.id, id), maintenanceData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(maintenanceAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.maintenances).where(eq(schema.maintenances.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Maintenance", record: id, title: gone.title });
@@ -79792,6 +80223,11 @@ export const maintenanceData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.maintenances).where(and(eq(schema.maintenances.id, row.id), maintenanceData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(maintenanceAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.maintenances).where(eq(schema.maintenances.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Maintenance", record: row.id, title: gone.title });
@@ -85031,7 +85467,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/component.import.server.ts": "25ae311e generated",
   "src/generated/component.import.ts": "53644553 generated",
   "src/generated/component.schema.ts": "8a49641f generated",
-  "src/generated/component.server.ts": "0bdfa6ce generated",
+  "src/generated/component.server.ts": "30e8fe38 generated",
   "src/generated/component.ts": "59b2f88c generated",
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/dev-door.server.ts": "62de424a generated",
@@ -85039,19 +85475,19 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/incident-update.import.server.ts": "05597fda generated",
   "src/generated/incident-update.import.ts": "2512bea4 generated",
   "src/generated/incident-update.schema.ts": "cc47d218 generated",
-  "src/generated/incident-update.server.ts": "cc3b065f generated",
+  "src/generated/incident-update.server.ts": "f9a4754d generated",
   "src/generated/incident-update.ts": "eefb0ef7 generated",
   "src/generated/incident.import.server.ts": "f466f13d generated",
   "src/generated/incident.import.ts": "f56f7242 generated",
   "src/generated/incident.schema.ts": "45d7d984 generated",
-  "src/generated/incident.server.ts": "19520bdc generated",
+  "src/generated/incident.server.ts": "4c6b9fa1 generated",
   "src/generated/incident.ts": "755dc086 generated",
   "src/generated/keys.server.ts": "50bbd5b3 generated",
   "src/generated/keys.test.ts": "4cef6c7c generated",
   "src/generated/maintenance.import.server.ts": "7f9a3b5d generated",
   "src/generated/maintenance.import.ts": "d0b5690b generated",
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
-  "src/generated/maintenance.server.ts": "109de27d generated",
+  "src/generated/maintenance.server.ts": "fa0d4501 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
   "src/generated/mcp.server.ts": "c95c523a generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -88929,12 +89365,20 @@ export const messageData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(messageAccess.write, viewer, row.ownerId);
     let changed: typeof schema.messages.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.messages.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(messageAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || messageAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = messageData.checkUpdate(tx, viewer, id, updated, before);
         const after = tx.update(schema.messages).set(checked).where(eq(schema.messages.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "Message", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -88963,8 +89407,9 @@ export const messageData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.messages.id }).from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.messages).where(and(eq(schema.messages.id, id), messageData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(messageAccess.delete, viewer, current.ownerId);
         const gone = tx.delete(schema.messages).where(eq(schema.messages.id, id)).returning().get();
         if (gone) {
           audit(tx, viewer, { action: "deleted", model: "Message", record: id, title: titleOf(gone.content) });
@@ -88994,6 +89439,11 @@ export const messageData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.messages).where(and(eq(schema.messages.id, row.id), messageData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(messageAccess.delete, viewer, current.ownerId);
           const gone = tx.delete(schema.messages).where(eq(schema.messages.id, row.id)).returning().get();
           if (gone) {
             audit(tx, viewer, { action: "deleted", model: "Message", record: row.id, title: titleOf(gone.content) });
@@ -90009,12 +90459,20 @@ export const supportCaseData = {
     // first, which includes the roles its grant names (docs/design/actions.md, Access).
     if (what === "changed") check(supportCaseAccess.write, viewer, row.ownerId);
     let changed: typeof schema.supportCases.$inferSelect;
-    const updated = values;
+    // Whose it is after the change, from the record as it is in the change's transaction.
+    const withOwner = (_current: typeof schema.supportCases.$inferSelect) => values;
     try {
       changed = db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
         const before = tx.select().from(schema.supportCases).where(and(eq(schema.supportCases.id, id), supportCaseData.readable(viewer))).get();
         if (!before) throw new AccessDenied(viewer !== null);
+        // The form's write check again, on the record as it is now: it may have changed hands.
+        if (what === "changed") check(supportCaseAccess.write, viewer, before.ownerId);
+        // An action checked its access on the record as it was read: one that changed hands since
+        // is refused, unless the viewer changes everyone's.
+        else if (before.ownerId !== row.ownerId && !(!!viewer && (!!viewer.system || supportCaseAccess.write.roles.includes(viewer.role))))
+          throw new AccessDenied(true);
+        const updated = withOwner(before);
         const checked = supportCaseData.checkUpdate(tx, viewer, id, updated, before, what, frees);
         const after = tx.update(schema.supportCases).set(checked).where(eq(schema.supportCases.id, id)).returning().get();
         audit(tx, viewer, { action: what, model: "SupportCase", record: id, fields: before && changedFields(before, after, Object.keys(updated)) });
@@ -90043,8 +90501,9 @@ export const supportCaseData = {
     try {
       db.transaction((tx) => {
         // Read again in the change itself: a record that left the viewer's reach meanwhile is refused.
-        if (!tx.select({ id: schema.supportCases.id }).from(schema.supportCases).where(and(eq(schema.supportCases.id, id), supportCaseData.readable(viewer))).get())
-          throw new AccessDenied(viewer !== null);
+        const current = tx.select().from(schema.supportCases).where(and(eq(schema.supportCases.id, id), supportCaseData.readable(viewer))).get();
+        if (!current) throw new AccessDenied(viewer !== null);
+        check(supportCaseAccess.delete, viewer, current.ownerId);
         const used = usedBy(tx, id, String(row.subject ?? id));
         if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
         const gone = tx.delete(schema.supportCases).where(eq(schema.supportCases.id, id)).returning().get();
@@ -90076,6 +90535,11 @@ export const supportCaseData = {
     db.transaction((tx) => {
       for (const row of rows)
         try {
+          // Read again in the change itself, as one record's delete is: one that left the
+          // viewer's reach meanwhile is refused, and so is one past its deadline (T819).
+          const current = tx.select().from(schema.supportCases).where(and(eq(schema.supportCases.id, row.id), supportCaseData.readable(viewer))).get();
+          if (!current) throw new AccessDenied(viewer !== null);
+          check(supportCaseAccess.delete, viewer, current.ownerId);
           const used = usedBy(tx, row.id, String(row.subject ?? row.id));
           if (used) throw new Conflict(\`in-use:\${JSON.stringify(used)}\`);
           const gone = tx.delete(schema.supportCases).where(eq(schema.supportCases.id, row.id)).returning().get();
@@ -90301,7 +90765,7 @@ export const UPLOADS: Record<string, Record<string, UploadField>> = {
 
 exports[`../../../examples/support/smithable.yml > file list and generated code > src/generated/user-choices.server.ts 1`] = `
 "// Generated by Smithable from smithable.auth.yml. Do not edit: this file is overwritten on every change.
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
 import { lookedFor, namesHolding } from "#/kit/people-match";
@@ -90316,6 +90780,10 @@ export const userChoices = () =>
  * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
  * never an address.
  */
+/** A person's name by their id, as a confirmation card shows a person asked for. */
+export const personName = (id: string): string | undefined =>
+  db.select({ name: user.name }).from(user).where(eq(user.id, id)).get()?.name;
+
 export function peopleNamed(words: string): { id: string; name: string }[] {
   const text = lookedFor(words);
   if (!text) throw new BadInput("Give two letters or more of the name.");
@@ -93040,7 +93508,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/dev-door.server.ts": "3782a982 generated",
   "src/generated/hooks.ts": "1260830e generated",
   "src/generated/message.schema.ts": "4261619c generated",
-  "src/generated/message.server.ts": "d57d9bbe generated",
+  "src/generated/message.server.ts": "dcd218ac generated",
   "src/generated/message.ts": "bbf512fd generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/outgoing.server.ts": "8956b93c generated",
@@ -93049,10 +93517,10 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/support-case.import.server.ts": "1d171fe5 generated",
   "src/generated/support-case.import.ts": "84512c28 generated",
   "src/generated/support-case.schema.ts": "da32d7c9 generated",
-  "src/generated/support-case.server.ts": "1a93021c generated",
+  "src/generated/support-case.server.ts": "9bda0b04 generated",
   "src/generated/support-case.ts": "3f9c46df generated",
   "src/generated/uploads.ts": "8e5fb9e5 generated",
-  "src/generated/user-choices.server.ts": "a4a73a74 generated",
+  "src/generated/user-choices.server.ts": "d953aad5 generated",
   "src/generated/users.server.ts": "a6b70aa0 generated",
   "src/generated/users.test.ts": "5cb4d084 generated",
   "src/generated/users.ts": "f77bb99b generated",
