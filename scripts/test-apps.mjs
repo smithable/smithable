@@ -1765,6 +1765,42 @@ async function kioskPaymentFlow(dir, base) {
   );
   const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
   if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
+  // An order with no lines, through the plain create a record page uses: it stays held, never
+  // released unpaid at a total of zero (T817).
+  const holdCheck = join(dir, "src/order-hold.test.ts");
+  writeFileSync(
+    holdCheck,
+    `import { expect, test } from "vitest";
+import { db } from "#/db";
+import { user } from "#/db/schema";
+import { orderData } from "./generated/order.server";
+
+const values = { name: "By hand", phone: "+358 40 555 6666" } as never;
+
+test("an order with no lines stays held", async () => {
+  const made = await orderData.create(null, values, undefined, true);
+  expect(made.payHeldAt).not.toBeNull();
+});
+
+test("unheld and unpaid only for a role that changes everyone's orders", async () => {
+  db.insert(user).values([
+    { id: "hold-admin", name: "Admin", email: "hold-admin@example.com", role: "admin" },
+    { id: "hold-guest", name: "Guest", email: "hold-guest@example.com", role: "guest" },
+  ]).run();
+  const admin = { id: "hold-admin", name: "Admin", email: "hold-admin@example.com", role: "admin" };
+  const guest = { id: "hold-guest", name: "Guest", email: "hold-guest@example.com", role: "guest" };
+  // Staff entering one by hand: unheld.
+  expect((await orderData.create(admin, values, undefined, false)).payHeldAt).toBeNull();
+  // Anyone else who may add one, asking not to pay: held all the same.
+  expect((await orderData.create(guest, values, undefined, false)).payHeldAt).not.toBeNull();
+});
+`,
+  );
+  try {
+    run("pnpm", ["exec", "vitest", "run", "src/order-hold.test.ts"], dir);
+  } finally {
+    rmSync(holdCheck);
+  }
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
   // Orders up to the provider's page; the Payment's id from its address.
@@ -1896,7 +1932,7 @@ async function kioskPaymentFlow(dir, base) {
     if ((await event(forged, "0".repeat(64))) !== 401)
       throw new Error("an unsigned event was taken");
     console.log(
-      "  ✓ kiosk payments (fake): an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount releases it; a forged call is refused",
+      "  ✓ kiosk payments (fake): an order with no lines stays held, and so does one made unpaid by anyone but staff; an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount releases it; a forged call is refused",
     );
   } catch (error) {
     console.log(

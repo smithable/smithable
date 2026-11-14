@@ -96,11 +96,16 @@ test("the group goes to the trash together, with one mark, and comes back and go
   // Restoring the root restores the group; removing it for good removes the group first, deepest first.
   expect(customer).toContain("orderData.restoreWith(tx, viewer, `Customer:${row.id}`);");
   expect(customer).toContain("shipmentData.restoreWith(tx, viewer, `Customer:${row.id}`);");
-  const erase = customer.slice(customer.indexOf("erase(viewer: Viewer | null, ids: number[])"));
-  expect(erase.indexOf("shipmentData.erase(")).toBeLessThan(erase.indexOf("orderLineData.erase("));
-  expect(erase.indexOf("orderLineData.erase(")).toBeLessThan(erase.indexOf("orderData.erase("));
+  // In one transaction, each record checked for the viewer's delete right (T817).
+  const erase = customer.slice(
+    customer.indexOf("eraseIn(tx: Tx, viewer: Viewer | null, app: boolean"),
+  );
+  expect(erase.indexOf("shipmentData.eraseIn(")).toBeLessThan(
+    erase.indexOf("orderLineData.eraseIn("),
+  );
+  expect(erase.indexOf("orderLineData.eraseIn(")).toBeLessThan(erase.indexOf("orderData.eraseIn("));
   expect(erase).toContain(
-    "orderData.erase(viewer, db.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id));",
+    "after.push(...orderData.eraseIn(tx, viewer, app, tx.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id)));",
   );
   expect(erase).toContain(
     "inArray(schema.orderLines.orderId, db.select({ id: schema.orders.id }).from(schema.orders).where(inArray(schema.orders.customerId, ids)))",
@@ -159,7 +164,7 @@ test("a member without a trash keeps the delete refused, with the facts and the 
   expect(customer).not.toContain("trashWith(");
   expect(customer).not.toContain("restoreWith(");
   // Removing trashed customers for good still takes the trashed orders and lines that point to them.
-  expect(customer).toContain("orderLineData.erase(viewer,");
+  expect(customer).toContain("orderLineData.eraseIn(tx, viewer, app,");
   // Without a trash of its own, the root is the missing one.
   const line = file("src/generated/order-line.server.ts");
   expect(line).toContain("together: false, missing: [shipmentUi.label]");

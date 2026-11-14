@@ -34952,6 +34952,52 @@ describe("FollowUp", () => {
   });
 });
 
+describe("Customer: what the app keeps itself", () => {
+  test("is not taken from a create or a change", async () => {
+    const viewer = signedIn("admin");
+    const made = (await customerData.create(viewer, { ...customerValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never)) as { id: number };
+    expect(db.select({ deletedAt: schema.customers.deletedAt, deletedBy: schema.customers.deletedBy, deletedWith: schema.customers.deletedWith }).from(schema.customers).where(eq(schema.customers.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
+    // A change with the record's own values beside them: those are written, these are not.
+    await customerData.update(viewer, made.id, { ...customerValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never);
+    expect(db.select({ deletedAt: schema.customers.deletedAt, deletedBy: schema.customers.deletedBy, deletedWith: schema.customers.deletedWith }).from(schema.customers).where(eq(schema.customers.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
+  });
+});
+
+describe("Order: what the app keeps itself", () => {
+  test("is not taken from a create or a change", async () => {
+    const viewer = signedIn("admin");
+    const made = (await orderData.create(viewer, { ...orderValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never)) as { id: number };
+    expect(db.select({ deletedAt: schema.orders.deletedAt, deletedBy: schema.orders.deletedBy, deletedWith: schema.orders.deletedWith }).from(schema.orders).where(eq(schema.orders.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
+    // A change with the record's own values beside them: those are written, these are not.
+    await orderData.update(viewer, made.id, { ...orderValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never);
+    expect(db.select({ deletedAt: schema.orders.deletedAt, deletedBy: schema.orders.deletedBy, deletedWith: schema.orders.deletedWith }).from(schema.orders).where(eq(schema.orders.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
+  });
+});
+
+describe("FollowUp: what the app keeps itself", () => {
+  test("is not taken from a create or a change", async () => {
+    const viewer = signedIn("admin");
+    const made = (await followUpData.create(viewer, { ...followUpValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never)) as { id: number };
+    expect(db.select({ deletedAt: schema.followUps.deletedAt, deletedBy: schema.followUps.deletedBy, deletedWith: schema.followUps.deletedWith }).from(schema.followUps).where(eq(schema.followUps.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
+    // A change with the record's own values beside them: those are written, these are not.
+    await followUpData.update(viewer, made.id, { ...followUpValues(viewer.id), ...{ deletedAt: new Date(), deletedBy: stranger.id, deletedWith: "Other:1" } } as never);
+    expect(db.select({ deletedAt: schema.followUps.deletedAt, deletedBy: schema.followUps.deletedBy, deletedWith: schema.followUps.deletedWith }).from(schema.followUps).where(eq(schema.followUps.id, made.id)).get()).toEqual({ deletedAt: null, deletedBy: null, deletedWith: null });
+  });
+});
+
+describe("erasing a Customer for good", () => {
+  test("another person's trashed Order pointing to it stops it", async () => {
+    const viewer = signedIn("sales");
+    const parent = insertCustomer(viewer.id);
+    const child = insertOrder(stranger.id, { customerId: parent.id });
+    db.update(schema.customers).set({ deletedAt: new Date() }).where(eq(schema.customers.id, parent.id)).run();
+    db.update(schema.orders).set({ deletedAt: new Date() }).where(eq(schema.orders.id, child.id)).run();
+    expect(await can(() => customerData.erase(viewer, [parent.id]))).toBe(false);
+    expect(db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.id, child.id)).get()).toBeDefined();
+    expect(db.select({ id: schema.customers.id }).from(schema.customers).where(eq(schema.customers.id, parent.id)).get()).toBeDefined();
+  });
+});
+
 describe("the mergeCustomers action", () => {
   test("admin", async () => {
     const viewer = signedIn("admin");
@@ -36781,7 +36827,7 @@ export const customerSettable = createInsertSchema(schema.customers, {
   phone: (s) => s.regex(/^\\+?[0-9 ()-]{5,20}$/, w.enterValidPhone),
   creditLimit: (s) => s.min(0),
   notes: (s) => s.max(10000, w.atMostCharacters(10000)),
-}).omit({ id: true, createdAt: true, updatedAt: true });
+}).omit({ id: true, createdAt: true, updatedAt: true, deletedAt: true, deletedBy: true, deletedWith: true });
 /** What a customer's form sends, checked. */
 export const customerSchema = customerSettable;
 
@@ -36997,7 +37043,7 @@ export const customerData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, _viewer: Viewer | null, given: CustomerSettable): CustomerSettable {
-    const values = given;
+    const values = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
 
     return values;
   },
@@ -37008,7 +37054,7 @@ export const customerData = {
    * action that changes it in a transaction of its own call it; access stays with the caller.
    */
   checkUpdate(_tx: Tx, _viewer: Viewer | null, _id: number, given: Partial<CustomerSettable>, _before: typeof schema.customers.$inferSelect): Partial<CustomerSettable> {
-    const updated = given;
+    const updated = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
 
     return updated;
   },
@@ -37505,27 +37551,42 @@ export const customerData = {
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
-    if (ids.length === 0) return;
-    // What is in the trash pointing to them goes first, deepest first (docs/design/delete-together.md).
-    followUpData.erase(viewer, db.select({ id: schema.followUps.id }).from(schema.followUps).where(and(isNotNull(schema.followUps.deletedAt), inArray(schema.followUps.customerId, ids))).all().map((r) => r.id));
-    orderData.erase(viewer, db.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id));
-
-    const rows = db
-      .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
-      .from(schema.customers)
-      .where(and(inArray(schema.customers.id, ids), isNotNull(schema.customers.deletedAt)))
-      .all();
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
+    let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        for (const row of rows) {
-          const gone = tx.delete(schema.customers).where(eq(schema.customers.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "removed", model: "Customer", record: row.id, title: gone.name });
-        }
+        after = customerData.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
     }
+    // The files only once the rows are gone for good: a refused erase keeps them.
+    for (const done of after) done();
+  },
+
+  /**
+   * The erase, in a transaction of the caller's: what is in the trash pointing to the records
+   * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
+   */
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
+    const after: (() => void)[] = [];
+    if (ids.length === 0) return after;
+    after.push(...followUpData.eraseIn(tx, viewer, app, tx.select({ id: schema.followUps.id }).from(schema.followUps).where(and(isNotNull(schema.followUps.deletedAt), inArray(schema.followUps.customerId, ids))).all().map((r) => r.id)));
+    after.push(...orderData.eraseIn(tx, viewer, app, tx.select({ id: schema.orders.id }).from(schema.orders).where(and(isNotNull(schema.orders.deletedAt), inArray(schema.orders.customerId, ids))).all().map((r) => r.id)));
+
+    const rows = tx
+      .select({ id: schema.customers.id, accountManagerId: schema.customers.accountManagerId })
+      .from(schema.customers)
+      .where(and(inArray(schema.customers.id, ids), isNotNull(schema.customers.deletedAt)))
+      .all();
+    if (!app && rows.some((row) => !allows(customerAccess.delete, viewer, row.accountManagerId))) throw new AccessDenied(viewer !== null);
+    for (const row of rows) {
+      const gone = tx.delete(schema.customers).where(eq(schema.customers.id, row.id)).returning().get();
+      if (gone) audit(tx, viewer, { action: "removed", model: "Customer", record: row.id, title: gone.name });
+    }
+    return after;
   },
 
   /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
@@ -37536,7 +37597,7 @@ export const customerData = {
       .where(lt(schema.customers.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    customerData.erase(null, old);
+    customerData.erase(null, old, true);
     return old.length;
   },
 
@@ -38363,7 +38424,7 @@ import { w } from "#/kit/words";
 export const followUpSettable = createInsertSchema(schema.followUps, {
   dueOn: (s) => s.regex(/^\\d{4}-\\d{2}-\\d{2}$/, w.enterValidDate),
   note: (s) => s.max(10000, w.atMostCharacters(10000)),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true, deletedAt: true, deletedBy: true, deletedWith: true });
 /** What a follow up's form sends, checked. */
 export const followUpSchema = followUpSettable;
 
@@ -38492,7 +38553,7 @@ export const followUpData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, viewer: Viewer | null, given: FollowUpSettable): FollowUpSettable {
-    const values = given;
+    const values = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
     checkReferences(viewer, values);
 
     return values;
@@ -38504,7 +38565,7 @@ export const followUpData = {
    * action that changes it in a transaction of its own call it; access stays with the caller.
    */
   checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<FollowUpSettable>, _before: typeof schema.followUps.$inferSelect): Partial<FollowUpSettable> {
-    const updated = given;
+    const updated = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
     checkReferences(viewer, updated);
 
     return updated;
@@ -38986,23 +39047,39 @@ export const followUpData = {
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
-    if (ids.length === 0) return;
-    const rows = db
-      .select({ id: schema.followUps.id, ownerId: schema.followUps.ownerId })
-      .from(schema.followUps)
-      .where(and(inArray(schema.followUps.id, ids), isNotNull(schema.followUps.deletedAt)))
-      .all();
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
+    let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        for (const row of rows) {
-          const gone = tx.delete(schema.followUps).where(eq(schema.followUps.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "removed", model: "FollowUp", record: row.id, title: titleOf(gone.note) });
-        }
+        after = followUpData.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
     }
+    // The files only once the rows are gone for good: a refused erase keeps them.
+    for (const done of after) done();
+  },
+
+  /**
+   * The erase, in a transaction of the caller's: what is in the trash pointing to the records
+   * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
+   */
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
+    const after: (() => void)[] = [];
+    if (ids.length === 0) return after;
+    const rows = tx
+      .select({ id: schema.followUps.id, ownerId: schema.followUps.ownerId })
+      .from(schema.followUps)
+      .where(and(inArray(schema.followUps.id, ids), isNotNull(schema.followUps.deletedAt)))
+      .all();
+    if (!app && rows.some((row) => !allows(followUpAccess.delete, viewer, row.ownerId))) throw new AccessDenied(viewer !== null);
+    for (const row of rows) {
+      const gone = tx.delete(schema.followUps).where(eq(schema.followUps.id, row.id)).returning().get();
+      if (gone) audit(tx, viewer, { action: "removed", model: "FollowUp", record: row.id, title: titleOf(gone.note) });
+    }
+    return after;
   },
 
   /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
@@ -39013,7 +39090,7 @@ export const followUpData = {
       .where(lt(schema.followUps.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    followUpData.erase(null, old);
+    followUpData.erase(null, old, true);
     return old.length;
   },
 
@@ -39458,7 +39535,7 @@ import { w } from "#/kit/words";
 /** What a order may be given: a form's values and what the app fills (an action's set). */
 export const orderSettable = createInsertSchema(schema.orders, {
   number: (s) => s.trim().min(1, w.required).max(200, w.atMostCharacters(200)),
-}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true });
+}).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true, deletedAt: true, deletedBy: true, deletedWith: true });
 /** What a order's form sends, checked. */
 export const orderSchema = orderSettable;
 
@@ -39588,7 +39665,7 @@ export const orderData = {
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(_tx: Tx, viewer: Viewer | null, given: OrderSettable): OrderSettable {
-    const values = given;
+    const values = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
     checkReferences(viewer, values);
 
     return values;
@@ -39600,7 +39677,7 @@ export const orderData = {
    * action that changes it in a transaction of its own call it; access stays with the caller.
    */
   checkUpdate(_tx: Tx, viewer: Viewer | null, _id: number, given: Partial<OrderSettable>, _before: typeof schema.orders.$inferSelect): Partial<OrderSettable> {
-    const updated = given;
+    const updated = (Object.fromEntries(Object.entries(given).filter(([key]) => !["deletedAt","deletedBy","deletedWith"].includes(key))) as typeof given);
     checkReferences(viewer, updated);
 
     return updated;
@@ -40082,23 +40159,39 @@ export const orderData = {
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
-    if (ids.length === 0) return;
-    const rows = db
-      .select({ id: schema.orders.id, ownerId: schema.orders.ownerId })
-      .from(schema.orders)
-      .where(and(inArray(schema.orders.id, ids), isNotNull(schema.orders.deletedAt)))
-      .all();
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
+    let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        for (const row of rows) {
-          const gone = tx.delete(schema.orders).where(eq(schema.orders.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "removed", model: "Order", record: row.id, title: gone.number });
-        }
+        after = orderData.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
     }
+    // The files only once the rows are gone for good: a refused erase keeps them.
+    for (const done of after) done();
+  },
+
+  /**
+   * The erase, in a transaction of the caller's: what is in the trash pointing to the records
+   * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
+   */
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
+    const after: (() => void)[] = [];
+    if (ids.length === 0) return after;
+    const rows = tx
+      .select({ id: schema.orders.id, ownerId: schema.orders.ownerId })
+      .from(schema.orders)
+      .where(and(inArray(schema.orders.id, ids), isNotNull(schema.orders.deletedAt)))
+      .all();
+    if (!app && rows.some((row) => !allows(orderAccess.delete, viewer, row.ownerId))) throw new AccessDenied(viewer !== null);
+    for (const row of rows) {
+      const gone = tx.delete(schema.orders).where(eq(schema.orders.id, row.id)).returning().get();
+      if (gone) audit(tx, viewer, { action: "removed", model: "Order", record: row.id, title: gone.number });
+    }
+    return after;
   },
 
   /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
@@ -40109,7 +40202,7 @@ export const orderData = {
       .where(lt(schema.orders.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    orderData.erase(null, old);
+    orderData.erase(null, old, true);
     return old.length;
   },
 
@@ -43752,7 +43845,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/db/index.ts": "ba378d34 kit",
   "src/db/schema.ts": "53da9b50 generated",
   "src/db/seed.ts": "962bef0c generated",
-  "src/generated/access.test.ts": "3c1ae244 generated",
+  "src/generated/access.test.ts": "0e8a6036 generated",
   "src/generated/actions/merge-customers.server.ts": "672ac5eb generated",
   "src/generated/actions/merge-customers.ts": "68575f8a generated",
   "src/generated/actions/schedule-follow-ups.input.ts": "5ecb6336 generated",
@@ -43766,15 +43859,15 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/custom.ts": "5801b2b0 generated",
   "src/generated/customer.import.server.ts": "6460f913 generated",
   "src/generated/customer.import.ts": "53f4b1d0 generated",
-  "src/generated/customer.schema.ts": "abdad055 generated",
-  "src/generated/customer.server.ts": "69dbb3f9 generated",
+  "src/generated/customer.schema.ts": "e6ad7cbe generated",
+  "src/generated/customer.server.ts": "a268d361 generated",
   "src/generated/customer.ts": "8c21bca9 generated",
   "src/generated/dev-door.server.ts": "c6582e43 generated",
   "src/generated/follow-up.formulas.ts": "464cc51b generated",
   "src/generated/follow-up.import.server.ts": "747d6cf1 generated",
   "src/generated/follow-up.import.ts": "39b736bf generated",
-  "src/generated/follow-up.schema.ts": "4393010c generated",
-  "src/generated/follow-up.server.ts": "c30824a8 generated",
+  "src/generated/follow-up.schema.ts": "a4599e2b generated",
+  "src/generated/follow-up.server.ts": "2af58e63 generated",
   "src/generated/follow-up.ts": "6e9b86d6 generated",
   "src/generated/hooks.ts": "c1f38e86 generated",
   "src/generated/my-time.ts": "c315432b generated",
@@ -43782,8 +43875,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/order.formulas.ts": "f74d6edc generated",
   "src/generated/order.import.server.ts": "afc9f15e generated",
   "src/generated/order.import.ts": "efdb6114 generated",
-  "src/generated/order.schema.ts": "906a5fce generated",
-  "src/generated/order.server.ts": "67ece6a0 generated",
+  "src/generated/order.schema.ts": "0a39b791 generated",
+  "src/generated/order.server.ts": "948153ed generated",
   "src/generated/order.ts": "739e757f generated",
   "src/generated/pages.ts": "93284445 generated",
   "src/generated/roles.ts": "1cc6979a generated",
@@ -57671,7 +57764,10 @@ export const orderData = {
           const item = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, chosen.id), dishData.readable(viewer))).get();
           if (!item) throw new BadInput("order-item");
           if (item.available === false) throw new Conflict(\`sold-out:\${item.name}\`);
-          tx.insert(schema.orderLines).values({ orderId: made.id, dishId: item.id, quantity: chosen.quantity, unitPrice: item.price, ownerId: personOf(viewer) }).run();
+          // A line is a record of its own: its creator (also one owned through its order), its
+          // numbers counted up, and its line in the audit log.
+          const added = tx.insert(schema.orderLines).values({ orderId: made.id, dishId: item.id, quantity: chosen.quantity, unitPrice: item.price, ownerId: personOf(viewer) }).returning().get();
+          audit(tx, viewer, { action: "created", model: "OrderLine", record: added.id });
         }
         audit(tx, viewer, { action: "created", model: "Order", record: made.id });
         outgoing(tx, viewer, "Order", "created", made);
@@ -62357,7 +62453,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.import.server.ts": "c25ea634 generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "916eed82 generated",
+  "src/generated/order.server.ts": "e1b345e7 generated",
   "src/generated/order.ts": "db4c9478 generated",
   "src/generated/outgoing.server.ts": "4615ff1f generated",
   "src/generated/pages.ts": "7d21451f generated",

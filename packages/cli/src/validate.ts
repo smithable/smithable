@@ -14,6 +14,7 @@ import {
   formatsOf,
   hasErrors,
   LANGUAGES,
+  modelAccess,
   PEOPLE_FILE,
   type PersonIR,
   pageModel,
@@ -432,6 +433,13 @@ export function explainSpec(ir: SpecIR, auth: AuthIR, ux?: UxIR, language?: stri
       ),
     ];
     if (uniques.length) lines.push(`  unique: ${uniques.join("; ")}`);
+    // Pay to create: who may make one unheld, by the access rules (payments.md §3.2).
+    if (model.heldByPayment) {
+      const writers = modelAccess(model, auth).write.roles;
+      lines.push(
+        `  held until paid, unless made by the app${writers.length ? ` or by ${writers.join(", ")} (the roles that change everyone's)` : ""}`,
+      );
+    }
     const shownAsThread = ir.pages.some((p) =>
       Object.entries(ux?.pages[p.id]?.lists ?? {}).some(
         ([name, look]) =>

@@ -140,12 +140,14 @@ export function modelSchemaModule(model: ModelIR, t: Texts, auth: AuthIR): strin
   const schema = refinements.length
     ? `createInsertSchema(${n.table}, {\n${refinements.join("\n")}\n})`
     : `createInsertSchema(${n.table})`;
-  // Never given: the id, the owner, the times, and a number counting up (the app counts it).
+  // Never given: the id, the owner, the times, a number counting up (the app counts it), and
+  // what the app keeps about a record itself: its trash and its payment hold (systemKeys).
   const omitted = [
     "id",
     ...(!creatorOwned(model) || !hasSignIn(auth) ? [] : ["ownerId"]),
     "createdAt",
     "updatedAt",
+    ...systemKeys(model),
     ...storedFields(model)
       .filter((f) => f.sequence)
       .map(dataKey),
@@ -1302,7 +1304,7 @@ export function dataModule(
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
   checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}): ${n.settableValues} {
-    ${uploadFields.length || sideRule("values") ? "let" : "const"} values = given;
+    ${uploadFields.length || sideRule("values") ? "let" : "const"} values = ${withoutSystem(model, "given")};
 ${createBody}
     return values;
   },
@@ -1313,7 +1315,7 @@ ${createBody}
    * action that changes it in a transaction of its own call it; access stays with the caller.
    */
   checkUpdate(${updateUses("tx") ? "tx" : "_tx"}: Tx, ${uploadFields.length || updateUses("viewer") ? "viewer" : "_viewer"}: Viewer | null, ${updateUses("id") ? "id" : "_id"}: number, given: Partial<${n.settableValues}>, ${uploadFields.length || updateUses("before") ? "before" : "_before"}: typeof ${n.table}.$inferSelect${loadComputed ? ", loaded: Record<string, unknown> = {}" : ""}${locks.length ? `, what = "changed", frees: readonly string[] = []` : ""}): Partial<${n.settableValues}> {
-    const updated = ${uploadFields.length ? "checkFiles(viewer, given, before)" : "given"};
+    const updated = ${uploadFields.length ? `checkFiles(viewer, ${withoutSystem(model, "given")}, before)` : withoutSystem(model, "given")};
 ${updateBody}
     return updated;
   },
@@ -1354,7 +1356,17 @@ ${updateBody}
           if (item.${field(from, orderPage.available)} === false) throw new Conflict(\`sold-out:\${${title && title !== "id" ? `item.${title}` : "item.id"}}\`);`
               : ""
           }
-          tx.insert(${nl.table}).values({ ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)}${signedIn && !line.ownedBy ? ", ownerId: personOf(viewer)" : ""} }).run();
+          // A line is a record of its own: its creator (also one owned through its order), its
+          // numbers counted up, and its line in the audit log.
+          const added = tx.insert(${nl.table}).values({ ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)}${signedIn && creatorOwned(line) ? ", ownerId: personOf(viewer)" : ""}${sequenceEntries(
+            line,
+            auth,
+            nl.table,
+            "personOf(viewer)",
+          )
+            .map((e) => `, ${e}`)
+            .join("")} }).returning().get();
+          audit(tx, viewer, { action: "created", model: ${JSON.stringify(line.name)}, record: added.id });
         }`;
   })();
   // Pay to create (payments.md §3.2, §4.1): the record is written held, with its pending Payment,
@@ -1377,7 +1389,7 @@ ${updateBody}
           const amount = Math.round(Number(priced.${dataKey(payAmount)} ?? 0));
           // Nothing to pay only at exactly zero; a negative or unreadable amount is refused there.
           if (amount !== 0) askPayment(tx, ${JSON.stringify(payEntry.name)}, made.id, amount, ${JSON.stringify(ir.app.currency ?? "EUR")}, ${describe(payEntry.description, "priced")});
-          else made.payHeldAt = tx.update(${n.table}).set({ payHeldAt: null }).where(eq(${n.table}.id, made.id)).returning().get().payHeldAt;
+          ${orderPage ? "// An order with no lines is no order: it stays held, never released at a total of zero.\n          else if (lines?.length) made.payHeldAt" : "else made.payHeldAt"} = tx.update(${n.table}).set({ payHeldAt: null }).where(eq(${n.table}.id, made.id)).returning().get().payHeldAt;
         }`
       : "";
   const insertAudited = `const made = tx.insert(${n.table}).values(${payEntry ? `{ ...${createValues}, payHeldAt: pay ? new Date() : null }` : createValues}).returning().get();${orderLines}
@@ -1575,7 +1587,7 @@ ${loose
         .filter((m) => m.trash)
         .map((m) => {
           const tm = tableRef(m);
-          return `    ${dataOf(m)}.erase(viewer, db.select({ id: ${tm}.id }).from(${tm}).where(and(isNotNull(${tm}.deletedAt), ${pointsAt(m.name, [m.name])})).all().map((r) => r.id));\n`;
+          return `    after.push(...${dataOf(m)}.eraseIn(tx, viewer, app, tx.select({ id: ${tm}.id }).from(${tm}).where(and(isNotNull(${tm}.deletedAt), ${pointsAt(m.name, [m.name])})).all().map((r) => r.id)));\n`;
         })
         .join("")
     : "";
@@ -1732,39 +1744,56 @@ ${members.map((m) => `          ${dataOf(m)}.restoreWith(tx, viewer, \`${model.n
   },
 
   /** Deletes trashed records for good (Delete permanently, Empty trash, the daily job). */
-  erase(viewer: Viewer | null, ids: number[]): void {
-    if (ids.length === 0) return;${
-      eraseMembers
-        ? `
-    // What is in the trash pointing to them goes first, deepest first (docs/design/delete-together.md).
-${eraseMembers}`
-        : ""
-    }
-    const rows = db
-      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
-      .from(${n.table})
-      .where(and(inArray(${n.table}.id, ids), isNotNull(${n.table}.deletedAt)))
-      .all();
+  erase(viewer: Viewer | null, ids: number[], app = false): void {
+    let after: (() => void)[] = [];
     try {
       db.transaction((tx) => {
-        for (const row of rows) {
-          const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
-          if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });
-        }
+        after = ${self}.eraseIn(tx, viewer, app, ids);
       });
     } catch (error) {
       throw refusal(error);
     }
-${
-  pictures.length
-    ? `    for (const row of rows) {
+    // The files only once the rows are gone for good: a refused erase keeps them.
+    for (const done of after) done();
+  },
+
+  /**
+   * The erase, in a transaction of the caller's: what is in the trash pointing to the records
+   * first, deepest first (docs/design/delete-together.md), all of it refused unless the viewer may
+   * delete every record (only the app itself, the daily job, need not); returns what to do once it
+   * commits.
+   */
+  eraseIn(tx: Tx, viewer: Viewer | null, app: boolean, ids: number[]): (() => void)[] {
+    const after: (() => void)[] = [];
+    if (ids.length === 0) return after;${
+      eraseMembers
+        ? `
+${eraseMembers}`
+        : ""
+    }
+    const rows = tx
+      .select(${selectOwner.replace("{ ", `{ id: ${n.table}.id, `)})
+      .from(${n.table})
+      .where(and(inArray(${n.table}.id, ids), isNotNull(${n.table}.deletedAt)))
+      .all();
+    if (!app && rows.some((row) => !allows(${n.access}.delete, viewer, ${rowOwner}))) throw new AccessDenied(viewer !== null);
+    for (const row of rows) {
+      const gone = tx.delete(${n.table}).where(eq(${n.table}.id, row.id)).returning().get();
+      if (gone) audit(tx, viewer, { action: "removed", model: "${model.name}", record: row.id, title: ${longTitle(model) ? `titleOf(gone.${titleKey})` : `gone.${titleKey}`} });
+    }${
+      pictures.length
+        ? `
+    after.push(() => {
+      for (const row of rows) {
 ${dropPictures(
   () => "undefined",
   () => "([] as string[])",
-).replace(/^ {4}/gm, "      ")}    }
-`
-    : ""
-}  },
+).replace(/^ {4}/gm, "        ")}      }
+    });`
+        : ""
+    }
+    return after;
+  },
 
   /** What has been in the trash for thirty days goes for good (once a day, see trash.server.ts). */
   purge(now = Date.now()): number {
@@ -1774,7 +1803,7 @@ ${dropPictures(
       .where(lt(${n.table}.deletedAt, new Date(now - TRASH_DAYS * DAY)))
       .all()
       .map((row) => row.id);
-    ${self}.erase(null, old);
+    ${self}.erase(null, old, true);
     return old.length;
   },${
     roots.length
@@ -2753,7 +2782,7 @@ ${
 `
     : ""
 }  async create(viewer: Viewer | null, values: ${n.settableValues}${orderPage ? ", lines?: { id: number; quantity: number }[]" : ""}${payEntry ? ", pay = false" : ""}) {
-    check(${n.access}.create, viewer);${payEntry ? "\n    // A visitor makes one only by paying: no other way in skips it (payments.md §4.7).\n    if (viewer === null && !pay) throw new AccessDenied(false);" : ""}
+    check(${n.access}.create, viewer);${payEntry ? "\n    // A visitor makes one only by paying: no other way in skips it (payments.md §4.7).\n    if (viewer === null && !pay) throw new AccessDenied(false);\n    // Unheld and unpaid only for the app itself and the roles that change everyone's (staff\n    // entering one by hand); anyone else's, by whichever function, is held until it is paid.\n    if (!(viewer?.system || (viewer && " + n.access + ".write.roles.includes(viewer.role)))) pay = true;" : ""}
 ${
   access.create.public
     ? `    // Visitors add these without an account: at most ${VISITOR_ROWS.toLocaleString("en")} of theirs, so a flood stops here.
@@ -3230,4 +3259,24 @@ export function isMessageModel(model: ModelIR, ir: SpecIR, ux: UxIR): boolean {
   return ir.models.some((m) =>
     lists(m).some((f) => f.type.model === model.name && threadLists(m, ir, ux).includes(f.name)),
   );
+}
+
+/**
+ * What the app keeps about a record itself, never given by a form, the API or an action: when and
+ * by whom it went to the trash and with what, and its payment hold. Writing them is the trash's
+ * and the payment's own work, straight to the table.
+ */
+export function systemKeys(model: ModelIR): string[] {
+  return [
+    ...(model.trash ? ["deletedAt", "deletedBy", "deletedWith"] : []),
+    ...(model.heldByPayment ? ["payHeldAt"] : []),
+  ];
+}
+
+/** The given values without what the app keeps itself, whatever the schema they came through. */
+function withoutSystem(model: ModelIR, given: string): string {
+  const keys = systemKeys(model);
+  return keys.length
+    ? `(Object.fromEntries(Object.entries(${given}).filter(([key]) => !${JSON.stringify(keys)}.includes(key))) as typeof ${given})`
+    : given;
 }
