@@ -14,6 +14,8 @@
 // The landing text's fit (`taste`) is for a judging model, scored apart; not in this script yet.
 //   node scripts/bench-first-builds.mjs [reader] [small] [small>better] [--set PATH] [--only fb-01,fb-02]
 //     [--label today] [--max-cost USD] [--record DIR]
+// allowance-used: free; Studio's fallback when its model refuses (the allowance used up), with a
+// stub model on this machine: the starter its questions step picks, replaced from the description.
 // reader: no model, free: the description reader alone, or (when it cannot build) the starter `new`
 // names instead, as a person without a model would start. small: Claude Haiku 5.5. small>better:
 // Haiku and Sonnet 5.5, as the hosted service drafts (a first build takes the strongest first, so
@@ -21,7 +23,7 @@
 // anthropic; the key in ~/.config/smithable/claude.env, never printed). Ask before a paid run.
 // Writes docs/benchmarks/first-builds-<label>.md and .jsonl.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { repo } from "./dev-app.mjs";
@@ -44,6 +46,61 @@ const label = option("--label") ?? new Date().toISOString().slice(0, 10);
 const maxCost = option("--max-cost") ? Number(option("--max-cost")) : Number.POSITIVE_INFINITY;
 let stopped = false;
 
+/**
+ * For the allowance-used tier: a model on this machine that answers every call 402 with the
+ * service's words, so Studio's fallback (the starter, kept as private as the description asks)
+ * runs without spending anything.
+ */
+const refusing = await (async () => {
+  if (!tiers.includes("allowance-used")) return undefined;
+  const { createServer } = await import("node:http");
+  const server = createServer((req, res) => {
+    req.resume();
+    res.writeHead(402, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: { message: "The AI allowance for today is used up." } }));
+  });
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  return { url: `http://127.0.0.1:${server.address().port}/v1`, close: () => server.close() };
+})();
+const { openQuestions } = await import(join(repo, "packages/cli/dist/new.js"));
+const { replaceProject } = await import(join(repo, "packages/cli/dist/replace.js"));
+
+/**
+ * Studio's way for a description when its model cannot draft: the starter its questions step picks
+ * (no model asked), made as a project, then replaced from the description, with the model refusing.
+ */
+async function studioFallback(dir, text) {
+  const saved = { ...process.env };
+  const without = envOf("reader");
+  for (const k of Object.keys(process.env)) if (!(k in without)) delete process.env[k];
+  // The environment is put back however this ends, a failed new or a throw included.
+  let starter = "crm";
+  try {
+    starter = (await openQuestions(text)).starter ?? "crm";
+    const made = spawnSync("node", [cli, "new", dir, "--starter", starter], {
+      cwd: repo,
+      encoding: "utf8",
+      env: without,
+    });
+    if (made.status !== 0)
+      return {
+        status: made.status ?? 1,
+        out: made.error?.message ?? `${made.stdout}${made.stderr}`,
+        starter,
+      };
+    Object.assign(process.env, envOf("allowance-used"));
+    let out = "";
+    const io = { out: (t) => (out += t), err: (t) => (out += t) };
+    const status = await replaceProject(dir, io, { describe: text, starter });
+    return { status, out, starter };
+  } catch (error) {
+    return { status: 1, out: String(error?.stack ?? error), starter };
+  } finally {
+    for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k];
+    Object.assign(process.env, saved);
+  }
+}
+
 /** Anthropic's key, read from its file when a paid tier runs, never printed. */
 const claudeKey = () => {
   const text = readFileSync(join(homedir(), ".config/smithable/claude.env"), "utf8");
@@ -57,11 +114,19 @@ function envOf(tier) {
     Object.entries(process.env).filter(([k]) => !/^SMITHABLE_(MODEL|FRONTIER|LOCAL|CODER)/.test(k)),
   );
   if (tier === "reader") return env;
+  // A model that refuses every call as the service does when the allowance is used up: free.
+  if (tier === "allowance-used")
+    return Object.assign(env, {
+      SMITHABLE_MODEL: "stub-allowance-used",
+      SMITHABLE_MODEL_URL: refusing.url,
+      SMITHABLE_MODEL_LOCATION: "eu",
+    });
   const models = {
     small: "claude-haiku-5-5",
     "small>better": "claude-haiku-5-5,claude-sonnet-5-5",
   };
-  if (!models[tier]) throw new Error(`Unknown tier ${tier}: reader, small, small>better.`);
+  if (!models[tier])
+    throw new Error(`Unknown tier ${tier}: reader, allowance-used, small, small>better.`);
   Object.assign(env, {
     SMITHABLE_FRONTIER: "anthropic",
     SMITHABLE_FRONTIER_MODEL: models[tier],
@@ -314,6 +379,35 @@ for (const tier of tiers) {
       );
     } catch {}
     const started = Date.now();
+    if (tier === "allowance-used") {
+      const fell = await studioFallback(dir, item.text);
+      const s = fell.status === 0 ? specOf(dir) : { valid: false };
+      rows.push({
+        tier,
+        id: item.id,
+        language: item.language,
+        length: item.length,
+        built: fell.status === 0,
+        starter: fell.starter,
+        validates: Boolean(s.valid),
+        generates: Boolean(s.generated),
+        tokens: 0,
+        cost: 0,
+        seconds: (Date.now() - started) / 1000,
+        ...questionsScored(item, questions),
+        ...(s.valid
+          ? scored(item, s)
+          : { must: [], mustNot: [], leaks: [], extra: { models: [], pages: [] } }),
+        ...(fell.status === 0
+          ? {}
+          : { error: fell.out.trim().split("\n").slice(-3).join(" ").slice(0, 300) }),
+      });
+      const r = rows.at(-1);
+      console.log(
+        `${tier} ${item.id}: ${r.built ? `${r.starter}, must ${r.must.filter((m) => m.ok).length}/${r.must.length}, leaks ${r.leaks.length}` : `not built: ${r.error}`}`,
+      );
+      continue;
+    }
     let run = spawnSync("node", [cli, "new", dir, "--describe", item.text, "--yes"], {
       cwd: repo,
       encoding: "utf8",
@@ -362,6 +456,9 @@ for (const tier of tiers) {
     );
   }
 }
+refusing?.close();
+// The builds are scored and written: their folder goes.
+rmSync(root, { recursive: true, force: true });
 if (stopped) console.log(`Stopped at the cost ceiling of $${maxCost}: ${rows.length} builds done.`);
 
 const out = join(repo, `docs/benchmarks/first-builds-${label}`);
