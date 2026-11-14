@@ -844,6 +844,8 @@ export function dataModule(
   const listWith = [...withReferences(model), ...aggregatedLists(model).map(liveList)];
   const others = new Set<ModelIR>();
   if (orderPage && orderPage.from !== model.name) others.add(modelNamed(ir, orderPage.from));
+  // A line passes its own checks (its rules, references and capacity) as any new one does.
+  if (orderPage && orderPage.line !== model.name) others.add(modelNamed(ir, orderPage.line));
   const getWith = [
     ...withReferences(model),
     ...lists(model).map((f) => {
@@ -1285,7 +1287,12 @@ export function dataModule(
   // their transaction, and so do the actions that write in one of their own.
   const indent = (code: string) =>
     code.replace(/\n {6,8}/g, (m) => `\n${" ".repeat(m.length - 3)}`);
-  const createBody = `${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? "    checkReferences(viewer, values);\n" : ""}${sideRule("values")}${createRules}${indent(`${capacityCheck()}${closedCheck}`)}${occ ? `\n    checkTime(tx, { ${choiceDefaults}...values });` : ""}`;
+  // A line an order page writes (orders.md §3): its order and item are checked by the order
+  // itself (the order is not yet there to read outside its transaction), the rest as any new one.
+  const orderLine = ir.pages.some(
+    (p) => p.pattern.kind === "order" && p.pattern.line === model.name,
+  );
+  const createBody = `${uploadFields.length ? "    values = checkFiles(viewer, values);\n" : ""}${refs.length ? (orderLine ? "    checkReferences(viewer, Object.fromEntries(Object.entries(values).filter(([k]) => !known.includes(k))) as typeof values);\n" : "    checkReferences(viewer, values);\n") : ""}${sideRule("values")}${createRules}${indent(`${capacityCheck()}${closedCheck}`)}${occ ? `\n    checkTime(tx, { ${choiceDefaults}...values });` : ""}`;
   const createViewer =
     uploadFields.length > 0 || refs.length > 0 || closedCheck !== "" || sideRule("values") !== "";
   const updateBody = `${refs.length ? "    checkReferences(viewer, updated);\n" : ""}${sideRule("updated")}${holdChecks.length || capacity ? "    const values = updated;" : ""}${indent(holdChecks.join(""))}${indent(updateChecks)}${indent(updateRules)}${
@@ -1303,7 +1310,7 @@ export function dataModule(
    * What a new ${inert(n.label.toLowerCase())} must pass, in the transaction that adds it (A 153): its files and
    * references, its rules, its capacity and time. create() and an action that adds one call it.
    */
-  checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}): ${n.settableValues} {
+  checkCreate(${capacity || occ ? "tx" : "_tx"}: Tx, ${createViewer ? "viewer" : "_viewer"}: Viewer | null, given: ${n.settableValues}${orderLine ? `, ${refs.length ? "known" : "_known"}: readonly string[] = []` : ""}): ${n.settableValues} {
     ${uploadFields.length || sideRule("values") ? "let" : "const"} values = ${withoutSystem(model, "given")};
 ${createBody}
     return values;
@@ -1356,9 +1363,11 @@ ${updateBody}
           if (item.${field(from, orderPage.available)} === false) throw new Conflict(\`sold-out:\${${title && title !== "id" ? `item.${title}` : "item.id"}}\`);`
               : ""
           }
-          // A line is a record of its own: its creator (also one owned through its order), its
-          // numbers counted up, and its line in the audit log.
-          const added = tx.insert(${nl.table}).values({ ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)}${signedIn && creatorOwned(line) ? ", ownerId: personOf(viewer)" : ""}${sequenceEntries(
+          // A line is a record of its own: its own checks, as any new one passes (its rules,
+          // references and capacity), its creator (also one owned through its order), its numbers
+          // counted up, and its line in the audit log.
+          const checked = ${nl.data}.checkCreate(tx, viewer, { ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)} } as never, ${literal([...(back ? [dataKey(back)] : []), field(line, orderPage.item)])});
+          const added = tx.insert(${nl.table}).values({ ...checked${signedIn && creatorOwned(line) ? ", ownerId: personOf(viewer)" : ""}${sequenceEntries(
             line,
             auth,
             nl.table,
