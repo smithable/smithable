@@ -4368,6 +4368,22 @@ async function apiFlow(base) {
       })
     ).json();
     if (changed.status !== "doing") throw new Error(`changing gave ${JSON.stringify(changed)}`);
+    // A change writes what it changes (T821 #6): one with nothing new answers the task as it is,
+    // and changing one field leaves the others as they were.
+    const same = await api(`/tasks/${task.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "doing" }),
+    });
+    if (same.status !== 200 || (await same.json()).status !== "doing")
+      throw new Error(`a change with nothing new gave ${same.status}`);
+    const renamed = await (
+      await api(`/tasks/${task.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: "Send it" }),
+      })
+    ).json();
+    if (renamed.title !== "Send it" || renamed.status !== "doing" || renamed.project !== project.id)
+      throw new Error(`changing the title gave ${JSON.stringify(renamed)}`);
     const done = await (await api(`/tasks/${task.id}/actions/complete`, { method: "POST" })).json();
     if (done.status !== "done") throw new Error(`completing gave ${JSON.stringify(done)}`);
     // The assistant role deletes nothing: refused, in the app's words.
