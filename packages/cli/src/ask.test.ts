@@ -93,6 +93,7 @@ test("a replay answers from the recording only, and a fixture keeps what it read
   };
   const request = { system: "s", user: "u", schema: { type: "object" } };
   const [model] = aiProviders(env);
+  if (!model) throw new Error("No provider made from the replay environment");
   // Not recorded: the model is not asked.
   await expect(model.complete(request)).rejects.toThrow("Not in the recording");
   // Record the request's answer under its key by a fresh cache pointed at the recording.
