@@ -573,7 +573,7 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
-import { ${[...new Set([reads, adds])].sort().join(", ")} } from "#/kit/api.server";
+import { ${[...new Set([reads, adds, ...(adds === "openApiCall" ? ["BadInput"] : [])])].sort().join(", ")} } from "#/kit/api.server";
 import { importItems } from "#/kit/import.server";
 import { whereFromQuery } from "#/kit/where";
 
@@ -593,10 +593,15 @@ export const Route = createFileRoute("/api/v1/${path}/")({
           }`
               : ""
           }
-          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
-          const page = Math.max(1, Number(query.get("page")) || 1);
+          // Whole numbers in their bounds: a limit of 1 to 100, a page from 1 (T821 #8).
+          const whole = (name: string, fallback: number) => {
+            const n = Number(query.get(name));
+            return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+          };
+          const limit = Math.min(100, whole("limit", 100));
+          const page = Math.min(whole("page", 1), 1_000_000);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
-          const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
+          const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"${model.trash ? ', "trashed"' : ""}]);
           const search = query.get("search") ?? undefined;
           const { items, total } = await ${n.data}.find(viewer, {
             where,
@@ -606,7 +611,8 @@ export const Route = createFileRoute("/api/v1/${path}/")({
             offset: (page - 1) * limit,
           });
           // ?sum=total adds up a number field over every record that fits, not only this page.
-          const sums = query.get("sum")?.split(",").filter(Boolean);
+          // Each field once, at most ten.
+          const sums = [...new Set(query.get("sum")?.split(",").filter(Boolean))].slice(0, 10);
           return {
             items: items.map(${camelName}ToApi),
             page,
@@ -621,7 +627,13 @@ export const Route = createFileRoute("/api/v1/${path}/")({
         ${adds}(request, async (viewer, body) => {
           // A list is an import (A 238): every item checked, each one's id or refusal, one line to undo it by.
           if (Array.isArray(body)) {
-            const { results, undo } = await importItems(viewer, ${JSON.stringify(model.name)}, body, (item) => ${n.data}.create(viewer, ${camelName}FromApi(item) as never));
+${
+  adds === "openApiCall"
+    ? `            // An import is a key's: a visitor adds one at a time (T821 #9).
+            if (viewer === null) throw new BadInput("Add one at a time.");
+`
+    : ""
+}            const { results, undo } = await importItems(viewer, ${JSON.stringify(model.name)}, body, (item) => ${n.data}.create(viewer, ${camelName}FromApi(item) as never));
             return { results, ...(undo !== undefined ? { undo: \`/api/v1/${path}/imports/\${undo}\` } : {}) };
           }
           return ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never));
