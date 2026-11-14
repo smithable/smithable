@@ -24,7 +24,7 @@
    "right": 13,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 34222,
+   "medianTokens": 34220,
    "medianExtraParts": 11,
    "medianExtraDocs": 3
   },
@@ -39,12 +39,12 @@
   },
   "docs-question": {
    "requests": 34,
-   "right": 23,
-   "cannotTell": 11,
+   "right": 29,
+   "cannotTell": 5,
    "wrongRoute": 0,
-   "medianTokens": 1771,
+   "medianTokens": 2254,
    "medianExtraParts": 9,
-   "medianExtraDocs": 2
+   "medianExtraDocs": 4
   },
   "off-topic": {
    "requests": 10,
@@ -69,9 +69,9 @@
    "right": 46,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 1980,
+   "medianTokens": 2536,
    "medianExtraParts": 8,
-   "medianExtraDocs": 3
+   "medianExtraDocs": 5
   },
   "two-things": {
    "requests": 17,
@@ -85,12 +85,9 @@
  },
  "retrieval": {
   "questions": 34,
-  "top3": 23,
-  "top5": 27,
+  "top3": 25,
+  "top5": 30,
   "missed": [
-   "d-publish",
-   "d-cost",
-   "d-selfhost",
    "d-apps",
    "d-fi-finnish",
    "d-fi-cost",
@@ -113,7 +110,7 @@
   "custom-code": {
    "requests": 13,
    "byRule": 0,
-   "medianTokens": 34222,
+   "medianTokens": 34220,
    "maxTokens": 44465
   },
   "data": {
@@ -125,7 +122,7 @@
   "docs-question": {
    "requests": 34,
    "byRule": 0,
-   "medianTokens": 1771,
+   "medianTokens": 2254,
    "maxTokens": 38831
   },
   "off-topic": {
@@ -143,8 +140,8 @@
   "spec-question": {
    "requests": 46,
    "byRule": 2,
-   "medianTokens": 1980,
-   "maxTokens": 38886
+   "medianTokens": 2536,
+   "maxTokens": 39093
   },
   "two-things": {
    "requests": 17,

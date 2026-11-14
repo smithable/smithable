@@ -27,6 +27,14 @@ test("a request's words: no plain words, a plural's s dropped", () => {
   expect(searchWords("Hur publicerar jag appen?")).toEqual(["publicerar", "publish", "appen"]);
 });
 
+test("a docs word of five letters or more is found with one letter wrong (T844 D)", () => {
+  expect(searchDocs(index, "how do I publsh")[0]?.url).toBe(
+    searchDocs(index, "how do I publish")[0]?.url,
+  );
+  // A short word is not guessed at.
+  expect(searchDocs(index, "kez")).toEqual([]);
+});
+
 test("the docs' parts by BM25, a heading's words counting more", () => {
   expect(searchDocs(index, "Can I use my own domain?")[0]?.url).toBe(
     "https://docs.smithable.ai/publish.html#domain",

@@ -4,15 +4,15 @@
 
 ## Retrieval
 
-Docs questions whose labelled part is among the parts found, without the search phrases a model adds: top 3 23 / 34 (68 %), top 5 27 / 34 (79 %).
+Docs questions whose labelled part is among the parts found, without the search phrases a model adds: top 3 25 / 34 (74 %), top 5 30 / 34 (88 %).
 
 | Language | Top 3 | Top 5 |
 |---|---|---|
-| en | 16 / 22 (73 %) | 19 / 22 (86 %) |
+| en | 19 / 22 (86 %) | 22 / 22 (100 %) |
 | fi | 0 / 2 (0 %) | 0 / 2 (0 %) |
-| sv | 7 / 10 (70 %) | 8 / 10 (80 %) |
+| sv | 6 / 10 (60 %) | 8 / 10 (80 %) |
 
-Not in the top 5: d-publish, d-cost, d-selfhost, d-apps, d-fi-finnish, d-fi-cost, d-sv-selfhost.
+Not in the top 5: d-apps, d-fi-finnish, d-fi-cost, d-sv-selfhost.
 
 ## What would be sent
 
@@ -22,12 +22,12 @@ The first model call's prompt per kind of request, about four characters a token
 |---|---|---|---|---|
 | ambiguous | 25 | 0 | 26,700 | 44,351 |
 | change | 141 | 14 | 34,462 | 46,156 |
-| custom-code | 13 | 0 | 34,222 | 44,465 |
+| custom-code | 13 | 0 | 34,220 | 44,465 |
 | data | 23 | 0 | 34,402 | 45,885 |
-| docs-question | 34 | 0 | 1,771 | 38,831 |
+| docs-question | 34 | 0 | 2,254 | 38,831 |
 | off-topic | 10 | 0 | 26,075 | 34,386 |
 | smalltalk | 17 | 13 | 27,316 | 27,381 |
-| spec-question | 46 | 2 | 1,980 | 38,886 |
+| spec-question | 46 | 2 | 2,536 | 39,093 |
 | two-things | 17 | 0 | 44,132 | 45,486 |
 
 ## The oracle
@@ -38,10 +38,10 @@ A perfect model in place of the real one: right when the prompt holds everything
 |---|---|---|---|---|---|---|---|
 | ambiguous | 25 | 25 | 0 | 0 | 26,700 | 9 | 3 |
 | change | 141 | 141 | 0 | 0 | 34,462 | 10 | 3 |
-| custom-code | 13 | 13 | 0 | 0 | 34,222 | 11 | 3 |
+| custom-code | 13 | 13 | 0 | 0 | 34,220 | 11 | 3 |
 | data | 23 | 23 | 0 | 0 | 34,402 | 8 | 3 |
-| docs-question | 34 | 23 | 11 | 0 | 1,771 | 9 | 2 |
+| docs-question | 34 | 29 | 5 | 0 | 2,254 | 9 | 4 |
 | off-topic | 10 | 10 | 0 | 0 | 26,075 | 11 | 3 |
 | smalltalk | 17 | 17 | 0 | 0 | 27,316 | 9 | 2 |
-| spec-question | 46 | 46 | 0 | 0 | 1,980 | 8 | 3 |
+| spec-question | 46 | 46 | 0 | 0 | 2,536 | 8 | 5 |
 | two-things | 17 | 17 | 0 | 0 | 44,132 | 7 | 3 |

@@ -68,6 +68,8 @@ Yes. `smithable deploy --target docker` runs the release checks and builds a con
 
 ### Is there a hosted version?
 
+<!-- asked as: what does it cost, price, pay, hosting cost -->
+
 Yes, and what you build stays yours: a private beta at [smithable.ai](https://smithable.ai), by invitation, with a free two-hour sandbox that needs no sign-up; [ask for an invite](https://smithable.ai/invite-request) if you want to keep what you build. Invited testers keep their apps, publish them on their own domain, and can download everything (code, history and data) or hand an app to a developer or another account at any time. Pricing and plans are not set; the beta is free.
 
 ### Where does my data live?

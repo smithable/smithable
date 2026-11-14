@@ -1,11 +1,5 @@
-d-publish (docs-question, en): cannot tell: missing docs start-hosted.html#publish-and-share
-d-mcp (docs-question, en): cannot tell: missing docs api.html#6-for-ai-assistants | assistants.html#4-connect-an-assistant
-d-cost (docs-question, en): cannot tell: missing docs why.html#is-there-a-hosted-version
-d-selfhost (docs-question, en): cannot tell: missing docs leave.html | self-host.html | start-local.html#running-it-elsewhere
 d-apps (docs-question, sv): cannot tell: missing docs limits.html#per-account
 d-fi-finnish (docs-question, fi): cannot tell: missing docs language.html
 d-fi-cost (docs-question, fi): cannot tell: missing docs why.html#is-there-a-hosted-version
-d-handover (docs-question, en): cannot tell: missing docs start-hosted.html#take-it-with-you
 long-mp-docs (docs-question, en): cannot tell: missing docs why.html#where-does-my-data-live | start-hosted.html#where-it-runs | start-hosted.html#take-it-with-you | leave.html
 d-sv-selfhost (docs-question, sv): cannot tell: missing docs leave.html | self-host.html | start-local.html#running-it-elsewhere
-d-sv-mail-limit (docs-question, sv): cannot tell: missing docs limits.html#per-app

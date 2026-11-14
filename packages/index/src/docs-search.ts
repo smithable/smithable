@@ -51,13 +51,19 @@ export function searchWords(text: string): string[] {
  * BM25 over documents given as word lists (k1 1.2, b 0.75): each document's score for the
  * query, 0 where it shares no word. A word in a heading is counted as three.
  */
-function bm25(docs: string[][], query: string[]): number[] {
+function bm25(docs: string[][], query: string[], typos = false): number[] {
   const n = docs.length;
   if (!n) return [];
   const average = docs.reduce((sum, d) => sum + d.length, 0) / n || 1;
   const holding = new Map<string, number>();
   for (const d of docs) for (const w of new Set(d)) holding.set(w, (holding.get(w) ?? 0) + 1);
-  const wanted = [...new Set(query)];
+  // A word of five letters or more found nowhere is also each word one edit from it (T844 D):
+  // "publsh" finds publish.
+  const near = (w: string) =>
+    typos && w.length >= 5 && !holding.has(w)
+      ? [...holding.keys()].filter((v) => v.length >= 5 && oneEdit(w, v))
+      : [];
+  const wanted = [...new Set(query.flatMap((w) => [w, ...near(w)]))];
   return docs.map((d) => {
     const counts = new Map<string, number>();
     for (const w of d) counts.set(w, (counts.get(w) ?? 0) + 1);
@@ -71,6 +77,19 @@ function bm25(docs: string[][], query: string[]): number[] {
     }
     return score;
   });
+}
+
+/** Whether two words differ by one letter added, left out, changed or two swapped. */
+function oneEdit(a: string, b: string): boolean {
+  if (a === b || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  if (a.length === b.length)
+    return (
+      a.slice(i + 1) === b.slice(i + 1) ||
+      (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2))
+    );
+  return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
 }
 
 const weighted = (heading: string, text: string) => {
@@ -87,6 +106,7 @@ export function searchDocs(index: DocsIndex, request: string, count = 3): DocsHi
       weighted(`${index.pages[page]?.[1] ?? ""} ${heading}`, text),
     ),
     query,
+    true,
   );
   return index.parts
     .map((part, i) => ({ part, score: scores[i] ?? 0 }))
