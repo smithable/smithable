@@ -18,6 +18,9 @@
           "type": "phone"
         }
       },
+      "needs": [
+        "model:Instructor"
+      ],
       "noModel": true
     },
     {
@@ -36,6 +39,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Instructor"
+      ],
       "noModel": true
     },
     {
@@ -91,6 +97,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "model:Instructor"
+      ],
       "noModel": false
     },
     {
@@ -112,6 +121,10 @@
           ]
         }
       },
+      "needs": [
+        "pages",
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -129,6 +142,9 @@
           "view": "agenda"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -146,6 +162,10 @@
           "by": "classType.level"
         }
       },
+      "needs": [
+        "pages",
+        "model:ClassType"
+      ],
       "noModel": false
     },
     {
@@ -165,6 +185,12 @@
           "recipient": "owner"
         }
       },
+      "needs": [
+        "model:Booking",
+        "model:Session",
+        "outgoing:reminder",
+        "timer:remind"
+      ],
       "noModel": false
     },
     {
@@ -184,6 +210,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Session"
+      ],
       "noModel": true
     },
     {
@@ -201,6 +231,10 @@
           "field": "-startsAt"
         }
       },
+      "needs": [
+        "pages",
+        "model:Session"
+      ],
       "noModel": true
     },
     {
@@ -255,6 +289,10 @@
           "cancelUntil": "2 hours before session.startsAt"
         }
       },
+      "needs": [
+        "model:Booking",
+        "model:Session"
+      ],
       "noModel": false
     },
     {
@@ -274,6 +312,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -350,6 +391,10 @@
           ]
         }
       },
+      "needs": [
+        "pages",
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -367,6 +412,9 @@
           "trash": false
         }
       },
+      "needs": [
+        "model:FollowUp"
+      ],
       "noModel": true
     },
     {
@@ -385,6 +433,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -406,6 +457,9 @@
           }
         }
       },
+      "needs": [
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -462,6 +516,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -479,6 +537,9 @@
           "export": "off"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": true
     },
     {
@@ -498,6 +559,10 @@
         },
         "unsure": true
       },
+      "needs": [
+        "model:Order",
+        "model:Customer"
+      ],
       "noModel": false
     },
     {
@@ -588,6 +653,9 @@
           }
         }
       },
+      "needs": [
+        "model:Barber"
+      ],
       "noModel": false
     },
     {
@@ -605,6 +673,9 @@
           "cancelUntil": "24h"
         }
       },
+      "needs": [
+        "model:Appointment"
+      ],
       "noModel": false
     },
     {
@@ -626,6 +697,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "outgoing:appointmentConfirmed"
+      ],
       "noModel": false
     },
     {
@@ -756,6 +830,10 @@
           "at": "3 days after dueOn"
         }
       },
+      "needs": [
+        "timer:markOverdue",
+        "model:Invoice"
+      ],
       "noModel": false
     },
     {
@@ -796,6 +874,10 @@
           ]
         }
       },
+      "needs": [
+        "pages",
+        "model:Invoice"
+      ],
       "noModel": false
     },
     {
@@ -847,6 +929,9 @@
           "currency": "SEK"
         }
       },
+      "needs": [
+        "app"
+      ],
       "noModel": false
     },
     {
@@ -863,6 +948,9 @@
           "language": "sv"
         }
       },
+      "needs": [
+        "app"
+      ],
       "noModel": false
     },
     {
@@ -899,6 +987,9 @@
           "to": "energy"
         }
       },
+      "needs": [
+        "model:Dish"
+      ],
       "noModel": false,
       "after": "ki-calories"
     },
@@ -956,6 +1047,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -973,6 +1067,9 @@
           "view": "cards"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1048,6 +1145,10 @@
           "value": "new"
         }
       },
+      "needs": [
+        "pages",
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -1101,6 +1202,9 @@
           "favorites": "off"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1118,6 +1222,9 @@
           "fields": "none"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": false
     },
     {
@@ -1294,6 +1401,7 @@
           "preset": "cafe"
         }
       },
+      "needs": [],
       "noModel": true
     },
     {
@@ -1428,6 +1536,11 @@
         },
         "unsure": true
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Maintenance"
+      ],
       "noModel": false
     },
     {
@@ -1463,6 +1576,9 @@
           "section": "uptime"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1480,6 +1596,9 @@
           "icon": "alert"
         }
       },
+      "needs": [
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1520,6 +1639,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "action:monitoring"
+      ],
       "noModel": false
     },
     {
@@ -1575,6 +1698,10 @@
         },
         "unsure": true
       },
+      "needs": [
+        "model:SupportCase",
+        "action:close"
+      ],
       "noModel": false
     },
     {
@@ -1628,6 +1755,10 @@
           "as": "thread"
         }
       },
+      "needs": [
+        "pages",
+        "model:Message"
+      ],
       "noModel": false
     },
     {
@@ -1664,6 +1795,10 @@
           "control": "slider"
         }
       },
+      "needs": [
+        "pages",
+        "model:SupportCase"
+      ],
       "noModel": false
     },
     {
@@ -1753,6 +1888,10 @@
           "model": "Task"
         }
       },
+      "needs": [
+        "model:Task",
+        "pages"
+      ],
       "noModel": true
     },
     {
@@ -5279,6 +5418,393 @@
           "member"
         ]
       },
+      "noModel": false
+    },
+    {
+      "id": "q-bk-sv-staff-sessions",
+      "starter": "booking",
+      "text": "får personalen ta bort pass?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "nej",
+          "bara bokningar"
+        ],
+        "mustNot": []
+      },
+      "noModel": false,
+      "needs": [
+        "auth"
+      ]
+    },
+    {
+      "id": "q-bk-sv-full",
+      "starter": "booking",
+      "text": "vad händer när ett pass är fullt?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "inga fler bokningar än det finns platser"
+        ],
+        "mustNot": []
+      },
+      "noModel": false,
+      "needs": [
+        "model:Booking"
+      ]
+    },
+    {
+      "id": "q-inv-sv-overdue",
+      "starter": "invoicing",
+      "text": "när blir en faktura förfallen?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "7 dagar efter förfallodagen",
+          "om den fortfarande är skickad"
+        ],
+        "mustNot": []
+      },
+      "noModel": false,
+      "needs": [
+        "timer:markOverdue"
+      ]
+    },
+    {
+      "id": "q-crm-sv-shared",
+      "starter": "crm",
+      "text": "kan säljarna se varandras kunder?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "ja"
+        ],
+        "mustNot": [
+          "bara sina egna"
+        ]
+      },
+      "noModel": false,
+      "needs": [
+        "auth"
+      ]
+    },
+    {
+      "id": "q-ki-sv-soldout",
+      "starter": "kiosk",
+      "text": "vad gör slutsåld på en rätt?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "inte längre tillgänglig",
+          "resten av dagen"
+        ],
+        "mustNot": []
+      },
+      "noModel": false,
+      "needs": [
+        "action:soldOut"
+      ]
+    },
+    {
+      "id": "q-bb-sv-confirm-mail",
+      "starter": "barbers",
+      "text": "får kunden ett mejl när tiden bekräftas?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "ja"
+        ],
+        "mustNot": []
+      },
+      "noModel": false,
+      "needs": [
+        "outgoing:appointmentConfirmed"
+      ]
+    },
+    {
+      "id": "q-st-sv-public",
+      "starter": "status",
+      "text": "kan vem som helst se incidenterna?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "ja",
+          "utan att logga in"
+        ],
+        "mustNot": []
+      },
+      "noModel": false,
+      "needs": [
+        "auth"
+      ]
+    },
+    {
+      "id": "q-api-sv-assistant-delete",
+      "starter": "api",
+      "text": "kan assistenten ta bort uppgifter?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [
+          "nej",
+          "tar aldrig bort"
+        ],
+        "mustNot": []
+      },
+      "noModel": false,
+      "needs": [
+        "auth"
+      ]
+    },
+    {
+      "id": "d-sv-export",
+      "starter": "booking",
+      "text": "kan jag exportera min data?",
+      "kind": "docs-question",
+      "language": "sv",
+      "noModel": false,
+      "outcome": {
+        "must": [
+          "Download everything (.zip)",
+          "Export CSV"
+        ],
+        "mustNot": []
+      },
+      "docs": [
+        "start-hosted.html#take-it-with-you",
+        "leave.html",
+        "api.html#as-a-spreadsheet"
+      ]
+    },
+    {
+      "id": "d-sv-selfhost",
+      "starter": "kiosk",
+      "text": "kan jag köra den på min egen server?",
+      "kind": "docs-question",
+      "language": "sv",
+      "noModel": false,
+      "outcome": {
+        "must": [
+          "ja",
+          "Docker",
+          "smithable deploy"
+        ],
+        "mustNot": []
+      },
+      "docs": [
+        "leave.html",
+        "self-host.html",
+        "start-local.html#running-it-elsewhere"
+      ]
+    },
+    {
+      "id": "d-sv-import",
+      "starter": "crm",
+      "text": "kan jag importera mina kunder från excel?",
+      "kind": "docs-question",
+      "language": "sv",
+      "noModel": false,
+      "outcome": {
+        "must": [
+          "Import",
+          "CSV"
+        ],
+        "mustNot": [
+          "xlsx-filer läses direkt"
+        ]
+      },
+      "docs": [
+        "import.html"
+      ]
+    },
+    {
+      "id": "d-sv-need-ai",
+      "starter": "invoicing",
+      "text": "behöver jag en AI-modell för det här?",
+      "kind": "docs-question",
+      "language": "sv",
+      "noModel": false,
+      "outcome": {
+        "must": [
+          "nej"
+        ],
+        "mustNot": []
+      },
+      "docs": [
+        "why.html#do-i-need-an-ai-model"
+      ]
+    },
+    {
+      "id": "d-sv-sandbox",
+      "starter": "support",
+      "text": "hur länge varar sandlådan?",
+      "kind": "docs-question",
+      "language": "sv",
+      "noModel": false,
+      "outcome": {
+        "must": [
+          "två timmar"
+        ],
+        "mustNot": []
+      },
+      "docs": [
+        "limits.html#the-free-sandbox",
+        "start-hosted.html#try-it-in-a-sandbox"
+      ]
+    },
+    {
+      "id": "d-sv-mail-limit",
+      "starter": "barbers",
+      "text": "hur många mejl kan min app skicka?",
+      "kind": "docs-question",
+      "language": "sv",
+      "noModel": false,
+      "outcome": {
+        "must": [
+          "100 mottagare om dagen per app",
+          "1 000 mottagare i månaden per konto"
+        ],
+        "mustNot": []
+      },
+      "docs": [
+        "limits.html#per-app"
+      ]
+    },
+    {
+      "id": "crm-sv-delivery-date",
+      "starter": "crm",
+      "text": "lägg till ett leveransdatum på ordrarna",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "addField"
+        ],
+        "args": {
+          "model": "Order",
+          "field": "deliveryDate",
+          "type": "date"
+        }
+      },
+      "needs": [
+        "model:Order"
+      ],
+      "noModel": false
+    },
+    {
+      "id": "inv-sv-cards",
+      "starter": "invoicing",
+      "text": "visa fakturorna som kort",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setView"
+        ],
+        "args": {
+          "page": "invoices",
+          "view": "cards"
+        }
+      },
+      "needs": [
+        "pages"
+      ],
+      "noModel": false
+    },
+    {
+      "id": "bk-sv-staff-delete-sessions",
+      "starter": "booking",
+      "text": "låt personalen ta bort pass",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "grant"
+        ],
+        "args": {
+          "role": "staff",
+          "delete": [
+            "Session"
+          ]
+        }
+      },
+      "needs": [
+        "auth",
+        "model:Session"
+      ],
+      "noModel": false
+    },
+    {
+      "id": "ki-sv-sort-price",
+      "starter": "kiosk",
+      "text": "sortera rätterna efter pris, billigast först",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setSort"
+        ],
+        "args": {
+          "page": "dishes",
+          "field": "price"
+        }
+      },
+      "needs": [
+        "pages",
+        "model:Dish"
+      ],
+      "noModel": false
+    },
+    {
+      "id": "inv-sv-overdue-3",
+      "starter": "invoicing",
+      "text": "markera fakturor som förfallna 3 dagar efter förfallodagen i stället för en vecka",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setTimer"
+        ],
+        "args": {
+          "name": "markOverdue",
+          "at": "3 days after dueOn"
+        }
+      },
+      "needs": [
+        "timer:markOverdue",
+        "model:Invoice"
+      ],
+      "noModel": false
+    },
+    {
+      "id": "bb-sv-sms-confirm",
+      "starter": "barbers",
+      "text": "skicka ett sms också när en tid bekräftas",
+      "kind": "change",
+      "language": "sv",
+      "outcome": {
+        "operations": [
+          "setOutgoingTo"
+        ],
+        "args": {
+          "name": "appointmentConfirmed",
+          "to": [
+            "mail",
+            "sms"
+          ]
+        },
+        "unsure": true
+      },
+      "needs": [
+        "outgoing:appointmentConfirmed"
+      ],
       "noModel": false
     }
   ]

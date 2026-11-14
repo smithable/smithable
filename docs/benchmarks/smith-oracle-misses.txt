@@ -17,3 +17,14 @@ d-sv-data (docs-question, sv): cannot tell: missing docs why.html#where-does-my-
 d-fi-cost (docs-question, fi): cannot tell: missing docs why.html#is-there-a-hosted-version
 d-handover (docs-question, en): cannot tell: missing docs start-hosted.html#take-it-with-you
 long-mp-docs (docs-question, en): cannot tell: missing docs why.html#where-does-my-data-live | start-hosted.html#where-it-runs | start-hosted.html#take-it-with-you | leave.html
+q-bk-sv-staff-sessions (spec-question, sv): cannot tell: missing auth
+q-inv-sv-overdue (spec-question, sv): cannot tell: missing timer:markOverdue
+q-st-sv-public (spec-question, sv): cannot tell: missing auth
+d-sv-export (docs-question, sv): cannot tell: missing docs start-hosted.html#take-it-with-you | leave.html | api.html#as-a-spreadsheet
+d-sv-selfhost (docs-question, sv): cannot tell: missing docs leave.html | self-host.html | start-local.html#running-it-elsewhere
+d-sv-import (docs-question, sv): cannot tell: missing docs import.html
+d-sv-need-ai (docs-question, sv): cannot tell: missing docs why.html#do-i-need-an-ai-model
+d-sv-sandbox (docs-question, sv): cannot tell: missing docs limits.html#the-free-sandbox | start-hosted.html#try-it-in-a-sandbox
+d-sv-mail-limit (docs-question, sv): cannot tell: missing docs limits.html#per-app
+bk-sv-staff-delete-sessions (change, sv): cannot tell: missing auth
+inv-sv-overdue-3 (change, sv): cannot tell: missing timer:markOverdue

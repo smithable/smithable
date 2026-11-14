@@ -303,11 +303,16 @@ for (const [set, text, kinds, audiences, visitors] of SET) {
     const seen = new Set(
       [...r.leftover, ...[...r.things, ...r.maybe].flatMap((t) => t.split(" "))].map(stem),
     );
-    const missed = notice.filter((w) => !seen.has(stem(w)));
+    // A word kept as a field ("holds: time") is kept too, but named apart: a field can be a
+    // wrong reading of it ("giving away for free" is a price, not a field called free).
+    const held = new Set(r.fields.flatMap((f) => f.split(" ")).map(stem));
+    const asField = notice.filter((w) => !seen.has(stem(w)) && held.has(stem(w)));
+    const missed = notice.filter((w) => !seen.has(stem(w)) && !held.has(stem(w)));
     totals[set].notice = (totals[set].notice ?? 0) + notice.length;
     totals[set].missed = (totals[set].missed ?? 0) + missed.length;
+    totals[set].asField = (totals[set].asField ?? 0) + asField.length;
     console.log(
-      `  to notice: ${notice.join(", ")}${missed.length ? `; SWALLOWED: ${missed.join(", ")}` : "; all left over or kept"}`,
+      `  to notice: ${notice.join(", ")}${asField.length ? `; kept as fields: ${asField.join(", ")}` : ""}${missed.length ? `; SWALLOWED: ${missed.join(", ")}` : "; all left over or kept"}`,
     );
   }
   if (trace) console.log(`  ${r.trace.map((t) => `${t.word}[${t.as}]`).join(" ")}`);
@@ -322,5 +327,5 @@ for (const [set, t] of Object.entries(totals))
 for (const [set, t] of Object.entries(totals))
   if (t.notice)
     console.log(
-      `${set}: of ${t.notice} words a builder must notice, ${t.missed} were swallowed by a word list`,
+      `${set}: of ${t.notice} words a builder must notice, ${t.missed} were swallowed by a word list (${t.asField} more kept only as fields, which may be a wrong reading)`,
     );
