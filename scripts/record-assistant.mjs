@@ -262,7 +262,13 @@ try {
         await page.evaluate(([id, o, t]) => window.answer(id, o, t), [part.tool_use_id, ok, shown]);
         if (added && name === "add" && input.kind === "Session") {
           moment("the class is added", "The app adds it: it is in the schedule");
-          await page.evaluate(() => window.show(`/schedule?t=${Date.now()}`));
+          // The schedule shows seven days from today: a class later than that is shown from its own day.
+          const dayOf = (at) =>
+            new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Mariehamn" }).format(new Date(at));
+          const day = dayOf(input.values?.startsAt ?? Date.now());
+          const ahead = (Date.parse(day) - Date.parse(dayOf(Date.now()))) / 86400000;
+          const from = ahead >= 7 ? `from=${day}&` : "";
+          await page.evaluate((q) => window.show(`/schedule?${q}t=${Date.now()}`), from);
           await app.getByText(/Yin/).first().waitFor({ timeout: 60000 });
           await hold(1500);
           await shot("added");
