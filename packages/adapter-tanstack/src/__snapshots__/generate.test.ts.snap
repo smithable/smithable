@@ -12408,7 +12408,8 @@ exports[`../../../examples/api/smithable.yml > file list and generated code > sr
 // several), PUT one as the body (a document's name in X-File-Name, a picture's description in
 // X-Alt); a field of several gets it added.
 import { createFileRoute } from "@tanstack/react-router";
-import { noteData } from "#/generated/note.server";
+import { noteAccess, noteData } from "#/generated/note.server";
+import { check } from "#/kit/access";
 import { BadInput, bytesOf, fileCall, NotFound, TooLarge } from "#/kit/api.server";
 import { bodySize, BodyLimit } from "#/kit/bounded-body";
 import { storeUpload } from "#/kit/receipts.server";
@@ -12434,7 +12435,8 @@ const FIELDS: Record<string, { kind: "picture" | "file"; key: string; many: bool
 };
 
 async function target(viewer: Parameters<typeof noteData.get>[0], id: string, name: string) {
-  const field = FIELDS[name];
+  // Its own fields only: "constructor" or "__proto__" is no field (T821 #5).
+  const field = Object.hasOwn(FIELDS, name) ? FIELDS[name] : undefined;
   if (!field) throw new NotFound("This note has no picture or document by that name.");
   const row = await noteData.get(viewer, Number(id));
   if (!row) throw new NotFound("No such note, or not one this key may read.");
@@ -12453,6 +12455,9 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
       PUT: ({ request, params }) =>
         fileCall(request, async (viewer) => {
           const { field, row, value } = await target(viewer, params.id, params.field);
+          // The right to change it first: a file is neither read, scanned nor stored for a caller
+          // who may not (T821 #5).
+          check(noteAccess.write, viewer, row.ownerId as string | null);
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           const max = field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES;
@@ -12479,7 +12484,15 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
               if (error instanceof BadFile) throw new BadInput(error.message);
               throw error;
             }
-            const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
+            // A name as sent, decoded where it is encoded; a stray "%" is kept as written.
+            const named = (header: string) => {
+              const raw = request.headers.get(header) ?? "";
+              try {
+                return decodeURIComponent(raw);
+              } catch {
+                return raw;
+              }
+            };
             try {
               stored = storeUpload(viewer?.id ?? null, "note", params.field, noteData.uses,
                 () => field.kind === "file" ? saveFile("note", bytes, named("x-file-name"), held) : savePicture("note", bytes, named("x-alt"), false, held));
@@ -12492,7 +12505,14 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
           }
           const sent = stored as { file: string; receipt: string };
           try {
-            await noteData.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
+            // A field of several as it is now: two sent at once both stay, and the limit holds.
+            const now = field.many
+              ? ((await noteData.get(viewer, row.id)) as Record<string, unknown> | undefined)?.[field.key]
+              : undefined;
+            if (field.many && now === undefined) throw new NotFound("No such note any longer.");
+            const current = Array.isArray(now) ? now : [];
+            if (field.many && current.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
+            await noteData.update(viewer, row.id, { [field.key]: field.many ? [...current, sent] : sent } as never);
           } catch (error) {
             // The record did not take it: the file it would have had goes again.
             const still = noteData.uses((stored as { file: string }).file);
@@ -14162,7 +14182,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "050d96d7 generated",
   "src/routes/admin/tasks/new.tsx": "0937d919 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "3d2d4148 generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "39326272 generated",
   "src/routes/api/v1/notes/$id.ts": "8d8c3986 generated",
   "src/routes/api/v1/notes/imports.$id.ts": "ce608828 generated",
   "src/routes/api/v1/notes/index.ts": "6b48f6f2 generated",

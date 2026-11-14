@@ -30,6 +30,7 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields, askedKeys } from "./actions.js";
 import { importNames } from "./import-module.js";
+import { payToCreate } from "./payments.js";
 import {
   addressOwned,
   dataKey,
@@ -39,6 +40,7 @@ import {
   modelNamed,
   names,
   ownerKey,
+  ownerOf,
   quotedText,
   references,
   shownTitleKey,
@@ -856,7 +858,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
 // several), PUT one as the body (a document's name in X-File-Name, a picture's description in
 // X-Alt); a field of several gets it added.
 import { createFileRoute } from "@tanstack/react-router";
-import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { ${n.access}, ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { ${addressOwned(model) ? "addressOwner, " : ""}check } from "#/kit/access";
 import { BadInput, bytesOf, fileCall, NotFound, TooLarge } from "#/kit/api.server";
 import { bodySize, BodyLimit } from "#/kit/bounded-body";
 import { storeUpload } from "#/kit/receipts.server";
@@ -882,7 +885,8 @@ ${uploads.map((f) => `  ${JSON.stringify(f.name)}: { kind: "${storesFiles(f) ? "
 };
 
 async function target(viewer: Parameters<typeof ${n.data}.get>[0], id: string, name: string) {
-  const field = FIELDS[name];
+  // Its own fields only: "constructor" or "__proto__" is no field (T821 #5).
+  const field = Object.hasOwn(FIELDS, name) ? FIELDS[name] : undefined;
   if (!field) throw new NotFound("This ${quotedText(n.label.toLowerCase())} has no picture or document by that name.");
   const row = await ${n.data}.get(viewer, Number(id));
   if (!row) throw new NotFound("No such ${quotedText(n.label.toLowerCase())}, or not one this key may read.");
@@ -901,6 +905,9 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
       PUT: ({ request, params }) =>
         fileCall(request, async (viewer) => {
           const { field, row, value } = await target(viewer, params.id, params.field);
+          // The right to change it first: a file is neither read, scanned nor stored for a caller
+          // who may not (T821 #5).
+          check(${n.access}.write, viewer, ${ownerOf(model, n, "row")} as string | null);
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           const max = field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES;
@@ -927,7 +934,15 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
               if (error instanceof BadFile) throw new BadInput(error.message);
               throw error;
             }
-            const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
+            // A name as sent, decoded where it is encoded; a stray "%" is kept as written.
+            const named = (header: string) => {
+              const raw = request.headers.get(header) ?? "";
+              try {
+                return decodeURIComponent(raw);
+              } catch {
+                return raw;
+              }
+            };
             try {
               stored = storeUpload(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, ${n.data}.uses,
                 () => field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name"), held) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"), false, held));
@@ -940,7 +955,14 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           }
           const sent = stored as { file: string; receipt: string };
           try {
-            await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
+            // A field of several as it is now: two sent at once both stay, and the limit holds.
+            const now = field.many
+              ? ((await ${n.data}.get(viewer, row.id)) as Record<string, unknown> | undefined)?.[field.key]
+              : undefined;
+            if (field.many && now === undefined) throw new NotFound("No such ${quotedText(n.label.toLowerCase())} any longer.");
+            const current = Array.isArray(now) ? now : [];
+            if (field.many && current.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
+            await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...current, sent] : sent } as never);
           } catch (error) {
             // The record did not take it: the file it would have had goes again.
             const still = ${n.data}.uses((stored as { file: string }).file);
@@ -1186,7 +1208,7 @@ function toolsModule(
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, ${addressOwned(model) ? `whose: (viewer: Viewer | null, row: Record<string, unknown>) => ${n.data}.whose(viewer, row as never), ` : ""}targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms && payToCreate(ir, model) ? ", paid: true" : ""}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, ${addressOwned(model) ? `whose: (viewer: Viewer | null, row: Record<string, unknown>) => ${n.data}.whose(viewer, row as never), ` : ""}targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
   });
   // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
   const proposals = actions.map((action) => {
@@ -1775,6 +1797,10 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     args = { ...args, values };
     if (tool === "add") {
       if (!allows(kind.access.create, viewer)) throw new AccessDenied(true);
+      // One made by paying for it is made on its own page, where it is paid: the add itself refuses
+      // it (callTool), so Ask does not propose it (T821 #1).
+      if ((kind as { paid?: boolean }).paid)
+        throw new BadInput(\`A \${kind.label} is paid for when it is made, so it is made on its own page.\`);
       kind.fromApi(values);
       kept = args;
       card = { title: \`Add a \${kind.label}\`, changes: Object.entries(values).map(([k, v]) => ({ label: label(k), to: shownTo(k, v) })) };

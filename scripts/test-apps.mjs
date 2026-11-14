@@ -4413,6 +4413,19 @@ async function apiFlow(base) {
       throw new Error(`fetching the attachment gave ${fetched.status}`);
     if ((await attach(Buffer.from("not a pdf"), "fake.pdf")).status !== 400)
       throw new Error("a file that only claims to be a PDF was taken");
+    // A name with a stray "%" is kept as written; a field that is only the object's own name
+    // (constructor) is no field (T821 #5).
+    const percent = await attach(pdf, "100% done.pdf");
+    const kept = await percent.json();
+    if (percent.status !== 200 || kept.name !== "100% done.pdf")
+      throw new Error(`a name with a % gave ${percent.status} ${JSON.stringify(kept)}`);
+    const notField = await fetch(`${base}/api/v1/notes/${note.id}/constructor`, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${key}`, "content-type": "application/pdf" },
+      body: pdf,
+    });
+    if (notField.status !== 404)
+      throw new Error(`a field named constructor gave ${notField.status}`);
     const tools = await fetch(`${base}/mcp`, {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
