@@ -66,10 +66,10 @@
   },
   "spec-question": {
    "requests": 46,
-   "right": 39,
-   "cannotTell": 7,
+   "right": 45,
+   "cannotTell": 1,
    "wrongRoute": 0,
-   "medianTokens": 1864,
+   "medianTokens": 1774,
    "medianExtraParts": 8,
    "medianExtraDocs": 3
   },
@@ -151,7 +151,7 @@
   "spec-question": {
    "requests": 46,
    "byRule": 2,
-   "medianTokens": 1864,
+   "medianTokens": 1774,
    "maxTokens": 38886
   },
   "two-things": {

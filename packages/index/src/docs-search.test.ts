@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
   appParts,
+  asksRights,
   type DocsIndex,
   searchDocs,
   searchDocsWith,
@@ -62,6 +63,31 @@ test("what the app does by itself is always there by its line: each action, outg
   );
   // Found itself: in full, not listed again.
   expect(appParts(app, "when is the booking mail sent?")).not.toContain("- outgoing:bookingMade:");
+});
+
+test("a question about who may do what, in English or Swedish, brings who may (T844 C)", () => {
+  for (const asked of [
+    "who can close cases",
+    "can customers see each other's orders?",
+    "let staff delete sessions",
+    "what does the api offer",
+    "får frisörerna ta bort tjänster?",
+    "kan vem som helst se incidenterna?",
+    "låt personalen ta bort pass",
+  ])
+    expect(asksRights(asked), asked).toBe(true);
+  for (const asked of [
+    "can you add a phone field",
+    "kan du lägga till ett fält",
+    "who are my customers",
+    "how many bookings are there",
+  ])
+    expect(asksRights(asked), asked).toBe(false);
+  const app: SummarySection[] = [
+    ...sections,
+    { concept: "auth", title: "Who may do what", sentences: ["Staff change bookings."] },
+  ];
+  expect(appParts(app, "can members see the schedule?")).toContain("Who may do what");
 });
 
 test("a request's own best part first, then each phrase's, none twice", () => {

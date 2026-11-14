@@ -131,6 +131,85 @@ const sectionText = (s: SummarySection) =>
  * The parts of the app's plain-language summary (in the app's own words and language) that share
  * the most words with a request, at most `count`; without any, the whole summary, cut.
  */
+/**
+ * The words of a question about who may do what (T844 C), by language: the asking words, the
+ * verbs of the grants (read, create, write, delete, run, see) and the persons who ask for
+ * themselves, whose "can I" is a request, not a question about rights. Data, not rules.
+ */
+const RIGHTS = {
+  en: {
+    who: [
+      "who",
+      "whom",
+      "which role",
+      "which roles",
+      "which people",
+      "which users",
+      "anyone",
+      "everyone",
+    ],
+    ask: ["can", "may", "let", "allowed to"],
+    verbs: [
+      "see",
+      "read",
+      "view",
+      "open",
+      "create",
+      "add",
+      "write",
+      "edit",
+      "change",
+      "delete",
+      "remove",
+      "run",
+      "use",
+      "close",
+    ],
+    self: ["you", "i", "we"],
+  },
+  sv: {
+    who: ["vem", "vilka", "vem som helst", "alla"],
+    ask: ["kan", "får", "låt"],
+    verbs: [
+      "se",
+      "läsa",
+      "öppna",
+      "skapa",
+      "lägga till",
+      "skriva",
+      "ändra",
+      "redigera",
+      "ta bort",
+      "radera",
+      "köra",
+      "använda",
+      "stänga",
+    ],
+    self: ["du", "ni", "jag", "vi"],
+  },
+};
+const alt = (words: readonly string[]) => words.map((w) => w.replace(/ /g, "\\s+")).join("|");
+const RIGHTS_SHAPES = Object.values(RIGHTS).flatMap((l) => [
+  // "who can close cases", "vem får se …"
+  new RegExp(
+    `(^|[^\\p{L}])(${alt(l.who)})([^\\p{L}].*)?[^\\p{L}](${alt(l.ask)})([^\\p{L}]|$)`,
+    "u",
+  ),
+  // "can customers see …", "får frisörerna ta bort …", "låt personalen ta bort …"; not "can you add"
+  new RegExp(
+    `(^|[^\\p{L}])(${alt(l.ask)})\\s+(?!(${alt(l.self)})[^\\p{L}])(\\p{L}+\\s+){1,3}(${alt(l.verbs)})([^\\p{L}]|$)`,
+    "u",
+  ),
+]);
+
+/** Whether a request asks who may do what, or about the API (keys read by their role). */
+export function asksRights(request: string): boolean {
+  const text = request.toLowerCase();
+  return (
+    /(^|[^\p{L}])api([^\p{L}]|$)/u.test(text) || RIGHTS_SHAPES.some((shape) => shape.test(text))
+  );
+}
+
 export function appParts(sections: SummarySection[], request: string, count = 4): string {
   const query = searchWords(request);
   const scores = bm25(
@@ -147,6 +226,9 @@ export function appParts(sections: SummarySection[], request: string, count = 4)
     .filter((h) => h.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, count);
+  // A question about who may do what brings who may (the auth part), whatever its words matched.
+  const auth = asksRights(request) && sections.find((s) => s.concept === "auth");
+  if (auth && !found.some((h) => h.s === auth)) found.push({ s: auth, score: 0 });
   // What the app does by itself that the search may miss (T844 B): every action, outgoing call
   // and timer the parts found leave out, by one line each, a few tokens, in any language asked.
   const also = sections
