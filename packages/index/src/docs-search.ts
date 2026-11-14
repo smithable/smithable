@@ -18,6 +18,8 @@ export interface DocsHit {
   url: string;
   /** The part's words, cut to `TEXT` characters. */
   text: string;
+  /** How well it matched (BM25): small when only a common word was shared. */
+  score?: number;
 }
 
 export const DOCS_SITE = "https://docs.smithable.ai";
@@ -113,12 +115,13 @@ export function searchDocs(index: DocsIndex, request: string, count = 3): DocsHi
     .filter((h) => h.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, count)
-    .map(({ part: [page, heading, id, text] }) => {
+    .map(({ part: [page, heading, id, text], score }) => {
       const [url = "", title = ""] = index.pages[page] ?? [];
       return {
         title: title === heading || !heading ? title : `${title} › ${heading}`,
         url: `${DOCS_SITE}/${url}${id ? `#${id}` : ""}`,
         text: text.slice(0, TEXT),
+        score,
       };
     });
 }

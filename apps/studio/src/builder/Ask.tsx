@@ -249,7 +249,7 @@ export function Ask({
               .slice(-6)
               .map(({ request, reply }) => ({ request: request ?? "", reply }))
           : [],
-        docs: found.map(({ title, url, text }) => ({ title, url, text })),
+        docs: found.map(({ title, url, text, score }) => ({ title, url, text, score })),
       });
       last.current = { text, at: Date.now(), question: next.kind === "question" };
       setProposal(next);

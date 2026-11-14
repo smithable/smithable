@@ -13,6 +13,8 @@ export interface DocsHit {
   line: string;
   /** The part's words, for Smith to answer from (A 152). */
   text: string;
+  /** How well it matched: under a floor, Smith takes the request as matching nothing (T844 A). */
+  score?: number;
 }
 
 let loading: Promise<DocsIndex> | undefined;

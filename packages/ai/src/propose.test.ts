@@ -184,6 +184,22 @@ describe("proposeChange", () => {
     expect(proposal).toMatchObject({ kind: "none", reason: "This changes nothing." });
   });
 
+  test("a request nothing of the app or the docs matches gets the short prompt (T844 A)", async () => {
+    const request = "write me a poem about the sea";
+    const model = scripted([{ kind: "answer", text: "I make apps, not poems." }]);
+    const proposal = await proposeChange({
+      request,
+      files: { spec },
+      context: buildContext(index, request),
+      providers: [model],
+      // Searched, and only a weak part found: under the floor.
+      docs: [{ title: "Help", url: "https://docs.smithable.ai/help.html", text: "…", score: 2 }],
+    });
+    expect(proposal).toMatchObject({ kind: "answer", text: "I make apps, not poems." });
+    // No operations and no docs part in what was sent.
+    expect(model.prompts[0]).not.toContain("Operations (change the app only through these):");
+  });
+
   test("an ambiguous request becomes a question, not a guess", async () => {
     const proposal = await propose("Add a date", [
       scripted([

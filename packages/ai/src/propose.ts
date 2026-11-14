@@ -238,8 +238,8 @@ export async function proposeChange(options: {
   check?: (before: ProjectFiles, after: ProjectFiles, effects: Effect[]) => string | undefined;
   /** The conversation so far, oldest first (A 152): what a follow-up is read by. */
   conversation?: { request: string; reply: string }[];
-  /** Parts of docs.smithable.ai the person's browser found for the request, to answer from. */
-  docs?: { title: string; url: string; text: string }[];
+  /** Parts of docs.smithable.ai the person's browser found for the request, to answer from, each with its search score when the search gave one. */
+  docs?: { title: string; url: string; text: string; score?: number }[];
   /** The parts of the app's plain-language summary the request names, or the whole (T755). */
   app?: string;
   /** What every app does by itself, in the kit's words (the adapter's kitSummary). */
@@ -311,11 +311,21 @@ export async function proposeChange(options: {
   const docs = (options.docs ?? []).map((d) => `${d.title} (${d.url}): ${d.text}`).join("\n");
   // Both searches run for every request that reaches a model, each labelled (T755).
   const around = `${said ? `\n\nThe conversation so far:\n${said}` : ""}${options.app ? `\n\nFrom this app:\n${options.app}` : ""}${docs ? `\n\nFrom the docs:\n${docs}` : ""}`;
+  // A change's prompt carries no docs parts: it chooses operations, not words to quote (T844 A).
+  const aroundChange = `${said ? `\n\nThe conversation so far:\n${said}` : ""}${options.app ? `\n\nFrom this app:\n${options.app}` : ""}`;
+  // Nothing of the app and nothing of the docs matches it (small talk, off topic): the short
+  // conversation prompt answers it, not the whole app with its operations (T844 A). Should it be
+  // a change after all, the model says so and the normal path below runs.
+  // Only where the docs were searched (Studio): without them nothing says what is not there.
+  const matchesNothing =
+    options.docs !== undefined &&
+    context.concepts.length === 0 &&
+    !options.docs.some((d) => (d.score ?? Number.POSITIVE_INFINITY) >= DOCS_FLOOR);
   // A question, as the rules read it (T755): answered by the cheapest model from the app's parts
   // and the docs, with no operations to choose from (most of a change's prompt). When it is a
   // change after all, the model says so and the normal path below runs.
   const first = providers[0];
-  if (first && looksLikeQuestion(options.request)) {
+  if (first && (looksLikeQuestion(options.request) || matchesNothing)) {
     try {
       const answer = (await completeJson(
         first,
@@ -336,7 +346,7 @@ export async function proposeChange(options: {
   for (const [index, provider] of providers.entries()) {
     const prompted = promptFor(provider, context, files.plugins, options.kit);
     const { system, operations } = prompted;
-    const user = prompted.user + around;
+    const user = prompted.user + aroundChange;
     const schema = answerSchema(operations);
     const fallbackSchema = answerSchema(operations, false);
     let prompt = user;
@@ -416,6 +426,13 @@ const QUESTION = `You are Smith, the assistant in Smithable's Studio, where a pe
 - a greeting, thanks or other small talk: one or two friendly sentences, then something to change or ask about this app;
 - not about this app or Smithable: one sentence, then lead back to this app.
 When neither says it, say you do not know rather than guess. When the request is really a change to make, not a question, answer {"kind":"change"} and nothing else.`;
+
+/**
+ * The docs score under which a part shares only a common word with a request (T844 A): measured
+ * on smith-stages, small talk tops out at 6.7 and half the off-topic under 6, while a docs
+ * question's best part scores 8 at the median.
+ */
+const DOCS_FLOOR = 7;
 
 const QUESTION_SCHEMA = {
   type: "object",
