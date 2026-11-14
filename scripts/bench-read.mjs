@@ -301,7 +301,8 @@ for (const [set, text, kinds, audiences, visitors] of SET) {
     .filter((w) => said.has(stem(w)));
   if (notice.length) {
     const seen = new Set(
-      [...r.leftover, ...[...r.things, ...r.maybe].flatMap((t) => t.split(" "))].map(stem),
+      // A phrase the reader joined (follow-up, every-minute) holds its words.
+      [...r.leftover, ...r.things, ...r.maybe].flatMap((t) => [t, ...t.split(/[ -]/)]).map(stem),
     );
     // A word kept as a field ("holds: time") is kept too, but named apart: a field can be a
     // wrong reading of it ("giving away for free" is a price, not a field called free).

@@ -69,7 +69,7 @@ const STOP = set(`a an the and or but of to for in on at by with from as is are 
 
 // Words every app description has: they settle nothing and are not left over.
 const GENERIC = set(`app application tool system software program solution platform
-  need want like keep track tracking manage managing hold store know send small
+  need want like keep manage managing hold store know small
   little local simple basic good nice thing stuff way one single whole together page board
   desk work month year week day longer front-page shared kept written second-hand invite
   invited behind`);
@@ -125,6 +125,14 @@ const PEOPLE = set(`member neighbor neighbour customer anyone people everybody e
 const CONTRIBUTE = set(`post sell lend borrow offer claim book pick register apply upload
   submit swap themselves suggest vote rent buy pay reserve sign-up`);
 const LOOK = set("check browse see look view read follow find");
+// What the app must do beyond keeping records (T846): mail or messages out, other programs
+// asking it, checks on a schedule, tracking. Never generic: a build without them misses a
+// capability (mail, API access, a timer), so each is left over for the builder or asked.
+const DOES = set(`send mail email notify remind reminder alert text sms slack post-to query api
+  sync export import integrate webhook track tracking monitor ping`);
+// A kind word that is also the record people keep (T846): it settles the kind and stays a
+// thing. Words that only name the shape (chatbot, assistant) are not here.
+const KIND_THINGS = set("session lesson slot menu dish listing case incident outage recipe");
 // Whose records a look is at: the lookers' own, which they sign in to see.
 const OWN = set("their his her own");
 
@@ -210,7 +218,20 @@ const PHRASES: [RegExp, string][] = [
   [/\bsecond hand\b/gi, "second-hand"],
   [/\bhelp ?desk\b/gi, "help-desk"],
   [/\bstatus pages?\b/gi, "status-page"],
+  // Phrases whose small words carry the meaning (T846): a reminder, a capacity, a link between
+  // two people, a schedule.
+  [/\bfollow(?:s|ing)? ?ups?\b/gi, "follow-up"],
+  // The capacity joined, the record it counts kept as its own word (it may settle the kind).
+  [/\bat most (\w+) per (\w+)\b/gi, "at-most-$1-per $2"],
+  [/\bwho((?:\s+\w+){0,4})\s+owes\s+whom\b/gi, "who-owes-whom$1"],
+  // Other programs asking the app (an API).
+  [/\bother (programs|systems|apps|tools)\b/gi, "other-$1"],
+  [/\bevery (minute|hour|day|morning|evening|night|week|month)\b/gi, "every-$1"],
+  [/\bposts? (?=(?:\w+ ){0,3}to (?:slack|teams|discord|email|mail)\b)/gi, "post-to "],
 ];
+// A check on a schedule ("checks our servers every minute") is something the app does.
+const SCHEDULE =
+  /\bevery-(minute|hour|day|morning|evening|night|week|month)\b|\b(hourly|daily|nightly|weekly)\b/i;
 
 export function readDescription(given: string): Reading {
   const description = PHRASES.reduce((text, [phrase, as]) => text.replace(phrase, as), given);
@@ -225,9 +246,11 @@ export function readDescription(given: string): Reading {
     questions: [],
     trace: [],
   };
+  // English by the description as written, before its phrases were joined.
+  const written = given.match(/[\p{L}\p{N}][\p{L}\p{N}’'-]*/gu) ?? [];
   const english =
-    words.length >= 4 &&
-    words.filter((w) => ENGLISH.has(w.toLowerCase())).length / words.length >= 0.15;
+    written.length >= 4 &&
+    written.filter((w) => ENGLISH.has(w.toLowerCase())).length / written.length >= 0.15;
   if (!english) return reading;
   reading.read = true;
 
@@ -271,8 +294,17 @@ export function readDescription(given: string): Reading {
       who.team++;
       as.push("team");
     }
+    // Sending, other programs, a check on a schedule, tracking: done by the app, left over.
+    const does =
+      DOES.has(w) ||
+      // A check with its schedule in the words after it: "checks our servers every minute".
+      (w === "check" && SCHEDULE.test(words.slice(i, i + 8).join(" "))) ||
+      /^(every|at-most|who-owes|other)-/.test(w);
+    if (does) as.push("does");
     // Looking at their own ("our clients see their invoices"): people who sign in, not visitors.
-    if (LOOK.has(w) && ownLooks.has(i)) as.push("own");
+    if (does) {
+      // not a look
+    } else if (LOOK.has(w) && ownLooks.has(i)) as.push("own");
     else if (LOOK.has(w)) {
       who.look++;
       as.push("looks");
@@ -300,7 +332,7 @@ export function readDescription(given: string): Reading {
       closed++;
       as.push("closed");
     }
-    if (THING.has(w) && !NOT_THINGS.has(w)) {
+    if ((THING.has(w) || KIND_THINGS.has(w)) && !NOT_THINGS.has(w)) {
       if (!reading.things.includes(w)) reading.things.push(w);
       as.push("thing");
     }
@@ -308,10 +340,17 @@ export function readDescription(given: string): Reading {
       if (!reading.fields.includes(w)) reading.fields.push(w);
       as.push("field");
     }
-    if (!as.length && (STOP.has(w) || STOP.has(word.toLowerCase()) || NOT.has(w) || w === "ai"))
+    // A word in capitals as written (IT, HR) is a name, never a stop word (T846).
+    const capitals = word.length > 1 && word === word.toUpperCase() && /\p{Lu}/u.test(word);
+    // AI says nothing of the app however it is written.
+    if (
+      !as.length &&
+      ((!capitals && (STOP.has(w) || STOP.has(word.toLowerCase()) || NOT.has(w))) || w === "ai")
+    )
       as.push("stop");
-    if (!as.length && (GENERIC.has(w) || NUMBER.has(w) || /^\d+$/.test(w))) as.push("generic");
-    if (!as.length) reading.leftover.push(word.toLowerCase());
+    if (!as.length && !capitals && (GENERIC.has(w) || NUMBER.has(w) || /^\d+$/.test(w)))
+      as.push("generic");
+    if (!as.length || does) reading.leftover.push(word.toLowerCase());
     reading.trace.push({ word, as: as.join(", ") || "?" });
   });
 
