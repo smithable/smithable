@@ -947,7 +947,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
             const now = field.many
               ? ((await ${n.data}.get(viewer, row.id)) as Record<string, unknown> | undefined)?.[field.key]
               : undefined;
-            const current = Array.isArray(now) ? now : list;
+            if (field.many && now === undefined) throw new NotFound("No such ${quotedText(n.label.toLowerCase())} any longer.");
+            const current = Array.isArray(now) ? now : [];
             if (field.many && current.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
             await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...current, sent] : sent } as never);
           } catch (error) {
@@ -1784,10 +1785,10 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     args = { ...args, values };
     if (tool === "add") {
       if (!allows(kind.access.create, viewer)) throw new AccessDenied(true);
-      // One made by paying for it is held until paid: Ask proposes only what it can complete, so
-      // only where the caller's role makes them unheld (staff entering one by hand; T821 #1).
-      if ((kind as { paid?: boolean }).paid && !kind.access.write.roles.includes(viewer.role))
-        throw new BadInput(\`A \${kind.label} is made by paying for it on its page, not here.\`);
+      // One made by paying for it is made on its own page, where it is paid: the add itself refuses
+      // it (callTool), so Ask does not propose it (T821 #1).
+      if ((kind as { paid?: boolean }).paid)
+        throw new BadInput(\`A \${kind.label} is paid for when it is made, so it is made on its own page.\`);
       kind.fromApi(values);
       kept = args;
       card = { title: \`Add a \${kind.label}\`, changes: Object.entries(values).map(([k, v]) => ({ label: label(k), to: shownTo(k, v) })) };

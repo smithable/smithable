@@ -12509,7 +12509,8 @@ export const Route = createFileRoute("/api/v1/notes/$id/$field")({
             const now = field.many
               ? ((await noteData.get(viewer, row.id)) as Record<string, unknown> | undefined)?.[field.key]
               : undefined;
-            const current = Array.isArray(now) ? now : list;
+            if (field.many && now === undefined) throw new NotFound("No such note any longer.");
+            const current = Array.isArray(now) ? now : [];
             if (field.many && current.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
             await noteData.update(viewer, row.id, { [field.key]: field.many ? [...current, sent] : sent } as never);
           } catch (error) {
@@ -14163,7 +14164,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/index.tsx": "050d96d7 generated",
   "src/routes/admin/tasks/new.tsx": "0937d919 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/notes/$id.$field.ts": "34b94208 generated",
+  "src/routes/api/v1/notes/$id.$field.ts": "39326272 generated",
   "src/routes/api/v1/notes/$id.ts": "8d8c3986 generated",
   "src/routes/api/v1/notes/imports.$id.ts": "ce608828 generated",
   "src/routes/api/v1/notes/index.ts": "d8208fa0 generated",
