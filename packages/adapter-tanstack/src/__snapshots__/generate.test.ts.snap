@@ -1375,7 +1375,13 @@ export function projectFromApi(body: unknown, current?: Record<string, unknown>)
         values.description = v;
         break;
     }
-  return projectSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = projectSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A task as the API gives it. */
@@ -1418,7 +1424,13 @@ export function taskFromApi(body: unknown, current?: Record<string, unknown>) {
         values.details = v;
         break;
     }
-  return taskSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = taskSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A note as the API gives it. */
@@ -1449,7 +1461,13 @@ export function noteFromApi(body: unknown, current?: Record<string, unknown>) {
         values.body = v;
         break;
     }
-  return noteSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = noteSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** The whole API in the OpenAPI format, for tools and agents. */
@@ -5216,7 +5234,13 @@ export function projectFromApi(body: unknown, current?: Record<string, unknown>)
         values.description = v;
         break;
     }
-  return projectSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = projectSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A task as the API gives it. */
@@ -5259,7 +5283,13 @@ export function taskFromApi(body: unknown, current?: Record<string, unknown>) {
         values.details = v;
         break;
     }
-  return taskSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = taskSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A note as the API gives it. */
@@ -5290,7 +5320,13 @@ export function noteFromApi(body: unknown, current?: Record<string, unknown>) {
         values.body = v;
         break;
     }
-  return noteSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = noteSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -5933,7 +5969,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -8033,7 +8072,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -12462,7 +12504,10 @@ export const Route = createFileRoute("/api/v1/notes/$id")({
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
-          return noteToApi(await noteData.update(viewer, row.id, noteFromApi(body, row) as never));
+          // Only what differs from the record is written; nothing that differs is no change.
+          const changes = noteFromApi(body, row);
+          if (!Object.keys(changes).length) return noteToApi(row);
+          return noteToApi(await noteData.update(viewer, row.id, changes as never));
         }),
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
@@ -12632,7 +12677,10 @@ export const Route = createFileRoute("/api/v1/projects/$id")({
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
-          return projectToApi(await projectData.update(viewer, row.id, projectFromApi(body, row) as never));
+          // Only what differs from the record is written; nothing that differs is no change.
+          const changes = projectFromApi(body, row);
+          if (!Object.keys(changes).length) return projectToApi(row);
+          return projectToApi(await projectData.update(viewer, row.id, changes as never));
         }),
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
@@ -12806,7 +12854,10 @@ export const Route = createFileRoute("/api/v1/tasks/$id")({
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
-          return taskToApi(await taskData.update(viewer, row.id, taskFromApi(body, row) as never));
+          // Only what differs from the record is written; nothing that differs is no change.
+          const changes = taskFromApi(body, row);
+          if (!Object.keys(changes).length) return taskToApi(row);
+          return taskToApi(await taskData.update(viewer, row.id, changes as never));
         }),
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
@@ -13941,9 +13992,9 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.server.ts": "6d1e193a generated",
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/activity.server.ts": "3bfe13cf generated",
-  "src/generated/api.server.ts": "6d97c04c generated",
+  "src/generated/api.server.ts": "e9deba4b generated",
   "src/generated/app.ts": "547ab03a generated",
-  "src/generated/ask.server.ts": "a2e9859f generated",
+  "src/generated/ask.server.ts": "e65bff7f generated",
   "src/generated/card.server.ts": "9b4d94be generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -13951,7 +14002,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/hooks.ts": "d6804a3c generated",
   "src/generated/keys.server.ts": "0fa3cf33 generated",
   "src/generated/keys.test.ts": "2a71c746 generated",
-  "src/generated/mcp.server.ts": "a279592d generated",
+  "src/generated/mcp.server.ts": "96926378 generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/note.import.server.ts": "7b3f75d9 generated",
   "src/generated/note.import.ts": "13466794 generated",
@@ -14069,17 +14120,17 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/admin/tasks/new.tsx": "0937d919 generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/notes/$id.$field.ts": "3d2d4148 generated",
-  "src/routes/api/v1/notes/$id.ts": "97abc01d generated",
+  "src/routes/api/v1/notes/$id.ts": "8d8c3986 generated",
   "src/routes/api/v1/notes/imports.$id.ts": "ce608828 generated",
   "src/routes/api/v1/notes/index.ts": "d8208fa0 generated",
   "src/routes/api/v1/notes[.]csv.ts": "78146a92 generated",
   "src/routes/api/v1/openapi[.]json.ts": "ed462bec generated",
-  "src/routes/api/v1/projects/$id.ts": "cc89aacd generated",
+  "src/routes/api/v1/projects/$id.ts": "8d2154b5 generated",
   "src/routes/api/v1/projects/imports.$id.ts": "537b11a5 generated",
   "src/routes/api/v1/projects/index.ts": "21a2ea84 generated",
   "src/routes/api/v1/projects[.]csv.ts": "f598199b generated",
   "src/routes/api/v1/tasks/$id.actions.$action.ts": "3afab909 generated",
-  "src/routes/api/v1/tasks/$id.ts": "24e49dc9 generated",
+  "src/routes/api/v1/tasks/$id.ts": "fa58523b generated",
   "src/routes/api/v1/tasks/imports.$id.ts": "0a104a2f generated",
   "src/routes/api/v1/tasks/index.ts": "dae1f46a generated",
   "src/routes/api/v1/tasks[.]csv.ts": "b9d31159 generated",
@@ -23653,7 +23704,13 @@ export function classTypeFromApi(body: unknown, current?: Record<string, unknown
         values.durationMinutes = v;
         break;
     }
-  return classTypeSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = classTypeSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A instructor as the API gives it. */
@@ -23680,7 +23737,13 @@ export function instructorFromApi(body: unknown, current?: Record<string, unknow
         values.bio = v;
         break;
     }
-  return instructorSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = instructorSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A session as the API gives it. */
@@ -23716,7 +23779,13 @@ export function sessionFromApi(body: unknown, current?: Record<string, unknown>)
         values.capacity = v;
         break;
     }
-  return sessionSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = sessionSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A booking as the API gives it. */
@@ -23743,7 +23812,13 @@ export function bookingFromApi(body: unknown, current?: Record<string, unknown>)
         values.attendeeId = v === null ? null : userId(v, "attendee");
         break;
     }
-  return bookingSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = bookingSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A post as the API gives it. */
@@ -23786,7 +23861,13 @@ export function postFromApi(body: unknown, current?: Record<string, unknown>) {
         values.status = v;
         break;
     }
-  return postSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = postSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A message as the API gives it. */
@@ -23817,7 +23898,13 @@ export function messageFromApi(body: unknown, current?: Record<string, unknown>)
         values.message = v;
         break;
     }
-  return messageSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = messageSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -24508,7 +24595,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -36929,7 +37019,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "cba56f7d generated",
+  "src/generated/ask.server.ts": "307722f2 generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -38627,7 +38717,13 @@ export function customerFromApi(body: unknown, current?: Record<string, unknown>
         values.accountManagerId = v === null ? null : userId(v, "accountManager");
         break;
     }
-  return customerSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = customerSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A order as the API gives it. */
@@ -38671,7 +38767,13 @@ export function orderFromApi(body: unknown, current?: Record<string, unknown>) {
         values.placedAt = v === null ? null : moment(v, "placedAt");
         break;
     }
-  return orderSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = orderSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A follow up as the API gives it. */
@@ -38706,7 +38808,13 @@ export function followUpFromApi(body: unknown, current?: Record<string, unknown>
         values.note = v;
         break;
     }
-  return followUpSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = followUpSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -39199,7 +39307,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -46831,7 +46942,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "e1896b86 generated",
+  "src/generated/ask.server.ts": "60cbf37a generated",
   "src/generated/card.server.ts": "a5f24452 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -48668,7 +48779,13 @@ export function businessProfileFromApi(body: unknown, current?: Record<string, u
         values.invoiceFooter = v;
         break;
     }
-  return businessProfileSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = businessProfileSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A client as the API gives it. */
@@ -48703,7 +48820,13 @@ export function clientFromApi(body: unknown, current?: Record<string, unknown>) 
         values.vatNumber = v;
         break;
     }
-  return clientSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = clientSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A invoice as the API gives it. */
@@ -48743,7 +48866,13 @@ export function invoiceFromApi(body: unknown, current?: Record<string, unknown>)
         values.status = v;
         break;
     }
-  return invoiceSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = invoiceSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A invoice line as the API gives it. */
@@ -48779,7 +48908,13 @@ export function invoiceLineFromApi(body: unknown, current?: Record<string, unkno
         values.unitPrice = v === null ? null : Math.round(amount(v, "unitPrice") * 100);
         break;
     }
-  return invoiceLineSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = invoiceLineSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -49279,7 +49414,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -56220,7 +56358,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "d41af9ad generated",
+  "src/generated/ask.server.ts": "75a25938 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "948ad30b generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
@@ -66427,7 +66565,13 @@ export function itemFromApi(body: unknown, current?: Record<string, unknown>) {
         values.available = v;
         break;
     }
-  return itemSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = itemSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -66888,7 +67032,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -70934,7 +71081,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/access.test.ts": "17492689 generated",
   "src/generated/activity.server.ts": "c6b9630b generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "d823d229 generated",
+  "src/generated/ask.server.ts": "f49093ad generated",
   "src/generated/card.server.ts": "f87d436f generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -71724,7 +71871,13 @@ export function itemFromApi(body: unknown, current?: Record<string, unknown>) {
         values.addedOn = v;
         break;
     }
-  return itemSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = itemSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -72185,7 +72338,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -74990,7 +75146,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "2040abdb generated",
+  "src/generated/ask.server.ts": "27a3b6d1 generated",
   "src/generated/card.server.ts": "57b7eaca generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -76791,7 +76947,13 @@ export function componentFromApi(body: unknown, current?: Record<string, unknown
         values.description = v;
         break;
     }
-  return componentSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = componentSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A incident as the API gives it. */
@@ -76834,7 +76996,13 @@ export function incidentFromApi(body: unknown, current?: Record<string, unknown>
         values.summary = v;
         break;
     }
-  return incidentSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = incidentSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** The whole API in the OpenAPI format, for tools and agents. */
@@ -79095,7 +79263,13 @@ export function componentFromApi(body: unknown, current?: Record<string, unknown
         values.description = v;
         break;
     }
-  return componentSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = componentSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A incident as the API gives it. */
@@ -79138,7 +79312,13 @@ export function incidentFromApi(body: unknown, current?: Record<string, unknown>
         values.summary = v;
         break;
     }
-  return incidentSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = incidentSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A incident update as the API gives it. */
@@ -79173,7 +79353,13 @@ export function incidentUpdateFromApi(body: unknown, current?: Record<string, un
         values.message = v;
         break;
     }
-  return incidentUpdateSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = incidentUpdateSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A maintenance as the API gives it. */
@@ -79212,7 +79398,13 @@ export function maintenanceFromApi(body: unknown, current?: Record<string, unkno
         values.description = v;
         break;
     }
-  return maintenanceSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = maintenanceSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -79712,7 +79904,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -85066,7 +85261,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -86264,7 +86462,10 @@ export const Route = createFileRoute("/api/v1/components/$id")({
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
-          return componentToApi(await componentData.update(viewer, row.id, componentFromApi(body, row) as never));
+          // Only what differs from the record is written; nothing that differs is no change.
+          const changes = componentFromApi(body, row);
+          if (!Object.keys(changes).length) return componentToApi(row);
+          return componentToApi(await componentData.update(viewer, row.id, changes as never));
         }),
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
@@ -86435,7 +86636,10 @@ export const Route = createFileRoute("/api/v1/incidents/$id")({
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
-          return incidentToApi(await incidentData.update(viewer, row.id, incidentFromApi(body, row) as never));
+          // Only what differs from the record is written; nothing that differs is no change.
+          const changes = incidentFromApi(body, row);
+          if (!Object.keys(changes).length) return incidentToApi(row);
+          return incidentToApi(await incidentData.update(viewer, row.id, changes as never));
         }),
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {
@@ -89341,9 +89545,9 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.server.ts": "a2a5449e generated",
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/activity.server.ts": "dc01d286 generated",
-  "src/generated/api.server.ts": "13759bf7 generated",
+  "src/generated/api.server.ts": "53f71b75 generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "9a0deac7 generated",
+  "src/generated/ask.server.ts": "5411d340 generated",
   "src/generated/card.server.ts": "944abfcc generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
@@ -89371,7 +89575,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/maintenance.schema.ts": "80ec6842 generated",
   "src/generated/maintenance.server.ts": "0b281e50 generated",
   "src/generated/maintenance.ts": "e16bc0e1 generated",
-  "src/generated/mcp.server.ts": "c95c523a generated",
+  "src/generated/mcp.server.ts": "247e37bf generated",
   "src/generated/my-time.ts": "c315432b generated",
   "src/generated/pages.ts": "bf2f0857 generated",
   "src/generated/roles.ts": "6b44c69a generated",
@@ -89465,12 +89669,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "c0360f5c generated",
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
-  "src/routes/api/v1/components/$id.ts": "6ae4c505 generated",
+  "src/routes/api/v1/components/$id.ts": "cc2ea80b generated",
   "src/routes/api/v1/components/imports.$id.ts": "3f0d0d7b generated",
   "src/routes/api/v1/components/index.ts": "dd3eaac4 generated",
   "src/routes/api/v1/components[.]csv.ts": "304e2fb5 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
-  "src/routes/api/v1/incidents/$id.ts": "02e50507 generated",
+  "src/routes/api/v1/incidents/$id.ts": "10f4197a generated",
   "src/routes/api/v1/incidents/imports.$id.ts": "a4277996 generated",
   "src/routes/api/v1/incidents/index.ts": "de869596 generated",
   "src/routes/api/v1/incidents[.]csv.ts": "766067c0 generated",
@@ -91328,7 +91532,13 @@ export function supportCaseFromApi(body: unknown, current?: Record<string, unkno
         values.body = v;
         break;
     }
-  return supportCaseSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = supportCaseSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /** A message as the API gives it. */
@@ -91367,7 +91577,13 @@ export function messageFromApi(body: unknown, current?: Record<string, unknown>)
         values.supportCaseId = v === null ? null : whole(v, "supportCase");
         break;
     }
-  return messageSchema.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = messageSchema.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }
 
 /**
@@ -91845,7 +92061,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
@@ -97365,7 +97584,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.ts": "2fdc7c64 generated",
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "70b969f8 generated",
+  "src/generated/ask.server.ts": "747dad8b generated",
   "src/generated/card.server.ts": "eb1c3b3c generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",

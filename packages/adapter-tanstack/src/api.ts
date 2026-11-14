@@ -592,7 +592,13 @@ export function ${camelName}FromApi(body: unknown, current?: Record<string, unkn
     switch (key) {
 ${writable.map((f) => `      case ${JSON.stringify(f.name)}:\n        ${writeCode(f)}\n        break;`).join("\n")}
     }
-  return ${n.schema}.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = ${n.schema}.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }`;
   })
   .join("\n")}`;
@@ -778,7 +784,10 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
-          return ${camelName}ToApi(await ${n.data}.update(viewer, row.id, ${camelName}FromApi(body, row) as never));
+          // Only what differs from the record is written; nothing that differs is no change.
+          const changes = ${camelName}FromApi(body, row);
+          if (!Object.keys(changes).length) return ${camelName}ToApi(row);
+          return ${camelName}ToApi(await ${n.data}.update(viewer, row.id, changes as never));
         }),
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {${
@@ -1531,7 +1540,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
