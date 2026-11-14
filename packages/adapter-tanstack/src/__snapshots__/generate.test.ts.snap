@@ -12600,8 +12600,13 @@ export const Route = createFileRoute("/api/v1/notes/")({
       GET: ({ request }) =>
         apiCall(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
-          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
-          const page = Math.max(1, Number(query.get("page")) || 1);
+          // Whole numbers in their bounds: a limit of 1 to 100, a page from 1 (T821 #8).
+          const whole = (name: string, fallback: number) => {
+            const n = Number(query.get(name));
+            return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+          };
+          const limit = Math.min(100, whole("limit", 100));
+          const page = Math.min(whole("page", 1), 1_000_000);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
           const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
           const search = query.get("search") ?? undefined;
@@ -12613,7 +12618,8 @@ export const Route = createFileRoute("/api/v1/notes/")({
             offset: (page - 1) * limit,
           });
           // ?sum=total adds up a number field over every record that fits, not only this page.
-          const sums = query.get("sum")?.split(",").filter(Boolean);
+          // Each field once, at most ten.
+          const sums = [...new Set(query.get("sum")?.split(",").filter(Boolean))].slice(0, 10);
           return {
             items: items.map(noteToApi),
             page,
@@ -12773,8 +12779,13 @@ export const Route = createFileRoute("/api/v1/projects/")({
       GET: ({ request }) =>
         apiCall(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
-          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
-          const page = Math.max(1, Number(query.get("page")) || 1);
+          // Whole numbers in their bounds: a limit of 1 to 100, a page from 1 (T821 #8).
+          const whole = (name: string, fallback: number) => {
+            const n = Number(query.get(name));
+            return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+          };
+          const limit = Math.min(100, whole("limit", 100));
+          const page = Math.min(whole("page", 1), 1_000_000);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
           const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
           const search = query.get("search") ?? undefined;
@@ -12786,7 +12797,8 @@ export const Route = createFileRoute("/api/v1/projects/")({
             offset: (page - 1) * limit,
           });
           // ?sum=total adds up a number field over every record that fits, not only this page.
-          const sums = query.get("sum")?.split(",").filter(Boolean);
+          // Each field once, at most ten.
+          const sums = [...new Set(query.get("sum")?.split(",").filter(Boolean))].slice(0, 10);
           return {
             items: items.map(projectToApi),
             page,
@@ -12950,8 +12962,13 @@ export const Route = createFileRoute("/api/v1/tasks/")({
       GET: ({ request }) =>
         apiCall(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
-          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
-          const page = Math.max(1, Number(query.get("page")) || 1);
+          // Whole numbers in their bounds: a limit of 1 to 100, a page from 1 (T821 #8).
+          const whole = (name: string, fallback: number) => {
+            const n = Number(query.get(name));
+            return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+          };
+          const limit = Math.min(100, whole("limit", 100));
+          const page = Math.min(whole("page", 1), 1_000_000);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
           const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
           const search = query.get("search") ?? undefined;
@@ -12963,7 +12980,8 @@ export const Route = createFileRoute("/api/v1/tasks/")({
             offset: (page - 1) * limit,
           });
           // ?sum=total adds up a number field over every record that fits, not only this page.
-          const sums = query.get("sum")?.split(",").filter(Boolean);
+          // Each field once, at most ten.
+          const sums = [...new Set(query.get("sum")?.split(",").filter(Boolean))].slice(0, 10);
           return {
             items: items.map(taskToApi),
             page,
@@ -14167,17 +14185,17 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/notes/$id.$field.ts": "39326272 generated",
   "src/routes/api/v1/notes/$id.ts": "8d8c3986 generated",
   "src/routes/api/v1/notes/imports.$id.ts": "ce608828 generated",
-  "src/routes/api/v1/notes/index.ts": "d8208fa0 generated",
+  "src/routes/api/v1/notes/index.ts": "6b48f6f2 generated",
   "src/routes/api/v1/notes[.]csv.ts": "78146a92 generated",
   "src/routes/api/v1/openapi[.]json.ts": "ed462bec generated",
   "src/routes/api/v1/projects/$id.ts": "8d2154b5 generated",
   "src/routes/api/v1/projects/imports.$id.ts": "537b11a5 generated",
-  "src/routes/api/v1/projects/index.ts": "21a2ea84 generated",
+  "src/routes/api/v1/projects/index.ts": "043d4826 generated",
   "src/routes/api/v1/projects[.]csv.ts": "f598199b generated",
   "src/routes/api/v1/tasks/$id.actions.$action.ts": "3afab909 generated",
   "src/routes/api/v1/tasks/$id.ts": "fa58523b generated",
   "src/routes/api/v1/tasks/imports.$id.ts": "0a104a2f generated",
-  "src/routes/api/v1/tasks/index.ts": "dae1f46a generated",
+  "src/routes/api/v1/tasks/index.ts": "da35c448 generated",
   "src/routes/api/v1/tasks[.]csv.ts": "b9d31159 generated",
   "src/routes/api/v1/users.ts": "0798ee24 generated",
   "src/routes/app-card.tsx": "48827720 generated",
@@ -39406,19 +39424,19 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
       const id = Number(args.id);
       if (!customerData.restore(viewer, [id]).restored)
         throw new NotFound(\`No customer \${id} in the trash that you may restore.\`);
-      return customerToApi((await customerData.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? customerToApi(row) : { done: true, readable: false }))((await customerData.get(viewer, id)) as Record<string, any> | undefined);
     }
     case "restoreOrder": {
       const id = Number(args.id);
       if (!orderData.restore(viewer, [id]).restored)
         throw new NotFound(\`No order \${id} in the trash that you may restore.\`);
-      return orderToApi((await orderData.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? orderToApi(row) : { done: true, readable: false }))((await orderData.get(viewer, id)) as Record<string, any> | undefined);
     }
     case "restoreFollowUp": {
       const id = Number(args.id);
       if (!followUpData.restore(viewer, [id]).restored)
         throw new NotFound(\`No follow up \${id} in the trash that you may restore.\`);
-      return followUpToApi((await followUpData.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? followUpToApi(row) : { done: true, readable: false }))((await followUpData.get(viewer, id)) as Record<string, any> | undefined);
     }
         default:
           throw new NotFound(\`There is no action "\${String(args.action)}".\`);
@@ -47046,7 +47064,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "60cbf37a generated",
+  "src/generated/ask.server.ts": "d98af3d1 generated",
   "src/generated/card.server.ts": "a5f24452 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -86683,8 +86701,13 @@ export const Route = createFileRoute("/api/v1/components/")({
       GET: ({ request }) =>
         openApiCall(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
-          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
-          const page = Math.max(1, Number(query.get("page")) || 1);
+          // Whole numbers in their bounds: a limit of 1 to 100, a page from 1 (T821 #8).
+          const whole = (name: string, fallback: number) => {
+            const n = Number(query.get(name));
+            return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+          };
+          const limit = Math.min(100, whole("limit", 100));
+          const page = Math.min(whole("page", 1), 1_000_000);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
           const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
           const search = query.get("search") ?? undefined;
@@ -86696,7 +86719,8 @@ export const Route = createFileRoute("/api/v1/components/")({
             offset: (page - 1) * limit,
           });
           // ?sum=total adds up a number field over every record that fits, not only this page.
-          const sums = query.get("sum")?.split(",").filter(Boolean);
+          // Each field once, at most ten.
+          const sums = [...new Set(query.get("sum")?.split(",").filter(Boolean))].slice(0, 10);
           return {
             items: items.map(componentToApi),
             page,
@@ -86857,8 +86881,13 @@ export const Route = createFileRoute("/api/v1/incidents/")({
       GET: ({ request }) =>
         openApiCall(request, async (viewer) => {
           const query = new URL(request.url).searchParams;
-          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
-          const page = Math.max(1, Number(query.get("page")) || 1);
+          // Whole numbers in their bounds: a limit of 1 to 100, a page from 1 (T821 #8).
+          const whole = (name: string, fallback: number) => {
+            const n = Number(query.get(name));
+            return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+          };
+          const limit = Math.min(100, whole("limit", 100));
+          const page = Math.min(whole("page", 1), 1_000_000);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
           const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
           const search = query.get("search") ?? undefined;
@@ -86870,7 +86899,8 @@ export const Route = createFileRoute("/api/v1/incidents/")({
             offset: (page - 1) * limit,
           });
           // ?sum=total adds up a number field over every record that fits, not only this page.
-          const sums = query.get("sum")?.split(",").filter(Boolean);
+          // Each field once, at most ten.
+          const sums = [...new Set(query.get("sum")?.split(",").filter(Boolean))].slice(0, 10);
           return {
             items: items.map(incidentToApi),
             page,
@@ -89841,12 +89871,12 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/auth/$.ts": "3980f9e2 kit",
   "src/routes/api/v1/components/$id.ts": "cc2ea80b generated",
   "src/routes/api/v1/components/imports.$id.ts": "3f0d0d7b generated",
-  "src/routes/api/v1/components/index.ts": "dd3eaac4 generated",
+  "src/routes/api/v1/components/index.ts": "2eeded62 generated",
   "src/routes/api/v1/components[.]csv.ts": "304e2fb5 generated",
   "src/routes/api/v1/incidents/$id.actions.$action.ts": "b5414452 generated",
   "src/routes/api/v1/incidents/$id.ts": "10f4197a generated",
   "src/routes/api/v1/incidents/imports.$id.ts": "a4277996 generated",
-  "src/routes/api/v1/incidents/index.ts": "de869596 generated",
+  "src/routes/api/v1/incidents/index.ts": "df4858f4 generated",
   "src/routes/api/v1/incidents[.]csv.ts": "766067c0 generated",
   "src/routes/api/v1/openapi[.]json.ts": "ed462bec generated",
   "src/routes/app-card.tsx": "48827720 generated",
