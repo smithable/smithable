@@ -101,6 +101,9 @@ export async function checkStudioLayout(browser, base, pictures) {
           .getByRole("textbox", { name: "Describe a change, or ask a question" })
           .locator("visible=true")
           .waitFor();
+        await page.setViewportSize({ width: 1600, height: 900 });
+        await page.getByRole("complementary", { name: "Smith" }).waitFor();
+        await page.locator('[data-window="changes"]').waitFor({ state: "detached" });
       }
       console.log(
         `  ✓ Studio ${viewport.width}×${viewport.height} at 2×: one guide, one scroll region, reachable input and controls`,
@@ -108,5 +111,62 @@ export async function checkStudioLayout(browser, base, pictures) {
     } finally {
       await page.close();
     }
+  }
+}
+
+export async function checkCompactLook(browser, base, pictures) {
+  const page = await browser.newPage({
+    viewport: { width: 960, height: 540 },
+    deviceScaleFactor: 2,
+    colorScheme: "dark",
+  });
+  try {
+    await page.goto(`${base}/?guide=off`);
+    await page.getByRole("button", { name: "Edit look", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+    await dialog
+      .getByRole("status")
+      .filter({ hasText: "Draft preview ready" })
+      .waitFor({ timeout: 60000 });
+    assert.equal(
+      await dialog.getByRole("button", { name: "Light", exact: true }).getAttribute("aria-pressed"),
+      "true",
+    );
+    const iframe = dialog.locator("iframe[data-frame]").first();
+    const frame = await (await iframe.elementHandle()).contentFrame();
+    assert.ok(await frame.locator("#sm-theme").count(), "connected preview has no draft style");
+    assert.equal(
+      await frame.locator("html").getAttribute("data-appearance"),
+      "light",
+      "Light choice was not applied to the dark-system preview",
+    );
+    await dialog.getByRole("button", { name: "Dark", exact: true }).click();
+    await frame.waitForFunction(() => document.documentElement.dataset.appearance === "dark");
+    await dialog.getByRole("button", { name: "Light", exact: true }).click();
+    await frame.waitForFunction(() => document.documentElement.dataset.appearance === "light");
+    const layout = await dialog.evaluate((dialog) => {
+      const main = dialog.querySelector("main");
+      const row = dialog.querySelector("aside dl > div");
+      const label = row.querySelector("dt").getBoundingClientRect();
+      const value = row.querySelector("dd").getBoundingClientRect();
+      const controls = [
+        ...dialog.querySelectorAll("header button, header input, header select"),
+      ].filter((el) => el.checkVisibility());
+      return {
+        columns: value.left >= label.right,
+        mainInside: main.getBoundingClientRect().right <= innerWidth,
+        noHorizontalScroll: main.scrollWidth <= main.clientWidth + 1,
+        controlsInside: controls.every((el) => {
+          const r = el.getBoundingClientRect();
+          return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight;
+        }),
+      };
+    });
+    assert.ok(Object.values(layout).every(Boolean), JSON.stringify(layout));
+    if (pictures) await page.screenshot({ path: join(pictures, "after-960-edit-look.png") });
+    console.log("  ✓ compact Edit look: connected draft, two-column details, reachable controls");
+    await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+  } finally {
+    await page.close();
   }
 }

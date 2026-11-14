@@ -27,7 +27,7 @@ import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
-import { checkStudioLayout } from "./studio-layout-checks.mjs";
+import { checkCompactLook, checkStudioLayout } from "./studio-layout-checks.mjs";
 import {
   checkStudioLook,
   checkStudioLookGallery,
@@ -200,6 +200,7 @@ try {
   }
   const preview = page.frameLocator('iframe[title="App preview"]');
   await checkStudioLayout(browser, base);
+  await checkCompactLook(browser, base);
   const status = page.getByRole("status");
   // The Changes window, with Smith above it in the third place (the test's layout).
   const trace = page.getByRole("list", { name: "Change trace" });

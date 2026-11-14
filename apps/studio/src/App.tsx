@@ -300,10 +300,15 @@ export function App() {
   // Floating, Smith leaves the first place and the preview takes the width: the window there
   // (Changes) comes back by the arrow or its tab (smith-first.md §12.3).
   const [hidden, setHidden] = useState({ left: floating, right: false });
-  // Resizing a floating layout must reveal Smith's dock without changing the saved preference.
+  // A resize reveals Smith's dock, then gives the preview its width back on a wide screen.
+  // The saved placement preference remains unchanged.
+  const wasFloating = useRef(floating);
   useEffect(() => {
-    if (compact) setHidden((h) => ({ ...h, left: false }));
-  }, [compact]);
+    if (wasFloating.current !== floating) {
+      setHidden((h) => ({ ...h, left: floating }));
+      wasFloating.current = floating;
+    }
+  }, [floating]);
   const layout = narrow ? "one" : arrangement.layout;
   // A phone has every window in one row, side by side, and shows one of them; a swipe moves the
   // row (A 173).
