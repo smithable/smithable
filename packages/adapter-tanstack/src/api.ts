@@ -436,7 +436,7 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
   };
   // What each role is shown (T821 #4): the paths and methods its role may use, and the schemas of
   // the kinds it may read or add; a key reads as its role, so it sees its role's.
-  const byRole: Record<string, unknown> = {};
+  const byRole: [string, unknown][] = [];
   if (auth.signIn !== "none")
     for (const role of auth.roles.map((r) => r.name)) {
       const may = (a: { public: boolean; roles: string[]; owner: boolean }) =>
@@ -459,32 +459,41 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
           may(a.write),
           may(a.delete),
         ];
-        if (read || create) kinds.push(model.name);
+        // Its schema wherever the role may do anything with it: no reference left dangling.
+        if (read || create || write || remove) kinds.push(model.name);
         keep(`/api/v1/${path}`, { get: read, post: create });
         keep(`/api/v1/${path}/{id}`, { get: read, patch: write, put: write, delete: remove });
         keep(`/api/v1/${path}/{id}/restore`, { post: remove });
       }
-      for (const action of [...actions, ...rowsActions]) {
+      // Each action at its own address: on a record, or on the kind (a combine, a run on rows).
+      for (const action of actions) {
         if (!may(actionAccess(action, auth, ir.models))) continue;
-        const on =
-          "rows" in action && action.rows ? action.rows.model : (action as { on: string }).on;
-        const path = models.find((m) => m.model.name === on)?.path;
-        for (const at of [
-          `/api/v1/${path}/{id}/actions/${action.name}`,
-          `/api/v1/${path}/actions/${action.name}`,
-        ])
-          keep(at, { post: true });
+        const path = models.find((m) => m.model.name === action.on)?.path;
+        keep(
+          action.merge?.into === "new"
+            ? `/api/v1/${path}/actions/${action.name}`
+            : `/api/v1/${path}/{id}/actions/${action.name}`,
+          { post: true },
+        );
       }
-      byRole[role] = {
-        ...openapi,
-        paths: rolePaths,
-        components: {
-          ...openapi.components,
-          schemas: Object.fromEntries(
-            Object.entries(schemas).filter(([k]) => k === "Problem" || kinds.includes(k)),
-          ),
+      for (const action of rowsActions) {
+        if (!may(actionAccess(action, auth, ir.models))) continue;
+        const path = models.find((m) => m.model.name === action.rows.model)?.path;
+        keep(`/api/v1/${path}/actions/${action.name}`, { post: true });
+      }
+      byRole.push([
+        role,
+        {
+          ...openapi,
+          paths: rolePaths,
+          components: {
+            ...openapi.components,
+            schemas: Object.fromEntries(
+              Object.entries(schemas).filter(([k]) => k === "Problem" || kinds.includes(k)),
+            ),
+          },
         },
-      };
+      ]);
     }
   return `${HEADER}// The API's conversions (docs/design/integrations.md §2): records as programs read them (the
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
@@ -499,7 +508,7 @@ export const OPENAPI = ${JSON.stringify(openapi, null, 2)};
 export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
 
 /** What each role is shown, by role: the paths, methods and kinds the role may use. */
-export const OPENAPI_BY_ROLE: Record<string, unknown> = ${JSON.stringify(byRole, null, 2)};
+export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map(${JSON.stringify(byRole, null, 2)});
 `;
 }
 
@@ -609,7 +618,7 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
       GET: async ({ request }) => {
         // A key reads as its role; a person signed in, as theirs.
         const viewer = callerOf(request).viewer || (await currentViewer());
-        const own = viewer && !viewer.system ? OPENAPI_BY_ROLE[viewer.role] : undefined;
+        const own = viewer && !viewer.system ? OPENAPI_BY_ROLE.get(viewer.role) : undefined;
         return Response.json(own ?? VISITOR_OPENAPI);
       },
     },

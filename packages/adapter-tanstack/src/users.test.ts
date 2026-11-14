@@ -134,9 +134,9 @@ test("a role's description holds only what the role may use, and a key sees its 
   );
   const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() });
   const api = file(files, "src/generated/api.server.ts");
-  const marker = "export const OPENAPI_BY_ROLE: Record<string, unknown> = ";
-  const byRole = JSON.parse(
-    api.slice(api.indexOf(marker) + marker.length).replace(/;\s*$/, ""),
+  const marker = "export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map(";
+  const byRole = Object.fromEntries(
+    JSON.parse(api.slice(api.indexOf(marker) + marker.length).replace(/\);\s*$/, "")),
   ) as Record<string, { paths: Record<string, Record<string, unknown>> }>;
   const reader = byRole.reader?.paths["/api/v1/customers"] ?? {};
   const one = byRole.reader?.paths["/api/v1/customers/{id}"] ?? {};
