@@ -122,10 +122,19 @@ export function aiDestinations(env: NodeJS.ProcessEnv = process.env): string[] {
   const bedrock = env.SMITHABLE_BEDROCK_REGION || env.AWS_REGION || "eu-north-1";
   const where: Record<string, string> = {
     local: "a model on this computer",
-    smithable:
-      env.SMITHABLE_MODEL_LOCATION === "elsewhere"
-        ? "the Smithable model, outside the EU"
-        : "the Smithable model, in the EU",
+    // The hosted model's provider and place are the service's to say (ASSISTANT_PROVIDER and
+    // _REGION, the same words the apps' assistant shows); without them no place is guessed (T864).
+    smithable: ((provider, region) =>
+      provider && region
+        ? `${provider}, in ${region}`
+        : provider
+          ? provider
+          : region
+            ? `the Smithable model, in ${region}`
+            : "the Smithable model, where the Smithable service runs it")(
+      env.ASSISTANT_PROVIDER?.trim(),
+      env.ASSISTANT_REGION?.trim(),
+    ),
     anthropic: "Anthropic's Claude, in the USA",
     "claude-code": "Anthropic's Claude through your Claude Code, in the USA",
     // A cross-region inference profile's prefix says where it routes (eu., us., global.…); without
