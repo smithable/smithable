@@ -2408,6 +2408,2725 @@ export const VISITOR_OPENAPI = {
     }
   }
 };
+
+/** What each role is shown, by role: the paths, methods and kinds the role may use. */
+export const OPENAPI_BY_ROLE: Record<string, unknown> = {
+  "admin": {
+    "openapi": "3.1.0",
+    "info": {
+      "title": "Team Tasks",
+      "version": "1",
+      "description": "Tasks and notes, grouped in projects, that an AI assistant keeps for a small team."
+    },
+    "paths": {
+      "/api/v1/projects": {
+        "get": {
+          "summary": "Projects the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of projects"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a project",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One project",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a project (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a project",
+          "description": "A project that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no project (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks": {
+        "get": {
+          "summary": "Tasks the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of tasks"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a task",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One task",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a task (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a task",
+          "description": "A task that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no task (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/notes": {
+        "get": {
+          "summary": "Notes the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of notes"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a note",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/notes/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One note",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a note (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a note",
+          "description": "A note that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no note (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}/actions/complete": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "Mark a task as done.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}/actions/reopen": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "Open a finished task again.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Project": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "Task": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "project": {
+              "type": "integer",
+              "description": "The id of a Project"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "todo",
+                "doing",
+                "done"
+              ]
+            },
+            "dueDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "assignee": {
+              "type": "string",
+              "description": "The id of a User"
+            },
+            "details": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "project",
+            "status"
+          ]
+        },
+        "Note": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "project": {
+              "type": "integer",
+              "description": "The id of a Project"
+            },
+            "body": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "project"
+          ]
+        },
+        "Problem": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "securitySchemes": {
+        "key": {
+          "type": "http",
+          "scheme": "bearer",
+          "description": "A key made on the users page"
+        }
+      }
+    },
+    "security": [
+      {
+        "key": []
+      }
+    ]
+  },
+  "member": {
+    "openapi": "3.1.0",
+    "info": {
+      "title": "Team Tasks",
+      "version": "1",
+      "description": "Tasks and notes, grouped in projects, that an AI assistant keeps for a small team."
+    },
+    "paths": {
+      "/api/v1/projects": {
+        "get": {
+          "summary": "Projects the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of projects"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a project",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One project",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a project (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a project",
+          "description": "A project that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no project (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks": {
+        "get": {
+          "summary": "Tasks the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of tasks"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a task",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One task",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a task (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a task",
+          "description": "A task that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no task (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/notes": {
+        "get": {
+          "summary": "Notes the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of notes"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a note",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/notes/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One note",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a note (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a note",
+          "description": "A note that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no note (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}/actions/complete": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "Mark a task as done.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}/actions/reopen": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "Open a finished task again.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Project": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "Task": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "project": {
+              "type": "integer",
+              "description": "The id of a Project"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "todo",
+                "doing",
+                "done"
+              ]
+            },
+            "dueDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "assignee": {
+              "type": "string",
+              "description": "The id of a User"
+            },
+            "details": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "project",
+            "status"
+          ]
+        },
+        "Note": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "project": {
+              "type": "integer",
+              "description": "The id of a Project"
+            },
+            "body": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "project"
+          ]
+        },
+        "Problem": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "securitySchemes": {
+        "key": {
+          "type": "http",
+          "scheme": "bearer",
+          "description": "A key made on the users page"
+        }
+      }
+    },
+    "security": [
+      {
+        "key": []
+      }
+    ]
+  },
+  "assistant": {
+    "openapi": "3.1.0",
+    "info": {
+      "title": "Team Tasks",
+      "version": "1",
+      "description": "Tasks and notes, grouped in projects, that an AI assistant keeps for a small team."
+    },
+    "paths": {
+      "/api/v1/projects": {
+        "get": {
+          "summary": "Projects the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of projects"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/projects/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One project",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a project (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a project",
+          "description": "A project that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no project (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks": {
+        "get": {
+          "summary": "Tasks the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of tasks"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a task",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One task",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a task (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a task",
+          "description": "A task that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no task (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/notes": {
+        "get": {
+          "summary": "Notes the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of notes"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a note",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/notes/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One note",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a note (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a note",
+          "description": "A note that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no note (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}/actions/complete": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "Mark a task as done.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/tasks/{id}/actions/reopen": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "Open a finished task again.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Project": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "Task": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "project": {
+              "type": "integer",
+              "description": "The id of a Project"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "todo",
+                "doing",
+                "done"
+              ]
+            },
+            "dueDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "assignee": {
+              "type": "string",
+              "description": "The id of a User"
+            },
+            "details": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "project",
+            "status"
+          ]
+        },
+        "Note": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "project": {
+              "type": "integer",
+              "description": "The id of a Project"
+            },
+            "body": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "project"
+          ]
+        },
+        "Problem": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "securitySchemes": {
+        "key": {
+          "type": "http",
+          "scheme": "bearer",
+          "description": "A key made on the users page"
+        }
+      }
+    },
+    "security": [
+      {
+        "key": []
+      }
+    ]
+  }
+};
 "
 `;
 
@@ -9860,12 +12579,11 @@ export const Route = createFileRoute("/api/v1/notes.csv")({
 exports[`../../../examples/api/smithable.yml > file list and generated code > src/routes/api/v1/openapi[.]json.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 // The API's description in the OpenAPI format, with no key needed to read it: with a key, or
-// signed in as someone who may open the users page (its download), all a program may call; otherwise what anyone may read
-// or add, which in an app with nothing public is nothing (no model or field names to a stranger).
+// signed in, what the caller's role may call (an administrator: all of it); otherwise what anyone
+// may read or add, which in an app with nothing public is nothing (no model or field names to a
+// stranger).
 import { createFileRoute } from "@tanstack/react-router";
-import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
-import { pageAccess } from "#/generated/pages";
-import { allows } from "#/kit/access";
+import { OPENAPI_BY_ROLE, VISITOR_OPENAPI } from "#/generated/api.server";
 import { callerOf } from "#/kit/api.server";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -9873,10 +12591,10 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        // A key; or signed in as someone who may open the users page, where keys are made.
-        const session = await currentViewer();
-        const whole = callerOf(request).viewer || (session && allows(pageAccess["team"], session));
-        return Response.json(whole ? OPENAPI : VISITOR_OPENAPI);
+        // A key reads as its role; a person signed in, as theirs.
+        const viewer = callerOf(request).viewer || (await currentViewer());
+        const own = viewer && !viewer.system ? OPENAPI_BY_ROLE[viewer.role] : undefined;
+        return Response.json(own ?? VISITOR_OPENAPI);
       },
     },
   },
@@ -11214,7 +13932,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/actions/reopen.server.ts": "6d1e193a generated",
   "src/generated/actions/reopen.ts": "3317e68c generated",
   "src/generated/activity.server.ts": "3bfe13cf generated",
-  "src/generated/api.server.ts": "b737b4b9 generated",
+  "src/generated/api.server.ts": "babc02ee generated",
   "src/generated/app.ts": "547ab03a generated",
   "src/generated/ask.server.ts": "a2e9859f generated",
   "src/generated/card.server.ts": "9b4d94be generated",
@@ -11346,7 +14064,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/api/v1/notes/imports.$id.ts": "ce608828 generated",
   "src/routes/api/v1/notes/index.ts": "d8208fa0 generated",
   "src/routes/api/v1/notes[.]csv.ts": "78146a92 generated",
-  "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
+  "src/routes/api/v1/openapi[.]json.ts": "af4bea91 generated",
   "src/routes/api/v1/projects/$id.ts": "cc89aacd generated",
   "src/routes/api/v1/projects/imports.$id.ts": "537b11a5 generated",
   "src/routes/api/v1/projects/index.ts": "21a2ea84 generated",
@@ -75013,6 +77731,1266 @@ export const VISITOR_OPENAPI = {
     }
   }
 };
+
+/** What each role is shown, by role: the paths, methods and kinds the role may use. */
+export const OPENAPI_BY_ROLE: Record<string, unknown> = {
+  "admin": {
+    "openapi": "3.1.0",
+    "info": {
+      "title": "Northwind Status",
+      "version": "1",
+      "description": "Is it working? The state of our services, live."
+    },
+    "paths": {
+      "/api/v1/components": {
+        "get": {
+          "summary": "Components the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of components"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a component",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Component"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/components/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One component",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Component"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a component (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Component"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a component",
+          "description": "A component that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no component (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/incidents": {
+        "get": {
+          "summary": "Incidents the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of incidents"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a incident",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Incident"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/incidents/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One incident",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Incident"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a incident (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Incident"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a incident",
+          "description": "A incident that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no incident (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/incidents/{id}/actions/resolve": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "The incident is over, with an update saying so. The component's state stays what the team sets.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Component": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "operational",
+                "degraded",
+                "down",
+                "maintenance"
+              ]
+            },
+            "description": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "name",
+            "status"
+          ]
+        },
+        "Incident": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "investigating",
+                "identified",
+                "monitoring",
+                "resolved"
+              ]
+            },
+            "component": {
+              "type": "integer",
+              "description": "The id of a Component"
+            },
+            "detectedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "resolvedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "status",
+            "detectedAt"
+          ]
+        },
+        "Problem": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "securitySchemes": {
+        "key": {
+          "type": "http",
+          "scheme": "bearer",
+          "description": "A key made on the users page"
+        }
+      }
+    },
+    "security": [
+      {
+        "key": []
+      }
+    ]
+  },
+  "staff": {
+    "openapi": "3.1.0",
+    "info": {
+      "title": "Northwind Status",
+      "version": "1",
+      "description": "Is it working? The state of our services, live."
+    },
+    "paths": {
+      "/api/v1/components": {
+        "get": {
+          "summary": "Components the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of components"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a component",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Component"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/components/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One component",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Component"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a component (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Component"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Component"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a component",
+          "description": "A component that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no component (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/incidents": {
+        "get": {
+          "summary": "Incidents the key's role may read",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "A page of incidents"
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Add a incident",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Added",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Incident"
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/incidents/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "get": {
+          "summary": "One incident",
+          "responses": {
+            "200": {
+              "description": "The record",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Incident"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "patch": {
+          "summary": "Change a incident (the fields given)",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Incident"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Changed",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Incident"
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a incident",
+          "description": "A incident that other records point to with a required reference is refused with 409 and the facts: what points to it, by kind and count (with), what would show no incident (loose), and whether they can go to the trash together.",
+          "responses": {
+            "204": {
+              "description": "Deleted"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/incidents/{id}/actions/resolve": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "post": {
+          "summary": "The incident is over, with an update saying so. The component's state stays what the team sets.",
+          "responses": {
+            "200": {
+              "description": "Done: the record as it is now"
+            },
+            "403": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            },
+            "409": {
+              "description": "Refused, with the app's own words",
+              "content": {
+                "application/problem+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Problem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Component": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "operational",
+                "degraded",
+                "down",
+                "maintenance"
+              ]
+            },
+            "description": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "name",
+            "status"
+          ]
+        },
+        "Incident": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "title": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "investigating",
+                "identified",
+                "monitoring",
+                "resolved"
+              ]
+            },
+            "component": {
+              "type": "integer",
+              "description": "The id of a Component"
+            },
+            "detectedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "resolvedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "readOnly": true
+            }
+          },
+          "required": [
+            "title",
+            "status",
+            "detectedAt"
+          ]
+        },
+        "Problem": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer"
+            },
+            "title": {
+              "type": "string"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "securitySchemes": {
+        "key": {
+          "type": "http",
+          "scheme": "bearer",
+          "description": "A key made on the users page"
+        }
+      }
+    },
+    "security": [
+      {
+        "key": []
+      }
+    ]
+  }
+};
 "
 `;
 
@@ -82568,12 +86546,11 @@ export const Route = createFileRoute("/api/v1/incidents.csv")({
 exports[`../../../examples/status/smithable.yml > file list and generated code > src/routes/api/v1/openapi[.]json.ts 1`] = `
 "// Generated by Smithable from smithable.yml. Do not edit: this file is overwritten on every change.
 // The API's description in the OpenAPI format, with no key needed to read it: with a key, or
-// signed in as someone who may open the users page (its download), all a program may call; otherwise what anyone may read
-// or add, which in an app with nothing public is nothing (no model or field names to a stranger).
+// signed in, what the caller's role may call (an administrator: all of it); otherwise what anyone
+// may read or add, which in an app with nothing public is nothing (no model or field names to a
+// stranger).
 import { createFileRoute } from "@tanstack/react-router";
-import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
-import { pageAccess } from "#/generated/pages";
-import { allows } from "#/kit/access";
+import { OPENAPI_BY_ROLE, VISITOR_OPENAPI } from "#/generated/api.server";
 import { callerOf } from "#/kit/api.server";
 import { currentViewer } from "#/lib/viewer.server";
 
@@ -82581,10 +86558,10 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        // A key; or signed in as someone who may open the users page, where keys are made.
-        const session = await currentViewer();
-        const whole = callerOf(request).viewer || (session && allows(pageAccess["team"], session));
-        return Response.json(whole ? OPENAPI : VISITOR_OPENAPI);
+        // A key reads as its role; a person signed in, as theirs.
+        const viewer = callerOf(request).viewer || (await currentViewer());
+        const own = viewer && !viewer.system ? OPENAPI_BY_ROLE[viewer.role] : undefined;
+        return Response.json(own ?? VISITOR_OPENAPI);
       },
     },
   },
@@ -85349,7 +89326,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/actions/resolve.server.ts": "a2a5449e generated",
   "src/generated/actions/resolve.ts": "ff4366e0 generated",
   "src/generated/activity.server.ts": "dc01d286 generated",
-  "src/generated/api.server.ts": "deca8db3 generated",
+  "src/generated/api.server.ts": "09e18deb generated",
   "src/generated/app.ts": "c7fc730f generated",
   "src/generated/ask.server.ts": "9a0deac7 generated",
   "src/generated/card.server.ts": "944abfcc generated",
@@ -85482,7 +89459,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/routes/api/v1/incidents/imports.$id.ts": "a4277996 generated",
   "src/routes/api/v1/incidents/index.ts": "de869596 generated",
   "src/routes/api/v1/incidents[.]csv.ts": "766067c0 generated",
-  "src/routes/api/v1/openapi[.]json.ts": "360eed98 generated",
+  "src/routes/api/v1/openapi[.]json.ts": "af4bea91 generated",
   "src/routes/app-card.tsx": "48827720 generated",
   "src/routes/components/$id.tsx": "dc8ee51a generated",
   "src/routes/components/index.tsx": "505a019a generated",

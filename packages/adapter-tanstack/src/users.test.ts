@@ -115,10 +115,37 @@ test("an app with nothing public describes nothing to a stranger: no model or fi
     content: emptyContent(),
   });
   const api = file(files, "src/generated/api.server.ts");
-  const visitor = api.slice(api.indexOf("export const VISITOR_OPENAPI"));
+  const visitor = api.slice(
+    api.indexOf("export const VISITOR_OPENAPI"),
+    api.indexOf("export const OPENAPI_BY_ROLE"),
+  );
   expect(visitor).toContain('"paths": {}');
   expect(visitor).not.toContain("Customer");
-  expect(file(files, "src/routes/api/v1/openapi[.]json.ts")).toContain(
-    'callerOf(request).viewer || (session && allows(pageAccess["team"], session))',
+  // A key or a person signed in reads as its role (T821 #4); anyone else as a stranger.
+  const route = file(files, "src/routes/api/v1/openapi[.]json.ts");
+  expect(route).toContain("const viewer = callerOf(request).viewer || (await currentViewer());");
+  expect(route).toContain("return Response.json(own ?? VISITOR_OPENAPI);");
+  expect(route).not.toMatch(/\bOPENAPI\b(?!_)/);
+});
+
+test("a role's description holds only what the role may use, and a key sees its role's (T821 #4)", () => {
+  const auth = authOf(
+    "smithableAuth: 0.1\nsignIn: { providers: [google] }\ndefaultAccess: private\nroles: { admin: {}, reader: { pages: all, read: [Customer] } }\napi: { models: all }\n",
   );
+  const files = generateApp(ir, { smithableVersion: "0.0.0", auth, content: emptyContent() });
+  const api = file(files, "src/generated/api.server.ts");
+  const marker = "export const OPENAPI_BY_ROLE: Record<string, unknown> = ";
+  const byRole = JSON.parse(
+    api.slice(api.indexOf(marker) + marker.length).replace(/;\s*$/, ""),
+  ) as Record<string, { paths: Record<string, Record<string, unknown>> }>;
+  const reader = byRole.reader?.paths["/api/v1/customers"] ?? {};
+  const one = byRole.reader?.paths["/api/v1/customers/{id}"] ?? {};
+  // Private access: every role adds, reads and changes its own, so the paths are there for both;
+  // what a role may not run at all (an action, a kind with no grant) is left out.
+  expect(Object.keys(byRole).sort()).toEqual(["admin", "reader"]);
+  expect(Object.keys(reader)).toContain("get");
+  expect(Object.keys(byRole.admin?.paths["/api/v1/customers/{id}"] ?? {})).toEqual(
+    expect.arrayContaining(["get", "patch", "delete"]),
+  );
+  expect(Object.keys(one)).toContain("get");
 });
