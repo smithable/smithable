@@ -458,7 +458,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return ${refusedUser};
         try {
@@ -531,7 +533,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)

@@ -555,6 +555,13 @@ async function devDoorFlow(dir, base) {
     const stranger = (await fetch(`${base}/_dev/moves?user=dev-admin`, { headers: door })).status;
     if (shut !== 404 || stranger !== 403)
       throw new Error(`without the secret: ${shut}; someone not a sample user: ${stranger}`);
+    // A body that is no object is an empty one: refused as no sample user, not a 500.
+    for (const side of ["act", "ask"]) {
+      const status = (
+        await fetch(`${base}/_dev/${side}`, { method: "POST", headers: door, body: "null" })
+      ).status;
+      if (status !== 403) throw new Error(`${side} with a null body: ${status}`);
+    }
     // Ask as a sample user (ask-words.md §3.2); a role a sample user has is asked as that person.
     const asked = await call("ask", {
       user: "sample-maja-lindqvist",
@@ -3524,6 +3531,30 @@ async function demoVisitorsFlow(dir, port) {
   const browser = await chromium.launch();
   try {
     const base = `http://localhost:${port}`;
+    // The development door in a demo as the hosted showcases run it (DEMO_SIGN_IN=1, no
+    // DEV_DOOR_SECRET): every /_dev/ path a 404, whatever door header a visitor sends, and Ask as
+    // a made-up role too.
+    const statuses = [];
+    for (const header of [{}, { "x-dev-door": "" }, { "x-dev-door": "undefined" }]) {
+      const headers = { ...header, "Content-Type": "application/json" };
+      statuses.push((await fetch(`${base}/_dev/moves?user=visitor`, { headers })).status);
+      for (const [side, body] of [
+        ["act", { user: "visitor", move: "x" }],
+        ["clock", { offset: 1000 }],
+        ["ask", { user: "role:admin", question: "Who are the users?" }],
+      ])
+        statuses.push(
+          (
+            await fetch(`${base}/_dev/${side}`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify(body),
+            })
+          ).status,
+        );
+    }
+    if (!statuses.every((status) => status === 404))
+      throw new Error(`the development door in a demo: ${statuses.join(", ")}`);
     const visitor = async () =>
       (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
     const [a, b] = [await visitor(), await visitor()];
@@ -7941,7 +7972,7 @@ for (const [index, example] of examples.entries()) {
 
     if (example === "crm")
       await asyncStep(
-        "a demo (DEMO_VISITORS=1) gives each visitor a copy of the data of their own: one visitor's new customer, another never sees",
+        "a demo (DEMO_VISITORS=1) gives each visitor a copy of the data of their own: one visitor's new customer, another never sees; its development door is shut (every /_dev/ path a 404)",
         () => demoVisitorsFlow(dir, port + 400),
       );
 

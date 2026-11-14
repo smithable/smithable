@@ -136,8 +136,8 @@ const PAGES = [
     src: "docs/site/assistants.md",
     out: "assistants.html",
     description:
-      "An app made for programs and AI assistants: the api starter, a key for an assistant, and Claude Code connected to it to keep tasks and notes.",
-    nav: "Programs and assistants",
+      "Use your app from an AI assistant: a key for the assistant, Claude Code connected to the app at /mcp, and what it may and may not do, on the api and booking starters.",
+    nav: "AI assistants",
     group: "Connect",
   },
   {
