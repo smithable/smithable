@@ -30,6 +30,7 @@ import {
 } from "@smithable/core";
 import { actionNames, askedFields, askedKeys } from "./actions.js";
 import { importNames } from "./import-module.js";
+import { payToCreate } from "./payments.js";
 import {
   addressOwned,
   dataKey,
@@ -1194,7 +1195,7 @@ function toolsModule(
       titleField(model) === "id"
         ? ", named: undefined"
         : `, named: (viewer: Viewer | null, text: string) => ${n.data}.named(viewer, text)`;
-    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, ${addressOwned(model) ? `whose: (viewer: Viewer | null, row: Record<string, unknown>) => ${n.data}.whose(viewer, row as never), ` : ""}targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
+    return `  ${model.name}: { data: ${n.data}, toApi: ${c}ToApi, fromApi: ${c}FromApi, title: ${JSON.stringify(shownTitleKey(ir, model.name))}, refs: ${JSON.stringify(Object.fromEntries(refs))}, searched: ${JSON.stringify(searched)}, lists: ${JSON.stringify(lists)} as Record<string, { kind: string; ref: string }>, label: ${JSON.stringify(n.label.toLowerCase())}${named}${confirms && payToCreate(ir, model) ? ", paid: true" : ""}${confirms ? `, access: ${n.access}, owner: ${JSON.stringify(ownerKey(model))}, ${addressOwned(model) ? `whose: (viewer: Viewer | null, row: Record<string, unknown>) => ${n.data}.whose(viewer, row as never), ` : ""}targets: ${JSON.stringify(Object.fromEntries(model.fields.filter((f) => f.type.kind === "relation" && !f.type.many && models.some((m) => m.model.name === (f.type as { model: string }).model)).map((f) => [f.name, (f.type as { model: string }).model])))} as Record<string, string>` : ""} },`;
   });
   // For a proposed action: the kind it runs on, who may run it and when, and its name in words.
   const proposals = actions.map((action) => {
@@ -1783,6 +1784,10 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     args = { ...args, values };
     if (tool === "add") {
       if (!allows(kind.access.create, viewer)) throw new AccessDenied(true);
+      // One made by paying for it is held until paid: Ask proposes only what it can complete, so
+      // only where the caller's role makes them unheld (staff entering one by hand; T821 #1).
+      if ((kind as { paid?: boolean }).paid && !kind.access.write.roles.includes(viewer.role))
+        throw new BadInput(\`A \${kind.label} is made by paying for it on its page, not here.\`);
       kind.fromApi(values);
       kept = args;
       card = { title: \`Add a \${kind.label}\`, changes: Object.entries(values).map(([k, v]) => ({ label: label(k), to: shownTo(k, v) })) };
