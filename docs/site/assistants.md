@@ -1,4 +1,6 @@
-# An app for programs and assistants
+# Use your app from an AI assistant
+
+Any app can be used from an AI assistant such as Claude Code: the assistant gets a key, connects to the app at `/mcp`, and may do exactly what the key's role may, no more. This page shows two: an app made only for programs and assistants (steps 1 to 5), and an app with pages, where a front desk's assistant adds a class and is refused a change the reception role may not make ([step 6](#6-an-app-with-pages-the-front-desks-assistant)).
 
 Some apps are mostly used by other programs: a backend for a phone app, a place where an AI assistant keeps what it needs to remember. Such an app needs no landing page and no screens of its own, only a page for the team that runs it, keys, and the rules that say who may do what. Those rules hold for every caller, person or program.
 

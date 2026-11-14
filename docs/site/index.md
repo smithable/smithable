@@ -15,7 +15,7 @@ Routine changes are generated, not written by an AI: adding a phone number to cu
   - [Ask your app a question](ask.md): the line under each answer that says what was looked up, and a word Ask could read two ways, explained, on the status starter.
   - [Buttons that change a record](actions.md): standard actions, from setting a field to copying a record with its lines.
   - [Let other programs use your app](api.md): keys, the API's calls and its refusals, on the status starter.
-  - [An app for programs and assistants](assistants.md): the api starter, a key for an AI assistant, and Claude Code connected to it.
+  - [Use your app from an AI assistant](assistants.md): a key for an assistant, Claude Code connected to the app, and what it may and may not do, on the api and booking starters.
   - [Book a person's time](appointments.md): a barber's hours and days off, appointments that never overlap, on the barbers starter.
   - [An app in another language](language.md): Swedish for the booking starter, and what stays English on purpose.
   - [Make a theme](theme.md): a theme of your own as a file, checked for readable colors, and in the [theme lab](https://docs.smithable.ai/theme-lab/index.html) beside a real app.

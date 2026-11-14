@@ -27,7 +27,7 @@ The first model call's prompt per kind of request, about four characters a token
 | docs-question | 34 | 0 | 2,198 | 37,744 |
 | off-topic | 10 | 0 | 2,029 | 33,021 |
 | smalltalk | 17 | 13 | 2,428 | 2,493 |
-| spec-question | 46 | 2 | 2,479 | 3,935 |
+| spec-question | 46 | 2 | 2,536 | 3,935 |
 | two-things | 17 | 0 | 43,675 | 44,127 |
 
 ## The oracle
@@ -43,5 +43,5 @@ A perfect model in place of the real one: right when the prompt holds everything
 | docs-question | 34 | 29 | 5 | 0 | 2,198 | 9 | 4 |
 | off-topic | 10 | 10 | 0 | 0 | 2,029 | 11 | 3 |
 | smalltalk | 17 | 17 | 0 | 0 | 2,428 | 9 | 2 |
-| spec-question | 46 | 46 | 0 | 0 | 2,479 | 8 | 5 |
+| spec-question | 46 | 46 | 0 | 0 | 2,536 | 8 | 5 |
 | two-things | 17 | 17 | 0 | 0 | 43,675 | 7 | 0 |
