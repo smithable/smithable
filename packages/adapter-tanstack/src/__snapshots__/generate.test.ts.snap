@@ -8400,7 +8400,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
@@ -11344,7 +11344,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c01d8257 generated",
+  "src/lib/auth.ts": "8cdb1ad7 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -16611,7 +16611,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           audit(db, who, { action: "signed in" });
         },
@@ -19121,7 +19121,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d28b895f generated",
+  "src/lib/auth.ts": "2f8e44ff generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -29012,7 +29012,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           audit(db, who, { action: "signed in" });
         },
@@ -34398,7 +34398,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "868565fa generated",
+  "src/lib/auth.ts": "a5e9568e generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -41443,7 +41443,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
@@ -44293,7 +44293,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "3fe024fc generated",
+  "src/lib/auth.ts": "a5bc8760 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -51401,7 +51401,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           audit(db, who, { action: "signed in" });
         },
@@ -53704,7 +53704,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d24b43f5 generated",
+  "src/lib/auth.ts": "abeccae5 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -60361,7 +60361,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
@@ -63032,7 +63032,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "f8847c31 generated",
+  "src/lib/auth.ts": "5a8d99b1 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -66210,7 +66210,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           audit(db, who, { action: "signed in" });
         },
@@ -68423,7 +68423,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "273e4484 generated",
+  "src/lib/auth.ts": "074b32c0 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -71073,7 +71073,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           audit(db, who, { action: "signed in" });
         },
@@ -72476,7 +72476,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "b3d5e0ae generated",
+  "src/lib/auth.ts": "79f9bae2 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -81965,7 +81965,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
@@ -85613,7 +85613,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "b4eb40af generated",
+  "src/lib/auth.ts": "5849713f generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -91462,7 +91462,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
@@ -93647,7 +93647,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "1cb58bf6 generated",
+  "src/lib/auth.ts": "c686a476 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",

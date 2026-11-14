@@ -282,7 +282,7 @@ export const auth = betterAuth({
           const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
           if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
           }${
             invitations
               ? `
