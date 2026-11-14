@@ -5,6 +5,7 @@
 import { ChevronDown, ChevronUp, FilePlus, FileText, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
+import { versioned } from "./file-address";
 import { fileSize } from "./format";
 import type { FieldControlProps } from "./model";
 import { w } from "./words";
@@ -90,7 +91,7 @@ export function FileInput({
   }
   const href =
     current && record !== undefined && current.file === saved
-      ? `/files/${model}/${record}/${field}`
+      ? versioned(`/files/${model}/${record}/${field}`, current)
       : undefined;
   return (
     <div className="space-y-2" {...aria}>
@@ -205,7 +206,7 @@ export function FilesInput({
                   value={f}
                   href={
                     at !== undefined && record !== undefined
-                      ? `/files/${model}/${record}/${field}/${at}`
+                      ? versioned(`/files/${model}/${record}/${field}/${at}`, f)
                       : undefined
                   }
                 />

@@ -10,6 +10,7 @@ const kit = (await import(path)) as {
   savePicture(model: string, bytes: Uint8Array, alt: string, ours?: boolean): unknown;
   roomFor(bytes: number): unknown;
   release(held: unknown): void;
+  cacheControl(request: Request, tag: string, everyone: boolean, shared: boolean): string;
 };
 
 /** A ZIP archive of stored entries (no compression), with its central directory and end record. */
@@ -205,4 +206,59 @@ test("room held for an upload stops a second one, and an upload refused gives it
     if (before === undefined) delete process.env.UPLOADS_MAX_BYTES;
     else process.env.UPLOADS_MAX_BYTES = before;
   }
+});
+
+test("a storage limit written with a unit lets nothing in rather than switching the limit off (T812)", () => {
+  const before = process.env.UPLOADS_MAX_BYTES;
+  try {
+    for (const written of ["500MB", "9".repeat(400)]) {
+      process.env.UPLOADS_MAX_BYTES = written;
+      expect(kit.roomFor(1), written).toBeUndefined();
+    }
+    // A number written another way is still one.
+    process.env.UPLOADS_MAX_BYTES = "1e6";
+    const fits = kit.roomFor(1);
+    expect(fits).toBeTruthy();
+    kit.release(fits);
+    process.env.UPLOADS_MAX_BYTES = "";
+    const free = kit.roomFor(1);
+    expect(free).toBeTruthy();
+    kit.release(free);
+  } finally {
+    if (before === undefined) delete process.env.UPLOADS_MAX_BYTES;
+    else process.env.UPLOADS_MAX_BYTES = before;
+  }
+});
+
+test("a file is kept for a day only when anyone may read it, by its content's tag, outside a demo visitor's own (T812)", () => {
+  const tag = kit.pictureTag({ file: "post/0123456789abcdef01234567.webp" });
+  const at = (query: string) => new Request(`https://shop.example/files/post/1/picture${query}`);
+  expect(kit.cacheControl(at("?v=0123456789abcdef01234567"), tag, true, true)).toBe(
+    "public, max-age=86400, immutable",
+  );
+  // No tag, a stale one, a model not everyone reads, a demo visitor's own: asked again each time.
+  expect(kit.cacheControl(at(""), tag, true, true)).toBe("private, no-cache");
+  expect(kit.cacheControl(at("?v=ffffffffffffffffffffffff"), tag, true, true)).toBe(
+    "private, no-cache",
+  );
+  expect(kit.cacheControl(at("?v=0123456789abcdef01234567"), tag, false, true)).toBe(
+    "private, no-cache",
+  );
+  expect(kit.cacheControl(at("?v=0123456789abcdef01234567"), tag, true, false)).toBe(
+    "private, no-cache",
+  );
+});
+
+test("an address carries its content's tag as the cache asks for it (T812)", async () => {
+  const address = (await import("../templates/src/kit/file-address.ts" as string)) as {
+    versioned(address: string, stored: { file?: string } | null | undefined): string;
+  };
+  const stored = { file: "post/0123456789abcdef01234567.webp" };
+  expect(address.versioned("/files/post/1/picture", stored)).toBe(
+    "/files/post/1/picture?v=0123456789abcdef01234567",
+  );
+  expect(`"${address.versioned("/files/post/1/picture", stored).split("?v=")[1]}"`).toBe(
+    kit.pictureTag(stored),
+  );
+  expect(address.versioned("/files/post/1/picture", null)).toBe("/files/post/1/picture");
 });
