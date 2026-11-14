@@ -133,12 +133,14 @@ export function SmithLayer({
   return (
     <>
       {mode !== "panel" && (
-        // The backdrop: the brand's dark tone with Studio softened behind; a click on it does
-        // nothing (too easy beside an open question).
-        <div
-          aria-hidden="true"
+        // Clicking beside the presentation shows the app; reading inside never advances it.
+        <button
+          type="button"
+          aria-label="Close presentation"
+          tabIndex={-1}
+          onClick={mode === "closing" ? undefined : onSkip}
           className={cx(
-            "fixed inset-0 z-40 backdrop-blur-sm",
+            "fixed inset-0 z-40 cursor-default border-0 p-0 backdrop-blur-sm",
             motion && "transition-[opacity,background-color] duration-500",
             mode === "closing" && "opacity-0",
           )}
@@ -147,11 +149,11 @@ export function SmithLayer({
           }}
         >
           {!phone && (
-            <p className="absolute inset-x-0 top-10 truncate px-6 text-center text-3xl font-semibold tracking-tight text-white">
+            <span className="absolute inset-x-0 top-10 truncate px-6 text-center text-3xl font-semibold tracking-tight text-white">
               {appName}
-            </p>
+            </span>
           )}
-        </div>
+        </button>
       )}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: a dialog or a region by its mode, whose taps and keys are the overlay's (§12.2) */}
       {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-modal only while it is the dialog */}
@@ -165,10 +167,6 @@ export function SmithLayer({
         hidden={!shown}
         onPointerDown={stir}
         onKeyDown={stir}
-        onClick={(e) => {
-          // A tap on the thread, not on a control, brings the next part at once.
-          if (mode === "overlay" && !inControl(e.target as Element)) onNext();
-        }}
         className={cx(
           "fixed z-50 flex flex-col overflow-hidden bg-panel shadow-2xl outline-none",
           phone && mode !== "panel" ? "" : "rounded-xl border border-line",
@@ -223,16 +221,17 @@ export function SmithLayer({
 export function panelRect(side: "left" | "right", w: number, h: number, over?: Bounds) {
   const { left, right } = over ?? { left: 0, right: w };
   const width = Math.min(400, right - left - 24);
+  const top = over?.top === undefined ? 60 : Math.max(60, over.top + 80);
   return {
     width,
-    height: Math.min(640, h - 72),
-    top: 60,
+    height: Math.min(640, h - top - 12),
+    top,
     left: side === "right" ? right - width - 12 : left + 12,
   };
 }
 
 /** Where the panel hangs: over the preview, between its edges; the window without one. */
-export type Bounds = { left: number; right: number };
+export type Bounds = { left: number; right: number; top?: number };
 
 /**
  * The side for the panel while a guide's stop is lit (§12.3): the other side when the stop's place

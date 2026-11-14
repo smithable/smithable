@@ -113,12 +113,14 @@ export default function LookEditorDialog({
       }}
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-panel p-2">
-        <span className="text-sm font-medium">Edit look · {project.name}</span>
+        <span className="min-w-0 text-sm font-medium wrap-break-word">
+          Edit look · {project.name}
+        </span>
         <button
           type="button"
           disabled={isBusy}
           onClick={close}
-          className="rounded border border-line px-3 py-1 text-sm disabled:opacity-50"
+          className="shrink-0 rounded border border-line px-3 py-1 text-sm disabled:opacity-50"
         >
           Close look editor
         </button>

@@ -122,6 +122,7 @@ export function Panel({
   className,
   busy,
   panel,
+  scroll = true,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
@@ -131,6 +132,8 @@ export function Panel({
   busy?: boolean;
   /** Its name in a phone's row of panels (data-panel). */
   panel?: string;
+  /** False when the child owns its scrolling region, as Smith's thread does. */
+  scroll?: boolean;
 }) {
   return (
     <section
@@ -144,7 +147,9 @@ export function Panel({
           {actions}
         </header>
       )}
-      <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+      <div className={cx("min-h-0 flex-1", scroll ? "overflow-auto" : "overflow-hidden")}>
+        {children}
+      </div>
     </section>
   );
 }

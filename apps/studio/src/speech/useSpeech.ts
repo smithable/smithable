@@ -14,6 +14,7 @@ type Provider = { name: "browser" | "service"; onDeviceOnly?: true };
 
 interface Settings {
   sound: boolean;
+  rate: number;
   voice?: string;
   /** The mic as the person left it: off, or press to talk (automatic is chosen per visit). */
   mic: "off" | "press";
@@ -23,9 +24,15 @@ interface Settings {
 
 function load(): Settings {
   try {
-    return { sound: true, mic: "off", ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+    const kept = JSON.parse(localStorage.getItem(KEY) ?? "{}");
+    return {
+      sound: true,
+      mic: "off",
+      ...kept,
+      rate: [0.85, 1, 1.2].includes(kept?.rate) ? kept.rate : 1,
+    };
   } catch {
-    return { sound: true, mic: "off" };
+    return { sound: true, mic: "off", rate: 1 };
   }
 }
 
@@ -72,6 +79,11 @@ export interface Speech {
   voices: string[];
   voice?: string;
   setVoice: (name: string) => void;
+  rate: number;
+  setRate: (rate: number) => void;
+  needsLocalCheck: boolean;
+  checkingHearing: boolean;
+  hearingNote: string | undefined;
   mic: "off" | "press";
   /** Automatic mode (§4.2): chosen per visit, never saved; back to press to talk by itself. */
   auto: boolean;
@@ -132,6 +144,8 @@ export function useSpeech(
   // the policy needs it and only at the mic's first press: the call is experimental, and crashed
   // a headless Chromium page when made on every load. Unknown until asked; nothing assumed.
   const [localHearing, setLocalHearing] = useState<boolean | undefined>(undefined);
+  const [checkingHearing, setCheckingHearing] = useState(false);
+  const [hearingError, setHearingError] = useState<string>();
   const canHear = Boolean(Rec) && (!onDeviceOnly || localHearing !== false);
   const canSpeak = Boolean(synth) && voices.length > 0;
   const why = !providers.length
@@ -154,6 +168,7 @@ export function useSpeech(
         const u = new SpeechSynthesisUtterance(piece);
         u.voice = voice;
         u.lang = voice.lang;
+        u.rate = settings.rate;
         u.onstart = () => setSpeaking(true);
         u.onend = () => setSpeaking(synth.pending || synth.speaking);
         u.onerror = (e) => {
@@ -164,7 +179,7 @@ export function useSpeech(
         synth.speak(u);
       }
     },
-    [synth, voice, settings.sound],
+    [synth, voice, settings.sound, settings.rate],
   );
   const stopSpeaking = useCallback(() => {
     synth?.cancel();
@@ -193,12 +208,18 @@ export function useSpeech(
   const mayHear = () => {
     if (!Rec || !canHear) return false;
     if (onDeviceOnly && localHearing === undefined) {
-      void (Rec.available?.({ langs: ["en-US"], processLocally: true }) ?? Promise.resolve("no"))
+      if (checkingHearing) return false;
+      setCheckingHearing(true);
+      void Promise.resolve()
+        .then(() => Rec.available?.({ langs: ["en-US"], processLocally: true }) ?? "no")
         .then(
           (state) => state === "available",
           () => false,
         )
-        .then((local) => setLocalHearing(local));
+        .then((local) => {
+          setLocalHearing(local);
+          setCheckingHearing(false);
+        });
       return false;
     }
     return true;
@@ -218,6 +239,7 @@ export function useSpeech(
   const listen = useCallback(
     (hold: boolean) => {
       if (rec.current || !mayHear() || !Rec) return;
+      setHearingError(undefined);
       stopSpeaking();
       const r = new Rec();
       r.lang = "en-US";
@@ -239,6 +261,21 @@ export function useSpeech(
       };
       r.onerror = (e) => {
         if (ear.current && e.error === "audio-capture") clash.current = true;
+        if (
+          e.error !== "aborted" &&
+          !(ear.current && ["audio-capture", "no-speech"].includes(e.error))
+        )
+          setHearingError(
+            e.error === "not-allowed" || e.error === "service-not-allowed"
+              ? "Microphone access was refused. Allow the microphone for this Studio address in your browser's site settings, then try again."
+              : e.error === "audio-capture"
+                ? "No microphone is available. Check that it is connected and allowed by your system."
+                : e.error === "network"
+                  ? "The browser's speech service could not connect. Check your connection and try again."
+                  : e.error === "no-speech"
+                    ? "No speech was heard. Press the microphone and try again."
+                    : "The browser could not recognize speech. Check its speech and language settings, then try again.",
+          );
       };
       r.onend = () => {
         rec.current = undefined;
@@ -259,12 +296,15 @@ export function useSpeech(
       } catch {
         // A start the browser refuses leaves nothing listening, and the mic free for the next try.
         rec.current = undefined;
+        setHearingError(
+          "The browser could not start speech recognition. Check microphone permission for this Studio address and try again.",
+        );
         return;
       }
       setListening(true);
       if (settings.mic === "off" || !settings.told) save({ ...settings, mic: "press", told: true });
     },
-    [Rec, canHear, onDeviceOnly, localHearing, stopSpeaking, settings],
+    [Rec, canHear, onDeviceOnly, localHearing, checkingHearing, stopSpeaking, settings],
   );
   const release = useCallback(() => rec.current?.stop(), []);
 
@@ -277,6 +317,7 @@ export function useSpeech(
   const generation = useRef(0);
   const starting = useRef(false);
   const stopAuto = (note?: string) => {
+    setHearingError(undefined);
     generation.current++;
     starting.current = false;
     ear.current?.stop();
@@ -287,6 +328,7 @@ export function useSpeech(
   };
   const startAuto = async () => {
     if (ear.current || !Rec || !canHear) return;
+    setHearingError(undefined);
     const mine = ++generation.current;
     const cancelled = () => mine !== generation.current;
     starting.current = true;
@@ -405,6 +447,27 @@ export function useSpeech(
     voices: voices.map((v) => v.name),
     ...(voice ? { voice: voice.name } : {}),
     setVoice: (name) => save({ ...settings, voice: name }),
+    rate: settings.rate,
+    setRate: (rate) => {
+      if ([0.85, 1, 1.2].includes(rate)) save({ ...settings, rate });
+    },
+    needsLocalCheck: Boolean(Rec) && onDeviceOnly && localHearing === undefined,
+    checkingHearing,
+    hearingNote:
+      hearingError ??
+      (!Rec
+        ? why
+        : onDeviceOnly
+          ? checkingHearing
+            ? "Checking whether this browser can recognize speech on this computer…"
+            : localHearing === false
+              ? "This project requires speech recognition on this computer. This browser cannot provide it, so the microphone is unavailable. You can type instead."
+              : localHearing === undefined
+                ? "This project requires speech recognition on this computer. Check browser support before using the microphone."
+                : undefined
+          : !canHear
+            ? why
+            : undefined),
     mic: settings.mic,
     auto,
     setAuto: (on) => (on ? void startAuto() : stopAuto()),

@@ -18,8 +18,10 @@
 
   .lab {
     display: grid;
-    grid-template: "head head" auto "side main" 1fr / 260px 1fr;
+    grid-template: "head head" auto "side main" minmax(0, 1fr) / 260px minmax(0, 1fr);
     height: 100vh;
+    min-width: 0;
+    min-height: 0;
   }
   header {
     grid-area: head;
@@ -31,12 +33,28 @@
     background: var(--panel);
     border-bottom: 1px solid var(--line);
   }
+  header > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  header label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  header input,
+  header select {
+    max-width: 100%;
+  }
   aside {
     grid-area: side;
     overflow: auto;
     padding: 8px 12px;
     background: var(--panel-2);
     border-right: 1px solid var(--line);
+    min-height: 0;
+    min-width: 0;
   }
   fieldset {
     border: 0;
@@ -46,6 +64,16 @@
   }
   legend {
     font-weight: 600;
+  }
+  aside dl > div {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 8px;
+    margin: 4px 0;
+    overflow-wrap: anywhere;
+  }
+  aside dd {
+    margin: 0;
   }
   aside label {
     display: flex;
@@ -63,6 +91,9 @@
     grid-area: main;
     overflow: auto;
     padding: 16px;
+    min-width: 0;
+    min-height: 0;
+    overflow-wrap: anywhere;
   }
   iframe {
     border: 0;

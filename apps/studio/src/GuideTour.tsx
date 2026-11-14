@@ -1,6 +1,6 @@
 // The Studio guide (docs/design/studio-guide.md, smith-first.md §12.4): each place lit in order,
-// said by Smith in his thread with its chips (`asLine`) and, beside the place, a small card with
-// the stop's title, one sentence and the same chips; the rest of the screen dims a little and
+// said by Smith in his thread with its chips (`asLine`), or beside the place in a small card
+// when Smith is not visible. The card dims the rest of the screen a little and
 // takes no clicks, Smith's panel excepted. On a phone the card and the dimming are left out and a
 // stop scrolls its window into view (A 172). A stop whose place is not on the screen is left out,
 // except the preview, which is brought on screen (onStop). After "Ask me", Smith offers to show one
@@ -352,6 +352,7 @@ export function Guide({
       <section
         aria-label={`Guide: ${line.stop.title}`}
         data-guide-beside={line.stop.anchor}
+        data-guide-card={line.stop.anchor}
         data-guide-step={step}
         className="smith-line fixed z-[55] space-y-2 rounded-lg border border-line bg-panel p-3 shadow-lg"
         style={{ ...position, width: CARD.width }}
