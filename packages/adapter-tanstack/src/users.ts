@@ -394,12 +394,15 @@ export function usersTestSource(ir: SpecIR, auth: AuthIR): string {
   const domain = auth.signIn.allowedDomains?.[0] ?? "example.com";
   const other = auth.roles.map((r) => r.name).find((r) => r !== "admin");
   const closed = !auth.signIn.selfSignUp;
+  // Open sign-up with a role to invite to beside the default: an unproven sign-in can then hold
+  // an invitation back, and the library's clean-up at the proof is pinned (T809).
+  const withheld = !closed && Boolean(other) && other !== auth.defaultRole;
   return `${HEADER}// Invitations and user management: who gets in, with which role, and what an administrator may
 // not do to their own account. Against the test database, like access.test.ts.
 import { eq } from "drizzle-orm";
 import { expect, test } from "vitest";
 import { db } from "#/db";
-import { auditLog, invitation, user } from "#/db/schema";
+import { ${withheld ? "account, " : ""}auditLog, invitation, ${withheld ? "session, " : ""}user } from "#/db/schema";
 import { AccessDenied } from "#/kit/access";
 ${other ? 'import { forgetInLog } from "#/kit/audit.server";\n' : ""}import { outbox } from "#/kit/mail";
 import { auth } from "#/lib/auth";
@@ -476,6 +479,30 @@ test("an invitation withheld from a sign-in that had not proven the address is t
   expect(db.select().from(user).where(eq(user.id, made.id)).get()?.role).toBe(${JSON.stringify(other)});
   expect(db.select().from(invitation).where(eq(invitation.email, address)).get()).toBeUndefined();
   expect(audited("invitation accepted").at(-1)).toMatchObject({ who: made.id, details: { role: ${JSON.stringify(other)} } });
+});
+
+test("a mailed-code sign-in that proves an address first ends the unproven account's sessions and provider links", async () => {
+  // The app's safety here rests on Better Auth (revokeUnprovenAccountAccess): an upgrade must not
+  // change it silently. Someone signed in through a provider that did not confirm the address...
+  const address = "users-test-taken@${domain}";
+  await invite(admin, address, ${JSON.stringify(other)}, ORIGIN);
+  const hooks = auth.options.databaseHooks?.user?.create;
+  const provider = { path: "/callback/google" } as never;
+  const asked = { id: "users-test-taken", email: address, name: "taken", emailVerified: false };
+  const before = (await hooks?.before?.(asked as never, provider)) as { data: { role: string } };
+  db.insert(user).values({ ...asked, role: before.data.role }).run();
+  await hooks?.after?.({ ...asked, role: before.data.role } as never, provider);
+  const context = await auth.$context;
+  const held = await context.internalAdapter.createSession(asked.id);
+  await context.internalAdapter.linkAccount({ providerId: "google", accountId: "users-test-google", userId: asked.id });
+  // ...then the address's owner signs in with a code by mail.
+  const otp = await auth.api.createVerificationOTP({ body: { email: address, type: "sign-in" } });
+  await auth.api.signInEmailOTP({ body: { email: address, otp } });
+  expect(db.select().from(session).where(eq(session.token, held.token)).get()).toBeUndefined();
+  expect(db.select().from(account).where(eq(account.userId, asked.id)).all().filter((a) => a.providerId === "google")).toEqual([]);
+  // Proven now, and the invitation's role given to the owner's new session only.
+  const now = db.select().from(user).where(eq(user.id, asked.id)).get();
+  expect(now).toMatchObject({ emailVerified: true, role: ${JSON.stringify(other)} });
 });
 ${
   auth.admins.length
