@@ -60,6 +60,9 @@
           "default": 15
         }
       },
+      "needs": [
+        "model:Session"
+      ],
       "noModel": true
     },
     {
@@ -78,6 +81,9 @@
           "type": "beginner | allLevels | intermediate | advanced"
         }
       },
+      "needs": [
+        "model:ClassType"
+      ],
       "noModel": false
     },
     {
@@ -253,6 +259,9 @@
           "type": "phone"
         }
       },
+      "needs": [
+        "model:Instructor"
+      ],
       "noModel": false
     },
     {
@@ -271,6 +280,9 @@
           "type": "phone"
         }
       },
+      "needs": [
+        "model:Message"
+      ],
       "noModel": false
     },
     {
@@ -333,6 +345,9 @@
           "type": "url"
         }
       },
+      "needs": [
+        "model:Customer"
+      ],
       "noModel": true
     },
     {
@@ -351,6 +366,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Customer"
+      ],
       "noModel": true
     },
     {
@@ -369,6 +387,9 @@
           "type": "draft | placed | shipped | returned | canceled"
         }
       },
+      "needs": [
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -478,6 +499,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Customer"
+      ],
       "noModel": false
     },
     {
@@ -496,6 +520,9 @@
           "type": "high | medium | low"
         }
       },
+      "needs": [
+        "model:FollowUp"
+      ],
       "noModel": true
     },
     {
@@ -580,6 +607,10 @@
           "field": "dueOn"
         }
       },
+      "needs": [
+        "pages",
+        "model:FollowUp"
+      ],
       "noModel": false
     },
     {
@@ -598,6 +629,9 @@
           "type": "email"
         }
       },
+      "needs": [
+        "model:Appointment"
+      ],
       "noModel": true
     },
     {
@@ -616,6 +650,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Appointment"
+      ],
       "noModel": true
     },
     {
@@ -634,6 +671,9 @@
           "default": 45
         }
       },
+      "needs": [
+        "model:Service"
+      ],
       "noModel": false
     },
     {
@@ -718,6 +758,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Appointment"
+      ],
       "noModel": false
     },
     {
@@ -736,6 +779,9 @@
           "type": "email"
         }
       },
+      "needs": [
+        "model:Barber"
+      ],
       "noModel": false
     },
     {
@@ -758,6 +804,11 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Service",
+        "pages"
+      ],
       "noModel": true
     },
     {
@@ -776,6 +827,9 @@
           "type": "text"
         }
       },
+      "needs": [
+        "model:Invoice"
+      ],
       "noModel": true
     },
     {
@@ -794,6 +848,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Invoice"
+      ],
       "noModel": false,
       "after": "inv-notes"
     },
@@ -813,6 +870,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Client"
+      ],
       "noModel": true
     },
     {
@@ -855,6 +915,9 @@
           }
         }
       },
+      "needs": [
+        "model:Invoice"
+      ],
       "noModel": false
     },
     {
@@ -895,6 +958,10 @@
           "field": "-issuedOn"
         }
       },
+      "needs": [
+        "pages",
+        "model:Invoice"
+      ],
       "noModel": true
     },
     {
@@ -913,6 +980,11 @@
           "recipient": "client.email"
         }
       },
+      "needs": [
+        "model:Invoice",
+        "model:Client",
+        "action:markOverdue"
+      ],
       "noModel": false
     },
     {
@@ -969,6 +1041,9 @@
           "type": "int"
         }
       },
+      "needs": [
+        "model:Dish"
+      ],
       "noModel": true
     },
     {
@@ -1009,6 +1084,9 @@
           "type": "none | vegetarian | vegan | glutenFree"
         }
       },
+      "needs": [
+        "model:Dish"
+      ],
       "noModel": false
     },
     {
@@ -1027,6 +1105,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -1091,6 +1172,10 @@
         },
         "unsure": true
       },
+      "needs": [
+        "outgoing:orderReady",
+        "model:Order"
+      ],
       "noModel": false
     },
     {
@@ -1109,6 +1194,9 @@
           "type": "starters | mains | drinks | sweets | kids"
         }
       },
+      "needs": [
+        "model:Dish"
+      ],
       "noModel": false
     },
     {
@@ -1127,6 +1215,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Dish"
+      ],
       "noModel": false
     },
     {
@@ -1167,6 +1258,9 @@
           "type": "furniture | bikes | electronics | sports | kids | toys | other"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": false
     },
     {
@@ -1185,6 +1279,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": true
     },
     {
@@ -1242,6 +1339,10 @@
           "field": "price"
         }
       },
+      "needs": [
+        "pages",
+        "model:Item"
+      ],
       "noModel": true
     },
     {
@@ -1259,6 +1360,9 @@
           "field": "delivery"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": false
     },
     {
@@ -1277,6 +1381,9 @@
           "type": "phone"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": false
     },
     {
@@ -1295,6 +1402,9 @@
           "type": "picture"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": true
     },
     {
@@ -1313,6 +1423,9 @@
           "type": "general | favorite | archived | wishlist"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": false
     },
     {
@@ -1331,6 +1444,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": true
     },
     {
@@ -1353,6 +1469,11 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Item",
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1369,6 +1490,9 @@
           "name": "Levyhylly"
         }
       },
+      "needs": [
+        "app"
+      ],
       "noModel": false
     },
     {
@@ -1385,6 +1509,9 @@
           "name": "Min samling"
         }
       },
+      "needs": [
+        "app"
+      ],
       "noModel": false
     },
     {
@@ -1420,6 +1547,9 @@
           "type": "money"
         }
       },
+      "needs": [
+        "model:Item"
+      ],
       "noModel": false
     },
     {
@@ -1436,6 +1566,7 @@
           "brand": "dark green"
         }
       },
+      "needs": [],
       "noModel": false
     },
     {
@@ -1453,6 +1584,7 @@
         },
         "unsure": true
       },
+      "needs": [],
       "noModel": false
     },
     {
@@ -1471,6 +1603,9 @@
           "type": "minor | major | critical"
         }
       },
+      "needs": [
+        "model:Incident"
+      ],
       "noModel": true
     },
     {
@@ -1489,6 +1624,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Incident"
+      ],
       "noModel": true
     },
     {
@@ -1512,6 +1650,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1559,6 +1701,10 @@
           "recipient": "admin"
         }
       },
+      "needs": [
+        "model:Incident",
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -1616,6 +1762,9 @@
           "field": "severity"
         }
       },
+      "needs": [
+        "model:Incident"
+      ],
       "noModel": false
     },
     {
@@ -1661,6 +1810,9 @@
           "type": "billing | technical | other"
         }
       },
+      "needs": [
+        "model:SupportCase"
+      ],
       "noModel": true
     },
     {
@@ -1679,6 +1831,9 @@
           "default": 2
         }
       },
+      "needs": [
+        "model:SupportCase"
+      ],
       "noModel": false
     },
     {
@@ -1719,6 +1874,10 @@
           "field": "-createdAt"
         }
       },
+      "needs": [
+        "pages",
+        "model:SupportCase"
+      ],
       "noModel": true
     },
     {
@@ -1736,6 +1895,10 @@
           "field": "priority"
         }
       },
+      "needs": [
+        "pages",
+        "model:SupportCase"
+      ],
       "noModel": false,
       "after": "sp-newest"
     },
@@ -1777,6 +1940,9 @@
           "type": "string"
         }
       },
+      "needs": [
+        "model:SupportCase"
+      ],
       "noModel": false
     },
     {
@@ -1816,6 +1982,9 @@
           "field": "priority"
         }
       },
+      "needs": [
+        "model:Task"
+      ],
       "noModel": true
     },
     {
@@ -1834,6 +2003,9 @@
           "required": true
         }
       },
+      "needs": [
+        "model:Task"
+      ],
       "noModel": true
     },
     {
@@ -1853,6 +2025,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Note"
+      ],
       "noModel": false
     },
     {
@@ -1872,6 +2048,9 @@
           ]
         }
       },
+      "needs": [
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -1908,6 +2087,10 @@
           "model": "Project"
         }
       },
+      "needs": [
+        "model:Project",
+        "pages"
+      ],
       "noModel": false
     },
     {
@@ -1926,6 +2109,9 @@
           "type": "string"
         }
       },
+      "needs": [
+        "model:Task"
+      ],
       "noModel": false
     },
     {
@@ -2653,6 +2839,9 @@
         "operations": [],
         "say": "customers already have a phone field: nothing to add, and Smith says so"
       },
+      "needs": [
+        "model:Customer"
+      ],
       "noModel": false
     },
     {
@@ -2687,6 +2876,9 @@
           "access": "private"
         }
       },
+      "needs": [
+        "auth"
+      ],
       "noModel": false,
       "after": "q-crm-shared"
     },
@@ -2827,6 +3019,9 @@
         "operations": [],
         "say": "services already have a price field: nothing to add, and Smith says so"
       },
+      "needs": [
+        "model:Service"
+      ],
       "noModel": false
     },
     {
@@ -3200,6 +3395,10 @@
           ]
         }
       },
+      "needs": [
+        "auth",
+        "model:Task"
+      ],
       "noModel": false,
       "after": "q-api-assistant-delete"
     },
@@ -4824,6 +5023,9 @@
         },
         "unsure": true
       },
+      "needs": [
+        "model:Session"
+      ],
       "noModel": false
     },
     {
@@ -4916,6 +5118,11 @@
           ]
         }
       },
+      "needs": [
+        "action:resolve",
+        "auth",
+        "model:Incident"
+      ],
       "noModel": false
     },
     {
@@ -5006,6 +5213,11 @@
           "grant"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Instructor"
+      ],
       "noModel": false
     },
     {
@@ -5019,6 +5231,11 @@
           "grant"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Instructor"
+      ],
       "noModel": false
     },
     {
@@ -5030,6 +5247,10 @@
       "outcome": {
         "existingPage": "bookings"
       },
+      "needs": [
+        "pages",
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -5041,6 +5262,10 @@
       "outcome": {
         "existingPage": "bookings"
       },
+      "needs": [
+        "pages",
+        "auth"
+      ],
       "noModel": false
     },
     {
@@ -5057,7 +5282,11 @@
         "notGranted": [
           "member"
         ]
-      }
+      },
+      "needs": [
+        "pages",
+        "auth"
+      ]
     },
     {
       "starter": "booking",
@@ -5073,7 +5302,11 @@
         "notGranted": [
           "member"
         ]
-      }
+      },
+      "needs": [
+        "pages",
+        "auth"
+      ]
     },
     {
       "starter": "booking",
@@ -5087,7 +5320,12 @@
           "staff",
           "member"
         ]
-      }
+      },
+      "needs": [
+        "pages",
+        "auth",
+        "model:ClassType"
+      ]
     },
     {
       "starter": "booking",
@@ -5101,7 +5339,12 @@
           "staff",
           "member"
         ]
-      }
+      },
+      "needs": [
+        "pages",
+        "auth",
+        "model:ClassType"
+      ]
     },
     {
       "id": "bk-bookings-members-staff",
@@ -5114,6 +5357,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5127,6 +5375,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5140,6 +5393,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5153,6 +5411,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5166,6 +5429,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5179,6 +5447,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5192,6 +5465,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5205,6 +5483,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5218,6 +5501,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5231,6 +5519,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5244,6 +5537,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5257,6 +5555,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5270,6 +5573,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5283,6 +5591,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5296,6 +5609,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5309,6 +5627,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5322,6 +5645,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5338,6 +5666,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5354,6 +5687,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5370,6 +5708,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5386,6 +5729,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5402,6 +5750,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
@@ -5418,6 +5771,11 @@
           "member"
         ]
       },
+      "needs": [
+        "pages",
+        "auth",
+        "model:Booking"
+      ],
       "noModel": false
     },
     {
