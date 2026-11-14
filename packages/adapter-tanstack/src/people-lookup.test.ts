@@ -99,3 +99,28 @@ test("names outside ASCII are found as they are written, folded alike on both si
     ),
   ).toHaveLength(10);
 });
+
+test("an action's card names each asked value by its field, and a person or a record by name (T821)", () => {
+  const spec = validateSpec({
+    path: "smithable.yml",
+    text: "smithable: 0.1\napp: { name: Studio }\nmodels:\n  Room:\n    fields: { name: string! }\n  Booking:\n    fields: { when: datetime!, attendee: User, room: Room, note: string }\nactions:\n  assign:\n    on: Booking\n    set: { attendee:, room:, note: }\npages:\n  bookings: { crud: Booking, actions: [assign] }\n  rooms: { crud: Room }\n  team: { users: manage }\n",
+  });
+  expect(spec.ir).toBeDefined();
+  const auth = validateAuth(
+    {
+      path: "smithable.auth.yml",
+      text: "smithableAuth: 0.1\nsignIn: { providers: [email] }\ndefaultAccess: private\nroles: { admin: all }\nassistant: { for: signed-in, may: change }\n",
+    },
+    spec.ir as SpecIR,
+  ).auth as AuthIR;
+  const out = generateApp(spec.ir as SpecIR, {
+    smithableVersion: "0.0.0",
+    auth,
+    content: emptyContent(),
+  });
+  const all = out.map((f) => f.content).join("\n");
+  expect(all).toContain(
+    'shows: {"attendeeId":["Booking","attendee","person"],"roomId":["Booking","room","Room"],"note":["Booking","note",null]}',
+  );
+  expect(all).toContain("to = personName(String(value)) ?? to;");
+});

@@ -43,6 +43,7 @@ import {
   type Texts,
   templateText,
   titleField,
+  userFields,
 } from "./shared.js";
 
 /**
@@ -1054,6 +1055,14 @@ function toolsModule(
   );
   // People by name, when a caller is offered the lookup (T729).
   const people = Object.values(offers).some((o) => o.tools.some((tool) => tool.name === "people"));
+  // A person an action asks for, shown on Ask's card by name.
+  const askedPerson =
+    confirms &&
+    actions.some((action) =>
+      askedFields(action).some((x) =>
+        userFields(modelNamed(ir, x.model)).some((f) => f.name === x.field),
+      ),
+    );
   // Whose a record is, for allows: its owner column, or what the kind's data function says for an
   // owner by address or one step away (docs/design/support-portal-path.md §2).
   const ownerOfKind = models.some(({ model }) => addressOwned(model))
@@ -1095,12 +1104,31 @@ function toolsModule(
     const words = action.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
     const asks =
       !action.merge && !action.split && askedFields(action).length ? `, asks: ${a.asks}` : "";
+    // Each asked value's key, with its model and field by name and, for a reference, what it
+    // refers to ("person" for a user): the card names it by its label and shows it by its title.
+    const shows =
+      asks &&
+      `, shows: ${JSON.stringify(
+        Object.fromEntries(
+          askedFields(action).map((x) => {
+            const field = modelNamed(ir, x.model).fields.find((f) => f.name === x.field) as FieldIR;
+            const key = x.key === x.field ? dataKey(field) : `${x.model}.${dataKey(field)}`;
+            const target =
+              field.type.kind === "relation" && !field.type.many
+                ? field.type.model === USER_MODEL
+                  ? "person"
+                  : field.type.model
+                : null;
+            return [key, [x.model, x.field, target]];
+          }),
+        ),
+      )}`;
     // A merge or a split fits any record its rule lets the viewer run it on.
     const fits =
       action.merge || action.split
         ? "() => true"
         : `${a.fits} as (row: never, viewer: { id: string } | null) => boolean`;
-    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${fits}, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks} },`;
+    return `  ${JSON.stringify(action.name)}: { kind: ${JSON.stringify(action.on)}, access: ${a.access}, fits: ${fits}, label: ${JSON.stringify(words[0]?.toUpperCase() + words.slice(1))}${asks}${shows} },`;
   });
   // Out of the trash, as a built-in action per kind with a trash (docs/design/trash.md).
   const restores = models
@@ -1196,7 +1224,7 @@ function toolsModule(
   }
 ${actions.length || rowsActions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
 ${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${app ? `import { count, LIMITS${confirms ? ", writeAllowed" : ""} } from "#/kit/limit";\nimport { w } from "#/kit/words";\n` : confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
-import { NoSuchValue, nearest } from "#/kit/where";${people ? '\nimport { peopleNamed } from "./user-choices.server";' : ""}
+import { NoSuchValue, nearest } from "#/kit/where";${people || askedPerson ? `\nimport { ${[people && "peopleNamed", askedPerson && "personName"].filter(Boolean).join(", ")} } from "./user-choices.server";` : ""}
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
   app
@@ -1527,7 +1555,7 @@ ${
   confirms
     ? `
 /** Each action Ask may propose: the kind it runs on, its rule, when it fits, its name in words. */
-const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never, viewer: { id: string } | null) => boolean; label: string; asks?: { parse: (input: unknown) => unknown } }> = {
+const RUNS: Record<string, { kind: keyof typeof KINDS; access: Rule; fits: (row: never, viewer: { id: string } | null) => boolean; label: string; asks?: { parse: (input: unknown) => unknown }; shows?: Record<string, [string, string, string | null]> }> = {
 ${proposals.join("\n")}
 };
 
@@ -1611,16 +1639,29 @@ async function propose(viewer: Viewer, tool: string, args: Record<string, unknow
     // Only the checked values go on: an action that asks for nothing gets none.
     const { input: _given, ...rest } = args;
     kept = { ...rest, id: row.id, ...(input ? { input } : {}) };
-    // A value of a record the action adds is named "Model.field"; its own, by the field.
-    const asked = (key: string) => {
-      const dot = key.indexOf(".");
-      return dot < 0 ? labelOf(viewer, String(run.kind), key) : labelOf(viewer, key.slice(0, dot), key.slice(dot + 1));
+    // Each asked value by its field's label; a record it refers to by its title, a person by name.
+    const shownAsked = async (key: string, value: unknown) => {
+      const [model, field, target] = run.shows?.[key] ?? [String(run.kind), key, null];
+      let to = cardValue(value);
+      if (value !== null && value !== undefined && value !== "")
+        try {
+          if (target === "person") {${askedPerson ? "\n            to = personName(String(value)) ?? to;\n          " : ""}} else if (target && Object.hasOwn(KINDS, target)) {
+            const other = KINDS[target as keyof typeof KINDS];
+            const ref = (await found(other, viewer, value)) as Record<string, any>;
+            to = String(ref[other.title] ?? ref.id);
+          }
+        } catch {
+          // One the person may not read stays as given; running the action refuses it.
+        }
+      return { label: labelOf(viewer, model, field), to };
     };
     card = {
       title: \`\${run.label} \${kind.label} \${String(row[kind.title] ?? row.id)}\`,
-      changes: Object.entries(input ?? {})
-        .filter(([, v]) => v !== undefined)
-        .map(([k, v]) => ({ label: asked(k), to: cardValue(v) })),
+      changes: await Promise.all(
+        Object.entries(input ?? {})
+          .filter(([, v]) => v !== undefined)
+          .map(([k, v]) => shownAsked(k, v)),
+      ),
     };
   } else {
     const kind = kindOf(args);
