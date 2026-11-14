@@ -39,6 +39,7 @@ import {
   modelNamed,
   names,
   ownerKey,
+  ownerOf,
   quotedText,
   references,
   shownTitleKey,
@@ -844,7 +845,8 @@ export const Route = createFileRoute("/api/v1/${path}/$id/restore")({
 // several), PUT one as the body (a document's name in X-File-Name, a picture's description in
 // X-Alt); a field of several gets it added.
 import { createFileRoute } from "@tanstack/react-router";
-import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { ${n.access}, ${n.data} } from "#/generated/${kebab(model.name)}.server";
+import { ${addressOwned(model) ? "addressOwner, " : ""}check } from "#/kit/access";
 import { BadInput, bytesOf, fileCall, NotFound, TooLarge } from "#/kit/api.server";
 import { bodySize, BodyLimit } from "#/kit/bounded-body";
 import { storeUpload } from "#/kit/receipts.server";
@@ -870,7 +872,8 @@ ${uploads.map((f) => `  ${JSON.stringify(f.name)}: { kind: "${storesFiles(f) ? "
 };
 
 async function target(viewer: Parameters<typeof ${n.data}.get>[0], id: string, name: string) {
-  const field = FIELDS[name];
+  // Its own fields only: "constructor" or "__proto__" is no field (T821 #5).
+  const field = Object.hasOwn(FIELDS, name) ? FIELDS[name] : undefined;
   if (!field) throw new NotFound("This ${quotedText(n.label.toLowerCase())} has no picture or document by that name.");
   const row = await ${n.data}.get(viewer, Number(id));
   if (!row) throw new NotFound("No such ${quotedText(n.label.toLowerCase())}, or not one this key may read.");
@@ -889,6 +892,9 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
       PUT: ({ request, params }) =>
         fileCall(request, async (viewer) => {
           const { field, row, value } = await target(viewer, params.id, params.field);
+          // The right to change it first: a file is neither read, scanned nor stored for a caller
+          // who may not (T821 #5).
+          check(${n.access}.write, viewer, ${ownerOf(model, n, "row")} as string | null);
           const list = Array.isArray(value) ? value : [];
           if (field.many && list.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
           const max = field.kind === "file" ? FILE_MAX_BYTES : PICTURE_MAX_BYTES;
@@ -915,7 +921,15 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
               if (error instanceof BadFile) throw new BadInput(error.message);
               throw error;
             }
-            const named = (header: string) => decodeURIComponent(request.headers.get(header) ?? "");
+            // A name as sent, decoded where it is encoded; a stray "%" is kept as written.
+            const named = (header: string) => {
+              const raw = request.headers.get(header) ?? "";
+              try {
+                return decodeURIComponent(raw);
+              } catch {
+                return raw;
+              }
+            };
             try {
               stored = storeUpload(viewer?.id ?? null, ${JSON.stringify(kebab(model.name))}, params.field, ${n.data}.uses,
                 () => field.kind === "file" ? saveFile(${JSON.stringify(kebab(model.name))}, bytes, named("x-file-name"), held) : savePicture(${JSON.stringify(kebab(model.name))}, bytes, named("x-alt"), false, held));
@@ -928,7 +942,13 @@ export const Route = createFileRoute("/api/v1/${path}/$id/$field")({
           }
           const sent = stored as { file: string; receipt: string };
           try {
-            await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...list, sent] : sent } as never);
+            // A field of several as it is now: two sent at once both stay, and the limit holds.
+            const now = field.many
+              ? ((await ${n.data}.get(viewer, row.id)) as Record<string, unknown> | undefined)?.[field.key]
+              : undefined;
+            const current = Array.isArray(now) ? now : list;
+            if (field.many && current.length >= field.max) throw new BadInput(\`At most \${field.max} here.\`);
+            await ${n.data}.update(viewer, row.id, { [field.key]: field.many ? [...current, sent] : sent } as never);
           } catch (error) {
             // The record did not take it: the file it would have had goes again.
             const still = ${n.data}.uses((stored as { file: string }).file);
