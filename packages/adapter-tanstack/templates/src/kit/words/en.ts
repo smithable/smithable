@@ -278,6 +278,7 @@ export const w = {
   no: "No",
   noActivityInPeriod: "No activity in this period.",
   nobodyLeaveEmpty: "Nobody (leave them empty)",
+  noAnswer: "I don't know that. Here is what I can answer about:",
   noModelToAsk: "The app's assistant has no model yet to answer this; ask whoever runs the app.",
   noPlacesLeft: "No places left.",
   nobodyYet: "Nobody yet. Invite the first person above.",

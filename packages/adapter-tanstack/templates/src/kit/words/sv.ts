@@ -277,6 +277,7 @@ export const w = {
   no: "Nej",
   noActivityInPeriod: "Ingen aktivitet under perioden.",
   nobodyLeaveEmpty: "Ingen (lämna tomt)",
+  noAnswer: "Det vet jag inte. Det här kan jag svara på:",
   noModelToAsk:
     "Appens assistent har ingen modell än som kan svara på det här; fråga den som driver appen.",
   noPlacesLeft: "Inga platser kvar.",
