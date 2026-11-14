@@ -17,7 +17,8 @@ import { RECORD_PROBE } from "./preview-discovery.js";
 /** The runtime, run in the preview page inside Studio's iframe. */
 export const RUNTIME = `
 if (typeof window !== "undefined" && window.parent !== window) {
-  const designOnly = new URLSearchParams(location.search).has("__sm_look");
+  let design = new URLSearchParams(location.search).has("__sm_look");
+  const designOnly = () => design ||= new URLSearchParams(location.search).has("__sm_look");
   let selecting = false;
   // In Studio's Code mode a text is not changed in place: Studio opens its line instead.
   let code = false;
@@ -61,7 +62,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   };
   let watching = null;
   window.addEventListener("message", (event) => {
-    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:highlight") return;
     if (!trusted(event.origin)) return;
     studio = event.origin;
     // Studio hears when the page has flashed (with the key it sent), so a change is flashed
@@ -83,6 +84,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const found = document.querySelectorAll(selector);
     if (found.length) return done(found);
     const observer = new MutationObserver(() => {
+      if (designOnly()) return observer.disconnect();
       const now = document.querySelectorAll(selector);
       if (!now.length) return;
       observer.disconnect();
@@ -105,7 +107,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // Only from the page this preview is in, and only from this machine. The fonts' bare imports
   // become the paths Vite serves them at (every app has all seven).
   window.addEventListener("message", (event) => {
-    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:theme-css") return;
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:theme-css") return;
     if (!trusted(event.origin)) return;
     if (typeof event.data.css !== "string") return;
     let sheet = document.getElementById("sm-theme");
@@ -152,7 +154,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // Bounded discovery runs inside the currently authorized rendered list. The parent must
   // own this actual iframe; hosted authorization is supplied separately by the host adapter.
   window.addEventListener("message", (event) => {
-    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:discover-record") return;
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:discover-record") return;
     if (!trusted(event.origin)) return;
     const { request, base } = event.data;
     if (typeof request !== "string" || request.length > 100 || typeof base !== "string" || base.length > 1000) return;
@@ -169,10 +171,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // role, there only in development): asked from the page this preview is in on this machine,
   // the sign-in page clicks the role's button once it is ready.
   window.addEventListener("message", (event) => {
-    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:dev-sign-in") return;
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:dev-sign-in") return;
     if (!trusted(event.origin)) return;
     const started = Date.now();
     const tryClick = () => {
+      if (designOnly()) return;
       const buttons = [...document.querySelectorAll("[data-dev-role]")];
       const button =
         buttons.find((b) => b.dataset.devRole === event.data.role);
@@ -189,7 +192,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // The theme lab shows a theme's motion: the page scrolls slowly to its end and back, so what
   // moves as it comes into view moves (same parent-and-machine rule).
   window.addEventListener("message", (event) => {
-    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:motion-tour") return;
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:motion-tour") return;
     if (!trusted(event.origin)) return;
     const end = document.documentElement.scrollHeight - window.innerHeight;
     const started = Date.now();
@@ -202,11 +205,11 @@ if (typeof window !== "undefined" && window.parent !== window) {
     step();
   });
   // Sheets the page adds later (a route's own styles) follow the same mode.
-  new MutationObserver(() => scheme && applyScheme()).observe(document.head, { childList: true });
+  new MutationObserver(() => !designOnly() && scheme && applyScheme()).observe(document.head, { childList: true });
 
   window.addEventListener("message", (event) => {
     // Only the page this preview is in: Studio.
-    if (designOnly || event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
     if (!trusted(event.origin)) return;
     studio = event.origin;
     report();
@@ -222,7 +225,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
       .forEach((th) => (selecting ? (th.draggable = true) : th.removeAttribute("draggable")));
   });
   document.addEventListener("mouseover", (event) => {
-    if (!selecting) return;
+    if (designOnly() || !selecting) return;
     hovered?.removeAttribute("data-sm-hover");
     hovered = markedAt(event.target);
     hovered?.setAttribute("data-sm-hover", "");
@@ -231,7 +234,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // A text marked with its place in smithable.content.yml is changed in place: Enter or
   // leaving it saves, Escape cancels.
   document.addEventListener("click", (event) => {
-    if (!selecting) return;
+    if (designOnly() || !selecting) return;
     const text = event.target instanceof Element ? event.target.closest("[data-sm-text]") : null;
     if (!text || text.isContentEditable) return;
     event.preventDefault();
@@ -263,7 +266,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     text.addEventListener("blur", blur);
   }, true);
   document.addEventListener("click", (event) => {
-    if (!selecting) return;
+    if (designOnly() || !selecting) return;
     const marked = markedAt(event.target);
     event.preventDefault();
     event.stopPropagation();
@@ -283,13 +286,16 @@ if (typeof window !== "undefined" && window.parent !== window) {
   }, true);
   // Dropping a column header on another moves it there.
   document.addEventListener("dragstart", (event) => {
+    if (designOnly()) return;
     const marked = markedAt(event.target);
     if (selecting && marked?.dataset.smPart === "column") dragged = marked;
   });
   document.addEventListener("dragover", (event) => {
+    if (designOnly()) return;
     if (dragged && markedAt(event.target)?.dataset.smPart === "column") event.preventDefault();
   });
   document.addEventListener("drop", (event) => {
+    if (designOnly()) return;
     const target = markedAt(event.target);
     if (!dragged || target?.dataset.smPart !== "column" || target === dragged) return;
     event.preventDefault();
@@ -304,12 +310,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
   document.addEventListener("keydown", (event) => {
     const t = event.target;
     const typing = t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
-    if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z" && !typing) {
+    if (!designOnly() && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z" && !typing) {
       event.preventDefault();
       post({ type: "undo" });
     }
     // A selected column moves with Alt+Left and Alt+Right: the drag's keyboard way (A 231).
-    const chosen = selecting ? document.querySelector("[data-sm-selected][data-sm-part=column]") : null;
+    const chosen = !designOnly() && selecting ? document.querySelector("[data-sm-selected][data-sm-part=column]") : null;
     if (chosen && event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !typing) {
       const headers = [...(chosen.closest("tr")?.querySelectorAll("[data-sm-part=column]") ?? [])];
       const at = headers.indexOf(chosen);
@@ -384,7 +390,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
   } catch {}
   // The page the preview is on, for Studio's address bar: after every navigation, including
   // the app's own (the router uses the History API) and Back.
-  const report = () => post({ type: "navigated", path: location.pathname + location.search });
+  const report = () => {
+    designOnly();
+    post({ type: "navigated", path: location.pathname + location.search });
+  };
   for (const name of ["pushState", "replaceState"]) {
     const original = history[name];
     history[name] = function (...args) {
@@ -410,7 +419,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     true,
   );
   const signIn = setInterval(() => {
-    if (designOnly) return clearInterval(signIn);
+    if (designOnly()) return clearInterval(signIn);
     if (location.pathname !== "/sign-in") return clearInterval(signIn);
     if (document.body.dataset.hydrated !== "true") return;
     clearInterval(signIn);
@@ -784,12 +793,28 @@ export function smithableEditor(
         ? RUNTIME +
           (look
             ? `
-if (typeof window !== "undefined" && new URLSearchParams(location.search).has("__sm_look")) {
+if (typeof window !== "undefined") {
+  let lookStarted = false;
+  const startLook = () => {
+    if (lookStarted || !new URLSearchParams(location.search).has("__sm_look")) return;
+    lookStarted = true;
   const lookConfig=${JSON.stringify({ ...look, boot })};
   ${lookCommandRuntime()}
   const applyFonts=${fontImportRuntime("local")};
   const probeRecord=${RECORD_PROBE};
   ${LOOK_FRAME_BODY}
+  };
+  // A sign-in return can enter look mode through the router without loading this module again.
+  for (const method of ["pushState", "replaceState"]) {
+    const original = history[method];
+    history[method] = function(...args) {
+      const result = original.apply(this, args);
+      startLook();
+      return result;
+    };
+  }
+  window.addEventListener("popstate", startLook);
+  startLook();
 }`
             : "")
         : undefined,
