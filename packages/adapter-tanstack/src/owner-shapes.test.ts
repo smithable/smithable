@@ -134,7 +134,7 @@ describe("the support portal: an owner by address, and reading through a referen
     );
     // On a change: left out it stays; given, a chooser's as written, anyone else's own.
     expect(cases).toContain(
-      "const updated = { ...values, customerEmail: values.customerEmail === undefined || !chooses(viewer) ? row.customerEmail : ownerFor(viewer, values.customerEmail) };",
+      "const withOwner = (current: typeof schema.supportCases.$inferSelect) => ({ ...values, customerEmail: values.customerEmail === undefined || !chooses(viewer) ? current.customerEmail : ownerFor(viewer, values.customerEmail) });",
     );
     // Visitors' cases are counted in the audit log, the last day, since no owner column tells them apart.
     expect(cases).toContain(

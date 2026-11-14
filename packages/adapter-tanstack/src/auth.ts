@@ -383,7 +383,7 @@ export const userOptions = createServerFn().handler(async () => {
  * looked up as a request and not found).
  */
 export function userChoicesModule(): string {
-  return `${HEADER}import { asc } from "drizzle-orm";
+  return `${HEADER}import { asc, eq } from "drizzle-orm";
 import { db } from "#/db";
 import { user } from "#/db/schema";
 import { lookedFor, namesHolding } from "#/kit/people-match";
@@ -398,6 +398,10 @@ export const userChoices = () =>
  * §3.6): the same people a form lists, at most ten whose name holds the words, by id and name only,
  * never an address.
  */
+/** A person's name by their id, as a confirmation card shows a person asked for. */
+export const personName = (id: string): string | undefined =>
+  db.select({ name: user.name }).from(user).where(eq(user.id, id)).get()?.name;
+
 export function peopleNamed(words: string): { id: string; name: string }[] {
   const text = lookedFor(words);
   if (!text) throw new BadInput("Give two letters or more of the name.");
