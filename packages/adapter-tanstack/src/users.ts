@@ -495,6 +495,9 @@ test("a mailed-code sign-in that proves an address first ends the unproven accou
   const context = await auth.$context;
   const held = await context.internalAdapter.createSession(asked.id);
   await context.internalAdapter.linkAccount({ providerId: "google", accountId: "users-test-google", userId: asked.id });
+  // Both there before the proof, so their absence after it says something.
+  expect(db.select().from(session).where(eq(session.token, held.token)).get()).toBeDefined();
+  expect(db.select().from(account).where(eq(account.userId, asked.id)).all().map((a) => a.providerId)).toContain("google");
   // ...then the address's owner signs in with a code by mail.
   const otp = await auth.api.createVerificationOTP({ body: { email: address, type: "sign-in" } });
   await auth.api.signInEmailOTP({ body: { email: address, otp } });
