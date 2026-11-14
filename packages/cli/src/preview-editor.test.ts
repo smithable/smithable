@@ -92,6 +92,15 @@ function page(
     readyState: "loading",
   };
   const noop = () => 0;
+  const location = { pathname: at, search, reload: () => reloads.push(1) };
+  const history = {
+    pushState(_state: unknown, _title: string, href: string) {
+      const url = new URL(href, "http://localhost:5731");
+      location.pathname = url.pathname;
+      location.search = url.search;
+    },
+    replaceState() {},
+  };
   new Function(
     "window",
     "document",
@@ -107,8 +116,8 @@ function page(
   )(
     window,
     document,
-    { pushState() {}, replaceState() {} },
-    { pathname: at, search, reload: () => reloads.push(1) },
+    history,
+    location,
     (tick: () => void) => ticks.push(tick),
     (timer: () => void) => timers.set(++timerId, timer) && timerId,
     noop,
@@ -133,6 +142,7 @@ function page(
     for (const listener of listeners) listener({ data, origin, source });
   };
   return {
+    navigate: (href: string) => history.pushState(null, "", href),
     send,
     theme: () => document.getElementById("sm-theme")?.textContent,
     head,
@@ -546,6 +556,22 @@ test("a design-owned frame keeps the current viewer and never clicks development
   design.send({ type: "smithable:dev-sign-in", role: "admin" });
   design.tick();
   expect(design.clicked).toEqual([]);
+});
+
+test("entering look mode by client navigation disables legacy preview commands", () => {
+  const preview = page("/sign-in");
+  preview.navigate("/overview?__sm_look=1");
+  preview.send({ type: "smithable:dev-sign-in", role: "admin" });
+  preview.send({ type: "smithable:theme-css", css: ":root { color: red }", mode: "dark" });
+  preview.tick();
+  expect(preview.clicked).toEqual([]);
+  expect(preview.theme()).toBeUndefined();
+  preview.navigate("/overview");
+  preview.send({ type: "smithable:dev-sign-in", role: "admin" });
+  preview.send({ type: "smithable:theme-css", css: ":root { color: red }", mode: "dark" });
+  preview.tick();
+  expect(preview.clicked).toEqual([]);
+  expect(preview.theme()).toBeUndefined();
 });
 
 test("the preview's config is written once for a run: its look identity is the run's, never the project's", async () => {
