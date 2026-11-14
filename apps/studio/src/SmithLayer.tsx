@@ -138,7 +138,7 @@ export function SmithLayer({
           type="button"
           aria-label="Close presentation"
           tabIndex={-1}
-          onClick={onSkip}
+          onClick={mode === "closing" ? undefined : onSkip}
           className={cx(
             "fixed inset-0 z-40 cursor-default border-0 p-0 backdrop-blur-sm",
             motion && "transition-[opacity,background-color] duration-500",
@@ -221,7 +221,7 @@ export function SmithLayer({
 export function panelRect(side: "left" | "right", w: number, h: number, over?: Bounds) {
   const { left, right } = over ?? { left: 0, right: w };
   const width = Math.min(400, right - left - 24);
-  const top = Math.max(60, (over?.top ?? 0) + 80);
+  const top = over?.top === undefined ? 60 : Math.max(60, over.top + 80);
   return {
     width,
     height: Math.min(640, h - top - 12),

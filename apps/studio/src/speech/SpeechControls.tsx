@@ -47,9 +47,11 @@ export function SpeechControls({ speech }: { speech: Speech }) {
           className={cx(BUTTON, speech.listening && "border-red-500 text-red-600")}
           disabled={!speech.canHear || speech.checkingHearing}
           title={
-            speech.canHear
-              ? "Hold to talk (or Ctrl+Shift+Space); click to say one thing"
-              : speech.why
+            speech.needsLocalCheck
+              ? "Check whether speech recognition can run on this computer"
+              : speech.canHear
+                ? "Hold to talk (or Ctrl+Shift+Space); click to say one thing"
+                : speech.why
           }
           aria-label={
             speech.needsLocalCheck

@@ -1,17 +1,27 @@
 import assert from "node:assert/strict";
 
 export async function checkStudioSpeech(browser, base) {
-  for (const localOnly of [false, true]) {
+  for (const support of ["browser", "unavailable", "available", "missing"]) {
+    const localOnly = support !== "browser";
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     try {
-      await page.addInitScript(() => {
-        window.speechFixture = { starts: 0, rates: [], behavior: "denied" };
+      await page.addInitScript((support) => {
+        window.speechFixture = {
+          starts: 0,
+          checks: 0,
+          local: false,
+          rates: [],
+          behavior: "denied",
+        };
         class Recognition {
+          processLocally = false;
           static available() {
-            return Promise.resolve("unavailable");
+            window.speechFixture.checks++;
+            return Promise.resolve(support);
           }
           start() {
             window.speechFixture.starts++;
+            window.speechFixture.local = this.processLocally;
             if (window.speechFixture.behavior === "throw") throw new Error("fixture refused");
             queueMicrotask(() => {
               this.onerror?.({ error: "not-allowed" });
@@ -26,7 +36,11 @@ export async function checkStudioSpeech(browser, base) {
           }
         }
         Object.defineProperty(window, "SpeechRecognition", {
-          value: Recognition,
+          value: support === "missing" ? undefined : Recognition,
+          configurable: true,
+        });
+        Object.defineProperty(window, "webkitSpeechRecognition", {
+          value: undefined,
           configurable: true,
         });
         const synth = new EventTarget();
@@ -47,7 +61,7 @@ export async function checkStudioSpeech(browser, base) {
           },
           configurable: true,
         });
-      });
+      }, support);
       await page.route("**/api/project", async (route) => {
         const response = await route.fetch();
         const body = await response.json();
@@ -87,25 +101,52 @@ export async function checkStudioSpeech(browser, base) {
         .getByRole("button", { name: "Sound: on", exact: true })
         .getByText("Sound on")
         .waitFor();
-      if (localOnly) {
+      assert.equal(
+        await page.evaluate(() => window.speechFixture.checks),
+        0,
+        "local capability was probed without a gesture",
+      );
+      if (support === "missing") {
+        await page.getByText("This browser cannot write out speech.", { exact: true }).waitFor();
+        assert.ok(await page.getByRole("button", { name: /^Mic:/ }).isDisabled());
+        assert.equal(
+          await page
+            .getByRole("button", { name: "Check on-device speech support", exact: true })
+            .count(),
+          0,
+        );
+      } else if (localOnly) {
         await page
           .getByText(
             "This project requires speech recognition on this computer. Check browser support before using the microphone.",
             { exact: true },
           )
           .waitFor();
-        await page
-          .getByRole("button", { name: "Check on-device speech support", exact: true })
-          .click();
-        await page
-          .getByText(/This browser cannot provide it, so the microphone is unavailable/)
-          .waitFor();
-        assert.ok(await page.getByRole("button", { name: /^Mic:/ }).isDisabled());
-        assert.equal(
-          await page.evaluate(() => window.speechFixture.starts),
-          0,
-          "policy denied recognition still started",
-        );
+        const check = page.getByRole("button", {
+          name: "Check on-device speech support",
+          exact: true,
+        });
+        await check.focus();
+        await page.keyboard.press("Space");
+        if (support === "available") {
+          await page.getByRole("button", { name: "Automatic", exact: true }).waitFor();
+          const mic = page.getByRole("button", { name: /^Mic:/ });
+          await mic.focus();
+          await page.keyboard.press("Space");
+          await page.getByText(/Microphone access was refused/).waitFor();
+          assert.equal(await page.evaluate(() => window.speechFixture.local), true);
+        } else {
+          await page
+            .getByText(/This browser cannot provide it, so the microphone is unavailable/)
+            .waitFor();
+          assert.ok(await page.getByRole("button", { name: /^Mic:/ }).isDisabled());
+          assert.equal(
+            await page.evaluate(() => window.speechFixture.starts),
+            0,
+            "policy denied recognition still started",
+          );
+        }
+        assert.equal(await page.evaluate(() => window.speechFixture.checks), 1);
       } else {
         await page.getByRole("button", { name: /^Mic:/ }).click();
         await page.getByText(/Microphone access was refused/).waitFor();
@@ -122,7 +163,7 @@ export async function checkStudioSpeech(browser, base) {
         await page.waitForFunction(() => window.speechFixture.rates.includes(1.2));
       }
       console.log(
-        `  ✓ Smith speech ${localOnly ? "on-device policy" : "browser refusal"}: visible failure, saved sound/speed, introduction stays while reading`,
+        `  ✓ Smith speech ${support}: visible failure, saved sound/speed, introduction stays while reading`,
       );
     } finally {
       await page.close();

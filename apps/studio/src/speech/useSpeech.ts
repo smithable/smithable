@@ -261,7 +261,10 @@ export function useSpeech(
       };
       r.onerror = (e) => {
         if (ear.current && e.error === "audio-capture") clash.current = true;
-        if (e.error !== "aborted")
+        if (
+          e.error !== "aborted" &&
+          !(ear.current && ["audio-capture", "no-speech"].includes(e.error))
+        )
           setHearingError(
             e.error === "not-allowed" || e.error === "service-not-allowed"
               ? "Microphone access was refused. Allow the microphone for this Studio address in your browser's site settings, then try again."
@@ -314,6 +317,7 @@ export function useSpeech(
   const generation = useRef(0);
   const starting = useRef(false);
   const stopAuto = (note?: string) => {
+    setHearingError(undefined);
     generation.current++;
     starting.current = false;
     ear.current?.stop();
@@ -324,6 +328,7 @@ export function useSpeech(
   };
   const startAuto = async () => {
     if (ear.current || !Rec || !canHear) return;
+    setHearingError(undefined);
     const mine = ++generation.current;
     const cancelled = () => mine !== generation.current;
     starting.current = true;
@@ -446,21 +451,23 @@ export function useSpeech(
     setRate: (rate) => {
       if ([0.85, 1, 1.2].includes(rate)) save({ ...settings, rate });
     },
-    needsLocalCheck: onDeviceOnly && localHearing === undefined,
+    needsLocalCheck: Boolean(Rec) && onDeviceOnly && localHearing === undefined,
     checkingHearing,
     hearingNote:
       hearingError ??
-      (onDeviceOnly
-        ? checkingHearing
-          ? "Checking whether this browser can recognize speech on this computer…"
-          : localHearing === false
-            ? "This project requires speech recognition on this computer. This browser cannot provide it, so the microphone is unavailable. You can type instead."
-            : localHearing === undefined
-              ? "This project requires speech recognition on this computer. Check browser support before using the microphone."
-              : undefined
-        : !canHear
-          ? why
-          : undefined),
+      (!Rec
+        ? why
+        : onDeviceOnly
+          ? checkingHearing
+            ? "Checking whether this browser can recognize speech on this computer…"
+            : localHearing === false
+              ? "This project requires speech recognition on this computer. This browser cannot provide it, so the microphone is unavailable. You can type instead."
+              : localHearing === undefined
+                ? "This project requires speech recognition on this computer. Check browser support before using the microphone."
+                : undefined
+          : !canHear
+            ? why
+            : undefined),
     mic: settings.mic,
     auto,
     setAuto: (on) => (on ? void startAuto() : stopAuto()),
