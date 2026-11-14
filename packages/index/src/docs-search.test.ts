@@ -46,6 +46,24 @@ test("the app's parts the request names, else its whole summary", () => {
   );
 });
 
+test("what the app does by itself is always there by its line: each action, outgoing call and timer (T844)", () => {
+  const app: SummarySection[] = [
+    ...sections,
+    {
+      concept: "outgoing:bookingMade",
+      title: "Mail when a booking is made",
+      sentences: ["To the member."],
+    },
+    { concept: "timer:remind", title: "Reminders every morning", sentences: ["At 08:00."] },
+  ];
+  // Found by the search: in full, the others by one line.
+  expect(appParts(app, "who can see the schedule?")).toBe(
+    "Pages: The schedule is public.\n\nAlso in the app:\n- outgoing:bookingMade: Mail when a booking is made\n- timer:remind: Reminders every morning",
+  );
+  // Found itself: in full, not listed again.
+  expect(appParts(app, "when is the booking mail sent?")).not.toContain("- outgoing:bookingMade:");
+});
+
 test("a request's own best part first, then each phrase's, none twice", () => {
   const own = searchDocs(index, "can I use my own domain")[0]?.url;
   const hits = searchDocsWith(index, "can I use my own domain", ["publish", "API key"]);

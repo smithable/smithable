@@ -20,15 +20,15 @@ The first model call's prompt per kind of request, about four characters a token
 
 | Kind | Requests | Answered by a rule | Median tokens sent | Most |
 |---|---|---|---|---|
-| ambiguous | 25 | 0 | 26,654 | 44,272 |
-| change | 141 | 14 | 34,404 | 46,072 |
-| custom-code | 13 | 0 | 34,210 | 44,465 |
-| data | 23 | 0 | 34,385 | 45,868 |
-| docs-question | 34 | 0 | 1,450 | 38,831 |
-| off-topic | 10 | 0 | 26,075 | 34,368 |
-| smalltalk | 17 | 13 | 27,316 | 27,362 |
-| spec-question | 46 | 2 | 1,775 | 38,841 |
-| two-things | 17 | 0 | 44,132 | 45,440 |
+| ambiguous | 25 | 0 | 26,700 | 44,351 |
+| change | 141 | 14 | 34,462 | 46,156 |
+| custom-code | 13 | 0 | 34,222 | 44,465 |
+| data | 23 | 0 | 34,402 | 45,885 |
+| docs-question | 34 | 0 | 1,519 | 38,831 |
+| off-topic | 10 | 0 | 26,075 | 34,386 |
+| smalltalk | 17 | 13 | 27,316 | 27,381 |
+| spec-question | 46 | 2 | 1,864 | 38,886 |
+| two-things | 17 | 0 | 44,132 | 45,486 |
 
 ## The oracle
 
@@ -36,12 +36,12 @@ A perfect model in place of the real one: right when the prompt holds everything
 
 | Kind | Requests | Right | Cannot tell | Wrong route | Median tokens sent | Median parts not needed | Median docs parts not needed |
 |---|---|---|---|---|---|---|---|
-| ambiguous | 25 | 25 | 0 | 0 | 26,654 | 4 | 3 |
-| change | 141 | 139 | 2 | 0 | 34,404 | 6 | 3 |
-| custom-code | 13 | 13 | 0 | 0 | 34,210 | 6 | 3 |
-| data | 23 | 23 | 0 | 0 | 34,385 | 5 | 3 |
-| docs-question | 34 | 17 | 17 | 0 | 1,450 | 8 | 2 |
-| off-topic | 10 | 10 | 0 | 0 | 26,075 | 8 | 3 |
-| smalltalk | 17 | 17 | 0 | 0 | 27,316 | 8 | 2 |
-| spec-question | 46 | 35 | 11 | 0 | 1,775 | 6 | 3 |
-| two-things | 17 | 17 | 0 | 0 | 44,132 | 3 | 3 |
+| ambiguous | 25 | 25 | 0 | 0 | 26,700 | 9 | 3 |
+| change | 141 | 140 | 1 | 0 | 34,462 | 10 | 3 |
+| custom-code | 13 | 13 | 0 | 0 | 34,222 | 11 | 3 |
+| data | 23 | 23 | 0 | 0 | 34,402 | 8 | 3 |
+| docs-question | 34 | 17 | 17 | 0 | 1,519 | 9 | 2 |
+| off-topic | 10 | 10 | 0 | 0 | 26,075 | 11 | 3 |
+| smalltalk | 17 | 17 | 0 | 0 | 27,316 | 9 | 2 |
+| spec-question | 46 | 39 | 7 | 0 | 1,864 | 8 | 3 |
+| two-things | 17 | 17 | 0 | 0 | 44,132 | 7 | 3 |

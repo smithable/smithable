@@ -6,17 +6,17 @@
    "right": 25,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 26654,
-   "medianExtraParts": 4,
+   "medianTokens": 26700,
+   "medianExtraParts": 9,
    "medianExtraDocs": 3
   },
   "change": {
    "requests": 141,
-   "right": 139,
-   "cannotTell": 2,
+   "right": 140,
+   "cannotTell": 1,
    "wrongRoute": 0,
-   "medianTokens": 34404,
-   "medianExtraParts": 6,
+   "medianTokens": 34462,
+   "medianExtraParts": 10,
    "medianExtraDocs": 3
   },
   "custom-code": {
@@ -24,8 +24,8 @@
    "right": 13,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 34210,
-   "medianExtraParts": 6,
+   "medianTokens": 34222,
+   "medianExtraParts": 11,
    "medianExtraDocs": 3
   },
   "data": {
@@ -33,8 +33,8 @@
    "right": 23,
    "cannotTell": 0,
    "wrongRoute": 0,
-   "medianTokens": 34385,
-   "medianExtraParts": 5,
+   "medianTokens": 34402,
+   "medianExtraParts": 8,
    "medianExtraDocs": 3
   },
   "docs-question": {
@@ -42,8 +42,8 @@
    "right": 17,
    "cannotTell": 17,
    "wrongRoute": 0,
-   "medianTokens": 1450,
-   "medianExtraParts": 8,
+   "medianTokens": 1519,
+   "medianExtraParts": 9,
    "medianExtraDocs": 2
   },
   "off-topic": {
@@ -52,7 +52,7 @@
    "cannotTell": 0,
    "wrongRoute": 0,
    "medianTokens": 26075,
-   "medianExtraParts": 8,
+   "medianExtraParts": 11,
    "medianExtraDocs": 3
   },
   "smalltalk": {
@@ -61,16 +61,16 @@
    "cannotTell": 0,
    "wrongRoute": 0,
    "medianTokens": 27316,
-   "medianExtraParts": 8,
+   "medianExtraParts": 9,
    "medianExtraDocs": 2
   },
   "spec-question": {
    "requests": 46,
-   "right": 35,
-   "cannotTell": 11,
+   "right": 39,
+   "cannotTell": 7,
    "wrongRoute": 0,
-   "medianTokens": 1775,
-   "medianExtraParts": 6,
+   "medianTokens": 1864,
+   "medianExtraParts": 8,
    "medianExtraDocs": 3
   },
   "two-things": {
@@ -79,7 +79,7 @@
    "cannotTell": 0,
    "wrongRoute": 0,
    "medianTokens": 44132,
-   "medianExtraParts": 3,
+   "medianExtraParts": 7,
    "medianExtraDocs": 3
   }
  },
@@ -109,56 +109,56 @@
   "ambiguous": {
    "requests": 25,
    "byRule": 0,
-   "medianTokens": 26654,
-   "maxTokens": 44272
+   "medianTokens": 26700,
+   "maxTokens": 44351
   },
   "change": {
    "requests": 141,
    "byRule": 14,
-   "medianTokens": 34404,
-   "maxTokens": 46072
+   "medianTokens": 34462,
+   "maxTokens": 46156
   },
   "custom-code": {
    "requests": 13,
    "byRule": 0,
-   "medianTokens": 34210,
+   "medianTokens": 34222,
    "maxTokens": 44465
   },
   "data": {
    "requests": 23,
    "byRule": 0,
-   "medianTokens": 34385,
-   "maxTokens": 45868
+   "medianTokens": 34402,
+   "maxTokens": 45885
   },
   "docs-question": {
    "requests": 34,
    "byRule": 0,
-   "medianTokens": 1450,
+   "medianTokens": 1519,
    "maxTokens": 38831
   },
   "off-topic": {
    "requests": 10,
    "byRule": 0,
    "medianTokens": 26075,
-   "maxTokens": 34368
+   "maxTokens": 34386
   },
   "smalltalk": {
    "requests": 17,
    "byRule": 13,
    "medianTokens": 27316,
-   "maxTokens": 27362
+   "maxTokens": 27381
   },
   "spec-question": {
    "requests": 46,
    "byRule": 2,
-   "medianTokens": 1775,
-   "maxTokens": 38841
+   "medianTokens": 1864,
+   "maxTokens": 38886
   },
   "two-things": {
    "requests": 17,
    "byRule": 0,
    "medianTokens": 44132,
-   "maxTokens": 45440
+   "maxTokens": 45486
   }
  }
 }

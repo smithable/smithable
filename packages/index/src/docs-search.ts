@@ -147,9 +147,24 @@ export function appParts(sections: SummarySection[], request: string, count = 4)
     .filter((h) => h.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, count);
-  if (found.length) return found.map(({ s }) => sectionText(s)).join("\n\n");
+  // What the app does by itself that the search may miss (T844 B): every action, outgoing call
+  // and timer the parts found leave out, by one line each, a few tokens, in any language asked.
+  const also = sections
+    .filter((s) => /^(action|outgoing|timer):/.test(s.concept) && !found.some((h) => h.s === s))
+    .map((s) => `- ${s.concept}: ${s.title}`);
+  if (found.length)
+    return [
+      ...found.map(({ s }) => sectionText(s)),
+      ...(also.length ? [`Also in the app:\n${also.join("\n")}`] : []),
+    ].join("\n\n");
   const whole = sections.map(sectionText).join("\n\n");
-  return whole.length > SUMMARY ? `${whole.slice(0, SUMMARY)}…` : whole;
+  if (whole.length <= SUMMARY) return whole;
+  // Cut, the ones past the cut by their line.
+  const cut = whole.slice(0, SUMMARY);
+  const past = sections
+    .filter((s) => /^(action|outgoing|timer):/.test(s.concept) && !cut.includes(sectionText(s)))
+    .map((s) => `- ${s.concept}: ${s.title}`);
+  return `${cut}…${past.length ? `\n\nAlso in the app:\n${past.join("\n")}` : ""}`;
 }
 
 /** The spec's sections whose entries a question may name (T755): what the summary leaves out. */
