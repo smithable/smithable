@@ -57,6 +57,9 @@ test("the deadlines are read from the referenced record in the write's transacti
   );
   expect(booking).toContain("return at ? new Date(at.getTime() - 0) : undefined;");
   expect(booking).toContain('throw new Conflict("cancel-closed")');
+  // Deleting many is held to the same deadline as one (T819).
+  const many = booking.slice(booking.indexOf("async removeMany("));
+  expect(many.slice(0, many.indexOf("\n  },"))).toContain('throw new Conflict("cancel-closed")');
   // A change: a move or an entry into the count is checked like a new record; leaving it is a cancel.
   expect(booking).toContain("const counted = (_r: Record<string, unknown>) => true;");
   // With a where, the row is read.
