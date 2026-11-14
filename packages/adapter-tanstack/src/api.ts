@@ -646,7 +646,7 @@ export const Route = createFileRoute("/api/v1/openapi.json")({
 import { createFileRoute } from "@tanstack/react-router";
 import { ${camelName}FromApi, ${camelName}ToApi } from "#/generated/api.server";
 import { ${n.data} } from "#/generated/${kebab(model.name)}.server";
-import { ${[...new Set([reads, adds])].sort().join(", ")} } from "#/kit/api.server";
+import { ${[...new Set([reads, adds, ...(adds === "openApiCall" ? ["BadInput"] : [])])].sort().join(", ")} } from "#/kit/api.server";
 import { importItems } from "#/kit/import.server";
 import { whereFromQuery } from "#/kit/where";
 
@@ -666,10 +666,15 @@ export const Route = createFileRoute("/api/v1/${path}/")({
           }`
               : ""
           }
-          const limit = Math.min(100, Math.max(1, Number(query.get("limit")) || 100));
-          const page = Math.max(1, Number(query.get("page")) || 1);
+          // Whole numbers in their bounds: a limit of 1 to 100, a page from 1 (T821 #8).
+          const whole = (name: string, fallback: number) => {
+            const n = Number(query.get(name));
+            return Number.isSafeInteger(n) && n >= 1 ? n : fallback;
+          };
+          const limit = Math.min(100, whole("limit", 100));
+          const page = Math.min(whole("page", 1), 1_000_000);
           // Filters as fields (?status=sent, a list as a,b, a range as from..to, mine=true), search, sort.
-          const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"]);
+          const where = whereFromQuery(query, ["limit", "page", "search", "sort", "sum"${model.trash ? ', "trashed"' : ""}]);
           const search = query.get("search") ?? undefined;
           const { items, total } = await ${n.data}.find(viewer, {
             where,
@@ -679,7 +684,8 @@ export const Route = createFileRoute("/api/v1/${path}/")({
             offset: (page - 1) * limit,
           });
           // ?sum=total adds up a number field over every record that fits, not only this page.
-          const sums = query.get("sum")?.split(",").filter(Boolean);
+          // Each field once, at most ten.
+          const sums = [...new Set(query.get("sum")?.split(",").filter(Boolean))].slice(0, 10);
           return {
             items: items.map(${camelName}ToApi),
             page,
@@ -694,7 +700,13 @@ export const Route = createFileRoute("/api/v1/${path}/")({
         ${adds}(request, async (viewer, body) => {
           // A list is an import (A 238): every item checked, each one's id or refusal, one line to undo it by.
           if (Array.isArray(body)) {
-            const { results, undo } = await importItems(viewer, ${JSON.stringify(model.name)}, body, (item) => ${n.data}.create(viewer, ${camelName}FromApi(item) as never));
+${
+  adds === "openApiCall"
+    ? `            // An import is a key's: a visitor adds one at a time (T821 #9).
+            if (viewer === null) throw new BadInput("Add one at a time.");
+`
+    : ""
+}            const { results, undo } = await importItems(viewer, ${JSON.stringify(model.name)}, body, (item) => ${n.data}.create(viewer, ${camelName}FromApi(item) as never));
             return { results, ...(undo !== undefined ? { undo: \`/api/v1/${path}/imports/\${undo}\` } : {}) };
           }
           return ${camelName}ToApi(await ${n.data}.create(viewer, ${camelName}FromApi(body) as never));
@@ -966,7 +978,7 @@ ${combines
               if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "sum" || c === "join" || Number.isInteger(c))))
                 throw new BadInput("choices: for each field the records differ in, keep or the id of the record whose value is taken (sum or join where offered).");
               const made = await ${actionNames(a).run}(viewer, ids as number[], (choices ?? {}) as never, remove === true);
-              return ${camelName}ToApi((await ${n.data}.get(viewer, made)) as Record<string, any>);
+              return ((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, made)) as Record<string, any> | undefined);
             }`,
   )
   .join("\n")}
@@ -1009,18 +1021,18 @@ ${own
               if (choices !== undefined && (typeof choices !== "object" || choices === null || Array.isArray(choices) || !Object.values(choices).every((c) => c === "keep" || c === "sum" || c === "join" || Number.isInteger(c))))
                 throw new BadInput("choices: for each field the records differ in, keep or the id of the record whose value is taken (sum or join where offered).");
               const merged = await ${actionNames(a).run}(viewer, [id, ...(others as number[])], (choices ?? {}) as never);
-              return ${camelName}ToApi((await ${n.data}.get(viewer, merged.kept)) as Record<string, any>);
+              return ((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, merged.kept)) as Record<string, any> | undefined);
             }`;
     if (a.split)
       return `            case ${JSON.stringify(a.name)}: {
               const { move } = (body ?? {}) as { move?: unknown };
               if (!Array.isArray(move) || !move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
-              return ${camelName}ToApi((await ${n.data}.get(viewer, await ${actionNames(a).run}(viewer, id, move as number[]))) as Record<string, any>);
+              return ((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, await ${actionNames(a).run}(viewer, id, move as number[]))) as Record<string, any> | undefined);
             }`;
     const ran = `await ${actionNames(a).run}(viewer, id${askedFields(a).length ? `, ${actionNames(a).asks}.parse(body)` : ""})`;
     // A copy gives the new record's id: the answer is that record.
     return `            case ${JSON.stringify(a.name)}:
-              return ${camelName}ToApi(${a.copy ? `(await ${n.data}.get(viewer, ${ran})) as Record<string, any>` : ran});`;
+              return ${a.copy ? `((row) => (row ? ${camelName}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, ${ran})) as Record<string, any> | undefined)` : `${camelName}ToApi(${ran})`};`;
   })
   .join("\n")}
             default:
@@ -1217,7 +1229,7 @@ function toolsModule(
       const id = Number(args.id);
       if (!${n.data}.restore(viewer, [id]).restored)
         throw new NotFound(\`No ${templateText(n.label.toLowerCase())} \${id} in the trash that you may restore.\`);
-      return ${c}ToApi((await ${n.data}.get(viewer, id)) as Record<string, any>);
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await ${n.data}.get(viewer, id)) as Record<string, any> | undefined);
     }`;
     });
   const runs = actions.map((action) => {
@@ -1232,7 +1244,7 @@ function toolsModule(
       for (const one of args.ids) ids.push((await found(KINDS.${model.name}, viewer, one)).id as number);
       const choices = numbered(args.choices);
       const made = await ${actionNames(action).run}(keyed(viewer), ids, choices as never, args.remove === true);
-      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), made)) as Record<string, any>);
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), made)) as Record<string, any> | undefined);
     }`;
     // A merge keeps the record named and takes the others; a split answers with its new record.
     if (action.merge || action.split)
@@ -1246,9 +1258,9 @@ function toolsModule(
       for (const one of args.others) others.push((await found(KINDS.${model.name}, viewer, one, "merge")).id as number);
       const choices = numbered(args.choices);
       const merged = await ${actionNames(action).run}(keyed(viewer), [row.id, ...others], choices as never);
-      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), merged.kept)) as Record<string, any>);`
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), merged.kept)) as Record<string, any> | undefined);`
           : `if (!Array.isArray(args.move) || !args.move.every(Number.isInteger)) throw new BadInput("Say which records go: move, a list of ids.");
-      return ${c}ToApi((await KINDS.${model.name}.data.get(keyed(viewer), await ${actionNames(action).run}(keyed(viewer), row.id, args.move as number[]))) as Record<string, any>);`
+      return ((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), await ${actionNames(action).run}(keyed(viewer), row.id, args.move as number[]))) as Record<string, any> | undefined);`
       }
     }`;
     // The record by its id or its title, as the other tools take it.
@@ -1256,7 +1268,7 @@ function toolsModule(
     // A copy gives the new record's id: the answer is that record.
     return `    case ${JSON.stringify(action.name)}: {
       const row = await found(KINDS.${model.name}, viewer, args.id, "change");
-      return ${c}ToApi(${action.copy ? `(await KINDS.${model.name}.data.get(keyed(viewer), ${ran})) as Record<string, any>` : ran});
+      return ${action.copy ? `((row) => (row ? ${c}ToApi(row) : { done: true, readable: false }))((await KINDS.${model.name}.data.get(keyed(viewer), ${ran})) as Record<string, any> | undefined)` : `${c}ToApi(${ran})`};
     }`;
   });
   // A custom action on rows: on the ids given, with what else it asks for.
