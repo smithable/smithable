@@ -33,8 +33,24 @@ const size = { width: 1280, height: 720 };
 mkdirSync(opts.out, { recursive: true });
 
 // What the receptionist asks: one thing reception may do, one it may not.
-const ask =
-  "Add a Yin class this Saturday at 10:00 with Emma Lindqvist. Also change Emma's bio to say she is away in December.";
+// The day is named, never "this Saturday": on a Saturday that is ambiguous, and Claude rightly asks
+// which one instead of adding it (a take on 2026-11-14). The next Saturday after today, in Mariehamn.
+const saturday = (() => {
+  const day = new Date();
+  do day.setDate(day.getDate() + 1);
+  while (
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Mariehamn", weekday: "long" }).format(
+      day,
+    ) !== "Saturday"
+  );
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Mariehamn",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(day);
+})();
+const ask = `Add a Yin class on ${saturday} at 10:00 with Emma Lindqvist. Also change Emma's bio to say she is away in December.`;
 
 if (opts["dry-run"]) {
   console.log(`A take would:
@@ -144,7 +160,9 @@ const stage = `<!doctype html><html><head><meta charset="utf-8"><style>
 const context = await browser.newContext({
   viewport: size,
   deviceScaleFactor: 2,
-  recordVideo: { dir: opts.out, size: { width: size.width * 2, height: size.height * 2 } },
+  // The video at the viewport size: at twice it, Playwright put most frames at the viewport size in
+  // the top-left corner of a grey canvas and only some at full size (2026-11-13).
+  recordVideo: { dir: opts.out, size },
   colorScheme: "light",
   timezoneId: "Europe/Mariehamn",
 });
@@ -244,7 +262,13 @@ try {
         await page.evaluate(([id, o, t]) => window.answer(id, o, t), [part.tool_use_id, ok, shown]);
         if (added && name === "add" && input.kind === "Session") {
           moment("the class is added", "The app adds it: it is in the schedule");
-          await page.evaluate(() => window.show(`/schedule?t=${Date.now()}`));
+          // The schedule shows seven days from today: a class later than that is shown from its own day.
+          const dayOf = (at) =>
+            new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Mariehamn" }).format(new Date(at));
+          const day = dayOf(input.values?.startsAt ?? Date.now());
+          const ahead = (Date.parse(day) - Date.parse(dayOf(Date.now()))) / 86400000;
+          const from = ahead >= 7 ? `from=${day}&` : "";
+          await page.evaluate((q) => window.show(`/schedule?${q}t=${Date.now()}`), from);
           await app.getByText(/Yin/).first().waitFor({ timeout: 60000 });
           await hold(1500);
           await shot("added");

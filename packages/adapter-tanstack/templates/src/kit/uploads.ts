@@ -242,6 +242,26 @@ export function fileKind(
   return ext && kind?.is(bytes, text) ? { ext, type: kind.type } : undefined;
 }
 
+/**
+ * The most all stored pictures and documents may take (UPLOADS_MAX_BYTES), in bytes; 0 when it is
+ * not set. Written as anything but a number of bytes ("500MB", or one too large to be one) it lets
+ * nothing in, said once in the log, rather than no limit at all.
+ */
+let badMaxSaid = false;
+export function uploadsMax(): number {
+  const text = process.env.UPLOADS_MAX_BYTES?.trim() ?? "";
+  if (!text) return 0;
+  const bytes = Number(text);
+  if (Number.isFinite(bytes) && bytes >= 0) return Math.floor(bytes);
+  if (!badMaxSaid) {
+    badMaxSaid = true;
+    log.error("UPLOADS_MAX_BYTES is not a number of bytes; no file is stored until it is", {
+      value: text,
+    });
+  }
+  return -1;
+}
+
 /** All stored pictures and documents together, in bytes: counted at most once a minute. */
 const counted = new Map<string, { bytes: number; at: number }>();
 function storedBytes(cachedOnly = false): number {
@@ -334,7 +354,7 @@ export async function reserveUpload(bytes: number): Promise<UploadReservation | 
   if (!Number.isFinite(bytes) || bytes < 0) return undefined;
   const dir = uploadsDir();
   const kept = counted.get(dir);
-  if (Number(process.env.UPLOADS_MAX_BYTES ?? "") && (!kept || Date.now() - kept.at >= 60_000)) {
+  if (uploadsMax() && (!kept || Date.now() - kept.at >= 60_000)) {
     let pending = scanning.get(dir);
     if (!pending) {
       pending = (async () => {
@@ -392,7 +412,7 @@ const heldBytes = new Map<string, number>();
 export function roomFor(bytes: number, cachedOnly = false): UploadReservation | undefined {
   if (!Number.isFinite(bytes) || bytes < 0) return undefined;
   const dir = uploadsDir();
-  const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
+  const max = uploadsMax();
   const held = heldBytes.get(dir) ?? 0;
   if (max && storedBytes(cachedOnly) + held + bytes > max) return undefined;
   heldBytes.set(dir, held + bytes);
@@ -420,7 +440,7 @@ function store(path: string, bytes: Uint8Array, reservation?: UploadReservation)
   if (!held?.active || held.dir !== uploadsDir()) throw new BadFile(w.storageFull);
   try {
     const added = existsSync(path) ? 0 : bytes.length;
-    const max = Number(process.env.UPLOADS_MAX_BYTES ?? "");
+    const max = uploadsMax();
     if (
       max &&
       storedBytes(Boolean(reservation)) + (heldBytes.get(held.dir) ?? 0) - held.bytes + added > max
@@ -539,10 +559,27 @@ export function fileHeaders(stored: StoredFile): Record<string, string> {
 }
 
 /**
- * A record's stored picture or document as the file routes send it, or "Not found": cached by
- * browsers for a day when anyone may read the model (the address changes with the content);
- * otherwise asked again each time (no-cache, with its ETag: a short 304 when it has not
- * changed), so after a sign-out or access taken away the browser no longer shows it.
+ * How long a file may be kept: a day, by anyone, only where that is safe by the address: a file
+ * anyone may read, not a demo visitor's own (`shared`), asked for by its content's tag
+ * (src/kit/file-address.ts), so a replaced file has a new address. Otherwise asked again each
+ * time; the ETag makes that cheap.
+ */
+export function cacheControl(
+  request: Request,
+  tag: string,
+  everyone: boolean,
+  shared: boolean,
+): string {
+  return everyone && shared && `"${new URL(request.url).searchParams.get("v")}"` === tag
+    ? "public, max-age=86400, immutable"
+    : "private, no-cache";
+}
+
+/**
+ * A record's stored picture or document as the file routes send it, or "Not found": kept for a
+ * day when anyone may read the model and the address carries the content's tag; otherwise asked
+ * again each time (no-cache, with its ETag: a short 304 when it has not changed), so a replaced or
+ * removed file, or one after a sign-out or access taken away, is no longer shown.
  */
 export function uploadResponse(
   request: Request,
@@ -558,7 +595,7 @@ export function uploadResponse(
     ...(kind === "picture"
       ? { "Content-Type": "image/webp", "X-Content-Type-Options": "nosniff" }
       : fileHeaders(found)),
-    "Cache-Control": everyone ? "public, max-age=86400" : "private, no-cache",
+    "Cache-Control": cacheControl(request, tag, everyone, ownDataDir() === dataDir),
     ETag: tag,
   };
   if (request.headers.get("if-none-match") === tag)

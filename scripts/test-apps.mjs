@@ -1765,6 +1765,42 @@ async function kioskPaymentFlow(dir, base) {
   );
   const generated = spawnSync("node", [cli, "generate", dir], { cwd: repo, encoding: "utf8" });
   if (generated.status !== 0) throw new Error(`${generated.stdout}${generated.stderr}`);
+  // An order with no lines, through the plain create a record page uses: it stays held, never
+  // released unpaid at a total of zero (T817).
+  const holdCheck = join(dir, "src/order-hold.test.ts");
+  writeFileSync(
+    holdCheck,
+    `import { expect, test } from "vitest";
+import { db } from "#/db";
+import { user } from "#/db/schema";
+import { orderData } from "./generated/order.server";
+
+const values = { name: "By hand", phone: "+358 40 555 6666" } as never;
+
+test("an order with no lines stays held", async () => {
+  const made = await orderData.create(null, values, undefined, true);
+  expect(made.payHeldAt).not.toBeNull();
+});
+
+test("unheld and unpaid only for a role that changes everyone's orders", async () => {
+  db.insert(user).values([
+    { id: "hold-admin", name: "Admin", email: "hold-admin@example.com", role: "admin" },
+    { id: "hold-guest", name: "Guest", email: "hold-guest@example.com", role: "guest" },
+  ]).run();
+  const admin = { id: "hold-admin", name: "Admin", email: "hold-admin@example.com", role: "admin" };
+  const guest = { id: "hold-guest", name: "Guest", email: "hold-guest@example.com", role: "guest" };
+  // Staff entering one by hand: unheld.
+  expect((await orderData.create(admin, values, undefined, false)).payHeldAt).toBeNull();
+  // Anyone else who may add one, asking not to pay: held all the same.
+  expect((await orderData.create(guest, values, undefined, false)).payHeldAt).not.toBeNull();
+});
+`,
+  );
+  try {
+    run("pnpm", ["exec", "vitest", "run", "src/order-hold.test.ts"], dir);
+  } finally {
+    rmSync(holdCheck);
+  }
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
   // Orders up to the provider's page; the Payment's id from its address.
@@ -1896,7 +1932,7 @@ async function kioskPaymentFlow(dir, base) {
     if ((await event(forged, "0".repeat(64))) !== 401)
       throw new Error("an unsigned event was taken");
     console.log(
-      "  ✓ kiosk payments (fake): an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount releases it; a forged call is refused",
+      "  ✓ kiosk payments (fake): an order with no lines stays held, and so does one made unpaid by anyone but staff; an order is held until paid and told of then; declined it is gone; left, the hold timer releases it; the word twice counts once; a wrong amount releases it; a forged call is refused",
     );
   } catch (error) {
     console.log(
@@ -4518,7 +4554,7 @@ async function pictureFlow(dir, base) {
     await open(page, `${base}/instructors`);
     // The list is a table on a wide screen and cards on a phone: both carry the picture.
     await page
-      .locator('img[src="/files/instructor/1/portrait"]:visible')
+      .locator('img[src^="/files/instructor/1/portrait"]:visible')
       .waitFor({ timeout: 10000 * P });
     await open(page, `${base}/instructors/1`);
     const before = new Set(readdirSync(uploads));
@@ -8631,7 +8667,7 @@ test("measure sums, averages and sums per value", async () => {
     // The inspector's answering loop (docs/design/assistant.md §4), with a stand-in for the host's
     // model: the app runs the model's calls through the role's own tools and sends the results
     // back, a change is only proposed, a kind the role is not offered is refused, and a used-up
-    // allowance (402) is said in the host's words.
+    // allowance (402) is said in the app's words, never the host's.
     if (example === "api")
       step(
         "the inspector's model loop: tools run as the role and their results go back, tokens add up, a change is only proposed, a kind not offered is refused, an answer no result bears out is sent back, marked, then shown as not confirmed, a 402 is said",
@@ -8720,13 +8756,15 @@ test("the model's tool loop", async () => {
   expect(counted2.unconfirmed).toBeUndefined();
   expect(counted2.text).toBe(\`There are \${await tasks()} tasks.\`);
 
-  // The host's allowance used up: said in its words, and the rules still answer.
+  // The host's allowance used up: said in the app's words (the host's may name the key), and the
+  // rules still answer.
   const spent = await answer("anything", {
     offer: offerFor(viewer), kinds: [], call, model,
     fetch: (async () => new Response(JSON.stringify({ error: { message: "Used up for today." } }), { status: 402 })) as unknown as typeof fetch,
   });
   expect(spent).toMatchObject({ source: "none" });
-  expect(spent.note).toContain("Used up for today.");
+  expect(spent.note).not.toContain("Used up for today.");
+  expect(spent.note).toContain("answered all the questions");
 });
 `,
           );

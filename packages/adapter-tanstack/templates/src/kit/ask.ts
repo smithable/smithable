@@ -220,11 +220,15 @@ function readRecords(tokens: string[], kinds: AskKind[]): Read | undefined {
     if (!chosen) return undefined;
     take(left, chosen.p);
     for (const p of fieldWords(chosen.f.field)) if (take(left, p)) break;
+    // Several values of one choice field are any of them, however many ("draft, open, sent").
     const had = where[chosen.f.field];
+    const values = typeof had === "string" ? [had] : Array.isArray(had) ? had : [];
     where[chosen.f.field] =
-      typeof chosen.value === "string" && typeof had === "string" && had !== chosen.value
-        ? [had, chosen.value]
+      typeof chosen.value === "string" && values.length
+        ? [...new Set([...values, chosen.value])]
         : chosen.value;
+    if (Array.isArray(where[chosen.f.field]) && (where[chosen.f.field] as string[]).length === 1)
+      where[chosen.f.field] = (where[chosen.f.field] as string[])[0] as string;
   }
 
   return { kind, where, ...(by ? { by } : {}), left: left.filter((w) => !FILLER.has(w)) };
