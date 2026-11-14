@@ -13,7 +13,7 @@
 //   validates and generates; tokens and cost per build
 // The landing text's fit (`taste`) is for a judging model, scored apart; not in this script yet.
 //   node scripts/bench-first-builds.mjs [reader] [small] [small>better] [--set PATH] [--only fb-01,fb-02]
-//     [--label today] [--max-cost USD] [--record DIR]
+//     [--label today] [--max-cost USD] [--record DIR] [--replay DIR [--replay-from REC]]
 // allowance-used: free; Studio's fallback when its model refuses (the allowance used up), with a
 // stub model on this machine: the starter its questions step picks, replaced from the description.
 // reader: no model, free: the description reader alone, or (when it cannot build) the starter `new`
@@ -45,6 +45,8 @@ const label = option("--label") ?? new Date().toISOString().slice(0, 10);
 // estimate, as agreed for paid rounds); what was built so far is written as usual.
 const maxCost = option("--max-cost") ? Number(option("--max-cost")) : Number.POSITIVE_INFINITY;
 let stopped = false;
+const replay = option("--replay");
+if (replay && option("--record")) throw new Error("--replay and --record do not go together.");
 
 /**
  * For the allowance-used tier: a model on this machine that answers every call 402 with the
@@ -130,11 +132,18 @@ function envOf(tier) {
   Object.assign(env, {
     SMITHABLE_FRONTIER: "anthropic",
     SMITHABLE_FRONTIER_MODEL: models[tier],
-    ANTHROPIC_API_KEY: claudeKey(),
+    // A replay asks no model, so it needs no key: the provider is made, never called.
+    ANTHROPIC_API_KEY: replay ? "replay-asks-no-model" : claudeKey(),
     SMITHABLE_AI_POLICY: "best-available",
   });
   // --record DIR: every model call kept by the CLI's response cache, for replay (T784).
   if (option("--record")) env.SMITHABLE_LLM_CACHE = option("--record");
+  // --replay DIR: the calls answered from a recording only, free; a call not in it fails the
+  // build with "Not in the recording" (the prompt changed since: record the case again).
+  // --replay-from REC: answer from the whole recording REC too and copy what is used into DIR,
+  // to make a fixture of a few cases.
+  if (replay) Object.assign(env, { SMITHABLE_LLM_CACHE: replay, SMITHABLE_LLM_REPLAY: "1" });
+  if (replay && option("--replay-from")) env.SMITHABLE_LLM_CACHE_FROM = option("--replay-from");
   return env;
 }
 
