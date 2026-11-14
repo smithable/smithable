@@ -1466,14 +1466,21 @@ export async function studio(
             return asked !== undefined && reply !== undefined ? [{ request: asked, reply }] : [];
           },
         );
-        const parts = (Array.isArray(docs) ? docs.slice(0, 3) : []).flatMap(
-          (part: { title?: unknown; url?: unknown; text?: unknown } | null) => {
+        // At most five (a question's, T844 D), each with its search score when it is a number.
+        const parts = (Array.isArray(docs) ? docs.slice(0, 5) : []).flatMap(
+          (part: { title?: unknown; url?: unknown; text?: unknown; score?: unknown } | null) => {
             const [title, at, words] = [
               text(part?.title, 200),
               text(part?.url, 300),
               text(part?.text, 3000),
             ];
-            return title && at && words ? [{ title, url: at, text: words }] : [];
+            const score =
+              typeof part?.score === "number" && Number.isFinite(part.score)
+                ? part.score
+                : undefined;
+            return title && at && words
+              ? [{ title, url: at, text: words, ...(score === undefined ? {} : { score }) }]
+              : [];
           },
         );
         const quiet = { out: () => {}, err: (t: string) => log(t) };

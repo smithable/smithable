@@ -20,6 +20,7 @@ test("the parts holding the question's words, those with them in the heading fir
     url: "https://docs.smithable.ai/self-host.html#backups",
     line: "Back the database up to an S3 bucket every night.",
     text: "Back the database up to an S3 bucket every night.",
+    score: expect.any(Number),
   });
   expect(searchDocs(index, "how do I add a language")[0]?.url).toBe(
     "https://docs.smithable.ai/language.html",

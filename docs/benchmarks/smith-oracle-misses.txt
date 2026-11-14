@@ -1,46 +1,5 @@
-api-only-tasks (change, en): cannot tell: missing auth
-q-bk-mail-book (spec-question, en): cannot tell: missing outgoing:bookingMade, outgoing:reminder
-q-bk-sv-drafts (spec-question, sv): cannot tell: missing auth, model:Post
-q-bb-sv-delete-services (spec-question, sv): cannot tell: missing auth
-q-ki-order-notify (spec-question, en): cannot tell: missing outgoing:toKitchen
-q-ki-sv-others (spec-question, sv): cannot tell: missing auth
-q-st-api (spec-question, en): cannot tell: missing auth
-q-st-fi-resolve (spec-question, fi): cannot tell: missing action:resolve
-q-sp-close (spec-question, en): cannot tell: missing auth
-d-publish (docs-question, en): cannot tell: missing docs start-hosted.html#publish-and-share
-d-mcp (docs-question, en): cannot tell: missing docs api.html#6-for-ai-assistants | assistants.html#4-connect-an-assistant
-d-cost (docs-question, en): cannot tell: missing docs why.html#is-there-a-hosted-version
-d-selfhost (docs-question, en): cannot tell: missing docs leave.html | self-host.html | start-local.html#running-it-elsewhere
 d-apps (docs-question, sv): cannot tell: missing docs limits.html#per-account
 d-fi-finnish (docs-question, fi): cannot tell: missing docs language.html
-d-sv-publish (docs-question, sv): cannot tell: missing docs start-hosted.html#publish-and-share
-d-sv-data (docs-question, sv): cannot tell: missing docs why.html#where-does-my-data-live | start-hosted.html#where-it-runs
 d-fi-cost (docs-question, fi): cannot tell: missing docs why.html#is-there-a-hosted-version
-d-handover (docs-question, en): cannot tell: missing docs start-hosted.html#take-it-with-you
 long-mp-docs (docs-question, en): cannot tell: missing docs why.html#where-does-my-data-live | start-hosted.html#where-it-runs | start-hosted.html#take-it-with-you | leave.html
-bk-sv-instructors-for-staff (change, sv): cannot tell: missing auth
-bk-sv-staff-today-again (change, sv): cannot tell: missing auth
-bk-sv-members-for-staff (change, sv): cannot tell: missing auth
-bk-sv-classtypes-staff-members (change, sv): cannot tell: missing auth
-bk-sv-bookings-members-staff (change, sv): cannot tell: missing auth
-bk-sv-neg-inte-for (change, sv): cannot tell: missing auth
-bk-sv-neg-ej-for (change, sv): cannot tell: missing auth
-bk-sv-neg-utom (change, sv): cannot tell: missing auth
-bk-sv-neg-forutom (change, sv): cannot tell: missing auth
-bk-sv-neg-men-inte (change, sv): cannot tell: missing auth
-bk-sv-neg-dold (change, sv): cannot tell: missing auth
-bk-sv-neg-bara-for (change, sv): cannot tell: missing auth
-bk-sv-only-staff (change, sv): cannot tell: missing auth
-bk-sv-staff-utom-members (change, sv): cannot tell: missing auth
-bk-sv-staff-inte-members (change, sv): cannot tell: missing auth
-q-bk-sv-staff-sessions (spec-question, sv): cannot tell: missing auth
-q-inv-sv-overdue (spec-question, sv): cannot tell: missing timer:markOverdue
-q-st-sv-public (spec-question, sv): cannot tell: missing auth
-d-sv-export (docs-question, sv): cannot tell: missing docs start-hosted.html#take-it-with-you | leave.html | api.html#as-a-spreadsheet
 d-sv-selfhost (docs-question, sv): cannot tell: missing docs leave.html | self-host.html | start-local.html#running-it-elsewhere
-d-sv-import (docs-question, sv): cannot tell: missing docs import.html
-d-sv-need-ai (docs-question, sv): cannot tell: missing docs why.html#do-i-need-an-ai-model
-d-sv-sandbox (docs-question, sv): cannot tell: missing docs limits.html#the-free-sandbox | start-hosted.html#try-it-in-a-sandbox
-d-sv-mail-limit (docs-question, sv): cannot tell: missing docs limits.html#per-app
-bk-sv-staff-delete-sessions (change, sv): cannot tell: missing auth
-inv-sv-overdue-3 (change, sv): cannot tell: missing timer:markOverdue
