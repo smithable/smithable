@@ -2,6 +2,7 @@
 // own summary that share the most words with a request, ranked by BM25 with no model. Studio
 // searches the docs in the person's browser (a hosted workspace has no internet), the host
 // searches the app; the bench uses both, so the numbers measured are what Smith gets.
+import { standsFor } from "./search-words.js";
 import type { SummarySection } from "./summary.js";
 
 /** The docs' search index as the site builds it (scripts/build-docs.mjs): pages and their parts. */
@@ -34,12 +35,16 @@ const PLAIN = new Set(
 
 /** A request's or a text's words: lower case, letters and digits, a plural's s dropped. */
 export function searchWords(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 1 && !PLAIN.has(w))
-    .map((w) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w));
+  return (
+    text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 1 && !PLAIN.has(w))
+      // A word of another language also as the words it stands for (search-words.ts).
+      .flatMap((w) => [w, ...standsFor(w)])
+      .map((w) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w))
+  );
 }
 
 /**

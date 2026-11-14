@@ -24,7 +24,7 @@ const index: DocsIndex = {
 
 test("a request's words: no plain words, a plural's s dropped", () => {
   expect(searchWords("How do I add API keys?")).toEqual(["add", "api", "key"]);
-  expect(searchWords("Hur publicerar jag appen?")).toEqual(["publicerar", "appen"]);
+  expect(searchWords("Hur publicerar jag appen?")).toEqual(["publicerar", "publish", "appen"]);
 });
 
 test("the docs' parts by BM25, a heading's words counting more", () => {
