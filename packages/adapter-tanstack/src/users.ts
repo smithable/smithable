@@ -458,14 +458,21 @@ ${
 test("an invitation withheld from a sign-in that had not proven the address is the address's once proven", async () => {
   const address = "users-test-unproven@${domain}";
   await invite(admin, address, ${JSON.stringify(other)}, ORIGIN);
-  // A provider's sign-in with an address it has not confirmed: the account, but not the invited role.
-  const context = await auth.$context;
-  const made = await context.internalAdapter.createUser({ email: address, name: "unproven", emailVerified: false }, { path: "/callback/google" } as never);
+  // A provider's sign-in with an address it has not confirmed (its callback, emailVerified false),
+  // through the user hooks as Better Auth runs them: the account, but not the invited role.
+  const hooks = auth.options.databaseHooks?.user?.create;
+  const provider = { path: "/callback/google" } as never;
+  const asked = { id: "users-test-unproven", email: address, name: "unproven", emailVerified: false };
+  const before = (await hooks?.before?.(asked as never, provider)) as { data: { role: string } };
+  expect(before.data.role).toBe(${JSON.stringify(auth.defaultRole)});
+  db.insert(user).values({ ...asked, role: before.data.role }).run();
+  await hooks?.after?.({ ...asked, role: before.data.role } as never, provider);
+  const made = { id: asked.id };
   expect(db.select().from(user).where(eq(user.id, made.id)).get()?.role).toBe(${JSON.stringify(auth.defaultRole)});
   expect(db.select().from(invitation).where(eq(invitation.email, address)).get()).toBeDefined();
   // The address proven (a code by mail), then a sign-in: the invitation's role, and it is used up.
   db.update(user).set({ emailVerified: true }).where(eq(user.id, made.id)).run();
-  await auth.options.databaseHooks?.session?.create?.after?.({ userId: made.id } as never, null as never);
+  await auth.options.databaseHooks?.session?.create?.after?.({ userId: made.id } as never);
   expect(db.select().from(user).where(eq(user.id, made.id)).get()?.role).toBe(${JSON.stringify(other)});
   expect(db.select().from(invitation).where(eq(invitation.email, address)).get()).toBeUndefined();
   expect(audited("invitation accepted").at(-1)).toMatchObject({ who: made.id, details: { role: ${JSON.stringify(other)} } });
