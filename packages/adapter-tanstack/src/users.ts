@@ -477,7 +477,25 @@ test("an invitation withheld from a sign-in that had not proven the address is t
   expect(db.select().from(invitation).where(eq(invitation.email, address)).get()).toBeUndefined();
   expect(audited("invitation accepted").at(-1)).toMatchObject({ who: made.id, details: { role: ${JSON.stringify(other)} } });
 });
+${
+  auth.admins.length
+    ? `
+test("an address in admins that is also invited is an administrator once proven, not the invitation's role", async () => {
+  const address = ${JSON.stringify(auth.admins[0]?.toLowerCase())};
+  await invite(admin, address, ${JSON.stringify(other)}, ORIGIN);
+  const hooks = auth.options.databaseHooks?.user?.create;
+  const provider = { path: "/callback/google" } as never;
+  const asked = { id: "users-test-listed", email: address, name: "listed", emailVerified: false };
+  const before = (await hooks?.before?.(asked as never, provider)) as { data: { role: string } };
+  db.insert(user).values({ ...asked, role: before.data.role }).run();
+  await hooks?.after?.({ ...asked, role: before.data.role } as never, provider);
+  db.update(user).set({ emailVerified: true }).where(eq(user.id, asked.id)).run();
+  await auth.options.databaseHooks?.session?.create?.after?.({ userId: asked.id } as never);
+  expect(db.select().from(user).where(eq(user.id, asked.id)).get()?.role).toBe("admin");
+});
 `
+    : ""
+}`
     : ""
 }`
 }

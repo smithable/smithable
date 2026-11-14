@@ -8397,13 +8397,15 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
-          const left = current?.verified && current.role === "member" ? openInvitation(current.email.toLowerCase()) : undefined;
+          // Not over an administrator made just now: the admins list wins.
+          const left = !promoted && current?.verified && current.role === "member" ? openInvitation(current.email.toLowerCase()) : undefined;
           if (left) {
             db.update(user).set({ role: left.role }).where(eq(user.id, session.userId)).run();
             db.delete(invitation).where(eq(invitation.email, left.email)).run();
@@ -11339,7 +11341,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "44928679 generated",
+  "src/lib/auth.ts": "c01d8257 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -16603,7 +16605,8 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
@@ -19113,7 +19116,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "1f11479a generated",
+  "src/lib/auth.ts": "d28b895f generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -29001,7 +29004,8 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
@@ -34386,7 +34390,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "a4a788f1 generated",
+  "src/lib/auth.ts": "868565fa generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -41428,13 +41432,15 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
-          const left = current?.verified && current.role === "sales" ? openInvitation(current.email.toLowerCase()) : undefined;
+          // Not over an administrator made just now: the admins list wins.
+          const left = !promoted && current?.verified && current.role === "sales" ? openInvitation(current.email.toLowerCase()) : undefined;
           if (left) {
             db.update(user).set({ role: left.role }).where(eq(user.id, session.userId)).run();
             db.delete(invitation).where(eq(invitation.email, left.email)).run();
@@ -44276,7 +44282,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "c29d19be generated",
+  "src/lib/auth.ts": "3fe024fc generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -51381,7 +51387,8 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
@@ -53683,7 +53690,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "8b9dc574 generated",
+  "src/lib/auth.ts": "d24b43f5 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -60335,13 +60342,15 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
-          const left = current?.verified && current.role === "staff" ? openInvitation(current.email.toLowerCase()) : undefined;
+          // Not over an administrator made just now: the admins list wins.
+          const left = !promoted && current?.verified && current.role === "staff" ? openInvitation(current.email.toLowerCase()) : undefined;
           if (left) {
             db.update(user).set({ role: left.role }).where(eq(user.id, session.userId)).run();
             db.delete(invitation).where(eq(invitation.email, left.email)).run();
@@ -63005,7 +63014,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "f5a8fcc3 generated",
+  "src/lib/auth.ts": "f8847c31 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -66180,7 +66189,8 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
@@ -68392,7 +68402,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "02657c4f generated",
+  "src/lib/auth.ts": "273e4484 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -71039,7 +71049,8 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
@@ -72441,7 +72452,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "d7727cc5 generated",
+  "src/lib/auth.ts": "b3d5e0ae generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -81927,13 +81938,15 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
-          const left = current?.verified && current.role === "staff" ? openInvitation(current.email.toLowerCase()) : undefined;
+          // Not over an administrator made just now: the admins list wins.
+          const left = !promoted && current?.verified && current.role === "staff" ? openInvitation(current.email.toLowerCase()) : undefined;
           if (left) {
             db.update(user).set({ role: left.role }).where(eq(user.id, session.userId)).run();
             db.delete(invitation).where(eq(invitation.email, left.email)).run();
@@ -85573,7 +85586,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "02a1c079 generated",
+  "src/lib/auth.ts": "b4eb40af generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
@@ -91419,13 +91432,15 @@ export const auth = betterAuth({
           // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
           const who = signedInAs(session.userId);
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase())) {
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
             audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "admins in smithable.auth.yml" } });
           }
           // An invitation withheld from a sign-in that had not proven the address (user.create.after)
           // is the address's once it is proven: its role, while the account still has the default.
-          const left = current?.verified && current.role === "agent" ? openInvitation(current.email.toLowerCase()) : undefined;
+          // Not over an administrator made just now: the admins list wins.
+          const left = !promoted && current?.verified && current.role === "agent" ? openInvitation(current.email.toLowerCase()) : undefined;
           if (left) {
             db.update(user).set({ role: left.role }).where(eq(user.id, session.userId)).run();
             db.delete(invitation).where(eq(invitation.email, left.email)).run();
@@ -93602,7 +93617,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/words/en.ts": "55a386f5 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
-  "src/lib/auth.ts": "f3fb3564 generated",
+  "src/lib/auth.ts": "1cb58bf6 generated",
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
