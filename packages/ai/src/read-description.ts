@@ -297,7 +297,8 @@ export function readDescription(given: string): Reading {
     // Sending, other programs, a check on a schedule, tracking: done by the app, left over.
     const does =
       DOES.has(w) ||
-      (w === "check" && SCHEDULE.test(description)) ||
+      // A check with its schedule in the words after it: "checks our servers every minute".
+      (w === "check" && SCHEDULE.test(words.slice(i, i + 8).join(" "))) ||
       /^(every|at-most|who-owes|other)-/.test(w);
     if (does) as.push("does");
     // Looking at their own ("our clients see their invoices"): people who sign in, not visitors.

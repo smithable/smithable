@@ -154,3 +154,8 @@ test("a kind word that is the record stays a thing; a word in capitals is never 
     ).things,
   ).not.toContain("chatbot");
 });
+
+test("a check is the app's only when its schedule follows it (T846)", () => {
+  const looked = readDescription("Members check their bookings online. We back the data up daily.");
+  expect(looked.leftover).not.toContain("check");
+});
