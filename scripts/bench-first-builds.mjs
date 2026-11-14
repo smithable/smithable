@@ -251,7 +251,12 @@ function allowed(s, who, verb, model) {
     const list = verb === "read" ? a.public?.read : verb === "create" ? a.public?.create : [];
     return (list ?? []).includes(model) ? "all" : "none";
   }
-  const role = a.roles.find((r) => named(who, [r.name]));
+  // An exact name first (instructor over headInstructor for "Instructor"), then one containing it.
+  const same = (r) =>
+    String(who)
+      .split("|")
+      .some((alt) => stem(alt) && stem(alt) === stem(r.name));
+  const role = a.roles.find(same) ?? a.roles.find((r) => named(who, [r.name]));
   if (!role) return "no role";
   const grants = role.grants;
   const key = verb === "change" ? "write" : verb;
@@ -261,7 +266,10 @@ function allowed(s, who, verb, model) {
   if (verb === "create") return "none";
   // Without a grant: their own records under private access, everyone's under shared reading.
   if (a.defaultAccess === "shared" && verb === "read") return "all";
-  return "own";
+  // Their own: none for a role that may not add such a record (it owns none of them).
+  const creates =
+    grants === "all" || grants?.create === "all" || (grants?.create ?? []).includes(model);
+  return creates ? "own" : "none";
 }
 
 function scored(item, s) {
