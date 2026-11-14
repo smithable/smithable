@@ -495,5 +495,8 @@ export function nameFrom(description: string): string | undefined {
   const called = new RegExp(`\\b(?:called|named)\\s+["“”']?${name}`, "u").exec(description);
   if (called) return tidy(called[1]);
   const forWhom = new RegExp(`\\bfor\\s+(?:the\\s+)?${name}`, "u").exec(description);
-  return forWhom ? tidy(forWhom[1]) : undefined;
+  // After "for", a name of two words or more (Studio Nord): one word is as often a platform or a
+  // team (for Android, for HR) as a name.
+  const after = forWhom ? tidy(forWhom[1]) : undefined;
+  return after && after.split(/\s+/).length >= 2 ? after : undefined;
 }

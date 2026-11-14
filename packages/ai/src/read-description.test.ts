@@ -173,6 +173,8 @@ test("the app's name when the description gives one, by its shape; none invented
     "A CRM for a small sales team: companies, contacts, deals and follow-ups.",
     "A help desk for an IT team: tickets, priorities and who handles them.",
     "Invoices for my photography work: clients, shoots and what is still unpaid.",
+    "A chat app for Android, with groups and photos.",
+    "Tools for HR: leave, contracts and reviews.",
   ])
     expect(nameFrom(none), none).toBeUndefined();
 });
