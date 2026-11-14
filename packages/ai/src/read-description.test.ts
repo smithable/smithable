@@ -117,3 +117,40 @@ test("people who see their own records sign in to see them; they are not visitor
     readDescription("A tool library where neighbors browse the tools and borrow them.").visitors,
   ).toBe("read");
 });
+
+test("what the app must do is left over, never generic: mail out, other programs, a schedule, tracking (T846)", () => {
+  const status = readDescription(
+    "A status page that checks our servers every minute and posts outages to Slack.",
+  );
+  expect(status.leftover).toEqual(
+    expect.arrayContaining(["checks", "every-minute", "post-to", "slack"]),
+  );
+  expect(
+    readDescription("Keep track of who in the family owes whom after our trips.").leftover,
+  ).toEqual(expect.arrayContaining(["track", "who-owes-whom"]));
+  expect(
+    readDescription("A lab register of our equipment that other programs can query.").leftover,
+  ).toEqual(expect.arrayContaining(["other-programs", "query"]));
+});
+
+test("a kind word that is the record stays a thing; a word in capitals is never a stop word (T846)", () => {
+  const club = readDescription(
+    "Club members sign up for training sessions, at most twelve per session.",
+  );
+  expect(club.kind).toBe("booking");
+  expect(club.things).toContain("session");
+  expect(club.leftover).toContain("at-most-twelve-per");
+  expect(
+    readDescription("A public page of our cafe's menu that the staff can update.").things,
+  ).toContain("menu");
+  expect(
+    readDescription("A help desk for an IT team: tickets, priorities and who handles them.")
+      .leftover,
+  ).toContain("it");
+  // A word that only names the shape is not a record.
+  expect(
+    readDescription(
+      "Let our support chatbot look up customers' orders and change the delivery address.",
+    ).things,
+  ).not.toContain("chatbot");
+});
