@@ -8464,7 +8464,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -8498,7 +8500,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -11320,8 +11323,8 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "d4accd30 generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "bf4a5d88 generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "72e51f25 generated",
@@ -16648,7 +16651,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -19083,7 +19088,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "f40e387f generated",
@@ -29025,7 +29030,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -29059,7 +29066,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -34335,8 +34343,8 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "65b1f83a generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "66ce855e generated",
   "src/routes/[_dev]/clock.ts": "a43168cd generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "ed76d161 generated",
@@ -41440,7 +41448,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -41474,7 +41484,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -44203,8 +44214,8 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/-start-parts.tsx": "c178be52 generated",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "cf55946a generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "3e066e2e generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3a1f8636 generated",
@@ -51371,7 +51382,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -51405,7 +51418,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -53598,8 +53612,8 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "7678e5fc generated",
   "src/routes/[_dev]/clock.ts": "a43168cd generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "43f38496 generated",
@@ -60317,7 +60331,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -62901,7 +62917,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "3cfd0626 generated",
@@ -66300,7 +66316,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -66334,7 +66352,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -68284,8 +68303,8 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
   "src/routes/$id.tsx": "d8498e96 generated",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "7678e5fc generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "0929eb69 generated",
@@ -71000,7 +71019,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -71034,7 +71055,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -72327,8 +72349,8 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "e054fda4 generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "7678e5fc generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "1d2deb00 generated",
@@ -81880,7 +81902,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -81914,7 +81938,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -85440,8 +85465,8 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "e508f570 generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "df6443c8 generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "c0360f5c generated",
@@ -91351,7 +91376,9 @@ export const Route = createFileRoute("/_dev/act")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const body = (await request.json().catch(() => ({}))) as DoorBody & { user?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        // A body that is not an object (null, a number) is an empty one, not a 500.
+        const body = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as DoorBody & { user?: unknown };
         const viewer = viewerFor(body.user);
         if (viewer === undefined) return Response.json({ refused: true, status: 403, message: "Not a sample user of this app." }, { status: 403 });
         try {
@@ -91385,7 +91412,8 @@ export const Route = createFileRoute("/_dev/ask")({
       POST: async ({ request }) => {
         const shut = doorShut(request);
         if (shut) return shut;
-        const { user, question } = (await request.json().catch(() => ({}))) as { user?: unknown; question?: unknown };
+        const received: unknown = await request.json().catch(() => ({}));
+        const { user, question } = (received && typeof received === "object" && !Array.isArray(received) ? received : {}) as { user?: unknown; question?: unknown };
         const role = typeof user === "string" && user.startsWith("role:") ? user.slice(5) : undefined;
         const viewer: Viewer | null | undefined =
           role && ROLES.includes(role)
@@ -93448,8 +93476,8 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/lib/utils.ts": "3e9dc081 kit",
   "src/lib/viewer.server.ts": "61bef2b7 generated",
   "src/router.tsx": "1da2e059 kit",
-  "src/routes/[_dev]/act.ts": "255511bc generated",
-  "src/routes/[_dev]/ask.ts": "3e2813c1 generated",
+  "src/routes/[_dev]/act.ts": "c57e01e2 generated",
+  "src/routes/[_dev]/ask.ts": "f3d7d06d generated",
   "src/routes/[_dev]/clock.ts": "a02ee4a6 generated",
   "src/routes/[_dev]/moves.ts": "a2afa2d0 generated",
   "src/routes/__root.tsx": "05dab5c3 generated",
