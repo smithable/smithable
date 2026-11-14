@@ -6,6 +6,7 @@
 import {
   type AssistantCaller,
   type AuthIR,
+  actionAccess,
   apiOffers,
   asksWith,
   assistantOffer,
@@ -18,6 +19,7 @@ import {
   isUpload,
   kebab,
   type ModelIR,
+  modelAccess,
   PICTURES_MAX,
   plural,
   type SpecIR,
@@ -434,6 +436,67 @@ export function apiModule(ir: SpecIR, auth: AuthIR, t: Texts): string {
       schemas: Object.fromEntries(Object.entries(schemas).filter(([k]) => shown.includes(k))),
     },
   };
+  // What each role is shown (T821 #4): the paths and methods its role may use, and the schemas of
+  // the kinds it may read or add; a key reads as its role, so it sees its role's.
+  const byRole: [string, unknown][] = [];
+  if (auth.signIn !== "none")
+    for (const role of auth.roles.map((r) => r.name)) {
+      const may = (a: { public: boolean; roles: string[]; owner: boolean }) =>
+        a.public || a.owner || a.roles.includes(role);
+      const rolePaths: Record<string, unknown> = {};
+      const keep = (at: string, methods: Record<string, boolean>) => {
+        const entry = paths[at] as Record<string, unknown> | undefined;
+        if (!entry) return;
+        const kept = Object.fromEntries(
+          Object.entries(entry).filter(([k]) => k === "parameters" || methods[k]),
+        );
+        if (Object.keys(kept).some((k) => k !== "parameters")) rolePaths[at] = kept;
+      };
+      const kinds: string[] = [];
+      for (const { model, path } of models) {
+        const a = modelAccess(model, auth);
+        const [read, create, write, remove] = [
+          may(a.read),
+          may(a.create),
+          may(a.write),
+          may(a.delete),
+        ];
+        // Its schema wherever the role may do anything with it: no reference left dangling.
+        if (read || create || write || remove) kinds.push(model.name);
+        keep(`/api/v1/${path}`, { get: read, post: create });
+        keep(`/api/v1/${path}/{id}`, { get: read, patch: write, put: write, delete: remove });
+        keep(`/api/v1/${path}/{id}/restore`, { post: remove });
+      }
+      // Each action at its own address: on a record, or on the kind (a combine, a run on rows).
+      for (const action of actions) {
+        if (!may(actionAccess(action, auth, ir.models))) continue;
+        const path = models.find((m) => m.model.name === action.on)?.path;
+        keep(
+          action.merge?.into === "new"
+            ? `/api/v1/${path}/actions/${action.name}`
+            : `/api/v1/${path}/{id}/actions/${action.name}`,
+          { post: true },
+        );
+      }
+      for (const action of rowsActions) {
+        if (!may(actionAccess(action, auth, ir.models))) continue;
+        const path = models.find((m) => m.model.name === action.rows.model)?.path;
+        keep(`/api/v1/${path}/actions/${action.name}`, { post: true });
+      }
+      byRole.push([
+        role,
+        {
+          ...openapi,
+          paths: rolePaths,
+          components: {
+            ...openapi.components,
+            schemas: Object.fromEntries(
+              Object.entries(schemas).filter(([k]) => k === "Problem" || kinds.includes(k)),
+            ),
+          },
+        },
+      ]);
+    }
   return `${HEADER}// The API's conversions (docs/design/integrations.md §2): records as programs read them (the
 // spec's field names, amounts as decimal texts, times as ISO texts) and their values back, checked
 // by each model's own schema, as a form's are.
@@ -445,6 +508,9 @@ export const OPENAPI = ${JSON.stringify(openapi, null, 2)};
 
 /** What a stranger is shown: the reading and adding anyone may do; nothing in a closed app. */
 export const VISITOR_OPENAPI = ${JSON.stringify(visitorApi, null, 2)};
+
+/** What each role is shown, by role: the paths, methods and kinds the role may use. */
+export const OPENAPI_BY_ROLE: ReadonlyMap<string, unknown> = new Map(${JSON.stringify(byRole, null, 2)});
 `;
 }
 
@@ -528,7 +594,13 @@ export function ${camelName}FromApi(body: unknown, current?: Record<string, unkn
     switch (key) {
 ${writable.map((f) => `      case ${JSON.stringify(f.name)}:\n        ${writeCode(f)}\n        break;`).join("\n")}
     }
-  return ${n.schema}.parse(values);
+  // Checked whole, as a form is; a change then writes only what it changes, so a field another
+  // change set meanwhile is not written back from the row read before it (T821 #6).
+  const checked = ${n.schema}.parse(values) as Record<string, unknown>;
+  if (!current) return checked;
+  return Object.fromEntries(
+    Object.entries(checked).filter(([k]) => !(k in current) || !Object.is(values[k], current[k])),
+  );
 }`;
   })
   .join("\n")}`;
@@ -540,21 +612,22 @@ export function apiRoutes(ir: SpecIR, auth: AuthIR, t: Texts): Record<string, st
   const users = ir.pages.find((p) => p.pattern.kind === "users");
   const files: Record<string, string> = {
     "src/routes/api/v1/openapi[.]json.ts": `${HEADER}// The API's description in the OpenAPI format, with no key needed to read it: with a key, or
-// signed in as someone who may open the users page (its download), all a program may call; otherwise what anyone may read
-// or add, which in an app with nothing public is nothing (no model or field names to a stranger).
+// signed in, what the caller's role may call (an administrator: all of it); otherwise what anyone
+// may read or add, which in an app with nothing public is nothing (no model or field names to a
+// stranger).
 import { createFileRoute } from "@tanstack/react-router";
-import { OPENAPI, VISITOR_OPENAPI } from "#/generated/api.server";
-${users ? 'import { pageAccess } from "#/generated/pages";\nimport { allows } from "#/kit/access";\n' : ""}import { callerOf } from "#/kit/api.server";
+import { OPENAPI_BY_ROLE, VISITOR_OPENAPI } from "#/generated/api.server";
+import { callerOf } from "#/kit/api.server";
 import { currentViewer } from "#/lib/viewer.server";
 
 export const Route = createFileRoute("/api/v1/openapi.json")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        // A key; or signed in as someone who may open the users page, where keys are made.
-        const session = await currentViewer();
-        const whole = callerOf(request).viewer || ${users ? `(session && allows(pageAccess[${JSON.stringify(users.id)}], session))` : "session"};
-        return Response.json(whole ? OPENAPI : VISITOR_OPENAPI);
+        // A key reads as its role; a person signed in, as theirs.
+        const viewer = callerOf(request).viewer || (await currentViewer());
+        const own = viewer && !viewer.system ? OPENAPI_BY_ROLE.get(viewer.role) : undefined;
+        return Response.json(own ?? VISITOR_OPENAPI);
       },
     },
   },
@@ -713,7 +786,10 @@ export const Route = createFileRoute("/api/v1/${path}/$id")({
       PATCH: ({ request, params }) =>
         apiCall(request, async (viewer, body) => {
           const row = await found(viewer, params.id);
-          return ${camelName}ToApi(await ${n.data}.update(viewer, row.id, ${camelName}FromApi(body, row) as never));
+          // Only what differs from the record is written; nothing that differs is no change.
+          const changes = ${camelName}FromApi(body, row);
+          if (!Object.keys(changes).length) return ${camelName}ToApi(row);
+          return ${camelName}ToApi(await ${n.data}.update(viewer, row.id, changes as never));
         }),
       DELETE: ({ request, params }) =>
         apiCall(request, async (viewer) => {${
@@ -1466,7 +1542,10 @@ export async function callTool(viewer: Viewer | null, name: string, args: Record
     case "change": {
       const kind = kindOf(args);
       const row = await found(kind, viewer, args.id, "change");
-      return kind.toApi(await kind.data.update(viewer, row.id, kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as never));
+      // Nothing that differs from the record is no change: the record as it is.
+      const changes = kind.fromApi(args.values ?? {}, row as Record<string, unknown>) as Record<string, unknown>;
+      if (!Object.keys(changes).length) return kind.toApi(row);
+      return kind.toApi(await kind.data.update(viewer, row.id, changes as never));
     }
     case "delete": {
       const kind = kindOf(args);
