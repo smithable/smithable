@@ -223,16 +223,17 @@ export function SmithLayer({
 export function panelRect(side: "left" | "right", w: number, h: number, over?: Bounds) {
   const { left, right } = over ?? { left: 0, right: w };
   const width = Math.min(400, right - left - 24);
+  const top = Math.max(60, (over?.top ?? 0) + 80);
   return {
     width,
-    height: Math.min(640, h - 72),
-    top: 60,
+    height: Math.min(640, h - top - 12),
+    top,
     left: side === "right" ? right - width - 12 : left + 12,
   };
 }
 
 /** Where the panel hangs: over the preview, between its edges; the window without one. */
-export type Bounds = { left: number; right: number };
+export type Bounds = { left: number; right: number; top?: number };
 
 /**
  * The side for the panel while a guide's stop is lit (§12.3): the other side when the stop's place

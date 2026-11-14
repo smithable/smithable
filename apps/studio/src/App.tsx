@@ -209,7 +209,8 @@ export function App() {
   // Smith floating over the preview, or docked as the left window (smith-first.md §12.3); a
   // phone has him in its row of windows.
   const [smithAt, setSmithAt] = useSmithPlace();
-  const floating = !narrow && smithAt === "floating";
+  const compact = useMedia("(max-width: 1439px), (max-height: 799px)");
+  const floating = !narrow && !compact && smithAt === "floating";
   const [panelOpen, setPanelOpen] = useState(true);
   // The preview's edges on the screen, which the floating panel hangs between.
   const [previewBox, setPreviewBox] = useState<HTMLDivElement | null>(null);
@@ -220,7 +221,7 @@ export function App() {
     if (!box) return;
     const measure = () => {
       const r = box.getBoundingClientRect();
-      setOver(r.width > 0 ? { left: r.left, right: r.right } : undefined);
+      setOver(r.width > 0 ? { left: r.left, right: r.right, top: r.top } : undefined);
     };
     measure();
     const watch = new ResizeObserver(measure);
@@ -299,6 +300,10 @@ export function App() {
   // Floating, Smith leaves the first place and the preview takes the width: the window there
   // (Changes) comes back by the arrow or its tab (smith-first.md §12.3).
   const [hidden, setHidden] = useState({ left: floating, right: false });
+  // Resizing a floating layout must reveal Smith's dock without changing the saved preference.
+  useEffect(() => {
+    if (compact) setHidden((h) => ({ ...h, left: false }));
+  }, [compact]);
   const layout = narrow ? "one" : arrangement.layout;
   // A phone has every window in one row, side by side, and shows one of them; a swipe moves the
   // row (A 173).
@@ -906,7 +911,9 @@ export function App() {
         previewRuns={previewRuns}
         onClose={closeOverlay}
         peopleRunning={people?.running}
-        guide={guiding ? guideLine : undefined}
+        guide={
+          guiding && guideInSmith && (!narrow || phoneWindow === "smith") ? guideLine : undefined
+        }
         assumptions={assumptions}
         {...(project.beta ? { beta: project.beta } : {})}
         words={words}
@@ -935,6 +942,7 @@ export function App() {
     guiding && !narrow
       ? sideFor(lit?.anchor, lit?.box, window.innerWidth, window.innerHeight, over)
       : "right";
+  const guideInSmith = smithSays && (!floating || (panelOpen && side !== "fold"));
   // One change shown three ways after "Ask me" (smith-first.md §12.5): a notes field on the first
   // kind of record without one, by Smith, then by hand and in the text, kept or undone.
   const bare = spec.ir?.models.find((m) => !m.fields.some((f) => f.name === "notes"));
@@ -993,7 +1001,8 @@ export function App() {
       <div inert={overlaid || undefined} className="flex h-full flex-col">
         {/* On a phone the items wrap onto a second line instead of running off the screen. */}
         <header
-          className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-1.5 sm:flex-nowrap sm:py-0"
+          data-studio-header
+          className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-1.5 [&>fieldset]:shrink-0"
           // On a phone a swipe on the header moves the row of windows too (A 174).
           style={narrow ? { touchAction: "pan-y" } : undefined}
           {...rowPan.handlers}
@@ -1092,7 +1101,7 @@ export function App() {
           {narrow && !project.making && (
             <PhoneSettingsButton settings={phone} onChange={setPhone} />
           )}
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-x-3 gap-y-1 [&>button]:shrink-0 [&>a]:shrink-0">
             {!project.making && project.lookProject && (
               <Button
                 variant="ghost"
@@ -1408,7 +1417,7 @@ export function App() {
               }}
               onStop={guideStop}
               onPlace={(anchor, box) => setLit({ anchor, box })}
-              cards={!narrow}
+              cards={!guideInSmith}
               {...(showing ? { shown: showing } : {})}
               asLine={smithSays ? setGuideLine : undefined}
             />
@@ -1598,7 +1607,9 @@ export function App() {
                             key={w}
                             title="Ask Smith"
                             className="min-h-0 flex-[3]"
+                            scroll={false}
                             actions={
+                              !compact &&
                               !narrow && (
                                 <button
                                   type="button"

@@ -27,6 +27,7 @@ import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
+import { checkStudioLayout } from "./studio-layout-checks.mjs";
 import {
   checkStudioLook,
   checkStudioLookGallery,
@@ -198,6 +199,7 @@ try {
     await new Promise((r) => setTimeout(r, 500));
   }
   const preview = page.frameLocator('iframe[title="App preview"]');
+  await checkStudioLayout(browser, base);
   const status = page.getByRole("status");
   // The Changes window, with Smith above it in the third place (the test's layout).
   const trace = page.getByRole("list", { name: "Change trace" });
@@ -533,8 +535,8 @@ try {
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
             throw new Error(`the line for ${at} points at nothing`);
           await fresh.locator(`[data-guide-lit="${at}"]`).waitFor({ state: "attached" });
-          // Beside the place, a card with the same stop (smith-first.md §12.4).
-          await fresh.locator(`[data-guide-beside="${at}"]`).waitFor();
+          if ((await fresh.locator("[data-guide-card]:visible").count()) !== 1)
+            throw new Error(`the guide for ${at} is shown more than once`);
           await card.getByRole("button", { name: i === 6 ? "Done" : "Next", exact: true }).click();
           if (at === "change") {
             // One change shown three ways (§12.5): Smith adds a notes field, then it is shown by
