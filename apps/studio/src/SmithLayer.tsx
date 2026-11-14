@@ -133,12 +133,14 @@ export function SmithLayer({
   return (
     <>
       {mode !== "panel" && (
-        // The backdrop: the brand's dark tone with Studio softened behind; a click on it does
-        // nothing (too easy beside an open question).
-        <div
-          aria-hidden="true"
+        // Clicking beside the presentation shows the app; reading inside never advances it.
+        <button
+          type="button"
+          aria-label="Close presentation"
+          tabIndex={-1}
+          onClick={onSkip}
           className={cx(
-            "fixed inset-0 z-40 backdrop-blur-sm",
+            "fixed inset-0 z-40 cursor-default border-0 p-0 backdrop-blur-sm",
             motion && "transition-[opacity,background-color] duration-500",
             mode === "closing" && "opacity-0",
           )}
@@ -147,11 +149,11 @@ export function SmithLayer({
           }}
         >
           {!phone && (
-            <p className="absolute inset-x-0 top-10 truncate px-6 text-center text-3xl font-semibold tracking-tight text-white">
+            <span className="absolute inset-x-0 top-10 truncate px-6 text-center text-3xl font-semibold tracking-tight text-white">
               {appName}
-            </p>
+            </span>
           )}
-        </div>
+        </button>
       )}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: a dialog or a region by its mode, whose taps and keys are the overlay's (§12.2) */}
       {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-modal only while it is the dialog */}
@@ -165,10 +167,6 @@ export function SmithLayer({
         hidden={!shown}
         onPointerDown={stir}
         onKeyDown={stir}
-        onClick={(e) => {
-          // A tap on the thread, not on a control, brings the next part at once.
-          if (mode === "overlay" && !inControl(e.target as Element)) onNext();
-        }}
         className={cx(
           "fixed z-50 flex flex-col overflow-hidden bg-panel shadow-2xl outline-none",
           phone && mode !== "panel" ? "" : "rounded-xl border border-line",

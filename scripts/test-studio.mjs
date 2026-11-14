@@ -33,6 +33,7 @@ import {
   checkStudioLookGallery,
   checkStudioLookTimeout,
 } from "./studio-look-checks.mjs";
+import { checkStudioSpeech } from "./studio-speech-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
 
@@ -201,6 +202,7 @@ try {
   const preview = page.frameLocator('iframe[title="App preview"]');
   await checkStudioLayout(browser, base);
   await checkCompactLook(browser, base);
+  await checkStudioSpeech(browser, base);
   const status = page.getByRole("status");
   // The Changes window, with Smith above it in the third place (the test's layout).
   const trace = page.getByRole("list", { name: "Change trace" });

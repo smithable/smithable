@@ -41,17 +41,21 @@ export function SpeechControls({ speech }: { speech: Speech }) {
     );
   return (
     <div data-speech className="space-y-1">
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <button
           type="button"
           className={cx(BUTTON, speech.listening && "border-red-500 text-red-600")}
-          disabled={!speech.canHear}
+          disabled={!speech.canHear || speech.checkingHearing}
           title={
             speech.canHear
               ? "Hold to talk (or Ctrl+Shift+Space); click to say one thing"
               : speech.why
           }
-          aria-label={`Mic: ${speech.mic === "off" ? "off" : "press to talk"}${speech.listening ? ", listening" : ""}`}
+          aria-label={
+            speech.needsLocalCheck
+              ? "Check on-device speech support"
+              : `Mic: ${speech.mic === "off" ? "off" : "press to talk"}${speech.listening ? ", listening" : ""}`
+          }
           aria-pressed={speech.listening}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -78,7 +82,10 @@ export function SpeechControls({ speech }: { speech: Speech }) {
         </button>
         <button
           type="button"
-          className={cx(BUTTON, speech.blocked && "animate-pulse border-accent")}
+          className={cx(
+            "flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-line px-2 text-xs hover:border-accent disabled:opacity-40",
+            speech.blocked && "animate-pulse border-accent",
+          )}
           disabled={!speech.canSpeak}
           title={speech.canSpeak ? undefined : speech.why}
           aria-label={speech.blocked ? "Turn on sound" : `Sound: ${speech.sound ? "on" : "off"}`}
@@ -86,6 +93,7 @@ export function SpeechControls({ speech }: { speech: Speech }) {
           onClick={() => speech.setSound(speech.blocked ? true : !speech.sound)}
         >
           <SpeakerIcon on={speech.sound && !speech.blocked} />
+          {speech.blocked ? "Turn on sound" : `Sound ${speech.sound ? "on" : "off"}`}
         </button>
         {speech.canSpeak && speech.voices.length > 1 && (
           <select
@@ -102,7 +110,22 @@ export function SpeechControls({ speech }: { speech: Speech }) {
             ))}
           </select>
         )}
-        {speech.canHear && (
+        {speech.canSpeak && (
+          <label className="flex items-center gap-1 text-xs">
+            Speed
+            <select
+              aria-label="Speaking speed"
+              value={speech.rate}
+              onChange={(e) => speech.setRate(Number(e.target.value))}
+              className="h-8 rounded-md border border-line bg-panel text-xs"
+            >
+              <option value={0.85}>Slower</option>
+              <option value={1}>Normal</option>
+              <option value={1.2}>Faster</option>
+            </select>
+          </label>
+        )}
+        {speech.canHear && !speech.needsLocalCheck && (
           <button
             type="button"
             className={cx(
@@ -130,6 +153,11 @@ export function SpeechControls({ speech }: { speech: Speech }) {
         )}
       </div>
       {showWhere && <p className="text-xs text-quiet">{speech.where}</p>}
+      {speech.hearingNote && (
+        <p role="status" className="text-xs text-quiet">
+          {speech.hearingNote}
+        </p>
+      )}
       {speech.auto && (
         <p className="text-xs text-quiet">
           Listening while Smith is silent; a headset works best.
