@@ -1335,7 +1335,7 @@ function toolsModule(
 // describes them for each caller; every call goes through the data functions, as the API's do.`
   }
 ${actions.length || rowsActions.length || app ? `import { AccessDenied, ${confirms ? "allows, type Rule, " : ""}type Viewer } from "#/kit/access";` : 'import type { Viewer } from "#/kit/access";'}
-${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\n` : ""}${app ? `import { count, LIMITS${confirms ? ", writeAllowed" : ""} } from "#/kit/limit";\nimport { w } from "#/kit/words";\n` : confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
+${app ? `${worded.size ? 'import type { AskFilter, AskKind, Turn } from "#/kit/ask";\nimport type { ModelUi } from "#/kit/model";' : 'import type { AskKind, Turn } from "#/kit/ask";'}\nimport { type Answer, answer, ${confirms ? "type Card, " : ""}hostModel${confirms ? ", type Json" : ""} } from "#/kit/assistant.server";\nimport { app as appUi } from "#/generated/app";\n` : ""}${app ? `import { count, LIMITS${confirms ? ", writeAllowed" : ""} } from "#/kit/limit";\nimport { w } from "#/kit/words";\n` : confirms ? 'import { writeAllowed } from "#/kit/limit";\n' : ""}import { BadInput, NotFound } from "#/kit/refusal";
 import { NoSuchValue, nearest } from "#/kit/where";${people || askedPerson ? `\nimport { ${[people && "peopleNamed", askedPerson && "personName"].filter(Boolean).join(", ")} } from "./user-choices.server";` : ""}
 ${confirms ? 'import { type Offer, offered } from "#/kit/tools";\nimport { traceThrough } from "#/kit/trace.server";' : 'import type { Offer } from "#/kit/tools";'}
 ${
@@ -1663,7 +1663,9 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
     unread: viewer
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
-    voice: ${JSON.stringify(voice)},${content?.assistant?.about ? `\n    about: ${JSON.stringify(content.assistant.about)},` : ""}${confirms ? "\n    propose: viewer ? (tool, args) => propose(viewer, tool, args) : undefined," : ""}
+    voice: ${JSON.stringify(voice)},
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name${ir.app.description ? `, description: ${JSON.stringify(ir.app.description)}` : ""} },${content?.assistant?.about ? `\n    about: ${JSON.stringify(content.assistant.about)},` : ""}${confirms ? "\n    propose: viewer ? (tool, args) => propose(viewer, tool, args) : undefined," : ""}
   });
 }
 ${

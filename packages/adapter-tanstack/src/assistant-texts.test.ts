@@ -244,3 +244,24 @@ test("the words beside a proposed change are checked against the records too (T8
   });
   expect(said).toMatchObject({ unconfirmed: true });
 });
+
+test("an empty reply from the model is no empty answer: said plainly, with what Ask can answer (T877)", async () => {
+  const offer = { summary: "Orders.", tools: [] };
+  const model = { url: "http://model.invalid", key: "k", model: "m", person: "p" };
+  let system = "";
+  const empty = await answer("What is the name of this app.", {
+    offer,
+    kinds: [],
+    call: async () => null,
+    model,
+    app: { name: "Acme Orders", description: "Orders for a small shop." },
+    fetch: async (_url: string, init: { body: string }) => {
+      system = JSON.parse(init.body).messages[0].content;
+      return new Response(JSON.stringify({ choices: [{ message: { content: "" } }] }));
+    },
+  } as never);
+  expect((empty as { text?: string }).text).toBeUndefined();
+  expect(empty.note).toBe("I don't know that. Here is what I can answer about:");
+  // The model is told the app's own name and what it is for.
+  expect(system).toContain('This app is called "Acme Orders": "Orders for a small shop."');
+});

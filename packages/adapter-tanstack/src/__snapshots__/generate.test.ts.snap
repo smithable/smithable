@@ -5175,6 +5175,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -6065,6 +6066,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "Tasks and notes, grouped in projects, that an AI assistant keeps for a small team." },
   });
 }
 "
@@ -14057,7 +14060,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/generated/activity.server.ts": "3bfe13cf generated",
   "src/generated/api.server.ts": "d3d27b03 generated",
   "src/generated/app.ts": "547ab03a generated",
-  "src/generated/ask.server.ts": "e65bff7f generated",
+  "src/generated/ask.server.ts": "4f092194 generated",
   "src/generated/card.server.ts": "9b4d94be generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -14120,7 +14123,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -14157,7 +14160,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "8cdb1ad7 generated",
@@ -21934,7 +21937,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "2f8e44ff generated",
@@ -23699,6 +23702,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -24771,6 +24775,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "Class schedule and online booking for a small yoga studio." },
   });
 }
 "
@@ -37116,7 +37122,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/generated/actions/publish.ts": "21bb5fc0 generated",
   "src/generated/activity.server.ts": "b8ebc789 generated",
   "src/generated/app.ts": "7320a04b generated",
-  "src/generated/ask.server.ts": "307722f2 generated",
+  "src/generated/ask.server.ts": "b4df25e5 generated",
   "src/generated/booking.import.server.ts": "5dd23f09 generated",
   "src/generated/booking.import.ts": "19831a63 generated",
   "src/generated/booking.name.ts": "aba5786c generated",
@@ -37207,7 +37213,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/call.server.ts": "9a3805d8 kit",
@@ -37250,7 +37256,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a5e9568e generated",
@@ -38726,6 +38732,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -39505,6 +39512,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "Lightweight CRM for a small B2B sales team." },
   });
 }
 "
@@ -47064,7 +47073,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/generated/actions/schedule-follow-ups.ts": "3190ea81 generated",
   "src/generated/activity.server.ts": "b375128c generated",
   "src/generated/app.ts": "4f89cb6c generated",
-  "src/generated/ask.server.ts": "d98af3d1 generated",
+  "src/generated/ask.server.ts": "08318b05 generated",
   "src/generated/card.server.ts": "a5f24452 generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -47131,7 +47140,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -47166,7 +47175,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "a5bc8760 generated",
@@ -48825,6 +48834,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -49632,6 +49642,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "Simple invoicing for freelancers. Each user manages their own clients and invoices." },
   });
 }
 "
@@ -56492,7 +56504,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/generated/actions/mark-sent.ts": "ca912866 generated",
   "src/generated/activity.server.ts": "2b56b888 generated",
   "src/generated/app.ts": "74f19a10 generated",
-  "src/generated/ask.server.ts": "75a25938 generated",
+  "src/generated/ask.server.ts": "2b180de2 generated",
   "src/generated/business-profile.schema.ts": "a24b04cb generated",
   "src/generated/business-profile.server.ts": "d7de1db6 generated",
   "src/generated/business-profile.ts": "bc86a8d8 generated",
@@ -56561,7 +56573,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/call.server.ts": "9a3805d8 kit",
@@ -56604,7 +56616,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "abeccae5 generated",
@@ -65932,7 +65944,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5a8d99b1 generated",
@@ -66651,6 +66663,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -67266,6 +67279,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "Buy and sell second-hand things in your neighborhood." },
   });
 }
 "
@@ -71242,7 +71257,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/generated/access.test.ts": "17492689 generated",
   "src/generated/activity.server.ts": "c6b9630b generated",
   "src/generated/app.ts": "5c3013b9 generated",
-  "src/generated/ask.server.ts": "f49093ad generated",
+  "src/generated/ask.server.ts": "c418fc2d generated",
   "src/generated/card.server.ts": "f87d436f generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -71294,7 +71309,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -71332,7 +71347,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "074b32c0 generated",
@@ -71976,6 +71991,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -72579,6 +72595,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "A place to keep and show a collection of items." },
   });
 }
 "
@@ -75313,7 +75331,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/generated/access.test.ts": "2a3af11c generated",
   "src/generated/activity.server.ts": "4ed2a764 generated",
   "src/generated/app.ts": "2da3a528 generated",
-  "src/generated/ask.server.ts": "27a3b6d1 generated",
+  "src/generated/ask.server.ts": "bfe90d6d generated",
   "src/generated/card.server.ts": "57b7eaca generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -75359,7 +75377,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -75394,7 +75412,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "79f9bae2 generated",
@@ -79362,6 +79380,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -80168,6 +80187,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "Is it working? The state of our services, live." },
   });
 }
 "
@@ -89747,7 +89768,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/generated/activity.server.ts": "dc01d286 generated",
   "src/generated/api.server.ts": "edc266dd generated",
   "src/generated/app.ts": "c7fc730f generated",
-  "src/generated/ask.server.ts": "5411d340 generated",
+  "src/generated/ask.server.ts": "c57aa2a0 generated",
   "src/generated/card.server.ts": "944abfcc generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/component.import.server.ts": "25ae311e generated",
@@ -89820,7 +89841,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/consent.ts": "d0c2966f kit",
@@ -89856,7 +89877,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "5849713f generated",
@@ -91654,6 +91675,7 @@ import { AccessDenied, type Viewer } from "#/kit/access";
 import type { AskFilter, AskKind, Turn } from "#/kit/ask";
 import type { ModelUi } from "#/kit/model";
 import { type Answer, answer, hostModel } from "#/kit/assistant.server";
+import { app as appUi } from "#/generated/app";
 import { count, LIMITS } from "#/kit/limit";
 import { w } from "#/kit/words";
 import { BadInput, NotFound } from "#/kit/refusal";
@@ -92362,6 +92384,8 @@ export async function ask(viewer: Viewer | null, question: string, turns: Turn[]
       ? undefined
       : 'The app answers questions it can read by itself, like "how many … are there?" or "show the … that …".',
     voice: "plain",
+    // The app's own name from its one place (words-once), and what it is for.
+    app: { name: appUi.name, description: "Mail from customers, answered by the team." },
   });
 }
 "
@@ -97807,7 +97831,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/generated/actions/start-work.ts": "2fdc7c64 generated",
   "src/generated/activity.server.ts": "958f7815 generated",
   "src/generated/app.ts": "50242584 generated",
-  "src/generated/ask.server.ts": "747dad8b generated",
+  "src/generated/ask.server.ts": "8e379833 generated",
   "src/generated/card.server.ts": "eb1c3b3c generated",
   "src/generated/card.ts": "5cab12e4 generated",
   "src/generated/custom.ts": "5801b2b0 generated",
@@ -97863,7 +97887,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/appearance.ts": "b39c153d kit",
   "src/kit/ask.ts": "50fcc772 kit",
   "src/kit/asked.ts": "be1fc9b1 kit",
-  "src/kit/assistant.server.ts": "03835484 kit",
+  "src/kit/assistant.server.ts": "422bedf1 kit",
   "src/kit/audit.server.ts": "d14de961 kit",
   "src/kit/bounded-body.ts": "1ec0bcb1 kit",
   "src/kit/call.server.ts": "9a3805d8 kit",
@@ -97905,7 +97929,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
-  "src/kit/words/en.ts": "55a386f5 kit",
+  "src/kit/words/en.ts": "46ac4c55 kit",
   "src/kit/zoned.ts": "60f51d96 kit",
   "src/lib/auth-client.ts": "cd1fd98b kit",
   "src/lib/auth.ts": "c686a476 generated",
