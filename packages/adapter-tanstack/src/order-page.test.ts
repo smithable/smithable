@@ -43,7 +43,7 @@ test("the order and its lines are one write: each chosen record read as the view
     "if (item.available === false) throw new Conflict(`sold-out:${item.name}`);",
   );
   expect(data).toMatch(
-    /tx\.insert\(schema\.orderLines\)\.values\(\{ orderId: made\.id, dishId: item\.id, quantity: chosen\.quantity, unitPrice: item\.price/,
+    /orderLineData\.checkCreate\(tx, viewer, \{ orderId: made\.id, dishId: item\.id, quantity: chosen\.quantity, unitPrice: item\.price \} as never\);\n\s+const added = tx\.insert\(schema\.orderLines\)\.values\(\{ \.\.\.checked/,
   );
   expect(data).toContain(
     'number: nextInSequence(tx, "Order.number", tx.select({ n: max(schema.orders.number) })',

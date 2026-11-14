@@ -844,6 +844,8 @@ export function dataModule(
   const listWith = [...withReferences(model), ...aggregatedLists(model).map(liveList)];
   const others = new Set<ModelIR>();
   if (orderPage && orderPage.from !== model.name) others.add(modelNamed(ir, orderPage.from));
+  // A line passes its own checks (its rules, references and capacity) as any new one does.
+  if (orderPage && orderPage.line !== model.name) others.add(modelNamed(ir, orderPage.line));
   const getWith = [
     ...withReferences(model),
     ...lists(model).map((f) => {
@@ -1356,9 +1358,11 @@ ${updateBody}
           if (item.${field(from, orderPage.available)} === false) throw new Conflict(\`sold-out:\${${title && title !== "id" ? `item.${title}` : "item.id"}}\`);`
               : ""
           }
-          // A line is a record of its own: its creator (also one owned through its order), its
-          // numbers counted up, and its line in the audit log.
-          const added = tx.insert(${nl.table}).values({ ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)}${signedIn && creatorOwned(line) ? ", ownerId: personOf(viewer)" : ""}${sequenceEntries(
+          // A line is a record of its own: its own checks, as any new one passes (its rules,
+          // references and capacity), its creator (also one owned through its order), its numbers
+          // counted up, and its line in the audit log.
+          const checked = ${nl.data}.checkCreate(tx, viewer, { ${back ? `${dataKey(back)}: made.id, ` : ""}${field(line, orderPage.item)}: item.id, ${orderPage.quantity ? `${field(line, orderPage.quantity)}: chosen.quantity, ` : ""}${field(line, orderPage.unitPrice)}: item.${field(from, orderPage.price)} } as never);
+          const added = tx.insert(${nl.table}).values({ ...checked${signedIn && creatorOwned(line) ? ", ownerId: personOf(viewer)" : ""}${sequenceEntries(
             line,
             auth,
             nl.table,

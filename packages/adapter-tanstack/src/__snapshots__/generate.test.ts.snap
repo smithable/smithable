@@ -58074,9 +58074,11 @@ export const orderData = {
           const item = tx.select().from(schema.dishes).where(and(eq(schema.dishes.id, chosen.id), dishData.readable(viewer))).get();
           if (!item) throw new BadInput("order-item");
           if (item.available === false) throw new Conflict(\`sold-out:\${item.name}\`);
-          // A line is a record of its own: its creator (also one owned through its order), its
-          // numbers counted up, and its line in the audit log.
-          const added = tx.insert(schema.orderLines).values({ orderId: made.id, dishId: item.id, quantity: chosen.quantity, unitPrice: item.price, ownerId: personOf(viewer) }).returning().get();
+          // A line is a record of its own: its own checks, as any new one passes (its rules,
+          // references and capacity), its creator (also one owned through its order), its numbers
+          // counted up, and its line in the audit log.
+          const checked = orderLineData.checkCreate(tx, viewer, { orderId: made.id, dishId: item.id, quantity: chosen.quantity, unitPrice: item.price } as never);
+          const added = tx.insert(schema.orderLines).values({ ...checked, ownerId: personOf(viewer) }).returning().get();
           audit(tx, viewer, { action: "created", model: "OrderLine", record: added.id });
         }
         audit(tx, viewer, { action: "created", model: "Order", record: made.id });
@@ -62805,7 +62807,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/generated/order.import.server.ts": "c25ea634 generated",
   "src/generated/order.import.ts": "efdb6114 generated",
   "src/generated/order.schema.ts": "cf6bfc1f generated",
-  "src/generated/order.server.ts": "9af209d8 generated",
+  "src/generated/order.server.ts": "6d2a677f generated",
   "src/generated/order.ts": "db4c9478 generated",
   "src/generated/outgoing.server.ts": "4615ff1f generated",
   "src/generated/pages.ts": "7d21451f generated",
