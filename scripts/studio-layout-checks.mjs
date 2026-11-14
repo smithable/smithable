@@ -108,6 +108,12 @@ export async function checkStudioLayout(browser, base, pictures) {
       console.log(
         `  ✓ Studio ${viewport.width}×${viewport.height} at 2×: one guide, one scroll region, reachable input and controls`,
       );
+    } catch (error) {
+      if (pictures)
+        await page
+          .screenshot({ path: join(pictures, `failure-${viewport.width}-layout.png`) })
+          .catch(() => {});
+      throw error;
     } finally {
       await page.close();
     }
@@ -166,6 +172,10 @@ export async function checkCompactLook(browser, base, pictures) {
     if (pictures) await page.screenshot({ path: join(pictures, "after-960-edit-look.png") });
     console.log("  ✓ compact Edit look: connected draft, two-column details, reachable controls");
     await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+  } catch (error) {
+    if (pictures)
+      await page.screenshot({ path: join(pictures, "failure-edit-look.png") }).catch(() => {});
+    throw error;
   } finally {
     await page.close();
   }
