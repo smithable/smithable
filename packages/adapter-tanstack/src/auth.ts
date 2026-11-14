@@ -276,11 +276,28 @@ export const auth = betterAuth({
       create: {
         after: async (session) => {
           // An address the auth file lists becomes an admin when it signs in, also one added
-          // after its account was made; never one its sign-in has not proven.
+          // after its account was made; never one its sign-in has not proven. Said in the log.
           const current = db.select({ email: user.email, role: user.role, verified: user.emailVerified }).from(user).where(eq(user.id, session.userId)).get();
-          if (current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()))
+          const who = signedInAs(session.userId);
+          const promoted = Boolean(current?.verified && current.role !== "admin" && ADMINS.includes(current.email.toLowerCase()));
+          if (current && promoted) {
             db.update(user).set({ role: "admin" }).where(eq(user.id, session.userId)).run();
-          audit(db, signedInAs(session.userId), { action: "signed in" });
+            audit(db, who, { action: "role changed", model: "User", details: { user: session.userId, from: current.role, to: "admin", because: "the list of administrators" } });
+          }${
+            invitations
+              ? `
+          // An invitation withheld from a sign-in that had not proven the address (user.create.after)
+          // is the address's once it is proven: its role, while the account still has the default.
+          // Not over an administrator made just now: the admins list wins.
+          const left = !promoted && current?.verified && current.role === ${defaultRole} ? openInvitation(current.email.toLowerCase()) : undefined;
+          if (left) {
+            db.update(user).set({ role: left.role }).where(eq(user.id, session.userId)).run();
+            db.delete(invitation).where(eq(invitation.email, left.email)).run();
+            audit(db, who, { action: "invitation accepted", model: "User", details: { role: left.role } });
+          }`
+              : ""
+          }
+          audit(db, who, { action: "signed in" });
         },
       },
       // A session also ends when it expires or its user is removed: only a sign-out says so.
@@ -365,13 +382,19 @@ export async function currentViewer(): Promise<Viewer | null> {
 /** Everyone who can be chosen in a User field, e.g. an account manager. */
 export function usersModule(): string {
   return `${HEADER}import { createServerFn } from "@tanstack/react-start";
-import { AccessDenied } from "#/kit/access";
+import { AccessDenied, personOf } from "#/kit/access";
 import { currentViewer } from "#/lib/viewer.server";
 import { userChoices } from "./user-choices.server";
 
-/** Choices for fields that refer to a user; for signed-in users only. */
+/**
+ * Choices for fields that refer to a user: everyone's name, for a person whose address is proven
+ * (any role that adds such a record may also change its own, so the role does not narrow it);
+ * anyone else signed in gets none.
+ */
 export const userOptions = createServerFn().handler(async () => {
-  if (!(await currentViewer())) throw new AccessDenied(false);
+  const viewer = await currentViewer();
+  if (!viewer) throw new AccessDenied(false);
+  if (!personOf(viewer) || !viewer.proven) return [];
   return userChoices();
 });
 `;

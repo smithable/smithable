@@ -119,6 +119,7 @@ export function check(rule: Rule, viewer: Viewer | null, ownerId?: string | null
 export function readScope(rule: Rule, viewer: Viewer | null): "all" | "own" | "public" | "none" {
   if (viewer && (viewer.system || rule.roles.includes(viewer.role))) return "all";
   if (rule.public && !rule.where) return "all";
-  if (viewer && rule.owner) return "own";
+  // Only a person owns records: a key reads by its role, else what is public, else nothing.
+  if (personOf(viewer) && rule.owner) return "own";
   return rule.public ? "public" : "none";
 }

@@ -2247,6 +2247,8 @@ ${model.trash ? "    // What is in the trash is gone to every reader (docs/desig
   }
     const scope = readScope(${n.access}.read, viewer);
     if (scope === "all") return undefined;
+    // Nothing to read (a key whose role does not read this kind, where nothing is public): no row.
+    if (scope === "none") return sql\`0\`;
 ${publicWhere ? `    if (scope === "public") return ${publicWhere};\n` : ""}    return ${ownOrPublic};
   },
 ${ownerMethods}
