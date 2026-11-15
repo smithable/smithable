@@ -97,7 +97,12 @@ export async function checkStudioQuestions(browser, base) {
           window.questionFixture.utterance = u;
           synth.speaking = true;
           u.onstart?.();
-          if (!window.questionFixture.hold)
+          if (
+            !(
+              window.questionFixture.hold &&
+              /Times in this app|This app has no time zone/.test(u.text)
+            )
+          )
             queueMicrotask(() => {
               synth.speaking = false;
               u.onend?.();
