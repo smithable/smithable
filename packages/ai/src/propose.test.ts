@@ -60,8 +60,12 @@ const addPhone = {
 };
 
 describe("proposeChange", () => {
-  test("a polite request to show information keeps the docs in its prompt", async () => {
-    const request = "Can you show me how to publish this app?";
+  test.each([
+    "Can you show me how to publish this app?",
+    "Can you show examples of publishing?",
+    "Kan du visa varför sidan är offentlig?",
+    "Voitko näyttää mitä julkaiseminen tarkoittaa?",
+  ])("a polite information request keeps the docs: %s", async (request) => {
     const model = scripted([{ kind: "answer", text: "Use Review and publish." }]);
     const result = await proposeChange({
       request,

@@ -1,16 +1,6 @@
 // Instruction words are data, shared by the narrow wording rules and the model router.
 const WORDS = {
   en: {
-    information: [
-      "show me",
-      "show how",
-      "show where",
-      "show what",
-      "show why",
-      "show who",
-      "show which",
-      "show whether",
-    ],
     openers: [
       "please",
       "let me",
@@ -47,7 +37,6 @@ const WORDS = {
       "set",
       "change",
       "make",
-      "show",
       "hide",
       "use",
       "apply",
@@ -59,7 +48,6 @@ const WORDS = {
     ],
   },
   sv: {
-    information: ["visa mig", "visa hur", "visa vem", "visa vilka", "visa var", "visa om"],
     openers: ["snälla", "kan du", "skulle du kunna", "jag vill att du", "jag vill", "vi vill"],
     verbs: [
       "lägg till",
@@ -73,7 +61,6 @@ const WORDS = {
       "sätta",
       "gör",
       "göra",
-      "visa",
       "dölj",
       "använd",
       "använda",
@@ -85,16 +72,6 @@ const WORDS = {
     ],
   },
   fi: {
-    information: [
-      "näytä minulle",
-      "näyttää minulle",
-      "näytä miten",
-      "näyttää miten",
-      "näytä missä",
-      "näyttää missä",
-      "näytä kuka",
-      "näyttää kuka",
-    ],
     openers: ["voisitko", "voitko", "haluan että", "haluan", "haluamme"],
     verbs: [
       "lisää",
@@ -107,8 +84,6 @@ const WORDS = {
       "vaihtaa",
       "aseta",
       "asettaa",
-      "näytä",
-      "näyttää",
       "piilota",
       "piilottaa",
       "käytä",
@@ -134,10 +109,8 @@ export function stripRequestOpeners(text: string): string {
   }
 }
 
-/** A polite question can be an instruction; this routes it, never resolves its missing names. */
+/** Known change verbs can skip the question prompt. Showing information keeps its fallback. */
 export function looksLikeInstruction(request: string): boolean {
   const text = stripRequestOpeners(request.trim().toLowerCase().replace(/\s+/g, " "));
-  if (Object.values(WORDS).some((w) => w.information.some((phrase) => starts(text, phrase))))
-    return false;
   return Object.values(WORDS).some((w) => w.verbs.some((verb) => starts(text, verb)));
 }
