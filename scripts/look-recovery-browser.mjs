@@ -64,6 +64,10 @@ try {
   const original = await startServer();
   browser = await chromium.launch();
   page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  page.on("pageerror", (error) => console.error("Page error:", String(error)));
+  page.on("console", (message) => {
+    if (message.type() === "error") console.error("Browser error:", message.text());
+  });
   await page.addInitScript((name) => {
     for (const key of ["guideDone", "presented", "zoneAsked", "ownerAsked"])
       localStorage.setItem(`${key}:${name}`, "1");
