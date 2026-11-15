@@ -131,7 +131,6 @@ function CreationDialog({
         event.preventDefault();
         if (!committing.current) onClose();
       }}
-      onClose={onClose}
       className="m-auto max-h-[90vh] w-[min(42rem,92vw)] overflow-auto rounded-lg bg-panel text-fg shadow-xl backdrop:bg-black/40"
     >
       {created ? (
