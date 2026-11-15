@@ -208,12 +208,18 @@ export function Guide({
       setBox(undefined);
       return;
     }
-    if (!current || !place || !place.isConnected) return;
+    if (!current) return;
     if (!step) onStop?.(current.stop.anchor);
-    place.scrollIntoView({ block: "nearest", inline: "nearest" });
+    // Visiting Code replaces No code's DOM. Resolve each stop again rather than measuring
+    // the disconnected element found when the tour started.
+    const locate = () =>
+      own ? place : document.querySelector<HTMLElement>(`[data-guide="${current.stop.anchor}"]`);
+    locate()?.scrollIntoView({ block: "nearest", inline: "nearest" });
     const anchor = own ? `shown-${step}` : current.stop.anchor;
     const measure = () => {
-      const now = place.getBoundingClientRect();
+      const target = locate();
+      if (!target?.isConnected) return;
+      const now = target.getBoundingClientRect();
       setBox(now);
       onPlace?.(anchor, now);
     };

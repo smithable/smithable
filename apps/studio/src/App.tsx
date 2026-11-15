@@ -1072,10 +1072,9 @@ export function App() {
           guideDemo.current = false;
         });
       }
-      // The manual view closes again and the preview is in front.
+      // No code is needed by the remaining Look stop. The completed tour restores the layout.
       setArrangement({ ...now.arrangement, manual: "nocode" });
       if (now.narrow) now.showWindow("preview");
-      else if (now.layout === "three") setHidden((h) => ({ ...h, right: true }));
     },
     places: {
       smith: '[data-guide="preview"]',
