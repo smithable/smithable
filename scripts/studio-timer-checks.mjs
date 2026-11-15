@@ -11,6 +11,7 @@ export async function checkStudioTimers(browser, base) {
   const sent = [];
   try {
     const project = await (await page.request.get(`${base}/api/project`)).json();
+    const original = parse(project.files.spec);
     await page.addInitScript((name) => {
       for (const key of ["guideDone", "presented", "zoneAsked", "ownerAsked"])
         localStorage.setItem(`${key}:${name}`, "1");
@@ -214,6 +215,22 @@ export async function checkStudioTimers(browser, base) {
       assert.ok(Object.keys(request.args).length > 1, `${key} wrote an empty entry`);
       console.log(`  ✓ New ${label}: ${operation} includes its required first values`);
     }
+    // Later Code checks require the original available keys and a warning-free fixture.
+    // Restore these sections through the daemon, after proving every creation succeeded.
+    for (const key of ["outgoing", "payments", "incoming", "queries", "timers"]) {
+      const response = await page.request.post(`${base}/api/op`, {
+        headers: { "x-smithable": "1" },
+        data: { name: "editSpec", args: { path: [key], value: original[key] ?? null } },
+      });
+      const result = await response.json();
+      assert.ok(result.ok, result.output);
+    }
+    const restored = parse(
+      (await (await page.request.get(`${base}/api/project`)).json()).files.spec,
+    );
+    for (const key of ["outgoing", "payments", "incoming", "queries", "timers"])
+      assert.deepEqual(restored[key], original[key], `${key} fixture was not restored`);
+    console.log("  ✓ Timer and entry fixtures restored before the remaining editor checks");
   } finally {
     await page.close();
   }
