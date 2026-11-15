@@ -95,3 +95,13 @@ test("absent version evidence is not fine even when both sides are missing", () 
   Reflect.deleteProperty(review.maintenance, "currentKit");
   expect(reviewSections(review).find((s) => s.id === "maintenance")?.state).toBe("needs-look");
 });
+
+test("matching development versions still require source compatibility verification", () => {
+  const review = fixture();
+  review.maintenance.generatedEngine = "0.0.0";
+  review.maintenance.currentEngine = "0.0.0";
+  review.maintenance.status = "Development version; source compatibility needs verification";
+  const maintenance = reviewSections(review).find((s) => s.id === "maintenance");
+  expect(maintenance?.state).toBe("needs-look");
+  expect(maintenance?.summary).toContain("needs verification");
+});

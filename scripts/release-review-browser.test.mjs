@@ -82,9 +82,14 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
         await part.locator(":scope > summary").click();
       return part;
     };
+    const evidence = await (await fetch(`${base}/api/release-review`)).json();
+    const development = evidence.maintenance.currentEngine === "0.0.0";
     let dialog = await open();
     await dialog.locator("[data-first-release]").waitFor();
-    assert.equal(await dialog.locator("[data-review-count]").innerText(), "3 need a look");
+    assert.equal(
+      await dialog.locator("[data-review-count]").innerText(),
+      `${development ? 4 : 3} need a look`,
+    );
     await dialog
       .getByRole("heading", { name: "Who can use the current app", exact: true })
       .waitFor();
@@ -218,7 +223,10 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
       assert.equal(await part.getAttribute("open"), null);
       assert.match(await part.getAttribute("class"), /text-muted/);
     }
-    assert.equal(await dialog.locator("[data-review-count]").innerText(), "2 need a look");
+    assert.equal(
+      await dialog.locator("[data-review-count]").innerText(),
+      `${development ? 3 : 2} need a look`,
+    );
     await expand(dialog, "checks");
     await dialog
       .getByText("Release checks passed for the current project files.", { exact: true })

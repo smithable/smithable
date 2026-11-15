@@ -33,7 +33,8 @@ export function reviewSections(review: Review): ReviewSection[] {
     review.privacy?.length && review.privacy.every((p) => p.state === "reviewed"),
   );
   const versionsMatch = Boolean(
-    review.maintenance.generatedEngine &&
+    review.maintenance.currentEngine !== "0.0.0" &&
+      review.maintenance.generatedEngine &&
       review.maintenance.generatedProfile &&
       review.maintenance.generatedKit &&
       review.maintenance.generatedEngine === review.maintenance.currentEngine &&
