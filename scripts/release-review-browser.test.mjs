@@ -86,6 +86,7 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
       return part;
     };
     const evidence = await (await fetch(`${base}/api/release-review`)).json();
+    assert.equal(evidence.baselineState, hosted ? "unavailable" : "none");
     const development = evidence.maintenance.currentEngine === "0.0.0";
     let dialog = await open();
     assert.equal(await dialog.locator("[data-first-release]").count(), hosted ? 0 : 1);
@@ -97,6 +98,10 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
       .getByRole("heading", { name: "Who can use the current app", exact: true })
       .waitFor();
     assert.match(await dialog.innerText(), /People sign in/);
+    const access = dialog.locator('[data-review-part="access"]');
+    assert.equal(await access.getAttribute("data-review-state"), "needs-look");
+    assert.notEqual(await access.getAttribute("open"), null);
+    assert.match(await access.locator(":scope > summary").innerText(), /comparison unavailable/);
     const comparison = dialog.locator('[data-review-part="migrations"]');
     assert.equal(await comparison.getAttribute("data-review-state"), "needs-look");
     assert.notEqual(await comparison.getAttribute("open"), null);

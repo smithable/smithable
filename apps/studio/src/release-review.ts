@@ -48,11 +48,9 @@ export function reviewSections(review: Review): ReviewSection[] {
       state: accessSame ? "unchanged" : "needs-look",
       summary: accessSame
         ? "unchanged since the last local release"
-        : first
-          ? "review who can use this app"
-          : compared
-            ? "review changed access settings"
-            : "comparison unavailable; review current access",
+        : compared
+          ? "review changed access settings"
+          : "comparison unavailable; review current access",
     },
     {
       id: "privacy",

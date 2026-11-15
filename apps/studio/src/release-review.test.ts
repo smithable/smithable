@@ -48,6 +48,7 @@ test("first local release keeps unverified access and migration comparisons visi
   };
   const sections = reviewSections(review);
   expect(sections.find((s) => s.id === "access")?.state).toBe("needs-look");
+  expect(sections.find((s) => s.id === "access")?.summary).toContain("comparison unavailable");
   expect(sections.find((s) => s.id === "migrations")?.state).toBe("needs-look");
   expect(sections.find((s) => s.id === "recovery")?.state).toBe("not-applicable");
 });
