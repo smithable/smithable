@@ -295,7 +295,11 @@ export function NoCode({
     if (transient) return;
     pending.current = undefined;
     setContextPage(next.page);
-    const alreadyOpen = opened?.[0] === "pages" && opened[1] === next.page;
+    const alreadyOpen =
+      sub === "behavior" &&
+      contextPage === next.page &&
+      opened?.[0] === "pages" &&
+      opened[1] === next.page;
     onPlace({ page: next.page, ...(alreadyOpen ? {} : { selection: undefined }) });
     if (sub === "behavior" && !alreadyOpen) setOpened(["pages", next.page]);
   };

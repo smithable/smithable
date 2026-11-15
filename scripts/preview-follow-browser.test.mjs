@@ -61,6 +61,23 @@ test("No code follows real preview navigation without losing edits or opening hi
         throw Error(`Studio did not start: ${log}`);
       await new Promise((r) => setTimeout(r, 200));
     }
+    // The CRM starter has merge/custom actions; add a standard action for condition-row drafts.
+    const prepared = await (
+      await fetch(`${base}/api/op`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-smithable": "1" },
+        body: JSON.stringify({
+          name: "addAction",
+          args: {
+            action: "cancelOrder",
+            on: "Order",
+            when: { status: "draft" },
+            set: { status: "canceled" },
+          },
+        }),
+      })
+    ).json();
+    assert.ok(prepared.ok, prepared.output);
     const project = await (await fetch(`${base}/api/project`)).json();
     browser = await chromium.launch();
     page = await browser.newPage({ viewport: { width: 1920, height: 1100 } });
