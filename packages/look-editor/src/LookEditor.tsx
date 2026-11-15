@@ -112,11 +112,13 @@ export function LookEditor({
   initialTheme,
   initialTarget,
   showGallery = true,
+  onTargetChange,
 }: {
   host: LookEditorHost;
   initialTheme?: string;
   initialTarget?: string | null;
   showGallery?: boolean;
+  onTargetChange?: (page: string | null) => void;
 }) {
   const PUBLIC = host.kind === "public";
   const lookRoot = useRef<HTMLDivElement>(null);
@@ -409,6 +411,7 @@ export function LookEditor({
       setHistory(draftHistory(opened.text));
       setInitialText(opened.text);
       setTargetPage(selected);
+      onTargetChange?.(selected);
       setBaseScope(selected);
       setSaved(undefined);
     } catch (error) {
@@ -1013,6 +1016,7 @@ export function LookEditor({
                     const source = openProjectLook(start.look, scope).text;
                     setHistory(draftHistory(source));
                     setTargetPage(scope);
+                    onTargetChange?.(scope);
                     setSaved(undefined);
                     if (scope) {
                       const route = start.look.ir.pages.find((p) => p.id === scope)?.route;

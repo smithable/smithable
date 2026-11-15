@@ -221,7 +221,7 @@ export function ThemeSettings({
 
 export function ContentIdentity({ spec, run }: { spec: Spec; run: Run }) {
   return (
-    <div className="p-3">
+    <div className="p-3" data-path={JSON.stringify(["logo"])}>
       {" "}
       <Group title="App identity">
         <Logo spec={spec} run={run} />
@@ -231,7 +231,7 @@ export function ContentIdentity({ spec, run }: { spec: Spec; run: Run }) {
 }
 export function AppLanguage({ spec, run }: { spec: Spec; run: Run }) {
   return (
-    <>
+    <div data-path={JSON.stringify(["language"])}>
       {" "}
       <Group title="Language">
         <Select
@@ -246,7 +246,7 @@ export function AppLanguage({ spec, run }: { spec: Spec; run: Run }) {
           several, or the app makes it by an English rule.
         </p>
       </Group>
-    </>
+    </div>
   );
 }
 
@@ -422,6 +422,7 @@ export function ChoiceTones({
     ?.fields.find((item) => item.name === field);
   const choices =
     selected?.type.kind === "choice" ? [{ model, field, values: selected.type.values }] : [];
+  if (!choices.length) return null;
   return (
     <div className="basis-full">
       {" "}
@@ -655,9 +656,10 @@ function ThemeColor({
   const source = useUxSource(["theme", "brand", which], "theme");
   usePendingEdit(picked !== undefined && picked !== value);
   const shown = picked ?? value ?? fallback;
-  const apply = () => {
-    if (picked && picked !== value) void run("setTheme", { [which]: picked });
-    setPicked(undefined);
+  const apply = async () => {
+    const submitted = picked;
+    if (!submitted || submitted === value || (await run("setTheme", { [which]: submitted })))
+      setPicked((current) => (current === submitted ? undefined : current));
   };
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -683,7 +685,11 @@ function ThemeColor({
           type="button"
           className="text-xs text-muted hover:text-accent"
           aria-label={`Use the theme's own ${label.toLowerCase()}`}
-          onClick={() => run("resetThemeOverride", { key: which })}
+          onClick={async () => {
+            const submitted = picked;
+            if (await run("resetThemeOverride", { key: which }))
+              setPicked((current) => (current === submitted ? undefined : current));
+          }}
         >
           Use the theme's own
         </button>

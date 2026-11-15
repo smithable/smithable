@@ -216,7 +216,7 @@ export function NoCode({
   onPlace: (place: Place["nocode"]) => void;
   target?: OpenPart;
   onTargetOpened?: () => void;
-  onLook: () => void;
+  onLook: (page?: string) => void;
   followingBlocked?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -401,13 +401,16 @@ export function NoCode({
   };
   // A part named elsewhere (Smith's "What does this app do?") opens here.
   const openPart = (part: OpenPart) => {
-    if (
-      typeof part !== "string" &&
-      part.file.split(/[\\/]/).at(-1) === "smithable.ux.yml" &&
-      part.path[0] !== "pages"
-    ) {
-      cancelFollow();
-      onLook();
+    if (typeof part !== "string" && part.file.split(/[\\/]/).at(-1) === "smithable.ux.yml") {
+      if (part.path[0] === "tones" && typeof part.path[1] === "string") {
+        const [model, field] = part.path[1].split(".");
+        if (model && field) jumpTo({ sub: "behavior", path: ["models", model, "fields", field] });
+      } else if (part.path[0] === "pages" && part.path[2] !== "theme") {
+        jumpTo({ sub: "layout", path: part.path });
+      } else {
+        cancelFollow();
+        onLook(part.path[0] === "pages" ? String(part.path[1]) : undefined);
+      }
       return;
     }
     const at = entryOf(part);
@@ -527,22 +530,20 @@ export function NoCode({
                   const [area, name] = path;
                   if (area === "models" && path[2] === "fields" && path.length === 4)
                     return (
-                      <ChoiceTones
-                        spec={spec}
-                        run={run}
-                        model={String(name)}
-                        field={String(path[3])}
-                      />
+                      <>
+                        {spec.ir &&
+                          picked?.part === "value" &&
+                          picked.concept === `field:${name}.${path[3]}` && (
+                            <ValueOrigin models={spec.ir.models} concept={picked.concept} />
+                          )}
+                        <ChoiceTones
+                          spec={spec}
+                          run={run}
+                          model={String(name)}
+                          field={String(path[3])}
+                        />
+                      </>
                     );
-                  if (
-                    spec.ir &&
-                    picked?.part === "value" &&
-                    area === "models" &&
-                    path.length === 4 &&
-                    path[2] === "fields" &&
-                    picked.concept === `field:${name}.${path[3]}`
-                  )
-                    return <ValueOrigin models={spec.ir.models} concept={picked.concept} />;
                   if (path.length !== 2 || typeof name !== "string") return undefined;
                   if (area === "models") return <ImportRecords model={name} run={run} />;
                   // A part's own code (what-it-does.md §3): its files under src/custom, as the index found them.

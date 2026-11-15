@@ -43,7 +43,7 @@ export function Languages({ spec, run }: { spec: Spec; run: Run }) {
   const addable = LANGUAGES.filter((l) => l !== content.language && !others.includes(l));
   const empty = own.filter(([path]) => !said.get(path)?.trim()).length;
   return (
-    <div className="space-y-4 p-4 text-sm">
+    <div className="space-y-4 p-4 text-sm" data-path={JSON.stringify(["languages"])}>
       <AppLanguage spec={spec} run={run} />
       <p className="text-muted">
         The app is in {nameOf(content.language)}. In another language its public pages are at their

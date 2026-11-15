@@ -1,4 +1,4 @@
-import { LookEditor, type LookEditorHost } from "@smithable/look-editor";
+import { LookEditor, type LookEditorHost, type Start } from "@smithable/look-editor";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "./api";
 import type { Run } from "./builder/ChangeForms";
@@ -15,6 +15,7 @@ export default function LookEditorDialog({
   spec,
   run,
   liveBusy,
+  initialTarget,
   path,
   onClose,
 }: {
@@ -23,24 +24,34 @@ export default function LookEditorDialog({
   spec: Spec;
   run: Run;
   liveBusy: boolean;
+  initialTarget?: string | null;
   path: string;
   onClose: () => void;
 }) {
   const [project, setProject] = useState(initialProject);
   const [instance, setInstance] = useState(0);
+  const [settingsInstance, setSettingsInstance] = useState(0);
   const [tab, setTab] = useState<"settings" | "customise">("settings");
-  const [target, setTarget] = useState<string | null>(
-    () =>
-      spec.ir?.pages.find(
-        (page) => page.pattern.kind === "landing" && page.route === path.split(/[?#]/)[0],
-      )?.id ?? null,
-  );
+  const [target, setTarget] = useState<string | null>(initialTarget ?? null);
   const [draft, setDraft] = useState<{ theme?: string; target: string | null; path: string }>();
+  const draftTarget = useRef<string | null>(null);
   const edits = usePendingEdits();
   const dialog = useRef<HTMLDialogElement>(null);
   const dirty = useRef(false);
   const busy = useRef(false);
   const [isBusy, setBusy] = useState(false);
+  const livePending = useRef(0);
+  const [liveRunning, setLiveRunning] = useState(false);
+  const runLive: Run = async (...args) => {
+    livePending.current++;
+    setLiveRunning(true);
+    try {
+      return await run(...args);
+    } finally {
+      livePending.current--;
+      setLiveRunning(livePending.current > 0);
+    }
+  };
   useEffect(() => {
     const previous = document.activeElement;
     dialog.current?.showModal();
@@ -49,7 +60,7 @@ export default function LookEditorDialog({
     };
   }, []);
   const close = () => {
-    if (busy.current || liveBusy) return;
+    if (busy.current || liveBusy || livePending.current) return;
     if (
       (dirty.current || edits.pending()) &&
       !window.confirm("Discard these unsaved look edits and close?")
@@ -59,7 +70,7 @@ export default function LookEditorDialog({
     onClose();
   };
   const startDraft = (theme?: string) => {
-    if (busy.current || liveBusy) return;
+    if (busy.current || liveBusy || livePending.current) return;
     if (
       draft &&
       dirty.current &&
@@ -67,6 +78,7 @@ export default function LookEditorDialog({
     )
       return;
     setProject(liveProject);
+    draftTarget.current = target;
     setDraft({
       ...(theme ? { theme } : {}),
       target,
@@ -86,17 +98,42 @@ export default function LookEditorDialog({
         setBusy(value);
       },
       async onReopenProject() {
-        if (busy.current) return false;
+        if (busy.current || livePending.current) return false;
         if (
           (dirty.current || edits.pending()) &&
-          !window.confirm("Discard this unsaved look draft and reopen the current project?")
+          !window.confirm("Discard these unsaved look edits and reopen the current project?")
         )
           return false;
         const current = await api.project();
+        let scope = draftTarget.current;
+        let previewPath = draft?.path ?? path;
+        if (scope) {
+          const response = await fetch(`/api/look?path=${encodeURIComponent(previewPath)}`);
+          if (!response.ok)
+            throw new Error("The current project could not be opened. Retry its connection.");
+          const context = (await response.json()) as Start & { lookProject?: string };
+          if (context.lookProject !== current.lookProject)
+            throw new Error("The project changed again. Retry opening it.");
+          const landing = context.look?.ir.pages.find(
+            (page) => page.id === scope && page.pattern.kind === "landing",
+          );
+          if (!landing) {
+            if (
+              !window.confirm(
+                "This draft's landing page no longer exists. Open a new draft for the whole app instead?",
+              )
+            )
+              return false;
+            scope = null;
+            previewPath = "/";
+          } else previewPath = landing.route;
+        }
         setProject(current);
-        setDraft((value) => value && { target: null, path: "/" });
+        setDraft((value) => value && { target: scope, path: previewPath });
+        draftTarget.current = scope;
         dirty.current = false;
         setInstance((value) => value + 1);
+        setSettingsInstance((value) => value + 1);
         return true;
       },
       async request(route, init) {
@@ -181,14 +218,17 @@ export default function LookEditorDialog({
         </span>
         <button
           type="button"
-          disabled={isBusy || liveBusy}
+          disabled={isBusy || liveBusy || liveRunning}
           onClick={close}
           className="shrink-0 rounded border border-line px-3 py-1 text-sm disabled:opacity-50"
         >
           Close look editor
         </button>
       </div>
-      <fieldset disabled={isBusy || liveBusy} className="shrink-0 border-b border-line px-3 py-2">
+      <fieldset
+        disabled={isBusy || liveBusy || liveRunning}
+        className="shrink-0 border-b border-line px-3 py-2"
+      >
         <Tabs
           tabs={[
             ["settings", "Theme and settings"],
@@ -196,7 +236,7 @@ export default function LookEditorDialog({
           ]}
           value={tab}
           onChange={(next) => {
-            if (isBusy || liveBusy) return;
+            if (isBusy || liveBusy || livePending.current) return;
             if (next === "customise" && !draft) startDraft();
             else setTab(next);
           }}
@@ -204,12 +244,12 @@ export default function LookEditorDialog({
       </fieldset>
       <PendingEdits.Provider value={edits.report}>
         <div hidden={tab !== "settings"} className="min-h-0 flex-1 overflow-auto">
-          <fieldset disabled={isBusy || liveBusy}>
+          <fieldset disabled={isBusy || liveBusy || liveRunning}>
             <UxSource text={liveProject.files.ux} ux={spec.ux}>
               <ThemeSettings
-                key={instance}
+                key={settingsInstance}
                 spec={spec}
-                run={run}
+                run={runLive}
                 themes={liveProject.themes}
                 ownThemes={liveProject.ownThemes}
                 target={target}
@@ -227,6 +267,9 @@ export default function LookEditorDialog({
               initialTheme={draft.theme}
               initialTarget={draft.target}
               showGallery={false}
+              onTargetChange={(page) => {
+                draftTarget.current = page;
+              }}
             />
           )}
         </div>

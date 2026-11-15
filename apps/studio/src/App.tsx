@@ -143,7 +143,11 @@ export function App() {
   // Leave feedback (A 242): open with what was said to Smith, if anything; this session's changes.
   const [feedback, setFeedback] = useState<string>();
   const [sessionStart] = useState(() => new Date().toISOString());
-  const [editingLook, setEditingLook] = useState<{ project: Project; path: string }>();
+  const [editingLook, setEditingLook] = useState<{
+    project: Project;
+    path: string;
+    target?: string;
+  }>();
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
@@ -1664,7 +1668,13 @@ export function App() {
                             onPlace={nocodePlace}
                             target={partToOpen}
                             onTargetOpened={() => setPartToOpen(undefined)}
-                            onLook={() => setEditingLook({ project, path: keptPage() })}
+                            onLook={(target) =>
+                              setEditingLook({
+                                project,
+                                path: keptPage(),
+                                ...(target ? { target } : {}),
+                              })
+                            }
                             followingBlocked={
                               busy || guideStarted || Boolean(editingLook) || show.going
                             }
@@ -1802,6 +1812,7 @@ export function App() {
             spec={spec}
             run={run}
             liveBusy={busy}
+            initialTarget={editingLook.target}
             path={editingLook.path}
             onClose={() => setEditingLook(undefined)}
           />
