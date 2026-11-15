@@ -66,19 +66,13 @@ export function reviewSections(review: Review): ReviewSection[] {
     },
     {
       id: "migrations",
-      title: first ? "Compared with the last release" : "Migration impact",
-      state: first
-        ? "not-applicable"
-        : !compared || review.migrations.length
-          ? "needs-look"
-          : "unchanged",
-      summary: first
-        ? "nothing to compare yet"
-        : !compared
-          ? "comparison unavailable"
-          : review.migrations.length
-            ? "review model and field changes"
-            : "no model or field changes detected",
+      title: "Migration impact",
+      state: !compared || review.migrations.length ? "needs-look" : "unchanged",
+      summary: !compared
+        ? "comparison unavailable; review model and field changes"
+        : review.migrations.length
+          ? "review model and field changes"
+          : "no model or field changes detected",
     },
     {
       id: "checks",

@@ -166,12 +166,7 @@ export function ReleaseReview({
       </>
     ),
     migrations:
-      review.baselineState === "none" ? (
-        <p>
-          There is no local release to compare with yet. Review generated migrations before your
-          first deployment.
-        </p>
-      ) : review.comparison !== "available" ? (
+      review.comparison !== "available" ? (
         <p>Migration comparison unavailable. Review the generated migrations manually.</p>
       ) : review.migrations.length ? (
         <ul className="list-disc pl-5">

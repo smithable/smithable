@@ -245,3 +245,14 @@ test("a pending deployment record is unavailable, not a first release", () => {
   beginDeployment(dir);
   expect(releaseReview(dir).baselineState).toBe("unavailable");
 });
+
+test("hosted projects without local deployment evidence keep migration comparison unavailable", () => {
+  const dir = fixture();
+  // A local record is absent even when the hosted app already has live data.
+  writeFileSync(join(dir, "smithable.yml"), spec.replace(", body: text", ""));
+  const hosted = releaseReview(dir, { hosted: true });
+  expect(hosted.baselineState).toBe("unavailable");
+  expect(hosted.comparison).toBe("unavailable");
+  expect(hosted.comparisonReason).toContain("No valid local deployment baseline");
+  expect(releaseReview(dir).baselineState).toBe("none");
+});

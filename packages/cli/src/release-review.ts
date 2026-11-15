@@ -349,7 +349,7 @@ function accessFacts(ir: SpecIR, auth: AuthIR) {
   };
 }
 
-export function releaseReview(dir: string) {
+export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
   const revision = projectRevision(dir);
   const recorded = { checks: checksRecord(dir), deployment: deploymentRecord(dir) };
   const current = loadSpec(dir, { out: () => {}, err: () => {} });
@@ -451,7 +451,8 @@ export function releaseReview(dir: string) {
     // that a hosted project has never been published.
     baselineState: comparable
       ? "available"
-      : !busy &&
+      : !options.hosted &&
+          !busy &&
           !baselineChanged &&
           current.ir &&
           current.auth &&

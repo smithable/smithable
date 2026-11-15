@@ -1150,7 +1150,7 @@ export async function studio(
         }
       }
       if (url.pathname === "/api/release-review" && req.method === "GET")
-        return json(releaseReview(dir));
+        return json(releaseReview(dir, { hosted: Boolean(options.home || hostedLevel()) }));
       if (url.pathname === "/api/logs") return json(logs);
       // What the preview kept instead of sending: invitations, sign-in codes, notifications.
       if (url.pathname === "/api/outbox") return json(readOutbox(dir));
