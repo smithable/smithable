@@ -116,7 +116,11 @@ export function useSpeech(
   onFinal: (text: string) => void,
   /** Listening ended; `heard` when anything final came in it (the moment to send it). */
   onEnd: (heard: boolean) => void,
+  /** The guide owns the conversation: keep Auto armed, without recognizing input. */
+  inputBlocked = false,
 ): Speech {
+  const inputBlockedNow = useRef(inputBlocked);
+  inputBlockedNow.current = inputBlocked;
   const [settings, setSettings] = useState(load);
   const [notice, setNotice] = useState<string>();
   const save = (next: Settings) => {
@@ -229,7 +233,7 @@ export function useSpeech(
   // biome-ignore lint/correctness/useExhaustiveDependencies: settings are read as they are now
   const listen = useCallback(
     (hold: boolean) => {
-      if (rec.current || !mayHear() || !Rec) return;
+      if (inputBlockedNow.current || rec.current || !mayHear() || !Rec) return;
       setHearingError(undefined);
       if (!settings.told) {
         flushSync(() =>
@@ -367,7 +371,7 @@ export function useSpeech(
             .then(async () => {
               // Nothing is heard while Smith speaks (barge-in is off for these voices): what was
               // being heard when he started is dropped, so he is not written out as the person.
-              if (speakingNow.current) {
+              if (speakingNow.current || inputBlockedNow.current) {
                 segments.reset();
                 rec.current?.abort();
                 return;
@@ -435,6 +439,10 @@ export function useSpeech(
     },
     [],
   );
+
+  useEffect(() => {
+    if (inputBlocked) rec.current?.abort();
+  }, [inputBlocked]);
 
   return {
     canSpeak,

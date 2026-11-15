@@ -9,7 +9,13 @@ import type { Speech } from "./useSpeech";
 const BUTTON =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm hover:border-accent disabled:opacity-40";
 
-export function SpeechControls({ speech }: { speech: Speech }) {
+export function SpeechControls({
+  speech,
+  inputDisabled = false,
+}: {
+  speech: Speech;
+  inputDisabled?: boolean;
+}) {
   // Held past a moment it listens until let go; a shorter click listens for one utterance.
   const holding = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const held = useRef(false);
@@ -44,7 +50,7 @@ export function SpeechControls({ speech }: { speech: Speech }) {
           <button
             type="button"
             className={cx(BUTTON, speech.listening && "border-red-500 text-red-600")}
-            disabled={!speech.canHear || speech.checkingHearing}
+            disabled={inputDisabled || !speech.canHear || speech.checkingHearing}
             title={
               speech.needsLocalCheck
                 ? "Check whether speech recognition can run on this computer"
@@ -89,6 +95,7 @@ export function SpeechControls({ speech }: { speech: Speech }) {
                 speech.auto && "border-accent text-accent",
               )}
               aria-pressed={speech.auto}
+              disabled={inputDisabled}
               title="Listens by itself while Smith is silent; a headset works best"
               onClick={() => {
                 speech.setAuto(!speech.auto);

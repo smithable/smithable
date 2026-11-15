@@ -48,7 +48,9 @@ export function Ask({
   onClose,
   beta,
   guide,
+  guiding = false,
   onDone,
+  onBeginChange,
   onEdit,
   words,
   making = false,
@@ -70,6 +72,8 @@ export function Ask({
   peopleRunning?: boolean;
   /** The guide's stop, said as Smith's line with Next and Skip (smith-first.md §7). */
   guide?: GuideLine;
+  guiding?: boolean;
+  onBeginChange?: () => void;
   /** The hosted beta, said in Smith's words (smith-first.md §8). */
   beta?: Beta;
   /** Smith's presentation of the app, as far as it has gone (usePresentation). */
@@ -150,7 +154,7 @@ export function Ask({
   const taking = useRef(false);
   // Only a page someone is looking at takes it, so two open tabs do not both take the first.
   const next =
-    !making && !busy && !proposal && document.visibilityState === "visible"
+    !guiding && !making && !busy && !proposal && document.visibilityState === "visible"
       ? waiting[0]
       : undefined;
   useEffect(() => {
@@ -298,22 +302,25 @@ export function Ask({
   const requestNow = useRef(request);
   requestNow.current = request;
   const sendNow = useRef<() => void>(() => {});
+  const guidingNow = useRef(guiding);
+  guidingNow.current = guiding;
   const speech = useSpeech(
     speechProviders,
     (text) => {
-      if (!text) return;
+      if (!text || guidingNow.current) return;
       clearTimeout(sendLater.current);
       const next = requestNow.current.trim() ? `${requestNow.current.trim()} ${text}` : text;
       requestNow.current = next;
       setRequest(next);
     },
     (heard) => {
-      if (!heard || !speechNow.current.auto) return;
+      if (!heard || guidingNow.current || !speechNow.current.auto) return;
       clearTimeout(sendLater.current);
       sendLater.current = setTimeout(() => {
         if (speechNow.current.auto) sendNow.current();
       }, 1500);
     },
+    guiding,
   );
   useEffect(() => {
     if (!speech.auto) clearTimeout(sendLater.current);
@@ -330,7 +337,7 @@ export function Ask({
     const down = (e: KeyboardEvent) => {
       if (!(e.ctrlKey && e.shiftKey && e.code === "Space")) return;
       e.preventDefault();
-      if (e.repeat || held) return;
+      if (e.repeat || held || guidingNow.current) return;
       held = true;
       speech().listen(true);
     };
@@ -358,6 +365,7 @@ export function Ask({
   }, []);
   const apply = async () => {
     if (!proposal) return;
+    onBeginChange?.();
     setBusy(true);
     try {
       const result = await api.applyProposal(proposal.id);
@@ -417,7 +425,7 @@ export function Ask({
     void propose(text);
   };
   // The ready prompts rest during the presentation and the guide (smith-first.md §12.6).
-  const quiet = overlay || presenting || Boolean(guide);
+  const quiet = overlay || presenting || guiding || Boolean(guide);
   const leftOpen = !quiet && partsSaid >= parts.length ? (show?.leftOpen ?? []) : [];
   // The preview started to run during the presentation: said with the next part, or at once
   // after the last (smith-first.md §12.1).
@@ -465,7 +473,7 @@ export function Ask({
     void propose(detailed);
   };
   const send = () => {
-    if (busy || !request.trim()) return;
+    if (guiding || busy || !request.trim()) return;
     clearTimeout(sendLater.current);
     speech.stopSpeaking();
     if (proposal?.kind === "question") {
@@ -581,6 +589,15 @@ export function Ask({
   useEffect(() => {
     if (output) speech.speak(output);
   }, [output]);
+
+  // A new stop replaces the previous one. Re-rendering the same line never queues it again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stop identity, not chip callback identities
+  useEffect(() => {
+    if (!guide) return;
+    speech.stopSpeaking();
+    speech.speak(guide.stop.text);
+    return () => speech.stopSpeaking();
+  }, [guide?.stop.anchor, guide?.stop.text]);
 
   return (
     <div ref={panel} className="flex min-h-0 flex-1 flex-col">
@@ -756,6 +773,7 @@ export function Ask({
             ref={box}
             aria-label="Describe a change, or ask a question"
             value={request}
+            disabled={guiding}
             onChange={(e) => {
               // Any touch of the box keeps a spoken message from going by itself.
               clearTimeout(sendLater.current);
@@ -771,11 +789,13 @@ export function Ask({
             rows={2}
             className="block min-w-0 flex-1 resize-none rounded-md border border-line-strong bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
-          <Button type="submit" disabled={busy || !request.trim()}>
+          <Button type="submit" disabled={guiding || busy || !request.trim()}>
             {making ? "Make it once the app is there" : busy && !proposal ? "Working…" : "Send"}
           </Button>
         </div>
-        {speechProviders.length > 0 || speech.why ? <SpeechControls speech={speech} /> : null}
+        {speechProviders.length > 0 || speech.why ? (
+          <SpeechControls speech={speech} inputDisabled={guiding} />
+        ) : null}
         {overlay || presenting
           ? parts.length > 1 && <PartDots at={partsSaid} count={parts.length} />
           : ready &&

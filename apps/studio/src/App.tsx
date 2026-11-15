@@ -585,6 +585,7 @@ export function App() {
       confirm?: boolean,
       file?: { path: string; data: string },
     ) => {
+      pauseGuide();
       setBusy(true);
       setMessage(undefined);
       let result: Awaited<ReturnType<typeof api.operation>>;
@@ -740,6 +741,12 @@ export function App() {
   // screen, never with ?guide=off; Guide in the header shows it again. Code's tour when Code is
   // the first window.
   const [guiding, setGuiding] = useState(false);
+  const [guideStarted, setGuideStarted] = useState(false);
+  const guideChange = useRef(changeKey);
+  const guideBlocked =
+    message?.ok === false ||
+    Boolean(pending) ||
+    spec.diagnostics?.some((d) => d.severity === "error");
   const tour = manual === "code" && slotOf("code") !== undefined && !narrow ? "code" : "nocode";
   const firstVisit = project && !project.making && !guideOff() && !seenGuide(project.name);
   // Who runs the app is asked after the time zone is answered, one card at a time.
@@ -779,10 +786,14 @@ export function App() {
   // The tour as it started: the shown change opens Code on the way, which is not Code's tour.
   const [touring, setTouring] = useState<keyof typeof TOURS>("nocode");
   const startGuide = () => {
-    setTouring(tour);
-    if (floating && !guiding) beforeGuide.current = { arrangement, hidden };
+    if (guideBlocked) return;
+    const wanted = guideStarted ? touring : tour;
+    if (!guideStarted) setTouring(wanted);
+    guideChange.current = changeKey;
+    setGuideStarted(true);
+    if (floating && !guideStarted) beforeGuide.current = { arrangement, hidden };
     // The view with No code and Code comes into view for the tour's stops in it.
-    if (tour === "nocode" && !narrow) workIn("nocode");
+    if (wanted === "nocode" && !narrow) workIn("nocode");
     // Floating, Smith's panel opens for his lines, and the window he left comes on screen for its
     // stop.
     setPanelOpen(true);
@@ -794,6 +805,50 @@ export function App() {
   const [guideLine, setGuideLine] = useState<GuideLine>();
   // The lit place of the guide's stop, which the floating panel moves off (smith-first.md §12.3).
   const [lit, setLit] = useState<{ anchor: string; box: DOMRect }>();
+  const pauseGuide = () => {
+    setGuiding(false);
+    setGuideLine(undefined);
+    setLit(undefined);
+  };
+  // Close before an editor's click is handled, keeping Guide mounted with its current stop.
+  // Programmatic focus during a tour is not editing; Tab into a control or typing is.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: listeners live only during the active tour
+  useEffect(() => {
+    if (!guiding) return;
+    let tabbing = false;
+    const interact = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key === "Tab") {
+        tabbing = true;
+        return;
+      }
+      if (event.type === "focusin" && !tabbing) return;
+      tabbing = false;
+      const target = event.target instanceof Element ? event.target : undefined;
+      if (!target || target.closest("[data-guide-card]")) return;
+      const manual = target.closest(
+        '[data-guide="manual"], [data-guide="files"], [data-guide="behavior"]',
+      );
+      const editable = target.closest(
+        'input, textarea, select, [contenteditable="true"], [role="textbox"]',
+      );
+      const activate =
+        event instanceof KeyboardEvent && (event.key === "Enter" || event.key === " ");
+      if (manual && (event.type === "pointerdown" || editable || activate)) pauseGuide();
+    };
+    document.addEventListener("pointerdown", interact, true);
+    document.addEventListener("keydown", interact, true);
+    document.addEventListener("focusin", interact, true);
+    return () => {
+      document.removeEventListener("pointerdown", interact, true);
+      document.removeEventListener("keydown", interact, true);
+      document.removeEventListener("focusin", interact, true);
+    };
+  }, [guiding]);
+  // The visible error and the guide never share a frame. A committed change also ends the tour's turn.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pause only when the blocking state changes
+  useEffect(() => {
+    if (guiding && (guideBlocked || changeKey !== guideChange.current)) pauseGuide();
+  }, [guiding, guideBlocked, changeKey]);
   // On a phone too: the guide switches to a stop's window and says it at the window's foot.
   const smithSays = narrow || floating || slotOf("smith") !== undefined;
   // What the draft assumed (smith-first.md §4), kept from the making for Smith to ask at its
@@ -916,8 +971,11 @@ export function App() {
         previewRuns={previewRuns}
         onClose={closeOverlay}
         peopleRunning={people?.running}
+        guiding={guiding && !guideBlocked}
         guide={
-          guiding && guideInSmith && (!narrow || phoneWindow === "smith") ? guideLine : undefined
+          guiding && !guideBlocked && guideInSmith && (!narrow || phoneWindow === "smith")
+            ? guideLine
+            : undefined
         }
         assumptions={assumptions}
         {...(project.beta ? { beta: project.beta } : {})}
@@ -929,6 +987,7 @@ export function App() {
         speech={project.speech ?? []}
         // A milestone named or an undo from Smith: the windows read the history again.
         onDone={() => void refresh()}
+        onBeginChange={pauseGuide}
         ready={{
           sections,
           parts,
@@ -1402,15 +1461,17 @@ export function App() {
             onClose={() => setPeopleOpen(false)}
           />
         )}
-        {guiding && !project.making && (
+        {guideStarted && !project.making && (
           // Made again for the other way's tour, which finds its own places.
           <Suspense fallback={null}>
             <Guide
               key={touring}
               app={project.name}
+              active={guiding && !guideBlocked}
               stops={TOURS[touring]}
               onEnd={() => {
                 setGuiding(false);
+                setGuideStarted(false);
                 setGuided(true);
                 if (floating && beforeGuide.current) {
                   setArrangement(beforeGuide.current.arrangement);
@@ -1690,7 +1751,7 @@ export function App() {
                 </div>
               )}
             </main>
-            {narrow && guiding && guideLine && phoneWindow !== "smith" && (
+            {narrow && guiding && !guideBlocked && guideLine && phoneWindow !== "smith" && (
               // The guide's line where Smith's thread is not on screen: one line at the window's
               // foot, with its chips (A 172).
               <div
