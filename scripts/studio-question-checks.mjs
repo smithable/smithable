@@ -10,8 +10,11 @@ export async function checkStudioQuestions(browser, base) {
       ({ name }) => {
         localStorage.setItem(`guideDone:${name}`, "1");
         localStorage.setItem(`presented:${name}`, "1");
-        localStorage.removeItem(`zoneAsked:${name}`);
-        localStorage.removeItem(`ownerAsked:${name}`);
+        if (!sessionStorage.getItem(`questionFixture:${name}`)) {
+          localStorage.removeItem(`zoneAsked:${name}`);
+          localStorage.removeItem(`ownerAsked:${name}`);
+          sessionStorage.setItem(`questionFixture:${name}`, "1");
+        }
         localStorage.setItem("smithable:smith", "floating");
         localStorage.setItem(
           "smithable:speech",
