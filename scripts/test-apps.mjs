@@ -5445,7 +5445,7 @@ async function askPanelFlow(dir, base) {
       });
     if (!launcherAtLowerLeft)
       throw new Error("Ask's launcher icon is not at the label's lower left");
-    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    await page.locator('[data-kit="ask-launch"]').click();
     const sheet = page.getByRole("dialog", { name: "Ask" });
     await sheet.getByLabel("Question").fill("how many tasks");
     await sheet.getByRole("button", { name: "Ask", exact: true }).click();
@@ -5500,11 +5500,12 @@ async function askPanelFlow(dir, base) {
     await answered.getByRole("button", { name: "Sound on", exact: true }).click();
     const canceledBeforeClose = await page.evaluate(() => window.__answerSpeech.cancels);
     await sheet.getByRole("button", { name: "Close", exact: true }).click();
+    await sheet.waitFor({ state: "hidden" });
     await page.waitForFunction(
       (before) => window.__answerSpeech.current === null && window.__answerSpeech.cancels > before,
       canceledBeforeClose,
     );
-    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    await page.locator('[data-kit="ask-launch"]').click();
     await answered.getByRole("button", { name: "Sound off", exact: true }).waitFor();
     await answered.getByLabel("Voice", { exact: true }).selectOption("Fixture Two");
     const sample = await page.evaluate(() => {
@@ -5541,7 +5542,7 @@ async function askPanelFlow(dir, base) {
       .waitFor({ timeout: 10000 * P });
     // The button opens the sheet once the page runs in the browser.
     await page.reload({ waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    await page.locator('[data-kit="ask-launch"]').click();
     await sheet.locator("[data-answer]").nth(2).getByText("From your records").waitFor();
     // may: change: the model's proposal is a card in the app's words, made only once confirmed.
     await sheet.getByLabel("Question").fill("start the newsletter draft");
@@ -5562,12 +5563,11 @@ async function askPanelFlow(dir, base) {
       throw new Error(`the change was logged as ${logged}`);
     await page.context().clearCookies();
     await signInAs(page, base, "admin");
-    if (await page.getByRole("button", { name: "Ask", exact: true }).count())
+    if (await page.locator('[data-kit="ask-launch"]').count())
       throw new Error("a role the assistant block does not name has Ask");
     await page.context().clearCookies();
     await open(page, `${base}/sign-in`);
-    if (await page.getByRole("button", { name: "Ask", exact: true }).count())
-      throw new Error("a visitor has Ask");
+    if (await page.locator('[data-kit="ask-launch"]').count()) throw new Error("a visitor has Ask");
     console.log(
       "  ✓ browser: a member lands on the first page they may open; Ask answers a member from the records with the button (rules, no model) and says answers may come from an AI; a greeting is answered by rule with questions to try, one picked is answered, and the conversation stays on a reload; a change the model proposes is a card made only once confirmed, logged as through Ask; a role the assistant block does not name and a visitor have no Ask",
     );
