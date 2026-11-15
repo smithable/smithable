@@ -65,6 +65,10 @@ export function playback(
         owner?.();
         owner = stop;
       }
+      if (!queue.length && paused) {
+        paused = false;
+        synth.resume();
+      }
       for (const piece of sentences(text)) {
         const utterance = new SpeechSynthesisUtterance(piece);
         utterance.voice = voice;

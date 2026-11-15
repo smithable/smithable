@@ -4486,6 +4486,13 @@ async function apiFlow(base) {
     // Read aloud by the browser's own speech: the number is what it says.
     await page.evaluate(() => {
       window.__spoken = [];
+      // Plain fixture voices need a fixture utterance too: the native voice setter only takes
+      // browser-owned SpeechSynthesisVoice objects.
+      window.SpeechSynthesisUtterance = class {
+        constructor(text) {
+          this.text = text;
+        }
+      };
       window.speechSynthesis.getVoices = () => [
         { name: "Fixture", lang: "en-US", localService: true },
       ];
@@ -5397,6 +5404,11 @@ async function askPanelFlow(dir, base) {
   await page.addInitScript(() => {
     const speech = { utterances: [], current: null, pauses: 0, resumes: 0, cancels: 0 };
     window.__answerSpeech = speech;
+    window.SpeechSynthesisUtterance = class {
+      constructor(text) {
+        this.text = text;
+      }
+    };
     const synth = window.speechSynthesis;
     synth.getVoices = () => [
       { name: "Fixture One", lang: "en-US", localService: true },
@@ -5474,6 +5486,17 @@ async function askPanelFlow(dir, base) {
     });
     if (resumed.count !== reading.count || resumed.pauses !== 1 || resumed.resumes < 1)
       throw new Error(`Ask did not resume its reader: ${JSON.stringify(resumed)}`);
+    await answered.getByRole("button", { name: "Sound on", exact: true }).click();
+    // A final sentence can finish just after Pause. The next Play must work on its first click.
+    await page.evaluate(() => {
+      const s = window.__answerSpeech;
+      s.current = null;
+      s.utterances.at(-1).onend?.({});
+    });
+    await answered.getByRole("button", { name: "Sound off", exact: true }).click();
+    const playedAgain = await page.evaluate(() => window.__answerSpeech.utterances.length);
+    if (playedAgain !== reading.count + 1)
+      throw new Error("Play was silent after a paused final sentence finished");
     await answered.getByRole("button", { name: "Sound on", exact: true }).click();
     const canceledBeforeClose = await page.evaluate(() => window.__answerSpeech.cancels);
     await sheet.getByRole("button", { name: "Close", exact: true }).click();

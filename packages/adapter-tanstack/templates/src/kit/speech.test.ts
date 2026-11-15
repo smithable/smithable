@@ -149,3 +149,16 @@ test("a changed voice and speed apply to the remaining sentences", () => {
   expect(utterances[1]?.voice).toBe(next);
   expect(utterances[1]?.rate).toBe(2);
 });
+
+test("Play starts fresh after the final sentence ends while paused", () => {
+  const { player, utterances, voice, synth } = fixture();
+  player.speak("Only sentence.", voice, 1);
+  player.pause();
+  synth.speaking = false;
+  utterances[0]?.onend?.({} as SpeechSynthesisEvent);
+  expect(player.busy).toBe(false);
+  // The same busy-based dispatch as the answer's sound button.
+  if (player.busy) player.resume();
+  else player.speak("Only sentence.", voice, 1);
+  expect(utterances.map((u) => u.text)).toEqual(["Only sentence.", "Only sentence."]);
+});
