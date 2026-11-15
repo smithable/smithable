@@ -32,6 +32,9 @@ const KINDS: [string, string][] = [
   ["text", "Long text"],
   ["markdown", "Formatted text"],
   ["picture", "Picture"],
+  ["pictures", "Pictures"],
+  ["file", "File"],
+  ["files", "Files"],
   ["int", "Whole number"],
   ["decimal", "Number"],
   ["money", "Amount"],
@@ -140,7 +143,15 @@ function FieldShapeControls({
         <Select
           aria-label="Field type"
           value={shape.kind}
-          onChange={(e) => set({ kind: e.target.value, target: shape.target || (models[0] ?? "") })}
+          onChange={(e) =>
+            set({
+              kind: e.target.value,
+              target: shape.target || (models[0] ?? ""),
+              ...(["picture", "pictures", "file", "files"].includes(e.target.value)
+                ? { unique: "no" as const, rest: "" }
+                : {}),
+            })
+          }
           options={KINDS}
         />
       </Label>
@@ -176,7 +187,7 @@ function FieldShapeControls({
           />
         </div>
       )}
-      {shape.kind !== "choice" && (
+      {!["choice", "picture", "pictures", "file", "files"].includes(shape.kind) && (
         <Label
           text="Unique"
           hint="No two records with the same value here: among one owner's records, in the whole app, or as who may read them says"

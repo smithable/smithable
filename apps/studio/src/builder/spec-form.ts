@@ -170,6 +170,114 @@ export function alternativeFor(options: JsonSchema[], value: unknown): JsonSchem
   return options.find(fits);
 }
 
+/** A finite union keeps its actual value types, including booleans when it was not set. */
+export function finiteAlternatives(options: JsonSchema[]): unknown[] | undefined {
+  const result: unknown[] = [];
+  for (const option of options) {
+    const values =
+      "const" in option
+        ? [option.const]
+        : Array.isArray(option.enum)
+          ? option.enum
+          : types(option).length === 1 && types(option)[0] === "boolean"
+            ? [false, true]
+            : undefined;
+    if (
+      !values ||
+      values.some(
+        (value) => value === null || !["string", "number", "boolean"].includes(typeof value),
+      )
+    )
+      return undefined;
+    for (const value of values)
+      if (!result.some((before) => JSON.stringify(before) === JSON.stringify(value)))
+        result.push(value);
+  }
+  return result.length ? result : undefined;
+}
+
+export function numberLimits(schema: JsonSchema, path: (string | number)[], document: unknown) {
+  let min = typeof schema.minimum === "number" ? schema.minimum : undefined;
+  let max = typeof schema.maximum === "number" ? schema.maximum : undefined;
+  if (path.length === 5 && path[0] === "models" && path[2] === "fields") {
+    const key = path[4];
+    const other = at(document, [...path.slice(0, -1), key === "min" ? "max" : "min"]);
+    if (typeof other === "number" && Number.isFinite(other)) {
+      if (key === "min") max = max === undefined ? other : Math.min(max, other);
+      if (key === "max") min = min === undefined ? other : Math.max(min, other);
+    }
+  }
+  return {
+    ...(min === undefined ? {} : { min }),
+    ...(max === undefined ? {} : { max }),
+    integer: types(schema).includes("integer"),
+  };
+}
+
+/** Domain prose lists, as declared by the semantic-text schema; access rules are different. */
+export function isRuleList(schema: JsonSchema): boolean {
+  const item = schema.items as JsonSchema | undefined;
+  return (
+    schema["x-semantic"] === true &&
+    types(schema).includes("array") &&
+    Boolean(
+      (item?.oneOf as JsonSchema[] | undefined)?.some(
+        (option) => (option.properties as Record<string, JsonSchema> | undefined)?.rule,
+      ),
+    )
+  );
+}
+
+/** A new blank sentence is a draft. Existing saved values are kept until explicitly edited. */
+export function semanticDraftReady(schema: JsonSchema, value: unknown, original: unknown): boolean {
+  if (isRuleList(schema)) {
+    if (value === undefined) return true;
+    if (!Array.isArray(value)) return false;
+    const unchanged = Array.isArray(original) ? original.map((item) => JSON.stringify(item)) : [];
+    return value.every((item) => {
+      const text =
+        typeof item === "string"
+          ? item
+          : item && typeof item === "object"
+            ? (item as Record<string, unknown>).rule
+            : undefined;
+      if (typeof text !== "string") return false;
+      if (text.trim()) return true;
+      const index = unchanged.indexOf(JSON.stringify(item));
+      if (index < 0) return false;
+      unchanged.splice(index, 1);
+      return true;
+    });
+  }
+
+  const alternatives = (schema.oneOf ?? schema.anyOf) as JsonSchema[] | undefined;
+  if (alternatives) {
+    const chosen = alternativeFor(alternatives, value);
+    return !chosen || semanticDraftReady(chosen, value, original);
+  }
+  if (!value || typeof value !== "object") return true;
+  if (Array.isArray(value))
+    return value.every((item, index) =>
+      semanticDraftReady(
+        (schema.items ?? {}) as JsonSchema,
+        item,
+        Array.isArray(original) ? original[index] : undefined,
+      ),
+    );
+  return Object.entries(value).every(([key, child]) =>
+    semanticDraftReady(
+      ((schema.properties as Record<string, JsonSchema> | undefined)?.[key] ??
+        (typeof schema.additionalProperties === "object"
+          ? schema.additionalProperties
+          : {})) as JsonSchema,
+      child,
+      original && typeof original === "object"
+        ? (original as Record<string, unknown>)[key]
+        : undefined,
+    ),
+  );
+}
+
 /**
  * Alternatives that are one word or a list (a grant: all, or the names): the word and the list's
  * schema, so the form shows one check for the word and the list's chips otherwise.

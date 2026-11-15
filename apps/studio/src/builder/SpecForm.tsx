@@ -21,6 +21,7 @@ import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import { ConditionRows } from "./ConditionRows";
 import { conditionContext, conditionTreeReady } from "./condition-paths";
+import { NumberBox } from "./NumberBox";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
 import { type CreateReference, ReferenceCreation } from "./reference-creation";
@@ -41,9 +42,13 @@ import {
   choicesFor,
   controlOf,
   entryHeading,
+  finiteAlternatives,
+  isRuleList,
   labelOf,
+  numberLimits,
   operationFor,
   renameFor,
+  semanticDraftReady,
   wordOrList,
 } from "./spec-form";
 import { TimerForm } from "./TimerForm";
@@ -165,6 +170,12 @@ const shapeOf =
         );
       // What the rows do not hold (who sees it, its add, its look…), shown as written.
       const { on: _on, when: _when, set: _set, intent: _intent, ...rest } = written;
+      const rulesSchema = schemaAt(specSchema(), { actions: { [String(model)]: written } }, [
+        "actions",
+        String(model),
+        "rules",
+      ]);
+      if (rulesSchema) delete rest.rules;
       const save = (part: "when" | "set") => (value: unknown) =>
         run("setAction", { action: String(model), [part]: value });
       const help = (topic: "condition" | "formula") => <HelpMark topic={topic} />;
@@ -197,6 +208,16 @@ const shapeOf =
               help={help}
             />
           </div>
+          {rulesSchema && (
+            <div className="space-y-1" data-key="rules">
+              <p className="text-xs font-medium">Rules</p>
+              <Value
+                schema={rulesSchema}
+                value={written.rules}
+                path={["actions", String(model), "rules"]}
+              />
+            </div>
+          )}
           {Object.keys(rest).length > 0 && (
             <code className="block text-xs text-quiet">{JSON.stringify(rest)}</code>
           )}
@@ -394,12 +415,14 @@ function Value({
   path,
   drafted = false,
   variants = true,
+  labelOverride,
 }: {
   schema: JsonSchema;
   value: unknown;
   path: Path;
   drafted?: boolean;
   variants?: boolean;
+  labelOverride?: string;
 }) {
   const write = useContext(Writer);
   const choices = useContext(Choices);
@@ -412,6 +435,11 @@ function Value({
   const shaped = useContext(Shape)(path, value);
   const references = useContext(References);
   const inDraft = useContext(InDraft);
+  const nextListKey = useRef(0);
+  const listKeys = useRef<number[]>([]);
+  const listCount = Array.isArray(value) ? value.length : 0;
+  while (listKeys.current.length < listCount) listKeys.current.push(++nextListKey.current);
+  listKeys.current.length = listCount;
   const latest = useRef({ write, value, path });
   latest.current = { write, value, path };
   const mounted = useRef(false);
@@ -430,9 +458,16 @@ function Value({
   )
     return shaped;
   const condition = references && conditionContext(path, references.document, references.ir);
-  if (references && !drafted && !inDraft && (referenceGroup(path) || condition))
+  const rules = Boolean(references && isRuleList(schema));
+  if (references && !drafted && !inDraft && (referenceGroup(path) || condition || rules))
     return (
-      <ReferenceDraft schema={schema} value={value} path={path} condition={Boolean(condition)} />
+      <ReferenceDraft
+        schema={schema}
+        value={value}
+        path={path}
+        condition={Boolean(condition)}
+        rules={rules}
+      />
     );
   if (condition)
     return (
@@ -537,9 +572,36 @@ function Value({
   }
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;
-  const label = String(path.at(-1) ?? "");
+  const label = labelOverride ?? String(path.at(-1) ?? "");
   switch (control.kind) {
     case "alternatives": {
+      const finite = references && finiteAlternatives(control.options);
+      if (finite) {
+        const selected = value === undefined ? "" : JSON.stringify(value);
+        return (
+          <select
+            aria-label={label}
+            className={box}
+            value={selected}
+            onChange={(event) =>
+              void write(
+                path,
+                event.target.value === "" ? undefined : JSON.parse(event.target.value),
+              )
+            }
+          >
+            <option value="">Not set</option>
+            {value !== undefined && !finite.some((item) => JSON.stringify(item) === selected) && (
+              <option value={selected}>Saved: {String(value)}</option>
+            )}
+            {finite.map((item) => (
+              <option key={JSON.stringify(item)} value={JSON.stringify(item)}>
+                {typeof item === "boolean" ? (item ? "Yes" : "No") : String(item)}
+              </option>
+            ))}
+          </select>
+        );
+      }
       const either = wordOrList(control.options);
       if (either) {
         const whole = value === either.word;
@@ -560,7 +622,7 @@ function Value({
       }
       const chosen = alternativeFor(control.options, value);
       return chosen ? (
-        <Value schema={chosen} value={value} path={path} />
+        <Value schema={chosen} value={value} path={path} labelOverride={labelOverride} />
       ) : (
         <code className="text-xs">{JSON.stringify(value)}</code>
       );
@@ -599,6 +661,22 @@ function Value({
       );
     case "number":
     case "text":
+      if (control.kind === "number" && references)
+        return (
+          <NumberBox
+            label={label}
+            value={value}
+            {...numberLimits(schema, path, references.document)}
+            onCommit={(next) => write(path, next)}
+            {...(inDraft
+              ? {
+                  onDraft: (next: unknown) => {
+                    void write(path, next);
+                  },
+                }
+              : {})}
+          />
+        );
       return (
         <TextBox
           label={label}
@@ -631,15 +709,20 @@ function Value({
       ) : (
         <ol className="space-y-2">
           {items.map((item, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: a list's items are by their place
-            <li key={i} className="rounded-md border border-line p-2">
-              <Value schema={control.items} value={item} path={[...path, i]} />
-              {unique && (
+            <li key={rules ? listKeys.current[i] : i} className="rounded-md border border-line p-2">
+              <Value
+                schema={control.items}
+                value={item}
+                path={[...path, i]}
+                labelOverride={rules ? `Rule ${i + 1}` : undefined}
+              />
+              {(unique || rules) && (
                 <button
                   type="button"
                   className="text-xs underline"
-                  aria-label={`Remove unique rule ${i + 1}`}
+                  aria-label={`Remove ${unique ? "unique " : ""}rule ${i + 1}`}
                   onClick={() => {
+                    if (rules) listKeys.current.splice(i, 1);
                     const next = items.filter((_, index) => index !== i);
                     void write(path, next.length ? next : undefined);
                   }}
@@ -658,6 +741,17 @@ function Value({
                 onClick={() => void write(path, [...items, []])}
               >
                 Add unique rule
+              </button>
+            </li>
+          )}
+          {rules && (
+            <li>
+              <button
+                type="button"
+                className="text-xs underline"
+                onClick={() => void write(path, [...items, ""])}
+              >
+                Add a rule
               </button>
             </li>
           )}
@@ -1021,11 +1115,13 @@ function ReferenceDraft({
   value,
   path,
   condition = false,
+  rules = false,
 }: {
   schema: JsonSchema;
   value: unknown;
   path: Path;
   condition?: boolean;
+  rules?: boolean;
 }) {
   const write = useContext(Writer);
   const references = useContext(References);
@@ -1048,7 +1144,8 @@ function ReferenceDraft({
   const document = referenceWith(references.document, path, draft);
   const ready =
     referenceReady(schema, draft, path, document, references.ir, references.auth) &&
-    conditionTreeReady(path, draft, document, references.ir);
+    conditionTreeReady(path, draft, document, references.ir) &&
+    semanticDraftReady(schema, draft, value);
   const reset = () => {
     setDraft(value);
     setBaseline(current);
@@ -1060,7 +1157,11 @@ function ReferenceDraft({
     <fieldset
       disabled={busy}
       className="space-y-3"
-      aria-label={`Edit ${String(path.at(-1))} ${condition ? "condition" : "references"}`}
+      aria-label={
+        rules
+          ? "Edit domain rules"
+          : `Edit ${String(path.at(-1))} ${condition ? "condition" : "references"}`
+      }
     >
       <References.Provider
         value={{ ...references, document: referenceWith(references.document, path, draft) }}

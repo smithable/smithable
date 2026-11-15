@@ -1,12 +1,21 @@
-import { buildJsonSchema, COMPANION_SCHEMAS, operationsSetting } from "@smithable/core";
+import {
+  applyOperation,
+  buildJsonSchema,
+  COMPANION_SCHEMAS,
+  operationsSetting,
+} from "@smithable/core";
 import { expect, test } from "vitest";
 import {
   alternativeFor,
   choicesFor,
   controlOf,
+  finiteAlternatives,
+  isRuleList,
   labelOf,
+  numberLimits,
   operationFor,
   renameFor,
+  semanticDraftReady,
   uncovered,
   wordOrList,
 } from "./spec-form";
@@ -723,4 +732,111 @@ test("an emptied default box takes the default away", () => {
   expect(
     operationFor("smithable.yml", ["models", "Order", "fields", "minutes", "default"], ""),
   ).toEqual(["setFieldDefault", { model: "Order", field: "minutes", remove: true }]);
+});
+
+test("unset finite alternatives offer typed values without treating free text as a menu", () => {
+  expect(finiteAlternatives([{ type: "boolean" }, { enum: ["only"] }])).toEqual([
+    false,
+    true,
+    "only",
+  ]);
+  expect(finiteAlternatives([{ const: 0 }, { enum: [0, "0"] }])).toEqual([0, "0"]);
+  expect(finiteAlternatives([{ type: "string" }, { type: "boolean" }])).toBeUndefined();
+  expect(finiteAlternatives([{ type: "object" }])).toBeUndefined();
+});
+
+test("numeric bounds use the schema and the other field limit without inventing restrictions", () => {
+  const document = { models: { Item: { fields: { price: { min: -3.5, max: 9.5 } } } } };
+  const path = ["models", "Item", "fields", "price"];
+  expect(numberLimits({ type: "number" }, [...path, "min"], document)).toEqual({
+    max: 9.5,
+    integer: false,
+  });
+  expect(numberLimits({ type: "number" }, [...path, "max"], document)).toEqual({
+    min: -3.5,
+    integer: false,
+  });
+  expect(numberLimits({ type: "integer", minimum: 1, maximum: 5 }, ["limit"], document)).toEqual({
+    min: 1,
+    max: 5,
+    integer: true,
+  });
+  expect(numberLimits({ type: "number", maximum: 4 }, [...path, "min"], document)).toEqual({
+    max: 4,
+    integer: false,
+  });
+  expect(numberLimits({ type: "number" }, [...path, "default"], document)).toEqual({
+    integer: false,
+  });
+});
+
+test("domain rule additions stay drafts until written and named existing rules remain intact", () => {
+  const schema = {
+    type: "array",
+    "x-semantic": true,
+    items: {
+      oneOf: [{ type: "string" }, { type: "object", properties: { rule: { type: "string" } } }],
+    },
+  };
+  const named = { id: "no-overbooking", rule: "Never overbook a room." };
+  expect(isRuleList(schema)).toBe(true);
+  expect(isRuleList({ ...schema, "x-semantic": false })).toBe(false);
+  expect(semanticDraftReady(schema, [named, ""], [named])).toBe(false);
+  expect(semanticDraftReady(schema, [named, "   "], [named])).toBe(false);
+  expect(semanticDraftReady(schema, [named, "Keep the receipt."], [named])).toBe(true);
+  expect(semanticDraftReady(schema, [named], [named])).toBe(true);
+  expect(semanticDraftReady(schema, undefined, [named])).toBe(true);
+  expect(semanticDraftReady(schema, [""], [""])).toBe(true);
+  expect(semanticDraftReady(schema, [""], [named, ""])).toBe(true);
+  expect(semanticDraftReady(schema, ["", ""], [""])).toBe(false);
+  expect(
+    semanticDraftReady({ type: "object", properties: { rules: schema } }, { rules: [""] }, {}),
+  ).toBe(false);
+});
+
+test("new control values round-trip through the existing operations", () => {
+  const spec = `smithable: 0.1
+app: { name: Controls, timezone: UTC }
+models:
+  Item:
+    fields:
+      name: string!
+      amount: { type: decimal, min: -3.5, max: 9.5 }
+pages:
+  items: { crud: Item }
+`;
+  for (const value of [true, false, "only"]) {
+    expect(
+      applyOperation({ spec }, "editSpec", {
+        file: "smithable.yml",
+        path: ["pages", "items", "favorites"],
+        value,
+      }).ok,
+    ).toBe(true);
+  }
+  for (const type of ["pictures", "file", "files"]) {
+    expect(
+      applyOperation({ spec }, "addField", { model: "Item", field: "attachment", type }).ok,
+    ).toBe(true);
+  }
+  const rules = [{ id: "receipt", rule: "Keep every receipt." }, "Keep the total accurate."];
+  expect(
+    applyOperation({ spec }, "editSpec", {
+      file: "smithable.yml",
+      path: ["models", "Item", "rules"],
+      value: rules,
+    }).ok,
+  ).toBe(true);
+  expect(
+    applyOperation({ spec }, "setFieldRange", {
+      model: "Item",
+      field: "amount",
+      min: -2.5,
+      max: 9.5,
+    }).ok,
+  ).toBe(true);
+  expect(
+    applyOperation({ spec }, "setFieldRange", { model: "Item", field: "amount", min: 10, max: 9.5 })
+      .ok,
+  ).toBe(false);
 });
