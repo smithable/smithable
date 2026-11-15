@@ -34,12 +34,52 @@ dark:
 `;
 const parse = (text: string) => parseTheme({ path: "themes/forest.yml", text });
 
-test("the twenty-six built-in themes read in both modes, each under its own name", () => {
+test("the built-in themes read in both modes, with the selected gallery first", () => {
   const names = BUILT_IN_THEMES.map((t) => t.name);
   expect(names).toEqual([...THEME_PRESETS]);
-  expect(names).toHaveLength(26);
-  expect(new Set(names).size).toBe(26);
-  expect(names.slice(0, 4)).toEqual(["modern", "minimal", "playful", "corporate"]);
+  expect(names).toHaveLength(74);
+  expect(new Set(names).size).toBe(74);
+  expect(names.slice(0, 3)).toEqual(["arcade", "darkmatter", "halftone"]);
+  for (const excluded of ["carnival", "atelier", "newsprint"])
+    expect(names).not.toContain(excluded);
+  const leading =
+    "amber-minimal amethyst-haze arcade broadside caffeine coral cosmic-night darkmatter dusk halftone hallmark-midnight ink kiln nature refract ribbon solstice specimen spore starry-night studio sticker sunset-horizon terrazzo ultraviolet vantage".split(
+      " ",
+    );
+  const following =
+    "darkroom elegant-luxury furrow graphite grid manifesto midnight-bloom loom modern-minimal mono mocha-mousse neo-brutalism notebook rim riso sage-garden solar-dusk sport squeeze tangerine terminal vellum".split(
+      " ",
+    );
+  expect(names.slice(0, 26).toSorted()).toEqual(leading.toSorted());
+  expect(names.slice(26, 48).toSorted()).toEqual(following.toSorted());
+  expect(names.slice(48)).toEqual([
+    "modern",
+    "minimal",
+    "playful",
+    "corporate",
+    "coastal",
+    "navy",
+    "editorial",
+    "woodland",
+    "contrast",
+    "nordic",
+    "pastel",
+    "midnight",
+    "craft",
+    "restaurant",
+    "street-food",
+    "cafe",
+    "warm-service",
+    "quiet-workspace",
+    "ink-and-brass",
+    "workbench",
+    "stillwater",
+    "brass",
+    "paperwork",
+    "monochrome",
+    "softbox",
+    "helpdesk",
+  ]);
   for (const theme of BUILT_IN_THEMES) {
     expect(theme.source).toBe("built-in");
     expect(FONTS, theme.name).toContain(theme.font);
@@ -48,8 +88,10 @@ test("the twenty-six built-in themes read in both modes, each under its own name
   }
 });
 
-test("the theme library's twenty-two are theme files a project could have written", () => {
-  expect(Object.keys(THEME_LIBRARY)).toEqual(THEME_PRESETS.slice(4));
+test("the library themes are files a project could have written", () => {
+  expect(Object.keys(THEME_LIBRARY)).toEqual(
+    THEME_PRESETS.filter((name) => !["modern", "minimal", "playful", "corporate"].includes(name)),
+  );
   for (const [name, text] of Object.entries(THEME_LIBRARY)) {
     const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
     expect(diagnostics, name).toEqual([]);
@@ -268,6 +310,36 @@ test("a derived surface keeps the paper's cast: cream towards a green ink stays 
   for (const t of BUILT_IN_THEMES) {
     expect(hardToRead(t.light, "light"), t.name).toEqual([]);
     expect(hardToRead(t.dark, "dark"), t.name).toEqual([]);
+  }
+});
+
+test("explicit invisible field edges fail a strict theme check in either mode", () => {
+  for (const mode of ["light", "dark"] as const) {
+    const surface = mode === "light" ? "#ffffff" : "#121212";
+    const text = `smithableTheme: 0.1
+name: invisible
+modes: ${mode}
+${mode}:
+  background: "${surface}"
+  card: "${surface}"
+  foreground: "${mode === "light" ? "#111111" : "#ffffff"}"
+  primary: "#2f6b3a"
+  input: "${surface}"
+`;
+    const checked = parseTheme({ path: "themes/invisible.yml", text }, { contrast: "error" });
+    expect(checked.theme).toBeUndefined();
+    const project = parseTheme({ path: "themes/invisible.yml", text });
+    expect(project.theme?.[mode].input).toBe(surface);
+    expect(project.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(checked.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          severity: "error",
+          code: "theme-contrast",
+          message: `In ${mode} mode, the edges of form fields may be hard to see.`,
+        }),
+      ]),
+    );
   }
 });
 

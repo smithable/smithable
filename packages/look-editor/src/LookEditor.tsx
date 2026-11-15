@@ -137,7 +137,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   const [start, setStart] = useState<Start>();
   const [startingTheme, setStartingTheme] = useState("modern");
   const [history, setHistory] = useState(() =>
-    draftHistory(themeText(BUILT_IN_THEMES[0] as ThemeIR)),
+    draftHistory(themeText(BUILT_IN_THEMES.find((t) => t.name === "modern") as ThemeIR)),
   );
   const text = history.present.text;
   const setText = (edit: string | ((text: string) => string), yaml = false) =>

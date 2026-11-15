@@ -240,6 +240,9 @@ test("a companion file is helped from its own schema, with the spec's names", ()
     expect.arrayContaining(["modern", "corporate", "nordic", "acme"]),
   );
   expect(own("smithableUx: 0.1\npages:\n  customers:\n    theme:\n      preset: n‸")).toEqual([
+    "nature",
+    "neo-brutalism",
+    "notebook",
     "navy",
     "nordic",
   ]);

@@ -27,6 +27,8 @@ export const FONTS = [
   "Bodoni Moda",
   "Zilla Slab",
   "JetBrains Mono",
+  "Bungee",
+  "Chivo",
 ] as const;
 
 /** Each font's weights, lightest and heaviest (its variable axis): a heading weight outside them is
@@ -52,6 +54,8 @@ export const FONT_WEIGHTS: Record<(typeof FONTS)[number], readonly [number, numb
   "Bodoni Moda": [400, 900],
   "Zilla Slab": [300, 700],
   "JetBrains Mono": [100, 800],
+  Bungee: [400, 400],
+  Chivo: [100, 900],
 };
 
 /**
@@ -67,6 +71,7 @@ export const DISPLAY_FONTS: readonly string[] = [
   "Instrument Serif",
   "Young Serif",
   "Bodoni Moda",
+  "Bungee",
 ];
 
 export interface ThemeStyle {

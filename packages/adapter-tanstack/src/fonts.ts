@@ -24,6 +24,8 @@ export const FONT_PACKAGES: Record<(typeof FONTS)[number], string> = {
   "Bodoni Moda": "@fontsource-variable/bodoni-moda",
   "Zilla Slab": "@fontsource/zilla-slab",
   "JetBrains Mono": "@fontsource-variable/jetbrains-mono",
+  Bungee: "@fontsource/bungee",
+  Chivo: "@fontsource-variable/chivo",
 };
 
 /**
@@ -46,6 +48,7 @@ export const FONT_ITALICS: Record<string, string> = {
   "Bodoni Moda": "wght-italic.css",
   "Zilla Slab": "400-italic.css",
   "JetBrains Mono": "wght-italic.css",
+  Chivo: "wght-italic.css",
 };
 
 export const FONT_ASSET_VERSION = 1;

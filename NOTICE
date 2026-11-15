@@ -7,6 +7,13 @@ licensed under the Zero-Clause BSD licence, which imposes no attribution conditi
 third-party components retain their own licences and notices, including the notices
 distributed with generated apps.
 
+Imported theme palettes and design data include adaptations from Hallmark
+(https://github.com/Nutlope/hallmark), Copyright (c) 2026 Hallmark contributors,
+under the MIT License, and tweakcn (https://github.com/jnsahaj/tweakcn), under the
+Apache License 2.0. Smithable converts these into its own theme vocabulary and
+derives missing modes and readable field edges. The full license texts travel in
+packages/adapter-tanstack/templates/LICENSES/ and in generated apps' LICENSES/.
+
 Pictures in the Smithable image library (github.com/smithable/smithable-images), used
 as the starters' sample pictures under examples/*/public/images and shown by the
 generated apps, include AI-generated images and selected real photographs. Consult each

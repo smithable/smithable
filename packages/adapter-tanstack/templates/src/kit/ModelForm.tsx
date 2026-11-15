@@ -36,6 +36,8 @@ interface ModelFormProps<S extends z.ZodType> {
   /** Choices for reference fields, e.g. { customerId: [...] }. */
   options?: Options;
   submitLabel: string;
+  /** Long record editors keep Save in view; a form embedded in a page keeps its natural order. */
+  stickyActions?: boolean;
   onSubmit: (values: z.output<S>) => Promise<unknown>;
   onCancel?: () => void;
   /** The cancel button's text, e.g. "Back" in a step of an onboarding. */
@@ -531,7 +533,7 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
         <div
           data-part="actions"
           // With Delete under it, the row ends where the delete block starts; without, at the card's foot.
-          className={`sticky bottom-0 z-10 -mx-card flex flex-wrap items-center gap-3 border-t bg-card px-card py-4${onDelete ? "" : " -mb-card rounded-b-lg"}`}
+          className={`${props.stickyActions === false ? "" : "sticky bottom-0 z-10 "}-mx-card flex flex-wrap items-center gap-3 border-t bg-card px-card py-4${onDelete ? "" : " -mb-card rounded-b-lg"}`}
         >
           {!readOnly && (
             <Button type="submit" disabled={busy}>

@@ -32,6 +32,7 @@ import {
   tokensOf,
   withBackground,
 } from "./theme.js";
+import { PICKED_THEME_NAMES } from "./theme-picked.js";
 import {
   ACTIVES,
   CHROMES,
@@ -418,6 +419,7 @@ export function pageIcon(ux: UxIR, page: PageIR): Icon {
 }
 /** The built-in themes' names: the design delivery's four, then the theme library's nine and the theme lab's three. */
 export const THEME_PRESETS = [
+  ...PICKED_THEME_NAMES,
   "modern",
   "minimal",
   "playful",

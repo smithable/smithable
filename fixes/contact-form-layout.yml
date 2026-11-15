@@ -1,0 +1,9 @@
+id: contact-form-layout
+title: Contact forms keep their Send button below the fields, and page titles use the theme's spacing.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/ModelForm.tsx, src/kit/AppShell.tsx]
+  features: [section:contact]
+migration: none

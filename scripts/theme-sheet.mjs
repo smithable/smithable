@@ -10,6 +10,7 @@ import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 import { newApp, op, open as openUrl, serveDev, signIn } from "./dev-app.mjs";
+import { checkAdminHeading, checkContactForm, checkRenderedFonts } from "./theme-form-checks.mjs";
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
@@ -71,44 +72,52 @@ try {
     if (theme.endsWith(".yml")) op(dir, "addTheme", name, "--text", `@${resolve(theme)}`, "--use");
     else op(dir, "setTheme", "--preset", name);
     const stop = await serve();
-    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-    const page = await context.newPage();
-    // Signed in as an admin, so the list, form and dialog are open to the camera.
-    await signIn(page, base, "admin");
-    const shots = [];
-    for (const colorScheme of ["light", "dark"]) {
-      await page.emulateMedia({ colorScheme });
-      for (const [label, path, act, fullPage] of SHOTS) {
-        await open(page, path);
-        // A click before a freshly started dev server's page is ready does nothing: try again.
-        if (act && !label.startsWith("Dialog")) {
-          await act(page);
-          await page.waitForTimeout(300);
-        }
-        for (let attempt = 1; act && label.startsWith("Dialog"); attempt++) {
-          await act(page);
-          try {
-            await page
-              .getByRole("alertdialog")
-              .or(page.getByRole("dialog"))
-              .first()
-              .waitFor({ timeout: 5000 });
-            await page.waitForTimeout(300);
-            break;
-          } catch (error) {
-            if (attempt === 3) throw error;
-            await open(page, path);
+    let context;
+    try {
+      context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const page = await context.newPage();
+      // Signed in as an admin, so the list, form and dialog are open to the camera.
+      await signIn(page, base, "admin");
+      const shots = [];
+      for (const colorScheme of ["light", "dark"]) {
+        await page.emulateMedia({ colorScheme });
+        for (const [label, path, act, fullPage] of SHOTS) {
+          await open(page, path);
+          await page.evaluate(() => document.fonts.ready);
+          if (label === "Landing page") {
+            await checkContactForm(page);
+            await checkRenderedFonts(page);
           }
+          if (label === "List") await checkAdminHeading(page);
+          // A click before a freshly started dev server's page is ready does nothing: try again.
+          if (act && !label.startsWith("Dialog")) {
+            await act(page);
+            await page.waitForTimeout(300);
+          }
+          for (let attempt = 1; act && label.startsWith("Dialog"); attempt++) {
+            await act(page);
+            try {
+              await page
+                .getByRole("alertdialog")
+                .or(page.getByRole("dialog"))
+                .first()
+                .waitFor({ timeout: 5000 });
+              await page.waitForTimeout(300);
+              break;
+            } catch (error) {
+              if (attempt === 3) throw error;
+              await open(page, path);
+            }
+          }
+          const png = await page.screenshot({ fullPage, animations: "disabled" });
+          shots.push({
+            label: `${label}, ${colorScheme}`,
+            src: `data:image/png;base64,${png.toString("base64")}`,
+          });
         }
-        const png = await page.screenshot({ fullPage, animations: "disabled" });
-        shots.push({
-          label: `${label}, ${colorScheme}`,
-          src: `data:image/png;base64,${png.toString("base64")}`,
-        });
       }
-    }
-    // One page per theme: light on the left, dark on the right, the four shots down each.
-    const html = `<!doctype html><meta charset="utf-8"><style>
+      // One page per theme: light on the left, dark on the right, the four shots down each.
+      const html = `<!doctype html><meta charset="utf-8"><style>
       body { margin: 0; padding: 24px; background: #888; font: 600 20px system-ui, sans-serif; color: #111; }
       h1 { margin: 0 0 16px; font-size: 32px; }
       main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
@@ -123,14 +132,16 @@ try {
             .join("")}</div>`,
       )
       .join("")}</main>`;
-    const sheet = await browser.newPage({ viewport: { width: 2600, height: 1200 } });
-    await sheet.setContent(html);
-    const file = join(opts.out, `${name}.png`);
-    await sheet.screenshot({ path: file, fullPage: true });
-    await sheet.close();
-    await context.close();
-    stop();
-    console.log(file);
+      const sheet = await browser.newPage({ viewport: { width: 2600, height: 1200 } });
+      await sheet.setContent(html);
+      const file = join(opts.out, `${name}.png`);
+      await sheet.screenshot({ path: file, fullPage: true });
+      await sheet.close();
+      console.log(file);
+    } finally {
+      await context?.close();
+      stop();
+    }
   }
 } finally {
   await browser.close();

@@ -286,7 +286,7 @@ function* hallmark(checkout) {
     };
     const [displayClass, ...displayName] = (head.display ?? "").split(" ");
     const heading = hosted(
-      displayName.join(" ") || firstFamily(tokens["font-display"] ?? ""),
+      firstFamily(tokens["font-display"] ?? "") || displayName.join(" "),
       displayClass,
       "heading",
     );

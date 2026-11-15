@@ -9,6 +9,7 @@ import type { Diagnostic } from "./diagnostics.js";
 import { didYouMean } from "./suggest.js";
 import { readThemeDefaults, type ThemeUxDefaults } from "./theme-default-schema.js";
 import { THEME_LIBRARY } from "./theme-library.js";
+import { PICKED_THEME_NAMES } from "./theme-picked.js";
 import { PRESET_TOKENS } from "./theme-presets.js";
 import { DEFAULT_STYLE, FONTS, readStyle, type ThemeStyle } from "./theme-style.js";
 
@@ -585,6 +586,8 @@ const PAIRS: [text: TokenName, on: TokenName, ratio: number][] = [
   ["success-foreground", "success", 4.5],
   ["warning-foreground", "warning", 4.5],
   ["ring", "card", 3],
+  ["input", "card", 3],
+  ["input", "background", 3],
 ];
 
 /** The pairs that may not read: the text's colour, the one it is on, their ratio and the one needed. */
@@ -619,9 +622,11 @@ export function hardToRead(tokens: Tokens, mode: "light" | "dark"): string[] {
   return [
     ...new Set(
       lowContrast(tokens).map(({ text, on }) =>
-        text === "ring"
-          ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
-          : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
+        text === "input"
+          ? `In ${mode} mode, the edges of form fields may be hard to see.`
+          : text === "ring"
+            ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
+            : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
       ),
     ),
   ];
@@ -703,6 +708,7 @@ export function tokensOf(theme: ThemeIR, mode: Mode, over: Partial<Tokens> = {})
  * theme library, read with the parser and the checks a project's own theme gets. (At the end
  * of the module: the parser's constants must exist before it runs.)
  */
+const galleryRank = new Map<string, number>(PICKED_THEME_NAMES.map((name, i) => [name, i]));
 export const BUILT_IN_THEMES: readonly ThemeIR[] = [
   ...(Object.keys(PRESET_TOKENS) as (keyof typeof PRESET_TOKENS)[]).map(
     (name): ThemeIR => ({
@@ -722,4 +728,7 @@ export const BUILT_IN_THEMES: readonly ThemeIR[] = [
       );
     return { ...theme, source: "built-in" };
   }),
-];
+].sort(
+  (a, b) =>
+    (galleryRank.get(a.name) ?? galleryRank.size) - (galleryRank.get(b.name) ?? galleryRank.size),
+);
