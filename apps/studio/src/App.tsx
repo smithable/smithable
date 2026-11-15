@@ -560,9 +560,17 @@ export function App() {
 
   // After a change went through: the spec as it is now, before the app has restarted with it
   // ("changed" later reloads the preview), so the left side never shows the old state.
+  const guideDemo = useRef(false);
   const catchUp = async () => {
     const next = await api.project().catch(() => undefined);
-    if (next) setProject((p) => keepWaiting(p, next));
+    if (next) {
+      if (guideDemo.current) {
+        const last = next.trace[0];
+        guideChange.current =
+          last && !last.isUndo && !last.undone ? `${last.at}:${last.description}` : "";
+      }
+      setProject((p) => keepWaiting(p, next));
+    }
   };
 
   // Changes go one after the other: one made while another is still being applied (two Look
@@ -584,8 +592,9 @@ export function App() {
       args: Record<string, unknown>,
       confirm?: boolean,
       file?: { path: string; data: string },
+      fromGuide = false,
     ) => {
-      pauseGuide();
+      if (!fromGuide) pauseGuide();
       setBusy(true);
       setMessage(undefined);
       let result: Awaited<ReturnType<typeof api.operation>>;
@@ -826,7 +835,7 @@ export function App() {
       const target = event.target instanceof Element ? event.target : undefined;
       if (!target || target.closest("[data-guide-card]")) return;
       const manual = target.closest(
-        '[data-guide="manual"], [data-guide="files"], [data-guide="behavior"]',
+        '[data-window="manual"], [data-window="nocode"], [data-window="code"]',
       );
       const editable = target.closest(
         'input, textarea, select, [contenteditable="true"], [role="textbox"]',
@@ -847,7 +856,9 @@ export function App() {
   // The visible error and the guide never share a frame. A committed change also ends the tour's turn.
   // biome-ignore lint/correctness/useExhaustiveDependencies: pause only when the blocking state changes
   useEffect(() => {
-    if (guiding && (guideBlocked || changeKey !== guideChange.current)) pauseGuide();
+    if (!guiding) return;
+    if (guideBlocked || (!guideDemo.current && changeKey !== guideChange.current)) pauseGuide();
+    else if (guideDemo.current) guideChange.current = changeKey;
   }, [guiding, guideBlocked, changeKey]);
   // On a phone too: the guide switches to a stop's window and says it at the window's foot.
   const smithSays = narrow || floating || slotOf("smith") !== undefined;
@@ -1014,8 +1025,21 @@ export function App() {
     label: spec.content?.models?.[bare.name]?.label ?? humanize(bare.name),
     apply: async () => {
       const now = live.current;
-      if (!(await now.run("addField", { model: bare.name, field: "notes", type: "text" })))
-        return false;
+      guideDemo.current = true;
+      try {
+        if (
+          !(await now.run(
+            "addField",
+            { model: bare.name, field: "notes", type: "text" },
+            false,
+            undefined,
+            true,
+          ))
+        )
+          return false;
+      } finally {
+        guideDemo.current = false;
+      }
       const form = spec.ir?.pages.find(
         (p) => p.pattern.kind === "crud" && p.pattern.model === bare.name,
       );
@@ -1042,7 +1066,12 @@ export function App() {
       ),
     end: (keep) => {
       const now = live.current;
-      if (!keep) void now.undo();
+      if (!keep) {
+        guideDemo.current = true;
+        void now.undo().finally(() => {
+          guideDemo.current = false;
+        });
+      }
       // The manual view closes again and the preview is in front.
       setArrangement({ ...now.arrangement, manual: "nocode" });
       if (now.narrow) now.showWindow("preview");

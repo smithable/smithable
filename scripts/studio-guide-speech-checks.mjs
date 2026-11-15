@@ -97,11 +97,15 @@ export async function checkStudioGuideSpeech(browser, base) {
     await card("manual").waitFor();
     const step = await card("manual").locator("p").first().textContent();
     assert.ok(await input.isDisabled());
-    const editor = page.locator('[data-guide="manual"] input:visible').first();
+    // The guide's manual anchor is only the No code/Code tabs. Edit controls live below it.
+    const editor = page
+      .locator('[data-window="manual"]')
+      .getByRole("tab", { name: "Behavior", exact: true });
     await editor.click();
     await page.locator("[data-guide-card]:visible").waitFor({ state: "detached" });
     assert.equal(await page.locator("[data-guide-lit]").count(), 0);
     assert.ok(await input.isEnabled());
+    console.log("  ✓ Guide pauses when editing starts");
     const resume = async () => {
       await page.getByRole("button", { name: "Guide", exact: true }).click();
       await page.getByRole("menuitem", { name: "Tour Studio", exact: true }).click();
@@ -109,6 +113,7 @@ export async function checkStudioGuideSpeech(browser, base) {
     await resume();
     await card("manual").waitFor();
     await card("manual").getByText(step, { exact: true }).waitFor();
+    console.log("  ✓ Guide pauses for errors and resumes the saved stop");
     assert.ok(await input.isDisabled(), "resumed guide left the input enabled");
     notice = true;
     await page.evaluate(() =>
@@ -130,9 +135,54 @@ export async function checkStudioGuideSpeech(browser, base) {
     await resume();
     await card("manual").waitFor();
     await card("manual").getByText(step, { exact: true }).waitFor();
-    await card("manual").getByRole("button", { name: "Skip guide", exact: true }).click();
+    const visibleCard = page.locator("[data-guide-card]:visible");
+    const reachDemo = async () => {
+      for (let i = 0; i < 10; i++) {
+        await visibleCard.waitFor();
+        const anchor = await visibleCard.getAttribute("data-guide-card");
+        await visibleCard.getByRole("button", { name: "Next", exact: true }).click();
+        if (anchor === "change") break;
+        await page.waitForFunction(
+          (before) =>
+            [...document.querySelectorAll("[data-guide-card]")].some(
+              (el) => el.checkVisibility() && el.getAttribute("data-guide-card") !== before,
+            ),
+          anchor,
+        );
+      }
+      await visibleCard.getByRole("button", { name: "Yes", exact: true }).click();
+      for (const words of [
+        "My way: I added a notes field",
+        "The same change, by hand",
+        "And this is the line it became",
+      ]) {
+        await visibleCard.getByText(words, { exact: false }).waitFor({ timeout: 60000 });
+        console.log(`  ✓ Guide demonstration: ${words}`);
+        assert.ok(await input.isDisabled(), "guide-owned change unlocked Smith's input");
+        await visibleCard.getByRole("button", { name: "Next", exact: true }).click();
+      }
+      await visibleCard.getByText("Keep the field, or take it back?", { exact: true }).waitFor();
+    };
+    await reachDemo();
+    await visibleCard.getByRole("button", { name: "Undo", exact: true }).click();
+    await visibleCard.getByRole("button", { name: "Skip guide", exact: true }).waitFor();
+    await page.getByRole("status").filter({ hasText: "Undid:" }).waitFor({ timeout: 60000 });
+    assert.ok(await input.isDisabled(), "guide's own Undo paused the remaining tour");
+    await visibleCard.getByRole("button", { name: "Skip guide", exact: true }).click();
     await page.locator("[data-guide-card]:visible").waitFor({ state: "detached" });
     assert.ok(await input.isEnabled());
+    await resume();
+    await reachDemo();
+    await visibleCard.getByRole("button", { name: "Keep", exact: true }).click();
+    await visibleCard.getByRole("button", { name: "Skip guide", exact: true }).click();
+    assert.ok(await input.isEnabled());
+    // Keep is a real local operation; restore the fixture after checking that path too.
+    const undo = await page.request.post(`${base}/api/undo`, {
+      data: {},
+      headers: { "X-Smithable": "1" },
+    });
+    const undone = await undo.json();
+    assert.equal(undone.ok, true, JSON.stringify(undone));
     console.log(
       "  ✓ Guide: selected voice, input lock, edit/error pause, same-stop resume, silent dismissal",
     );
