@@ -2,7 +2,9 @@ import { validateSpec } from "@smithable/core";
 import { describe, expect, it } from "vitest";
 import {
   conditionOf,
+  setRowsFromArgs,
   setRowsOf,
+  unfinished,
   unfinishedConditions,
   valuesOf,
   waysFor,
@@ -59,6 +61,12 @@ describe("a standard action's rows (A 203)", () => {
   });
 });
 
+it("an explicit asked value stays valid, while an unfinished literal must not turn into asking", () => {
+  expect(unfinished(setRowsFromArgs({ reason: "" }))).toBe(false);
+  expect(unfinished([{ field: "reason", how: "value", value: "" }])).toBe(true);
+  expect(unfinished([{ field: "reason", how: "ask", value: "" }])).toBe(false);
+});
+
 it("timer condition choices exclude references and computed fields while shared defaults stay rich", () => {
   const checked = validateSpec({
     path: "smithable.yml",
@@ -108,9 +116,15 @@ actions:
   const action = checked.ir?.actions[0];
   expect(action && !action.custom).toBe(true);
   const original = whenRowsOf(action && !action.custom ? action.when : undefined);
-  expect(original).toEqual([{ field: "derived", value: "" }]);
+  expect(original).toEqual([{ field: "derived", value: "", emptyText: true }]);
+  expect(conditionOf([...original, { field: "active", value: false }])).toEqual({
+    derived: "",
+    active: false,
+  });
   expect(unfinishedConditions(original, original)).toBe(false);
   expect(unfinishedConditions([{ field: "derived", value: "" }], [])).toBe(true);
+  expect(unfinishedConditions([{ field: "derived", value: [] }], [])).toBe(true);
+  expect(unfinishedConditions([{ field: "derived", value: "", emptyText: true }], [])).toBe(false);
   expect(
     unfinishedConditions(
       [{ field: "derived", value: "" }],

@@ -87,6 +87,13 @@ export function Wizard({
   // Why the form cannot be made as it stands (two fields of one name), or why Create was refused.
   const [problems, setProblems] = useState<Record<number, string>>({});
   const problem = Object.values(problems)[0];
+  const reportProblem = (index: number, message: string | undefined) =>
+    setProblems((current) => {
+      const next = { ...current };
+      if (message) next[index] = message;
+      else delete next[index];
+      return next;
+    });
   const [refused, setRefused] = useState<string>();
   // The newest request: an answer to an older one (Enter, then Next) is left.
   const asking = useRef(0);
@@ -225,14 +232,7 @@ export function Wizard({
                   key={i}
                   args={o.args}
                   onArgs={(args) => setArgs(i, args)}
-                  onProblem={(message) =>
-                    setProblems((current) => {
-                      const next = { ...current };
-                      if (message) next[i] = message;
-                      else delete next[i];
-                      return next;
-                    })
-                  }
+                  onProblem={(message) => reportProblem(i, message)}
                 />
               ) : o.op === "addAction" &&
                 typeof o.args.on === "string" &&
@@ -248,6 +248,7 @@ export function Wizard({
                     args={o.args}
                     model={models.find((m) => m.name === o.args.on) as ModelIR}
                     onArgs={(args) => setArgs(i, args)}
+                    onProblem={(message) => reportProblem(i, message)}
                     help={(topic) => <HelpMark topic={topic} />}
                   />
                 </div>

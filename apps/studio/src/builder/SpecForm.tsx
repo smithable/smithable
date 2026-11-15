@@ -19,6 +19,8 @@ import { cx } from "../ui";
 import { CopyPicker, MergePicker, SplitPicker } from "./action-pickers";
 import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
+import { ConditionRows } from "./ConditionRows";
+import { conditionContext, conditionTreeReady } from "./condition-paths";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
 import { type CreateReference, ReferenceCreation } from "./reference-creation";
@@ -82,6 +84,7 @@ const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown, whol
 };
 /** Writes a part of the file being shown: its path and the new value (undefined takes it away). */
 const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(async () => false);
+const InDraft = createContext(false);
 /**
  * A field's type (its short form, or type: in its long form) as the field's own control: the
  * kind, required, unique, a choice's values, through changeField. Undefined for any other key,
@@ -408,6 +411,7 @@ function Value({
   const omitted = useContext(Omitted);
   const shaped = useContext(Shape)(path, value);
   const references = useContext(References);
+  const inDraft = useContext(InDraft);
   const latest = useRef({ write, value, path });
   latest.current = { write, value, path };
   const mounted = useRef(false);
@@ -425,8 +429,19 @@ function Value({
       path[0] === "timers")
   )
     return shaped;
-  if (references && !drafted && referenceGroup(path))
-    return <ReferenceDraft schema={schema} value={value} path={path} />;
+  const condition = references && conditionContext(path, references.document, references.ir);
+  if (references && !drafted && !inDraft && (referenceGroup(path) || condition))
+    return (
+      <ReferenceDraft schema={schema} value={value} path={path} condition={Boolean(condition)} />
+    );
+  if (condition)
+    return (
+      <ConditionRows
+        context={condition}
+        value={value}
+        onChange={(next) => void write(path, next)}
+      />
+    );
   if (references && variants && referenceVariant(path))
     return <ReferenceVariant schema={schema} value={value} path={path} />;
   const reference =
@@ -1005,10 +1020,12 @@ function ReferenceDraft({
   schema,
   value,
   path,
+  condition = false,
 }: {
   schema: JsonSchema;
   value: unknown;
   path: Path;
+  condition?: boolean;
 }) {
   const write = useContext(Writer);
   const references = useContext(References);
@@ -1028,14 +1045,10 @@ function ReferenceDraft({
   const stale = dirty && current !== seen;
   usePendingEdit(dirty || busy);
   if (!references) return null;
-  const ready = referenceReady(
-    schema,
-    draft,
-    path,
-    referenceWith(references.document, path, draft),
-    references.ir,
-    references.auth,
-  );
+  const document = referenceWith(references.document, path, draft);
+  const ready =
+    referenceReady(schema, draft, path, document, references.ir, references.auth) &&
+    conditionTreeReady(path, draft, document, references.ir);
   const reset = () => {
     setDraft(value);
     setBaseline(current);
@@ -1047,7 +1060,7 @@ function ReferenceDraft({
     <fieldset
       disabled={busy}
       className="space-y-3"
-      aria-label={`Edit ${String(path.at(-1))} references`}
+      aria-label={`Edit ${String(path.at(-1))} ${condition ? "condition" : "references"}`}
     >
       <References.Provider
         value={{ ...references, document: referenceWith(references.document, path, draft) }}
@@ -1060,7 +1073,9 @@ function ReferenceDraft({
             return true;
           }}
         >
-          <Value key={generation} schema={schema} value={draft} path={path} drafted />
+          <InDraft.Provider value={true}>
+            <Value key={generation} schema={schema} value={draft} path={path} drafted />
+          </InDraft.Provider>
         </Writer.Provider>
       </References.Provider>
       {dirty && (
