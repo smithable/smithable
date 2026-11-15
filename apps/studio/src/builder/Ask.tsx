@@ -497,15 +497,21 @@ export function Ask({
   // Smith says aloud what he writes, where sound is on (§5): his greeting once, then each new
   // line of the thread, a proposal and its question, and what he answers by himself.
   // The lines after the last one heard, by their time and words; the thread as it first loads is
-  // only marked, never read out.
+  // only marked, never read out. Server timestamps may replace optimistic timestamps.
   const lines = trace ? threadLines(trace, said, words) : undefined;
   const lastHeard = useRef<string | undefined>(undefined);
-  const newestLine = lines?.at(-1);
-  const lastKey = newestLine ? `${newestLine.at}|${newestLine.reply}` : "";
+  const occurrences = new Map<string, number>();
+  const speechKeys = lines?.map((line) => {
+    const content = JSON.stringify([line.request, line.reply]);
+    const occurrence = (occurrences.get(content) ?? 0) + 1;
+    occurrences.set(content, occurrence);
+    return `${content}|${occurrence}`;
+  });
+  const lastKey = speechKeys?.at(-1) ?? "";
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new last line is the signal
   useEffect(() => {
     if (!lines) return;
-    const keys = lines.map((l) => `${l.at}|${l.reply}`);
+    const keys = speechKeys ?? [];
     if (lastHeard.current !== undefined) {
       const from = keys.indexOf(lastHeard.current);
       for (const line of lines.slice(from + 1)) speech.speak(line.reply);

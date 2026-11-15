@@ -3,9 +3,10 @@
 // (step 1) and automatic mode (step 2: the voice detector starts and ends each utterance while
 // Smith is silent). Barge-in waits for the speaker test (§4.3); a `browser` voice never has it.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { playback } from "./playback";
 import { type Detector, type Ear, loadDetector, openEar } from "./vad";
 import { framer, segmenter } from "./vad-core";
-import { type Browser, browserOf, sentences, usableVoices, whereLine } from "./words";
+import { type Browser, browserOf, usableVoices, whereLine } from "./words";
 
 const KEY = "smithable:speech";
 const CHANNEL = "smithable:speech";
@@ -158,33 +159,20 @@ export function useSpeech(
           ? "This browser has no voice the project's AI policy allows."
           : undefined;
 
-  // Speaking: sentence by sentence, the queue dropped on stop.
+  // A single sentence queue survives renders and speaker pause/resume.
   const [speaking, setSpeaking] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const player = useRef<ReturnType<typeof playback> | undefined>(undefined);
+  if (!player.current && synth)
+    player.current = playback(synth, setSpeaking, () => setBlocked(true));
   const speak = useCallback(
     (text: string) => {
-      if (!synth || !voice || !settings.sound) return;
-      for (const piece of sentences(text)) {
-        const u = new SpeechSynthesisUtterance(piece);
-        u.voice = voice;
-        u.lang = voice.lang;
-        u.rate = settings.rate;
-        u.onstart = () => setSpeaking(true);
-        u.onend = () => setSpeaking(synth.pending || synth.speaking);
-        u.onerror = (e) => {
-          // Chrome refuses before the person has touched the page: the sound button asks.
-          if ((e as SpeechSynthesisErrorEvent).error === "not-allowed") setBlocked(true);
-          setSpeaking(false);
-        };
-        synth.speak(u);
-      }
+      if (voice && settings.sound) player.current?.speak(text, voice, settings.rate);
     },
-    [synth, voice, settings.sound, settings.rate],
+    [voice, settings.sound, settings.rate],
   );
-  const stopSpeaking = useCallback(() => {
-    synth?.cancel();
-    setSpeaking(false);
-  }, [synth]);
+  const stopSpeaking = useCallback(() => player.current?.stop(), []);
+  useEffect(() => () => player.current?.stop(), []);
 
   // Listening: one tab at a time; starting here stops it elsewhere.
   const [listening, setListening] = useState(false);
@@ -439,7 +427,8 @@ export function useSpeech(
     ...(why ? { why } : {}),
     sound: settings.sound && canSpeak,
     setSound: (on) => {
-      if (!on) stopSpeaking();
+      if (on) player.current?.resume();
+      else player.current?.pause();
       setBlocked(false);
       save({ ...settings, sound: on });
     },
