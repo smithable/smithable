@@ -1581,15 +1581,26 @@ try {
     "a greeting to Smith is answered like a chat, with something to try, changes nothing, and is kept by Studio",
     async () => {
       const before = (await project()).files.spec;
+      // Speech checks already left a greeting in the thread. Wait for this request's save,
+      // so its late answer cannot clear the next question after these assertions see the old one.
+      const saved = page.waitForResponse(
+        (response) =>
+          response.url() === `${base}/api/said` &&
+          response.request().method() === "POST" &&
+          response.request().postDataJSON()?.request === "Hi",
+      );
       await page.getByLabel("Describe a change").fill("Hi");
       await page.getByRole("button", { name: "Send", exact: true }).click();
+      const kept = await (await saved).json();
+      await page
+        .getByRole("button", { name: "Working…", exact: true })
+        .waitFor({ state: "hidden", timeout: 30000 * P });
       await page
         .getByRole("list", { name: "Thread" })
         .getByText(/Hello! I'm Smith\. Tell me what to change in Acme CRM/)
         .waitFor({ timeout: 30000 * P });
       if ((await project()).files.spec !== before) throw new Error("the spec changed");
       // Studio keeps the thread while it runs, for a reload or another tab (A 152).
-      const kept = await page.evaluate(() => fetch("/api/said").then((r) => r.json()));
       if (!kept.said.some((line) => line.request === "Hi" && /^Hello! I'm Smith/.test(line.reply)))
         throw new Error(`Studio kept ${JSON.stringify(kept)}`);
     },
