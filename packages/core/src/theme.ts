@@ -585,6 +585,8 @@ const PAIRS: [text: TokenName, on: TokenName, ratio: number][] = [
   ["success-foreground", "success", 4.5],
   ["warning-foreground", "warning", 4.5],
   ["ring", "card", 3],
+  ["input", "card", 3],
+  ["input", "background", 3],
 ];
 
 /** The pairs that may not read: the text's colour, the one it is on, their ratio and the one needed. */
@@ -619,9 +621,11 @@ export function hardToRead(tokens: Tokens, mode: "light" | "dark"): string[] {
   return [
     ...new Set(
       lowContrast(tokens).map(({ text, on }) =>
-        text === "ring"
-          ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
-          : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
+        text === "input"
+          ? `In ${mode} mode, the edges of form fields may be hard to see.`
+          : text === "ring"
+            ? `In ${mode} mode, the outline that shows where you are typing may be hard to see.`
+            : `In ${mode} mode, ${WHERE[on] ?? "some text"} may be hard to read.`,
       ),
     ),
   ];

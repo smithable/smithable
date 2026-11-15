@@ -10,6 +10,7 @@ import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 import { newApp, op, open as openUrl, serveDev, signIn } from "./dev-app.mjs";
+import { checkContactForm } from "./theme-form-checks.mjs";
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
@@ -80,6 +81,7 @@ try {
       await page.emulateMedia({ colorScheme });
       for (const [label, path, act, fullPage] of SHOTS) {
         await open(page, path);
+        if (label === "Landing page") await checkContactForm(page);
         // A click before a freshly started dev server's page is ready does nothing: try again.
         if (act && !label.startsWith("Dialog")) {
           await act(page);

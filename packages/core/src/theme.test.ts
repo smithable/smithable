@@ -271,6 +271,33 @@ test("a derived surface keeps the paper's cast: cream towards a green ink stays 
   }
 });
 
+test("explicit invisible field edges fail a strict theme check in either mode", () => {
+  for (const mode of ["light", "dark"] as const) {
+    const surface = mode === "light" ? "#ffffff" : "#121212";
+    const text = `smithableTheme: 0.1
+name: invisible
+modes: ${mode}
+${mode}:
+  background: "${surface}"
+  card: "${surface}"
+  foreground: "${mode === "light" ? "#111111" : "#ffffff"}"
+  primary: "#2f6b3a"
+  input: "${surface}"
+`;
+    const checked = parseTheme({ path: "themes/invisible.yml", text }, { contrast: "error" });
+    expect(checked.theme).toBeUndefined();
+    expect(checked.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          severity: "error",
+          code: "theme-contrast",
+          message: `In ${mode} mode, the edges of form fields may be hard to see.`,
+        }),
+      ]),
+    );
+  }
+});
+
 test("a field's edge stands at 3:1 on the card and the page, from a quiet border too (A 213)", () => {
   for (const mode of ["light", "dark"] as const) {
     const [background, foreground] =

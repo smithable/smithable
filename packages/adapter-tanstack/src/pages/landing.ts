@@ -464,6 +464,7 @@ export function landingRoute(
               ui={${n.ui}}
               app={app}
               schema={${n.schema}}
+              stickyActions={false}
               submitLabel=${attr(own.button ?? "Send")}
               onSubmit={async (values) => {
                 if (human()) await ${n.create}({ data: values });
