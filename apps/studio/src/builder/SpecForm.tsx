@@ -9,6 +9,7 @@ import {
   humanize,
   type JsonSchema,
   type SpecIR,
+  validateAuth,
 } from "@smithable/core";
 import { createContext, useContext, useId, useMemo, useState } from "react";
 import { parse } from "yaml";
@@ -19,6 +20,9 @@ import { CopyPicker, MergePicker, SplitPicker } from "./action-pickers";
 import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
+import { ReferencePicker } from "./ReferencePicker";
+import type { ReferenceOption } from "./reference-options";
+import { referenceControl, referenceGroup, referenceKeys, referenceWith } from "./reference-paths";
 import {
   alternativeFor,
   choicesFor,
@@ -48,6 +52,16 @@ const read = (text: string | undefined): unknown => {
 };
 
 type Path = (string | number)[];
+export type CreateReference = (kind: "model" | "page" | "action") => Promise<string | undefined>;
+const References = createContext<
+  | {
+      document: unknown;
+      ir: SpecIR;
+      auth?: ReturnType<typeof validateAuth>["auth"];
+      create?: CreateReference;
+    }
+  | undefined
+>(undefined);
 
 /** Writes one key: through its own operation when it has one, else editSpec with its path. */
 const writeKey = (run: Run, file: EditableFile, path: Path, value: unknown, whole?: unknown) => {
@@ -248,6 +262,7 @@ export function SpecForm({
   tools,
   adder,
   omit = [],
+  createReference,
 }: {
   files: Project["files"];
   run: Run;
@@ -260,6 +275,7 @@ export function SpecForm({
   adder?: (path: Path) => React.ReactNode;
   /** Root settings that have a dedicated control beside this form. */
   omit?: string[];
+  createReference?: CreateReference;
 }) {
   const schemas = useMemo(
     () => ({ "smithable.yml": specSchema(), ...COMPANION_SCHEMAS }) as Record<string, JsonSchema>,
@@ -287,7 +303,26 @@ export function SpecForm({
                         <Adder.Provider value={adder ?? (() => undefined)}>
                           <InContent.Provider value={key === "content"}>
                             <Omitted.Provider value={omit}>
-                              <Value schema={schema} value={read(files[key])} path={[]} />
+                              <References.Provider
+                                value={
+                                  file === "smithable.yml" && ir
+                                    ? {
+                                        document: read(files[key]),
+                                        ir,
+                                        auth: validateAuth(
+                                          {
+                                            path: "smithable.auth.yml",
+                                            text: files.auth ?? "smithableAuth: 0.1\n",
+                                          },
+                                          ir,
+                                        ).auth,
+                                        create: createReference,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <Value schema={schema} value={read(files[key])} path={[]} />
+                              </References.Provider>
                             </Omitted.Provider>
                           </InContent.Provider>
                         </Adder.Provider>
@@ -338,7 +373,17 @@ function AreaIcon({ d }: { d: string }) {
 }
 
 /** A value under its schema: its control, filled with what the file says, writing at `path`. */
-function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; path: Path }) {
+function Value({
+  schema,
+  value,
+  path,
+  drafted = false,
+}: {
+  schema: JsonSchema;
+  value: unknown;
+  path: Path;
+  drafted?: boolean;
+}) {
   const write = useContext(Writer);
   const choices = useContext(Choices);
   const renamer = useContext(Renamer);
@@ -348,6 +393,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const adder = useContext(Adder);
   const omitted = useContext(Omitted);
   const shaped = useContext(Shape)(path, value);
+  const references = useContext(References);
   if (
     shaped &&
     (typeof value === "string" ||
@@ -356,6 +402,74 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
       path[0] === "timers")
   )
     return shaped;
+  if (references && !drafted && referenceGroup(path))
+    return <ReferenceDraft schema={schema} value={value} path={path} />;
+  const reference =
+    references &&
+    referenceControl(path, value, references.document, references.ir, references.auth);
+  if (reference) {
+    const label = String(path.at(-1) ?? "Reference");
+    const parent = schemaAt(specSchema(), references.document, path.slice(0, -1));
+    const required = Array.isArray(parent?.required) && parent.required.includes(label);
+    const word = reference.word;
+    return (
+      <div className="space-y-2">
+        {word && (
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              aria-label={`${label}: ${word}`}
+              checked={value === word}
+              onChange={() => void write(path, value === word ? undefined : word)}
+            />
+            {word}
+          </label>
+        )}
+        {(!word || value !== word) && (
+          <ReferencePicker
+            label={label}
+            options={reference.options}
+            value={
+              typeof value === "string" || Array.isArray(value)
+                ? (value as string | string[])
+                : undefined
+            }
+            multiple={reference.multiple}
+            unset={required ? undefined : "Not set"}
+            onChange={(next) => write(path, next)}
+            create={
+              reference.create && references.create
+                ? {
+                    label: `New ${reference.create}…`,
+                    open: () =>
+                      void (
+                        reference.create && references.create
+                          ? references.create(reference.create)
+                          : Promise.resolve(undefined)
+                      ).then((name) => {
+                        if (name)
+                          void write(
+                            path,
+                            reference.multiple
+                              ? [
+                                  ...(Array.isArray(value)
+                                    ? value
+                                    : typeof value === "string"
+                                      ? [value]
+                                      : []),
+                                  name,
+                                ]
+                              : name,
+                          );
+                      }),
+                  }
+                : undefined
+            }
+          />
+        )}
+      </div>
+    );
+  }
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;
   const label = String(path.at(-1) ?? "");
@@ -462,6 +576,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
     }
     case "entries": {
       const entries = Object.entries((value ?? {}) as Record<string, unknown>);
+      const keys = references && referenceKeys(path, references.document, references.ir);
       return (
         <div className="space-y-1">
           {entries.map(([name, v]) => (
@@ -498,7 +613,15 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
               </div>
             </details>
           ))}
-          {adder(path) ?? <AddEntry label={label} onAdd={(name) => write([...path, name], {})} />}
+          {keys ? (
+            <ReferenceKeyAdd
+              label={label}
+              options={keys.filter((option) => !entries.some(([name]) => name === option.value))}
+              onAdd={(name, value) => write([...path, name], value)}
+            />
+          ) : (
+            (adder(path) ?? <AddEntry label={label} onAdd={(name) => write([...path, name], {})} />)
+          )}
         </div>
       );
     }
@@ -542,6 +665,159 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
       );
     }
   }
+}
+
+/** Mapping keys refer to existing fields; the value remains the call's template or plain value. */
+function ReferenceKeyAdd({
+  label,
+  options,
+  onAdd,
+}: {
+  label: string;
+  options: ReferenceOption[];
+  onAdd: (name: string, value: unknown) => Promise<boolean>;
+}) {
+  const [name, setName] = useState("");
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  usePendingEdit(Boolean(name || value) || busy);
+  return (
+    <fieldset disabled={busy} className="space-y-2">
+      <ReferencePicker
+        label={`Field in ${label}`}
+        options={options}
+        value={name || undefined}
+        onChange={async (value) => {
+          setName(String(value ?? ""));
+          return true;
+        }}
+      />
+      <input
+        aria-label={`Value in ${label}`}
+        className={box}
+        value={value}
+        placeholder="Value or {path}"
+        onChange={(event) => setValue(event.target.value)}
+      />
+      <button
+        type="button"
+        disabled={busy || !options.some((option) => option.value === name) || !value.trim()}
+        className="text-xs underline"
+        onClick={async () => {
+          if (busy) return;
+          setBusy(true);
+          let next: unknown = value;
+          try {
+            next = JSON.parse(value);
+          } catch {
+            /* A template or ordinary string stays text. */
+          }
+          try {
+            if (await onAdd(name, next)) {
+              setName("");
+              setValue("");
+            }
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Add {label}
+      </button>
+    </fieldset>
+  );
+}
+
+/** Local dependent choices are submitted as a complete value through the original Writer. */
+function ReferenceDraft({
+  schema,
+  value,
+  path,
+}: {
+  schema: JsonSchema;
+  value: unknown;
+  path: Path;
+}) {
+  const write = useContext(Writer);
+  const references = useContext(References);
+  const [draft, setDraft] = useState(value);
+  const [baseline, setBaseline] = useState(JSON.stringify(value));
+  const [seen, setSeen] = useState(JSON.stringify(value));
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string>();
+  const current = JSON.stringify(value);
+  const dirty = JSON.stringify(draft) !== baseline;
+  if (!dirty && current !== seen) {
+    setSeen(current);
+    setBaseline(current);
+    setDraft(value);
+  }
+  const stale = dirty && current !== seen;
+  usePendingEdit(dirty || busy);
+  if (!references) return null;
+  const reset = () => {
+    setDraft(value);
+    setBaseline(current);
+    setSeen(current);
+    setProblem(undefined);
+  };
+  return (
+    <fieldset
+      disabled={busy}
+      className="space-y-3"
+      aria-label={`Edit ${String(path.at(-1))} references`}
+    >
+      <References.Provider
+        value={{ ...references, document: referenceWith(references.document, path, draft) }}
+      >
+        <Writer.Provider
+          value={async (at, next) => {
+            if (busy) return false;
+            setDraft((before: unknown) => referenceWith(before, at.slice(path.length), next));
+            setProblem(undefined);
+            return true;
+          }}
+        >
+          <Value schema={schema} value={draft} path={path} drafted />
+        </Writer.Provider>
+      </References.Provider>
+      {dirty && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={busy || stale}
+            className="rounded-md border border-line px-2 py-1 text-xs"
+            onClick={async () => {
+              if (busy || stale) return;
+              setBusy(true);
+              try {
+                if (await write(path, draft)) setBaseline(JSON.stringify(draft));
+                else
+                  setProblem(
+                    "These settings were not applied. Check the selected references and required values.",
+                  );
+              } catch (error) {
+                setProblem(error instanceof Error ? error.message : String(error));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Save {String(path.at(-1))}
+          </button>
+          <button type="button" disabled={busy} className="text-xs underline" onClick={reset}>
+            Cancel changes
+          </button>
+        </div>
+      )}
+      {stale && (
+        <p role="alert">
+          The saved settings changed. Cancel these changes to load the current settings.
+        </p>
+      )}
+      {problem && <p role="alert">{problem}</p>}
+    </fieldset>
+  );
 }
 
 /** A text or number, written when the box is left or Enter is pressed; empty takes it away. */
@@ -863,7 +1139,22 @@ export function SpecPart({
       <Choices.Provider value={choicesOf(files, file)}>
         <Renamer.Provider value={renamerOf(run, file)}>
           <Shape.Provider value={shapeOf(run, file, ir)}>
-            <Value schema={schema} value={value} path={path} />
+            <References.Provider
+              value={
+                file === "smithable.yml" && ir
+                  ? {
+                      document: whole,
+                      ir,
+                      auth: validateAuth(
+                        { path: "smithable.auth.yml", text: files.auth ?? "smithableAuth: 0.1\n" },
+                        ir,
+                      ).auth,
+                    }
+                  : undefined
+              }
+            >
+              <Value schema={schema} value={value} path={path} />
+            </References.Provider>
           </Shape.Provider>
         </Renamer.Provider>
       </Choices.Provider>
