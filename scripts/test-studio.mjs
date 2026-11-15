@@ -2390,11 +2390,15 @@ try {
       .getByRole("group", { name: "Orders on a record of Customers" })
       .getByRole("button", { name: "Conversation" })
       .click();
-    await page
-      .getByText(/Order cannot be a thread: it has no long text field/)
-      .first()
-      .waitFor({ timeout: 60000 * P });
+    // No code keeps validator grammar behind the explicit Code details disclosure.
+    const refusal = page.locator("[data-validation-notice]");
+    await refusal.waitFor({ timeout: 60000 * P });
+    const reason = refusal.getByText(/Order cannot be a thread: it has no long text field/);
+    if (await reason.isVisible()) throw new Error("No code exposed the validator's grammar");
+    await refusal.getByText("Code details", { exact: true }).click();
+    await reason.waitFor({ timeout: 60000 * P });
     if (/lists:/.test(ux())) throw new Error("a refused conversation changed smithable.ux.yml");
+    await refusal.getByRole("button", { name: "Dismiss", exact: true }).click();
     await sub("Behavior");
   });
 
