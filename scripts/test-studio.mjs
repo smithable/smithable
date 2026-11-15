@@ -337,13 +337,6 @@ try {
     await page.getByRole("tab", { name: "Behavior" }).waitFor();
     if (await alert.count()) throw new Error("the notice came back");
   });
-  // The fixture's startup error is tested and dismissed above. An active error deliberately
-  // keeps the guide closed, so its healthy-layout checks start only after that notice is gone.
-  await checkStudioLayout(browser, base);
-  await checkCompactLook(browser, base);
-  await checkStudioLookNavigation(browser, base);
-  await checkStudioSpeech(browser, base);
-  await checkStudioGuideSpeech(browser, base);
   await step(
     "the three windows (Smith with Changes under him, the preview, No code) are kept after a reload",
     async () => {
@@ -353,6 +346,13 @@ try {
       await page.getByText("No changes yet.").waitFor();
     },
   );
+  // Start the guide only after dismissing the fixture's error. Its demonstration makes real
+  // changes and undoes them, so the initial empty-history assertion must also come first.
+  await checkStudioLayout(browser, base);
+  await checkCompactLook(browser, base);
+  await checkStudioLookNavigation(browser, base);
+  await checkStudioSpeech(browser, base);
+  await checkStudioGuideSpeech(browser, base);
   await step(
     "the preview shows the app as a phone or a tablet would, and keeps that choice after a reload",
     async () => {
