@@ -52,7 +52,13 @@ export function Languages({ spec, run }: { spec: Spec; run: Run }) {
         className="flex items-end gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          if (adding) void run("addLanguage", { language: adding }).then(() => setChosen(adding));
+          const submitted = adding;
+          if (submitted)
+            void run("addLanguage", { language: submitted }).then((ok) => {
+              if (!ok) return;
+              setChosen(submitted);
+              setAdding((current) => (current === submitted ? "" : current));
+            });
         }}
       >
         <Label text="Add a language">

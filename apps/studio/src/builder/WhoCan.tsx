@@ -168,7 +168,9 @@ function SignIn({ auth, run }: { auth: AuthIR; run: Run }) {
   const [domains, setDomains] = useState(
     signIn === "none" ? "" : (signIn.allowedDomains ?? []).join(", "),
   );
-  usePendingEdit(domains !== (signIn === "none" ? "" : (signIn.allowedDomains ?? []).join(", ")));
+  const domainList = domains.split(/[\s,]+/).filter(Boolean);
+  const written = signIn === "none" ? "" : (signIn.allowedDomains ?? []).join(", ");
+  usePendingEdit(domainList.join(", ") !== written);
   if (signIn === "none")
     return (
       <Block title="Sign-in">
@@ -177,11 +179,9 @@ function SignIn({ auth, run }: { auth: AuthIR; run: Run }) {
         </p>
       </Block>
     );
-  const written = (signIn.allowedDomains ?? []).join(", ");
   const saveDomains = () => {
-    const list = domains.split(/[\s,]+/).filter(Boolean);
-    if (list.join(", ") !== written)
-      void run("setDomains", { domains: list.length ? list : ["none"] });
+    if (domainList.join(", ") !== written)
+      void run("setDomains", { domains: domainList.length ? domainList : ["none"] });
   };
   return (
     <Block title="Sign-in">

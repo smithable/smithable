@@ -374,6 +374,98 @@ test("No code follows real preview navigation without losing edits or opening hi
     assert.equal(operations.length, 1, "following added an operation beside the explicit save");
     assert.equal(operations[0].name, "addTimer");
     console.log("PASS pending operation protection and following after explicit successful save");
+
+    await page.unroute("**/api/op");
+    await noCode.getByRole("tab", { name: "Content", exact: true }).click();
+    const language = noCode.getByLabel("Add a language", { exact: true });
+    await language.selectOption("sv");
+    let releaseLanguage;
+    let languageStarted;
+    const languageHeld = new Promise((resolve) => {
+      releaseLanguage = resolve;
+    });
+    const languageRequest = new Promise((resolve) => {
+      languageStarted = resolve;
+    });
+    await page.route("**/api/op", async (route) => {
+      languageStarted();
+      await languageHeld;
+      await route.continue();
+    });
+    await language
+      .locator("xpath=ancestor::form")
+      .getByRole("button", { name: "Add", exact: true })
+      .click();
+    await languageRequest;
+    await language.selectOption("fi");
+    await navigateInApp("/customers");
+    releaseLanguage();
+    await noCode.getByRole("button", { name: "Swedish", exact: true }).waitFor();
+    assert.equal(await language.inputValue(), "fi", "saving cleared a newer language choice");
+    await outside();
+    await settled();
+    assert.equal(await context(), "orders", "following left a newer language draft");
+    await language.selectOption("");
+    await outside();
+    await followed("customers");
+    await page.unroute("**/api/op");
+
+    await page.route("**/api/op", (route) =>
+      route.fulfill({
+        json: { ok: false, output: "Language addition refused for this test." },
+      }),
+    );
+    await language.selectOption("fi");
+    await language
+      .locator("xpath=ancestor::form")
+      .getByRole("button", { name: "Add", exact: true })
+      .click();
+    await page.getByText("Language addition refused for this test.", { exact: true }).waitFor();
+    assert.equal(await language.inputValue(), "fi", "a refused language choice was cleared");
+    await navigateInApp("/orders");
+    await outside();
+    assert.equal(await context(), "customers", "following left a refused language draft");
+    await page.unroute("**/api/op");
+    await language
+      .locator("xpath=ancestor::form")
+      .getByRole("button", { name: "Add", exact: true })
+      .click();
+    await noCode.getByRole("button", { name: "Finnish", exact: true }).waitFor();
+    assert.equal(await language.inputValue(), "", "successful language choice did not settle");
+    await outside();
+    await followed("orders");
+    console.log("PASS language success settles; refused and newer choices stay protected");
+
+    await noCode.getByRole("tab", { name: "Who can", exact: true }).click();
+    const domains = noCode.getByLabel("Only these email domains", { exact: true });
+    await domains.fill("a.com,b.com");
+    await navigateInApp("/customers");
+    assert.equal(await context(), "orders");
+    await outside();
+    await followed("customers");
+    const savedDomains = operations.length;
+    await domains.fill("a.com b.com");
+    await navigateInApp("/orders");
+    await outside();
+    await followed("orders");
+    assert.equal(operations.length, savedDomains, "equivalent domains caused a write");
+    await page.route("**/api/op", (route) =>
+      route.fulfill({
+        json: { ok: false, output: "Domain change refused for this test." },
+      }),
+    );
+    await domains.fill("refused.example");
+    await navigateInApp("/customers");
+    await outside();
+    await page.getByText("Domain change refused for this test.", { exact: true }).waitFor();
+    assert.equal(await domains.inputValue(), "refused.example");
+    assert.equal(await context(), "orders", "following left a refused domain draft");
+    await domains.fill("a.com, b.com");
+    await outside();
+    await followed("customers");
+    console.log(
+      "PASS normalized domains settle without extra writes; refused edits stay protected",
+    );
     passed = true;
   } catch (error) {
     if (page)
