@@ -202,11 +202,6 @@ try {
     await new Promise((r) => setTimeout(r, 500));
   }
   const preview = page.frameLocator('iframe[title="App preview"]');
-  await checkStudioLayout(browser, base);
-  await checkCompactLook(browser, base);
-  await checkStudioLookNavigation(browser, base);
-  await checkStudioSpeech(browser, base);
-  await checkStudioGuideSpeech(browser, base);
   const status = page.getByRole("status");
   // The Changes window, with Smith above it in the third place (the test's layout).
   const trace = page.getByRole("list", { name: "Change trace" });
@@ -342,6 +337,13 @@ try {
     await page.getByRole("tab", { name: "Behavior" }).waitFor();
     if (await alert.count()) throw new Error("the notice came back");
   });
+  // The fixture's startup error is tested and dismissed above. An active error deliberately
+  // keeps the guide closed, so its healthy-layout checks start only after that notice is gone.
+  await checkStudioLayout(browser, base);
+  await checkCompactLook(browser, base);
+  await checkStudioLookNavigation(browser, base);
+  await checkStudioSpeech(browser, base);
+  await checkStudioGuideSpeech(browser, base);
   await step(
     "the three windows (Smith with Changes under him, the preview, No code) are kept after a reload",
     async () => {
