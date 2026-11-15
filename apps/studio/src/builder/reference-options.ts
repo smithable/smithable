@@ -22,6 +22,10 @@ export interface ReferenceOption {
 /** Each use names a validator rule, never a guess based on the field's name. */
 export type FieldUse =
   | "stored"
+  | "calendar-title"
+  | "calendar-date"
+  | "calendar-duration"
+  | "measure"
   | "unique"
   | "name"
   | "owner"
@@ -54,7 +58,14 @@ export type FieldUse =
   | "sort"
   | "group";
 
-type OneHopUse = "name" | "date" | "datetime" | "integer" | "filter" | "group";
+type OneHopUse =
+  | "name"
+  | "date"
+  | "datetime"
+  | "integer"
+  | "filter"
+  | "group"
+  | "calendar-duration";
 type FieldSource = { kind: "field"; model: string } & (
   | { use: OneHopUse; oneHop?: boolean }
   | { use: Exclude<FieldUse, OneHopUse>; oneHop?: false }
@@ -80,6 +91,14 @@ const modelOf = (ir: SpecIR, name: string) => ir.models.find((model) => model.na
 
 function eligible(field: FieldIR, use: FieldUse, model: ModelIR, ir: SpecIR): boolean {
   switch (use) {
+    case "calendar-title":
+      return true;
+    case "calendar-date":
+      return scalar(field, "date", "datetime");
+    case "calendar-duration":
+      return scalar(field, "int");
+    case "measure":
+      return scalar(field, "int", "decimal", "money");
     case "stored":
       return stored(field);
     case "unique":
@@ -176,6 +195,9 @@ function fields(source: Extract<ReferenceSource, { kind: "field" }>, ir: SpecIR)
   const result = model.fields
     .filter((field) => eligible(field, source.use, model, ir))
     .map((f) => f.name);
+  // Accepted by list operations although these fields are not declared by the model.
+  if (source.use === "filter") result.push("owner", "createdAt", "updatedAt");
+  if (source.use === "sort") result.push("createdAt", "updatedAt");
   if (!source.oneHop) return result;
   for (const through of model.fields) {
     if (through.formula || through.type.kind !== "relation" || through.type.many) continue;

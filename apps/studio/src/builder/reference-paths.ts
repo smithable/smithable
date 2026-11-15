@@ -1,15 +1,37 @@
-import { type AuthIR, type Channel, humanize, type SpecIR } from "@smithable/core";
+import type { JsonSchema } from "@smithable/core";
+import { type AuthIR, type Channel, humanize, type SpecIR, validateSpec } from "@smithable/core";
+import { stringify } from "yaml";
 import {
   type FieldUse,
   type ReferenceOption,
   type ReferenceSource,
   referenceOptions,
 } from "./reference-options";
+import { alternativeFor } from "./spec-form";
 
 export type ReferencePath = (string | number)[];
 type MapValue = Record<string, unknown>;
 const object = (value: unknown): MapValue =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as MapValue) : {};
+const articleModels = new WeakMap<SpecIR, string[]>();
+/** Short articles use core's inference, including ambiguity among optional parts. */
+function inferredArticles(document: unknown, ir: SpecIR) {
+  const cached = articleModels.get(ir);
+  if (cached) return cached;
+  const base = { ...object(document) };
+  delete base.navigation;
+  const values = ir.models
+    .filter((model) => {
+      const result = validateSpec({
+        path: "smithable.yml",
+        text: stringify({ ...base, pages: { referenceCandidate: { articles: model.name } } }),
+      });
+      return result.ir && !result.diagnostics.some((item) => item.severity === "error");
+    })
+    .map((model) => model.name);
+  articleModels.set(ir, values);
+  return values;
+}
 export const referenceAt = (document: unknown, path: ReferencePath): unknown =>
   path.reduce<unknown>(
     (value, key) => (value && typeof value === "object" ? (value as MapValue)[key] : undefined),
@@ -209,7 +231,8 @@ export function referenceControl(
     const listModel = list.model ?? query?.returns;
     if (path.length === 3) {
       if (key === "when") return offer({ kind: "event" });
-      if (key === "fields") return field(eventModel, "stored", true);
+      if (key === "fields")
+        return field(trigger.endsWith(" changed") ? eventModel : undefined, "stored", true);
       if (key === "show") return { ...field(eventModel, "sendable", true), word: "none" };
       if (key === "to")
         return {
@@ -253,8 +276,15 @@ export function referenceControl(
       if (
         ["calendar", "articles"].includes(String(key)) &&
         (typeof value === "string" || value === undefined)
-      )
-        return models();
+      ) {
+        const control = models();
+        control.options = control.options.filter((option) =>
+          key === "calendar"
+            ? field(option.value, "date").options.length === 1
+            : inferredArticles(document, ir).includes(option.value),
+        );
+        return control;
+      }
       if (key === "data") return models(true, "all");
       if (key === "review")
         return {
@@ -263,10 +293,33 @@ export function referenceControl(
             .filter((model) => model.review?.length)
             .map((model) => ({ value: model.name, label: humanize(model.name) })),
         };
-      if (key === "actions") return offer({ kind: "action", model: text(pageModel) }, true);
-      if (key === "search") return field(pageModel, "search", true);
-      if (key === "filters") return field(pageModel, "filter", true, Boolean(own.crud));
-      if (key === "sortable") return field(pageModel, "sort", true);
+      if (key === "actions")
+        return own.crud
+          ? offer({ kind: "action", model: text(own.crud) }, true)
+          : { options: [], multiple: true };
+      if (key === "search") return field(own.crud, "search", true);
+      if (key === "filters") {
+        const control = field(
+          own.crud ?? (own.calendar ? pageModel : undefined),
+          "filter",
+          true,
+          Boolean(own.crud),
+        );
+        if (own.calendar)
+          control.options = control.options.filter((option) => {
+            if (option.value === "owner") return true;
+            const type = ir.models
+              .find((model) => model.name === pageModel)
+              ?.fields.find((field) => field.name === option.value)?.type;
+            return (
+              type?.kind === "choice" ||
+              type?.kind === "relation" ||
+              (type?.kind === "scalar" && type.name === "bool")
+            );
+          });
+        return control;
+      }
+      if (key === "sortable") return field(own.crud, "sort", true);
       if (key === "period" && (typeof value === "string" || value === undefined)) {
         const models = Object.values(object(own.dashboard))
           .map((tile) => {
@@ -285,20 +338,66 @@ export function referenceControl(
         };
       }
       if (key === "contact" && (typeof value === "string" || value === undefined))
-        return withWords(field(pageModel, "user"), "owner");
+        return own.crud ? withWords(field(own.crud, "user"), "owner") : { options: [] };
     }
     if (key === "period" && path.length === 4) return field(part, "date");
     if (key === "contact" && path.length === 4) {
       if (part === "to") return withWords(field(pageModel, "user"), "owner");
-      if (part === "keep") return models();
+      if (part === "keep")
+        return {
+          ...models(),
+          options: ir.models
+            .filter(
+              (model) =>
+                !model.fields.some(
+                  (field) => !field.formula && field.type.kind === "relation" && !field.type.many,
+                ),
+            )
+            .map((model) => ({ value: model.name, label: humanize(model.name) })),
+        };
     }
     if ((key === "calendar" || key === "articles") && path.length === 4) {
       const config = object(own[key]);
-      if (part === "model") return models();
+      if (part === "model") {
+        const control = models();
+        control.options = control.options.filter((option) =>
+          key === "calendar"
+            ? field(option.value, "date").options.length > 0
+            : ir.models
+                .find((model) => model.name === option.value)
+                ?.fields.some(
+                  (field) => field.type.kind === "scalar" && field.type.name === "markdown",
+                ) &&
+              ir.models
+                .find((model) => model.name === option.value)
+                ?.fields.some(
+                  (field) => field.type.kind === "scalar" && field.type.name === "string",
+                ),
+        );
+        return control;
+      }
       if (key === "calendar") {
-        if (part === "starts" || part === "ends") return field(config.model, "date");
-        if (part === "duration") return field(config.model, "integer", false, true);
-        if (part === "title") return field(config.model, "name");
+        if (part === "starts") return field(config.model, "calendar-date");
+        if (part === "ends") {
+          const control = field(config.model, "calendar-date");
+          const fields = ir.models.find((model) => model.name === config.model)?.fields ?? [];
+          const starts = fields.find((field) => field.name === config.starts)?.type;
+          control.options = config.duration
+            ? []
+            : control.options.filter((option) => {
+                const type = fields.find((field) => field.name === option.value)?.type;
+                return (
+                  !starts ||
+                  (starts.kind === "scalar" && type?.kind === "scalar" && starts.name === type.name)
+                );
+              });
+          return control;
+        }
+        if (part === "duration")
+          return config.ends
+            ? { options: [] }
+            : field(config.model, "calendar-duration", false, true);
+        if (part === "title") return field(config.model, "calendar-title");
       } else {
         const kinds: Record<string, string[]> = {
           title: ["string"],
@@ -316,7 +415,6 @@ export function referenceControl(
             .find((m) => m.name === config.model)
             ?.fields.filter(
               (f) =>
-                !f.formula &&
                 !used.includes(f.name) &&
                 (part === "author"
                   ? f.type.kind === "relation" && !f.type.many && f.type.model === "User"
@@ -369,7 +467,7 @@ export function referenceControl(
       if (leaf === "sum" || leaf === "average")
         return {
           options: ir.models.flatMap((m) =>
-            field(m.name, "number").options.map((option) => ({
+            field(m.name, "measure").options.map((option) => ({
               value: `${m.name}.${option.value}`,
               label: `${humanize(m.name)} → ${option.label}`,
             })),
@@ -409,6 +507,11 @@ export function referenceKeys(
             : undefined;
     if (typeof model === "string")
       return referenceOptions({ kind: "field", model, use: "incoming" }, ir);
+    if (
+      (path.length === 3 && key === "set") ||
+      (path.length === 4 && key === "reply" && (part === "set" || part === "then"))
+    )
+      return [];
   }
   if (area === "pages" && key === "defaultFilter" && path.length === 3)
     return (Array.isArray(own.filters) ? own.filters : [])
@@ -423,4 +526,38 @@ export function referenceKeys(
     return [...new Set(models)].map((value) => ({ value, label: humanize(value) }));
   }
   return undefined;
+}
+
+/** Required dependent parts and minimum list sizes must be complete before an atomic Save. */
+export function referenceComplete(schema: JsonSchema, value: unknown): boolean {
+  const alternatives = (schema.oneOf ?? schema.anyOf) as JsonSchema[] | undefined;
+  if (alternatives && !schema.properties) {
+    const chosen = alternativeFor(alternatives, value);
+    if (chosen) return referenceComplete(chosen, value);
+  }
+  if (value === undefined) return true;
+  if (Array.isArray(value))
+    return (
+      value.length >= (typeof schema.minItems === "number" ? schema.minItems : 0) &&
+      value.every((item) => referenceComplete((schema.items ?? {}) as JsonSchema, item))
+    );
+  if (value && typeof value === "object") {
+    const own = value as Record<string, unknown>;
+    if (
+      Array.isArray(schema.required) &&
+      schema.required.some((key) => own[String(key)] === undefined || own[String(key)] === "")
+    )
+      return false;
+    const properties = (schema.properties ?? {}) as Record<string, JsonSchema>;
+    return Object.entries(own).every(([key, value]) =>
+      referenceComplete(
+        properties[key] ??
+          ((typeof schema.additionalProperties === "object"
+            ? schema.additionalProperties
+            : {}) as JsonSchema),
+        value,
+      ),
+    );
+  }
+  return true;
 }

@@ -22,7 +22,14 @@ import { FieldShapeForm, type Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
 import type { ReferenceOption } from "./reference-options";
-import { referenceControl, referenceGroup, referenceKeys, referenceWith } from "./reference-paths";
+import {
+  referenceAt,
+  referenceComplete,
+  referenceControl,
+  referenceGroup,
+  referenceKeys,
+  referenceWith,
+} from "./reference-paths";
 import {
   alternativeFor,
   choicesFor,
@@ -378,11 +385,13 @@ function Value({
   value,
   path,
   drafted = false,
+  variants = true,
 }: {
   schema: JsonSchema;
   value: unknown;
   path: Path;
   drafted?: boolean;
+  variants?: boolean;
 }) {
   const write = useContext(Writer);
   const choices = useContext(Choices);
@@ -404,6 +413,8 @@ function Value({
     return shaped;
   if (references && !drafted && referenceGroup(path))
     return <ReferenceDraft schema={schema} value={value} path={path} />;
+  if (references && variants && referenceVariant(path))
+    return <ReferenceVariant schema={schema} value={value} path={path} />;
   const reference =
     references &&
     referenceControl(path, value, references.document, references.ir, references.auth);
@@ -552,6 +563,7 @@ function Value({
       return <span className="text-quiet">Nothing more</span>;
     case "list": {
       const items = Array.isArray(value) ? value : [];
+      const unique = path[0] === "models" && path[2] === "unique" && path.length === 3;
       const simple = ["choice", "text", "number", "fixed"].includes(
         controlOf(control.items)?.kind ?? "",
       );
@@ -568,9 +580,33 @@ function Value({
             // biome-ignore lint/suspicious/noArrayIndexKey: a list's items are by their place
             <li key={i} className="rounded-md border border-line p-2">
               <Value schema={control.items} value={item} path={[...path, i]} />
+              {unique && (
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  aria-label={`Remove unique rule ${i + 1}`}
+                  onClick={() => {
+                    const next = items.filter((_, index) => index !== i);
+                    void write(path, next.length ? next : undefined);
+                  }}
+                >
+                  Remove rule
+                </button>
+              )}
             </li>
           ))}
           {!items.length && <li className="text-xs text-quiet">None</li>}
+          {unique && (
+            <li>
+              <button
+                type="button"
+                className="text-xs underline"
+                onClick={() => void write(path, [...items, []])}
+              >
+                Add unique rule
+              </button>
+            </li>
+          )}
         </ol>
       );
     }
@@ -618,6 +654,18 @@ function Value({
               label={label}
               options={keys.filter((option) => !entries.some(([name]) => name === option.value))}
               onAdd={(name, value) => write([...path, name], value)}
+              valueOptions={
+                path[0] === "pages" && path[2] === "period" && references
+                  ? (name) =>
+                      referenceControl(
+                        [...path, name],
+                        undefined,
+                        references.document,
+                        references.ir,
+                        references.auth,
+                      )?.options ?? []
+                  : undefined
+              }
             />
           ) : (
             (adder(path) ?? <AddEntry label={label} onAdd={(name) => write([...path, name], {})} />)
@@ -667,15 +715,179 @@ function Value({
   }
 }
 
+function referenceVariant(path: Path) {
+  return (
+    (path[0] === "models" &&
+      ((path.length === 4 && path[2] === "capacity" && path[3] === "max") ||
+        (path.length === 4 && path[2] === "schedule" && path[3] === "away"))) ||
+    (path[0] === "pages" &&
+      path.length === 3 &&
+      ["calendar", "articles", "period"].includes(String(path[2]))) ||
+    (path[0] === "outgoing" && path.length === 3 && path[2] === "to")
+  );
+}
+
+/** The grammar's scalar/object and literal/reference alternatives remain explicit local choices. */
+function ReferenceVariant({
+  schema,
+  value,
+  path,
+}: {
+  schema: JsonSchema;
+  value: unknown;
+  path: Path;
+}) {
+  const write = useContext(Writer);
+  const references = useContext(References);
+  const capacity = path[0] === "models" && path[2] === "capacity";
+  const channels = path[0] === "outgoing";
+  const period = path[0] === "pages" && path[2] === "period";
+  const initial = capacity
+    ? typeof value === "string"
+      ? "reference"
+      : "literal"
+    : channels
+      ? typeof value === "string" && !["mail", "push", "sms"].includes(value)
+        ? "target"
+        : "channels"
+      : value && typeof value === "object"
+        ? "detailed"
+        : "short";
+  const [mode, setMode] = useState(initial);
+  const modes = capacity
+    ? [
+        ["literal", "Fixed number"],
+        ["reference", "A referenced field"],
+      ]
+    : channels
+      ? [
+          ["channels", "Built-in channels"],
+          ["target", "A named target"],
+        ]
+      : period
+        ? [
+            ["short", "One field for every model"],
+            ["detailed", "A field per model"],
+          ]
+        : [
+            ["short", "Model only"],
+            ["detailed", "Choose model and fields"],
+          ];
+  const label = String(path.at(-1));
+  return (
+    <fieldset className="space-y-2">
+      <label className="block text-xs">
+        {label} format
+        <select
+          className={box}
+          aria-label={`${label} format`}
+          value={mode}
+          onChange={(event) => {
+            const next = event.target.value;
+            setMode(next);
+            if (channels && references) {
+              let parent = referenceWith(
+                referenceAt(references.document, path.slice(0, -1)),
+                ["to"],
+                undefined,
+              );
+              if (next === "target") parent = referenceWith(parent, ["recipient"], undefined);
+              void write(path.slice(0, -1), parent);
+            } else if (capacity || period) void write(path, next === "detailed" ? {} : undefined);
+            else
+              void write(
+                path,
+                next === "detailed"
+                  ? { model: typeof value === "string" ? value : "" }
+                  : value && typeof value === "object"
+                    ? (value as Record<string, unknown>).model
+                    : undefined,
+              );
+          }}
+        >
+          {modes.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {capacity && mode === "literal" ? (
+        <input
+          type="number"
+          min={1}
+          step={1}
+          className={box}
+          aria-label="Maximum records"
+          value={typeof value === "number" ? value : ""}
+          onChange={(event) =>
+            void write(path, event.target.value === "" ? undefined : Number(event.target.value))
+          }
+        />
+      ) : channels ? (
+        mode === "target" ? (
+          <TextBox
+            label="Target name"
+            numeric={false}
+            value={value}
+            onCommit={(next) => write(path, next)}
+          />
+        ) : (
+          <ReferencePicker
+            label="Channels"
+            options={["mail", "push", "sms"].map((value) => ({ value, label: value }))}
+            value={
+              Array.isArray(value)
+                ? value
+                : typeof value === "string" && ["mail", "push", "sms"].includes(value)
+                  ? [value]
+                  : []
+            }
+            multiple
+            onChange={(next) => write(path, next)}
+          />
+        )
+      ) : mode === "detailed" ? (
+        <Value
+          schema={
+            controlOf(schema)?.kind === "alternatives"
+              ? (((schema.oneOf ?? schema.anyOf) as JsonSchema[] | undefined)?.find(
+                  (item: JsonSchema) => item.type === "object",
+                ) ?? schema)
+              : schema
+          }
+          value={value ?? {}}
+          path={path}
+          variants={false}
+        />
+      ) : capacity && references ? (
+        <ReferencePicker
+          label="Maximum field"
+          options={
+            referenceControl(path, "", references.document, references.ir, references.auth)
+              ?.options ?? []
+          }
+          value={typeof value === "string" ? value : undefined}
+          onChange={(next) => write(path, next)}
+        />
+      ) : (
+        <Value schema={schema} value={value} path={path} variants={false} />
+      )}
+    </fieldset>
+  );
+}
+
 /** Mapping keys refer to existing fields; the value remains the call's template or plain value. */
 function ReferenceKeyAdd({
   label,
   options,
   onAdd,
+  valueOptions,
 }: {
   label: string;
   options: ReferenceOption[];
   onAdd: (name: string, value: unknown) => Promise<boolean>;
+  valueOptions?: (name: string) => ReferenceOption[];
 }) {
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
@@ -689,16 +901,29 @@ function ReferenceKeyAdd({
         value={name || undefined}
         onChange={async (value) => {
           setName(String(value ?? ""));
+          setValue("");
           return true;
         }}
       />
-      <input
-        aria-label={`Value in ${label}`}
-        className={box}
-        value={value}
-        placeholder="Value or {path}"
-        onChange={(event) => setValue(event.target.value)}
-      />
+      {valueOptions ? (
+        <ReferencePicker
+          label={`Date for ${name || label}`}
+          options={valueOptions(name)}
+          value={value || undefined}
+          onChange={async (value) => {
+            setValue(String(value ?? ""));
+            return true;
+          }}
+        />
+      ) : (
+        <input
+          aria-label={`Value in ${label}`}
+          className={box}
+          value={value}
+          placeholder="Value or {path}"
+          onChange={(event) => setValue(event.target.value)}
+        />
+      )}
       <button
         type="button"
         disabled={busy || !options.some((option) => option.value === name) || !value.trim()}
@@ -745,6 +970,7 @@ function ReferenceDraft({
   const [seen, setSeen] = useState(JSON.stringify(value));
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string>();
+  const [generation, setGeneration] = useState(0);
   const current = JSON.stringify(value);
   const dirty = JSON.stringify(draft) !== baseline;
   if (!dirty && current !== seen) {
@@ -760,6 +986,7 @@ function ReferenceDraft({
     setBaseline(current);
     setSeen(current);
     setProblem(undefined);
+    setGeneration((value) => value + 1);
   };
   return (
     <fieldset
@@ -778,17 +1005,17 @@ function ReferenceDraft({
             return true;
           }}
         >
-          <Value schema={schema} value={draft} path={path} drafted />
+          <Value key={generation} schema={schema} value={draft} path={path} drafted />
         </Writer.Provider>
       </References.Provider>
       {dirty && (
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={busy || stale}
+            disabled={busy || stale || !referenceComplete(schema, draft)}
             className="rounded-md border border-line px-2 py-1 text-xs"
             onClick={async () => {
-              if (busy || stale) return;
+              if (busy || stale || !referenceComplete(schema, draft)) return;
               setBusy(true);
               try {
                 if (await write(path, draft)) setBaseline(JSON.stringify(draft));
