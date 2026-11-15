@@ -14,7 +14,7 @@ export interface Stop {
 const NOCODE: Stop[] = [
   {
     anchor: "preview",
-    title: "Your app, running",
+    title: "Preview",
     text: "This is your app, running: click around as anyone would. What you change shows here at once. Choose Select above it and click a part to open its settings.",
   },
   {

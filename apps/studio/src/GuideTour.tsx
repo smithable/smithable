@@ -87,6 +87,7 @@ const firstSentence = (text: string) => text.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? 
 
 export function Guide({
   app,
+  active = true,
   stops: tour,
   onEnd,
   onStop,
@@ -96,6 +97,8 @@ export function Guide({
   shown: offer,
 }: {
   app: string;
+  /** Closed while the person edits; the tour's stop and shown-change state stay here. */
+  active?: boolean;
   /** The tour of the view's open sub-tab (guide.ts). */
   stops: Stop[];
   onEnd: () => void;
@@ -156,7 +159,9 @@ export function Guide({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the tour starts
   useEffect(() => {
+    if (!active) return;
     before.current = document.activeElement;
+    const anchor = stops[at]?.stop.anchor;
     // A mode's places may still be loading (Code mode comes in its own chunk, App.tsx): looked
     // for again for a moment before the tour goes on without the ones that are not there.
     let tries = 0;
@@ -168,17 +173,19 @@ export function Guide({
       }
       if (found.length === 0) return end();
       setStops(found);
+      const kept = found.findIndex(({ stop }) => stop.anchor === anchor);
+      setAt(kept < 0 ? Math.min(at, found.length - 1) : kept);
     };
     let timer: ReturnType<typeof setTimeout> | undefined;
     look();
     return () => clearTimeout(timer);
-  }, []);
+  }, [active]);
 
   // A step of the shown change: its place looked for until it is on the screen (the preview's
   // form, No code's row and Code's text come after the step's own action).
   useEffect(() => {
     setStepPlace(undefined);
-    if (!step || step === "offer" || step === "end" || !shown) return;
+    if (!active || !step || step === "offer" || step === "end" || !shown) return;
     let tries = 0;
     const look = () => {
       const found = document.querySelector<HTMLElement>(shown.places[step]);
@@ -188,7 +195,7 @@ export function Guide({
     };
     let timer: ReturnType<typeof setTimeout> | undefined = setTimeout(look, 150);
     return () => clearTimeout(timer);
-  }, [step, shown]);
+  }, [active, step, shown]);
 
   // A step of the shown change is lit at its own place once found; the offer and the end at the
   // stop's.
@@ -197,7 +204,11 @@ export function Guide({
   // The place in view (on a phone, its panel scrolled to), then measured; again on resizing.
   // biome-ignore lint/correctness/useExhaustiveDependencies: each place once, as it opens (onStop is made anew each render)
   useLayoutEffect(() => {
-    if (!current || !place) return;
+    if (!active) {
+      setBox(undefined);
+      return;
+    }
+    if (!current || !place || !place.isConnected) return;
     if (!step) onStop?.(current.stop.anchor);
     place.scrollIntoView({ block: "nearest", inline: "nearest" });
     const anchor = own ? `shown-${step}` : current.stop.anchor;
@@ -215,7 +226,7 @@ export function Guide({
       clearTimeout(settled);
       window.removeEventListener("resize", measure);
     };
-  }, [current, place]);
+  }, [active, current, place]);
 
   // The line said now: a stop of the tour, or a step of the shown change with its own chips.
   const last = at === stops.length - 1;
@@ -294,10 +305,12 @@ export function Guide({
   // Smith's line for the stop, with its chips.
   // biome-ignore lint/correctness/useExhaustiveDependencies: each stop and step once, as it opens
   useEffect(() => {
-    if (line) asLine?.(line);
-  }, [current, step, shown, asLine]);
+    asLine?.(active ? line : undefined);
+    return () => asLine?.(undefined);
+  }, [active, current, step, shown, asLine]);
   // Enter is the main chip and Esc as above, while no control has the focus (§12.2).
   useEffect(() => {
+    if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       if (inControl(document.activeElement)) return;
       if (e.key === "Escape") {
@@ -310,9 +323,9 @@ export function Guide({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [active]);
 
-  if (!box || !line) return null;
+  if (!active || !box || !line) return null;
   const lit = own ? `shown-${step}` : current?.stop.anchor;
   const ring = (
     <div
