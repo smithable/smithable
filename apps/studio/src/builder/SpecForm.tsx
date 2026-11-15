@@ -28,6 +28,7 @@ import {
   renameFor,
   wordOrList,
 } from "./spec-form";
+import { TimerForm } from "./TimerForm";
 
 const FILES: [Exclude<keyof Project["files"], "translations">, EditableFile, string][] = [
   ["spec", "smithable.yml", "What the app does"],
@@ -65,6 +66,10 @@ const Shape = createContext<(path: Path, value?: unknown) => React.ReactNode>(()
 const shapeOf =
   (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path: Path, value?: unknown) => {
     const [first, model, third, name, key] = path;
+    if (file === "smithable.yml" && ir && first === "timers" && path.length === 2) {
+      const timer = ir.timers.find((item) => item.name === model);
+      if (timer) return <TimerForm key={JSON.stringify(value)} timer={timer} ir={ir} run={run} />;
+    }
     // A standard action's condition and values as rows of controls (A 203), in place of its
     // settings as text; a merge, split, copy or custom action keeps the text for now.
     if (file === "smithable.yml" && ir && first === "actions" && path.length === 2) {
@@ -335,7 +340,13 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const tools = useContext(Tools);
   const adder = useContext(Adder);
   const shaped = useContext(Shape)(path, value);
-  if (shaped && (typeof value === "string" || value === undefined || path[0] === "actions"))
+  if (
+    shaped &&
+    (typeof value === "string" ||
+      value === undefined ||
+      path[0] === "actions" ||
+      path[0] === "timers")
+  )
     return shaped;
   const control = controlOf(schema);
   if (!control) return <code className="text-xs">{JSON.stringify(value)}</code>;

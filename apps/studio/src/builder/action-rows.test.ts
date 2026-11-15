@@ -1,5 +1,6 @@
+import { validateSpec } from "@smithable/core";
 import { describe, expect, it } from "vitest";
-import { conditionOf, setRowsOf, valuesOf, waysFor, whenRowsOf } from "./action-rows";
+import { conditionOf, setRowsOf, valuesOf, waysFor, whenable, whenRowsOf } from "./action-rows";
 
 describe("a standard action's rows (A 203)", () => {
   it("reads a condition into rows and back, a choice with one value as that value", () => {
@@ -48,4 +49,32 @@ describe("a standard action's rows (A 203)", () => {
       "ask",
     ]);
   });
+});
+
+it("timer condition choices exclude references and computed fields while shared defaults stay rich", () => {
+  const checked = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: { name: Conditions }
+models:
+  Item:
+    fields:
+      status: todo | done
+      active: bool
+      assignee: User
+      derived: { type: bool, formula: active }
+`,
+  });
+  expect(checked.diagnostics).toEqual([]);
+  const model = checked.ir?.models.find((item) => item.name === "Item");
+  expect(model).toBeDefined();
+  expect(whenable(model).map((field) => field.name)).toEqual([
+    "status",
+    "active",
+    "assignee",
+    "derived",
+  ]);
+  expect(
+    whenable(model, { computed: false, references: false }).map((field) => field.name),
+  ).toEqual(["status", "active"]);
 });

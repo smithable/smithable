@@ -10,6 +10,7 @@ import type { Spec } from "../engine";
 import { isPreviewMessage, type Place, type Selection } from "../preview";
 import { Panel, Tabs } from "../ui";
 import { ActionPicture } from "./ActionPicture";
+import { AddEntryForm } from "./AddEntryForm";
 import type { Run } from "./ChangeForms";
 import { CodeFiles, ImportRecords, OwnCode } from "./EntryTools";
 import { ExamplesTable } from "./ExamplesTable";
@@ -17,6 +18,7 @@ import { Languages } from "./Languages";
 import { Look } from "./Look";
 import { OutgoingTemplate } from "./OutgoingTemplate";
 import { SpecForm } from "./SpecForm";
+import { TimerForm } from "./TimerForm";
 import { UxSource } from "./UxSource";
 import { WhoCan } from "./WhoCan";
 import { Wizard, type WizardKind } from "./Wizard";
@@ -315,6 +317,22 @@ export function NoCode({
             ir={spec.ir}
             open={opened}
             adder={(path) => {
+              if (path.length === 1 && path[0] === "timers" && spec.ir)
+                return <TimerForm ir={spec.ir} run={run} />;
+              if (
+                path.length === 1 &&
+                spec.ir &&
+                ["outgoing", "payments", "incoming", "queries"].includes(String(path[0]))
+              )
+                return (
+                  <AddEntryForm
+                    area={path[0] as "outgoing" | "payments" | "incoming" | "queries"}
+                    project={project}
+                    ir={spec.ir}
+                    plugins={spec.plugins}
+                    run={run}
+                  />
+                );
               const kind = (
                 { models: "model", pages: "page", actions: "action" } as Record<string, WizardKind>
               )[String(path[0])];

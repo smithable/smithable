@@ -10,13 +10,16 @@ type Field = ModelIR["fields"][number];
 const USER = "User";
 
 /** The fields a condition may name: choices, yes/no, single references, computed text or yes/no. */
-export const whenable = (model: ModelIR | undefined): Field[] =>
+export const whenable = (
+  model: ModelIR | undefined,
+  { computed = true, references = true }: { computed?: boolean; references?: boolean } = {},
+): Field[] =>
   (model?.fields ?? []).filter((f) =>
     f.formula
-      ? f.type.kind === "scalar" && (f.type.name === "string" || f.type.name === "bool")
+      ? computed && f.type.kind === "scalar" && (f.type.name === "string" || f.type.name === "bool")
       : f.type.kind === "choice" ||
         (f.type.kind === "scalar" && f.type.name === "bool") ||
-        (f.type.kind === "relation" && !f.type.many),
+        (references && f.type.kind === "relation" && !f.type.many),
   );
 
 /** The fields an action may set: stored, one value each. */
@@ -107,12 +110,16 @@ export function WhenRows({
   model,
   rows,
   onChange,
+  computed = true,
+  references = true,
 }: {
   model: ModelIR | undefined;
   rows: WhenRow[];
   onChange: (rows: WhenRow[]) => void;
+  computed?: boolean;
+  references?: boolean;
 }) {
-  const fields = whenable(model);
+  const fields = whenable(model, { computed, references });
   const put = (i: number, row: WhenRow) => onChange(rows.map((r, j) => (j === i ? row : r)));
   return (
     <fieldset className="space-y-2" aria-label="For records with">

@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+
+const { parse } = createRequire(new URL("../packages/core/package.json", import.meta.url))("yaml");
 
 const timerMessage =
   "The timer markOverdue needs one way to choose when it runs: a time of day, a schedule, or a date from its records.";
@@ -8,6 +11,9 @@ export async function checkStudioValidation(browser, base) {
   let plain = true;
   let refused;
   try {
+    const project = await (await page.request.get(`${base}/api/project`)).json();
+    const initialTimers = parse(project.files.spec).timers ?? {};
+    assert.ok(!Object.hasOwn(initialTimers, "markOverdue"), "fixture timer name is already in use");
     await page.addInitScript(() => {
       localStorage.setItem(
         "smithable:windows",
@@ -20,7 +26,24 @@ export async function checkStudioValidation(browser, base) {
       localStorage.setItem("smithable:smith", "docked");
     });
     await page.route("**/api/op", async (route) => {
-      const response = await route.fetch();
+      const request = route.request().postDataJSON();
+      // The new timer form cannot submit an unfinished timer. Exercise an older client's
+      // refused edit against the real daemon; the engine still supplies all finding metadata.
+      // Replace the whole section so this also works when the fixture has no timers map.
+      const response = await route.fetch(
+        request.name === "addTimer" && request.args.name === "markOverdue"
+          ? {
+              postData: JSON.stringify({
+                name: "editSpec",
+                args: {
+                  file: "smithable.yml",
+                  path: ["timers"],
+                  value: { ...initialTimers, markOverdue: {} },
+                },
+              }),
+            }
+          : undefined,
+      );
       const body = await response.json();
       if (!body.ok && body.diagnostics?.some((d) => d.code === "invalid-timer")) {
         refused = body;
@@ -49,9 +72,15 @@ export async function checkStudioValidation(browser, base) {
         .first()
         .click();
     await timers.locator(":scope > summary").click();
-    const name = timers.locator('input[placeholder="Name…"]');
-    await name.fill("markOverdue");
-    await timers.getByRole("button", { name: "Add", exact: true }).click();
+    const addTimer = timers.getByRole("form", { name: "Add timer", exact: true });
+    const name = addTimer.getByRole("textbox", { name: "Timer name", exact: true });
+    const refuse = async () => {
+      await name.fill("markOverdue");
+      await addTimer.getByRole("combobox", { name: "When the timer runs" }).selectOption("every");
+      await addTimer.getByLabel("Time of day", { exact: true }).fill("08:00");
+      await addTimer.getByRole("button", { name: "Add timer", exact: true }).click();
+    };
+    await refuse();
     const notice = page.locator("[data-validation-notice]");
     const timerError = notice.locator('[data-validation-code="invalid-timer"]');
     await timerError.getByText(timerMessage, { exact: true }).waitFor();
@@ -107,8 +136,7 @@ export async function checkStudioValidation(browser, base) {
     if (!(await timers.isVisible()))
       await form.locator(":scope > div > details").last().locator(":scope > summary").click();
     if (!(await timers.evaluate((el) => el.open))) await timers.locator(":scope > summary").click();
-    await name.fill("markOverdue");
-    await timers.getByRole("button", { name: "Add", exact: true }).click();
+    await refuse();
     const fallback = page
       .getByRole("alert")
       .filter({ hasText: "A setting in this app needs attention" });
@@ -144,6 +172,11 @@ export async function checkStudioValidation(browser, base) {
     } finally {
       await broken.close();
     }
+    assert.equal(
+      (await (await page.request.get(`${base}/api/project`)).json()).files.spec,
+      project.files.spec,
+      "refused legacy requests changed the shared fixture",
+    );
   } finally {
     await page.close();
   }
