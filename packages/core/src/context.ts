@@ -45,8 +45,8 @@ export class ParseContext {
     private readonly lines: LineCounter,
   ) {}
 
-  error(at: At, code: string, message: string, hint?: string): void {
-    this.report("error", at, code, message, hint);
+  error(at: At, code: string, message: string, hint?: string, plain?: Diagnostic["plain"]): void {
+    this.report("error", at, code, message, hint, plain);
   }
 
   warning(at: At, code: string, message: string, hint?: string): void {
@@ -135,13 +135,21 @@ export class ParseContext {
     }
   }
 
-  private report(severity: Severity, at: At, code: string, message: string, hint?: string): void {
+  private report(
+    severity: Severity,
+    at: At,
+    code: string,
+    message: string,
+    hint?: string,
+    plain?: Diagnostic["plain"],
+  ): void {
     const pos = at?.range ? this.lines.linePos(at.range[0]) : { line: 1, col: 1 };
     this.diagnostics.push({
       severity,
       code,
       message,
       ...(hint === undefined ? {} : { hint }),
+      ...(plain === undefined ? {} : { plain }),
       file: this.file,
       line: pos.line,
       column: pos.col,

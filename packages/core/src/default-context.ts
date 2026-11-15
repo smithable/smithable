@@ -1,5 +1,6 @@
 import type { LineCounter } from "yaml";
 import { type At, ParseContext } from "./context.js";
+import type { Diagnostic } from "./diagnostics.js";
 import type { PreparedUxDefaults } from "./look-defaults.js";
 
 /**
@@ -13,13 +14,19 @@ export class UxDefaultContext extends ParseContext {
   constructor(file: string, lines: LineCounter) {
     super(file, lines);
   }
-  override error(at: At, code: string, message: string, hint?: string): void {
+  override error(
+    at: At,
+    code: string,
+    message: string,
+    hint?: string,
+    plain?: Diagnostic["plain"],
+  ): void {
     const fact = at && typeof at === "object" ? this.prepared?.nodes.get(at) : undefined;
     if (fact) {
       if (!this.prepared?.skipped.has(fact)) this.prepared?.skipped.set(fact, message);
       return;
     }
-    super.error(at, code, message, hint);
+    super.error(at, code, message, hint, plain);
   }
   override warning(at: At, code: string, message: string, hint?: string): void {
     const fact = at && typeof at === "object" ? this.prepared?.nodes.get(at) : undefined;
