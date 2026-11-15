@@ -93,6 +93,8 @@ export interface LookEditorHost {
   request(path: string, init?: RequestInit): Promise<Response>;
   onDirtyChange?(dirty: boolean): void;
   onBusyChange?(busy: boolean): void;
+  /** Explicitly leave this project's draft and open the host's current project. */
+  onReopenProject?(): Promise<boolean>;
 }
 
 /** The common widths; the frame's edge drags to any width between them. */
@@ -173,12 +175,14 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   // Each new app is signed in again; the fallback below waits for it anew.
   const [round, setRound] = useState(0);
   const [loadError, setLoadError] = useState<string>();
+  const [keptDraft, setKeptDraft] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: loadAttempt deliberately retries this read-only host request.
   useEffect(() => {
     const controller = new AbortController();
     let alive = true;
     setLoadError(undefined);
+    setKeptDraft(false);
     void (async () => {
       try {
         const response = await host.request(PUBLIC ? "start.json" : "/api/start", {
@@ -1135,15 +1139,6 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
           )}
         </aside>
         <main>
-          {!start && !loadError && <p role="status">Opening the saved look…</p>}
-          {loadError && (
-            <p role="alert">
-              {loadError}{" "}
-              <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
-                Retry opening project
-              </button>
-            </p>
-          )}
           {start?.notice && <p role="status">{start.notice}</p>}
           {start?.look?.auth && start.look.auth.signIn !== "none" && (
             <p>
@@ -1323,6 +1318,56 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
             className={grey ? "stage grey" : "stage"}
             data-structural={structural || undefined}
           >
+            {!start && (
+              <section className="preview-unavailable" aria-label="Look preview">
+                <h2>{loadError ? "Preview unavailable" : "Opening the saved look…"}</h2>
+                {loadError ? (
+                  <>
+                    <p role="alert">{loadError}</p>
+                    <p role="status">
+                      {keptDraft
+                        ? "This draft is kept. You can edit or download it. Reopening the current project leaves this draft."
+                        : "Your draft is kept here. The preview cannot open until the current project is reopened."}
+                    </p>
+                    <button type="button" onClick={() => setKeptDraft(true)}>
+                      Keep this draft
+                    </button>{" "}
+                    {host.onReopenProject ? (
+                      <button
+                        type="button"
+                        disabled={openingLook}
+                        onClick={async () => {
+                          setOpeningLook(true);
+                          try {
+                            await host.onReopenProject?.();
+                          } catch (error) {
+                            setLoadError(error instanceof Error ? error.message : String(error));
+                          } finally {
+                            setOpeningLook(false);
+                          }
+                        }}
+                      >
+                        Reopen current project
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
+                        Retry opening project
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p role="status">Connecting to the project's preview…</p>
+                )}
+              </section>
+            )}
+            {start && loadError && (
+              <p role="alert">
+                {loadError}{" "}
+                <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
+                  Retry opening project
+                </button>
+              </p>
+            )}
             {structural && (
               <div className="structural-unavailable" role="status">
                 <p>

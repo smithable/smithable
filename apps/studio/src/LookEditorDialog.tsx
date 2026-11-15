@@ -4,7 +4,7 @@ import { api, type Project } from "./api";
 import "@smithable/look-editor/styles.css";
 
 export default function LookEditorDialog({
-  project,
+  project: initialProject,
   path,
   onClose,
 }: {
@@ -12,6 +12,8 @@ export default function LookEditorDialog({
   path: string;
   onClose: () => void;
 }) {
+  const [project, setProject] = useState(initialProject);
+  const [instance, setInstance] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
   const dirty = useRef(false);
   const busy = useRef(false);
@@ -38,6 +40,18 @@ export default function LookEditorDialog({
       onBusyChange(value) {
         busy.current = value;
         setBusy(value);
+      },
+      async onReopenProject() {
+        if (busy.current) return false;
+        if (
+          dirty.current &&
+          !window.confirm("Discard this unsaved look draft and reopen the current project?")
+        )
+          return false;
+        const current = await api.project();
+        setProject(current);
+        setInstance((value) => value + 1);
+        return true;
       },
       async request(route, init) {
         const context = async () => {
@@ -126,7 +140,7 @@ export default function LookEditorDialog({
         </button>
       </div>
       <div className="min-h-0 flex-1">
-        <LookEditor host={host} />
+        <LookEditor key={instance} host={host} />
       </div>
     </dialog>
   );

@@ -100,6 +100,15 @@
     background: #fff;
     box-shadow: 0 1px 4px #0003;
   }
+  .preview-unavailable {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 320px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+  }
   .bar {
     display: flex;
     flex-wrap: wrap;
