@@ -1427,8 +1427,15 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 * P });
     },
   );
-  await step("colors of a choice and a page's icon, from the Look tab", async () => {
-    await sub("Look");
+  await step("choice colors in Behavior and page icons in Layout", async () => {
+    await sub("Behavior");
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent("smithable:open-part", {
+          detail: { file: "smithable.yml", path: ["models", "Order", "fields", "status"] },
+        }),
+      ),
+    );
     const choices = page.getByRole("region", { name: "Colors of choices" });
     await choices
       .getByRole("group", { name: "Status of Order" })
@@ -1438,6 +1445,7 @@ try {
       .getByText("Show Order.status shipped as success")
       .first()
       .waitFor({ timeout: 60000 * P });
+    await sub("Layout");
     await page.getByLabel("Page to style").selectOption("orders");
     await page
       .getByRole("region", { name: "Pages" })
@@ -1955,7 +1963,11 @@ try {
       }, saved);
       // The ux file says where its choices have controls, with a way there.
       await page.getByRole("button", { name: "Open Look" }).click();
-      await page.getByRole("tab", { name: "Look", selected: true }).waitFor({ timeout: 10000 * P });
+      const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
+      await lookDialog
+        .getByRole("tab", { name: "Theme and settings", selected: true })
+        .waitFor({ timeout: 10000 * P });
+      await lookDialog.getByRole("button", { name: "Close look editor", exact: true }).click();
       await firstWindow("code");
       await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
       await firstWindow("nocode");
@@ -2243,7 +2255,7 @@ try {
   );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
-    await sub("Look");
+    await sub("Content");
     const look = (name) => page.getByRole("region", { name });
     // The app's language: the content file says it, and English is saying nothing.
     const content = () => readFileSync(join(dir, "smithable.content.yml"), "utf8");
@@ -2261,11 +2273,11 @@ try {
     // then removed. One too small is refused before it is sent, saying what is wanted.
     const tiny = join(dir, "..", "studio-test-tiny.png");
     writeFileSync(tiny, png(1, 1));
-    await look("Logo").locator('input[type="file"]').setInputFiles(tiny);
-    await look("Logo").getByRole("alert").getByText("at least 64 px").waitFor();
+    await look("App identity").locator('input[type="file"]').setInputFiles(tiny);
+    await look("App identity").getByRole("alert").getByText("at least 64 px").waitFor();
     const mark = join(dir, "..", "studio-test-mark.png");
     writeFileSync(mark, png(64, 64));
-    await look("Logo").locator('input[type="file"]').setInputFiles(mark);
+    await look("App identity").locator('input[type="file"]').setInputFiles(mark);
     for (let i = 0; !/src: images\/logo\.png/.test(content()); i++) {
       if (i === 60 * P) throw new Error(`no logo in smithable.content.yml:\n${content()}`);
       await new Promise((r) => setTimeout(r, 1000));
@@ -2295,23 +2307,36 @@ try {
           `no logo in the preview (frame at ${at}; the server's page ${html.includes('data-part="logo"') ? "has" : "lacks"} it, the root module ${/logo/.test(root) ? "has" : "lacks"} it): ${error.message.split("\n")[0]}`,
         );
       });
-    await look("Logo").getByRole("button", { name: "Remove" }).click();
+    await look("App identity").getByRole("button", { name: "Remove" }).click();
     for (let i = 0; /^logo:/m.test(content()); i++) {
       if (i === 60 * P) throw new Error("Remove did not take the logo away");
       await new Promise((r) => setTimeout(r, 1000));
     }
-    await look("Logo")
+    await look("App identity")
       .getByText("Add a logo")
       .waitFor({ timeout: 60000 * P });
-    await look("Font, density and motion").getByRole("button", { name: "Comfortable" }).click();
-    await look("Font, density and motion")
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    await look("App-wide font, density and motion")
+      .getByRole("button", { name: "Comfortable" })
+      .click();
+    await look("App-wide font, density and motion")
       .getByRole("button", { name: "Comfortable", pressed: true })
       .waitFor({ timeout: 60000 * P });
+    await page.getByRole("button", { name: "Close look editor", exact: true }).click();
+    await sub("Behavior");
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent("smithable:open-part", {
+          detail: { file: "smithable.yml", path: ["models", "Order", "fields", "status"] },
+        }),
+      ),
+    );
     await look("Colors of choices").getByLabel("Color of Draft").first().selectOption("warning");
     await last
       .getByText(/draft/i)
       .first()
       .waitFor({ timeout: 60000 * P });
+    await sub("Layout");
     await page.getByLabel("Page to style").selectOption("customers");
     // A second line under a column's value.
     await look("Pages").getByLabel("Second line under Email").first().selectOption("phone");
@@ -2346,7 +2371,10 @@ try {
     const pages = look("Pages");
     // Native selected-page controls have visible labels and keyboard focus. They use the same
     // project history as chat: one Undo restores the original authored source.
-    const menu = pages.getByLabel("Menu layout", { exact: true });
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    const menu = page
+      .getByRole("dialog", { name: "Look", exact: true })
+      .getByLabel("Menu layout", { exact: true });
     await menu.focus();
     if (!(await menu.evaluate((e) => document.activeElement === e)))
       throw new Error("Menu layout cannot receive keyboard focus");
@@ -2354,6 +2382,7 @@ try {
     await menu.selectOption("topbar");
     await waitUx(/navigation: topbar/);
     await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
+    await page.getByRole("button", { name: "Close look editor", exact: true }).click();
     await page.getByRole("button", { name: "Undo", exact: true }).click();
     await status.getByText(/Undid:.*menu/i).waitFor({ timeout: 60000 * P });
     if (ux() !== shellBefore) throw new Error("Undo did not restore the shell's source");
@@ -2484,13 +2513,17 @@ try {
         .getByRole("heading", { name: "Acme CRM", level: 1 })
         .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
-      await sub("Look");
-      await page.getByLabel("Page to style").selectOption("home");
-      await page.getByLabel("Theme of Home").selectOption("playful");
+      await page.getByRole("button", { name: "Look", exact: true }).click();
+      const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
+      await lookDialog.getByLabel("Theme selection target", { exact: true }).selectOption("home");
+      await lookDialog.getByRole("button", { name: "Use Playful theme", exact: true }).click();
       await last
         .getByText(/theme on the home page/i)
         .first()
         .waitFor({ timeout: 60000 * P });
+      await lookDialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+      await sub("Layout");
+      await page.getByLabel("Page to style").selectOption("home");
       // A background of the owner's: picked, applied when the picker closes, in the CSS.
       await page.getByLabel("Background", { exact: true }).fill("#f5efe6");
       await page.getByLabel("Background", { exact: true }).blur();

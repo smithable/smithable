@@ -105,6 +105,10 @@ try {
   await page.getByRole("button", { name: "Look", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Look", exact: true })
+    .getByLabel("Theme selection target", { exact: true })
+    .selectOption("welcome");
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
     .getByRole("tab", { name: "Customise", exact: true })
     .click();
   await started;
@@ -147,6 +151,11 @@ try {
     .getByRole("status")
     .filter({ hasText: /Draft preview ready|Saved preview ready/ })
     .waitFor({ timeout: 45000 });
+  assert.equal(
+    await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(),
+    "welcome",
+    "reopen silently broadened the draft target",
+  );
   assert.equal(operations.length, 0, "recovery wrote an operation");
   await page.screenshot({
     path: join(root, "recovered-after-workspace-restart.png"),
@@ -166,6 +175,10 @@ try {
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
   await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByLabel("Theme selection target", { exact: true })
+    .selectOption("welcome");
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByRole("tab", { name: "Customise", exact: true })
@@ -204,6 +217,10 @@ try {
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
   await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByLabel("Theme selection target", { exact: true })
+    .selectOption("welcome");
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByRole("tab", { name: "Customise", exact: true })

@@ -175,6 +175,21 @@ try {
   await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).waitFor();
   assert.equal(await dialog.getByRole("list", { name: "Themes", exact: true }).count(), 1);
   assert.equal(await dialog.getByRole("button", { name: "Look gallery", exact: true }).count(), 0);
+  assert.equal(await dialog.getByLabel("Theme selection target", { exact: true }).inputValue(), "");
+  await dialog.getByText("Add a theme", { exact: true }).click();
+  await dialog.getByLabel("Theme name", { exact: true }).fill("unsaved-import");
+  await dialog.getByRole("textbox", { name: "Theme", exact: true }).fill("name: unsaved-import\n");
+  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+  await dialog.getByLabel("Apply theme to", { exact: true }).waitFor();
+  await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).click();
+  assert.equal(
+    await dialog.getByLabel("Theme name", { exact: true }).inputValue(),
+    "unsaved-import",
+  );
+  assert.equal(
+    await dialog.getByRole("textbox", { name: "Theme", exact: true }).inputValue(),
+    "name: unsaved-import\n",
+  );
   await dialog.getByLabel("Theme selection target", { exact: true }).selectOption("welcome");
   const motion = dialog.getByRole("group", { name: "Motion", exact: true });
   await changed("setTheme", () =>
@@ -205,6 +220,17 @@ try {
       .filter({ hasText: /Draft preview ready|Saved preview ready/ })
       .waitFor({ timeout: 45000 });
   await ready();
+  await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).click();
+  assert.equal(
+    await dialog.getByLabel("Theme name", { exact: true }).inputValue(),
+    "unsaved-import",
+  );
+  await dialog.getByLabel("Theme name", { exact: true }).fill("");
+  await dialog.getByRole("textbox", { name: "Theme", exact: true }).fill("");
+  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+  console.log(
+    "PASS whole-app default and unsaved live form retained across initial/new Customise drafts",
+  );
   assert.equal(await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(), "welcome");
   assert.equal(await dialog.getByRole("button", { name: "Look gallery", exact: true }).count(), 0);
   await dialog.getByLabel("Name", { exact: true }).fill("pinned-draft");

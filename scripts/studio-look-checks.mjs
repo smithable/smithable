@@ -26,14 +26,15 @@ export async function checkStudioLook(page, dir) {
     if (new URL(request.url()).pathname === "/api/op" && request.method() === "POST") writes++;
   };
   page.on("request", requested);
-  const launch = page.getByRole("button", { name: "Edit look", exact: true });
+  const launch = page.getByRole("button", { name: "Look", exact: true });
   try {
     const savedPath = await page.getByLabel("Preview address", { exact: true }).inputValue();
     await launch.click();
-    const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+    const dialog = page.getByRole("dialog", { name: "Look", exact: true });
+    await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog.getByLabel("radius", { exact: true }).waitFor();
     await page.waitForFunction(
-      () => !document.querySelector('dialog[aria-label="Edit look"] header')?.inert,
+      () => !document.querySelector('dialog[aria-label="Look"] header')?.inert,
     );
     const context = await page.evaluate(
       (path) => fetch(`/api/look?path=${encodeURIComponent(path)}`).then((r) => r.json()),
@@ -61,7 +62,7 @@ export async function checkStudioLook(page, dir) {
     );
     const css = await frame.locator("#sm-theme").textContent();
     await dialog.getByText("Show the look as a file", { exact: true }).click();
-    await dialog.locator("textarea").fill("smithableTheme: [");
+    await dialog.locator("textarea:visible").fill("smithableTheme: [");
     await dialog.getByText("Not applied yet:", { exact: false }).waitFor();
     assert.equal(
       await frame.locator("#sm-theme").textContent(),
@@ -69,17 +70,17 @@ export async function checkStudioLook(page, dir) {
       "invalid source replaced the last valid preview",
     );
     await dialog.getByRole("button", { name: "Undo draft", exact: true }).click();
-    assert.match(await dialog.locator("textarea").inputValue(), /radius: 21px/);
-    const draft = await dialog.locator("textarea").inputValue();
+    assert.match(await dialog.locator("textarea:visible").inputValue(), /radius: 21px/);
+    const draft = await dialog.locator("textarea:visible").inputValue();
     await frame.locator("body").click({ position: { x: 3, y: 3 } });
     await frame.locator("body").press("Control+z");
     await page.waitForFunction(
-      (draft) => document.querySelector('dialog[aria-label="Edit look"] textarea')?.value !== draft,
+      (draft) => document.querySelector('dialog[aria-label="Look"] main textarea')?.value !== draft,
       draft,
     );
     await frame.locator("body").press("Control+Shift+z");
     await page.waitForFunction(
-      (draft) => document.querySelector('dialog[aria-label="Edit look"] textarea')?.value === draft,
+      (draft) => document.querySelector('dialog[aria-label="Look"] main textarea')?.value === draft,
       draft,
     );
     assert.equal(projectRevision(dir), baseline, "open/edit wrote project source");
@@ -92,7 +93,7 @@ export async function checkStudioLook(page, dir) {
     await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
     await dialog.waitFor({ state: "detached" });
     await launch.evaluate((button) => {
-      if (document.activeElement !== button) throw new Error("Focus did not return to Edit look");
+      if (document.activeElement !== button) throw new Error("Focus did not return to Look");
     });
     assert.equal(projectRevision(dir), baseline, "discard wrote project source");
     assert.equal(rows(), before, "discard wrote the database");
@@ -111,8 +112,9 @@ export async function checkStudioLook(page, dir) {
 }
 
 export async function checkStudioLookApply(page, dir) {
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Look", exact: true });
+  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
   const ready = () =>
     dialog
       .getByRole("status")
@@ -207,8 +209,9 @@ export async function checkStudioViewer(page, dir) {
       ]),
     );
   const before = domain();
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Look", exact: true });
+  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
   const pages = dialog.getByRole("group", { name: "Page", exact: true });
   const openSignIn = async () => {
     await pages.getByRole("button", { name: "Sign in / viewer", exact: true }).click();
@@ -225,7 +228,7 @@ export async function checkStudioViewer(page, dir) {
     await page.waitForFunction(
       () =>
         !document
-          .querySelector('dialog[aria-label="Edit look"] iframe[data-frame]')
+          .querySelector('dialog[aria-label="Look"] iframe[data-frame]')
           ?.src.includes("/sign-in"),
     );
     await pages.getByRole("button", { name: "Team", exact: true }).click();
@@ -244,7 +247,7 @@ export async function checkStudioViewer(page, dir) {
     await page.waitForFunction(
       () =>
         !document
-          .querySelector('dialog[aria-label="Edit look"] iframe[data-frame]')
+          .querySelector('dialog[aria-label="Look"] iframe[data-frame]')
           ?.src.includes("/sign-in"),
     );
     await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
@@ -279,36 +282,37 @@ export async function checkStudioLookTimeout(page, dir) {
     return route.continue();
   };
   await page.route("**/*", block);
-  const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+  const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   try {
     const loading = page.waitForRequest(
       (request) => new URL(request.url()).pathname === "/api/look",
     );
-    await page.getByRole("button", { name: "Edit look", exact: true }).click();
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await loading;
     await dialog.getByText("Show the look as a file", { exact: true }).click();
-    await dialog.locator("textarea").waitFor();
+    await dialog.locator("textarea:visible").waitFor();
     assert(
-      await dialog.locator("textarea").isDisabled(),
+      await dialog.locator("textarea:visible").isDisabled(),
       "source was editable before the saved context loaded",
     );
     releaseSource();
     await page.waitForFunction(
-      () => !document.querySelector('dialog[aria-label="Edit look"] header')?.inert,
+      () => !document.querySelector('dialog[aria-label="Look"] header')?.inert,
     );
     await dialog.getByLabel("radius", { exact: true }).fill("17px");
     await page.waitForFunction(() =>
       document
-        .querySelector('dialog[aria-label="Edit look"] textarea')
+        .querySelector('dialog[aria-label="Look"] main textarea')
         ?.value.includes("radius: 17px"),
     );
-    const draft = await dialog.locator("textarea").inputValue();
+    const draft = await dialog.locator("textarea:visible").inputValue();
     await dialog
       .getByRole("status")
       .filter({ hasText: "The preview did not connect" })
       .waitFor({ timeout: 30000 * P });
     assert.equal(
-      await dialog.locator("textarea").inputValue(),
+      await dialog.locator("textarea:visible").inputValue(),
       draft,
       "connection deadline discarded the draft",
     );
@@ -326,7 +330,7 @@ export async function checkStudioLookTimeout(page, dir) {
       document.getElementById("sm-theme")?.textContent.includes("--radius: 17px"),
     );
     assert.equal(
-      await dialog.locator("textarea").inputValue(),
+      await dialog.locator("textarea:visible").inputValue(),
       draft,
       "reconnect lost the pending draft",
     );
@@ -370,49 +374,39 @@ export async function checkStudioLookGallery(page, dir) {
   page.on("request", requested);
   try {
     const cold = Date.now();
-    await page.getByRole("button", { name: "Edit look", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
-    const textarea = dialog.locator("textarea");
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Look", exact: true });
+    await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
+    const textarea = dialog.locator("textarea:visible");
     await dialog.getByText("Show the look as a file", { exact: true }).click();
     await page.waitForFunction(
-      () => document.querySelector('dialog[aria-label="Edit look"] textarea')?.disabled === false,
+      () => document.querySelector('dialog[aria-label="Look"] main textarea')?.disabled === false,
     );
     const iframe = dialog.locator("iframe[data-frame]").first();
     await iframe.waitFor();
     const frame = await (await iframe.elementHandle()).contentFrame();
     await frame.waitForSelector("#sm-theme", { state: "attached", timeout: 90000 * P });
     const coldMs = Date.now() - cold;
-    await dialog.getByRole("button", { name: "Look gallery", exact: true }).click();
+    await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).click();
+    assert.equal(await dialog.getByRole("list", { name: "Themes", exact: true }).count(), 1);
     assert.equal(
-      await dialog.locator("iframe[data-frame]").count(),
-      1,
-      "gallery spawned additional app frames",
+      await dialog.getByRole("button", { name: "Look gallery", exact: true }).count(),
+      0,
     );
-    await dialog.getByRole("button", { name: "Choose minimal", exact: true }).click();
+    await dialog.getByRole("button", { name: "Customise Minimal", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await dialog.getByText("Show the look as a file", { exact: true }).click();
+    await page.waitForFunction(() =>
+      document
+        .querySelector('dialog[aria-label="Look"] main textarea')
+        ?.value.includes("name: minimal"),
+    );
     const selected = await textarea.inputValue();
-    assert.match(selected, /name: minimal/);
-    await dialog.getByRole("button", { name: "Choose corporate", exact: true }).click();
-    assert.match(await textarea.inputValue(), /name: corporate/);
-    await dialog.getByRole("button", { name: "Undo draft", exact: true }).click();
-    assert.equal(
-      await textarea.inputValue(),
-      selected,
-      "gallery skip/Undo lost the prior selection",
-    );
-    await dialog.getByRole("button", { name: "Choose minimal", exact: true }).focus();
-    await page.keyboard.press("ArrowRight");
-    assert.match(
-      await page.evaluate(() => document.activeElement?.getAttribute("aria-label")),
-      /^Choose /,
-    );
-    await page.keyboard.press("Space");
-    assert.notEqual(
-      await textarea.inputValue(),
-      selected,
-      "keyboard selection did not change the draft",
-    );
-    await dialog.getByRole("button", { name: "Undo draft", exact: true }).click();
-    assert.equal(await textarea.inputValue(), selected);
+    const activeFrame = await (
+      await dialog.locator("iframe[data-frame]").first().elementHandle()
+    ).contentFrame();
+    await activeFrame.waitForSelector("#sm-theme", { state: "attached", timeout: 90000 * P });
+    assert.equal(await dialog.locator("iframe[data-frame]").count(), 1);
     await textarea.fill(
       selected + "\ndefaults:\n  kinds:\n    crud:\n      table: {actions: menu}\n",
     );
@@ -420,7 +414,10 @@ export async function checkStudioLookGallery(page, dir) {
       .getByText("A full preview of this layout is not available yet.", { exact: true })
       .waitFor();
     assert.equal(
-      await iframe.evaluate((element) => getComputedStyle(element).visibility),
+      await dialog
+        .locator("iframe[data-frame]")
+        .first()
+        .evaluate((element) => getComputedStyle(element).visibility),
       "hidden",
       "structural draft was presented as a CSS preview",
     );
@@ -430,7 +427,7 @@ export async function checkStudioLookGallery(page, dir) {
       .waitFor({ state: "hidden" });
     const steady = Date.now();
     await dialog.getByLabel("radius", { exact: true }).fill("44px");
-    await frame.waitForFunction(() =>
+    await activeFrame.waitForFunction(() =>
       document.getElementById("sm-theme")?.textContent.includes("--radius: 44px"),
     );
     const steadyMs = Date.now() - steady;
@@ -441,7 +438,7 @@ export async function checkStudioLookGallery(page, dir) {
     await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
     await dialog.waitFor({ state: "detached" });
     console.log(
-      `  ✓ shared gallery keyboard/skip/Undo, one current-app frame, explicit unavailable structural draft, no writes; cold ${coldMs} ms, steady token ${steadyMs} ms`,
+      `  ✓ single gallery keyboard Customise/draft Undo, one current-app frame, explicit unavailable structural draft, no writes; cold ${coldMs} ms, steady token ${steadyMs} ms`,
     );
   } finally {
     page.off("request", requested);
@@ -451,8 +448,9 @@ export async function checkStudioLookGallery(page, dir) {
 
 export async function checkStudioDefaultsApply(page, dir) {
   const baseline = projectRevision(dir, false);
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Look", exact: true });
+  await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
   await dialog
     .getByRole("status")
     .filter({ hasText: "Draft preview ready" })
@@ -461,7 +459,7 @@ export async function checkStudioDefaultsApply(page, dir) {
     .getByLabel("Name", { exact: true })
     .fill(`default-browser-${crypto.randomUUID().slice(0, 8)}`);
   await dialog.getByText("Show the look as a file", { exact: true }).click();
-  const textarea = dialog.locator("textarea");
+  const textarea = dialog.locator("textarea:visible");
   await textarea.fill((await textarea.inputValue()) + "\ndefaults:\n  app: {navigation: topbar}\n");
   await dialog
     .getByText("A full preview of this layout is not available yet.", { exact: true })
@@ -492,14 +490,16 @@ export async function checkStudioDefaultsApply(page, dir) {
   await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
   await dialog.waitFor({ state: "detached" });
   await page.getByRole("checkbox", { name: "No code", exact: true }).check({ force: true });
-  await page.getByRole("tab", { name: "Look", exact: true }).click();
-  const menu = page.getByLabel("Menu layout", { exact: true });
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  const settings = page.getByRole("dialog", { name: "Look", exact: true });
+  const menu = settings.getByLabel("Menu layout", { exact: true });
   assert.equal(
     await menu.inputValue(),
     "__inherited",
     "effective theme default was mislabeled as authored UX",
   );
   assert.match(await menu.locator('option[value="__inherited"]').innerText(), /Topbar/);
+  await settings.getByRole("button", { name: "Close look editor", exact: true }).click();
   await page.getByRole("checkbox", { name: "Preview", exact: true }).check({ force: true });
   const history = async (action, expected) => {
     const response = page.waitForResponse(
