@@ -38,9 +38,10 @@ import { OutboxDialog } from "./Outbox";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
-import { ReleaseReview } from "./ReleaseReview";
+import { ReleaseReview, useReleaseReview } from "./ReleaseReview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
+import { needsLook } from "./release-review";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
@@ -103,6 +104,7 @@ function keepWaiting(shown: Project | undefined, next: Project): Project {
 export function App() {
   const [project, setProject] = useState<Project>();
   const [reviewingRelease, setReviewingRelease] = useState(false);
+  const release = useReleaseReview(project?.files, Boolean(project && !project.making));
   // Which windows are shown and where (studio-v3.md §8), kept in this browser.
   const [arrangement, setArrangement] = useArrangement();
   // A change's notice offers to undo it; errors stay until dismissed, other notices fade.
@@ -1229,32 +1231,21 @@ export function App() {
             {!project.making && (
               <button
                 type="button"
+                data-guide="publish"
+                data-review-launch
                 className="text-xs font-medium text-accent hover:underline"
-                onClick={() => setReviewingRelease(true)}
+                onClick={() => {
+                  void release.reload(true);
+                  setReviewingRelease(true);
+                }}
               >
-                Release review
+                Review and publish
+                {release.error
+                  ? " (unavailable)"
+                  : release.review
+                    ? ` (${needsLook(release.review)})`
+                    : " (reading…)"}
               </button>
-            )}
-            {project.making ? null : project.home ? (
-              <a
-                href={project.home}
-                data-guide="publish"
-                className="text-xs font-medium text-accent hover:underline"
-              >
-                Publish and share
-              </a>
-            ) : (
-              // On your own machine an app is published as an ordinary container.
-              <a
-                href="https://docs.smithable.ai/self-host.html"
-                data-guide="publish"
-                target="_blank"
-                rel="noreferrer"
-                title="smithable deploy runs it, with its Release checks, as a container"
-                className="text-xs font-medium text-accent hover:underline"
-              >
-                How to publish
-              </a>
             )}
             {!project.making && project.home && project.beta?.data === "test" && (
               // The service's state beside its publishing, as it is (legal-1.0 U4).
@@ -1835,7 +1826,16 @@ export function App() {
           {smith(layer === "overlay" ? "overlay" : "panel")}
         </SmithLayer>
       )}
-      {reviewingRelease && <ReleaseReview onClose={() => setReviewingRelease(false)} />}
+      {reviewingRelease && (
+        <ReleaseReview
+          review={release.review}
+          error={release.error}
+          loading={release.loading}
+          reload={release.reload}
+          home={project.home}
+          onClose={() => setReviewingRelease(false)}
+        />
+      )}
     </div>
   );
 }
