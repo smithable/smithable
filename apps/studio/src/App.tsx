@@ -35,7 +35,6 @@ import { logStore } from "./logs";
 import { Making } from "./Making";
 import { OLD_TAB, OldVersion, type OpenOld, openOldTab } from "./OldVersion";
 import { OutboxDialog } from "./Outbox";
-import { OwnerCheck } from "./OwnerCheck";
 import { PeoplePanel } from "./People";
 import { usePan } from "./pan";
 import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
@@ -44,7 +43,7 @@ import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
-import { TimeZoneCheck } from "./TimeZoneCheck";
+import { useStudioQuestion } from "./studio-questions";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
 import {
@@ -758,9 +757,6 @@ export function App() {
     spec.diagnostics?.some((d) => d.severity === "error");
   const tour = manual === "code" && slotOf("code") !== undefined && !narrow ? "code" : "nocode";
   const firstVisit = project && !project.making && !guideOff() && !seenGuide(project.name);
-  // Who runs the app is asked after the time zone is answered, one card at a time.
-  const [zoneDoneFor, setZoneDoneFor] = useState<string>();
-  const zoneAnswered = useCallback(() => setZoneDoneFor(project?.name), [project?.name]);
   // The first tour waits for the preview's page (its second stop points at the running app),
   // or twenty seconds when the preview is slow to start.
   const [previewUp, setPreviewUp] = useState(false);
@@ -896,6 +892,22 @@ export function App() {
   // guide alone; an app with nothing to present goes straight to the guide.
   const [layer, setLayer] = useState<LayerMode>();
   const overlaid = layer === "overlay" || layer === "closing";
+  const studioQuestion = useStudioQuestion({
+    app: project?.name,
+    spec: project?.files.spec,
+    auth: project?.files.auth,
+    ready: !project?.making && !guideOff() && !overlaid && !guiding && !firstVisit,
+    onUseZone: async (timezone) => (await run("setApp", { timezone })) !== false,
+    onChooseZone: () => {
+      nocodePlace({ sub: "behavior" });
+      if (narrow) showWindow("nocode");
+      else workIn("nocode");
+    },
+    onSetAdmins: async (admins) => (await run("setAdmins", { admins })) !== false,
+  });
+  const questionWaiting =
+    Boolean(studioQuestion) &&
+    (floating ? !panelOpen : narrow ? phoneWindow !== "smith" : slotOf("smith") === undefined);
   const show = usePresentation(parts, assumptions, layer === "overlay");
   const [presented, setPresented] = useState(false);
   const decided = useRef(false);
@@ -999,6 +1011,8 @@ export function App() {
         // A milestone named or an undo from Smith: the windows read the history again.
         onDone={() => void refresh()}
         onBeginChange={pauseGuide}
+        studioQuestion={studioQuestion}
+        questionVisible={(!floating || panelOpen) && (!narrow || phoneWindow === "smith")}
         ready={{
           sections,
           parts,
@@ -1316,7 +1330,7 @@ export function App() {
               // panel, or brings his window on screen.
               <button
                 type="button"
-                aria-label="Smith"
+                aria-label={questionWaiting ? "Smith, a question is waiting" : "Smith"}
                 aria-pressed={floating ? panelOpen : undefined}
                 title={floating ? (panelOpen ? "Close Smith" : "Ask Smith") : "Ask Smith"}
                 onClick={() =>
@@ -1327,7 +1341,7 @@ export function App() {
                       : workIn("smith")
                 }
                 className={cx(
-                  "smith-chip -my-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border",
+                  "smith-chip relative -my-1 flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border",
                   floating && panelOpen
                     ? "border-accent bg-accent-soft"
                     : "border-line hover:border-accent",
@@ -1336,6 +1350,15 @@ export function App() {
                 <span className="scale-[0.8]">
                   <SmithFace mood={guiding ? "pointing" : "waiting"} />
                 </span>
+                {questionWaiting && (
+                  <span
+                    data-question-waiting
+                    aria-hidden="true"
+                    className="absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-accent text-xs text-panel"
+                  >
+                    ?
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -1361,41 +1384,6 @@ export function App() {
                 : "Your workspace is starting…"}
           </div>
         )}
-        {/* After the presentation and the tour: their Enter must not answer it. */}
-        {!project.making &&
-          !guideOff() &&
-          !overlaid &&
-          !guiding &&
-          !firstVisit &&
-          project.name &&
-          project.files.spec && (
-            <TimeZoneCheck
-              key={project.name}
-              app={project.name}
-              spec={project.files.spec}
-              onAnswered={zoneAnswered}
-              onUse={async (zone) => (await run("setApp", { timezone: zone })) !== false}
-              onChange={() => {
-                nocodePlace({ sub: "behavior" });
-                if (narrow) showWindow("nocode");
-                else workIn("nocode");
-              }}
-            />
-          )}
-        {!project.making &&
-          !guideOff() &&
-          !overlaid &&
-          !guiding &&
-          !firstVisit &&
-          project.name === zoneDoneFor &&
-          project.files.auth && (
-            <OwnerCheck
-              key={project.name}
-              app={project.name}
-              auth={project.files.auth}
-              onSet={async (admins) => (await run("setAdmins", { admins })) !== false}
-            />
-          )}
         {(message || pending) && (
           // Hovering or focusing the notice keeps it while it is read.
           // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading

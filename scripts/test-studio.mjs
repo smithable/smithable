@@ -644,6 +644,11 @@ try {
         // After the guide the app's time zone is asked about once in this browser, and the
         // answer is remembered.
         const zone = fresh.locator('[data-part="time-zone-check"]');
+        if (!(await zone.isVisible()))
+          await fresh
+            .locator("[data-studio-header]")
+            .getByRole("button", { name: /^Smith(?:, a question is waiting)?$/ })
+            .click();
         await zone.getByRole("button", { name: /^(Keep|Not now)/ }).click();
         await zone.waitFor({ state: "detached", timeout: 5000 * P });
         // Then who runs the app: the owner's address goes to the administrators.
