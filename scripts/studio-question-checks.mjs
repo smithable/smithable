@@ -23,7 +23,7 @@ export async function checkStudioQuestions(browser, base) {
             told: true,
           }),
         );
-        window.questionFixture = { spoken: [] };
+        window.questionFixture = { spoken: [], hold: true, cancels: 0, pauses: 0, resumes: 0 };
         window.SpeechRecognition = class {
           start() {
             window.questionFixture.rec = this;
@@ -37,20 +37,73 @@ export async function checkStudioQuestions(browser, base) {
           }
         };
         window.webkitSpeechRecognition = undefined;
+        const track = { stop() {}, getSettings: () => ({}) };
+        Object.defineProperty(navigator, "mediaDevices", {
+          configurable: true,
+          value: {
+            async getUserMedia() {
+              return { getTracks: () => [track], getAudioTracks: () => [track] };
+            },
+          },
+        });
+        const connect = {
+          connect(target) {
+            return target;
+          },
+        };
+        Object.defineProperty(window, "AudioContext", {
+          configurable: true,
+          value: class {
+            destination = {};
+            sampleRate = 16000;
+            audioWorklet = { async addModule() {} };
+            async resume() {}
+            async close() {}
+            createGain() {
+              return { ...connect, gain: { value: 1 } };
+            }
+            createMediaStreamSource() {
+              return connect;
+            }
+          },
+        });
+        Object.defineProperty(window, "AudioWorkletNode", {
+          configurable: true,
+          value: class {
+            port = {};
+            connect(target) {
+              return target;
+            }
+          },
+        });
         const synth = new EventTarget();
         synth.getVoices = () => [
           { name: "Google UK English Male", lang: "en-GB", localService: false },
         ];
         synth.cancel = () => {
           synth.speaking = false;
+          window.questionFixture.cancels++;
         };
-        synth.pause = () => {};
-        synth.resume = () => {};
+        synth.pause = () => {
+          synth.paused = true;
+          window.questionFixture.pauses++;
+        };
+        synth.resume = () => {
+          synth.paused = false;
+          window.questionFixture.resumes++;
+        };
         synth.speak = (u) => {
           window.questionFixture.spoken.push({ text: u.text, voice: u.voice?.name, rate: u.rate });
+          window.questionFixture.utterance = u;
+          synth.speaking = true;
           u.onstart?.();
-          queueMicrotask(() => u.onend?.());
+          if (!window.questionFixture.hold)
+            queueMicrotask(() => {
+              synth.speaking = false;
+              u.onend?.();
+            });
         };
+        window.questionFixture.synth = synth;
         Object.defineProperty(window, "speechSynthesis", { value: synth, configurable: true });
         window.SpeechSynthesisUtterance = class {
           constructor(text) {
@@ -61,6 +114,7 @@ export async function checkStudioQuestions(browser, base) {
       },
       { name: project.name },
     );
+    await page.route("**/vad/**", (route) => route.abort());
     await page.route("**/api/project", async (route) => {
       const response = await route.fetch();
       const body = await response.json();
@@ -109,6 +163,22 @@ export async function checkStudioQuestions(browser, base) {
     assert.equal(spoken.length, 1);
     assert.equal(spoken[0].voice, "Google UK English Male");
     assert.equal(spoken[0].rate, 1.5);
+    const cancels = await page.evaluate(() => window.questionFixture.cancels);
+    await page.getByRole("button", { name: "Sound: on", exact: true }).click();
+    await page.getByRole("button", { name: "Sound: off", exact: true }).waitFor();
+    assert.equal(
+      await page.evaluate(() => window.questionFixture.cancels),
+      cancels,
+      "Sound off cancelled the paused card",
+    );
+    await page.getByRole("button", { name: "Sound: off", exact: true }).click();
+    assert.ok(await page.evaluate(() => window.questionFixture.resumes > 0));
+    assert.equal((await spokenZones()).length, 1, "Sound on restarted the card");
+    await page.evaluate(() => {
+      window.questionFixture.hold = false;
+      window.questionFixture.synth.speaking = false;
+      window.questionFixture.utterance.onend?.();
+    });
     await page.getByRole("button", { name: "Close Smith", exact: true }).click();
     await page.locator("[data-question-waiting]").waitFor();
     await page.getByRole("button", { name: "Smith, a question is waiting", exact: true }).click();
@@ -122,9 +192,13 @@ export async function checkStudioQuestions(browser, base) {
     await zone.waitFor();
     assert.equal(asks, 1, "an optional card held the request");
     const keep = await zone.getByRole("button", { name: /^(Keep |Not now$)/ }).textContent();
-    const dictate = async (text) => {
+    const dictate = async (text, { auto = false, focus } = {}) => {
+      await page.evaluate(() => {
+        window.questionFixture.rec = undefined;
+      });
       await page.getByRole("button", { name: /^Mic:/ }).click();
       await page.waitForFunction(() => Boolean(window.questionFixture.rec));
+      if (focus) await focus.focus();
       await page.evaluate((text) => {
         const rec = window.questionFixture.rec;
         const result = Object.assign([{ transcript: text }], { isFinal: true });
@@ -137,7 +211,13 @@ export async function checkStudioQuestions(browser, base) {
             ?.value === text,
         text,
       );
-      await page.getByRole("button", { name: "Send", exact: true }).click();
+      if (auto)
+        await page.waitForFunction(
+          () =>
+            document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
+              ?.value === "",
+        );
+      else await page.getByRole("button", { name: "Send", exact: true }).click();
     };
     await dictate(keep.trim());
     const owner = page.locator('[data-part="owner-check"]');
@@ -162,9 +242,24 @@ export async function checkStudioQuestions(browser, base) {
       false,
     );
     await dictate("Make them the administrator");
+    assert.deepEqual(admins, [], "spoken words changed administrators");
+    await email.press("Enter");
+    assert.deepEqual(admins, [], "Enter in the address field bypassed the button");
+    await page.getByRole("button", { name: "Auto off", exact: true }).click();
+    await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
+    await dictate("hijack@example.invalid", { auto: true, focus: email });
+    assert.equal(
+      await email.inputValue(),
+      "next@example.invalid",
+      "Auto dictation changed the owner field",
+    );
+    await dictate("Make them the administrator", { auto: true });
+    assert.deepEqual(admins, [], "Auto-send changed administrators");
+    await page.getByRole("button", { name: "Auto on", exact: true }).click();
+    await owner.getByRole("button", { name: "Make them the administrator", exact: true }).click();
     await card.waitFor({ state: "detached" });
     assert.deepEqual(admins, [["next@example.invalid"]]);
-    assert.equal(asks, 1);
+    assert.equal(asks, 2);
     await page.evaluate((name) => localStorage.removeItem(`zoneAsked:${name}`), project.name);
     await page.reload();
     await zone.waitFor();

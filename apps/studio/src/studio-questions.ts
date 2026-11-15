@@ -7,7 +7,7 @@ import { zoneOf } from "./TimeZoneCheck";
 export interface StudioQuestion {
   id: string;
   text: string;
-  choices: { label: string; act: () => void; disabled?: boolean }[];
+  choices: { label: string; act: () => void; disabled?: boolean; voice?: false }[];
   close: () => void;
   answer: (text: string) => boolean;
   spoken: boolean;
@@ -142,6 +142,7 @@ export function useStudioQuestion({
         ? [
             {
               label: "Make them the administrator",
+              voice: false,
               disabled: working || !valid,
               act: () => {
                 const address = draft.email.trim();
@@ -159,7 +160,7 @@ export function useStudioQuestion({
             { label: "Back", disabled: working, act: () => changeOwner({ other: false }) },
           ]
         : [
-            { label: "I will", act: () => settle(key) },
+            { label: "I will", act: () => settle(key), voice: false },
             { label: "Someone else", act: () => changeOwner({ other: true }) },
           ],
       ...(draft.other
@@ -181,6 +182,8 @@ export function useStudioQuestion({
     markSpoken: () => setSpoken((ids) => (ids.includes(question.id) ? ids : [...ids, question.id])),
     answer: (text) => {
       const choice = question.choices.find((c) => normalized(c.label) === normalized(text));
+      // These words must never fall through to a model or Auto-send an administrator change.
+      if (choice?.voice === false) return true;
       if (!choice || choice.disabled) return false;
       choice.act();
       return true;

@@ -41,8 +41,6 @@ export function StudioQuestionCard({
         className="space-y-3"
         onSubmit={(event) => {
           event.preventDefault();
-          const submit = question.choices.find((c) => c.label === "Make them the administrator");
-          if (submit && !submit.disabled) choose(submit);
         }}
       >
         {question.email && (
@@ -76,17 +74,9 @@ export function StudioQuestionCard({
           {question.choices.map((choice) => (
             <button
               key={choice.label}
-              type={
-                question.email && choice.label === "Make them the administrator"
-                  ? "submit"
-                  : "button"
-              }
+              type="button"
               disabled={choice.disabled}
-              onClick={
-                question.email && choice.label === "Make them the administrator"
-                  ? undefined
-                  : () => choose(choice)
-              }
+              onClick={() => choose(choice)}
               className={cx(
                 CHIP,
                 "w-full px-4 py-3 text-left whitespace-normal disabled:opacity-50",

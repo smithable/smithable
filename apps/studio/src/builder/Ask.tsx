@@ -621,6 +621,12 @@ export function Ask({
     return () => speech.stopSpeaking();
   }, [guide?.stop.anchor, guide?.stop.text]);
   // Optional cards wait until Smith is visible and sound is on; reopening never repeats them.
+  // Sound off pauses the player; only leaving the card cancels it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: identity/visibility own cancellation, sound does not
+  useEffect(() => {
+    if (!optionalQuestion || !questionVisible) return;
+    return () => speech.stopSpeaking();
+  }, [optionalQuestion?.id, questionVisible]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: question identity, not regenerated callbacks
   useEffect(() => {
     if (!optionalQuestion || !questionVisible || !speech.sound || optionalQuestion.spoken) return;
@@ -628,7 +634,6 @@ export function Ask({
     speech.speak(
       [optionalQuestion.text, ...optionalQuestion.choices.map((c) => c.label)].join(". "),
     );
-    return () => speech.stopSpeaking();
   }, [optionalQuestion?.id, questionVisible, speech.sound]);
 
   return (
