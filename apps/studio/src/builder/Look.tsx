@@ -11,6 +11,7 @@ import {
   type PageUx,
   pageModel,
   SECTION_LOOKS,
+  themeNamed,
   UX_CAPABILITIES,
 } from "@smithable/core";
 import { useId, useState } from "react";
@@ -22,7 +23,7 @@ import type { Run } from "./ChangeForms";
 import { PendingInput, usePendingEdit } from "./pending-edit";
 import { UxLists } from "./UxLists";
 import { UxRecords } from "./UxRecords";
-import { UxShell } from "./UxShell";
+import { AppShell, PageShell } from "./UxShell";
 import { useUxSource } from "./UxSource";
 
 /** Each language the kit has words in, by its own name. */
@@ -38,49 +39,95 @@ const TONE_CHOICES: [string, string][] = [
   ["danger", "Red (a problem)"],
 ];
 
-export function Look({
+/** Live theme selection; app-wide overrides stay independent of the selected page. */
+export function ThemeSettings({
   spec,
   run,
   themes,
-  page,
-  onPage,
+  ownThemes,
+  target,
+  onTarget,
+  onCustomise,
 }: {
   spec: Spec;
   run: Run;
-  /** Every theme the ux file may name, with its picture (the project's from themes/). */
   themes: Project["themes"];
-  page?: string;
-  onPage?: (page: string) => void;
+  ownThemes: Project["ownThemes"];
+  target: string | null;
+  onTarget: (page: string | null) => void;
+  onCustomise: (theme: string) => void;
 }) {
   const { ir, ux } = spec;
-  const [localPage, setLocalPage] = useState("");
-  const selectedPage = page ?? localPage;
-  const setSelectedPage = (next: string) => {
-    setLocalPage(next);
-    onPage?.(next);
-  };
+  const source = useUxSource(
+    [...(target ? ["pages", target] : []), "theme", "preset"],
+    target ? "app" : "theme",
+  );
   if (!ir || !ux)
     return <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>;
-  const activePage = ir.pages.find((p) => p.id === selectedPage) ?? ir.pages[0];
   const theme = ux.theme;
-  const choices = ir.models.flatMap((m) =>
-    m.fields.flatMap((f) =>
-      f.type.kind === "choice" ? [{ model: m.name, field: f.name, values: f.type.values }] : [],
-    ),
-  );
+  const preset = (target ? ux.pages[target]?.theme?.preset : undefined) ?? theme.preset;
+  const selectedTheme = themeNamed(preset, ownThemes);
   return (
     <div className="space-y-6 p-3">
+      <label className="flex items-center gap-3 text-sm">
+        Theme selection target
+        <Select
+          aria-label="Theme selection target"
+          value={target ?? ""}
+          onChange={(e) => onTarget(e.target.value || null)}
+          options={[
+            ["", "Whole app"],
+            ...ir.pages
+              .filter((p) => p.pattern.kind === "landing")
+              .map((p) => [p.id, humanize(p.id)] as [string, string]),
+          ]}
+        />
+      </label>
+      <p className="text-xs text-muted">
+        {target
+          ? "Choose the live theme for this landing page. App-wide settings below keep their scope."
+          : "Choose the live theme for the whole app."}
+      </p>
+      <p className="text-xs text-muted">
+        {source.present
+          ? "Theme selection: overridden here."
+          : target
+            ? "Theme selection: inherited from the app."
+            : "Theme selection: inherited from the default."}
+      </p>
+      {target && source.present && (
+        <button
+          type="button"
+          className="rounded border border-line px-3 py-1 text-sm"
+          onClick={() => run("resetThemeOverride", { key: "preset", page: target })}
+        >
+          Use the app's theme
+        </button>
+      )}
+      <p className="text-xs text-muted">
+        Available modes:{" "}
+        {selectedTheme?.modes === "both"
+          ? "Light and Dark"
+          : selectedTheme?.modes === "dark"
+            ? "Dark"
+            : "Light"}
+        .
+      </p>
       <Group title="Theme">
         {/* A card per theme, built in or the project's, with its picture (docs/design/look.md §3). */}
         <ul aria-label="Themes" className="grid grid-cols-2 gap-2">
           {themes.map((t) => {
-            const current = t.name === theme.preset;
+            const current = t.name === preset;
             return (
               <li key={t.name}>
                 <button
                   type="button"
+                  aria-label={`Use ${humanize(t.name)} theme`}
                   aria-pressed={current}
-                  onClick={() => !current && run("setTheme", { preset: t.name })}
+                  onClick={() =>
+                    !current &&
+                    run("setTheme", { preset: t.name, ...(target ? { page: target } : {}) })
+                  }
                   className={cx(
                     "w-full overflow-hidden rounded-md border text-left",
                     current
@@ -105,13 +152,21 @@ export function Look({
                     </span>
                   </span>
                 </button>
+                <button
+                  type="button"
+                  className="mt-1 rounded border border-line px-2 py-1 text-xs"
+                  aria-label={`Customise ${humanize(t.name)}`}
+                  onClick={() => onCustomise(t.name)}
+                >
+                  Customise this
+                </button>
               </li>
             );
           })}
         </ul>
         <AddTheme run={run} />
       </Group>
-      <Group title="Color">
+      <Group title="App-wide color">
         <ThemeColor
           which="primary"
           label="Brand color"
@@ -127,7 +182,7 @@ export function Look({
           run={run}
         />
       </Group>
-      <Group title="Font, density and motion">
+      <Group title="App-wide font, density and motion">
         <Segmented
           label="Font"
           value={theme.font ?? "none"}
@@ -155,9 +210,27 @@ export function Look({
           onChange={(motion) => run("setTheme", { motion })}
         />
       </Group>
-      <Group title="Logo">
+      <Group title="App-wide menu">
+        <AppShell ux={ux} run={run} />
+      </Group>
+    </div>
+  );
+}
+
+export function ContentIdentity({ spec, run }: { spec: Spec; run: Run }) {
+  return (
+    <div className="p-3">
+      {" "}
+      <Group title="App identity">
         <Logo spec={spec} run={run} />
       </Group>
+    </div>
+  );
+}
+export function AppLanguage({ spec, run }: { spec: Spec; run: Run }) {
+  return (
+    <>
+      {" "}
       <Group title="Language">
         <Select
           aria-label="The app's language"
@@ -171,6 +244,42 @@ export function Look({
           several, or the app makes it by an English rule.
         </p>
       </Group>
+    </>
+  );
+}
+
+/** Presentation for one page, sharing its context with Behavior and preview following. */
+export function PageLayout({
+  spec,
+  run,
+  page,
+  onPage,
+  onBehavior,
+  onContent,
+}: {
+  spec: Spec;
+  run: Run;
+  page: string;
+  onPage: (page: string) => void;
+  onBehavior: () => void;
+  onContent: () => void;
+}) {
+  const { ir, ux } = spec;
+  if (!ir || !ux)
+    return <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>;
+  const activePage = ir.pages.find((p) => p.id === page) ?? ir.pages[0];
+  const setSelectedPage = onPage;
+  return (
+    <div className="space-y-6 p-3">
+      <div className="flex gap-3 text-sm">
+        <button type="button" onClick={onBehavior}>
+          Page behavior
+        </button>
+        <button type="button" onClick={onContent}>
+          Page content
+        </button>
+      </div>
+      {!activePage && <p className="text-sm text-muted">No pages yet. Add a page in Behavior.</p>}
       <Group title="Pages">
         <label
           htmlFor="look-page-selector"
@@ -185,7 +294,7 @@ export function Look({
             onChange={(e) => setSelectedPage(e.target.value)}
           />
         </label>
-        <UxShell ux={ux} page={activePage} run={run} />
+        <PageShell ux={ux} page={activePage} run={run} />
         {ir.pages
           .filter((p) => p.id === activePage?.id)
           .map((page) => {
@@ -274,7 +383,6 @@ export function Look({
                     page={page.id}
                     sections={page.pattern.sections}
                     ux={ux.pages[page.id] ?? {}}
-                    themes={themes.map((t) => t.name)}
                     run={run}
                   />
                 )}
@@ -282,6 +390,31 @@ export function Look({
             );
           })}
       </Group>
+    </div>
+  );
+}
+
+export function ChoiceTones({
+  spec,
+  run,
+  model,
+  field,
+}: {
+  spec: Spec;
+  run: Run;
+  model: string;
+  field: string;
+}) {
+  const { ir, ux } = spec;
+  if (!ir || !ux) return null;
+  const selected = ir.models
+    .find((item) => item.name === model)
+    ?.fields.find((item) => item.name === field);
+  const choices =
+    selected?.type.kind === "choice" ? [{ model, field, values: selected.type.values }] : [];
+  return (
+    <div className="basis-full">
+      {" "}
       {choices.length > 0 && (
         <Group title="Colors of choices">
           {choices.map((c) => (
@@ -849,31 +982,15 @@ function LandingLook({
   page,
   sections,
   ux,
-  themes,
   run,
 }: {
   page: string;
   sections: { name: string; kind: string }[];
   ux: PageUx;
-  themes: string[];
   run: Run;
 }) {
-  const title = humanize(page);
   return (
     <div className="space-y-2 text-sm">
-      <div className="flex items-center justify-between gap-3">
-        <span>Theme</span>
-        <Select
-          aria-label={`Theme of ${title}`}
-          value={ux.theme?.preset ?? "none"}
-          onChange={(e) => run("setTheme", { page, preset: e.target.value })}
-          options={[
-            ["none", "The app's"],
-            ...themes.map((t): [string, string] => [t, humanize(t)]),
-          ]}
-          className="w-44"
-        />
-      </div>
       <SectionOrder page={page} sections={sections} run={run} />
       <SectionAppearance page={page} sections={sections} ux={ux} run={run} />
     </div>
@@ -1104,7 +1221,7 @@ function AddTheme({ run }: { run: Run }) {
             disabled={!text.trim()}
             className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-white disabled:opacity-50"
           >
-            Add and use
+            Add and use for the whole app
           </button>
         </div>
         <p className="text-xs text-quiet">

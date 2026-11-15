@@ -1224,7 +1224,7 @@ export function App() {
                 className="shrink-0 border border-line"
                 onClick={() => setEditingLook({ project, path: keptPage() })}
               >
-                Edit look
+                Look
               </Button>
             )}
             {busy && <span className="text-xs text-quiet">Working…</span>}
@@ -1681,9 +1681,7 @@ export function App() {
                               jumpTo={codeJump}
                               onJumped={forgetJump}
                               onLook={() => {
-                                nocodePlace({ sub: "look" });
-                                if (narrow) showWindow("nocode");
-                                else workIn("nocode");
+                                setEditingLook({ project, path: keptPage() });
                               }}
                             />
                           </Suspense>
@@ -1798,6 +1796,10 @@ export function App() {
         <Suspense fallback={<p role="status">Opening look editor…</p>}>
           <LookEditorDialog
             project={editingLook.project}
+            liveProject={project}
+            spec={spec}
+            run={run}
+            liveBusy={busy}
             path={editingLook.path}
             onClose={() => setEditingLook(undefined)}
           />

@@ -22,7 +22,7 @@ import type { Run } from "./ChangeForms";
 import { CodeFiles, ImportRecords, OwnCode } from "./EntryTools";
 import { ExamplesTable } from "./ExamplesTable";
 import { Languages } from "./Languages";
-import { Look } from "./Look";
+import { ChoiceTones, ContentIdentity, PageLayout } from "./Look";
 import { OutgoingTemplate } from "./OutgoingTemplate";
 import { PendingEdits, usePendingEdits } from "./pending-edit";
 import { PreviewNavigation, pageForPreviewPath } from "./preview-follow";
@@ -32,8 +32,8 @@ import { UxSource } from "./UxSource";
 import { WhoCan } from "./WhoCan";
 import { Wizard, type WizardKind } from "./Wizard";
 
-export type SubView = "behavior" | "look" | "who" | "content";
-const SUB_VIEWS: SubView[] = ["behavior", "look", "who", "content"];
+export type SubView = "behavior" | "layout" | "who" | "content";
+const SUB_VIEWS: SubView[] = ["behavior", "layout", "who", "content"];
 
 /** A part picked in the preview, as the sub view and the place in its file it opens at. */
 function placeOf(s: Selection | undefined): { sub: SubView; path: string[] } | undefined {
@@ -79,7 +79,7 @@ function entryOf(concept: OpenPart): { sub: SubView; path: (string | number)[] }
   if (typeof concept !== "string") {
     const subs: Record<string, SubView> = {
       "smithable.auth.yml": "who",
-      "smithable.ux.yml": "look",
+      "smithable.ux.yml": "layout",
       "smithable.content.yml": "content",
     };
     const file = concept.file.split(/[\\/]/).at(-1) ?? concept.file;
@@ -246,7 +246,11 @@ export function NoCode({
     advancePreviewContext();
   };
   const [sub, setSubState] = useState<SubView>(() =>
-    SUB_VIEWS.includes(place.sub as SubView) ? (place.sub as SubView) : "behavior",
+    place.sub === "look"
+      ? "layout"
+      : SUB_VIEWS.includes(place.sub as SubView)
+        ? (place.sub as SubView)
+        : "behavior",
   );
   const setSub = (next: SubView) => {
     cancelFollow();
@@ -433,7 +437,7 @@ export function NoCode({
               <Tabs
                 tabs={[
                   ["behavior", "Behavior", "behavior"],
-                  ["look", "Look", "look"],
+                  ["layout", "Layout", "layout"],
                   ["who", "Who can"],
                   ["content", "Content"],
                 ]}
@@ -508,6 +512,15 @@ export function NoCode({
                 }}
                 tools={(path) => {
                   const [area, name] = path;
+                  if (area === "models" && path[2] === "fields" && path.length === 4)
+                    return (
+                      <ChoiceTones
+                        spec={spec}
+                        run={run}
+                        model={String(name)}
+                        field={String(path[3])}
+                      />
+                    );
                   if (
                     spec.ir &&
                     picked?.part === "value" &&
@@ -577,13 +590,14 @@ export function NoCode({
                 }}
               />
             </>
-          ) : sub === "look" ? (
+          ) : sub === "layout" ? (
             <UxSource text={project.files.ux} ux={spec.ux}>
-              <Look
+              <PageLayout
                 spec={spec}
                 run={run}
-                themes={project.themes}
                 page={contextPage}
+                onBehavior={() => jumpTo({ sub: "behavior", path: ["pages", contextPage] })}
+                onContent={() => jumpTo({ sub: "content", path: ["pages", contextPage] })}
                 onPage={(page) => {
                   cancelFollow();
                   setContextPage(page);
@@ -595,12 +609,14 @@ export function NoCode({
             <WhoCan spec={spec} run={run} authText={project.files.auth} />
           ) : (
             <div className="divide-y divide-line">
+              <ContentIdentity spec={spec} run={run} />
               <SpecForm
                 key={JSON.stringify(opened ?? null)}
                 files={project.files}
                 run={run}
                 ir={spec.ir}
                 parts={["content"]}
+                omit={["logo", "language", "languages"]}
                 open={opened}
                 tools={(path) =>
                   spec.ir &&

@@ -107,7 +107,17 @@ const SIZES = [
 const PHONE = 390;
 const GAP = 16;
 
-export function LookEditor({ host }: { host: LookEditorHost }) {
+export function LookEditor({
+  host,
+  initialTheme,
+  initialTarget,
+  showGallery = true,
+}: {
+  host: LookEditorHost;
+  initialTheme?: string;
+  initialTarget?: string | null;
+  showGallery?: boolean;
+}) {
   const PUBLIC = host.kind === "public";
   const lookRoot = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -152,6 +162,8 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   const [pendingModes, setPendingModes] = useState<ThemeIR["modes"]>();
   const [page, setPage] = useState<string>();
   const [targetPage, setTargetPage] = useState<string | null>(null);
+  const targetRef = useRef(targetPage);
+  targetRef.current = targetPage;
   const [baseScope, setBaseScope] = useState<string | null>(null);
   const [initialText, setInitialText] = useState(text);
   const [applyBusy, setApplyBusy] = useState(false);
@@ -223,22 +235,50 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
         }
         if (!alive) return;
         if (data.look) {
-          const selected =
-            data.look.page && lookAuthorship(data.look.uxText)?.pages[data.look.page]?.preset
-              ? data.look.page
-              : null;
+          const selected = loadedOnce.current
+            ? targetRef.current
+            : initialTarget !== undefined
+              ? initialTarget
+              : data.look.page && lookAuthorship(data.look.uxText)?.pages[data.look.page]?.preset
+                ? data.look.page
+                : null;
+          if (
+            selected &&
+            !data.look.ir.pages.some(
+              (page) => page.id === selected && page.pattern.kind === "landing",
+            )
+          )
+            throw new Error(
+              "This landing page is no longer available. Reopen the current project.",
+            );
           const opened = openProjectLook(data.look, selected);
+          const requested = !loadedOnce.current ? initialTheme : undefined;
+          const file = requested && data.look.themeFiles.find((theme) => theme.name === requested);
+          const builtIn = requested && BUILT_IN_THEMES.find((theme) => theme.name === requested);
+          const draftText = requested
+            ? file
+              ? file.text
+              : builtIn
+                ? themeText(builtIn)
+                : undefined
+            : opened.text;
+          if (draftText === undefined)
+            throw new Error("This theme is no longer available. Reopen the current project.");
           // Retrying a failed read must not replace edits made while it was unavailable.
           if (!dirtyRef.current) {
             setStartingTheme(
-              opened.look.theme.source === "project"
-                ? `shown:${opened.look.theme.name}`
-                : opened.look.theme.name,
+              requested
+                ? file
+                  ? `shown:${requested}`
+                  : requested
+                : opened.look.theme.source === "project"
+                  ? `shown:${opened.look.theme.name}`
+                  : opened.look.theme.name,
             );
-            setHistory(draftHistory(opened.text));
+            setHistory(draftHistory(draftText));
           }
           // Before the first successful read, the target is only a placeholder.
-          if (!dirtyRef.current || !loadedOnce.current) setTargetPage(selected);
+          if (!loadedOnce.current) setTargetPage(selected);
           setInitialText(opened.text);
           setBaseScope(selected);
         }
@@ -915,16 +955,18 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               )}
             </select>
           </label>
-          <button
-            type="button"
-            aria-expanded={gallery}
-            onClick={() => {
-              setGallery((value) => !value);
-              setBeside(false);
-            }}
-          >
-            Look gallery
-          </button>
+          {showGallery && (
+            <button
+              type="button"
+              aria-expanded={gallery}
+              onClick={() => {
+                setGallery((value) => !value);
+                setBeside(false);
+              }}
+            >
+              Look gallery
+            </button>
+          )}
           <label>
             Name{" "}
             <input aria-label="Name" value={name} onChange={(e) => set(["name"], e.target.value)} />
@@ -1207,7 +1249,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               .
             </p>
           )}
-          {gallery && (
+          {showGallery && gallery && (
             <section className="look-gallery" aria-label="Look gallery">
               <p>
                 {PUBLIC

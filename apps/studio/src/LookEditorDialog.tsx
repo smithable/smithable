@@ -1,19 +1,42 @@
 import { LookEditor, type LookEditorHost } from "@smithable/look-editor";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type Project } from "./api";
+import type { Run } from "./builder/ChangeForms";
+import { ThemeSettings } from "./builder/Look";
+import { PendingEdits, usePendingEdits } from "./builder/pending-edit";
+import { UxSource } from "./builder/UxSource";
+import type { Spec } from "./engine";
+import { Tabs } from "./ui";
 import "@smithable/look-editor/styles.css";
 
 export default function LookEditorDialog({
   project: initialProject,
+  liveProject,
+  spec,
+  run,
+  liveBusy,
   path,
   onClose,
 }: {
   project: Project;
+  liveProject: Project;
+  spec: Spec;
+  run: Run;
+  liveBusy: boolean;
   path: string;
   onClose: () => void;
 }) {
   const [project, setProject] = useState(initialProject);
   const [instance, setInstance] = useState(0);
+  const [tab, setTab] = useState<"settings" | "customise">("settings");
+  const [target, setTarget] = useState<string | null>(
+    () =>
+      spec.ir?.pages.find(
+        (page) => page.pattern.kind === "landing" && page.route === path.split(/[?#]/)[0],
+      )?.id ?? null,
+  );
+  const [draft, setDraft] = useState<{ theme?: string; target: string | null; path: string }>();
+  const edits = usePendingEdits();
   const dialog = useRef<HTMLDialogElement>(null);
   const dirty = useRef(false);
   const busy = useRef(false);
@@ -26,10 +49,31 @@ export default function LookEditorDialog({
     };
   }, []);
   const close = () => {
-    if (busy.current) return;
-    if (dirty.current && !window.confirm("Discard this unsaved look draft and close?")) return;
+    if (busy.current || liveBusy) return;
+    if (
+      (dirty.current || edits.pending()) &&
+      !window.confirm("Discard these unsaved look edits and close?")
+    )
+      return;
     dialog.current?.close();
     onClose();
+  };
+  const startDraft = (theme?: string) => {
+    if (busy.current || liveBusy) return;
+    if (
+      draft &&
+      dirty.current &&
+      !window.confirm("Discard this unsaved look draft and start another?")
+    )
+      return;
+    setProject(liveProject);
+    setDraft({
+      ...(theme ? { theme } : {}),
+      target,
+      path: target ? (spec.ir?.pages.find((page) => page.id === target)?.route ?? path) : path,
+    });
+    setInstance((value) => value + 1);
+    setTab("customise");
   };
   const host = useMemo<LookEditorHost>(
     () => ({
@@ -44,20 +88,25 @@ export default function LookEditorDialog({
       async onReopenProject() {
         if (busy.current) return false;
         if (
-          dirty.current &&
+          (dirty.current || edits.pending()) &&
           !window.confirm("Discard this unsaved look draft and reopen the current project?")
         )
           return false;
         const current = await api.project();
         setProject(current);
+        setDraft((value) => value && { target: null, path: "/" });
+        dirty.current = false;
         setInstance((value) => value + 1);
         return true;
       },
       async request(route, init) {
         const context = async () => {
-          const response = await fetch(`/api/look?path=${encodeURIComponent(path)}`, {
-            signal: init?.signal,
-          });
+          const response = await fetch(
+            `/api/look?path=${encodeURIComponent(draft?.path ?? path)}`,
+            {
+              signal: init?.signal,
+            },
+          );
           if (!response.ok) return response;
           const value = await response.json();
           // The context's projectId is the preview's identity, for the frames; lookProject is
@@ -114,7 +163,7 @@ export default function LookEditorDialog({
         );
       },
     }),
-    [path, project.lookProject],
+    [path, draft?.path, project.lookProject, edits.pending],
   );
   return (
     <dialog
@@ -128,20 +177,60 @@ export default function LookEditorDialog({
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-panel p-2">
         <span className="min-w-0 text-sm font-medium wrap-break-word">
-          Edit look · {project.name}
+          Look · {tab === "settings" ? liveProject.name : project.name}
         </span>
         <button
           type="button"
-          disabled={isBusy}
+          disabled={isBusy || liveBusy}
           onClick={close}
           className="shrink-0 rounded border border-line px-3 py-1 text-sm disabled:opacity-50"
         >
           Close look editor
         </button>
       </div>
-      <div className="min-h-0 flex-1">
-        <LookEditor key={instance} host={host} />
+      <div className="shrink-0 border-b border-line px-3 py-2">
+        <Tabs
+          tabs={[
+            ["settings", "Theme and settings"],
+            ["customise", "Customise"],
+          ]}
+          value={tab}
+          onChange={(next) => {
+            if (isBusy || liveBusy) return;
+            if (next === "customise" && !draft) startDraft();
+            else setTab(next);
+          }}
+        />
       </div>
+      <PendingEdits.Provider value={edits.report}>
+        <div hidden={tab !== "settings"} className="min-h-0 flex-1 overflow-auto">
+          <fieldset disabled={isBusy || liveBusy}>
+            <UxSource text={liveProject.files.ux} ux={spec.ux}>
+              <ThemeSettings
+                key={instance}
+                spec={spec}
+                run={run}
+                themes={liveProject.themes}
+                ownThemes={liveProject.ownThemes}
+                target={target}
+                onTarget={setTarget}
+                onCustomise={startDraft}
+              />
+            </UxSource>
+          </fieldset>
+        </div>
+        <div hidden={tab !== "customise"} className="min-h-0 flex-1">
+          {draft && (
+            <LookEditor
+              key={instance}
+              host={host}
+              initialTheme={draft.theme}
+              initialTarget={draft.target}
+              showGallery={false}
+            />
+          )}
+        </div>
+      </PendingEdits.Provider>
     </dialog>
   );
 }
