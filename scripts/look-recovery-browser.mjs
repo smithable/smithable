@@ -62,6 +62,18 @@ try {
     { cwd: repo, env, stdio: "pipe", timeout: 120000 },
   );
   const original = await startServer();
+  for (const operation of [
+    { name: "addLandingPage", args: { page: "welcome", route: "/welcome" } },
+    { name: "setTheme", args: { page: "welcome", preset: "modern" } },
+  ]) {
+    const response = await fetch(`${base}/api/op`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-smithable": "1" },
+      body: JSON.stringify(operation),
+    });
+    const result = await response.json();
+    assert.ok(result.ok, result.output);
+  }
   browser = await chromium.launch();
   page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   page.on("pageerror", (error) => console.error("Page error:", String(error)));
@@ -144,6 +156,8 @@ try {
   await dialog.waitFor({ state: "detached" });
   await page.unroute("**/api/look?*");
   await page.reload();
+  await page.getByLabel("Preview address", { exact: true }).fill("/welcome");
+  await page.getByRole("button", { name: "Go", exact: true }).click();
   await page.route("**/api/look?*", (route) =>
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
@@ -164,9 +178,36 @@ try {
     "retry overwrote offline edits",
   );
   assert.equal(operations.length, 0, "retry wrote an operation");
+  assert.equal(
+    await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(),
+    "welcome",
+    "retry used a placeholder Apply target",
+  );
+  assert.ok(
+    await dialog.getByRole("button", { name: "Save as new theme", exact: true }).isEnabled(),
+  );
   console.log(
     "PASS transient-error Retry connects without replacing offline edits or writing operations.",
   );
+  page.once("dialog", (prompt) => prompt.accept());
+  await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+  await dialog.waitFor({ state: "detached" });
+  await page.route("**/api/look?*", (route) =>
+    route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
+  );
+  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
+  await page.unroute("**/api/look?*");
+  await dialog.getByRole("button", { name: "Retry opening project", exact: true }).click();
+  await dialog
+    .getByRole("status")
+    .filter({ hasText: /Draft preview ready|Saved preview ready/ })
+    .waitFor({ timeout: 45000 });
+  assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "modern");
+  assert.equal(await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(), "welcome");
+  assert.ok(await dialog.getByRole("button", { name: "Apply", exact: true }).isDisabled());
+  assert.equal(operations.length, 0);
+  console.log("PASS unedited Retry opens the saved page look and its target with no dirty draft.");
 } catch (error) {
   if (page)
     await page

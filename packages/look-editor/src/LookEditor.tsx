@@ -178,6 +178,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   const [keptDraft, setKeptDraft] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const dirtyRef = useRef(false);
+  const loadedOnce = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: loadAttempt deliberately retries this read-only host request.
   useEffect(() => {
     const controller = new AbortController();
@@ -235,13 +236,15 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                 : opened.look.theme.name,
             );
             setHistory(draftHistory(opened.text));
-            setTargetPage(selected);
           }
+          // Before the first successful read, the target is only a placeholder.
+          if (!dirtyRef.current || !loadedOnce.current) setTargetPage(selected);
           setInitialText(opened.text);
           setBaseScope(selected);
         }
         setPage((current) => current ?? data.open);
         setStart(data);
+        loadedOnce.current = true;
       } catch (error) {
         if (alive && !controller.signal.aborted)
           setLoadError(error instanceof Error ? error.message : String(error));
