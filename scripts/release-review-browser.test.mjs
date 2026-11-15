@@ -100,14 +100,12 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     const held = new Promise((resolve) => {
       releaseReply = resolve;
     });
-    const requested = page.waitForRequest(
-      (request) => new URL(request.url()).pathname === "/api/release-review",
-    );
     let heldOnce = false;
     const hold = async (route) => {
-      const response = await route.fetch();
-      if (heldOnce) return route.fulfill({ response });
+      const first = !heldOnce;
       heldOnce = true;
+      const response = await route.fetch();
+      if (!first) return route.fulfill({ response });
       const previous = await response.json();
       await held;
       await route.fulfill({ json: { ...previous, currentAccess: ["STALE REVIEW RESPONSE"] } });
@@ -115,8 +113,10 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     await page.route("**/api/release-review", hold);
     try {
       await comparison.locator(":scope > summary").focus();
-      await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-      await requested;
+      await Promise.all([
+        page.waitForRequest((request) => new URL(request.url()).pathname === "/api/release-review"),
+        page.evaluate(() => window.dispatchEvent(new Event("focus"))),
+      ]);
       await dialog.getByRole("status").filter({ hasText: "Refreshing release evidence" }).waitFor();
       assert.notEqual(await comparison.getAttribute("open"), null);
       assert.equal(
@@ -127,11 +127,12 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
       );
 
       // A second, newer response wins even when the older focus refresh arrives last.
-      const fresh = page.waitForResponse(
-        (response) => new URL(response.url()).pathname === "/api/release-review",
-      );
-      await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-      await fresh;
+      await Promise.all([
+        page.waitForResponse(
+          (response) => new URL(response.url()).pathname === "/api/release-review",
+        ),
+        page.evaluate(() => window.dispatchEvent(new Event("focus"))),
+      ]);
       await page.waitForFunction(
         () =>
           document
