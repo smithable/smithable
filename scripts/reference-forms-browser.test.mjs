@@ -257,6 +257,12 @@ test("typed reference forms write complete operations and protect unfinished dra
     const beforeParent = operations.length;
     await payment.getByRole("combobox", { name: "on", exact: true }).selectOption("Customer");
     assert.equal(operations.length, beforeParent, "parent model wrote before atomic Save");
+    assert.ok(
+      await payment
+        .getByRole("button", { name: "Save referencePayment", exact: true })
+        .isDisabled(),
+      "parent draft could save an unavailable old amount",
+    );
     assert.equal(await stored(["payments", "referencePayment", "on"]), "Order");
     assert.ok(
       (

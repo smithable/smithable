@@ -5,6 +5,7 @@ import {
   type FieldUse,
   type ReferenceOption,
   type ReferenceSource,
+  referenceEventModel,
   referenceOptions,
 } from "./reference-options";
 import { alternativeFor } from "./spec-form";
@@ -220,12 +221,7 @@ export function referenceControl(
     const trigger = text(own.when);
     const timer = ir.timers.find((t) => t.name === trigger);
     const action = ir.actions.find((a) => a.name === trigger);
-    const payment = ir.payments.find((p) => p.name === trigger);
-    const eventModel =
-      timer?.on ??
-      (action && !action.custom
-        ? action.on
-        : (payment?.on ?? trigger.match(/^([A-Z]\w*) (?:created|changed|deleted)$/)?.[1]));
+    const eventModel = referenceEventModel(trigger, ir);
     const list = object(own.list);
     const query = ir.queries.find((q) => q.name === list.query);
     const listModel = list.model ?? query?.returns;
@@ -536,6 +532,12 @@ export function referenceComplete(schema: JsonSchema, value: unknown): boolean {
     if (chosen) return referenceComplete(chosen, value);
   }
   if (value === undefined) return true;
+  if (typeof value === "number")
+    return (
+      Number.isFinite(value) &&
+      (schema.type !== "integer" || Number.isInteger(value)) &&
+      (typeof schema.minimum !== "number" || value >= schema.minimum)
+    );
   if (Array.isArray(value))
     return (
       value.length >= (typeof schema.minItems === "number" ? schema.minItems : 0) &&
@@ -543,6 +545,19 @@ export function referenceComplete(schema: JsonSchema, value: unknown): boolean {
     );
   if (value && typeof value === "object") {
     const own = value as Record<string, unknown>;
+    if (
+      schema.properties &&
+      alternatives?.length &&
+      alternatives.every((option) =>
+        Object.keys(option).every((key) => key === "required" || key === "not"),
+      ) &&
+      !alternatives.some(
+        (option) =>
+          Array.isArray(option.required) &&
+          option.required.every((key) => own[String(key)] !== undefined),
+      )
+    )
+      return false;
     if (
       Array.isArray(schema.required) &&
       schema.required.some((key) => own[String(key)] === undefined || own[String(key)] === "")
@@ -560,4 +575,36 @@ export function referenceComplete(schema: JsonSchema, value: unknown): boolean {
     );
   }
   return true;
+}
+
+/** A parent switch may leave stored names visible, but cannot submit them in the wrong context. */
+export function referenceReady(
+  schema: JsonSchema,
+  value: unknown,
+  path: ReferencePath,
+  document: unknown,
+  ir: SpecIR,
+  auth?: Pick<AuthIR, "roles">,
+): boolean {
+  if (!referenceComplete(schema, value)) return false;
+  const walk = (value: unknown, path: ReferencePath): boolean => {
+    if (value === undefined) return true;
+    const control = referenceControl(path, value, document, ir, auth);
+    if (control) {
+      if (control.word && value === control.word) return true;
+      return (Array.isArray(value) ? value : [value]).every(
+        (value) =>
+          typeof value === "string" && control.options.some((option) => option.value === value),
+      );
+    }
+    if (!value || typeof value !== "object") return true;
+    const keys = referenceKeys(path, document, ir);
+    const array = Array.isArray(value);
+    return Object.entries(value).every(
+      ([key, value]) =>
+        (!keys || keys.some((option) => option.value === key)) &&
+        walk(value, [...path, array ? Number(key) : key]),
+    );
+  };
+  return walk(value, path);
 }

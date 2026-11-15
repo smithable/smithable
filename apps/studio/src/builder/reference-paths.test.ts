@@ -1,12 +1,14 @@
 import { applyOperation, validateAuth, validateSpec } from "@smithable/core";
 import { expect, test } from "vitest";
 import { parse } from "yaml";
+import { referenceEventModel, referenceMailRecipients } from "./reference-options";
 import {
   referenceAt,
   referenceComplete,
   referenceControl,
   referenceGroup,
   referenceKeys,
+  referenceReady,
   referenceWith,
 } from "./reference-paths";
 import { operationFor } from "./spec-form";
@@ -227,6 +229,13 @@ test("required pairs and minimum multi-select sizes keep an atomic Save incomple
   expect(referenceComplete(rules, [["customer"]])).toBe(false);
   expect(referenceComplete(rules, [{ fields: ["customer"] }])).toBe(false);
   expect(referenceComplete(rules, [["customer", "title"]])).toBe(true);
+  const page = {
+    type: "object",
+    properties: { crud: { type: "string" } },
+    oneOf: [{ required: ["crud"] }, { required: ["calendar"] }],
+  };
+  expect(referenceComplete(page, {})).toBe(false);
+  expect(referenceComplete(page, { crud: "Invoice" })).toBe(true);
 });
 
 test("removing an optional reference from a complete draft does not restore it through a merging setter", () => {
@@ -249,4 +258,46 @@ test("removing an optional reference from a complete draft does not restore it t
   expect(removed.ok).toBe(true);
   if (!removed.ok) throw Error(removed.message);
   expect(referenceAt(parse(removed.files.spec), [...path, "author"])).toBeUndefined();
+});
+
+test("payment creation events keep record recipients and unusable auth keeps the existing admin fallback", () => {
+  const { ir, auth } = fixture();
+  expect(auth).toBeUndefined(); // The minimal auth text is not a usable sign-in configuration.
+  expect(referenceEventModel("pay", ir)).toBe("Invoice");
+  const recipients = referenceMailRecipients("pay", ir, auth).map((option) => option.value);
+  expect(recipients).toContain("owner");
+  expect(recipients).toContain("customer.email");
+  expect(referenceMailRecipients("daily", ir, auth).map((option) => option.value)).toEqual([
+    "admin",
+  ]);
+});
+
+test("complete non-model entry removals already use replacement rather than merging setters", () => {
+  const { document } = fixture();
+  for (const [area, name] of [
+    ["pages", "invoices"],
+    ["payments", "pay"],
+    ["outgoing", "receipt"],
+    ["incoming", "signup"],
+  ]) {
+    const before = referenceAt(document, [area, name]) as Record<string, unknown>;
+    const [removed] = Object.keys(before);
+    const next = { ...before };
+    delete next[removed];
+    expect(operationFor("smithable.yml", [area, name], next, document), area).toBeUndefined();
+  }
+});
+
+test("a changed parent cannot submit until its old field is replaced in the new context", () => {
+  const { document, ir, auth } = fixture();
+  const path = ["payments", "pay"];
+  let draft = referenceWith(document, [...path, "on"], "Customer");
+  const schema = {
+    type: "object",
+    required: ["on", "amount", "when"],
+    properties: { on: { type: "string" }, amount: { type: "string" }, when: { type: "string" } },
+  };
+  expect(referenceReady(schema, referenceAt(draft, path), path, draft, ir, auth)).toBe(false);
+  draft = referenceWith(draft, [...path, "amount"], "fee");
+  expect(referenceReady(schema, referenceAt(draft, path), path, draft, ir, auth)).toBe(true);
 });

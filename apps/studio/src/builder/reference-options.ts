@@ -89,6 +89,30 @@ const stored = (field: FieldIR) =>
   !field.formula && !(field.type.kind === "relation" && field.type.many);
 const modelOf = (ir: SpecIR, name: string) => ir.models.find((model) => model.name === name);
 
+/** The record carried by an event; clock/custom events deliberately have no record. */
+export function referenceEventModel(trigger: string, ir: SpecIR): string | undefined {
+  const timer = ir.timers.find((timer) => timer.name === trigger);
+  if (timer) return timer.on;
+  const action = ir.actions.find((action) => action.name === trigger);
+  if (action) return action.custom ? undefined : action.on;
+  return (
+    ir.payments.find((payment) => payment.name === trigger)?.on ??
+    trigger.match(/^([A-Z]\w*) (?:created|changed|deleted)$/)?.[1]
+  );
+}
+
+/** Preserve the creation form's administrator fallback when no usable auth file is available. */
+export function referenceMailRecipients(
+  trigger: string,
+  ir: SpecIR,
+  auth?: Pick<AuthIR, "roles">,
+): ReferenceOption[] {
+  const model = referenceEventModel(trigger, ir);
+  return !model && !auth
+    ? [{ value: "admin", label: "Admin" }]
+    : referenceOptions({ kind: "recipient", model, channels: ["mail"] }, ir, auth);
+}
+
 function eligible(field: FieldIR, use: FieldUse, model: ModelIR, ir: SpecIR): boolean {
   switch (use) {
     case "calendar-title":

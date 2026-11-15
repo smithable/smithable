@@ -13,7 +13,7 @@ import { conditionOf, type WhenRow, WhenRows } from "./action-rows";
 import type { Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
-import { referenceOptions } from "./reference-options";
+import { referenceMailRecipients, referenceOptions } from "./reference-options";
 
 type Area = "outgoing" | "payments" | "incoming" | "queries";
 const labels: Record<Area, string> = {
@@ -73,24 +73,12 @@ export function AddEntryForm({
   );
   const model = ir.models.find((m) => m.name === modelName);
   const timer = ir.timers.find((t) => t.name === trigger);
-  const action = ir.actions.find((a) => a.name === trigger);
   const listMail = Boolean(timer && !timer.on);
-  const eventModel = ir.models.find(
-    (m) => m.name === (timer?.on ?? (action && !action.custom ? action.on : trigger.split(" ")[0])),
-  );
   const auth = validateAuth(
     { path: "smithable.auth.yml", text: project.files.auth ?? "smithableAuth: 0.1\n" },
     ir,
   ).auth;
-  const receivers = referenceOptions(
-    {
-      kind: "recipient",
-      model: listMail || action?.custom ? undefined : eventModel?.name,
-      channels: ["mail"],
-    },
-    ir,
-    auth,
-  );
+  const receivers = referenceMailRecipients(trigger, ir, auth);
   const fields = (model?.fields ?? []).filter(
     (f) => !f.formula && !(f.type.kind === "relation" && f.type.many),
   );

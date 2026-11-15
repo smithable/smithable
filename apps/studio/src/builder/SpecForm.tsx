@@ -24,10 +24,10 @@ import { ReferencePicker } from "./ReferencePicker";
 import type { ReferenceOption } from "./reference-options";
 import {
   referenceAt,
-  referenceComplete,
   referenceControl,
   referenceGroup,
   referenceKeys,
+  referenceReady,
   referenceWith,
 } from "./reference-paths";
 import {
@@ -421,7 +421,12 @@ function Value({
   if (reference) {
     const label = String(path.at(-1) ?? "Reference");
     const parent = schemaAt(specSchema(), references.document, path.slice(0, -1));
-    const required = Array.isArray(parent?.required) && parent.required.includes(label);
+    const parentControl = parent && controlOf(parent);
+    const required =
+      (Array.isArray(parent?.required) && parent.required.includes(label)) ||
+      (parentControl?.kind === "group" &&
+        Boolean(parentControl.kinds?.includes(label)) &&
+        value !== undefined);
     const word = reference.word;
     return (
       <div className="space-y-2">
@@ -447,7 +452,18 @@ function Value({
             }
             multiple={reference.multiple}
             unset={required ? undefined : "Not set"}
-            onChange={(next) => write(path, next)}
+            onChange={(next) =>
+              write(
+                path,
+                reference.multiple &&
+                  Array.isArray(next) &&
+                  !next.length &&
+                  !required &&
+                  path[0] !== "navigation"
+                  ? undefined
+                  : next,
+              )
+            }
             create={
               reference.create && references.create
                 ? {
@@ -981,6 +997,14 @@ function ReferenceDraft({
   const stale = dirty && current !== seen;
   usePendingEdit(dirty || busy);
   if (!references) return null;
+  const ready = referenceReady(
+    schema,
+    draft,
+    path,
+    referenceWith(references.document, path, draft),
+    references.ir,
+    references.auth,
+  );
   const reset = () => {
     setDraft(value);
     setBaseline(current);
@@ -1012,10 +1036,10 @@ function ReferenceDraft({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={busy || stale || !referenceComplete(schema, draft)}
+            disabled={busy || stale || !ready}
             className="rounded-md border border-line px-2 py-1 text-xs"
             onClick={async () => {
-              if (busy || stale || !referenceComplete(schema, draft)) return;
+              if (busy || stale || !ready) return;
               setBusy(true);
               try {
                 if (await write(path, draft)) setBaseline(JSON.stringify(draft));
