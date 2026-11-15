@@ -205,7 +205,7 @@ try {
     .waitFor({ timeout: 45000 });
   assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "modern");
   assert.equal(await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(), "welcome");
-  assert.ok(await dialog.getByRole("button", { name: "Apply", exact: true }).isDisabled());
+  assert.ok(await dialog.getByRole("button", { name: "Apply look", exact: true }).isDisabled());
   assert.equal(operations.length, 0);
   console.log("PASS unedited Retry opens the saved page look and its target with no dirty draft.");
 } catch (error) {
