@@ -19,8 +19,10 @@ import {
   type RoleGrants,
   type SpecIR,
   sortableBy,
+  THEME_PRESETS,
   USER_MODEL,
 } from "@smithable/core";
+import { stripRequestOpeners } from "./request-words.js";
 import { KINDS } from "./summary.js";
 
 export interface PhraseOperation {
@@ -136,16 +138,9 @@ export function normalize(request: string): string {
   let end = text.length;
   while (end > 0 && ".!?".includes(text[end - 1] as string)) end -= 1;
   text = text.slice(0, end).replace(/\s+/g, " ");
-  for (;;) {
-    const shorter = text.replace(OPENERS, "").trim();
-    if (shorter === text) break;
-    text = shorter;
-  }
+  text = stripRequestOpeners(text);
   return text.replace(/^(?:please|also|and) /, "").trim();
 }
-
-const OPENERS =
-  /^(?:please|let me|let us|allow me to|help me|i need to|i need|we would like to|we'd like to|can you|could you|would you|i want to|i want|i would like to|i'd like to|we want to|we need to|we want|we need|let's|lets|make it possible to|it should be possible to|make sure that|make sure) /;
 
 /** A name as words ("placedAt" → "placed at"), and a text as a sentence starts. */
 const words = (name: string) => name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
@@ -589,6 +584,48 @@ const HEADER_PHRASES = [
 ];
 
 const RULES: Rule[] = [
+  {
+    name: "theme preset",
+    match(text) {
+      const m = /^(?:use|apply|switch to) (?:the |a )?(.+?) theme$/.exec(text);
+      if (!m) return undefined;
+      const preset = m[1] as string;
+      return THEME_PRESETS.includes(preset as (typeof THEME_PRESETS)[number])
+        ? [{ op: "setTheme", args: { preset } }]
+        : null;
+    },
+  },
+  {
+    name: "calendar agenda",
+    match(text, scope) {
+      const m =
+        /^show (?:the )?(.+?) as (?:an agenda|a list of the coming days)(?: instead of the week grid)?$/.exec(
+          text,
+        );
+      if (!m) return undefined;
+      const page = pageFor(scope.ir, m[1] as string);
+      if (!page || page.pattern.kind !== "calendar") return null;
+      return [{ op: "setCalendarView", args: { page: page.id, view: "agenda" } }];
+    },
+  },
+  {
+    name: "remove favorites",
+    match(text, scope) {
+      const m =
+        /^(?:turn off|remove|disable) favou?rites(?: (?:on|from) (?:the )?(.+?)(?: page)?)?$/.exec(
+          text,
+        );
+      if (!m) return undefined;
+      const candidates = scope.ir.pages.filter((p) => p.favorites);
+      const page = m[1]
+        ? pageFor(scope.ir, m[1])
+        : candidates.length === 1
+          ? candidates[0]
+          : undefined;
+      if (!page) return null;
+      return [{ op: "setFavorites", args: { page: page.id, mode: "off" } }];
+    },
+  },
   {
     // "add three customers who book over the week", "add two sample members", "add a visitor":
     // sample users of a role (sample-users.md §5), named from a list and described by the rest

@@ -300,8 +300,11 @@ async function scored(r, p) {
       return { right: !missing.length, why: missing.length ? `no ${missing.join(", ")}` : "" };
     }
     const got = [...new Set(p.operations.map((o) => o.op))].sort().join();
-    const wanted = [...new Set(r.outcome.operations ?? [])].sort().join();
-    return { right: got === wanted, why: got === wanted ? "" : `${got} for ${wanted}` };
+    const wanted = [r.outcome.operations ?? [], ...(r.outcome.operationAlternatives ?? [])].map(
+      (ops) => [...new Set(ops)].sort().join(),
+    );
+    const right = wanted.includes(got);
+    return { right, why: right ? "" : `${got} for ${wanted.join(" or ")}` };
   }
   if (kind === "ambiguous") return { right: p.kind === "question", why: p.kind };
   if (kind === "custom-code") return { right: p.kind === "none", why: p.kind };

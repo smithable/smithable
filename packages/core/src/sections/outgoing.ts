@@ -850,7 +850,7 @@ const addOutgoing: Operation<
 > = {
   name: "addOutgoing",
   summary:
-    "Tell someone when something happens to a record: mail, push to or text (--to mail,push) the record's owner, a role or an address on the record when a record is added, changed or deleted, or an action runs (e.g. a confirmation when a booking is made); or call a target. On a clock timer (every day at 06:30), a list mail: a table of records (--list Booking --columns …) to a role that reads them all.",
+    "Add a NEW outgoing entry: mail, push to or text (--to mail,push) the record's owner, a role or an address on the record when a record is added, changed or deleted, or an action runs (e.g. a confirmation when a booking is made); or call a target. On a clock timer (every day at 06:30), a list mail: a table of records (--list Booking --columns …) to a role that reads them all. To change an existing entry's channel or recipient, use setOutgoingTo instead.",
   schema: {
     type: "object",
     required: ["outgoing", "when"],
@@ -976,7 +976,7 @@ const setOutgoingTo: Operation<{ outgoing: string; to: string; recipient?: strin
   name: "setOutgoingTo",
   sets: ["smithable.yml:outgoing.*.to", "smithable.yml:outgoing.*.to.*"],
   summary:
-    "Change how an outgoing entry tells: its channels (mail, push, sms; several separated by commas) or a target, and with --recipient whom. A target has its own address, so a recipient goes with the change to one.",
+    "Change an EXISTING outgoing entry's channels (mail, push, sms; several separated by commas) or a target, and with --recipient whom. Keep its name and trigger; do not add a duplicate outgoing entry to change a confirmation to SMS. A target has its own address, so a recipient goes with the change to one.",
   schema: {
     type: "object",
     required: ["outgoing", "to"],

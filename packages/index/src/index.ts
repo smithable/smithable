@@ -35,5 +35,6 @@ export {
 } from "./project-index.js";
 export type { Answer } from "./questions.js";
 export { answerQuestion, looksLikeQuestion } from "./questions.js";
+export { looksLikeInstruction } from "./request-words.js";
 export type { SummarySection } from "./summary.js";
 export { noSignIn, summarize, wordsFor } from "./summary.js";

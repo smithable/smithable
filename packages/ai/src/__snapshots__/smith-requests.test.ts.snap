@@ -15,7 +15,6 @@ exports[`what the rules answer is right, and what needs no model is caught (the 
   "mp-price-required: change",
   "mp-sort-price: change",
   "rec-link-required: change",
-  "rec-cafe: change",
   "st-severity: change",
   "st-component-required: change",
   "sp-category: change",

@@ -58,7 +58,12 @@
           "model": "Session",
           "field": "capacity",
           "default": 15
-        }
+        },
+        "operationAlternatives": [
+          [
+            "setFieldDefault"
+          ]
+        ]
       },
       "needs": [
         "model:Session"
@@ -669,7 +674,12 @@
           "model": "Service",
           "field": "minutes",
           "default": 45
-        }
+        },
+        "operationAlternatives": [
+          [
+            "setFieldDefault"
+          ]
+        ]
       },
       "needs": [
         "model:Service"
@@ -1114,19 +1124,10 @@
       "id": "ki-sunday-hours",
       "starter": "kiosk",
       "text": "we open sundays now, 12 to 18",
-      "kind": "change",
+      "kind": "custom-code",
       "language": "en",
       "outcome": {
-        "operations": [
-          "editSpec"
-        ],
-        "args": {
-          "page": "menu",
-          "hours": {
-            "sun": "12:00-18:00"
-          }
-        },
-        "unsure": true
+        "reason": "No offered operation changes an existing order page's opening hours."
       },
       "needs": [
         "pages"
@@ -1563,7 +1564,7 @@
           "setTheme"
         ],
         "args": {
-          "brand": "dark green"
+          "primary": "#14532d"
         }
       },
       "needs": [],
@@ -1829,7 +1830,12 @@
           "model": "SupportCase",
           "field": "priority",
           "default": 2
-        }
+        },
+        "operationAlternatives": [
+          [
+            "setFieldDefault"
+          ]
+        ]
       },
       "needs": [
         "model:SupportCase"

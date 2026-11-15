@@ -193,7 +193,8 @@ const addField: Operation<{
 }> = {
   name: "addField",
   sets: ["smithable.yml:models.*.fields.*"],
-  summary: "Add a field to a model.",
+  summary:
+    "Add a NEW field to a model. To rename an existing field while keeping its data, use renameField instead.",
   schema: {
     type: "object",
     required: ["model", "field", "type"],
@@ -259,7 +260,8 @@ const addField: Operation<{
 const changeField: Operation<{ model: string; field: string; type: string; renames?: string[] }> = {
   name: "changeField",
   sets: ["smithable.yml:models.*.fields.*"],
-  summary: "Change a field's type, required flag, uniqueness or default.",
+  summary:
+    "Change an EXISTING field's type, choice values, required flag, uniqueness or default using its full shorthand. Preserve the other flags and choices. For only the initial value of new records, setFieldDefault is also available; it does not change the choices or existing records.",
   schema: {
     type: "object",
     required: ["model", "field", "type"],
@@ -372,7 +374,8 @@ const changeField: Operation<{ model: string; field: string; type: string; renam
 
 const renameField: Operation<{ model: string; from: string; to: string }> = {
   name: "renameField",
-  summary: "Rename a field, keeping its data.",
+  summary:
+    "Rename an EXISTING field from its old name to a new name, keeping its data and references. Do not add a second field for a rename.",
   schema: {
     type: "object",
     required: ["model", "from", "to"],
@@ -905,7 +908,7 @@ const setFieldDefault: Operation<{
   name: "setFieldDefault",
   sets: ["smithable.yml:models.*.fields.*.default"],
   summary:
-    'Set the value a new record starts with in a field, e.g. 60 for minutes or "open" for a status ("none" on a choice: no default, not its first value); remove takes the default away.',
+    'Set ONLY the value a new record starts with in an existing field, e.g. 60 for minutes or "open" for a status ("none" on a choice: no default, not its first value); remove takes the default away. Does not change existing records, field type, required flag or allowed choices: use changeField for those.',
   schema: {
     type: "object",
     required: ["model", "field"],

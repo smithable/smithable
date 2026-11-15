@@ -134,7 +134,9 @@ const ruleRight = (r, p) => {
     return (p.generator === "small talk" ? "smalltalk" : "spec-question") === r.kind;
   if (p.kind === "change") {
     const got = [...new Set(p.operations.map((o) => o.op))].sort().join();
-    return got === [...new Set(r.outcome?.operations ?? [])].sort().join();
+    return [r.outcome?.operations ?? [], ...(r.outcome?.operationAlternatives ?? [])].some(
+      (ops) => got === [...new Set(ops)].sort().join(),
+    );
   }
   if (p.kind === "none") return r.kind === "custom-code" || !(r.outcome?.operations ?? []).length;
   if (p.kind === "question") return r.kind === "ambiguous";

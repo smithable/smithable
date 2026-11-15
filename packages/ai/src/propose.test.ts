@@ -60,6 +60,54 @@ const addPhone = {
 };
 
 describe("proposeChange", () => {
+  test("a polite request to show information keeps the docs in its prompt", async () => {
+    const request = "Can you show me how to publish this app?";
+    const model = scripted([{ kind: "answer", text: "Use Review and publish." }]);
+    const result = await proposeChange({
+      request,
+      files: { spec },
+      context: buildContext(index, request),
+      providers: [model],
+      docs: [
+        {
+          title: "Publishing",
+          url: "https://docs.smithable.ai/publish.html",
+          text: "Use Review and publish.",
+          score: 10,
+        },
+      ],
+    });
+    expect(result.kind).toBe("answer");
+    expect(model.prompts).toHaveLength(1);
+    expect(model.prompts[0]).toContain("From the docs:");
+    expect(model.prompts[0]).toContain("Use Review and publish.");
+  });
+  test.each([
+    "Can you add somewhere to keep a customer's mobile?",
+    "Kan du lägga till ett fält för kundens mobil?",
+    "Voitko lisätä asiakkaan matkapuhelimen?",
+  ])(
+    "polite instructions go straight to a proposal and retain its assumption: %s",
+    async (request) => {
+      const model = scripted([
+        { ...addPhone, note: "I used a phone field for the mobile number." },
+      ]);
+      const result = await proposeChange({
+        request,
+        files: { spec },
+        context: buildContext(index, request),
+        providers: [model],
+        docs: [],
+      });
+      expect(result).toMatchObject({
+        kind: "change",
+        note: "I used a phone field for the mobile number.",
+      });
+      expect(model.prompts).toHaveLength(1);
+      expect(model.systems[0]).toContain("two plausible readings");
+    },
+  );
+
   test("a question the spec answers needs no model; one it cannot goes to the model as an answer", async () => {
     const model = scripted([
       { kind: "answer", text: "An order is shipped when its status says so." },
