@@ -7,6 +7,7 @@ import { api } from "../api";
 import type { Spec } from "../engine";
 import { Button, cx, Input, Label, Select } from "../ui";
 import type { Run } from "./ChangeForms";
+import { usePendingEdit } from "./pending-edit";
 
 /** A language's name in English (the maker's tool stays English): "Swedish". */
 const nameOf = (code: string) =>
@@ -22,6 +23,7 @@ export function Languages({ spec, run }: { spec: Spec; run: Run }) {
   // The model's first draft of the empty texts (smithable translate): what it said, while busy.
   const [drafting, setDrafting] = useState(false);
   const [drafted, setDrafted] = useState<{ ok: boolean; text: string }>();
+  usePendingEdit(Boolean(adding) || drafting);
   const own = useMemo(
     () =>
       content && ir ? [...textsToTranslate(content, ir)].sort(([a], [b]) => (a < b ? -1 : 1)) : [],
@@ -50,7 +52,13 @@ export function Languages({ spec, run }: { spec: Spec; run: Run }) {
         className="flex items-end gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          if (adding) void run("addLanguage", { language: adding }).then(() => setChosen(adding));
+          const submitted = adding;
+          if (submitted)
+            void run("addLanguage", { language: submitted }).then((ok) => {
+              if (!ok) return;
+              setChosen(submitted);
+              setAdding((current) => (current === submitted ? "" : current));
+            });
         }}
       >
         <Label text="Add a language">
@@ -181,6 +189,7 @@ function Row({
   run: Run;
 }) {
   const [value, setValue] = useState(said);
+  usePendingEdit(value.trim() !== said.trim());
   // A translation saved (here or elsewhere): shown in place, the row kept (A 121).
   const [seen, setSeen] = useState(said);
   if (said !== seen) {

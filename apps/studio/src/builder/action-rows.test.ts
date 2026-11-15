@@ -1,6 +1,14 @@
 import { validateSpec } from "@smithable/core";
 import { describe, expect, it } from "vitest";
-import { conditionOf, setRowsOf, valuesOf, waysFor, whenable, whenRowsOf } from "./action-rows";
+import {
+  conditionOf,
+  setRowsOf,
+  unfinishedConditions,
+  valuesOf,
+  waysFor,
+  whenable,
+  whenRowsOf,
+} from "./action-rows";
 
 describe("a standard action's rows (A 203)", () => {
   it("reads a condition into rows and back, a choice with one value as that value", () => {
@@ -77,4 +85,36 @@ models:
   expect(
     whenable(model, { computed: false, references: false }).map((field) => field.name),
   ).toEqual(["status", "active"]);
+});
+
+it("a saved empty computed-text condition is settled, while a new or cleared condition is pending", () => {
+  const checked = validateSpec({
+    path: "smithable.yml",
+    text: `smithable: 0.1
+app: {name: Empty condition}
+models:
+  Item:
+    fields:
+      name: string
+      derived: {type: string, formula: name}
+actions:
+  fillName:
+    on: Item
+    when: {derived: ""}
+    set: {name: filled}
+`,
+  });
+  expect(checked.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  const action = checked.ir?.actions[0];
+  expect(action && !action.custom).toBe(true);
+  const original = whenRowsOf(action && !action.custom ? action.when : undefined);
+  expect(original).toEqual([{ field: "derived", value: "" }]);
+  expect(unfinishedConditions(original, original)).toBe(false);
+  expect(unfinishedConditions([{ field: "derived", value: "" }], [])).toBe(true);
+  expect(
+    unfinishedConditions(
+      [{ field: "derived", value: "" }],
+      [{ field: "derived", value: "filled" }],
+    ),
+  ).toBe(true);
 });

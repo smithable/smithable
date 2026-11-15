@@ -1663,6 +1663,9 @@ export function App() {
                             onPlace={nocodePlace}
                             target={partToOpen}
                             onTargetOpened={() => setPartToOpen(undefined)}
+                            followingBlocked={
+                              busy || guideStarted || Boolean(editingLook) || show.going
+                            }
                           />
                         ) : w === "code" ? (
                           <Suspense

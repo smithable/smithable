@@ -5,7 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, type ChangeDetail, type TraceEntry } from "./api";
 import { type PartChange, summaryDiff } from "./builder/change-diff";
 import { entryText, grouped, numbers, restores, summary as summaryOf } from "./history";
-import { isPreviewMessage, previewTarget, setPreview } from "./preview";
+import { isPreviewMessage, previewFollowContext, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
 import { receipt } from "./receipt";
 import { Button, cx, Input, Panel } from "./ui";
@@ -204,7 +204,12 @@ export function Preview({
   useEffect(() => {
     const send = () =>
       frame.current?.contentWindow?.postMessage(
-        { type: "smithable:select-mode", on: Boolean(selecting), code: Boolean(inCode) },
+        {
+          type: "smithable:select-mode",
+          on: Boolean(selecting),
+          code: Boolean(inCode),
+          followContext: previewFollowContext(),
+        },
         previewTarget(),
       );
     send();
@@ -268,6 +273,10 @@ export function Preview({
     .slice(0, 8);
   const open = (path: string) => {
     current.current = path.startsWith("/") ? path : `/${path}`;
+    // A Go report repeats this same path, so the navigation listener has nothing to update.
+    try {
+      sessionStorage.setItem(PAGE_KEY, current.current);
+    } catch {}
     setTyped(current.current);
     setListing(false);
     setActive(-1);

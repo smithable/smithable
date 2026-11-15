@@ -11,6 +11,7 @@ import { useId, useState } from "react";
 import { Button, Input, Select } from "../ui";
 import { conditionOf, WhenRows, whenRowsOf } from "./action-rows";
 import type { Run } from "./ChangeForms";
+import { usePendingEdit } from "./pending-edit";
 
 /** Stored dates, including one step through a single reference, as the timer validator allows. */
 export function timerDates(model: ModelIR | undefined, models: ModelIR[]): string[] {
@@ -50,6 +51,8 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
   const id = useId();
   const [draft, setDraft] = useState(() => initial(timer));
   const [busy, setBusy] = useState(false);
+  const [savedDraft, setSavedDraft] = useState(() => JSON.stringify(initial(timer)));
+  usePendingEdit(busy || JSON.stringify(draft) !== savedDraft);
   const change = (patch: Partial<typeof draft>) => setDraft((value) => ({ ...value, ...patch }));
   const model = ir.models.find((m) => m.name === draft.on);
   const dates = timerDates(model, ir.models);
@@ -105,7 +108,10 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
         ...(timer ? { on: "none", run: "none", where: {} } : {}),
         ...values,
       });
-      if (ok && !timer) setDraft(initial());
+      if (ok) {
+        setSavedDraft(JSON.stringify(timer ? draft : initial()));
+        if (!timer) setDraft(initial());
+      }
     } finally {
       setBusy(false);
     }

@@ -5,6 +5,7 @@ import type { ActionValueIR, Condition, ModelIR } from "@smithable/core";
 import { humanize } from "@smithable/core";
 import { useState } from "react";
 import { Button, Input, Select } from "../ui";
+import { usePendingEdit } from "./pending-edit";
 
 type Field = ModelIR["fields"][number];
 const USER = "User";
@@ -50,6 +51,17 @@ export interface WhenRow {
 
 export const whenRowsOf = (when: Condition | undefined): WhenRow[] =>
   Object.entries(when ?? {}).map(([field, value]) => ({ field, value }));
+
+/** A saved computed-text condition may deliberately compare with empty text. */
+export const unfinishedConditions = (rows: WhenRow[], original: WhenRow[]) =>
+  rows.some(
+    (row) =>
+      (row.value === "" || (Array.isArray(row.value) && !row.value.length)) &&
+      !original.some(
+        (before) =>
+          before.field === row.field && JSON.stringify(before.value) === JSON.stringify(row.value),
+      ),
+  );
 
 /** The rows as a condition: a choice with one value is that value, none picked leaves the row out. */
 export const conditionOf = (rows: WhenRow[]): Condition =>
@@ -440,6 +452,10 @@ export function ActionRowsEditor({
   const value = part === "when" ? conditionOf(whenRows) : valuesOf(setRows);
   const was = part === "when" ? conditionOf(whenRowsOf(when)) : valuesOf(setRowsOf(set));
   const changed = JSON.stringify(value) !== JSON.stringify(was);
+  usePendingEdit(
+    changed ||
+      (part === "when" ? unfinishedConditions(whenRows, whenRowsOf(when)) : unfinished(setRows)),
+  );
   const empty = part === "set" && unfinished(setRows);
   return (
     <div className="space-y-2">

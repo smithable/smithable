@@ -19,6 +19,7 @@ import type { Spec } from "../engine";
 import { ICON_CHOICES } from "../properties";
 import { cx, Select } from "../ui";
 import type { Run } from "./ChangeForms";
+import { PendingInput, usePendingEdit } from "./pending-edit";
 import { UxLists } from "./UxLists";
 import { UxRecords } from "./UxRecords";
 import { UxShell } from "./UxShell";
@@ -41,14 +42,23 @@ export function Look({
   spec,
   run,
   themes,
+  page,
+  onPage,
 }: {
   spec: Spec;
   run: Run;
   /** Every theme the ux file may name, with its picture (the project's from themes/). */
   themes: Project["themes"];
+  page?: string;
+  onPage?: (page: string) => void;
 }) {
   const { ir, ux } = spec;
-  const [selectedPage, setSelectedPage] = useState("");
+  const [localPage, setLocalPage] = useState("");
+  const selectedPage = page ?? localPage;
+  const setSelectedPage = (next: string) => {
+    setLocalPage(next);
+    onPage?.(next);
+  };
   if (!ir || !ux)
     return <p className="p-3 text-sm text-quiet">The spec has errors; fix them in Code mode.</p>;
   const activePage = ir.pages.find((p) => p.id === selectedPage) ?? ir.pages[0];
@@ -465,6 +475,7 @@ function ThemeColor({
   run: Run;
 }) {
   const [picked, setPicked] = useState<string>();
+  usePendingEdit(picked !== undefined && picked !== value);
   const shown = picked ?? value ?? fallback;
   const apply = () => {
     if (picked && picked !== value) void run("setTheme", { [which]: picked });
@@ -677,6 +688,7 @@ function FormLook({
   const [added, setAdded] = useState<string[]>([]);
   const [name, setName] = useState("");
   const groups = ux.sections ?? [];
+  usePendingEdit(Boolean(name) || added.some((a) => !groups.some((g) => g.name === a)));
   const names = [
     ...groups.map((g) => g.name),
     ...added.filter((a) => !groups.some((g) => g.name === a)),
@@ -879,11 +891,13 @@ function SectionAppearance({
   ux: PageUx;
   run: Run;
 }) {
+  const scope = useId();
   return (
     <div className="space-y-2 text-sm">
       {sections.map((section) =>
         Object.entries(SECTION_LOOKS[section.kind] ?? {}).map(([key, values]) => {
           const label = `${humanize(key)} of ${humanize(section.name)}`;
+          const inputId = `${scope}-${section.name}-${key}`;
           const current = ux.looks?.[section.name]?.[key as "layout"];
           const heroLayoutOf = (name: string) => ux.looks?.[name]?.layout;
           const set = (value: string) =>
@@ -898,9 +912,14 @@ function SectionAppearance({
           // A stage hero's list page, by its name (unsaid, the first list in the navigation).
           if (values === "page")
             return heroLayoutOf(section.name) !== "stage" && !current ? null : (
-              <label key={`${section.name}.${key}`} className="flex items-center gap-2">
+              <label
+                key={`${section.name}.${key}`}
+                htmlFor={inputId}
+                className="flex items-center gap-2"
+              >
                 <span className="flex-1">{label}</span>
-                <input
+                <PendingInput
+                  id={inputId}
                   key={String(current ?? "")}
                   aria-label={label}
                   defaultValue={String(current ?? "")}
@@ -916,9 +935,14 @@ function SectionAppearance({
           // A hero's facts: models by name, counted under its text.
           if (values === "models")
             return (
-              <label key={`${section.name}.${key}`} className="flex items-center gap-2">
+              <label
+                key={`${section.name}.${key}`}
+                htmlFor={inputId}
+                className="flex items-center gap-2"
+              >
                 <span className="flex-1">{label}</span>
-                <input
+                <PendingInput
+                  id={inputId}
                   key={Array.isArray(current) ? current.join(" ") : ""}
                   aria-label={label}
                   defaultValue={Array.isArray(current) ? current.join(" ") : ""}
@@ -936,9 +960,14 @@ function SectionAppearance({
           // Default of their own, which takes the key away.
 
           return values === "text" ? (
-            <label key={`${section.name}.${key}`} className="flex items-center gap-2">
+            <label
+              key={`${section.name}.${key}`}
+              htmlFor={inputId}
+              className="flex items-center gap-2"
+            >
               <span className="flex-1">{label}</span>
-              <input
+              <PendingInput
+                id={inputId}
                 aria-label={label}
                 defaultValue={current ?? ""}
                 placeholder="A plan's name"
@@ -1020,6 +1049,7 @@ function SectionChoice({
 function AddTheme({ run }: { run: Run }) {
   const [name, setName] = useState("");
   const [text, setText] = useState("");
+  usePendingEdit(Boolean(name || text));
   const read = async (file: File | undefined) => {
     if (!file) return;
     setText(await file.text());

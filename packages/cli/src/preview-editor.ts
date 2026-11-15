@@ -41,6 +41,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // Studio's origin, learned from its first message; until then only "ready" and "errored"
   // (which carry nothing of the app) go out, to any origin.
   let studio = null;
+  let followContext = 0;
+  const documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+  let navigationId = -1;
+  let reportedPath = null;
   // Studio, and only Studio: a page on this machine, or the preview's own site (behind the
   // service's proxy both are one origin); never another site that frames the preview.
   const trusted = (origin) => /^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(origin) || origin === location.origin;
@@ -48,6 +52,12 @@ if (typeof window !== "undefined" && window.parent !== window) {
     const target = studio ?? (message.type === "ready" || message.type === "errored" ? "*" : null);
     if (target) window.parent.postMessage({ source: "smithable-preview", ...message }, target);
   };
+  window.addEventListener("message", (event) => {
+    if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:follow-context") return;
+    if (!trusted(event.origin) || !Number.isSafeInteger(event.data.context) || event.data.context < followContext) return;
+    studio = event.origin;
+    followContext = event.data.context;
+  });
   const markedAt = (element) => (element instanceof Element ? element.closest("[data-sm-concept]") : null);
   const clear = (attribute) => document.querySelectorAll("[" + attribute + "]").forEach((e) => e.removeAttribute(attribute));
   const fieldOf = (element) => element.dataset.smConcept.split(".")[1];
@@ -212,6 +222,7 @@ if (typeof window !== "undefined" && window.parent !== window) {
     if (designOnly() || event.source !== window.parent || event.data?.type !== "smithable:select-mode") return;
     if (!trusted(event.origin)) return;
     studio = event.origin;
+    if (Number.isSafeInteger(event.data.followContext) && event.data.followContext >= followContext) followContext = event.data.followContext;
     report();
     selecting = Boolean(event.data.on);
     code = Boolean(event.data.code);
@@ -392,7 +403,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
   // the app's own (the router uses the History API) and Back.
   const report = () => {
     designOnly();
-    post({ type: "navigated", path: location.pathname + location.search });
+    const path = location.pathname + location.search;
+    if (reportedPath !== path) navigationId++;
+    reportedPath = path;
+    post({ type: "navigated", path, documentId, navigationId, followContext });
   };
   for (const name of ["pushState", "replaceState"]) {
     const original = history[name];

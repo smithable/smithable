@@ -6,7 +6,13 @@ export type PreviewMessage =
   /** The page has flashed what a change touched; `key` is the one Studio sent with it. */
   | { type: "flashed"; key: string | null }
   /** The page the preview is on now, e.g. "/customers/12". */
-  | { type: "navigated"; path: string }
+  | {
+      type: "navigated";
+      path: string;
+      documentId: string;
+      navigationId: number;
+      followContext: number;
+    }
   | {
       type: "select";
       concept: string;
@@ -33,7 +39,7 @@ export type Selection = Extract<PreviewMessage, { type: "select" }>;
  */
 export interface Place {
   /** No code: its sub view, and the part last picked in the preview. */
-  nocode: { sub?: string; selection?: Selection };
+  nocode: { sub?: string; selection?: Selection; page?: string };
   /** Code: the file open in the editor. */
   code: { file?: EditableFile };
   /** A phone's one window (studio-v3.md §8). */
@@ -49,6 +55,18 @@ export function setPreview(window: Window | null, url: string) {
 }
 export const previewTarget = () => previewOrigin || "*";
 
+let followContext = 0;
+export const previewFollowContext = () => followContext;
+/** An explicit editor destination wins over already queued messages from the preview. */
+export function advancePreviewContext() {
+  followContext++;
+  previewWindow?.postMessage(
+    { type: "smithable:follow-context", context: followContext },
+    previewTarget(),
+  );
+  return followContext;
+}
+
 /** A message from the preview's own frame and origin, not from any other window. */
 export function isPreviewMessage(e: MessageEvent): e is MessageEvent<PreviewMessage> {
   return (
@@ -57,7 +75,9 @@ export function isPreviewMessage(e: MessageEvent): e is MessageEvent<PreviewMess
     e.origin === previewOrigin &&
     typeof e.data === "object" &&
     e.data !== null &&
-    (e.data as { source?: string }).source === "smithable-preview"
+    (e.data as { source?: string }).source === "smithable-preview" &&
+    // Every navigation consumer, including the address field, needs a string path.
+    (e.data.type !== "navigated" || typeof e.data.path === "string")
   );
 }
 

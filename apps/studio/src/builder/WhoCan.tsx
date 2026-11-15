@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Spec } from "../engine";
 import { Button, cx, Input, Select } from "../ui";
 import type { Run } from "./ChangeForms";
+import { PendingInput, usePendingEdit } from "./pending-edit";
 import { WhyAccess } from "./WhyAccess";
 import {
   adminPage,
@@ -167,6 +168,16 @@ function SignIn({ auth, run }: { auth: AuthIR; run: Run }) {
   const [domains, setDomains] = useState(
     signIn === "none" ? "" : (signIn.allowedDomains ?? []).join(", "),
   );
+  const domainList = [
+    ...new Set(
+      domains
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .filter((domain) => domain && domain !== "none"),
+    ),
+  ];
+  const written = signIn === "none" ? "" : (signIn.allowedDomains ?? []).join(", ");
+  usePendingEdit(domainList.join(", ") !== written);
   if (signIn === "none")
     return (
       <Block title="Sign-in">
@@ -175,11 +186,9 @@ function SignIn({ auth, run }: { auth: AuthIR; run: Run }) {
         </p>
       </Block>
     );
-  const written = (signIn.allowedDomains ?? []).join(", ");
   const saveDomains = () => {
-    const list = domains.split(/[\s,]+/).filter(Boolean);
-    if (list.join(", ") !== written)
-      void run("setDomains", { domains: list.length ? list : ["none"] });
+    if (domainList.join(", ") !== written)
+      void run("setDomains", { domains: domainList.length ? domainList : ["none"] });
   };
   return (
     <Block title="Sign-in">
@@ -659,6 +668,7 @@ function Roles({ auth, run }: { auth: AuthIR; run: Run }) {
   const roles = auth.roles.filter((r) => r.name !== "admin");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  usePendingEdit(Boolean(name || description));
   // setRoles takes every role with its description; "" keeps the one written.
   const all = (extra: Record<string, string> = {}, without?: string) =>
     Object.fromEntries([
@@ -673,7 +683,7 @@ function Roles({ auth, run }: { auth: AuthIR; run: Run }) {
         {roles.map((r) => (
           <li key={r.name} className="flex items-center gap-2">
             <span className="w-24 shrink-0 font-medium">{humanize(r.name)}</span>
-            <Input
+            <PendingInput
               aria-label={`Description of ${r.name}`}
               defaultValue={r.description ?? ""}
               onBlur={(e) => {
@@ -840,7 +850,7 @@ function Assistant({
           {ASSISTANT_TEXTS.map((key) => (
             <div key={key} className="flex items-center justify-between gap-3">
               <span>{TEXT_LABELS[key]}</span>
-              <Input
+              <PendingInput
                 aria-label={`Ask's ${key}`}
                 defaultValue={texts[key] ?? ""}
                 placeholder={TEXT_HINTS[key]}
