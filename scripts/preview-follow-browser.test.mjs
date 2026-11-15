@@ -407,6 +407,10 @@ test("No code follows real preview navigation without losing edits or opening hi
     await followed("customers");
     await page.unroute("**/api/op");
     await noCode.getByRole("button", { name: "Remove Swedish", exact: true }).click();
+    await page.getByRole("button", { name: "Apply anyway", exact: true }).click();
+    await noCode
+      .getByRole("button", { name: "Remove Swedish", exact: true })
+      .waitFor({ state: "detached" });
 
     await page.route("**/api/op", (route) =>
       route.fulfill({
@@ -442,7 +446,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     await outside();
     await followed("customers");
     const savedDomains = operations.length;
-    await domains.fill("a.com b.com");
+    await domains.fill("A.COM b.com a.com");
     await navigateInApp("/orders");
     await outside();
     await followed("orders");

@@ -168,7 +168,14 @@ function SignIn({ auth, run }: { auth: AuthIR; run: Run }) {
   const [domains, setDomains] = useState(
     signIn === "none" ? "" : (signIn.allowedDomains ?? []).join(", "),
   );
-  const domainList = domains.split(/[\s,]+/).filter(Boolean);
+  const domainList = [
+    ...new Set(
+      domains
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .filter((domain) => domain && domain !== "none"),
+    ),
+  ];
   const written = signIn === "none" ? "" : (signIn.allowedDomains ?? []).join(", ");
   usePendingEdit(domainList.join(", ") !== written);
   if (signIn === "none")
