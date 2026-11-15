@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+
+const { parse } = createRequire(new URL("../packages/core/package.json", import.meta.url))("yaml");
 
 const timerMessage =
   "The timer markOverdue needs one way to choose when it runs: a time of day, a schedule, or a date from its records.";
@@ -8,6 +11,9 @@ export async function checkStudioValidation(browser, base) {
   let plain = true;
   let refused;
   try {
+    const project = await (await page.request.get(`${base}/api/project`)).json();
+    const initialTimers = parse(project.files.spec).timers ?? {};
+    assert.ok(!Object.hasOwn(initialTimers, "markOverdue"), "fixture timer name is already in use");
     await page.addInitScript(() => {
       localStorage.setItem(
         "smithable:windows",
@@ -23,12 +29,17 @@ export async function checkStudioValidation(browser, base) {
       const request = route.request().postDataJSON();
       // The new timer form cannot submit an unfinished timer. Exercise an older client's
       // refused edit against the real daemon; the engine still supplies all finding metadata.
+      // Replace the whole section so this also works when the fixture has no timers map.
       const response = await route.fetch(
         request.name === "addTimer" && request.args.name === "markOverdue"
           ? {
               postData: JSON.stringify({
                 name: "editSpec",
-                args: { file: "smithable.yml", path: ["timers", "markOverdue"], value: {} },
+                args: {
+                  file: "smithable.yml",
+                  path: ["timers"],
+                  value: { ...initialTimers, markOverdue: {} },
+                },
               }),
             }
           : undefined,
@@ -161,6 +172,11 @@ export async function checkStudioValidation(browser, base) {
     } finally {
       await broken.close();
     }
+    assert.equal(
+      (await (await page.request.get(`${base}/api/project`)).json()).files.spec,
+      project.files.spec,
+      "refused legacy requests changed the shared fixture",
+    );
   } finally {
     await page.close();
   }
