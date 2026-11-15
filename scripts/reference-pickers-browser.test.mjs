@@ -21,13 +21,16 @@ test("closed reference pickers search, preserve unknown values and keep ordered 
 import React, {useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {ReferencePicker} from '/src/builder/ReferencePicker.tsx';
+import {PendingEdits, usePendingEdits} from '/src/builder/pending-edit.tsx';
 function Fixture() {
+  const pending = usePendingEdits();
   const [single, setSingle] = useState('removed');
   const [many, setMany] = useState(['page2', 'page1']);
   const [writes, setWrites] = useState(0);
   const [created, setCreated] = useState(0);
   const [failure, setFailure] = useState(false);
   const [count, setCount] = useState(16);
+  const [shown, setShown] = useState(true);
   const options = Array.from({length:count}, (_,i) => ({value:'page'+i, label:'Page '+i}));
   const save = (set) => async (value) => {
     setWrites((n) => n + 1);
@@ -37,13 +40,15 @@ function Fixture() {
     set(value);
     return true;
   };
-  return <>
-    <ReferencePicker label="Destination" options={options} value={single} unset="No destination" onChange={save(setSingle)} create={{label:'New page', open:() => setCreated((n) => n+1)}} />
+  return <PendingEdits.Provider value={pending.report}>
+    {shown && <ReferencePicker label="Destination" options={options} value={single} unset="No destination" onChange={save(setSingle)} create={{label:'New page', open:() => setCreated((n) => n+1)}} />}
     <ReferencePicker label="Menu pages" options={options} value={many} multiple onChange={save(setMany)} />
     <button onClick={() => setFailure((before) => !before)}>Toggle refusal</button>
     <button onClick={() => setCount((before) => before === 16 ? 6 : 16)}>Toggle choices</button>
+    <button onClick={() => setShown((before) => !before)}>Toggle destination</button>
     <output aria-label="Saved">{JSON.stringify({single,many,writes,created})}</output>
-  </>;
+    <output aria-label="Pending">{String(pending.pending())}</output>
+  </PendingEdits.Provider>;
 }
 createRoot(document.getElementById('root')).render(<Fixture/>);
 `;
@@ -101,6 +106,15 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     const saved = page.getByLabel("Saved", { exact: true });
     await saved.waitFor();
     const state = async () => JSON.parse(await saved.innerText());
+    const pending = page.getByLabel("Pending", { exact: true });
+    const pendingIs = async (wanted) => {
+      await page.waitForFunction(
+        (value) =>
+          document.querySelector('output[aria-label="Pending"]').textContent === String(value),
+        wanted,
+      );
+    };
+    await pendingIs(false);
     const destination = page.getByRole("combobox", { name: "Destination", exact: true });
     assert.equal(await destination.inputValue(), "removed");
     await page
@@ -110,6 +124,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     await page
       .getByRole("searchbox", { name: "Find Destination", exact: true })
       .fill("not a real page");
+    await pendingIs(true);
     assert.equal((await state()).writes, 0);
     assert.equal(await destination.inputValue(), "removed");
     assert.equal(await destination.locator('option[value="not a real page"]').count(), 0);
@@ -119,6 +134,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
       0,
     );
     assert.equal(await destination.locator('option[value="page0"]').count(), 1);
+    await pendingIs(false);
     assert.equal((await state()).writes, 0);
     await page.getByRole("button", { name: "Toggle choices", exact: true }).click();
     await page.getByRole("searchbox", { name: "Find Destination", exact: true }).fill("Page 15");
@@ -127,6 +143,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
       () => JSON.parse(document.querySelector("output").textContent).single === "page15",
     );
     assert.equal((await state()).writes, 1);
+    await pendingIs(false);
     await destination.selectOption("");
     await page.waitForFunction(
       () => !("single" in JSON.parse(document.querySelector("output").textContent)),
@@ -169,13 +186,14 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     });
     await destination.focus();
     await page.keyboard.press("End");
-    const pending = page.getByRole("group", { name: "Destination", exact: true });
+    const pendingGroup = page.getByRole("group", { name: "Destination", exact: true });
     await page.waitForFunction(
       () =>
         document.querySelector('fieldset[aria-label="Destination"]').getAttribute("aria-busy") ===
         "true",
     );
-    assert.equal(await pending.getAttribute("aria-busy"), "true");
+    assert.equal(await pendingGroup.getAttribute("aria-busy"), "true");
+    await pendingIs(true);
     assert.equal(await destination.evaluate((node) => node === document.activeElement), true);
     const beforeSecond = (await state()).writes;
     await destination.selectOption("page6");
@@ -188,6 +206,15 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     await page.waitForFunction(
       () => JSON.parse(document.querySelector("output").textContent).single === "page15",
     );
+    await pendingIs(false);
+    await page.getByRole("searchbox", { name: "Find Destination", exact: true }).fill("Page");
+    await page.getByRole("searchbox", { name: "Find Menu pages", exact: true }).fill("Page");
+    await pendingIs(true);
+    await page.getByRole("button", { name: "Toggle destination", exact: true }).click();
+    // Unmounting one picker releases only its own entry; the second still has a draft.
+    assert.equal(await pending.innerText(), "true");
+    await page.getByRole("searchbox", { name: "Find Menu pages", exact: true }).fill("");
+    await pendingIs(false);
     assert.deepEqual(errors, []);
     console.log(
       "PASS isolated actual component: unknown/search never writes, ordered changes, refusal and pending protection; not full Studio integration",

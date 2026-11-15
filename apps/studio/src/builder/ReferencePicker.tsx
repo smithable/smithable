@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from "react";
+import { usePendingEdit } from "./pending-edit";
 import type { ReferenceOption } from "./reference-options";
 
 type Value = string | string[] | undefined;
@@ -36,6 +37,7 @@ export function ReferencePicker({
   const unknown = selected.filter((item) => !options.some((option) => option.value === item));
   const searchable = options.length >= 12;
   const query = searchable ? search.trim().toLocaleLowerCase() : "";
+  usePendingEdit(Boolean(query) || busy);
   const filtered = options.filter(
     (option) =>
       (!multiple || !selected.includes(option.value)) &&
@@ -61,7 +63,6 @@ export function ReferencePicker({
     [next[index], next[index + step]] = [next[index + step], next[index]];
     void commit(next);
   };
-  // Guard integration is intentionally left to the shared pending-edit contract once merged.
   return (
     <fieldset disabled={disabled} aria-busy={busy} className="space-y-2" aria-label={label}>
       {searchable && (
