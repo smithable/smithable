@@ -302,7 +302,11 @@ function WhenControl({
               aria-label={`${label} value ${index + 1}`}
               value={text}
               onChange={(event) =>
-                onChange(value.map((before, at) => (at === index ? event.target.value : before)))
+                onChange(
+                  event.target.value.length
+                    ? value.map((before, at) => (at === index ? event.target.value : before))
+                    : value.filter((_, at) => at !== index),
+                )
               }
             />
             <Button
@@ -598,7 +602,9 @@ export function ProposedActionRows({
     onProblem?.(
       unfinishedConditions(nextWhen, whenRowsOf(args.when as Condition | undefined))
         ? "Choose a value for each condition, or remove its row."
-        : undefined,
+        : unfinished(nextSet)
+          ? "Fill in each value, or ask for it."
+          : undefined,
     );
     const condition = conditionOf(nextWhen);
     const { when: _, ...rest } = args;

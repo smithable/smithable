@@ -83,6 +83,7 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
     for (const [path, value] of [
       [["models", "Order", "fields", "conditionNote"], { type: "text" }],
       [["models", "Order", "fields", "derivedLabel"], { type: "string", formula: "number" }],
+      [["models", "Order", "fields", "optionalStatus"], { type: "cold | warm", default: "none" }],
       [["models", "Order", "fields", "derivedList"], { type: "string", formula: "number" }],
       [["models", "Order", "fields", "derivedFresh"], { type: "string", formula: "number" }],
       [["models", "Customer", "schedule"], { hours: { "mon-fri": "09:00-17:00" } }],
@@ -377,6 +378,34 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
       "PASS required mode refusal retains the draft, Cancel restores it and Undo restores a saved condition",
     );
 
+    const optional = order.locator(
+      `details[data-path='${JSON.stringify(["models", "Order", "fields", "optionalStatus"])}']`,
+    );
+    await reveal(optional);
+    if (!(await optional.evaluate((element) => element.open)))
+      await optional.locator(":scope > summary").click();
+    const optionalRequired = await key(optional, "required");
+    assert.equal(
+      await optionalRequired
+        .getByRole("combobox", { name: "required mode", exact: true })
+        .locator('option[value="always"]')
+        .count(),
+      1,
+    );
+    await optionalRequired
+      .getByRole("combobox", { name: "required mode", exact: true })
+      .selectOption("condition");
+    await optionalRequired.getByRole("button", { name: "Add a condition", exact: true }).click();
+    await saveDraft(optionalRequired, "Save required", [
+      "models",
+      "Order",
+      "fields",
+      "optionalStatus",
+    ]);
+    await expectChoice(
+      ["models", "Order", "fields", "optionalStatus", "required", "status"],
+      ["draft"],
+    );
     const capacity = await key(order, "capacity");
     const capacityWhere = await key(capacity, "where");
     await capacityWhere.getByRole("button", { name: "Add a condition", exact: true }).click();
@@ -506,6 +535,13 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
       derivedList: ["changed", "b"],
       active: false,
     });
+    await action.getByRole("textbox", { name: "Derived list is value 1", exact: true }).fill("");
+    await save(action, "Change the condition");
+    await waitStored(["actions", "conditionAction", "when"], {
+      derivedLabel: "",
+      derivedList: "b",
+      active: false,
+    });
     await action.getByRole("button", { name: "Add a condition", exact: true }).click();
     await pickField(action, "customer", "derivedFresh");
     assert.ok(
@@ -517,7 +553,7 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
     await save(action, "Change the condition");
     await waitStored(["actions", "conditionAction", "when"], {
       derivedLabel: "",
-      derivedList: ["changed", "b"],
+      derivedList: "b",
       active: false,
       derivedFresh: "",
     });

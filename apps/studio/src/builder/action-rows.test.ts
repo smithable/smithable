@@ -2,7 +2,9 @@ import { validateSpec } from "@smithable/core";
 import { describe, expect, it } from "vitest";
 import {
   conditionOf,
+  setRowsFromArgs,
   setRowsOf,
+  unfinished,
   unfinishedConditions,
   valuesOf,
   waysFor,
@@ -57,6 +59,12 @@ describe("a standard action's rows (A 203)", () => {
       "ask",
     ]);
   });
+});
+
+it("an explicit asked value stays valid, while an unfinished literal must not turn into asking", () => {
+  expect(unfinished(setRowsFromArgs({ reason: "" }))).toBe(false);
+  expect(unfinished([{ field: "reason", how: "value", value: "" }])).toBe(true);
+  expect(unfinished([{ field: "reason", how: "ask", value: "" }])).toBe(false);
 });
 
 it("timer condition choices exclude references and computed fields while shared defaults stay rich", () => {

@@ -228,3 +228,38 @@ test("a redundant saved required rule remains visible/removable without contradi
     ).toBe(expected);
   }
 });
+
+test("a choice's default in the current draft determines its modes, not the saved required flag", () => {
+  const { ir, document } = fixture();
+  const path = ["models", "Work", "fields", "status", "required"];
+  const draft = referenceWith(document, path.slice(0, -1), {
+    type: "draft | ready",
+    default: "none",
+  });
+  const context = conditionContext(path, draft, ir);
+  if (!context) throw Error("Missing optional-choice context");
+  expect(context.fixed).toBeUndefined();
+  expect(conditionReady(true, context)).toBe(true);
+  expect(conditionReady({ active: true }, context)).toBe(true);
+  expect(
+    applyOperation({ spec }, "editSpec", {
+      file: "smithable.yml",
+      path: path.slice(0, -1),
+      value: { type: "draft | ready", default: "none", required: { active: true } },
+    }).ok,
+  ).toBe(true);
+  // With no default, the explicit boolean can make the choice always required.
+  const required = validateSpec({
+    path: "smithable.yml",
+    text: spec.replace(
+      "status: draft | ready",
+      'status: {type: "draft | ready", default: none, required: true}',
+    ),
+  });
+  expect(required.diagnostics.filter((item) => item.severity === "error")).toEqual([]);
+  expect(
+    required.ir?.models
+      .find((model) => model.name === "Work")
+      ?.fields.find((field) => field.name === "status")?.required,
+  ).toBe(true);
+});
