@@ -225,13 +225,24 @@ export function NoCode({
   // A sentence of the summary opens its entry and brings it into view.
   const jumpTo = (at: { sub: SubView; path: (string | number)[] }) => {
     setSub(at.sub);
-    setOpened(at.path);
-    requestAnimationFrame(() =>
-      document
-        .querySelector(`[data-path='${JSON.stringify(at.path)}']`)
-        ?.scrollIntoView({ block: "start", behavior: "smooth" }),
-    );
+    setOpened([...at.path]);
   };
+  // Reopening the same target keeps the form's drafts. For a refused addition, its enclosing
+  // section is the nearest thing that exists; open it and its ancestors after the render.
+  useEffect(() => {
+    if (!opened?.length) return;
+    const nodes = [...document.querySelectorAll<HTMLElement>("[data-path]")];
+    for (let length = opened.length; length > 0; length--) {
+      const path = JSON.stringify(opened.slice(0, length));
+      const target = nodes.find((node) => node.dataset.path === path);
+      if (!target) continue;
+      for (let node: HTMLElement | null = target; node; node = node.parentElement) {
+        if (node instanceof HTMLDetailsElement) node.open = true;
+      }
+      target.scrollIntoView({ block: "start", behavior: "smooth" });
+      break;
+    }
+  }, [opened]);
   // The preview reports what was clicked in Select, columns dragged to a new place and texts
   // changed in place.
   const runRef = useRef(run);

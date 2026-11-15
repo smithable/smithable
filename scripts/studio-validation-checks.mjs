@@ -29,7 +29,14 @@ export async function checkStudioValidation(browser, base) {
       }
       await route.fulfill({ response, json: body });
     });
-    await page.goto(`${base}?guide=off`);
+    await page.goto(base);
+    const overlay = page.getByRole("dialog", { name: /^Smith presents / });
+    await overlay.getByRole("button", { name: "Skip", exact: true }).click();
+    await overlay.waitFor({ state: "detached" });
+    const guide = page.locator("[data-guide-card]:visible");
+    await guide.waitFor();
+    await guide.getByRole("button", { name: "Skip guide", exact: true }).click();
+    await guide.waitFor({ state: "detached" });
     const form = page.getByRole("region", { name: "What the app does", exact: true });
     await form.waitFor();
     const timers = form.locator('details[data-key="timers"]');
@@ -72,6 +79,12 @@ export async function checkStudioValidation(browser, base) {
     await timers.locator(":scope > summary").click();
     await notice.getByRole("button", { name: "Open timer", exact: true }).click();
     await page.waitForFunction(() => document.querySelector('details[data-key="timers"]')?.open);
+    await name.fill("keepThisDraft");
+    await timers.locator(":scope > summary").click();
+    await page.waitForFunction(() => !document.querySelector('details[data-key="timers"]')?.open);
+    await notice.getByRole("button", { name: "Open timer", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('details[data-key="timers"]')?.open);
+    assert.equal(await name.inputValue(), "keepThisDraft", "reopening the target lost a draft");
     console.log("  ✓ Validation target opens timer settings");
     await timerError.getByText("Code details", { exact: true }).click();
     await timerError.getByText(/one of the three/).waitFor();
