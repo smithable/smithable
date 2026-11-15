@@ -127,6 +127,7 @@ test("No code follows real preview navigation without losing edits or opening hi
         await page.locator('iframe[title="App preview"]').elementHandle()
       )?.contentFrame();
       assert.ok(frame, "no app frame");
+      await frame.waitForURL((url) => url.origin === new URL(project.preview).origin);
       return frame;
     };
     const go = async (path) => {
@@ -376,21 +377,20 @@ test("No code follows real preview navigation without losing edits or opening hi
     passed = true;
   } catch (error) {
     if (page)
-      console
-        .error(
-          "Studio state",
-          await page.evaluate(() => ({
-            place: sessionStorage.getItem("smithable:place"),
-            focused: document.activeElement?.outerHTML.slice(0, 400),
-            root: document.querySelector("[data-no-code]")?.getBoundingClientRect().toJSON(),
-            transients: [
-              ...document.querySelectorAll(
-                'dialog[open], [role="dialog"], [role="menu"], [role="listbox"]',
-              ),
-            ].map((node) => node.outerHTML.slice(0, 200)),
-            reports: window.followReports.slice(-4),
-          })),
-        );
+      console.error(
+        "Studio state",
+        await page.evaluate(() => ({
+          place: sessionStorage.getItem("smithable:place"),
+          focused: document.activeElement?.outerHTML.slice(0, 400),
+          root: document.querySelector("[data-no-code]")?.getBoundingClientRect().toJSON(),
+          transients: [
+            ...document.querySelectorAll(
+              'dialog[open], [role="dialog"], [role="menu"], [role="listbox"]',
+            ),
+          ].map((node) => node.outerHTML.slice(0, 200)),
+          reports: window.followReports.slice(-4),
+        })),
+      );
     if (page)
       await page.screenshot({ path: join(root, "failure.png"), fullPage: true }).catch(() => {});
     console.error(`Fixture retained: ${root}\n${log}`);

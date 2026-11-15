@@ -341,14 +341,14 @@ export function NoCode({
     });
     window.addEventListener("message", receive);
     window.addEventListener("scroll", changed, true);
-    for (const type of ["focusout", "click", "keyup", "resize"])
+    for (const type of ["focusout", "click", "keyup", "resize", "transitionend"])
       window.addEventListener(type, changed);
     if (initialFollow.current) enqueue.current(keptPage());
     return () => {
       transients.disconnect();
       window.removeEventListener("message", receive);
       window.removeEventListener("scroll", changed, true);
-      for (const type of ["focusout", "click", "keyup", "resize"])
+      for (const type of ["focusout", "click", "keyup", "resize", "transitionend"])
         window.removeEventListener(type, changed);
       if (frame.current !== undefined) cancelAnimationFrame(frame.current);
     };
