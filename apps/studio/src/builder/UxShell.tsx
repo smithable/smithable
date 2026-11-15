@@ -2,7 +2,18 @@ import type { PageIR, UxIR } from "@smithable/core";
 import type { Run } from "./ChangeForms";
 import { UxChoice } from "./UxChoice";
 
-export function UxShell({ ux, page, run }: { ux: UxIR; page?: PageIR; run: Run }) {
+export function AppShell({ ux, run }: { ux: UxIR; run: Run }) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="mb-2 text-sm font-medium">App-wide shell</legend>
+      <UxChoice id="navigation" data={ux} run={run} />
+      <UxChoice id="chrome" data={ux} run={run} />
+      <UxChoice id="menuActive" data={ux} run={run} />
+    </fieldset>
+  );
+}
+
+export function PageShell({ ux, page, run }: { ux: UxIR; page?: PageIR; run: Run }) {
   const hero =
     page?.pattern.kind === "landing"
       ? page.pattern.sections.find((s) => s.kind === "hero")
@@ -10,12 +21,6 @@ export function UxShell({ ux, page, run }: { ux: UxIR; page?: PageIR; run: Run }
   const layout = hero && ux.pages[page?.id ?? ""]?.looks?.[hero.name]?.layout;
   return (
     <>
-      <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">App shell</legend>
-        <UxChoice id="navigation" data={ux} run={run} />
-        <UxChoice id="chrome" data={ux} run={run} />
-        <UxChoice id="menuActive" data={ux} run={run} />
-      </fieldset>
       {page?.pattern.kind === "landing" && (
         <fieldset className="space-y-2">
           <legend className="mb-2 text-sm font-medium">Page shell</legend>

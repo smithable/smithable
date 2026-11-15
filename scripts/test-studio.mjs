@@ -359,7 +359,7 @@ try {
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
   await checkStudioDraft(browser, base);
-  await checkStudioTimers(browser, base);
+  await checkStudioTimers(browser, base, root);
   await checkStudioValidation(browser, base);
   await checkStudioQuestions(browser, base);
   await checkStudioUsage(browser, base);
@@ -381,18 +381,19 @@ try {
         throw new Error("Desktop did not give the pane back");
     },
   );
-  await step(
-    "the header has How to publish and Help, which open the docs (finding 14)",
-    async () => {
-      const header = page.locator("header").first();
-      for (const [name, href] of [
-        ["How to publish", "https://docs.smithable.ai/self-host.html"],
-        ["Help", "https://docs.smithable.ai/start.html"],
-      ])
-        if ((await header.getByRole("link", { name, exact: true }).getAttribute("href")) !== href)
-          throw new Error(`${name} does not lead to ${href}`);
-    },
-  );
+  await step("the header opens Review and publish and links to Help", async () => {
+    const header = page.locator("header").first();
+    if (
+      (await header.getByRole("link", { name: "Help", exact: true }).getAttribute("href")) !==
+      "https://docs.smithable.ai/start.html"
+    )
+      throw new Error("Help does not lead to the start page");
+    await header.getByRole("button", { name: /^Review and publish/ }).click();
+    const review = page.getByRole("dialog", { name: "Review and publish", exact: true });
+    await review.getByRole("heading", { name: /^Review and publish/ }).waitFor();
+    await review.getByRole("button", { name: "Close", exact: true }).click();
+    await review.waitFor({ state: "detached" });
+  });
   await step(
     "Leave feedback opens from the header and from Smith, each part shown before it is ticked (A 242)",
     async () => {
@@ -1427,8 +1428,15 @@ try {
       await preview.getByRole("heading", { name: "Clients" }).waitFor({ timeout: 60000 * P });
     },
   );
-  await step("colors of a choice and a page's icon, from the Look tab", async () => {
-    await sub("Look");
+  await step("choice colors in Behavior and page icons in Layout", async () => {
+    await sub("Behavior");
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent("smithable:open-part", {
+          detail: { file: "smithable.yml", path: ["models", "Order", "fields", "status"] },
+        }),
+      ),
+    );
     const choices = page.getByRole("region", { name: "Colors of choices" });
     await choices
       .getByRole("group", { name: "Status of Order" })
@@ -1438,6 +1446,7 @@ try {
       .getByText("Show Order.status shipped as success")
       .first()
       .waitFor({ timeout: 60000 * P });
+    await sub("Layout");
     await page.getByLabel("Page to style").selectOption("orders");
     await page
       .getByRole("region", { name: "Pages" })
@@ -1453,7 +1462,11 @@ try {
   await step(
     "look and feel: a theme, density and motion are chosen without touching code",
     async () => {
-      const theme = page.getByRole("region", { name: "Font, density and motion" });
+      await page.getByRole("button", { name: "Look", exact: true }).click();
+      const theme = page.getByRole("region", {
+        name: "App-wide font, density and motion",
+        exact: true,
+      });
       await theme.getByRole("button", { name: "Compact" }).click();
       await theme
         .getByRole("button", { name: "Compact", pressed: true })
@@ -1465,7 +1478,7 @@ try {
       const themes = page.getByRole("list", { name: "Themes" });
       // The project's own theme has its card, named with its file.
       await themes
-        .getByRole("button", { name: /Forest/ })
+        .getByRole("button", { name: "Use Forest theme", exact: true })
         .getByText("themes/forest.yml", { exact: false })
         .waitFor();
       // The theme swaps a font package, so the app's server restarts: the preview keeps the last
@@ -1484,13 +1497,13 @@ try {
             if (el.textContent === "Updating…") watch.updating = true;
         }, 50);
       });
-      await themes.getByRole("button", { name: /Playful/ }).click();
+      await themes.getByRole("button", { name: "Use Playful theme", exact: true }).click();
       await last
         .getByText("Use the Playful theme")
         .first()
         .waitFor({ timeout: 60000 * P });
       await themes
-        .getByRole("button", { name: /Playful/, pressed: true })
+        .getByRole("button", { name: "Use Playful theme", exact: true, pressed: true })
         .waitFor({ timeout: 60000 * P });
       await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
       const watch = await page.evaluate(() => {
@@ -1500,6 +1513,7 @@ try {
       if (watch.gaps)
         throw new Error(`the preview was empty in ${watch.gaps} checks during the restart`);
       if (!watch.updating) throw new Error("the preview never said Updating…");
+      await page.getByRole("button", { name: "Close look editor", exact: true }).click();
     },
   );
   // Every app has every theme's font, so a theme never needs an install (a hosted workspace
@@ -1553,21 +1567,26 @@ try {
   await step(
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
-      const look = page.getByRole("region", { name: "Theme" });
+      await page.getByRole("button", { name: "Look", exact: true }).click();
+      const look = page.getByRole("dialog", { name: "Look", exact: true });
       await look.getByText("Add a theme").click();
       await look
-        .getByLabel("Theme", { exact: true })
+        .getByRole("textbox", { name: "Theme", exact: true })
         .fill("smithableTheme: 0.1\nname: moss\nlight:\n  primary: nope\n");
-      await look.getByRole("button", { name: "Add and use" }).click();
+      await look
+        .getByRole("button", { name: "Add and use for the whole app", exact: true })
+        .click();
       await page
         .getByText(/The theme is refused/)
         .first()
         .waitFor({ timeout: 60000 * P });
       const forest = readFileSync(join(dir, "themes/forest.yml"), "utf8");
       await look
-        .getByLabel("Theme", { exact: true })
+        .getByRole("textbox", { name: "Theme", exact: true })
         .fill(forest.replace("name: forest", "name: moss"));
-      await look.getByRole("button", { name: "Add and use" }).click();
+      await look
+        .getByRole("button", { name: "Add and use for the whole app", exact: true })
+        .click();
       await last
         .getByText("Add theme moss and use it")
         .first()
@@ -1575,8 +1594,9 @@ try {
       if (!existsSync(join(dir, "themes/moss.yml"))) throw new Error("no themes/moss.yml");
       await page
         .getByRole("list", { name: "Themes" })
-        .getByRole("button", { name: /Moss/, pressed: true })
+        .getByRole("button", { name: "Use Moss theme", exact: true, pressed: true })
         .waitFor({ timeout: 60000 * P });
+      await look.getByRole("button", { name: "Close look editor", exact: true }).click();
       await page.getByRole("button", { name: "Undo", exact: true }).click();
       await status.getByText(/Undid: Add theme moss/).waitFor({ timeout: 60000 * P });
       if (existsSync(join(dir, "themes/moss.yml"))) throw new Error("undo left themes/moss.yml");
@@ -1955,7 +1975,11 @@ try {
       }, saved);
       // The ux file says where its choices have controls, with a way there.
       await page.getByRole("button", { name: "Open Look" }).click();
-      await page.getByRole("tab", { name: "Look", selected: true }).waitFor({ timeout: 10000 * P });
+      const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
+      await lookDialog
+        .getByRole("tab", { name: "Theme and settings", selected: true })
+        .waitFor({ timeout: 10000 * P });
+      await lookDialog.getByRole("button", { name: "Close look editor", exact: true }).click();
       await firstWindow("code");
       await page.getByLabel("File", { exact: true }).selectOption("smithable.yml");
       await firstWindow("nocode");
@@ -2243,7 +2267,7 @@ try {
   );
   await step("the Look tab shows smithable.ux.yml as controls, each applied at once", async () => {
     const ux = () => readFileSync(join(dir, "smithable.ux.yml"), "utf8");
-    await sub("Look");
+    await sub("Content");
     const look = (name) => page.getByRole("region", { name });
     // The app's language: the content file says it, and English is saying nothing.
     const content = () => readFileSync(join(dir, "smithable.content.yml"), "utf8");
@@ -2261,11 +2285,11 @@ try {
     // then removed. One too small is refused before it is sent, saying what is wanted.
     const tiny = join(dir, "..", "studio-test-tiny.png");
     writeFileSync(tiny, png(1, 1));
-    await look("Logo").locator('input[type="file"]').setInputFiles(tiny);
-    await look("Logo").getByRole("alert").getByText("at least 64 px").waitFor();
+    await look("App identity").locator('input[type="file"]').setInputFiles(tiny);
+    await look("App identity").getByRole("alert").getByText("at least 64 px").waitFor();
     const mark = join(dir, "..", "studio-test-mark.png");
     writeFileSync(mark, png(64, 64));
-    await look("Logo").locator('input[type="file"]').setInputFiles(mark);
+    await look("App identity").locator('input[type="file"]').setInputFiles(mark);
     for (let i = 0; !/src: images\/logo\.png/.test(content()); i++) {
       if (i === 60 * P) throw new Error(`no logo in smithable.content.yml:\n${content()}`);
       await new Promise((r) => setTimeout(r, 1000));
@@ -2295,23 +2319,36 @@ try {
           `no logo in the preview (frame at ${at}; the server's page ${html.includes('data-part="logo"') ? "has" : "lacks"} it, the root module ${/logo/.test(root) ? "has" : "lacks"} it): ${error.message.split("\n")[0]}`,
         );
       });
-    await look("Logo").getByRole("button", { name: "Remove" }).click();
+    await look("App identity").getByRole("button", { name: "Remove" }).click();
     for (let i = 0; /^logo:/m.test(content()); i++) {
       if (i === 60 * P) throw new Error("Remove did not take the logo away");
       await new Promise((r) => setTimeout(r, 1000));
     }
-    await look("Logo")
+    await look("App identity")
       .getByText("Add a logo")
       .waitFor({ timeout: 60000 * P });
-    await look("Font, density and motion").getByRole("button", { name: "Comfortable" }).click();
-    await look("Font, density and motion")
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    await look("App-wide font, density and motion")
+      .getByRole("button", { name: "Comfortable" })
+      .click();
+    await look("App-wide font, density and motion")
       .getByRole("button", { name: "Comfortable", pressed: true })
       .waitFor({ timeout: 60000 * P });
+    await page.getByRole("button", { name: "Close look editor", exact: true }).click();
+    await sub("Behavior");
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent("smithable:open-part", {
+          detail: { file: "smithable.yml", path: ["models", "Order", "fields", "status"] },
+        }),
+      ),
+    );
     await look("Colors of choices").getByLabel("Color of Draft").first().selectOption("warning");
     await last
       .getByText(/draft/i)
       .first()
       .waitFor({ timeout: 60000 * P });
+    await sub("Layout");
     await page.getByLabel("Page to style").selectOption("customers");
     // A second line under a column's value.
     await look("Pages").getByLabel("Second line under Email").first().selectOption("phone");
@@ -2346,7 +2383,10 @@ try {
     const pages = look("Pages");
     // Native selected-page controls have visible labels and keyboard focus. They use the same
     // project history as chat: one Undo restores the original authored source.
-    const menu = pages.getByLabel("Menu layout", { exact: true });
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    const menu = page
+      .getByRole("dialog", { name: "Look", exact: true })
+      .getByLabel("Menu layout", { exact: true });
     await menu.focus();
     if (!(await menu.evaluate((e) => document.activeElement === e)))
       throw new Error("Menu layout cannot receive keyboard focus");
@@ -2354,6 +2394,7 @@ try {
     await menu.selectOption("topbar");
     await waitUx(/navigation: topbar/);
     await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
+    await page.getByRole("button", { name: "Close look editor", exact: true }).click();
     await page.getByRole("button", { name: "Undo", exact: true }).click();
     await status.getByText(/Undid:.*menu/i).waitFor({ timeout: 60000 * P });
     if (ux() !== shellBefore) throw new Error("Undo did not restore the shell's source");
@@ -2484,14 +2525,15 @@ try {
         .getByRole("heading", { name: "Acme CRM", level: 1 })
         .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
-      await sub("Look");
-      await page.getByLabel("Page to style").selectOption("home");
-      await page.getByLabel("Theme of Home").selectOption("playful");
+      await page.getByRole("button", { name: "Look", exact: true }).click();
+      const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
+      await lookDialog.getByLabel("Theme selection target", { exact: true }).selectOption("home");
+      await lookDialog.getByRole("button", { name: "Use Playful theme", exact: true }).click();
       await last
         .getByText(/theme on the home page/i)
         .first()
         .waitFor({ timeout: 60000 * P });
-      // A background of the owner's: picked, applied when the picker closes, in the CSS.
+      // The app-wide background stays in Look while the landing preset is selected.
       await page.getByLabel("Background", { exact: true }).fill("#f5efe6");
       await page.getByLabel("Background", { exact: true }).blur();
       await last
@@ -2500,6 +2542,9 @@ try {
         .waitFor({ timeout: 60000 * P });
       if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
         throw new Error("the ux file has no background");
+      await lookDialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+      await sub("Layout");
+      await page.getByLabel("Page to style").selectOption("home");
       // Contact was added above Footer. Its up arrow moves it above Hero; wait for that
       // operation's response before reading the file it replaces.
       const moved = page.waitForResponse(

@@ -162,8 +162,9 @@ export async function checkCompactLook(browser, base, pictures) {
   });
   try {
     await page.goto(`${base}/?guide=off`);
-    await page.getByRole("button", { name: "Edit look", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Look", exact: true });
+    await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog
       .getByRole("status")
       .filter({ hasText: "Draft preview ready" })
@@ -204,7 +205,7 @@ export async function checkCompactLook(browser, base, pictures) {
     });
     assert.ok(Object.values(layout).every(Boolean), JSON.stringify(layout));
     if (pictures) await page.screenshot({ path: join(pictures, "after-960-edit-look.png") });
-    console.log("  ✓ compact Edit look: connected draft, two-column details, reachable controls");
+    console.log("  ✓ compact Look: connected draft, two-column details, reachable controls");
     await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
   } catch (error) {
     if (pictures)

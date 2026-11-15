@@ -89,7 +89,7 @@ try {
     if (new URL(request.url()).pathname === "/api/op") operations.push(request.postDataJSON());
   });
   await page.goto(`${base}?guide=off`);
-  await page.getByRole("button", { name: "Edit look", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Look", exact: true }).waitFor();
   let release, arrived;
   const held = new Promise((resolve) => {
     release = resolve;
@@ -102,7 +102,15 @@ try {
     await held;
     await route.continue();
   });
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByLabel("Theme selection target", { exact: true })
+    .selectOption("welcome");
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByRole("tab", { name: "Customise", exact: true })
+    .click();
   await started;
   await stopServer();
   const restarted = await startServer();
@@ -112,7 +120,7 @@ try {
     "restart did not replace project identity",
   );
   release();
-  const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+  const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   await dialog
     .getByText("The project changed. Keep this draft or reopen the current project.", {
       exact: false,
@@ -133,8 +141,30 @@ try {
   page.once("dialog", (prompt) => prompt.dismiss());
   await dialog.getByRole("button", { name: "Reopen current project", exact: true }).click();
   assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "kept-draft");
+  let releaseReopen, arrivedReopen;
+  const reopenGate = new Promise((resolve) => {
+    releaseReopen = resolve;
+  });
+  const reopenStarted = new Promise((resolve) => {
+    arrivedReopen = resolve;
+  });
+  await page.route("**/api/project", async (route) => {
+    arrivedReopen();
+    await reopenGate;
+    await route.continue();
+  });
   page.once("dialog", (prompt) => prompt.accept());
   await dialog.getByRole("button", { name: "Reopen current project", exact: true }).click();
+  await reopenStarted;
+  assert.ok(
+    await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).isDisabled(),
+    "Reopen allowed switching to settings while its request was pending",
+  );
+  assert.ok(
+    await dialog.getByRole("button", { name: "Close look editor", exact: true }).isDisabled(),
+    "Reopen allowed closing during its request",
+  );
+  releaseReopen();
   await dialog
     .getByRole("heading", { name: "Preview unavailable", exact: true })
     .waitFor({ state: "detached" });
@@ -143,6 +173,12 @@ try {
     .getByRole("status")
     .filter({ hasText: /Draft preview ready|Saved preview ready/ })
     .waitFor({ timeout: 45000 });
+  assert.equal(
+    await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(),
+    "welcome",
+    "reopen silently broadened the draft target",
+  );
+  await page.unroute("**/api/project");
   assert.equal(operations.length, 0, "recovery wrote an operation");
   await page.screenshot({
     path: join(root, "recovered-after-workspace-restart.png"),
@@ -161,7 +197,15 @@ try {
   await page.route("**/api/look?*", (route) =>
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByLabel("Theme selection target", { exact: true })
+    .selectOption("welcome");
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByRole("tab", { name: "Customise", exact: true })
+    .click();
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
   await dialog.getByLabel("Name", { exact: true }).fill("offline-retry");
   await dialog.getByLabel("Name", { exact: true }).press("Tab");
@@ -195,7 +239,15 @@ try {
   await page.route("**/api/look?*", (route) =>
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByLabel("Theme selection target", { exact: true })
+    .selectOption("welcome");
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByRole("tab", { name: "Customise", exact: true })
+    .click();
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
   await page.unroute("**/api/look?*");
   await dialog.getByRole("button", { name: "Retry opening project", exact: true }).click();

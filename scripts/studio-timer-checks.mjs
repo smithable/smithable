@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { join } from "node:path";
 
 // Read the persisted YAML; the daemon validates it with the project's plugins. A plain
 // validateSpec call here would reject sections supplied by the shared fixture's plugin.
 const { parse } = createRequire(new URL("../packages/core/package.json", import.meta.url))("yaml");
 
-export async function checkStudioTimers(browser, base) {
+export async function checkStudioTimers(browser, base, pictures) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
   const stem = `studio${Date.now()}`;
   const sent = [];
@@ -38,6 +39,10 @@ export async function checkStudioTimers(browser, base) {
     await page.goto(`${base}?guide=off`);
     const form = page.getByRole("region", { name: "What the app does", exact: true });
     await form.waitFor();
+    // These checks exercise explicit timer/entry editing; preview navigation is covered by
+    // preview-follow-browser.test.mjs. Keep its pending first-page navigation from moving
+    // this fixture after a saved operation clears the last draft/focus guard.
+    await page.getByRole("checkbox", { name: "Follows preview", exact: true }).uncheck();
     const area = async (key) => {
       const section = form.locator(`details[data-key="${key}"]`);
       if (!(await section.isVisible()))
@@ -231,6 +236,12 @@ export async function checkStudioTimers(browser, base) {
     for (const key of ["outgoing", "payments", "incoming", "queries", "timers"])
       assert.deepEqual(restored[key], original[key], `${key} fixture was not restored`);
     console.log("  ✓ Timer and entry fixtures restored before the remaining editor checks");
+  } catch (error) {
+    if (pictures)
+      await page
+        .screenshot({ path: join(pictures, "timer-failure.png"), fullPage: true })
+        .catch(() => {});
+    throw error;
   } finally {
     await page.close();
   }

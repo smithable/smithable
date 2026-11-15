@@ -64,6 +64,7 @@ const Writer = createContext<(path: Path, value: unknown) => Promise<boolean>>(a
  * a calculated field and a list of related records, which keep the plain text.
  */
 const Shape = createContext<(path: Path, value?: unknown) => React.ReactNode>(() => undefined);
+const Omitted = createContext<string[]>([]);
 const shapeOf =
   (run: Run, file: EditableFile, ir: SpecIR | undefined) => (path: Path, value?: unknown) => {
     const [first, model, third, name, key] = path;
@@ -246,6 +247,7 @@ export function SpecForm({
   open,
   tools,
   adder,
+  omit = [],
 }: {
   files: Project["files"];
   run: Run;
@@ -256,6 +258,8 @@ export function SpecForm({
   tools?: (path: Path) => React.ReactNode;
   /** An area's own way of adding instead of the name box (the creation wizard). */
   adder?: (path: Path) => React.ReactNode;
+  /** Root settings that have a dedicated control beside this form. */
+  omit?: string[];
 }) {
   const schemas = useMemo(
     () => ({ "smithable.yml": specSchema(), ...COMPANION_SCHEMAS }) as Record<string, JsonSchema>,
@@ -282,7 +286,9 @@ export function SpecForm({
                       <Tools.Provider value={tools ?? (() => undefined)}>
                         <Adder.Provider value={adder ?? (() => undefined)}>
                           <InContent.Provider value={key === "content"}>
-                            <Value schema={schema} value={read(files[key])} path={[]} />
+                            <Omitted.Provider value={omit}>
+                              <Value schema={schema} value={read(files[key])} path={[]} />
+                            </Omitted.Provider>
                           </InContent.Provider>
                         </Adder.Provider>
                       </Tools.Provider>
@@ -340,6 +346,7 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
   const inContent = useContext(InContent);
   const tools = useContext(Tools);
   const adder = useContext(Adder);
+  const omitted = useContext(Omitted);
   const shaped = useContext(Shape)(path, value);
   if (
     shaped &&
@@ -500,7 +507,10 @@ function Value({ schema, value, path }: { schema: JsonSchema; value: unknown; pa
       // A key the schema hides (the spec format version) is not shown, nor a companion file's
       // version line (smithableContent: 0.1 and the like).
       const shown = control.keys.filter(
-        ([key, s]) => s["x-hidden"] !== true && !COMPANION_VERSIONS.includes(key),
+        ([key, s]) =>
+          s["x-hidden"] !== true &&
+          !COMPANION_VERSIONS.includes(key) &&
+          (path.length > 0 || !omitted.includes(key)),
       );
       const set = shown.filter(([key]) => own[key] !== undefined);
       const unset = shown.filter(([key]) => own[key] === undefined);

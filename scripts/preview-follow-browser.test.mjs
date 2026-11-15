@@ -151,7 +151,7 @@ test("No code follows real preview navigation without losing edits or opening hi
       );
       await settled();
     };
-    const outside = () => page.getByRole("button", { name: "Edit look", exact: true }).focus();
+    const outside = () => page.getByRole("button", { name: "Look", exact: true }).focus();
     const area = async (key) => {
       const form = noCode.getByRole("region", { name: "What the app does", exact: true });
       const section = form.locator(`details[data-key="${key}"]`);
@@ -267,7 +267,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     await page.evaluate(() =>
       window.dispatchEvent(new CustomEvent("smithable:open-part", { detail: "model:Order" })),
     );
-    await noCode.getByRole("tab", { name: "Look", exact: true }).click();
+    await noCode.getByRole("tab", { name: "Layout", exact: true }).click();
     await noCode.getByLabel("Page to style", { exact: true }).selectOption("customers");
     await noCode.getByRole("tab", { name: "Behavior", exact: true }).click();
     assert.ok(
@@ -312,8 +312,8 @@ test("No code follows real preview navigation without losing edits or opening hi
     assert.equal(await context(), "orders");
     console.log("PASS preference reload and wrong-frame/malformed messages ignored");
 
-    await page.getByRole("button", { name: "Edit look", exact: true }).click();
-    const look = page.getByRole("dialog", { name: "Edit look", exact: true });
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    const look = page.getByRole("dialog", { name: "Look", exact: true });
     await look.waitFor();
     await navigateInApp("/customers");
     assert.equal(await context(), "orders", "following moved the column under the Look dialog");

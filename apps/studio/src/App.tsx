@@ -143,7 +143,11 @@ export function App() {
   // Leave feedback (A 242): open with what was said to Smith, if anything; this session's changes.
   const [feedback, setFeedback] = useState<string>();
   const [sessionStart] = useState(() => new Date().toISOString());
-  const [editingLook, setEditingLook] = useState<{ project: Project; path: string }>();
+  const [editingLook, setEditingLook] = useState<{
+    project: Project;
+    path: string;
+    target?: string;
+  }>();
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
@@ -406,7 +410,7 @@ export function App() {
           ? "smith"
           : anchor === "changes"
             ? "changes"
-            : ["behavior", "look"].includes(anchor)
+            : anchor === "behavior"
               ? "nocode"
               : anchor === "manual"
                 ? manual
@@ -1096,7 +1100,7 @@ export function App() {
           guideDemo.current = false;
         });
       }
-      // No code is needed by the remaining Look stop. The completed tour restores the layout.
+      // The completed tour restores the layout after the remaining top-bar stops.
       setArrangement({ ...now.arrangement, manual: "nocode" });
       if (now.narrow) now.showWindow("preview");
     },
@@ -1222,9 +1226,10 @@ export function App() {
               <Button
                 variant="ghost"
                 className="shrink-0 border border-line"
+                data-guide="look"
                 onClick={() => setEditingLook({ project, path: keptPage() })}
               >
-                Edit look
+                Look
               </Button>
             )}
             {busy && <span className="text-xs text-quiet">Working…</span>}
@@ -1663,6 +1668,13 @@ export function App() {
                             onPlace={nocodePlace}
                             target={partToOpen}
                             onTargetOpened={() => setPartToOpen(undefined)}
+                            onLook={(target) =>
+                              setEditingLook({
+                                project,
+                                path: keptPage(),
+                                ...(target ? { target } : {}),
+                              })
+                            }
                             followingBlocked={
                               busy || guideStarted || Boolean(editingLook) || show.going
                             }
@@ -1681,9 +1693,7 @@ export function App() {
                               jumpTo={codeJump}
                               onJumped={forgetJump}
                               onLook={() => {
-                                nocodePlace({ sub: "look" });
-                                if (narrow) showWindow("nocode");
-                                else workIn("nocode");
+                                setEditingLook({ project, path: keptPage() });
                               }}
                             />
                           </Suspense>
@@ -1798,6 +1808,11 @@ export function App() {
         <Suspense fallback={<p role="status">Opening look editor…</p>}>
           <LookEditorDialog
             project={editingLook.project}
+            liveProject={project}
+            spec={spec}
+            run={run}
+            liveBusy={busy}
+            initialTarget={editingLook.target}
             path={editingLook.path}
             onClose={() => setEditingLook(undefined)}
           />

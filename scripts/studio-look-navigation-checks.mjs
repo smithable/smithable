@@ -11,7 +11,7 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
   const page = await context.newPage();
   try {
     await page.goto(`${base}/?guide=off`);
-    await page.getByRole("button", { name: "Edit look", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Look", exact: true }).waitFor();
     // Finish the ordinary preview's initial load, then exercise a new app session in the editor.
     const main = await page.locator('iframe[title="App preview"]').elementHandle();
     const mainFrame = await main.contentFrame();
@@ -26,8 +26,9 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
       )
         redirected = true;
     });
-    await page.getByRole("button", { name: "Edit look", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+    await page.getByRole("button", { name: "Look", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Look", exact: true });
+    await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog.getByRole("button", { name: label, exact: true }).click();
     const element = await dialog.locator("iframe[data-frame]").first().elementHandle();
     const frame = await element.contentFrame();
@@ -41,7 +42,7 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
     await dialog.getByRole("button", { name: "Light", exact: true }).click();
     await frame.waitForFunction(() => document.documentElement.dataset.appearance === "light");
     if (pictures) await page.screenshot({ path: join(pictures, "look-after-sign-in.png") });
-    console.log("  ✓ Edit look connects after a sign-in return and follows Light/Dark");
+    console.log("  ✓ Look connects after a sign-in return and follows Light/Dark");
   } catch (error) {
     if (pictures)
       await page

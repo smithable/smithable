@@ -22,7 +22,7 @@ import type { Run } from "./ChangeForms";
 import { CodeFiles, ImportRecords, OwnCode } from "./EntryTools";
 import { ExamplesTable } from "./ExamplesTable";
 import { Languages } from "./Languages";
-import { Look } from "./Look";
+import { ChoiceTones, ContentIdentity, PageLayout } from "./Look";
 import { OutgoingTemplate } from "./OutgoingTemplate";
 import { PendingEdits, usePendingEdits } from "./pending-edit";
 import { PreviewNavigation, pageForPreviewPath } from "./preview-follow";
@@ -32,8 +32,8 @@ import { UxSource } from "./UxSource";
 import { WhoCan } from "./WhoCan";
 import { Wizard, type WizardKind } from "./Wizard";
 
-export type SubView = "behavior" | "look" | "who" | "content";
-const SUB_VIEWS: SubView[] = ["behavior", "look", "who", "content"];
+export type SubView = "behavior" | "layout" | "who" | "content";
+const SUB_VIEWS: SubView[] = ["behavior", "layout", "who", "content"];
 
 /** A part picked in the preview, as the sub view and the place in its file it opens at. */
 function placeOf(s: Selection | undefined): { sub: SubView; path: string[] } | undefined {
@@ -79,7 +79,7 @@ function entryOf(concept: OpenPart): { sub: SubView; path: (string | number)[] }
   if (typeof concept !== "string") {
     const subs: Record<string, SubView> = {
       "smithable.auth.yml": "who",
-      "smithable.ux.yml": "look",
+      "smithable.ux.yml": "layout",
       "smithable.content.yml": "content",
     };
     const file = concept.file.split(/[\\/]/).at(-1) ?? concept.file;
@@ -205,6 +205,7 @@ export function NoCode({
   onPlace,
   target,
   onTargetOpened,
+  onLook,
   followingBlocked = false,
 }: {
   project: Project;
@@ -215,6 +216,7 @@ export function NoCode({
   onPlace: (place: Place["nocode"]) => void;
   target?: OpenPart;
   onTargetOpened?: () => void;
+  onLook: (page?: string) => void;
   followingBlocked?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -246,7 +248,11 @@ export function NoCode({
     advancePreviewContext();
   };
   const [sub, setSubState] = useState<SubView>(() =>
-    SUB_VIEWS.includes(place.sub as SubView) ? (place.sub as SubView) : "behavior",
+    place.sub === "look"
+      ? "layout"
+      : SUB_VIEWS.includes(place.sub as SubView)
+        ? (place.sub as SubView)
+        : "behavior",
   );
   const setSub = (next: SubView) => {
     cancelFollow();
@@ -394,12 +400,27 @@ export function NoCode({
     onPlace({ sub: at.sub, selection: s });
   };
   // A part named elsewhere (Smith's "What does this app do?") opens here.
-  const jumpRef = useRef(jumpTo);
-  jumpRef.current = jumpTo;
+  const openPart = (part: OpenPart) => {
+    if (typeof part !== "string" && part.file.split(/[\\/]/).at(-1) === "smithable.ux.yml") {
+      if (part.path[0] === "tones" && typeof part.path[1] === "string") {
+        const [model, field] = part.path[1].split(".");
+        if (model && field) jumpTo({ sub: "behavior", path: ["models", model, "fields", field] });
+      } else if (part.path[0] === "pages" && part.path[2] !== "theme") {
+        jumpTo({ sub: "layout", path: part.path });
+      } else {
+        cancelFollow();
+        onLook(part.path[0] === "pages" ? String(part.path[1]) : undefined);
+      }
+      return;
+    }
+    const at = entryOf(part);
+    if (at) jumpTo(at);
+  };
+  const jumpRef = useRef(openPart);
+  jumpRef.current = openPart;
   useEffect(() => {
     const open = (e: Event) => {
-      const at = entryOf((e as CustomEvent<OpenPart>).detail);
-      if (at) jumpRef.current(at);
+      jumpRef.current((e as CustomEvent<OpenPart>).detail);
     };
     window.addEventListener(OPEN_PART, open);
     return () => window.removeEventListener(OPEN_PART, open);
@@ -407,8 +428,7 @@ export function NoCode({
   // An explicit target waits in App's state until this window is mounted.
   useEffect(() => {
     if (target === undefined) return;
-    const at = entryOf(target);
-    if (at) jumpRef.current(at);
+    jumpRef.current(target);
     onTargetOpened?.();
   }, [target, onTargetOpened]);
   useEffect(() => {
@@ -433,7 +453,7 @@ export function NoCode({
               <Tabs
                 tabs={[
                   ["behavior", "Behavior", "behavior"],
-                  ["look", "Look", "look"],
+                  ["layout", "Layout"],
                   ["who", "Who can"],
                   ["content", "Content"],
                 ]}
@@ -508,15 +528,22 @@ export function NoCode({
                 }}
                 tools={(path) => {
                   const [area, name] = path;
-                  if (
-                    spec.ir &&
-                    picked?.part === "value" &&
-                    area === "models" &&
-                    path.length === 4 &&
-                    path[2] === "fields" &&
-                    picked.concept === `field:${name}.${path[3]}`
-                  )
-                    return <ValueOrigin models={spec.ir.models} concept={picked.concept} />;
+                  if (area === "models" && path[2] === "fields" && path.length === 4)
+                    return (
+                      <>
+                        {spec.ir &&
+                          picked?.part === "value" &&
+                          picked.concept === `field:${name}.${path[3]}` && (
+                            <ValueOrigin models={spec.ir.models} concept={picked.concept} />
+                          )}
+                        <ChoiceTones
+                          spec={spec}
+                          run={run}
+                          model={String(name)}
+                          field={String(path[3])}
+                        />
+                      </>
+                    );
                   if (path.length !== 2 || typeof name !== "string") return undefined;
                   if (area === "models") return <ImportRecords model={name} run={run} />;
                   // A part's own code (what-it-does.md §3): its files under src/custom, as the index found them.
@@ -562,28 +589,38 @@ export function NoCode({
                     );
                   if (area === "pages")
                     return (
-                      <OwnCode
-                        page={name}
-                        files={codeOf(`page:${name}`, "pages")}
-                        dir={project.localDir}
-                        own={Boolean(
-                          project.concepts
-                            .find((c) => c.concept === `page:${name}`)
-                            ?.files.some((f) => f.path.startsWith("src/custom/pages/")),
-                        )}
-                      />
+                      <>
+                        <button
+                          type="button"
+                          className="rounded border border-line px-2 py-1 text-xs"
+                          onClick={() => jumpTo({ sub: "layout", path: ["pages", String(name)] })}
+                        >
+                          Page layout
+                        </button>
+                        <OwnCode
+                          page={name}
+                          files={codeOf(`page:${name}`, "pages")}
+                          dir={project.localDir}
+                          own={Boolean(
+                            project.concepts
+                              .find((c) => c.concept === `page:${name}`)
+                              ?.files.some((f) => f.path.startsWith("src/custom/pages/")),
+                          )}
+                        />
+                      </>
                     );
                   return undefined;
                 }}
               />
             </>
-          ) : sub === "look" ? (
+          ) : sub === "layout" ? (
             <UxSource text={project.files.ux} ux={spec.ux}>
-              <Look
+              <PageLayout
                 spec={spec}
                 run={run}
-                themes={project.themes}
                 page={contextPage}
+                onBehavior={(page) => jumpTo({ sub: "behavior", path: ["pages", page] })}
+                onContent={(page) => jumpTo({ sub: "content", path: ["pages", page] })}
                 onPage={(page) => {
                   cancelFollow();
                   setContextPage(page);
@@ -595,12 +632,14 @@ export function NoCode({
             <WhoCan spec={spec} run={run} authText={project.files.auth} />
           ) : (
             <div className="divide-y divide-line">
+              <ContentIdentity spec={spec} run={run} />
               <SpecForm
                 key={JSON.stringify(opened ?? null)}
                 files={project.files}
                 run={run}
                 ir={spec.ir}
                 parts={["content"]}
+                omit={["logo", "language", "languages"]}
                 open={opened}
                 tools={(path) =>
                   spec.ir &&
