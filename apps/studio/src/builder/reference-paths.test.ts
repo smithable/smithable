@@ -228,3 +228,25 @@ test("required pairs and minimum multi-select sizes keep an atomic Save incomple
   expect(referenceComplete(rules, [{ fields: ["customer"] }])).toBe(false);
   expect(referenceComplete(rules, [["customer", "title"]])).toBe(true);
 });
+
+test("removing an optional reference from a complete draft does not restore it through a merging setter", () => {
+  const prepared = applyOperation({ spec }, "setThread", {
+    model: "Message",
+    body: "body",
+    author: "sender",
+  });
+  expect(prepared.ok).toBe(true);
+  if (!prepared.ok) throw Error(prepared.message);
+  const document: unknown = parse(prepared.files.spec);
+  const path = ["models", "Message", "thread"];
+  const value = { body: "body" };
+  expect(operationFor("smithable.yml", path, value, document)).toBeUndefined();
+  const removed = applyOperation(prepared.files, "editSpec", {
+    file: "smithable.yml",
+    path,
+    value,
+  });
+  expect(removed.ok).toBe(true);
+  if (!removed.ok) throw Error(removed.message);
+  expect(referenceAt(parse(removed.files.spec), [...path, "author"])).toBeUndefined();
+});

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button, Select } from "../ui";
 import { type SetRow, SetRows, setRowsOf, unfinished, valuesOf } from "./action-rows";
 import { usePendingEdit } from "./pending-edit";
+import { ReferencePicker } from "./ReferencePicker";
 
 type Field = ModelIR["fields"][number];
 type Write = (key: string, value: unknown) => Promise<boolean>;
@@ -131,11 +132,11 @@ export function SplitPicker({
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-sm">
         <span className="text-xs text-muted">Moves</span>
-        <Select
-          aria-label="Moves"
-          value={move}
-          onChange={(e) => void write("move", e.target.value)}
-          options={lists.map((f) => [f.name, humanize(f.name)] as [string, string])}
+        <ReferencePicker
+          label="Moves"
+          value={move || undefined}
+          options={lists.map((field) => ({ value: field.name, label: humanize(field.name) }))}
+          onChange={async (value) => write("move", value)}
         />
       </div>
       <fieldset aria-label="The new record takes" className="space-y-1 text-sm">

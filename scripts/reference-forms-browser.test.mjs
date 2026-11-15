@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
-import { parse } from "yaml";
+
+const { parse } = createRequire(new URL("../apps/studio/package.json", import.meta.url))("yaml");
 
 // A real app and preview runtime: navigation reports are observed, never substituted.
 test("typed reference forms write complete operations and protect unfinished drafts", {
@@ -225,6 +227,8 @@ test("typed reference forms write complete operations and protect unfinished dra
     await following.uncheck();
     console.log("PASS actual preview navigation preserves reference search without any operation");
 
+    await entry("models", "Customer");
+    await reveal(naming);
     const firstName = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/api/op",
     );
@@ -240,7 +244,11 @@ test("typed reference forms write complete operations and protect unfinished dra
       .getByRole("button", { name: "Move referenceLabel11 earlier", exact: true })
       .click();
     await waitStored(["models", "Customer", "namedBy"], ["referenceLabel11", "name"]);
+    const removedName = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/op",
+    );
     await naming.getByRole("button", { name: "Remove referenceLabel11", exact: true }).click();
+    assert.ok((await (await removedName).json()).ok);
     const named = await stored(["models", "Customer", "namedBy"]);
     assert.deepEqual([named].flat(), ["name"]);
     console.log("PASS model references search/add/reorder/remove through setNamedBy");
