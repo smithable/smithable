@@ -138,6 +138,10 @@ function readTimer(
   actions: ActionIR[],
 ): TimerIR | undefined {
   const where = `timer "${name}"`;
+  const plain = (message: string) => ({
+    message: `The timer ${name} ${message}`,
+    path: ["timers", name],
+  });
   const known = checkKeys(ctx, mapEntries(ctx, node, where) ?? [], where, {
     allowed: ["on", "at", "every", "cron", "where", "run"],
   });
@@ -170,6 +174,10 @@ function readTimer(
       keyNode,
       "invalid-timer",
       `${capitalize(where)} is on a clock ("every: day" with "at: 08:00", or "cron"), or at a date of its records ("on: Booking" with "at: 1 day before session.startsAt"): one of the three${forms.length ? `, not ${forms.join(" and ")}` : ""}.`,
+      undefined,
+      plain(
+        "needs one way to choose when it runs: a time of day, a schedule, or a date from its records.",
+      ),
     );
     return undefined;
   }
@@ -179,7 +187,13 @@ function readTimer(
     if (cron === undefined) return undefined;
     const problem = cronProblem(cron);
     if (problem) {
-      ctx.error(at("cron"), "invalid-timer", `${capitalize(where)}: ${problem}`);
+      ctx.error(
+        at("cron"),
+        "invalid-timer",
+        `${capitalize(where)}: ${problem}`,
+        undefined,
+        plain("has an invalid schedule; choose when it should run using valid days and times."),
+      );
       return undefined;
     }
     if (byKey.has("at"))
@@ -199,6 +213,7 @@ function readTimer(
         "invalid-timer",
         `${capitalize(where)}: "every" is ${TIMER_EVERY.slice(0, -1).join(", ")} or ${TIMER_EVERY.at(-1)}; "${every}" is none of them.`,
         didYouMean(every, [...TIMER_EVERY]),
+        plain("has an unsupported repeat interval; choose how often it should run."),
       );
       return undefined;
     }
@@ -208,6 +223,10 @@ function readTimer(
           keyNode,
           "missing-key",
           `${capitalize(where)} runs every ${every}, so it needs "at": a clock time like "08:00".`,
+          undefined,
+          plain(
+            "needs a time of day for its repeating schedule; choose a time in the app's time zone.",
+          ),
         );
       return undefined;
     }
@@ -216,6 +235,8 @@ function readTimer(
         at("at"),
         "invalid-timer",
         `${capitalize(where)}: "at" with "every" is a clock time like "08:00" (the app's time zone); "${clock}" is not.`,
+        undefined,
+        plain("has an invalid time of day; choose a valid hour and minute in the app's time zone."),
       );
       return undefined;
     }
@@ -228,6 +249,10 @@ function readTimer(
         keyNode,
         "missing-key",
         `${capitalize(where)} is at a date of a record, so it needs "on": the model whose records it runs for.`,
+        undefined,
+        plain(
+          "needs a kind of record to get its date from; choose which records it should run for.",
+        ),
       );
       return undefined;
     }
@@ -237,6 +262,10 @@ function readTimer(
         at("at"),
         "invalid-timer",
         `${capitalize(where)}: "at" is a date field of ${model.name} (or one reference away, like session.startsAt), alone or after an offset: "<number> minutes|hours|days before|after <field>"; "${spec}" is neither.`,
+        undefined,
+        plain(
+          "needs a stored date from its records; choose a date, optionally with an amount of time before or after it.",
+        ),
       );
       return undefined;
     }
@@ -249,6 +278,9 @@ function readTimer(
         "invalid-timer",
         `${capitalize(where)}: ${resolved.problem}`,
         resolved.hint,
+        plain(
+          "cannot use the selected value as its date; choose a stored date or date and time from its records or one related record.",
+        ),
       );
       return undefined;
     }
@@ -257,6 +289,10 @@ function readTimer(
         at("at"),
         "invalid-timer",
         `${capitalize(where)}: the offset is a whole number above 0.`,
+        undefined,
+        plain(
+          "needs a positive amount of time before or after its date; choose at least one minute, hour, or day.",
+        ),
       );
       return undefined;
     }
@@ -311,6 +347,10 @@ function readTimer(
         action.merge
           ? `${capitalize(where)} runs "${run}", a merge: a person picks the two records and which stays, so no timer runs it.`
           : `${capitalize(where)} runs "${run}", a split: a person picks the records that go to the new one, so no timer runs it.`,
+        undefined,
+        plain(
+          `cannot run ${run}, because ${action.merge ? "combining" : "dividing"} records needs a person to choose them; choose an action that can run on its own.`,
+        ),
       );
       return undefined;
     }
@@ -324,6 +364,10 @@ function readTimer(
         at("run"),
         "invalid-timer",
         `${capitalize(where)} runs "${run}", whose condition names the person signed in (ME()); a timer runs as the app, for nobody in particular. Run an action whose condition names no person.`,
+        undefined,
+        plain(
+          `cannot run ${run}, because it depends on who is signed in; choose an action that does not need a signed-in person.`,
+        ),
       );
       return undefined;
     }
@@ -333,6 +377,10 @@ function readTimer(
           at("run"),
           "invalid-timer",
           `${capitalize(where)} runs the custom action "${run}", which runs once with no record, so it takes no "on"; a standard action of ${model.name} runs for each record.`,
+          undefined,
+          plain(
+            `runs ${run} once without a record; remove the selected kind of record or choose an action for those records.`,
+          ),
         );
         return undefined;
       }
@@ -341,6 +389,8 @@ function readTimer(
         at("run"),
         "invalid-timer",
         `${capitalize(where)} runs "${run}", a standard action of ${action.on}: give it "on: ${action.on}".`,
+        undefined,
+        plain(`runs ${run} for ${action.on} records; choose that kind of record for the timer.`),
       );
       return undefined;
     } else if (action.on !== model.name) {
@@ -348,6 +398,10 @@ function readTimer(
         at("run"),
         "invalid-timer",
         `${capitalize(where)} runs "${run}", which is an action of ${action.on}, not of ${model.name}.`,
+        undefined,
+        plain(
+          `runs ${run} for ${action.on} records; choose that kind of record or an action for the selected records.`,
+        ),
       );
       return undefined;
     }

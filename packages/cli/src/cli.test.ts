@@ -154,6 +154,34 @@ test("validate --json gives every finding with its code, for programs", async ()
   expect(refused.diagnostics.map((d) => d.code)).toContain("invalid-name");
 });
 
+test("validate JSON includes plain timer context while text output keeps the detailed diagnostic", async () => {
+  const dir = tempDir("smithable-plain-timer-");
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Demo }\nmodels:\n  Invoice:\n    fields:\n      dueOn: date\ntimers:\n  markOverdue: { on: Invoice }\n",
+  );
+  writeFileSync(join(dir, "smithable.auth.yml"), "smithableAuth: 0.1\nsignIn: none\n");
+  const json = captureIo();
+  expect(await run(["validate", dir, "--json"], json)).toBe(1);
+  expect(json.stderr).toBe("");
+  const result = JSON.parse(json.stdout);
+  expect(result.valid).toBe(false);
+  const timer = result.diagnostics.find((d: { code: string }) => d.code === "invalid-timer");
+  expect(timer).toMatchObject({
+    severity: "error",
+    file: join(dir, "smithable.yml"),
+    plain: {
+      message: expect.stringContaining("The timer markOverdue "),
+      path: ["timers", "markOverdue"],
+    },
+  });
+  expect(timer.message).toContain('"every: day"');
+  const text = captureIo();
+  expect(await run(["validate", dir], text)).toBe(1);
+  expect(text.stderr).toContain(timer.message);
+  expect(text.stderr).not.toContain(timer.plain.message);
+});
+
 test("validate --explain says what the rules settled", async () => {
   const dir = tempDir("smithable-explain-");
   writeFileSync(

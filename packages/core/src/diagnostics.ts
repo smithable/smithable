@@ -13,6 +13,8 @@ export interface Diagnostic {
   /** Stable, kebab-case identifier, for tests and documentation. */
   code: string;
   message: string;
+  /** Wording for a person who does not read the spec, and the thing's path within `file`. */
+  plain?: { message: string; path: (string | number)[] };
   hint?: string;
   /** A note's way: the operation that applies the advice. */
   fix?: Fix;
