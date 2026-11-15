@@ -22,6 +22,8 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: Ask and the inspector can pause and resume answer playback, sample a voice, and choose the speaking speed; Ask keeps its mark at the lower left of its label (`fixes/ask-sound-controls.yml`).
+
 - Embedded contact forms keep Send below the fields; full-page editors retain sticky Save controls, and page titles follow their theme's letter spacing (`fixes/contact-form-layout.yml`). Theme checks flag invisible field edges in both modes.
 
 - Generated apps: the privacy page states what the app's files and its running settings show (the assistant, signing in with Google, the payment provider, public forms, mail and calls coming in, services records go to, the owner's own functions, the AI model and the SMS provider as set now) and what only the maker knows (keeps, services, custom), and says when its operator reviewed it (`reviewPrivacyPage`; `validate` warns `privacy-unreviewed`, `privacy-missing`, `privacy-custom`). **Its sentences changed: owners are asked to review their privacy page again.**

@@ -161,4 +161,5 @@ test("Play starts fresh after the final sentence ends while paused", () => {
   if (player.busy) player.resume();
   else player.speak("Only sentence.", voice, 1);
   expect(utterances.map((u) => u.text)).toEqual(["Only sentence.", "Only sentence."]);
+  expect(synth.resume).toHaveBeenCalledOnce();
 });

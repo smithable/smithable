@@ -5487,15 +5487,20 @@ async function askPanelFlow(dir, base) {
     if (resumed.count !== reading.count || resumed.pauses !== 1 || resumed.resumes < 1)
       throw new Error(`Ask did not resume its reader: ${JSON.stringify(resumed)}`);
     await answered.getByRole("button", { name: "Sound on", exact: true }).click();
-    // A final sentence can finish just after Pause. The next Play must work on its first click.
+    // This records-only count is one sentence. It can finish just after Pause; the next Play
+    // must work on its first click and release the native synthesizer's paused state.
+    const resumesBeforeFinish = await page.evaluate(() => window.__answerSpeech.resumes);
     await page.evaluate(() => {
       const s = window.__answerSpeech;
       s.current = null;
       s.utterances.at(-1).onend?.({});
     });
     await answered.getByRole("button", { name: "Sound off", exact: true }).click();
-    const playedAgain = await page.evaluate(() => window.__answerSpeech.utterances.length);
-    if (playedAgain !== reading.count + 1)
+    const playedAgain = await page.evaluate(() => ({
+      count: window.__answerSpeech.utterances.length,
+      resumes: window.__answerSpeech.resumes,
+    }));
+    if (playedAgain.count !== reading.count + 1 || playedAgain.resumes <= resumesBeforeFinish)
       throw new Error("Play was silent after a paused final sentence finished");
     await answered.getByRole("button", { name: "Sound on", exact: true }).click();
     const canceledBeforeClose = await page.evaluate(() => window.__answerSpeech.cancels);
