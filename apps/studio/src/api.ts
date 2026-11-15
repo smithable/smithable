@@ -75,10 +75,6 @@ export type OldVersionResult =
   | { ok: false; message: string };
 
 export interface ReleaseReview {
-  /** Local evidence only: absence is not proof that a hosted app was never published. */
-  baselineState?: "none" | "available" | "unavailable";
-  accessUnchanged?: boolean;
-  currentAccess?: string[];
   maintenance: {
     generatedEngine?: string;
     generatedProfile?: string;
