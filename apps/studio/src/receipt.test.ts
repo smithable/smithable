@@ -49,9 +49,7 @@ test("the receipt of a request reads the engine's usage line", () => {
   expect(usageReceipt(line, "done")).toBe("Done by claude-opus-5-5, cost €0.0042");
   expect(usageReceipt(line, "by")).toBe("By claude-opus-5-5, cost €0.0042");
   expect(usageReceipt(line, "proposed")).toBe("Proposed by claude-opus-5-5, cost €0.0042");
-  expect(usageReceipt(line, "nothing")).toBe(
-    "Nothing changed; claude-opus-5-5 was asked, cost €0.0042",
-  );
+  expect(usageReceipt(line, "nothing")).toBe("Nothing changed; AI was asked, cost €0.0042");
   expect(usageReceipt("Generator (wording rules) · 0 tokens", "done")).toBe(
     "Done by rule, no AI, cost 0",
   );
@@ -69,7 +67,7 @@ test("where the service pays for the model, the line names who made it and no am
       "Proposed by mistral-medium",
     );
     expect(usageReceipt("Smithable model (mistral-medium): €0.0021", "nothing")).toBe(
-      "Nothing changed; mistral-medium was asked",
+      "Nothing changed; AI was asked",
     );
     expect(usageReceipt("No model was used", "nothing")).toBe("Nothing changed");
   } finally {

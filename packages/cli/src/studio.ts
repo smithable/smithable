@@ -50,6 +50,7 @@ import { lookContext } from "./look-context.js";
 import { mintLookTicket } from "./look-ticket.js";
 import { mcpServer } from "./mcp.js";
 import { milestones, nameMilestone } from "./milestones.js";
+import { modelUsage } from "./model-usage.js";
 import { openQuestions } from "./new.js";
 import {
   closeOldVersion,
@@ -1078,6 +1079,10 @@ export async function studio(
         } catch (error) {
           return json({ error: error instanceof Error ? error.message : String(error) }, 409);
         }
+      }
+      if (url.pathname === "/api/model-usage" && req.method === "GET") {
+        res.setHeader("Cache-Control", "no-store");
+        return json((await modelUsage()) ?? {});
       }
       if (url.pathname === "/api/project") {
         // Back from a held fix's branch: the dev data as it was before it (fix-open.ts), said.

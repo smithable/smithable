@@ -70,7 +70,7 @@ export function usageReceipt(
   const spent = spentOn(usage);
   if (state === "nothing")
     return spent.model
-      ? `Nothing changed; ${spent.model} was asked${priced ? `, cost ${cost(spent)}` : ""}`
+      ? `Nothing changed; AI was asked${priced ? `, cost ${cost(spent)}` : ""}`
       : `Nothing changed${priced ? ", cost 0" : ""}`;
   // "by" follows a sentence that already says Done (after Apply).
   const verb = { done: "Done by", by: "By", proposed: "Proposed by", answered: "Answered by" }[

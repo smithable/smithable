@@ -37,6 +37,7 @@ import {
 import { checkStudioLookNavigation } from "./studio-look-navigation-checks.mjs";
 import { checkStudioQuestions } from "./studio-question-checks.mjs";
 import { checkStudioSpeech } from "./studio-speech-checks.mjs";
+import { checkStudioUsage } from "./studio-usage-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
 
@@ -355,6 +356,7 @@ try {
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
   await checkStudioQuestions(browser, base);
+  await checkStudioUsage(browser, base);
   await step(
     "the preview shows the app as a phone or a tablet would, and keeps that choice after a reload",
     async () => {
