@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 
-export async function checkStudioSpeech(browser, base) {
-  for (const support of ["browser", "unavailable", "available", "missing"]) {
+export async function checkStudioSpeech(
+  browser,
+  base,
+  supports = ["browser", "unavailable", "available", "missing"],
+) {
+  for (const support of supports) {
     const localOnly = support !== "browser";
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     try {
@@ -36,7 +40,11 @@ export async function checkStudioSpeech(browser, base) {
               queueMicrotask(() => {
                 this.onresult?.({
                   resultIndex: 0,
-                  results: [Object.assign([{ transcript: "Hi" }], { isFinal: true })],
+                  results: [
+                    Object.assign([{ transcript: window.speechFixture.transcript ?? "Hi" }], {
+                      isFinal: true,
+                    }),
+                  ],
                 });
                 this.onend?.();
               });
@@ -51,7 +59,11 @@ export async function checkStudioSpeech(browser, base) {
             if (window.speechFixture.behavior === "automatic") {
               this.onresult?.({
                 resultIndex: 0,
-                results: [Object.assign([{ transcript: "Hi" }], { isFinal: true })],
+                results: [
+                  Object.assign([{ transcript: window.speechFixture.transcript ?? "Hi" }], {
+                    isFinal: true,
+                  }),
+                ],
               });
             }
             this.onend?.();
@@ -155,6 +167,25 @@ export async function checkStudioSpeech(browser, base) {
         body.speech = [{ name: "browser", ...(localOnly ? { onDeviceOnly: true } : {}) }];
         await route.fulfill({ response, json: body });
       });
+      if (support === "browser") {
+        const project = await (await fetch(`${base}/api/project`)).json();
+        await page.addInitScript((app) => {
+          sessionStorage.setItem(
+            "smithable:assumptions",
+            JSON.stringify({
+              app,
+              assumptions: [
+                {
+                  part: "app",
+                  question: "Who can use this app?",
+                  chosen: "Invited people",
+                  options: ["Invited people", "Anyone with the link"],
+                },
+              ],
+            }),
+          );
+        }, project.name);
+      }
       await page.goto(base);
       const overlay = page.getByRole("dialog", { name: /^Smith presents / });
       const app = overlay.locator('[data-part="app"]');
@@ -167,6 +198,22 @@ export async function checkStudioSpeech(browser, base) {
         "reading inside advanced the presentation",
       );
       assert.ok(await overlay.isVisible(), "reading inside closed the presentation");
+      if (support === "browser") {
+        await overlay.locator('[data-assumption="app"]').waitFor();
+        await page.waitForFunction(
+          (before) =>
+            document
+              .querySelector('[role="dialog"][aria-label^="Smith presents "]')
+              ?.querySelectorAll("[data-part]").length > before,
+          count,
+          { timeout: 8000 },
+        );
+        assert.equal(
+          await overlay.locator('[data-assumption="app"][data-answered]').count(),
+          0,
+          "an optional assumption was answered instead of being left open",
+        );
+      }
       await page
         .getByRole("button", { name: "Close presentation", exact: true })
         .click({ position: { x: 8, y: 8 } });
@@ -332,7 +379,6 @@ export async function checkStudioSpeech(browser, base) {
           1,
         );
         await input.fill("");
-        const mic = page.getByRole("button", { name: /^Mic:/ });
         const automatic = page.getByRole("button", { name: "Auto off", exact: true });
         assert.equal(
           await automatic.evaluate(
@@ -391,6 +437,7 @@ export async function checkStudioSpeech(browser, base) {
           0,
           "the first-use notice was repeated on reload",
         );
+        await checkSmithQuestions(page);
       }
       console.log(
         `  ✓ Smith speech ${support}: visible failure, saved sound/speed, introduction stays while reading`,
@@ -399,4 +446,115 @@ export async function checkStudioSpeech(browser, base) {
       await page.close();
     }
   }
+}
+
+// T872 D: a needed answer holds the change, shares typed/voice context, and can be aborted silently.
+async function checkSmithQuestions(page) {
+  const asks = [];
+  let applied = 0;
+  await page.route("**/api/ask", async (route) => {
+    asks.push(route.request().postDataJSON().request);
+    await route.fulfill({
+      json: {
+        id: `question-${asks.length}`,
+        usage: "",
+        ...(asks.length % 2 === 0
+          ? {
+              kind: "change",
+              operations: [
+                { op: "addTimer", args: {}, description: "Add the reminder", destructive: false },
+              ],
+            }
+          : {
+              kind: "question",
+              question: "When should the reminder run?",
+              options: [
+                "Weekdays only, after the morning meeting",
+                "Every day, including weekends",
+              ],
+            }),
+      },
+    });
+  });
+  await page.route("**/api/ask/apply", async (route) => {
+    applied++;
+    await route.fulfill({ json: { ok: true, output: "done" } });
+  });
+  const input = page.getByRole("textbox", { name: "Describe a change, or ask a question" });
+  const send = page.getByRole("button", { name: "Send", exact: true });
+  await input.fill("Add a reminder");
+  await send.click();
+  const card = page.getByRole("region", { name: "Proposal", exact: true });
+  await card.getByText("When should the reminder run?", { exact: true }).waitFor();
+  assert.equal(await input.inputValue(), "", "the original request polluted the dictated answer");
+  const choice = card.getByRole("button", {
+    name: "Weekdays only, after the morning meeting",
+    exact: true,
+  });
+  const geometry = await choice.evaluate((button) => ({
+    height: button.getBoundingClientRect().height,
+    width: button.getBoundingClientRect().width,
+    available: button.parentElement.getBoundingClientRect().width,
+    align: getComputedStyle(button).textAlign,
+  }));
+  assert.ok(geometry.height >= 48 && Math.abs(geometry.width - geometry.available) < 2);
+  assert.equal(geometry.align, "left");
+  await page.waitForTimeout(1800);
+  assert.equal(asks.length, 1, "Smith went on without the required answer");
+  assert.equal(applied, 0);
+  // Beyond the generic follow-up window: a required answer still belongs to its question.
+  await page.evaluate(() => {
+    const now = Date.now.bind(Date);
+    Date.now = () => now() + 6 * 60_000;
+    window.speechFixture.transcript = "Weekdays only, after the morning meeting";
+    window.speechFixture.behavior = "transcript";
+  });
+  await page.keyboard.press("Control+Shift+Space");
+  await page.waitForFunction(
+    () =>
+      document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
+        ?.value === "Weekdays only, after the morning meeting",
+  );
+  await send.click();
+  await card.getByText("Proposed change", { exact: true }).waitFor();
+  assert.equal(asks[1], "Add a reminder (Weekdays only, after the morning meeting)");
+  assert.equal(applied, 0, "answering applied a change without confirmation");
+  await card.getByRole("button", { name: "Discard", exact: true }).click();
+  for (const mode of ["typed", "button"]) {
+    const original = `Add a ${mode} reminder`;
+    await input.fill(original);
+    await send.click();
+    await card.getByText("When should the reminder run?", { exact: true }).waitFor();
+    if (mode === "typed") {
+      await input.fill("Every day, including weekends");
+      await send.click();
+    } else
+      await card
+        .getByRole("button", { name: "Every day, including weekends", exact: true })
+        .click();
+    await card.getByText("Proposed change", { exact: true }).waitFor();
+    assert.equal(asks.at(-1), `${original} (Every day, including weekends)`);
+    assert.equal(applied, 0);
+    await card.getByRole("button", { name: "Discard", exact: true }).click();
+  }
+  await input.fill("Add another reminder");
+  await send.click();
+  await card.getByRole("button", { name: "Cancel this change", exact: true }).waitFor();
+  // Let the question finish, then snapshot BEFORE X to catch synchronous speech too.
+  await page.waitForTimeout(100);
+  const spoken = await page.evaluate(() => window.speechFixture.utterances.map((u) => u.text));
+  await card.getByRole("button", { name: "Cancel this change", exact: true }).click();
+  await card.waitFor({ state: "detached" });
+  assert.equal(await input.inputValue(), "");
+  await page.waitForTimeout(1800);
+  assert.equal(asks.length, 7);
+  assert.equal(applied, 0);
+  assert.deepEqual(
+    await page.evaluate(() => window.speechFixture.utterances.map((u) => u.text)),
+    spoken,
+    "closing the question spoke a reply",
+  );
+  console.log(
+    "  ✓ Smith questions: roomy choices, required wait, dictated answer retains context, silent abort",
+  );
 }
