@@ -44,8 +44,8 @@ const NOCODE: Stop[] = [
   },
   {
     anchor: "publish",
-    title: "Publish and share",
-    text: "When it does what you want, publish it: an address people can open, with sign-in and backups. Until then, nothing leaves this page.",
+    title: "Review and publish",
+    text: "Review who can use the app and its checks, then continue to publishing. Publishing runs its own checks before people can use the app at its address.",
   },
 ];
 
