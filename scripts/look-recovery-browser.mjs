@@ -107,6 +107,7 @@ try {
     })
     .waitFor();
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
+  assert.ok(await dialog.getByRole("button", { name: "Save theme", exact: true }).isDisabled());
   await dialog.getByLabel("Name", { exact: true }).fill("kept-draft");
   await dialog.getByLabel("Name", { exact: true }).press("Tab");
   assert.equal(

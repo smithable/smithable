@@ -109,6 +109,19 @@
     background: var(--panel);
     color: var(--ink);
   }
+  .preview-unavailable h2 {
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .preview-unavailable p {
+    margin-bottom: 12px;
+  }
+  .preview-unavailable button {
+    border: 1px solid var(--line-2);
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-right: 8px;
+  }
   .bar {
     display: flex;
     flex-wrap: wrap;

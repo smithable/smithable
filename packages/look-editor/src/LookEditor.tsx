@@ -852,7 +852,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   return (
     <div className="sm-look-editor" style={{ height: STUDIO ? "100%" : "100vh" }} ref={lookRoot}>
       <div className="lab" style={{ height: "100%" }}>
-        <header inert={!start || openingLook || applyBusy || saving || switchBusy}>
+        <header inert={(!start && !loadError) || openingLook || applyBusy || saving || switchBusy}>
           {/* Studio's dialog carries the title; the lab says its own. */}
           {!STUDIO && <strong>Theme lab</strong>}
           {PUBLIC && (
@@ -923,7 +923,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
           </label>
           <button
             type="button"
-            disabled={!signedIn}
+            disabled={!signedIn || !start}
             onClick={() => {
               setPage(start?.frames[0]?.id ?? start?.frames[0]?.label);
               touring.current = true;
@@ -936,7 +936,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
           <button
             type="button"
             data-guide="save"
-            disabled={!theme || errors.length > 0}
+            disabled={!theme || errors.length > 0 || (!PUBLIC && !start)}
             onClick={save}
           >
             {PUBLIC ? "Download" : start?.project ? "Save as new theme" : "Save theme"}
@@ -1042,7 +1042,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
         {guiding && <Guide onEnd={() => setGuiding(false)} />}
         <aside
           data-guide="controls"
-          inert={!start || openingLook || applyBusy || saving || switchBusy}
+          inert={(!start && !loadError) || openingLook || applyBusy || saving || switchBusy}
         >
           {projectPreview && (
             <fieldset aria-label="Effective look">
