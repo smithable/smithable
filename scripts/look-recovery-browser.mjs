@@ -91,6 +91,7 @@ try {
     .getByRole("dialog", { name: "Edit look", exact: true })
     .getByLabel("Name", { exact: true })
     .fill("kept-draft");
+  console.log("Draft before restart", await page.getByLabel("Name", { exact: true }).inputValue());
   await stopServer();
   const restarted = await startServer();
   assert.notEqual(
@@ -105,6 +106,7 @@ try {
       exact: false,
     })
     .waitFor();
+  console.log("Draft after restart", await dialog.getByLabel("Name", { exact: true }).inputValue());
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
   await dialog.getByRole("button", { name: "Keep this draft", exact: true }).click();
   assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "kept-draft");
