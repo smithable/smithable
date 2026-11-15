@@ -117,7 +117,7 @@ function eligible(field: FieldIR, use: FieldUse, model: ModelIR, ir: SpecIR): bo
         Boolean(modelOf(ir, field.type.model)?.schedule)
       );
     case "sendable":
-      return !notSendable(field);
+      return !field.formula && !notSendable(field);
     case "incoming":
       return !field.formula && field.type.kind !== "relation" && !isUpload(field);
     case "search": {
@@ -170,6 +170,7 @@ function recipients(
   ir: SpecIR,
   roles: string[],
 ): string[] {
+  if (!source.channels.length) return [];
   // Clock list mail has no record to own or address; its recipient must be a role.
   if (!source.model) return roles;
   const model = modelOf(ir, source.model);

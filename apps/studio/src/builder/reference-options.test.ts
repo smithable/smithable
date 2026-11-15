@@ -106,7 +106,8 @@ test("search, filter and sort use different eligibility rules, including one-hop
 test("sendable fields reuse core's sensitive/upload/list refusal, and never become every field", () => {
   const offered = values({ kind: "field", model: "Booking", use: "sendable" });
   expect(offered).toContain("title");
-  for (const name of ["picture", "document", "replies"]) expect(offered).not.toContain(name);
+  for (const name of ["picture", "document", "replies", "copiedDay"])
+    expect(offered).not.toContain(name);
 });
 
 test("money, integer, required-reference and choice-value candidates recompute for their context", () => {
