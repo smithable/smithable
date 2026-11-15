@@ -279,7 +279,13 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
           </div>
         )}
         {model && (
-          <WhenRows model={model} rows={draft.where} onChange={(where) => change({ where })} />
+          <WhenRows
+            computed={false}
+            references={false}
+            model={model}
+            rows={draft.where}
+            onChange={(where) => change({ where })}
+          />
         )}
         {draft.mode && (
           <label className="block space-y-1 text-sm" htmlFor={`${id}-action`}>

@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { validateSpec } from "../packages/core/dist/index.js";
+import { createRequire } from "node:module";
+
+// Read the persisted YAML; the daemon validates it with the project's plugins. A plain
+// validateSpec call here would reject sections supplied by the shared fixture's plugin.
+const { parse } = createRequire(new URL("../packages/core/package.json", import.meta.url))("yaml");
 
 export async function checkStudioTimers(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
@@ -60,8 +64,7 @@ export async function checkStudioTimers(browser, base) {
     };
     const timer = async () => {
       const body = await (await page.request.get(`${base}/api/project`)).json();
-      const ir = validateSpec({ path: "smithable.yml", text: body.files.spec }).ir;
-      return ir?.timers.find((t) => t.name === `${stem}Timer`);
+      return parse(body.files.spec).timers?.[`${stem}Timer`];
     };
     const timers = await area("timers");
     const add = timers.getByRole("form", { name: "Add timer", exact: true });
@@ -104,7 +107,7 @@ export async function checkStudioTimers(browser, base) {
     await edit.getByRole("textbox", { name: "Schedule minute", exact: true }).fill("0");
     assert.equal(sent.length, 1, "changing modes wrote before Save");
     await save(saveTimer, "setTimer");
-    assert.deepEqual((await timer()).schedule, { kind: "cron", cron: "0 9 * * 1" });
+    assert.deepEqual(await timer(), { cron: "0 9 * * 1" });
     await when.selectOption("record");
     await edit
       .getByRole("combobox", { name: /Kind of record|For each record of/ })
@@ -125,23 +128,35 @@ export async function checkStudioTimers(browser, base) {
     assert.ok(await saveTimer.isDisabled());
     await edit.getByRole("spinbutton", { name: "Offset amount", exact: true }).fill("2");
     await edit.getByRole("button", { name: "Add a condition", exact: true }).click();
-    await edit.getByRole("combobox", { name: "Field", exact: true }).selectOption("status");
+    const conditionProject = await (await page.request.get(`${base}/api/project`)).json();
+    const reference = parse(conditionProject.files.spec).models.Order.fields.customer;
+    assert.equal(
+      typeof reference === "string" ? reference : reference.type,
+      "Customer!",
+      "fixture must have the reference whose exclusion is checked",
+    );
+    const conditionField = edit.getByRole("combobox", { name: "Field", exact: true });
+    const conditionChoices = await conditionField
+      .locator("option")
+      .evaluateAll((options) => options.map((option) => option.value));
+    assert.ok(
+      !conditionChoices.includes("customer"),
+      "timer conditions offered an unsupported reference",
+    );
+    await conditionField.selectOption("status");
     await save(saveTimer, "setTimer");
-    assert.deepEqual((await timer()).schedule, {
-      kind: "record",
-      path: ["placedAt"],
-      offset: { amount: 2, unit: "day", direction: "before" },
+    assert.deepEqual(await timer(), {
+      on: "Order",
+      at: "2 days before placedAt",
+      where: { status: "draft" },
     });
-    assert.equal((await timer()).on, "Order");
     await when.selectOption("every");
     await edit
       .getByRole("combobox", { name: /Kind of record|For each record of/ })
       .selectOption("");
     await edit.getByLabel("Time of day", { exact: true }).fill("09:30");
     await save(saveTimer, "setTimer");
-    assert.deepEqual((await timer()).schedule, { kind: "every", every: "day", at: "09:30" });
-    assert.equal((await timer()).on, undefined);
-    assert.equal((await timer()).where, undefined);
+    assert.deepEqual(await timer(), { every: "day", at: "09:30" });
     console.log(
       "  ✓ Timer drafts: required mode/time, atomic add, refresh, all modes, positive offset, conditions and action choices",
     );
