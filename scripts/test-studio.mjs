@@ -2391,7 +2391,9 @@ try {
       .getByRole("button", { name: "Conversation" })
       .click();
     // No code keeps validator grammar behind the explicit Code details disclosure.
-    const refusal = page.locator("[data-validation-notice]");
+    const refusal = page
+      .locator("[data-validation-notice]")
+      .filter({ hasText: /Order cannot be a thread: it has no long text field/ });
     await refusal.waitFor({ timeout: 60000 * P });
     const reason = refusal.getByText(/Order cannot be a thread: it has no long text field/);
     if (await reason.isVisible()) throw new Error("No code exposed the validator's grammar");
