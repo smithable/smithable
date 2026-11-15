@@ -16,6 +16,7 @@ pages:
   records: {data: all}
   waiting: {review: all}
   team: {users: manage}
+  languageNamed: {route: /sv, crud: Order}
 `,
 });
 const ir = checked.ir as SpecIR;
@@ -36,6 +37,7 @@ describe("the page followed from the preview", () => {
   });
   it("uses only configured language prefixes, preserving the root and record routes", () => {
     expect(pageForPreviewPath(ir, "/sv", ["sv"])).toBe("home");
+    expect(pageForPreviewPath(ir, "/sv")).toBe("languageNamed");
     expect(pageForPreviewPath(ir, "/sv/orders/5", ["sv"])).toBe("orders");
     expect(pageForPreviewPath(ir, "/fi/orders/5", ["sv"])).toBeUndefined();
   });
@@ -94,4 +96,11 @@ describe("preview navigation ordering", () => {
       expect(follow.receive(value, 0)).toBeUndefined();
     expect(follow.receive(message("/customers", 0), 0)).toBe("/customers");
   });
+});
+
+it("follows a genuine return after an old-context navigation was refused", () => {
+  const follow = new PreviewNavigation();
+  expect(follow.receive(message("/customers", 0), 0)).toBe("/customers");
+  expect(follow.receive(message("/orders", 1, 0), 1)).toBeUndefined();
+  expect(follow.receive(message("/customers", 2, 1), 1)).toBe("/customers");
 });

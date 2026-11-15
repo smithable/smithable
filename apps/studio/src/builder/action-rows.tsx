@@ -52,6 +52,17 @@ export interface WhenRow {
 export const whenRowsOf = (when: Condition | undefined): WhenRow[] =>
   Object.entries(when ?? {}).map(([field, value]) => ({ field, value }));
 
+/** A saved computed-text condition may deliberately compare with empty text. */
+export const unfinishedConditions = (rows: WhenRow[], original: WhenRow[]) =>
+  rows.some(
+    (row) =>
+      (row.value === "" || (Array.isArray(row.value) && !row.value.length)) &&
+      !original.some(
+        (before) =>
+          before.field === row.field && JSON.stringify(before.value) === JSON.stringify(row.value),
+      ),
+  );
+
 /** The rows as a condition: a choice with one value is that value, none picked leaves the row out. */
 export const conditionOf = (rows: WhenRow[]): Condition =>
   Object.fromEntries(
@@ -443,11 +454,7 @@ export function ActionRowsEditor({
   const changed = JSON.stringify(value) !== JSON.stringify(was);
   usePendingEdit(
     changed ||
-      (part === "when"
-        ? whenRows.some(
-            (row) => row.value === "" || (Array.isArray(row.value) && !row.value.length),
-          )
-        : unfinished(setRows)),
+      (part === "when" ? unfinishedConditions(whenRows, whenRowsOf(when)) : unfinished(setRows)),
   );
   const empty = part === "set" && unfinished(setRows);
   return (

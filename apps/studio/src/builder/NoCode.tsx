@@ -242,6 +242,7 @@ export function NoCode({
   }, []);
   const cancelFollow = () => {
     pending.current = undefined;
+    previewPage.current = undefined;
     advancePreviewContext();
   };
   const [sub, setSubState] = useState<SubView>(() =>
@@ -250,7 +251,8 @@ export function NoCode({
   const setSub = (next: SubView) => {
     cancelFollow();
     setSubState(next);
-    if (next === "behavior" && contextPage) setOpened(["pages", contextPage]);
+    if (next === "behavior" && sub !== "behavior" && following && contextPage)
+      setOpened(["pages", contextPage]);
     onPlace({ sub: next });
   };
   const [opened, setOpened] = useState<(string | number)[] | undefined>(
@@ -269,6 +271,7 @@ export function NoCode({
     if (!next || !following || followingBlocked || edits.pending()) return;
     if (next.context !== previewFollowContext()) {
       pending.current = undefined;
+      previewPage.current = undefined;
       return;
     }
     const node = root.current;
@@ -292,8 +295,9 @@ export function NoCode({
     if (transient) return;
     pending.current = undefined;
     setContextPage(next.page);
-    onPlace({ page: next.page, selection: undefined });
-    if (sub === "behavior") setOpened(["pages", next.page]);
+    const alreadyOpen = opened?.[0] === "pages" && opened[1] === next.page;
+    onPlace({ page: next.page, ...(alreadyOpen ? {} : { selection: undefined }) });
+    if (sub === "behavior" && !alreadyOpen) setOpened(["pages", next.page]);
   };
   const enqueue = useRef<(path: string) => void>(() => {});
   enqueue.current = (path) => {
@@ -320,12 +324,24 @@ export function NoCode({
       const path = navigation.current.receive(event.data, previewFollowContext());
       if (path !== undefined) enqueue.current(path);
     };
+    // A popup can close after its blur event (for example the preview address suggestions).
+    // Observe its actual removal/visibility change so a deferred page does not stay stuck.
+    const transients = new MutationObserver(() => {
+      if (pending.current) schedule();
+    });
+    transients.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["open", "hidden", "aria-hidden", "data-state", "class", "style"],
+    });
     window.addEventListener("message", receive);
     window.addEventListener("scroll", changed, true);
     for (const type of ["focusout", "click", "keyup", "resize"])
       window.addEventListener(type, changed);
     if (initialFollow.current) enqueue.current(keptPage());
     return () => {
+      transients.disconnect();
       window.removeEventListener("message", receive);
       window.removeEventListener("scroll", changed, true);
       for (const type of ["focusout", "click", "keyup", "resize"])

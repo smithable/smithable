@@ -17,8 +17,6 @@ export function pageForPreviewPath(ir: SpecIR, path: string, languages: string[]
   )
     return;
   pathname = pathname.replace(/\/$/, "") || "/";
-  const exact = ir.pages.find((page) => page.route === pathname);
-  if (exact) return exact.id;
   const [, first = "", ...rest] = pathname.split("/");
   if (languages.includes(first)) pathname = `/${rest.join("/")}` || "/";
   if (/^\/(?:sign-in|sign-out|api|files|dev|_serverFn)(?:\/|$)/.test(pathname)) return;
@@ -81,14 +79,15 @@ export class PreviewNavigation {
     const previous = this.seen.get(message.documentId) ?? -1;
     if (sequence <= previous) return;
     this.seen.set(message.documentId, sequence);
-    // Remember old-context reports too: resending one after a handshake is not a new navigation.
+    // Track the actual path even when an older context cannot move the editor.
+    const samePath = this.path === message.path;
+    this.path = message.path;
     if (message.followContext !== context) return;
     if (message.documentId !== this.document) {
       if (this.document) this.retired.add(this.document);
       this.document = message.documentId;
     }
-    if (this.path === message.path) return;
-    this.path = message.path;
+    if (samePath) return;
     return message.path;
   }
 }

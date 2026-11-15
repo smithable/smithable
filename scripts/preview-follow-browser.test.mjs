@@ -133,7 +133,7 @@ test("No code follows real preview navigation without losing edits or opening hi
       );
       await settled();
     };
-    const outside = () => page.getByLabel("Preview address", { exact: true }).focus();
+    const outside = () => page.getByRole("button", { name: "Edit look", exact: true }).focus();
     const area = async (key) => {
       const form = noCode.getByRole("region", { name: "What the app does", exact: true });
       const section = form.locator(`details[data-key="${key}"]`);
@@ -168,6 +168,9 @@ test("No code follows real preview navigation without losing edits or opening hi
     await name.focus();
     await navigateInApp("/orders");
     assert.equal(await context(), "customers", "focus alone did not defer following");
+    await page.getByLabel("Preview address", { exact: true }).focus();
+    await settled();
+    assert.equal(await context(), "customers", "an open address list did not defer following");
     await outside();
     await followed("orders");
     await (await area("timers"))
@@ -227,13 +230,30 @@ test("No code follows real preview navigation without losing edits or opening hi
     await outside();
     await settled();
     assert.equal(await context(), "orders", "a queued follow overrode an explicit Open");
+    await navigateInApp("/customers/1");
+    await followed("customers");
     await go("/");
     await followed("start");
-    console.log("PASS global tabs retained and explicit editor Open wins");
+    console.log(
+      "PASS global tabs retained, explicit editor Open wins, later record navigation follows",
+    );
 
     await following.uncheck();
+    await page.evaluate(() =>
+      window.dispatchEvent(new CustomEvent("smithable:open-part", { detail: "model:Order" })),
+    );
+    await noCode.getByRole("tab", { name: "Look", exact: true }).click();
+    await noCode.getByLabel("Page to style", { exact: true }).selectOption("customers");
+    await noCode.getByRole("tab", { name: "Behavior", exact: true }).click();
+    assert.ok(
+      await noCode
+        .locator(`details[data-path='${JSON.stringify(["models", "Order"])}']`)
+        .evaluate((el) => el.open),
+      "following off changed the selected Behavior entry",
+    );
+    const stoppedAt = await context();
     await go("/orders");
-    assert.equal(await context(), "start");
+    assert.equal(await context(), stoppedAt);
     await page.reload();
     await following.waitFor();
     assert.equal(await following.isChecked(), false);
