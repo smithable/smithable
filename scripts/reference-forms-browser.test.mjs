@@ -395,8 +395,10 @@ test("typed reference forms write complete operations and protect unfinished dra
       .getByRole("combobox", { name: "Add to navigation", exact: true })
       .selectOption("orders");
     await waitStored(["navigation"], ["start", "customers", "orders"]);
+    await navigation.locator('fieldset[aria-busy="true"]').waitFor({ state: "detached" });
     await navigation.getByRole("button", { name: "Move orders earlier", exact: true }).click();
     await waitStored(["navigation"], ["start", "orders", "customers"]);
+    await navigation.locator('fieldset[aria-busy="true"]').waitFor({ state: "detached" });
     console.log("PASS page references and ordered navigation through real manifest writers");
     const landing = await entry("pages", "referenceLanding");
     const hero = landing.locator(
