@@ -28,9 +28,10 @@ export async function checkStudioUsage(browser, base) {
     await page.route("**/api/ask", (route) =>
       route.fulfill({
         json: {
-          kind: "none",
+          kind: "question",
           id: "usage-fixture",
-          reason: "This request made no change.",
+          question: "Which synthetic option?",
+          options: ["Keep it", "Cancel"],
           usage: "Smithable model (private-fixture-model) · €0.0021",
         },
       }),
