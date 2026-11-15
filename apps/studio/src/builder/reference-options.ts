@@ -148,7 +148,7 @@ function fields(source: Extract<ReferenceSource, { kind: "field" }>, ir: SpecIR)
     .map((f) => f.name);
   if (!source.oneHop) return result;
   for (const through of model.fields) {
-    if (through.type.kind !== "relation" || through.type.many) continue;
+    if (through.formula || through.type.kind !== "relation" || through.type.many) continue;
     const target = modelOf(ir, through.type.model);
     if (!target) continue;
     for (const field of target.fields) {
@@ -176,13 +176,14 @@ function recipients(
   const model = modelOf(ir, source.model);
   if (!model || !source.channels.length) return [];
   const address = (field: FieldIR) =>
-    eligible(field, "user", model, ir) ||
-    (source.channels.every((channel) => channel === "mail") && scalar(field, "email")) ||
-    (source.channels.every((channel) => channel === "sms") && scalar(field, "phone"));
+    !field.formula &&
+    (eligible(field, "user", model, ir) ||
+      (source.channels.every((channel) => channel === "mail") && scalar(field, "email")) ||
+      (source.channels.every((channel) => channel === "sms") && scalar(field, "phone")));
   const result = ["owner", ...roles.filter((role) => !model.fields.some((f) => f.name === role))];
   for (const field of model.fields) {
     if (address(field)) result.push(field.name);
-    if (field.type.kind !== "relation") continue;
+    if (field.formula || field.type.kind !== "relation") continue;
     const target = modelOf(ir, field.type.model);
     if (!target) continue;
     if (field.type.many) result.push(`${field.name}.owner`);

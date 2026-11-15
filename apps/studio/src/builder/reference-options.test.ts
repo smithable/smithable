@@ -17,6 +17,7 @@ models:
       notes: text
       day: date
       copiedDay: { type: date, formula: day }
+      copiedEmail: { type: email, formula: email }
       venue: Venue!
       who: User
       email: email
@@ -165,6 +166,7 @@ test("recipient candidates respect each channel, list recipients and the validat
     "replies.author",
   ]);
   expect(recipients(["mail", "sms"])).not.toContain("email");
+  expect(recipients(["mail"])).not.toContain("copiedEmail");
   expect(recipients(["sms"])).toContain("phone");
   expect(
     referenceOptions({ kind: "recipient", channels: ["mail"] }, ir, auth).map((o) => o.value),

@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { ReferenceOption } from "./reference-options";
 
 type Value = string | string[] | undefined;
@@ -29,27 +29,30 @@ export function ReferencePicker({
   const id = useId();
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
   const [error, setError] = useState<string>();
   const selected = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
   const selectedOne = typeof value === "string" ? value : "";
   const unknown = selected.filter((item) => !options.some((option) => option.value === item));
+  const searchable = options.length >= 12;
+  const query = searchable ? search.trim().toLocaleLowerCase() : "";
   const filtered = options.filter(
     (option) =>
       (!multiple || !selected.includes(option.value)) &&
-      (!search.trim() ||
-        `${option.label} ${option.value}`
-          .toLocaleLowerCase()
-          .includes(search.trim().toLocaleLowerCase())),
+      (!query || `${option.label} ${option.value}`.toLocaleLowerCase().includes(query)),
   );
   const commit = async (next: Value) => {
-    if (busy || disabled) return;
+    if (inFlight.current || disabled) return;
+    inFlight.current = true;
     setBusy(true);
     setError(undefined);
     try {
       if (await onChange(next)) setSearch("");
+      else setError("The change was not applied.");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -60,8 +63,8 @@ export function ReferencePicker({
   };
   // Guard integration is intentionally left to the shared pending-edit contract once merged.
   return (
-    <fieldset disabled={disabled || busy} className="space-y-2" aria-label={label}>
-      {options.length >= 12 && (
+    <fieldset disabled={disabled} aria-busy={busy} className="space-y-2" aria-label={label}>
+      {searchable && (
         <input
           type="search"
           aria-label={`Find ${label}`}
@@ -145,9 +148,20 @@ export function ReferencePicker({
         </p>
       )}
       {create && (
-        <button type="button" className="text-sm underline" onClick={create.open}>
+        <button
+          type="button"
+          className="text-sm underline"
+          onClick={() => {
+            if (!inFlight.current) create.open();
+          }}
+        >
           {create.label}
         </button>
+      )}
+      {busy && (
+        <p role="status" className="text-xs text-muted">
+          Saving the reference…
+        </p>
       )}
       {error && <p role="alert">{error}</p>}
     </fieldset>

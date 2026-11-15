@@ -27,11 +27,13 @@ function Fixture() {
   const [writes, setWrites] = useState(0);
   const [created, setCreated] = useState(0);
   const [failure, setFailure] = useState(false);
-  const options = Array.from({length:16}, (_,i) => ({value:'page'+i, label:'Page '+i}));
+  const [count, setCount] = useState(16);
+  const options = Array.from({length:count}, (_,i) => ({value:'page'+i, label:'Page '+i}));
   const save = (set) => async (value) => {
     setWrites((n) => n + 1);
     if (window.hold) await new Promise((resolve) => window.release = resolve);
     if (failure) throw Error('Fixture refusal');
+    if (window.refuseFalse) return false;
     set(value);
     return true;
   };
@@ -39,6 +41,7 @@ function Fixture() {
     <ReferencePicker label="Destination" options={options} value={single} unset="No destination" onChange={save(setSingle)} create={{label:'New page', open:() => setCreated((n) => n+1)}} />
     <ReferencePicker label="Menu pages" options={options} value={many} multiple onChange={save(setMany)} />
     <button onClick={() => setFailure((before) => !before)}>Toggle refusal</button>
+    <button onClick={() => setCount((before) => before === 16 ? 6 : 16)}>Toggle choices</button>
     <output aria-label="Saved">{JSON.stringify({single,many,writes,created})}</output>
   </>;
 }
@@ -110,6 +113,14 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     assert.equal((await state()).writes, 0);
     assert.equal(await destination.inputValue(), "removed");
     assert.equal(await destination.locator('option[value="not a real page"]').count(), 0);
+    await page.getByRole("button", { name: "Toggle choices", exact: true }).click();
+    assert.equal(
+      await page.getByRole("searchbox", { name: "Find Destination", exact: true }).count(),
+      0,
+    );
+    assert.equal(await destination.locator('option[value="page0"]').count(), 1);
+    assert.equal((await state()).writes, 0);
+    await page.getByRole("button", { name: "Toggle choices", exact: true }).click();
     await page.getByRole("searchbox", { name: "Find Destination", exact: true }).fill("Page 15");
     await destination.selectOption("page15");
     await page.waitForFunction(
@@ -147,21 +158,33 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     assert.equal(await destination.inputValue(), "");
     await page.getByRole("button", { name: "Toggle refusal", exact: true }).click();
     await page.evaluate(() => {
+      window.refuseFalse = true;
+    });
+    await destination.selectOption("page4");
+    await page.getByRole("alert").filter({ hasText: "The change was not applied" }).waitFor();
+    assert.equal((await state()).single, undefined);
+    await page.evaluate(() => {
+      window.refuseFalse = false;
       window.hold = true;
     });
-    await destination.selectOption("page5");
-    await page.waitForFunction(() => document.querySelector("fieldset").disabled);
-    assert.equal(await destination.isDisabled(), true);
+    await destination.focus();
+    await page.keyboard.press("End");
+    const pending = page.getByRole("group", { name: "Destination", exact: true });
+    await page.waitForFunction(
+      () =>
+        document.querySelector('fieldset[aria-label="Destination"]').getAttribute("aria-busy") ===
+        "true",
+    );
+    assert.equal(await pending.getAttribute("aria-busy"), "true");
+    assert.equal(await destination.evaluate((node) => node === document.activeElement), true);
+    const beforeSecond = (await state()).writes;
+    await destination.selectOption("page6");
+    assert.equal((await state()).writes, beforeSecond);
     await page.evaluate(() => {
       window.hold = false;
       window.release();
     });
-    await page.waitForFunction(
-      () => JSON.parse(document.querySelector("output").textContent).single === "page5",
-    );
-    await destination.focus();
-    await page.keyboard.press("End");
-    await page.keyboard.press("Enter");
+
     await page.waitForFunction(
       () => JSON.parse(document.querySelector("output").textContent).single === "page15",
     );
