@@ -22,7 +22,7 @@ import {
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask, usePresentation } from "./builder/Ask";
-import { NoCode, OPEN_PART } from "./builder/NoCode";
+import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { SmithFace } from "./builder/SmithFace";
 import { Visualize } from "./builder/Visualize";
 import { ASK_SMITH } from "./builder/Wizard";
@@ -417,6 +417,7 @@ export function App() {
   // A setting another window names (Who can's Why?): the Code window on screen, beside No code
   // and not over the preview where there is room, and the setting shown there.
   const [codeJump, setCodeJump] = useState<CodeJump>();
+  const [partToOpen, setPartToOpen] = useState<OpenPart>();
   const forgetJump = useCallback(() => setCodeJump(undefined), []);
   useEffect(() => {
     const onShow = (e: Event) => {
@@ -532,9 +533,10 @@ export function App() {
   }, [refresh]);
 
   const spec = useSpec(project);
-  const validationErrors = (
-    message?.diagnostics?.length ? message.diagnostics : (spec.diagnostics ?? [])
-  ).filter((d) => d.severity === "error");
+  const messageErrors = (message?.diagnostics ?? []).filter((d) => d.severity === "error");
+  const validationErrors = messageErrors.length
+    ? messageErrors
+    : (spec.diagnostics ?? []).filter((d) => d.severity === "error");
   shownIR.current = spec.ir;
   // Smith's presentation of the app (smith-first.md §3).
   const parts = useMemo(
@@ -1379,83 +1381,73 @@ export function App() {
           <ValidationNotice
             diagnostics={validationErrors}
             code={manual === "code"}
-            onDismiss={message?.diagnostics?.length ? () => setMessage(undefined) : undefined}
+            onDismiss={messageErrors.length ? () => setMessage(undefined) : undefined}
             onOpen={(diagnostic) => {
+              if (!diagnostic.plain?.path.length) return;
               pauseGuide();
+              setPartToOpen({ file: diagnostic.file, path: diagnostic.plain.path });
               if (narrow) showWindow("nocode");
               else workIn("nocode");
-              setTimeout(
-                () =>
-                  window.dispatchEvent(
-                    new CustomEvent(OPEN_PART, {
-                      detail: { file: diagnostic.file, path: diagnostic.plain?.path },
-                    }),
-                  ),
-                150,
-              );
             }}
           />
         )}
-        {(message || pending) &&
-          (!validationErrors.length ||
-            pending ||
-            (!message?.diagnostics?.length && !message?.notice)) && (
-            // Hovering or focusing the notice keeps it while it is read.
-            // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
-            <div
-              role={message?.ok === false || pending ? "alert" : "status"}
-              onMouseEnter={() => setHolding(true)}
-              onMouseLeave={() => setHolding(false)}
-              onFocus={() => setHolding(true)}
-              onBlur={() => setHolding(false)}
-              className={cx(
-                "flex items-center gap-3 border-b px-4 py-2 text-sm",
-                pending
-                  ? "border-amber-200 bg-amber-50"
-                  : message?.ok
-                    ? "border-green-200 bg-green-50"
-                    : "border-red-200 bg-red-50",
-              )}
-            >
-              <span className="min-w-0 flex-1 whitespace-pre-wrap">
-                {pending ? pending.impact : message?.text}
-              </span>
-              {pending ? (
-                <>
-                  <Button
-                    variant="danger"
-                    disabled={busy}
-                    onClick={() =>
-                      pending.undo
-                        ? undoChanges(pending.undo, true)
-                        : run(pending.name, pending.args, true)
-                    }
-                  >
-                    Apply anyway
-                  </Button>
-                  <Button variant="ghost" onClick={() => setPending(undefined)}>
-                    Cancel
-                  </Button>
-                </>
-              ) : message?.change ? (
-                // The change is the latest one, so undo takes back exactly it.
-                <Button variant="ghost" disabled={busy} onClick={() => void undo()}>
-                  Undo this change
+        {(message || pending) && (!validationErrors.length || pending || !messageErrors.length) && (
+          // Hovering or focusing the notice keeps it while it is read.
+          // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
+          <div
+            role={message?.ok === false || pending ? "alert" : "status"}
+            onMouseEnter={() => setHolding(true)}
+            onMouseLeave={() => setHolding(false)}
+            onFocus={() => setHolding(true)}
+            onBlur={() => setHolding(false)}
+            className={cx(
+              "flex items-center gap-3 border-b px-4 py-2 text-sm",
+              pending
+                ? "border-amber-200 bg-amber-50"
+                : message?.ok
+                  ? "border-green-200 bg-green-50"
+                  : "border-red-200 bg-red-50",
+            )}
+          >
+            <span className="min-w-0 flex-1 whitespace-pre-wrap">
+              {pending ? pending.impact : message?.text}
+            </span>
+            {pending ? (
+              <>
+                <Button
+                  variant="danger"
+                  disabled={busy}
+                  onClick={() =>
+                    pending.undo
+                      ? undoChanges(pending.undo, true)
+                      : run(pending.name, pending.args, true)
+                  }
+                >
+                  Apply anyway
                 </Button>
-              ) : (
-                <>
-                  {message?.failure && (
-                    <Button variant="ghost" onClick={() => setTroubleshooting(true)}>
-                      Troubleshoot
-                    </Button>
-                  )}
-                  <Button variant="ghost" onClick={() => setMessage(undefined)}>
-                    Dismiss
+                <Button variant="ghost" onClick={() => setPending(undefined)}>
+                  Cancel
+                </Button>
+              </>
+            ) : message?.change ? (
+              // The change is the latest one, so undo takes back exactly it.
+              <Button variant="ghost" disabled={busy} onClick={() => void undo()}>
+                Undo this change
+              </Button>
+            ) : (
+              <>
+                {message?.failure && (
+                  <Button variant="ghost" onClick={() => setTroubleshooting(true)}>
+                    Troubleshoot
                   </Button>
-                </>
-              )}
-            </div>
-          )}
+                )}
+                <Button variant="ghost" onClick={() => setMessage(undefined)}>
+                  Dismiss
+                </Button>
+              </>
+            )}
+          </div>
+        )}
         {reporting && <ReportDialog onClose={() => setReporting(false)} />}
         {feedback !== undefined && (
           <FeedbackDialog
@@ -1678,6 +1670,8 @@ export function App() {
                             run={run}
                             place={place.nocode}
                             onPlace={nocodePlace}
+                            target={partToOpen}
+                            onTargetOpened={() => setPartToOpen(undefined)}
                           />
                         ) : w === "code" ? (
                           <Suspense

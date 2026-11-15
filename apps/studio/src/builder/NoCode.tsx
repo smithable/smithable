@@ -61,7 +61,7 @@ function ValueOrigin({ models, concept }: { models: ModelIR[]; concept: string }
 
 /** The event that opens a part of the app in Behavior (Smith's answer leads there). */
 export const OPEN_PART = "smithable:open-part";
-type OpenPart = string | { file: string; path: (string | number)[] };
+export type OpenPart = string | { file: string; path: (string | number)[] };
 
 /** Where a summary's part is set: its entry in Behavior, or Who can for sign-in and access. */
 function entryOf(concept: OpenPart): { sub: SubView; path: (string | number)[] } | undefined {
@@ -71,7 +71,8 @@ function entryOf(concept: OpenPart): { sub: SubView; path: (string | number)[] }
       "smithable.ux.yml": "look",
       "smithable.content.yml": "content",
     };
-    return { sub: subs[concept.file] ?? "behavior", path: concept.path };
+    const file = concept.file.split(/[\\/]/).at(-1) ?? concept.file;
+    return { sub: subs[file] ?? "behavior", path: concept.path };
   }
   const [kind = "", name = ""] = concept.split(/:(.*)/s);
   const area = {
@@ -191,6 +192,8 @@ export function NoCode({
   run,
   place,
   onPlace,
+  target,
+  onTargetOpened,
 }: {
   project: Project;
   spec: Spec;
@@ -198,6 +201,8 @@ export function NoCode({
   /** Where the person was, and a way to say where they are now (App.tsx). */
   place: Place["nocode"];
   onPlace: (place: Place["nocode"]) => void;
+  target?: OpenPart;
+  onTargetOpened?: () => void;
 }) {
   const [sub, setSubState] = useState<SubView>(() =>
     SUB_VIEWS.includes(place.sub as SubView) ? (place.sub as SubView) : "behavior",
@@ -251,6 +256,13 @@ export function NoCode({
     window.addEventListener(OPEN_PART, open);
     return () => window.removeEventListener(OPEN_PART, open);
   }, []);
+  // An explicit target waits in App's state until this window is mounted.
+  useEffect(() => {
+    if (target === undefined) return;
+    const at = entryOf(target);
+    if (at) jumpRef.current(at);
+    onTargetOpened?.();
+  }, [target, onTargetOpened]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!isPreviewMessage(e)) return;
