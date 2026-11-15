@@ -596,19 +596,6 @@ const RULES: Rule[] = [
     },
   },
   {
-    name: "calendar agenda",
-    match(text, scope) {
-      const m =
-        /^show (?:the )?(.+?) as (?:an agenda|a list of the coming days)(?: instead of the week grid)?$/.exec(
-          text,
-        );
-      if (!m) return undefined;
-      const page = pageFor(scope.ir, m[1] as string);
-      if (!page || page.pattern.kind !== "calendar") return null;
-      return [{ op: "setCalendarView", args: { page: page.id, view: "agenda" } }];
-    },
-  },
-  {
     name: "remove favorites",
     match(text, scope) {
       const m =
@@ -616,7 +603,8 @@ const RULES: Rule[] = [
           text,
         );
       if (!m) return undefined;
-      const candidates = scope.ir.pages.filter((p) => p.favorites);
+      // A saved-only view consumes favorites; the page with hearts enables the feature.
+      const candidates = scope.ir.pages.filter((p) => p.favorites === "all");
       const page = m[1]
         ? pageFor(scope.ir, m[1])
         : candidates.length === 1

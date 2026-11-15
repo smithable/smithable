@@ -6285,7 +6285,8 @@
       },
       "noModel": false,
       "docs": [
-        "publish.html"
+        "start-hosted.html",
+        "self-host.html"
       ]
     },
     {
@@ -6318,7 +6319,8 @@
       },
       "noModel": false,
       "docs": [
-        "publish.html"
+        "start-hosted.html",
+        "self-host.html"
       ]
     }
   ]

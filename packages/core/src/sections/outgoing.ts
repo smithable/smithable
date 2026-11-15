@@ -976,7 +976,7 @@ const setOutgoingTo: Operation<{ outgoing: string; to: string; recipient?: strin
   name: "setOutgoingTo",
   sets: ["smithable.yml:outgoing.*.to", "smithable.yml:outgoing.*.to.*"],
   summary:
-    "Change an EXISTING outgoing entry's channels (mail, push, sms; several separated by commas) or a target, and with --recipient whom. Keep its name and trigger; do not add a duplicate outgoing entry to change a confirmation to SMS. A target has its own address, so a recipient goes with the change to one.",
+    "Change an EXISTING outgoing entry's channels (mail, push, sms; several separated by commas) or a target, and with --recipient whom. Keep its name and trigger; to add a separate outgoing entry, use addOutgoing. A target has its own address, so a recipient goes with the change to one.",
   schema: {
     type: "object",
     required: ["outgoing", "to"],

@@ -46,7 +46,7 @@ const setTheme: Operation<{
     "smithable.ux.yml:theme.brand.font",
   ],
   summary:
-    'Choose the theme preset, primary (brand) color, background color, font, density or motion. The brand color argument is primary (a hex color), never brand. Use preset for a named theme ("none" removes a color or the font; for motion it means no motion).',
+    'Choose the theme preset, primary (brand) color, background color, font, density or motion. The color argument is primary (a hex color). Use preset for a named theme ("none" removes a color or the font; for motion it means no motion).',
   schema: {
     type: "object",
     additionalProperties: false,
