@@ -18,7 +18,7 @@ export const whenable = (
 ): Field[] =>
   (model?.fields ?? []).filter((f) =>
     f.formula
-      ? computed && f.type.kind === "scalar" && (f.type.name === "string" || f.type.name === "bool")
+      ? computed && f.type.kind === "scalar" && ["string", "text", "bool"].includes(f.type.name)
       : f.type.kind === "choice" ||
         (f.type.kind === "scalar" && f.type.name === "bool") ||
         (references && f.type.kind === "relation" && !f.type.many),
@@ -68,7 +68,7 @@ export const unfinishedConditions = (rows: WhenRow[], original: WhenRow[]) =>
 export const conditionOf = (rows: WhenRow[]): Condition =>
   Object.fromEntries(
     rows
-      .filter((r) => r.field && !(Array.isArray(r.value) && r.value.length === 0) && r.value !== "")
+      .filter((r) => r.field && !(Array.isArray(r.value) && r.value.length === 0))
       .map((r) => [
         r.field,
         Array.isArray(r.value) && r.value.length === 1 ? (r.value[0] as string) : r.value,
@@ -125,12 +125,15 @@ export function WhenRows({
   onChange,
   computed = true,
   references = true,
+  person = true,
 }: {
   model: ModelIR | undefined;
   rows: WhenRow[];
   onChange: (rows: WhenRow[]) => void;
   computed?: boolean;
   references?: boolean;
+  /** Payments run as the app, so a condition there cannot name the person signed in. */
+  person?: boolean;
 }) {
   const fields = whenable(model, { computed, references });
   const put = (i: number, row: WhenRow) => onChange(rows.map((r, j) => (j === i ? row : r)));
@@ -170,6 +173,7 @@ export function WhenRows({
             <WhenControl
               field={field}
               value={row.value}
+              person={person}
               onChange={(value) => put(i, { ...row, value })}
             />
           </div>
@@ -206,18 +210,24 @@ function WhenControl({
   field,
   value,
   onChange,
+  person,
 }: {
   field: Field | undefined;
   value: WhenRow["value"];
   onChange: (value: WhenRow["value"]) => void;
+  person: boolean;
 }) {
-  if (!field) return null;
+  if (!field) return <p className="text-xs text-quiet">Saved value: {JSON.stringify(value)}</p>;
   const label = `${humanize(field.name)} is`;
   if (field.type.kind === "choice") {
+    const values = field.type.values;
     const picked = Array.isArray(value) ? value : [String(value)];
     return (
       <fieldset aria-label={label} className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-        {field.type.values.map((v) => (
+        {picked.some((item) => !values.includes(item)) && (
+          <p className="text-xs text-quiet">Saved values: {picked.join(", ")}</p>
+        )}
+        {values.map((v) => (
           <label key={v} className="flex items-center gap-1.5">
             <input
               type="checkbox"
@@ -253,7 +263,7 @@ function WhenControl({
         options={[
           ["none", "empty"],
           ["any", "set"],
-          ...(field.type.model === USER
+          ...(person && field.type.model === USER
             ? ([
                 ["ME()", "the person signed in"],
                 ["not ME()", "not the person signed in"],
@@ -464,7 +474,8 @@ export function ActionRowsEditor({
     changed ||
       (part === "when" ? unfinishedConditions(whenRows, whenRowsOf(when)) : unfinished(setRows)),
   );
-  const empty = part === "set" && unfinished(setRows);
+  const empty =
+    part === "set" ? unfinished(setRows) : unfinishedConditions(whenRows, whenRowsOf(when));
   return (
     <div className="space-y-2">
       {part === "when" ? (

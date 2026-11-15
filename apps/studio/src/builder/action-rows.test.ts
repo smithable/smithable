@@ -109,6 +109,10 @@ actions:
   expect(action && !action.custom).toBe(true);
   const original = whenRowsOf(action && !action.custom ? action.when : undefined);
   expect(original).toEqual([{ field: "derived", value: "" }]);
+  expect(conditionOf([...original, { field: "active", value: false }])).toEqual({
+    derived: "",
+    active: false,
+  });
   expect(unfinishedConditions(original, original)).toBe(false);
   expect(unfinishedConditions([{ field: "derived", value: "" }], [])).toBe(true);
   expect(
