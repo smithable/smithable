@@ -453,7 +453,7 @@ export function NoCode({
               <Tabs
                 tabs={[
                   ["behavior", "Behavior", "behavior"],
-                  ["layout", "Layout", "layout"],
+                  ["layout", "Layout"],
                   ["who", "Who can"],
                   ["content", "Content"],
                 ]}

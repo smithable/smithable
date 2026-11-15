@@ -25,7 +25,7 @@ const NOCODE: Stop[] = [
   {
     anchor: "behavior",
     title: "What it does",
-    text: "Behavior is every setting of your app: its kinds of record, pages and actions, each opened when you need it. Who can and Content are beside it.",
+    text: "Behavior holds what your app does: its kinds of record, pages and actions, each opened when you need it. Layout, Who can and Content are beside it.",
   },
   {
     anchor: "change",
