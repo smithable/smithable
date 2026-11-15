@@ -37,6 +37,7 @@ import {
 import { checkStudioLookNavigation } from "./studio-look-navigation-checks.mjs";
 import { checkStudioQuestions } from "./studio-question-checks.mjs";
 import { checkStudioSpeech } from "./studio-speech-checks.mjs";
+import { checkStudioUsage } from "./studio-usage-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
 
@@ -355,6 +356,7 @@ try {
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
   await checkStudioQuestions(browser, base);
+  await checkStudioUsage(browser, base);
   await step(
     "the preview shows the app as a phone or a tablet would, and keeps that choice after a reload",
     async () => {
@@ -1579,15 +1581,27 @@ try {
     "a greeting to Smith is answered like a chat, with something to try, changes nothing, and is kept by Studio",
     async () => {
       const before = (await project()).files.spec;
+      // Speech checks already left a greeting in the thread. Wait for this request's save,
+      // so its late answer cannot clear the next question after these assertions see the old one.
+      const saved = page.waitForResponse(
+        (response) =>
+          response.url() === `${base}/api/said` &&
+          response.request().method() === "POST" &&
+          response.request().postDataJSON()?.request === "Hi",
+      );
       await page.getByLabel("Describe a change").fill("Hi");
       await page.getByRole("button", { name: "Send", exact: true }).click();
+      const kept = await (await saved).json();
+      await page
+        .getByRole("button", { name: "Working…", exact: true })
+        .waitFor({ state: "hidden", timeout: 30000 * P });
       await page
         .getByRole("list", { name: "Thread" })
         .getByText(/Hello! I'm Smith\. Tell me what to change in Acme CRM/)
+        .last()
         .waitFor({ timeout: 30000 * P });
       if ((await project()).files.spec !== before) throw new Error("the spec changed");
       // Studio keeps the thread while it runs, for a reload or another tab (A 152).
-      const kept = await page.evaluate(() => fetch("/api/said").then((r) => r.json()));
       if (!kept.said.some((line) => line.request === "Hi" && /^Hello! I'm Smith/.test(line.reply)))
         throw new Error(`Studio kept ${JSON.stringify(kept)}`);
     },
@@ -2474,19 +2488,35 @@ try {
         .waitFor({ timeout: 60000 * P });
       if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
         throw new Error("the ux file has no background");
-      // The contact section, added last, moved above the footer with its arrow.
+      // Contact was added above Footer. Its up arrow moves it above Hero; wait for that
+      // operation's response before reading the file it replaces.
+      const moved = page.waitForResponse(
+        (response) =>
+          response.url() === `${base}/api/op` &&
+          response.request().method() === "POST" &&
+          response.request().postDataJSON()?.name === "moveSection",
+      );
       await page
         .getByRole("list", { name: "Sections of Home" })
         .getByRole("button", { name: "Move Contact up" })
         .click();
-      const above = () => {
-        const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
-        const home = spec.slice(spec.indexOf("\n  home:"));
-        return home.indexOf("contact:") < home.indexOf("footer:");
-      };
-      for (let i = 0; i < 60 * P && !above(); i++) await new Promise((r) => setTimeout(r, 1000));
-      if (!above()) throw new Error("the contact section was not moved above the footer");
-      // The panel follows: the contact section is no longer last.
+      const move = await (await moved).json();
+      if (!move.ok) throw new Error(`moveSection: ${move.output}`);
+      const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+      const home = spec.slice(spec.indexOf("\n  home:"));
+      if (
+        home.indexOf("contact:") < 0 ||
+        home.indexOf("contact:") > home.indexOf("hero:") ||
+        home.indexOf("hero:") > home.indexOf("footer:")
+      )
+        throw new Error("the sections are not Contact, Hero, Footer after the move");
+      // The panel follows: Contact is first and can still move down.
+      await page
+        .getByRole("list", { name: "Sections of Home" })
+        .locator("li")
+        .first()
+        .getByText("Contact", { exact: true })
+        .waitFor({ timeout: 60000 * P });
       const down = page
         .getByRole("list", { name: "Sections of Home" })
         .getByRole("button", { name: "Move Contact down" });

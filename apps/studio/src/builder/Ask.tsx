@@ -21,6 +21,7 @@ import { asksTheDocs, type DocsHit, docsIndex, searchDocs } from "./docs-search"
 import { useHistoryFlow } from "./HistoryFlow";
 import { type Mood, SmithFace } from "./SmithFace";
 import { StudioQuestionCard } from "./StudioQuestionCard";
+import { UsageBar } from "./UsageBar";
 import { ASK_SMITH, HANDED } from "./Wizard";
 
 /**
@@ -875,6 +876,9 @@ export function Ask({
               />
             )}
       </form>
+      {stage !== "overlay" && (
+        <UsageBar busy={busy} revision={`${proposal?.id ?? ""}:${trace?.[0]?.id ?? ""}`} />
+      )}
     </div>
   );
 }

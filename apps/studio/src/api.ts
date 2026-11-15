@@ -110,6 +110,16 @@ export interface ReleaseReview {
   }[];
 }
 
+export interface ModelUsage {
+  window: { used: number; allowed: number; remaining: number; resetsAt: string; currency: "EUR" };
+  paused: { is: boolean; reason: "day" | "month" | "shared" | null };
+  recent: {
+    at: string;
+    kind: "change" | "question" | "first build" | "assistant" | "other";
+    cost: number;
+  }[];
+}
+
 export interface Project {
   name: string;
   files: {
@@ -349,6 +359,7 @@ export interface PeopleState {
 }
 
 export const api = {
+  modelUsage: () => call<ModelUsage | Record<string, never>>("/api/model-usage"),
   project: () =>
     call<Project>("/api/project").then((p) => {
       showCosts(!p.servicePays);
