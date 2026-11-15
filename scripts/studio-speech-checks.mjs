@@ -11,6 +11,10 @@ export async function checkStudioSpeech(browser, base) {
           checks: 0,
           local: false,
           rates: [],
+          utterances: [],
+          hold: false,
+          pauses: 0,
+          resumes: 0,
           behavior: "denied",
         };
         class Recognition {
@@ -45,11 +49,25 @@ export async function checkStudioSpeech(browser, base) {
         });
         const synth = new EventTarget();
         synth.getVoices = () => [{ name: "Fixture voice", lang: "en-US", localService: true }];
-        synth.cancel = () => {};
+        synth.cancel = () => {
+          synth.speaking = false;
+        };
+        synth.pause = () => {
+          window.speechFixture.pauses++;
+        };
+        synth.resume = () => {
+          window.speechFixture.resumes++;
+        };
         synth.speak = (utterance) => {
           window.speechFixture.rates.push(utterance.rate);
+          window.speechFixture.utterances.push(utterance);
+          synth.speaking = true;
           utterance.onstart?.();
-          queueMicrotask(() => utterance.onend?.());
+          if (!window.speechFixture.hold)
+            queueMicrotask(() => {
+              synth.speaking = false;
+              utterance.onend?.();
+            });
         };
         Object.defineProperty(window, "speechSynthesis", { value: synth, configurable: true });
         Object.defineProperty(window, "SpeechSynthesisUtterance", {
@@ -155,12 +173,33 @@ export async function checkStudioSpeech(browser, base) {
         });
         await page.getByRole("button", { name: /^Mic:/ }).click();
         await page.getByText(/The browser could not start speech recognition/).waitFor();
+        await page.evaluate(() => {
+          window.speechFixture.hold = true;
+        });
         // A fresh spoken reply uses the saved speed; this request is answered locally by rule.
         await page
           .getByRole("textbox", { name: "Describe a change, or ask a question" })
           .fill("Hi");
         await page.getByRole("button", { name: "Send", exact: true }).click();
         await page.waitForFunction(() => window.speechFixture.rates.includes(1.2));
+        const before = await page.evaluate(() => window.speechFixture.utterances.length);
+        await page.getByRole("button", { name: "Sound: on", exact: true }).click();
+        await page.getByRole("button", { name: "Sound: off", exact: true }).click();
+        assert.equal(await page.evaluate(() => window.speechFixture.pauses), 1);
+        assert.ok(await page.evaluate(() => window.speechFixture.resumes > 0));
+        assert.equal(
+          await page.evaluate(() => window.speechFixture.utterances.length),
+          before,
+          "resuming queued the current sentence again",
+        );
+        // Let the saved thread replace the optimistic timestamp, then change unrelated UI state.
+        await page.waitForTimeout(700);
+        await page.getByLabel("Speaking speed", { exact: true }).selectOption("1");
+        assert.equal(
+          await page.evaluate(() => window.speechFixture.utterances.length),
+          before,
+          "a server echo or render queued the reply again",
+        );
       }
       console.log(
         `  ✓ Smith speech ${support}: visible failure, saved sound/speed, introduction stays while reading`,
