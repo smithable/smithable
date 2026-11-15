@@ -14,6 +14,7 @@ import { Button } from "../ui";
 import type { Words } from "./Ask";
 import { ProposedActionRows } from "./action-rows";
 import type { Run } from "./ChangeForms";
+import { createdReferenceNames } from "./reference-creation";
 
 export type WizardKind = "model" | "page" | "action";
 
@@ -57,6 +58,8 @@ export function Wizard({
   words,
   models = [],
   onClose,
+  onCreated,
+  onBusyChange,
 }: {
   kind: WizardKind;
   run: Run;
@@ -64,14 +67,22 @@ export function Wizard({
   /** The app's kinds of record: a proposed action on one shows its condition and values as rows. */
   models?: ModelIR[];
   onClose: () => void;
+  /** A reference creator returns a successful, explicitly chosen creation instead of closing. */
+  onCreated?: (name: string) => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const { title, asked, placeholder } = KINDS[kind];
   usePendingEdit(true); // An open wizard must stay where the person opened it.
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const committing = useRef(false);
+  const [creating, setCreating] = useState(false);
   const [proposal, setProposal] = useState<Proposal>();
   // The operations as the person has edited them in the form.
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [chosen, setChosen] = useState("");
+  const creations = createdReferenceNames(kind, operations);
+  const returned = creations.length === 1 ? creations[0] : creations.includes(chosen) ? chosen : "";
   // Why the form cannot be made as it stands (two fields of one name), or why Create was refused.
   const [problem, setProblem] = useState<string>();
   const [refused, setRefused] = useState<string>();
@@ -80,7 +91,15 @@ export function Wizard({
   const box = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     box.current?.focus();
+    return () => {
+      asking.current++;
+    };
   }, []);
+  const close = () => {
+    if (committing.current) return;
+    asking.current++;
+    onClose();
+  };
   const propose = async () => {
     if (!text.trim() || busy) return;
     const n = ++asking.current;
@@ -99,25 +118,40 @@ export function Wizard({
     setBusy(false);
   };
   const create = async () => {
-    if (proposal?.kind !== "change" || problem || busy) return;
+    if (proposal?.kind !== "change" || problem || busy || (onCreated && !returned)) return;
+    committing.current = true;
+    setCreating(true);
     setBusy(true);
+    onBusyChange?.(true);
     setRefused(undefined);
     const edited = JSON.stringify(operations) !== JSON.stringify(proposal.operations);
     // As proposed, or as edited in the form, one change (a refusal of the edited one is said in
     // the notice at the top).
     let ok = true;
-    if (!edited) {
-      const result = await api
-        .applyProposal(proposal.id)
-        .catch((e: Error) => ({ ok: false, output: e.message }));
-      ok = result.ok;
-      if (!ok) setRefused(plainRefusal(result.output));
+    try {
+      if (!edited) {
+        const result = await api.applyProposal(proposal.id);
+        ok = result.ok;
+        if (!ok) setRefused(plainRefusal(result.output));
+      }
+      // Edited, still one change: the operations as the form has them, in one batch (#703).
+      else
+        ok = await run("batch", {
+          operations: operations.map((o) => ({ op: o.op, args: o.args })),
+        });
+    } catch (error) {
+      ok = false;
+      setRefused(plainRefusal(error instanceof Error ? error.message : String(error)));
+    } finally {
+      committing.current = false;
+      setCreating(false);
+      setBusy(false);
+      onBusyChange?.(false);
     }
-    // Edited, still one change: the operations as the form has them, in one batch (#703).
-    else
-      ok = await run("batch", { operations: operations.map((o) => ({ op: o.op, args: o.args })) });
-    setBusy(false);
-    if (ok) onClose();
+    if (ok) {
+      if (onCreated && returned) onCreated(returned);
+      else onClose();
+    }
   };
   const setArgs = (i: number, args: Record<string, unknown>) =>
     setOperations((all) => all.map((o, at) => (at === i ? { ...o, args } : o)));
@@ -128,7 +162,7 @@ export function Wizard({
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           e.preventDefault();
-          onClose();
+          close();
         }
       }}
     >
@@ -140,6 +174,7 @@ export function Wizard({
             aria-label={`${title}, in your words`}
             placeholder={placeholder}
             value={text}
+            disabled={busy}
             rows={2}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -167,60 +202,92 @@ export function Wizard({
             <Button disabled={busy || !text.trim()} onClick={() => void propose()}>
               {busy ? "Working…" : "Next"}
             </Button>
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="ghost" disabled={creating} onClick={close}>
               Cancel
             </Button>
           </div>
         </>
       ) : (
         <div className="space-y-2">
-          {operations.map((o, i) =>
-            o.op === "addModel" ? (
-              <ModelForm
-                // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
-                key={i}
-                args={o.args}
-                onArgs={(args) => setArgs(i, args)}
-                onProblem={setProblem}
-              />
-            ) : o.op === "addAction" &&
-              typeof o.args.on === "string" &&
-              models.some((m) => m.name === o.args.on) &&
-              !o.args.merge &&
-              !o.args.split &&
-              !o.args.copy ? (
-              // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
-              <div key={i} className="space-y-1">
-                <p className="text-sm">{words?.(o.op, o.args) ?? o.description}</p>
-                <ProposedActionRows
-                  key={proposal.id}
+          <fieldset disabled={busy} className="space-y-2">
+            {operations.map((o, i) =>
+              o.op === "addModel" ? (
+                <ModelForm
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
+                  key={i}
                   args={o.args}
-                  model={models.find((m) => m.name === o.args.on) as ModelIR}
                   onArgs={(args) => setArgs(i, args)}
-                  help={(topic) => <HelpMark topic={topic} />}
+                  onProblem={setProblem}
                 />
-              </div>
-            ) : (
-              // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
-              <p key={i} className="text-sm">
-                {words?.(o.op, o.args) ?? o.description}
-                {o.destructive && <span className="text-red-700"> (loses data)</span>}
+              ) : o.op === "addAction" &&
+                typeof o.args.on === "string" &&
+                models.some((m) => m.name === o.args.on) &&
+                !o.args.merge &&
+                !o.args.split &&
+                !o.args.copy ? (
+                // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
+                <div key={i} className="space-y-1">
+                  <p className="text-sm">{words?.(o.op, o.args) ?? o.description}</p>
+                  <ProposedActionRows
+                    key={proposal.id}
+                    args={o.args}
+                    model={models.find((m) => m.name === o.args.on) as ModelIR}
+                    onArgs={(args) => setArgs(i, args)}
+                    help={(topic) => <HelpMark topic={topic} />}
+                  />
+                </div>
+              ) : (
+                // biome-ignore lint/suspicious/noArrayIndexKey: the proposal's operations by their place
+                <p key={i} className="text-sm">
+                  {words?.(o.op, o.args) ?? o.description}
+                  {o.destructive && <span className="text-red-700"> (loses data)</span>}
+                </p>
+              ),
+            )}
+            {(problem || refused) && (
+              <p role="status" className="text-sm text-red-700">
+                {problem ?? refused}
               </p>
-            ),
-          )}
-          {(problem || refused) && (
-            <p role="status" className="text-sm text-red-700">
-              {problem ?? refused}
-            </p>
-          )}
+            )}
+            {onCreated && creations.length === 0 && (
+              <p role="status">
+                This proposal does not add the requested item. Dismiss it and describe what to add.
+              </p>
+            )}
+            {onCreated && creations.length > 1 && (
+              <label className="block space-y-1">
+                After creating, use
+                <select
+                  aria-label="After creating, use"
+                  value={returned}
+                  onChange={(event) => setChosen(event.target.value)}
+                  className="block rounded border border-line px-2 py-1"
+                >
+                  <option value="">Choose the item for this reference</option>
+                  {creations.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </fieldset>
           <div className="flex flex-wrap gap-2">
-            <Button disabled={busy || Boolean(problem)} onClick={() => void create()}>
+            <Button
+              disabled={busy || Boolean(problem) || Boolean(onCreated && !returned)}
+              onClick={() => void create()}
+            >
               Create
             </Button>
-            <Button variant="ghost" onClick={() => setProposal(undefined)}>
+            <Button variant="ghost" disabled={busy} onClick={() => setProposal(undefined)}>
               Dismiss
             </Button>
-            <Button variant="ghost" onClick={() => handToSmith(`${asked}${text.trim()}`)}>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => handToSmith(`${asked}${text.trim()}`)}
+            >
               Ask Smith for help
             </Button>
           </div>

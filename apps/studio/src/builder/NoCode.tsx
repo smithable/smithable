@@ -26,6 +26,7 @@ import { ChoiceTones, ContentIdentity, PageLayout } from "./Look";
 import { OutgoingTemplate } from "./OutgoingTemplate";
 import { PendingEdits, usePendingEdits } from "./pending-edit";
 import { PreviewNavigation, pageForPreviewPath } from "./preview-follow";
+import { ReferenceCreationProvider } from "./ReferenceCreationProvider";
 import { SpecForm } from "./SpecForm";
 import { TimerForm } from "./TimerForm";
 import { UxSource } from "./UxSource";
@@ -445,229 +446,240 @@ export function NoCode({
   }, []);
   return (
     <PendingEdits.Provider value={edits.report}>
-      <div ref={root} className="h-full min-h-0" data-no-code>
-        <Panel
-          className="h-full"
-          title={
-            <div>
-              <Tabs
-                tabs={[
-                  ["behavior", "Behavior", "behavior"],
-                  ["layout", "Layout"],
-                  ["who", "Who can"],
-                  ["content", "Content"],
-                ]}
-                value={sub}
-                onChange={setSub}
+      <ReferenceCreationProvider
+        project={project.lookProject}
+        ir={spec.ir}
+        run={run}
+        words={words}
+        onStart={cancelFollow}
+      >
+        <div ref={root} className="h-full min-h-0" data-no-code>
+          <Panel
+            className="h-full"
+            title={
+              <div>
+                <Tabs
+                  tabs={[
+                    ["behavior", "Behavior", "behavior"],
+                    ["layout", "Layout"],
+                    ["who", "Who can"],
+                    ["content", "Content"],
+                  ]}
+                  value={sub}
+                  onChange={setSub}
+                />
+              </div>
+            }
+          >
+            <label className="flex items-center gap-2 border-b border-line px-4 py-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={following}
+                onChange={(event) => {
+                  const next = event.target.checked;
+                  cancelFollow();
+                  setFollowing(next);
+                  try {
+                    localStorage.setItem("smithable:follows-preview", next ? "1" : "0");
+                  } catch {}
+                  if (next && spec.ir) {
+                    const page = pageForPreviewPath(spec.ir, keptPage(), spec.content?.languages);
+                    previewPage.current = page;
+                    if (page) pending.current = { page, context: previewFollowContext() };
+                    schedule();
+                  }
+                }}
               />
-            </div>
-          }
-        >
-          <label className="flex items-center gap-2 border-b border-line px-4 py-2 text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={following}
-              onChange={(event) => {
-                const next = event.target.checked;
-                cancelFollow();
-                setFollowing(next);
-                try {
-                  localStorage.setItem("smithable:follows-preview", next ? "1" : "0");
-                } catch {}
-                if (next && spec.ir) {
-                  const page = pageForPreviewPath(spec.ir, keptPage(), spec.content?.languages);
-                  previewPage.current = page;
-                  if (page) pending.current = { page, context: previewFollowContext() };
-                  schedule();
-                }
-              }}
-            />
-            Follows preview
-          </label>
-          {sub === "behavior" ? (
-            <>
-              <Summary sections={sections} onJump={jumpTo} />
-              <SpecForm
-                // A new pick opens the form afresh down to it.
-                key={JSON.stringify(opened ?? null)}
-                files={project.files}
-                run={run}
-                ir={spec.ir}
-                open={opened}
-                adder={(path) => {
-                  if (path.length === 1 && path[0] === "timers" && spec.ir)
-                    return <TimerForm ir={spec.ir} run={run} />;
-                  if (
-                    path.length === 1 &&
+              Follows preview
+            </label>
+            {sub === "behavior" ? (
+              <>
+                <Summary sections={sections} onJump={jumpTo} />
+                <SpecForm
+                  // A new pick opens the form afresh down to it.
+                  key={JSON.stringify(opened ?? null)}
+                  files={project.files}
+                  run={run}
+                  ir={spec.ir}
+                  open={opened}
+                  adder={(path) => {
+                    if (path.length === 1 && path[0] === "timers" && spec.ir)
+                      return <TimerForm ir={spec.ir} run={run} />;
+                    if (
+                      path.length === 1 &&
+                      spec.ir &&
+                      ["outgoing", "payments", "incoming", "queries"].includes(String(path[0]))
+                    )
+                      return (
+                        <AddEntryForm
+                          area={path[0] as "outgoing" | "payments" | "incoming" | "queries"}
+                          project={project}
+                          ir={spec.ir}
+                          plugins={spec.plugins}
+                          run={run}
+                        />
+                      );
+                    const kind = (
+                      { models: "model", pages: "page", actions: "action" } as Record<
+                        string,
+                        WizardKind
+                      >
+                    )[String(path[0])];
+                    return path.length === 1 && kind ? (
+                      <AddByWizard
+                        kind={kind}
+                        run={run}
+                        words={words}
+                        models={spec.ir?.models ?? []}
+                      />
+                    ) : undefined;
+                  }}
+                  tools={(path) => {
+                    const [area, name] = path;
+                    if (area === "models" && path[2] === "fields" && path.length === 4)
+                      return (
+                        <>
+                          {spec.ir &&
+                            picked?.part === "value" &&
+                            picked.concept === `field:${name}.${path[3]}` && (
+                              <ValueOrigin models={spec.ir.models} concept={picked.concept} />
+                            )}
+                          <ChoiceTones
+                            spec={spec}
+                            run={run}
+                            model={String(name)}
+                            field={String(path[3])}
+                          />
+                        </>
+                      );
+                    if (path.length !== 2 || typeof name !== "string") return undefined;
+                    if (area === "models") return <ImportRecords model={name} run={run} />;
+                    // A part's own code (what-it-does.md §3): its files under src/custom, as the index found them.
+                    // Its own kind of file only (an action's under actions/), not code that uses it.
+                    const codeOf = (concept: string, folder: string) =>
+                      project.concepts
+                        .find((c) => c.concept === concept)
+                        ?.files.map((f) => f.path)
+                        .filter((p) => p.startsWith(`src/custom/${folder}/`)) ?? [];
+                    if (area === "queries")
+                      return (
+                        <CodeFiles
+                          files={codeOf(`query:${name}`, "queries")}
+                          dir={project.localDir}
+                        />
+                      );
+                    if (
+                      area === "incoming" &&
+                      spec.ir?.incoming.find((i) => i.name === name)?.custom
+                    )
+                      return (
+                        <CodeFiles
+                          files={[`src/custom/incoming/${kebab(name)}.ts`]}
+                          dir={project.localDir}
+                        />
+                      );
+                    // A custom action: the picture its contract draws (intents.md §7), and its examples (§6).
+                    const custom = spec.ir?.actions.find((a) => a.name === name && a.custom);
+                    if (area === "actions" && spec.ir && custom?.custom)
+                      return (
+                        <div className="space-y-3">
+                          <ActionPicture
+                            ir={spec.ir}
+                            action={name}
+                            onOpen={(concept) => {
+                              const at = entryOf(concept);
+                              if (at) jumpTo(at);
+                            }}
+                          />
+                          <ExamplesTable examples={custom.examples ?? []} />
+                          <CodeFiles
+                            files={codeOf(`action:${name}`, "actions")}
+                            dir={project.localDir}
+                          />
+                        </div>
+                      );
+                    if (area === "pages")
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            className="rounded border border-line px-2 py-1 text-xs"
+                            onClick={() => jumpTo({ sub: "layout", path: ["pages", String(name)] })}
+                          >
+                            Page layout
+                          </button>
+                          <OwnCode
+                            page={name}
+                            files={codeOf(`page:${name}`, "pages")}
+                            dir={project.localDir}
+                            own={Boolean(
+                              project.concepts
+                                .find((c) => c.concept === `page:${name}`)
+                                ?.files.some((f) => f.path.startsWith("src/custom/pages/")),
+                            )}
+                          />
+                        </>
+                      );
+                    return undefined;
+                  }}
+                />
+              </>
+            ) : sub === "layout" ? (
+              <UxSource text={project.files.ux} ux={spec.ux}>
+                <PageLayout
+                  spec={spec}
+                  run={run}
+                  page={contextPage}
+                  onBehavior={(page) => jumpTo({ sub: "behavior", path: ["pages", page] })}
+                  onContent={(page) => jumpTo({ sub: "content", path: ["pages", page] })}
+                  onPage={(page) => {
+                    cancelFollow();
+                    setContextPage(page);
+                    onPlace({ page });
+                  }}
+                />
+              </UxSource>
+            ) : sub === "who" ? (
+              <WhoCan spec={spec} run={run} authText={project.files.auth} />
+            ) : (
+              <div className="divide-y divide-line">
+                <ContentIdentity spec={spec} run={run} />
+                <SpecForm
+                  key={JSON.stringify(opened ?? null)}
+                  files={project.files}
+                  run={run}
+                  ir={spec.ir}
+                  parts={["content"]}
+                  omit={["logo", "language", "languages"]}
+                  open={opened}
+                  tools={(path) =>
                     spec.ir &&
-                    ["outgoing", "payments", "incoming", "queries"].includes(String(path[0]))
-                  )
-                    return (
-                      <AddEntryForm
-                        area={path[0] as "outgoing" | "payments" | "incoming" | "queries"}
-                        project={project}
+                    path.length === 2 &&
+                    path[0] === "outgoing" &&
+                    typeof path[1] === "string" ? (
+                      <OutgoingTemplate
+                        key={path[1]}
+                        entry={path[1]}
                         ir={spec.ir}
-                        plugins={spec.plugins}
+                        auth={spec.auth}
+                        contentText={project.files.content}
+                        samples={project.samples ?? {}}
                         run={run}
                       />
-                    );
-                  const kind = (
-                    { models: "model", pages: "page", actions: "action" } as Record<
-                      string,
-                      WizardKind
-                    >
-                  )[String(path[0])];
-                  return path.length === 1 && kind ? (
-                    <AddByWizard
-                      kind={kind}
-                      run={run}
-                      words={words}
-                      models={spec.ir?.models ?? []}
-                    />
-                  ) : undefined;
-                }}
-                tools={(path) => {
-                  const [area, name] = path;
-                  if (area === "models" && path[2] === "fields" && path.length === 4)
-                    return (
-                      <>
-                        {spec.ir &&
-                          picked?.part === "value" &&
-                          picked.concept === `field:${name}.${path[3]}` && (
-                            <ValueOrigin models={spec.ir.models} concept={picked.concept} />
-                          )}
-                        <ChoiceTones
-                          spec={spec}
-                          run={run}
-                          model={String(name)}
-                          field={String(path[3])}
-                        />
-                      </>
-                    );
-                  if (path.length !== 2 || typeof name !== "string") return undefined;
-                  if (area === "models") return <ImportRecords model={name} run={run} />;
-                  // A part's own code (what-it-does.md §3): its files under src/custom, as the index found them.
-                  // Its own kind of file only (an action's under actions/), not code that uses it.
-                  const codeOf = (concept: string, folder: string) =>
-                    project.concepts
-                      .find((c) => c.concept === concept)
-                      ?.files.map((f) => f.path)
-                      .filter((p) => p.startsWith(`src/custom/${folder}/`)) ?? [];
-                  if (area === "queries")
-                    return (
-                      <CodeFiles
-                        files={codeOf(`query:${name}`, "queries")}
-                        dir={project.localDir}
-                      />
-                    );
-                  if (area === "incoming" && spec.ir?.incoming.find((i) => i.name === name)?.custom)
-                    return (
-                      <CodeFiles
-                        files={[`src/custom/incoming/${kebab(name)}.ts`]}
-                        dir={project.localDir}
-                      />
-                    );
-                  // A custom action: the picture its contract draws (intents.md §7), and its examples (§6).
-                  const custom = spec.ir?.actions.find((a) => a.name === name && a.custom);
-                  if (area === "actions" && spec.ir && custom?.custom)
-                    return (
-                      <div className="space-y-3">
-                        <ActionPicture
-                          ir={spec.ir}
-                          action={name}
-                          onOpen={(concept) => {
-                            const at = entryOf(concept);
-                            if (at) jumpTo(at);
-                          }}
-                        />
-                        <ExamplesTable examples={custom.examples ?? []} />
-                        <CodeFiles
-                          files={codeOf(`action:${name}`, "actions")}
-                          dir={project.localDir}
-                        />
-                      </div>
-                    );
-                  if (area === "pages")
-                    return (
-                      <>
-                        <button
-                          type="button"
-                          className="rounded border border-line px-2 py-1 text-xs"
-                          onClick={() => jumpTo({ sub: "layout", path: ["pages", String(name)] })}
-                        >
-                          Page layout
-                        </button>
-                        <OwnCode
-                          page={name}
-                          files={codeOf(`page:${name}`, "pages")}
-                          dir={project.localDir}
-                          own={Boolean(
-                            project.concepts
-                              .find((c) => c.concept === `page:${name}`)
-                              ?.files.some((f) => f.path.startsWith("src/custom/pages/")),
-                          )}
-                        />
-                      </>
-                    );
-                  return undefined;
-                }}
-              />
-            </>
-          ) : sub === "layout" ? (
-            <UxSource text={project.files.ux} ux={spec.ux}>
-              <PageLayout
-                spec={spec}
-                run={run}
-                page={contextPage}
-                onBehavior={(page) => jumpTo({ sub: "behavior", path: ["pages", page] })}
-                onContent={(page) => jumpTo({ sub: "content", path: ["pages", page] })}
-                onPage={(page) => {
-                  cancelFollow();
-                  setContextPage(page);
-                  onPlace({ page });
-                }}
-              />
-            </UxSource>
-          ) : sub === "who" ? (
-            <WhoCan spec={spec} run={run} authText={project.files.auth} />
-          ) : (
-            <div className="divide-y divide-line">
-              <ContentIdentity spec={spec} run={run} />
-              <SpecForm
-                key={JSON.stringify(opened ?? null)}
-                files={project.files}
-                run={run}
-                ir={spec.ir}
-                parts={["content"]}
-                omit={["logo", "language", "languages"]}
-                open={opened}
-                tools={(path) =>
-                  spec.ir &&
-                  path.length === 2 &&
-                  path[0] === "outgoing" &&
-                  typeof path[1] === "string" ? (
-                    <OutgoingTemplate
-                      key={path[1]}
-                      entry={path[1]}
-                      ir={spec.ir}
-                      auth={spec.auth}
-                      contentText={project.files.content}
-                      samples={project.samples ?? {}}
-                      run={run}
-                    />
-                  ) : undefined
-                }
-              />
-              <section aria-label="Languages">
-                <h2 className="px-4 pt-4 text-xs font-semibold tracking-wide text-quiet uppercase">
-                  Languages
-                </h2>
-                <Languages spec={spec} run={run} />
-              </section>
-            </div>
-          )}
-        </Panel>
-      </div>
+                    ) : undefined
+                  }
+                />
+                <section aria-label="Languages">
+                  <h2 className="px-4 pt-4 text-xs font-semibold tracking-wide text-quiet uppercase">
+                    Languages
+                  </h2>
+                  <Languages spec={spec} run={run} />
+                </section>
+              </div>
+            )}
+          </Panel>
+        </div>
+      </ReferenceCreationProvider>
     </PendingEdits.Provider>
   );
 }
