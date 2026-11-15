@@ -3,6 +3,7 @@
 // (step 1) and automatic mode (step 2: the voice detector starts and ends each utterance while
 // Smith is silent). Barge-in waits for the speaker test (§4.3); a `browser` voice never has it.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { playback } from "./playback";
 import { type Detector, type Ear, loadDetector, openEar } from "./vad";
 import { framer, segmenter } from "./vad-core";
@@ -100,6 +101,7 @@ export interface Speech {
   where: string;
   /** The line was shown once: the mic's first press shows it before asking the browser. */
   told: boolean;
+  notice?: string;
   /** Starts listening (held, or one utterance); finals arrive through onFinal. */
   listen: (hold: boolean) => void;
   release: () => void;
@@ -116,6 +118,7 @@ export function useSpeech(
   onEnd: (heard: boolean) => void,
 ): Speech {
   const [settings, setSettings] = useState(load);
+  const [notice, setNotice] = useState<string>();
   const save = (next: Settings) => {
     setSettings(next);
     try {
@@ -228,6 +231,12 @@ export function useSpeech(
     (hold: boolean) => {
       if (rec.current || !mayHear() || !Rec) return;
       setHearingError(undefined);
+      if (!settings.told) {
+        flushSync(() =>
+          setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true)),
+        );
+        save({ ...settings, mic: "press", told: true });
+      }
       stopSpeaking();
       const r = new Rec();
       r.lang = "en-US";
@@ -317,6 +326,12 @@ export function useSpeech(
   const startAuto = async () => {
     if (ear.current || !Rec || !canHear) return;
     setHearingError(undefined);
+    if (!settings.told) {
+      flushSync(() =>
+        setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true)),
+      );
+      save({ ...settings, told: true });
+    }
     const mine = ++generation.current;
     const cancelled = () => mine !== generation.current;
     starting.current = true;
@@ -472,6 +487,7 @@ export function useSpeech(
     interim,
     where: whereLine("browser", browser, onDeviceOnly && localHearing === true),
     told: Boolean(settings.told),
+    ...(notice ? { notice } : {}),
     listen,
     release,
     speak,

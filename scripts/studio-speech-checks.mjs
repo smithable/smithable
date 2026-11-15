@@ -8,6 +8,7 @@ export async function checkStudioSpeech(browser, base) {
       await page.addInitScript((support) => {
         window.speechFixture = {
           starts: 0,
+          captures: 0,
           checks: 0,
           local: false,
           rates: [],
@@ -25,14 +26,34 @@ export async function checkStudioSpeech(browser, base) {
           }
           start() {
             window.speechFixture.starts++;
+            window.speechFixture.noticeBeforeStart = document.body.textContent.includes(
+              "Your voice is sent to Google to be written out",
+            );
+            if (window.speechFixture.behavior === "automatic") return;
             window.speechFixture.local = this.processLocally;
             if (window.speechFixture.behavior === "throw") throw new Error("fixture refused");
+            if (window.speechFixture.behavior === "transcript") {
+              queueMicrotask(() => {
+                this.onresult?.({
+                  resultIndex: 0,
+                  results: [Object.assign([{ transcript: "Hi" }], { isFinal: true })],
+                });
+                this.onend?.();
+              });
+              return;
+            }
             queueMicrotask(() => {
               this.onerror?.({ error: "not-allowed" });
               this.onend?.();
             });
           }
           stop() {
+            if (window.speechFixture.behavior === "automatic") {
+              this.onresult?.({
+                resultIndex: 0,
+                results: [Object.assign([{ transcript: "Hi" }], { isFinal: true })],
+              });
+            }
             this.onend?.();
           }
           abort() {
@@ -46,6 +67,49 @@ export async function checkStudioSpeech(browser, base) {
         Object.defineProperty(window, "webkitSpeechRecognition", {
           value: undefined,
           configurable: true,
+        });
+        const track = { stop() {}, getSettings: () => ({}) };
+        Object.defineProperty(navigator, "mediaDevices", {
+          configurable: true,
+          value: {
+            async getUserMedia() {
+              window.speechFixture.captures++;
+              return { getTracks: () => [track], getAudioTracks: () => [track] };
+            },
+          },
+        });
+        const connect = {
+          connect(target) {
+            return target;
+          },
+        };
+        Object.defineProperty(window, "AudioContext", {
+          configurable: true,
+          value: class {
+            destination = {};
+            sampleRate = 16000;
+            audioWorklet = { async addModule() {} };
+            async resume() {}
+            async close() {}
+            createGain() {
+              return { ...connect, gain: { value: 1 } };
+            }
+            createMediaStreamSource() {
+              return connect;
+            }
+          },
+        });
+        Object.defineProperty(window, "AudioWorkletNode", {
+          configurable: true,
+          value: class {
+            constructor() {
+              window.speechFixture.worklet = this;
+            }
+            port = {};
+            connect(target) {
+              return target;
+            }
+          },
         });
         const synth = new EventTarget();
         synth.getVoices = () => [
@@ -84,6 +148,7 @@ export async function checkStudioSpeech(browser, base) {
           configurable: true,
         });
       }, support);
+      await page.route("**/vad/**", (route) => route.abort());
       await page.route("**/api/project", async (route) => {
         const response = await route.fetch();
         const body = await response.json();
@@ -170,7 +235,7 @@ export async function checkStudioSpeech(browser, base) {
         await check.focus();
         await page.keyboard.press("Space");
         if (support === "available") {
-          await page.getByRole("button", { name: "Automatic", exact: true }).waitFor();
+          await page.getByRole("button", { name: "Auto off", exact: true }).waitFor();
           const mic = page.getByRole("button", { name: /^Mic:/ });
           await mic.focus();
           await page.keyboard.press("Space");
@@ -189,8 +254,13 @@ export async function checkStudioSpeech(browser, base) {
         }
         assert.equal(await page.evaluate(() => window.speechFixture.checks), 1);
       } else {
-        await page.getByRole("button", { name: /^Mic:/ }).click();
+        await page.keyboard.press("Control+Shift+Space");
         await page.getByText(/Microphone access was refused/).waitFor();
+        assert.equal(
+          await page.evaluate(() => window.speechFixture.noticeBeforeStart),
+          true,
+          "the keyboard-first provider notice was not rendered before recognition started",
+        );
         await page.evaluate(() => {
           window.speechFixture.behavior = "throw";
         });
@@ -242,6 +312,84 @@ export async function checkStudioSpeech(browser, base) {
           new Set(completed).size,
           completed.length,
           "server echo duplicated queued speech",
+        );
+        const input = page.getByRole("textbox", { name: "Describe a change, or ask a question" });
+        await page.evaluate(() => {
+          window.speechFixture.behavior = "transcript";
+        });
+        await page.keyboard.press("Control+Shift+Space");
+        await input.waitFor();
+        await page.waitForFunction(
+          () =>
+            document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
+              ?.value === "Hi",
+        );
+        await page.waitForTimeout(1700);
+        assert.equal(await input.inputValue(), "Hi", "manual dictation sent without Auto");
+        await page.getByText(/Your voice is sent to Google to be written out/).waitFor();
+        assert.equal(
+          await page.getByText(/Your voice is sent to Google to be written out/).count(),
+          1,
+        );
+        await input.fill("");
+        const mic = page.getByRole("button", { name: /^Mic:/ });
+        const automatic = page.getByRole("button", { name: "Auto off", exact: true });
+        assert.equal(
+          await automatic.evaluate(
+            (el) =>
+              el.parentElement ===
+              document.querySelector('[data-speech] button[aria-label^="Mic:"]').parentElement,
+          ),
+          true,
+        );
+        await page.evaluate(() => {
+          window.speechFixture.behavior = "automatic";
+        });
+        const utter = async () =>
+          page.evaluate(() => {
+            const port = window.speechFixture.worklet.port;
+            for (let frame = 0; frame < 12; frame++)
+              port.onmessage({
+                data: Float32Array.from({ length: 512 }, (_, i) => 0.3 * Math.sin(i * 0.3)),
+              });
+            for (let frame = 0; frame < 26; frame++)
+              port.onmessage({ data: new Float32Array(512) });
+          });
+        await automatic.click();
+        await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
+        await utter();
+        await page.waitForFunction(
+          () =>
+            document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
+              ?.value === "Hi",
+        );
+        await page.getByRole("button", { name: "Auto on", exact: true }).click();
+        await page.getByRole("button", { name: "Auto off", exact: true }).click();
+        await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
+        await page.waitForTimeout(1700);
+        assert.equal(await input.inputValue(), "Hi", "an old Auto timer survived off/on toggles");
+        await input.fill("");
+        await utter();
+        await page.waitForFunction(
+          () =>
+            document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
+              ?.value === "Hi",
+        );
+        await page.waitForFunction(
+          () =>
+            document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
+              ?.value === "",
+          {},
+          { timeout: 10000 },
+        );
+        assert.equal(await page.evaluate(() => window.speechFixture.captures), 2);
+        await page.getByRole("button", { name: "Auto on", exact: true }).click();
+        await page.reload();
+        await page.getByRole("button", { name: "Auto off", exact: true }).waitFor();
+        assert.equal(
+          await page.getByText(/Your voice is sent to Google to be written out/).count(),
+          0,
+          "the first-use notice was repeated on reload",
         );
       }
       console.log(
