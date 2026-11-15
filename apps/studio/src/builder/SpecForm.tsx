@@ -793,6 +793,13 @@ function ReferenceVariant({
         ? "detailed"
         : "short";
   const [mode, setMode] = useState(initial);
+  const current = JSON.stringify(value);
+  const [seen, setSeen] = useState(current);
+  if (current !== seen) {
+    setSeen(current);
+    // An empty value is also the intermediate state of an explicit format change.
+    if (value !== undefined) setMode(initial);
+  }
   const modes = capacity
     ? [
         ["literal", "Fixed number"],

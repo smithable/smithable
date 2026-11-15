@@ -124,6 +124,8 @@ test("typed reference forms write complete operations and protect unfinished dra
         field: `referenceLabel${index}`,
         type: "string",
       });
+    await prepare("addField", { model: "Customer", field: "referenceLimit", type: "int" });
+    await prepare("setCapacity", { model: "Order", per: "customer", max: "3" });
     await prepare("addQuery", { query: "referenceRecords", returns: "Customer" });
     await prepare("addPayment", {
       name: "referencePayment",
@@ -314,6 +316,40 @@ test("typed reference forms write complete operations and protect unfinished dra
     const named = await stored(["models", "Customer", "namedBy"]);
     assert.deepEqual([named].flat(), ["name"]);
     console.log("PASS model references search/add/reorder/remove through setNamedBy");
+
+    const orderModel = await entry("models", "Order");
+    const capacity = orderModel.getByRole("group", {
+      name: "Edit capacity references",
+      exact: true,
+    });
+    await reveal(capacity);
+    const maxFormat = capacity.getByRole("combobox", { name: "max format", exact: true });
+    assert.equal(await maxFormat.inputValue(), "literal");
+    await maxFormat.selectOption("reference");
+    await capacity
+      .getByRole("combobox", { name: "Maximum field", exact: true })
+      .selectOption("customer.referenceLimit");
+    await save(capacity, "Save capacity");
+    await waitStored(["models", "Order", "capacity", "max"], "customer.referenceLimit");
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await waitStored(["models", "Order", "capacity", "max"], 3);
+    await page.waitForFunction(
+      () => document.querySelector('select[aria-label="max format"]')?.value === "literal",
+    );
+    assert.equal(
+      await capacity.getByRole("spinbutton", { name: "Maximum records", exact: true }).inputValue(),
+      "3",
+    );
+    await maxFormat.selectOption("reference");
+    await capacity.getByRole("button", { name: "Cancel changes", exact: true }).click();
+    assert.equal(await maxFormat.inputValue(), "literal");
+    assert.equal(
+      await capacity.getByRole("spinbutton", { name: "Maximum records", exact: true }).inputValue(),
+      "3",
+    );
+    console.log(
+      "PASS capacity format follows saved Undo and Cancel without losing the restored number",
+    );
 
     const payment = await entry("payments", "referencePayment");
     const beforeParent = operations.length;
