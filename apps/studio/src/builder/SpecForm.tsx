@@ -11,7 +11,7 @@ import {
   type SpecIR,
   validateAuth,
 } from "@smithable/core";
-import { createContext, useContext, useId, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { parse } from "yaml";
 import type { Project } from "../api";
 import { HelpMark, type HelpTopic } from "../help";
@@ -21,6 +21,10 @@ import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
+import { type CreateReference, ReferenceCreation } from "./reference-creation";
+
+export type { CreateReference } from "./reference-creation";
+
 import type { ReferenceOption } from "./reference-options";
 import {
   referenceAt,
@@ -59,7 +63,6 @@ const read = (text: string | undefined): unknown => {
 };
 
 type Path = (string | number)[];
-export type CreateReference = (kind: "model" | "page" | "action") => Promise<string | undefined>;
 const References = createContext<
   | {
       document: unknown;
@@ -284,6 +287,8 @@ export function SpecForm({
   omit?: string[];
   createReference?: CreateReference;
 }) {
+  const hostedCreation = useContext(ReferenceCreation);
+  const create = createReference ?? hostedCreation;
   const schemas = useMemo(
     () => ({ "smithable.yml": specSchema(), ...COMPANION_SCHEMAS }) as Record<string, JsonSchema>,
     [],
@@ -323,7 +328,7 @@ export function SpecForm({
                                           },
                                           ir,
                                         ).auth,
-                                        create: createReference,
+                                        create,
                                       }
                                     : undefined
                                 }
@@ -403,6 +408,15 @@ function Value({
   const omitted = useContext(Omitted);
   const shaped = useContext(Shape)(path, value);
   const references = useContext(References);
+  const latest = useRef({ write, value, path });
+  latest.current = { write, value, path };
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   if (
     shaped &&
     (typeof value === "string" ||
@@ -468,27 +482,36 @@ function Value({
               reference.create && references.create
                 ? {
                     label: `New ${reference.create}…`,
-                    open: () =>
+                    open: () => {
+                      const requestedPath = JSON.stringify(path);
                       void (
                         reference.create && references.create
                           ? references.create(reference.create)
                           : Promise.resolve(undefined)
                       ).then((name) => {
-                        if (name)
-                          void write(
-                            path,
+                        const current = latest.current;
+                        if (
+                          name &&
+                          mounted.current &&
+                          JSON.stringify(current.path) === requestedPath
+                        )
+                          void current.write(
+                            current.path,
                             reference.multiple
                               ? [
-                                  ...(Array.isArray(value)
-                                    ? value
-                                    : typeof value === "string"
-                                      ? [value]
-                                      : []),
-                                  name,
+                                  ...new Set([
+                                    ...(Array.isArray(current.value)
+                                      ? current.value
+                                      : typeof current.value === "string"
+                                        ? [current.value]
+                                        : []),
+                                    name,
+                                  ]),
                                 ]
                               : name,
                           );
-                      }),
+                      });
+                    },
                   }
                 : undefined
             }
@@ -1375,6 +1398,7 @@ export function SpecPart({
   file?: EditableFile;
   ir?: SpecIR;
 }) {
+  const create = useContext(ReferenceCreation);
   const entry = FILES.find(([, name]) => name === file);
   const root = file === "smithable.yml" ? specSchema() : COMPANION_SCHEMAS[file];
   const text = entry ? files[entry[0]] : undefined;
@@ -1400,6 +1424,7 @@ export function SpecPart({
                         { path: "smithable.auth.yml", text: files.auth ?? "smithableAuth: 0.1\n" },
                         ir,
                       ).auth,
+                      create,
                     }
                   : undefined
               }

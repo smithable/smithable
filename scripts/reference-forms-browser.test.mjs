@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
+import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -26,6 +27,50 @@ test("typed reference forms write complete operations and protect unfinished dra
     )
       delete env[key];
   env.XDG_CONFIG_HOME = join(root, "config");
+  const fake = createServer(async (request, response) => {
+    let text = "";
+    for await (const chunk of request) text += chunk;
+    const body = JSON.parse(text || "{}");
+    const user = body.messages?.find((item) => item.role === "user")?.content ?? "";
+    const asked = /^Request: (.*)$/m.exec(user)?.[1] ?? "";
+    const navigationCreation = asked.includes("navigation companion");
+    const pageName = navigationCreation ? "referenceNavPage" : "referenceNewPage";
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(
+      JSON.stringify({
+        model: "fixture-model",
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: JSON.stringify({
+                kind: "operations",
+                operations: [
+                  { op: "addPage", args: { page: pageName, model: "Customer" } },
+                  ...(navigationCreation
+                    ? [
+                        {
+                          op: "editSpec",
+                          args: {
+                            file: "smithable.yml",
+                            path: ["navigation"],
+                            value: ["start", "orders", "customers", "referenceNewPage", pageName],
+                          },
+                        },
+                      ]
+                    : []),
+                ],
+              }),
+            },
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 10 },
+      }),
+    );
+  });
+  await new Promise((resolve) => fake.listen(0, "127.0.0.1", resolve));
+  env.SMITHABLE_LOCAL_MODEL = "fixture-model";
+  env.SMITHABLE_LOCAL_URL = `http://127.0.0.1:${fake.address().port}/v1`;
   let server,
     browser,
     page,
@@ -96,6 +141,16 @@ test("typed reference forms write complete operations and protect unfinished dra
       name: "referenceCall",
       create: "Customer",
       set: ["name={name}"],
+    });
+    await prepare("addLandingPage", {
+      page: "referenceLanding",
+      route: "/reference-landing",
+      public: false,
+    });
+    await prepare("editSpec", {
+      file: "smithable.yml",
+      path: ["pages", "referenceLanding", "landing", "hero"],
+      value: { button: "customers" },
     });
     await prepare("editSpec", {
       file: "smithable.yml",
@@ -343,6 +398,108 @@ test("typed reference forms write complete operations and protect unfinished dra
     await navigation.getByRole("button", { name: "Move orders earlier", exact: true }).click();
     await waitStored(["navigation"], ["start", "orders", "customers"]);
     console.log("PASS page references and ordered navigation through real manifest writers");
+    const landing = await entry("pages", "referenceLanding");
+    const hero = landing.locator(
+      `details[data-path='${JSON.stringify(["pages", "referenceLanding", "landing", "hero"])}']`,
+    );
+    await reveal(hero);
+    if (!(await hero.evaluate((element) => element.open)))
+      await hero.locator(":scope > summary").click();
+    const destination = hero.locator('[data-key="button"]');
+    const secondary = hero.locator('[data-key="secondButton"]');
+    await reveal(secondary);
+    await secondary
+      .getByRole("combobox", { name: "secondButton", exact: true })
+      .selectOption("orders");
+    const beforeNew = operations.length;
+    const dialog = page.getByRole("dialog", { name: "Create and select", exact: true });
+    await destination.getByRole("button", { name: "New page…", exact: true }).click();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(
+      await secondary.getByRole("combobox", { name: "secondButton", exact: true }).inputValue(),
+      "orders",
+    );
+    assert.equal(
+      await destination.getByRole("combobox", { name: "button", exact: true }).inputValue(),
+      "customers",
+    );
+    assert.equal(operations.length, beforeNew, "cancelling creator wrote a reference");
+    await destination.getByRole("button", { name: "New page…", exact: true }).click();
+    await dialog
+      .getByRole("textbox")
+      .first()
+      .fill("Another customer catalogue page for the accounts team");
+    await dialog.getByRole("button", { name: "Next", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    const untilSelected = Date.now() + 15000;
+    while (
+      (await destination.getByRole("combobox", { name: "button", exact: true }).inputValue()) !==
+      "referenceNewPage"
+    ) {
+      if (Date.now() > untilSelected)
+        throw Error("Complete creator did not return to its reference control");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(
+      await secondary.getByRole("combobox", { name: "secondButton", exact: true }).inputValue(),
+      "orders",
+      "creator discarded another local reference",
+    );
+    assert.equal(
+      await stored(["pages", "referenceLanding", "landing", "hero", "button"]),
+      "customers",
+      "returned reference bypassed atomic Save",
+    );
+    assert.equal(
+      await stored(["pages", "referenceNewPage", "crud"]),
+      "Customer",
+      "creator did not make a complete page",
+    );
+    await save(landing, "Save referenceLanding");
+    await waitStored(
+      ["pages", "referenceLanding", "landing", "hero", "button"],
+      "referenceNewPage",
+    );
+    assert.equal(
+      await stored(["pages", "referenceLanding", "landing", "hero", "secondButton"]),
+      "orders",
+    );
+    console.log(
+      "PASS complete existing Wizard creation returns a fresh page, Cancel keeps selection, origin draft survives and one Save writes both references",
+    );
+    await navigation.getByRole("button", { name: "New page…", exact: true }).click();
+    await dialog.getByRole("textbox").first().fill("Another navigation companion page");
+    await dialog.getByRole("button", { name: "Next", exact: true }).click();
+    const navigationReturn = page.waitForResponse((response) => {
+      if (new URL(response.url()).pathname !== "/api/op") return false;
+      const operation = response.request().postDataJSON();
+      return (
+        operation?.args?.path?.[0] === "navigation" &&
+        operation.args.value?.includes("referenceNavPage")
+      );
+    });
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    assert.ok((await (await navigationReturn).json()).ok);
+    await waitStored(
+      ["navigation"],
+      ["start", "orders", "customers", "referenceNewPage", "referenceNavPage"],
+    );
+    assert.equal(
+      await navigation
+        .getByRole("button", {
+          name: "Remove referenceNavPage",
+          exact: true,
+        })
+        .count(),
+      1,
+      "creator return duplicated the page already added to navigation",
+    );
+    console.log(
+      "PASS creator return uses current list and preserves creation-side navigation changes without duplicates",
+    );
     passed = true;
   } catch (error) {
     if (page)
@@ -366,6 +523,7 @@ test("typed reference forms write complete operations and protect unfinished dra
     throw error;
   } finally {
     await browser?.close();
+    await new Promise((resolve) => fake.close(resolve));
     if (server?.pid) {
       const exited = new Promise((resolve) => server.once("exit", resolve));
       try {
