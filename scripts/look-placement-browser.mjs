@@ -208,7 +208,7 @@ try {
   assert.equal(await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(), "welcome");
   assert.equal(await dialog.getByRole("button", { name: "Look gallery", exact: true }).count(), 0);
   await dialog.getByLabel("Name", { exact: true }).fill("pinned-draft");
-  await dialog.getByLabel("radius", { exact: true }).fill("21");
+  await dialog.getByLabel("radius", { exact: true }).fill("21px");
   await dialog.getByLabel("Name", { exact: true }).press("Tab");
   await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).click();
   await dialog.getByLabel("Theme selection target", { exact: true }).selectOption("offer");
@@ -219,7 +219,7 @@ try {
   assert.equal(operations.at(-1).args.page, "offer");
   await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
   assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "pinned-draft");
-  assert.equal(await dialog.getByLabel("radius", { exact: true }).inputValue(), "21");
+  assert.equal(await dialog.getByLabel("radius", { exact: true }).inputValue(), "21px");
   assert.equal(
     await dialog.getByLabel("Apply theme to", { exact: true }).inputValue(),
     "welcome",
@@ -237,7 +237,7 @@ try {
     .click();
   await ready();
   await dialog.getByLabel("Name", { exact: true }).fill("pinned-draft");
-  await dialog.getByLabel("radius", { exact: true }).fill("21");
+  await dialog.getByLabel("radius", { exact: true }).fill("21px");
   await dialog.getByLabel("Name", { exact: true }).press("Tab");
   await changed("applyTheme", () =>
     dialog.getByRole("button", { name: "Apply look", exact: true }).click(),
