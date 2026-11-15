@@ -26,6 +26,10 @@ export async function checkStudioSpeech(browser, base) {
           }
           start() {
             window.speechFixture.starts++;
+            window.speechFixture.noticeBeforeStart = document.body.textContent.includes(
+              "Your voice is sent to Google to be written out",
+            );
+            if (window.speechFixture.behavior === "automatic") return;
             window.speechFixture.local = this.processLocally;
             if (window.speechFixture.behavior === "throw") throw new Error("fixture refused");
             if (window.speechFixture.behavior === "transcript") {
@@ -44,6 +48,12 @@ export async function checkStudioSpeech(browser, base) {
             });
           }
           stop() {
+            if (window.speechFixture.behavior === "automatic") {
+              this.onresult?.({
+                resultIndex: 0,
+                results: [Object.assign([{ transcript: "Hi" }], { isFinal: true })],
+              });
+            }
             this.onend?.();
           }
           abort() {
@@ -92,6 +102,9 @@ export async function checkStudioSpeech(browser, base) {
         Object.defineProperty(window, "AudioWorkletNode", {
           configurable: true,
           value: class {
+            constructor() {
+              window.speechFixture.worklet = this;
+            }
             port = {};
             connect(target) {
               return target;
@@ -241,8 +254,13 @@ export async function checkStudioSpeech(browser, base) {
         }
         assert.equal(await page.evaluate(() => window.speechFixture.checks), 1);
       } else {
-        await page.getByRole("button", { name: /^Mic:/ }).click();
+        await page.keyboard.press("Control+Shift+Space");
         await page.getByText(/Microphone access was refused/).waitFor();
+        assert.equal(
+          await page.evaluate(() => window.speechFixture.noticeBeforeStart),
+          true,
+          "the keyboard-first provider notice was not rendered before recognition started",
+        );
         await page.evaluate(() => {
           window.speechFixture.behavior = "throw";
         });
@@ -324,9 +342,34 @@ export async function checkStudioSpeech(browser, base) {
           ),
           true,
         );
+        await page.evaluate(() => {
+          window.speechFixture.behavior = "automatic";
+        });
+        const utter = async () =>
+          page.evaluate(() => {
+            const port = window.speechFixture.worklet.port;
+            for (let frame = 0; frame < 12; frame++)
+              port.onmessage({
+                data: Float32Array.from({ length: 512 }, (_, i) => 0.3 * Math.sin(i * 0.3)),
+              });
+            for (let frame = 0; frame < 26; frame++)
+              port.onmessage({ data: new Float32Array(512) });
+          });
         await automatic.click();
         await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
-        await mic.click();
+        await utter();
+        await page.waitForFunction(
+          () =>
+            document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
+              ?.value === "Hi",
+        );
+        await page.getByRole("button", { name: "Auto on", exact: true }).click();
+        await page.getByRole("button", { name: "Auto off", exact: true }).click();
+        await page.getByRole("button", { name: "Auto on", exact: true }).waitFor();
+        await page.waitForTimeout(1700);
+        assert.equal(await input.inputValue(), "Hi", "an old Auto timer survived off/on toggles");
+        await input.fill("");
+        await utter();
         await page.waitForFunction(
           () =>
             document.querySelector('textarea[aria-label="Describe a change, or ask a question"]')
@@ -339,7 +382,7 @@ export async function checkStudioSpeech(browser, base) {
           {},
           { timeout: 10000 },
         );
-        assert.equal(await page.evaluate(() => window.speechFixture.captures), 1);
+        assert.equal(await page.evaluate(() => window.speechFixture.captures), 2);
         await page.getByRole("button", { name: "Auto on", exact: true }).click();
         await page.reload();
         await page.getByRole("button", { name: "Auto off", exact: true }).waitFor();

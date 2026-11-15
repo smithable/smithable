@@ -312,6 +312,9 @@ export function Ask({
       }, 1500);
     },
   );
+  useEffect(() => {
+    if (!speech.auto) clearTimeout(sendLater.current);
+  }, [speech.auto]);
   const speechNow = useRef(speech);
   speechNow.current = speech;
   // Hold Ctrl+Shift+Space to talk anywhere in Studio (the preview's keys are its own page's);

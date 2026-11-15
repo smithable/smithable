@@ -3,6 +3,7 @@
 // (step 1) and automatic mode (step 2: the voice detector starts and ends each utterance while
 // Smith is silent). Barge-in waits for the speaker test (§4.3); a `browser` voice never has it.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { playback } from "./playback";
 import { type Detector, type Ear, loadDetector, openEar } from "./vad";
 import { framer, segmenter } from "./vad-core";
@@ -231,7 +232,9 @@ export function useSpeech(
       if (rec.current || !mayHear() || !Rec) return;
       setHearingError(undefined);
       if (!settings.told) {
-        setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true));
+        flushSync(() =>
+          setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true)),
+        );
         save({ ...settings, mic: "press", told: true });
       }
       stopSpeaking();
@@ -324,7 +327,9 @@ export function useSpeech(
     if (ear.current || !Rec || !canHear) return;
     setHearingError(undefined);
     if (!settings.told) {
-      setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true));
+      flushSync(() =>
+        setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true)),
+      );
       save({ ...settings, told: true });
     }
     const mine = ++generation.current;
