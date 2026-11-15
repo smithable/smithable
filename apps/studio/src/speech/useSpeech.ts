@@ -439,7 +439,7 @@ export function useSpeech(
       const selected = voices.find((voice) => voice.name === name);
       if (!selected) return;
       save({ ...settings, voice: name });
-      if (!speaking && settings.sound)
+      if (!player.current?.busy && settings.sound)
         player.current?.speak("Hello, I'm Smith. This is my voice.", selected, settings.rate);
     },
     rate: settings.rate,

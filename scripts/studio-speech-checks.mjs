@@ -206,9 +206,10 @@ export async function checkStudioSpeech(browser, base) {
         await page.getByRole("button", { name: "Send", exact: true }).click();
         await page.waitForFunction(() => window.speechFixture.rates.includes(1.5));
         const before = await page.evaluate(() => window.speechFixture.utterances.length);
+        const pauses = await page.evaluate(() => window.speechFixture.pauses);
         await page.getByRole("button", { name: "Sound: on", exact: true }).click();
         await page.getByRole("button", { name: "Sound: off", exact: true }).click();
-        assert.equal(await page.evaluate(() => window.speechFixture.pauses), 1);
+        assert.equal(await page.evaluate(() => window.speechFixture.pauses), pauses + 1);
         assert.ok(await page.evaluate(() => window.speechFixture.resumes > 0));
         assert.equal(
           await page.evaluate(() => window.speechFixture.utterances.length),
