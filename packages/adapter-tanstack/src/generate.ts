@@ -1096,6 +1096,9 @@ const SECTION_GENERATORS: SectionGenerator[] = [
           "src/kit/assistant.server.ts",
           "src/kit/grounded.ts",
           "src/kit/Inspector.tsx",
+          "src/kit/SoundControls.tsx",
+          "src/kit/speech.ts",
+          "src/kit/speech.test.ts",
         ],
         used: ({ ir, auth }) =>
           Boolean(auth.assistant) ||
