@@ -8,9 +8,11 @@ import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 
-test("release review shows unknown, passed, stale, widening, loss and unavailable evidence", {
+test("review and publish keeps quiet states closed and exposes first-release, changed and unavailable evidence", {
   timeout: 240000,
 }, async () => {
+  const hosted = process.env.REVIEW_HOSTED === "1";
+  const screenshots = process.env.REVIEW_SCREENSHOTS;
   const repo = resolve(import.meta.dirname, "..");
   const root = mkdtempSync(join(tmpdir(), "smithable-release-review-")),
     dir = join(root, "app"),
@@ -40,6 +42,7 @@ test("release review shows unknown, passed, stale, widening, loss and unavailabl
     for (const key of Object.keys(env))
       if (/^(SMITHABLE_|ANTHROPIC_|OPENAI_|GOOGLE_|GEMINI_|MISTRAL_|AZURE_|AWS_)/.test(key))
         delete env[key];
+    if (hosted) env.SMITHABLE_HOSTED_LEVEL = "normal";
     server = spawn(process.execPath, [cli, "studio", dir, "--port", String(port)], {
       env,
       detached: true,
@@ -62,27 +65,135 @@ test("release review shows unknown, passed, stale, widening, loss and unavailabl
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(`${base}/?guide=off`);
     const open = async () => {
-      await page.getByRole("button", { name: "Release review", exact: true }).click();
-      const dialog = page.getByRole("dialog", { name: "Release review", exact: true });
-      await dialog.getByRole("heading", { name: "Recovery", exact: true }).waitFor();
+      await page.locator("[data-review-launch]").click();
+      const dialog = page.getByRole("dialog", { name: "Review and publish", exact: true });
+      await dialog.locator('[data-review-part="access"]').waitFor();
+      const count = Number((await dialog.locator("[data-review-count]").innerText()).split(" ")[0]);
+      assert.equal(
+        await page.locator("[data-review-launch]").innerText(),
+        `Review and publish (${count})`,
+      );
       return dialog;
     };
     const close = async (dialog) => {
       await dialog.getByRole("button", { name: "Close", exact: true }).click();
       await dialog.waitFor({ state: "hidden" });
     };
+    const expand = async (dialog, id) => {
+      const part = dialog.locator(`[data-review-part="${id}"]`);
+      if ((await part.getAttribute("open")) === null)
+        await part.locator(":scope > summary").click();
+      return part;
+    };
+    const evidence = await (await fetch(`${base}/api/release-review`)).json();
+    assert.equal(evidence.baselineState, hosted ? "unavailable" : "none");
+    const development = evidence.maintenance.currentEngine === "0.0.0";
     let dialog = await open();
+    assert.equal(await dialog.locator("[data-first-release]").count(), hosted ? 0 : 1);
+    assert.equal(
+      await dialog.locator("[data-review-count]").innerText(),
+      `${(development ? 5 : 4) + (hosted ? 1 : 0)} need a look`,
+    );
     await dialog
-      .getByText(
-        "No valid local deployment baseline is recorded. Review the current access map before publishing.",
-        { exact: true },
-      )
+      .getByRole("heading", { name: "Who can use the current app", exact: true })
       .waitFor();
+    assert.match(await dialog.innerText(), /People sign in/);
+    const access = dialog.locator('[data-review-part="access"]');
+    assert.equal(await access.getAttribute("data-review-state"), "needs-look");
+    assert.notEqual(await access.getAttribute("open"), null);
+    assert.match(await access.locator(":scope > summary").innerText(), /comparison unavailable/);
+    const comparison = dialog.locator('[data-review-part="migrations"]');
+    assert.equal(await comparison.getAttribute("data-review-state"), "needs-look");
+    assert.notEqual(await comparison.getAttribute("open"), null);
+    await comparison.locator(":scope > summary").focus();
+    await page.keyboard.press("Enter");
+    assert.equal(await comparison.getAttribute("open"), null);
+    await page.keyboard.press("Enter");
+    assert.notEqual(await comparison.getAttribute("open"), null);
+    if (screenshots)
+      await page.screenshot({ path: join(screenshots, "01-no-baseline.png"), fullPage: true });
+    // Refreshing unchanged evidence preserves manual expansion and keyboard focus.
+    let releaseReply;
+    const held = new Promise((resolve) => {
+      releaseReply = resolve;
+    });
+    let heldOnce = false;
+    const hold = async (route) => {
+      const first = !heldOnce;
+      heldOnce = true;
+      const response = await route.fetch();
+      if (!first) return route.fulfill({ response });
+      const previous = await response.json();
+      await held;
+      await route.fulfill({ json: { ...previous, currentAccess: ["STALE REVIEW RESPONSE"] } });
+    };
+    await page.route("**/api/release-review", hold);
+    try {
+      await comparison.locator(":scope > summary").focus();
+      await Promise.all([
+        page.waitForRequest((request) => new URL(request.url()).pathname === "/api/release-review"),
+        page.evaluate(() => window.dispatchEvent(new Event("focus"))),
+      ]);
+      await dialog.getByRole("status").filter({ hasText: "Refreshing release evidence" }).waitFor();
+      assert.notEqual(await comparison.getAttribute("open"), null);
+      assert.equal(
+        await comparison
+          .locator(":scope > summary")
+          .evaluate((node) => node === document.activeElement),
+        true,
+      );
+
+      // A second, newer response wins even when the older focus refresh arrives last.
+      await Promise.all([
+        page.waitForResponse(
+          (response) => new URL(response.url()).pathname === "/api/release-review",
+        ),
+        page.evaluate(() => window.dispatchEvent(new Event("focus"))),
+      ]);
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelector('dialog[aria-label="Review and publish"]')
+            ?.getAttribute("aria-busy") !== "true",
+      );
+      const late = page.waitForResponse(
+        (response) => new URL(response.url()).pathname === "/api/release-review",
+      );
+      releaseReply();
+      await late;
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
+      assert.equal(await dialog.getByText("STALE REVIEW RESPONSE", { exact: true }).count(), 0);
+    } finally {
+      releaseReply();
+      await page.unroute("**/api/release-review", hold);
+    }
+    await page.waitForFunction(
+      () =>
+        document
+          .querySelector('dialog[aria-label="Review and publish"]')
+          ?.getAttribute("aria-busy") !== "true",
+    );
+    assert.equal(
+      await dialog.getByRole("link", { name: "Publish on your own server" }).getAttribute("href"),
+      "https://docs.smithable.ai/self-host.html",
+    );
+    assert.equal(
+      await page.getByRole("button", { name: "Release review", exact: true }).count(),
+      0,
+    );
+    assert.equal(
+      await page.getByRole("link", { name: "Publish and share", exact: true }).count(),
+      0,
+    );
+    await expand(dialog, "recovery");
+    await expand(dialog, "maintenance");
     await dialog
       .getByText("Release checks are not verified for the current project files.", { exact: true })
       .waitFor();
     assert.match(await dialog.innerText(), /Last verified restore: none recorded/);
-    await dialog.getByRole("heading", { name: "Maintenance", exact: true }).waitFor();
+    await dialog.locator('[data-review-part="maintenance"] > summary').waitFor();
     assert.match(
       await dialog.innerText(),
       /Deployed apps keep their generated code until updated and released/,
@@ -108,16 +219,43 @@ test("release review shows unknown, passed, stale, widening, loss and unavailabl
       run(process.execPath, [
         "--input-type=module",
         "-e",
-        `import {recordDeployment,recordChecks,projectRevision} from ${JSON.stringify(module)};const dir=${JSON.stringify(dir)};${code}`,
+        `import {beginDeployment,recordDeployment,recordChecks,projectRevision} from ${JSON.stringify(module)};const dir=${JSON.stringify(dir)};${code}`,
       ]);
     metadata(
       'recordDeployment(dir);recordChecks(dir,"release",[{what:"Synthetic fixture check",by:"fixture",ok:true,findings:[]}],projectRevision(dir));',
     );
     dialog = await open();
+    for (const [id, state] of [
+      ["access", "unchanged"],
+      ["migrations", "unchanged"],
+      ["checks", "fine"],
+    ]) {
+      const part = dialog.locator(`[data-review-part="${id}"]`);
+      assert.equal(await part.getAttribute("data-review-state"), state);
+      assert.equal(await part.getAttribute("open"), null);
+      assert.match(await part.getAttribute("class"), /text-muted/);
+    }
+    assert.equal(
+      await dialog.locator("[data-review-count]").innerText(),
+      `${development ? 3 : 2} need a look`,
+    );
+    if (screenshots)
+      await page.screenshot({ path: join(screenshots, "02-compared-quiet.png"), fullPage: true });
+    await expand(dialog, "checks");
     await dialog
       .getByText("Release checks passed for the current project files.", { exact: true })
       .waitFor();
     await close(dialog);
+    metadata("beginDeployment(dir);");
+    dialog = await open();
+    assert.equal(await dialog.locator("[data-first-release]").count(), 0);
+    for (const id of ["access", "migrations"]) {
+      const part = dialog.locator(`[data-review-part="${id}"]`);
+      assert.equal(await part.getAttribute("data-review-state"), "needs-look");
+      assert.notEqual(await part.getAttribute("open"), null);
+    }
+    await close(dialog);
+    metadata("recordDeployment(dir);");
     metadata(
       'const fs=await import("node:fs");fs.writeFileSync(dir+"/data/.smithable/release-review/writer.lock","interrupted fixture");',
     );
@@ -152,6 +290,11 @@ test("release review shows unknown, passed, stale, widening, loss and unavailabl
       dir,
     ]);
     dialog = await open();
+    for (const id of ["access", "migrations", "checks"]) {
+      const part = dialog.locator(`[data-review-part="${id}"]`);
+      assert.equal(await part.getAttribute("data-review-state"), "needs-look");
+      assert.notEqual(await part.getAttribute("open"), null);
+    }
     await dialog.getByText("Customer read: public access added", { exact: true }).waitFor();
     await dialog
       .getByText("Removed stored field Customer.releaseMemo; its values may be lost.", {
@@ -161,6 +304,11 @@ test("release review shows unknown, passed, stale, widening, loss and unavailabl
     await dialog
       .getByText("Release checks are not verified for the current project files.", { exact: true })
       .waitFor();
+    if (screenshots)
+      await page.screenshot({
+        path: join(screenshots, "03-pending-migration.png"),
+        fullPage: true,
+      });
     await close(dialog);
     metadata(
       'recordChecks(dir,"release",[{what:"Incomplete fixture check",by:"fixture",ok:true,checked:false,findings:[]}],projectRevision(dir));',
@@ -177,7 +325,7 @@ test("release review shows unknown, passed, stale, widening, loss and unavailabl
     await page.route("**/api/release-review", (route) =>
       route.fulfill({ status: 500, body: "fixture unavailable" }),
     );
-    await page.getByRole("button", { name: "Release review", exact: true }).click();
+    await page.locator("[data-review-launch]").click();
     await page
       .getByRole("alert")
       .filter({ hasText: "The release review could not be read" })
@@ -188,8 +336,31 @@ test("release review shows unknown, passed, stale, widening, loss and unavailabl
         .count(),
       0,
     );
+    await close(page.getByRole("dialog", { name: "Review and publish", exact: true }));
+    await page.unroute("**/api/release-review");
+    // Only the hosted link is a fixture; publishing is never called or represented as enforced.
+    await page.route("**/api/project", async (route) => {
+      const response = await route.fetch();
+      const project = await response.json();
+      await route.fulfill({
+        json: { ...project, home: "https://example.invalid/projects/review-fixture" },
+      });
+    });
+    await page.reload();
+    dialog = await open();
+    assert.equal(
+      await dialog
+        .getByRole("link", { name: "Continue to publishing", exact: true })
+        .getAttribute("href"),
+      "https://example.invalid/projects/review-fixture",
+    );
+    assert.equal(
+      await dialog.getByRole("link", { name: "Publish on your own server", exact: true }).count(),
+      0,
+    );
+    assert.equal(await dialog.getByRole("tab", { name: /staging|production/i }).count(), 0);
     console.log(
-      "PASS synthetic release evidence and real Studio UI states; no actual release checks or deployment claimed",
+      "PASS quiet/fine/unchanged/first-release/needs-look states, count, keyboard expansion and hosted/local continuation; existing stale/refusal checks preserved; no actual release or enforced publishing sequence claimed",
     );
   } finally {
     await browser?.close();

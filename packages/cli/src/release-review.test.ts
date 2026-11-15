@@ -213,3 +213,46 @@ test("an interrupted metadata writer cannot leave a green current result", () =>
   unlinkSync(lock);
   expect(releaseReview(dir).checks?.current).toBe(true);
 });
+
+test("quiet review distinguishes an absent baseline from unreadable deployment evidence", () => {
+  const dir = fixture();
+  expect(releaseReview(dir).baselineState).toBe("none");
+  expect(releaseReview(dir).currentAccess?.join(" ")).toContain("People sign in");
+  mkdirSync(join(dir, "data/.smithable/release-review"), { recursive: true });
+  writeFileSync(join(dir, "data/.smithable/release-review/deployment.json"), "broken");
+  expect(releaseReview(dir).baselineState).toBe("unavailable");
+  unlinkSync(join(dir, "data/.smithable/release-review/deployment.json"));
+  symlinkSync(
+    join(dir, "missing-deployment"),
+    join(dir, "data/.smithable/release-review/deployment.json"),
+  );
+  expect(releaseReview(dir).baselineState).toBe("unavailable");
+});
+
+test("empty added-access lists do not call a narrowing change unchanged", () => {
+  const dir = fixture();
+  recordDeployment(dir);
+  expect(releaseReview(dir).accessUnchanged).toBe(true);
+  writeFileSync(join(dir, "smithable.auth.yml"), auth.replace("create: all", "create: []"));
+  const review = releaseReview(dir);
+  expect(review.comparison).toBe("available");
+  expect(review.access).toEqual([]);
+  expect(review.accessUnchanged).toBe(false);
+});
+
+test("a pending deployment record is unavailable, not a first release", () => {
+  const dir = fixture();
+  beginDeployment(dir);
+  expect(releaseReview(dir).baselineState).toBe("unavailable");
+});
+
+test("hosted projects without local deployment evidence keep migration comparison unavailable", () => {
+  const dir = fixture();
+  // A local record is absent even when the hosted app already has live data.
+  writeFileSync(join(dir, "smithable.yml"), spec.replace(", body: text", ""));
+  const hosted = releaseReview(dir, { hosted: true });
+  expect(hosted.baselineState).toBe("unavailable");
+  expect(hosted.comparison).toBe("unavailable");
+  expect(hosted.comparisonReason).toContain("No valid local deployment baseline");
+  expect(releaseReview(dir).baselineState).toBe("none");
+});

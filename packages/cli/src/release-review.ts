@@ -18,13 +18,15 @@ import {
 import { join } from "node:path";
 import {
   type Allowed,
+  type AuthIR,
   actionAccess,
   modelAccess,
   pageAccess,
+  type SpecIR,
   validateAuth,
   validateSpec,
 } from "@smithable/core";
-import { noSignIn } from "@smithable/index";
+import { noSignIn, summarize } from "@smithable/index";
 import { maintenanceInfo } from "./maintenance.js";
 import { lostFields } from "./op.js";
 import { loadPlugins } from "./plugins.js";
@@ -337,7 +339,17 @@ function wider(before: Allowed, after: Allowed, roles: string[]): string[] {
     );
   return changes;
 }
-export function releaseReview(dir: string) {
+/** Compare the complete effective access map, not just the list of added grants. */
+function accessFacts(ir: SpecIR, auth: AuthIR) {
+  return {
+    auth,
+    models: ir.models.map((m) => [m.name, modelAccess(m, auth)]),
+    pages: ir.pages.map((p) => [p.id, pageAccess(p, auth)]),
+    actions: ir.actions.map((a) => [a.name, actionAccess(a, auth, ir.models)]),
+  };
+}
+
+export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
   const revision = projectRevision(dir);
   const recorded = { checks: checksRecord(dir), deployment: deploymentRecord(dir) };
   const current = loadSpec(dir, { out: () => {}, err: () => {} });
@@ -432,7 +444,36 @@ export function releaseReview(dir: string) {
   const busy = existsSync(join(dir, STATE, "writer.lock"));
   const baselineChanged =
     latestDeployment?.run !== baseline?.run || latestDeployment?.at !== baseline?.at;
+  const comparable =
+    !busy && !baselineChanged && before && beforeAuth && current.ir && current.auth;
   return {
+    // No record differs from an unreadable, pending or unsupported record; neither is proof
+    // that a hosted project has never been published.
+    baselineState: comparable
+      ? "available"
+      : !options.hosted &&
+          !busy &&
+          !baselineChanged &&
+          current.ir &&
+          current.auth &&
+          !lstatSync(join(dir, STATE, "deployment.json"), { throwIfNoEntry: false })
+        ? "none"
+        : "unavailable",
+    accessUnchanged: Boolean(
+      comparable &&
+        before &&
+        beforeAuth &&
+        current.ir &&
+        current.auth &&
+        JSON.stringify(accessFacts(before, beforeAuth)) ===
+          JSON.stringify(accessFacts(current.ir, current.auth)),
+    ),
+    currentAccess:
+      current.ir && current.auth
+        ? summarize(current.ir, current.auth, current.content, plugins).find(
+            (s) => s.concept === "auth",
+          )?.sentences
+        : undefined,
     assets: assetReview(dir),
     // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
     privacy: privacyStates(dir),
