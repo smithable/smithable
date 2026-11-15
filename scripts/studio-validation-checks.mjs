@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 
+const timerMessage =
+  "The timer markOverdue needs one way to choose when it runs: a time of day, a schedule, or a date from its records.";
+
 export async function checkStudioValidation(browser, base) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
   let plain = true;
@@ -21,17 +24,8 @@ export async function checkStudioValidation(browser, base) {
       const body = await response.json();
       if (!body.ok && body.diagnostics?.some((d) => d.code === "invalid-timer")) {
         refused = body;
-        // Exercise both the additive engine contract and an older diagnostic without it.
-        body.diagnostics = body.diagnostics.map((d) => ({
-          ...d,
-          plain:
-            plain && d.code === "invalid-timer"
-              ? {
-                  message: "The timer markOverdue needs one way to say when it runs.",
-                  path: ["timers", "markOverdue"],
-                }
-              : undefined,
-        }));
+        // Keep the real engine metadata; only the older-engine case removes the optional field.
+        if (!plain) body.diagnostics = body.diagnostics.map((d) => ({ ...d, plain: undefined }));
       }
       await route.fulfill({ response, json: body });
     });
@@ -53,10 +47,12 @@ export async function checkStudioValidation(browser, base) {
     await timers.getByRole("button", { name: "Add", exact: true }).click();
     const notice = page.locator("[data-validation-notice]");
     const timerError = notice.locator('[data-validation-code="invalid-timer"]');
-    await timerError
-      .getByText("The timer markOverdue needs one way to say when it runs.", { exact: true })
-      .waitFor();
+    await timerError.getByText(timerMessage, { exact: true }).waitFor();
     assert.ok(refused?.diagnostics?.length, "real operation response lost validator diagnostics");
+    assert.deepEqual(refused.diagnostics.find((d) => d.code === "invalid-timer")?.plain, {
+      message: timerMessage,
+      path: ["timers", "markOverdue"],
+    });
     console.log("  ✓ Real refusal preserves structured diagnostics and plain text");
     assert.equal(
       await timerError.getByText(/one of the three/).isVisible(),
