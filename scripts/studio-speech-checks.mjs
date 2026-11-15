@@ -200,6 +200,25 @@ export async function checkStudioSpeech(browser, base) {
           before,
           "a server echo or render queued the reply again",
         );
+        const completed = await page.evaluate((first) => {
+          const texts = [];
+          for (
+            let i = first - 1;
+            i < window.speechFixture.utterances.length && texts.length < 30;
+            i++
+          ) {
+            const utterance = window.speechFixture.utterances[i];
+            texts.push(utterance.text);
+            utterance.onend?.();
+          }
+          return texts;
+        }, before);
+        assert.ok(completed.length < 30, "speech queue did not finish");
+        assert.equal(
+          new Set(completed).size,
+          completed.length,
+          "server echo duplicated queued speech",
+        );
       }
       console.log(
         `  ✓ Smith speech ${support}: visible failure, saved sound/speed, introduction stays while reading`,
