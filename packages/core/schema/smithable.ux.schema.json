@@ -23,7 +23,7 @@
       "properties": {
         "preset": {
           "type": "string",
-          "description": "A built-in theme (modern, minimal, playful, corporate, coastal, navy, editorial, woodland, contrast, nordic, pastel, midnight, craft, restaurant, street-food, cafe, warm-service, quiet-workspace, ink-and-brass, workbench, stillwater, brass, paperwork, monochrome, softbox, helpdesk) or one of the project's own (themes/<name>.yml)."
+          "description": "A built-in theme (arcade, darkmatter, halftone, starry-night, nature, dusk, hallmark-midnight, ultraviolet, ribbon, studio, vantage, specimen, spore, sticker, broadside, solstice, kiln, refract, terrazzo, sunset-horizon, amber-minimal, coral, amethyst-haze, cosmic-night, caffeine, ink, riso, vellum, loom, terminal, neo-brutalism, sport, squeeze, midnight-bloom, rim, elegant-luxury, darkroom, tangerine, mono, mocha-mousse, graphite, notebook, modern-minimal, manifesto, solar-dusk, sage-garden, grid, furrow, modern, minimal, playful, corporate, coastal, navy, editorial, woodland, contrast, nordic, pastel, midnight, craft, restaurant, street-food, cafe, warm-service, quiet-workspace, ink-and-brass, workbench, stillwater, brass, paperwork, monochrome, softbox, helpdesk) or one of the project's own (themes/<name>.yml)."
         },
         "brand": {
           "type": "object",
@@ -59,9 +59,11 @@
                 "Newsreader",
                 "Bodoni Moda",
                 "Zilla Slab",
-                "JetBrains Mono"
+                "JetBrains Mono",
+                "Bungee",
+                "Chivo"
               ],
-              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans, Outfit, Hanken Grotesk, Instrument Sans, Mona Sans, Bricolage Grotesque, Oswald, Big Shoulders Display, Instrument Serif, Young Serif, Newsreader, Bodoni Moda, Zilla Slab, JetBrains Mono."
+              "description": "The font: Inter, Nunito Sans, Source Sans 3, Source Serif 4, Fraunces, Archivo Narrow, DM Sans, Outfit, Hanken Grotesk, Instrument Sans, Mona Sans, Bricolage Grotesque, Oswald, Big Shoulders Display, Instrument Serif, Young Serif, Newsreader, Bodoni Moda, Zilla Slab, JetBrains Mono, Bungee, Chivo."
             }
           }
         },

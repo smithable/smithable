@@ -9,7 +9,10 @@
 // with the same parser and checks as a project's own, and derives the rest. To change one, change
 // its text here: nothing else names its colors.
 
+import { PICKED_THEMES } from "./theme-picked.js";
+
 export const THEME_LIBRARY: Record<string, string> = {
+  ...PICKED_THEMES,
   coastal: `# coastal: from the rule-made candidate coastal-2 (primary hue 190), picked by Johan 2026-10-04.
 smithableTheme: 0.1
 name: coastal

@@ -29,7 +29,8 @@
         "Mona Sans",
         "Newsreader",
         "Zilla Slab",
-        "JetBrains Mono"
+        "JetBrains Mono",
+        "Chivo"
       ]
     },
     "fonts": {
@@ -49,7 +50,8 @@
             "Mona Sans",
             "Newsreader",
             "Zilla Slab",
-            "JetBrains Mono"
+            "JetBrains Mono",
+            "Chivo"
           ]
         },
         "heading": {
@@ -73,7 +75,9 @@
             "Newsreader",
             "Bodoni Moda",
             "Zilla Slab",
-            "JetBrains Mono"
+            "JetBrains Mono",
+            "Bungee",
+            "Chivo"
           ]
         },
         "labels": {
@@ -97,7 +101,9 @@
             "Newsreader",
             "Bodoni Moda",
             "Zilla Slab",
-            "JetBrains Mono"
+            "JetBrains Mono",
+            "Bungee",
+            "Chivo"
           ]
         }
       }

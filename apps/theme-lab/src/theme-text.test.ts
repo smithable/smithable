@@ -55,7 +55,11 @@ test("a field is set where the file says it: the body font as font or fonts.body
 });
 
 test("a field reads back as the file has it, also one the checks would refuse", () => {
-  const text = setField(themeText(BUILT_IN_THEMES[0] as ThemeIR), ["dark", "primary"], "#151a28");
+  const text = setField(
+    themeText(BUILT_IN_THEMES.find((t) => t.name === "modern") as ThemeIR),
+    ["dark", "primary"],
+    "#151a28",
+  );
   expect(getField(text, ["dark", "primary"])).toBe("#151a28");
   expect(getField(text, ["fonts", "body"])).toBe("Inter");
   expect(getField(text, ["dark", "nothing"])).toBeUndefined();
@@ -69,7 +73,7 @@ test("corporate exceptions survive an unrelated edit; derived colours still foll
   for (const mode of ["light", "dark"] as const)
     for (const token of TOKEN_NAMES)
       expect(hexOf(read[mode][token]), `${mode}.${token}`).toBe(hexOf(theme[mode][token]));
-  const modern = themeText(BUILT_IN_THEMES[0] as ThemeIR);
+  const modern = themeText(BUILT_IN_THEMES.find((t) => t.name === "modern") as ThemeIR);
   expect(getField(modern, ["light", "chart-1"])).toBeUndefined();
   const edited = parseTheme({
     path: "modern.yml",
@@ -79,7 +83,7 @@ test("corporate exceptions survive an unrelated edit; derived colours still foll
 });
 
 test("source edits preserve comments and explicit colours until reset is requested", () => {
-  const source = `${themeText(BUILT_IN_THEMES[0] as ThemeIR)}# my palette\n`;
+  const source = `${themeText(BUILT_IN_THEMES.find((t) => t.name === "modern") as ThemeIR)}# my palette\n`;
   const custom = setField(
     setField(source, ["light", "sidebar"], "#102e42"),
     ["light", "chart-2"],
@@ -124,7 +128,7 @@ test("app background overrides produce the same valid tokens before and after th
 
 test("theme defaults survive serialization, an unrelated field edit, and reopening", () => {
   const theme: ThemeIR = {
-    ...(BUILT_IN_THEMES[0] as ThemeIR),
+    ...(BUILT_IN_THEMES.find((t) => t.name === "modern") as ThemeIR),
     name: "direction",
     source: "project",
     defaults: {

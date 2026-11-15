@@ -34,12 +34,13 @@ dark:
 `;
 const parse = (text: string) => parseTheme({ path: "themes/forest.yml", text });
 
-test("the twenty-six built-in themes read in both modes, each under its own name", () => {
+test("the built-in themes read in both modes, with the selected gallery first", () => {
   const names = BUILT_IN_THEMES.map((t) => t.name);
   expect(names).toEqual([...THEME_PRESETS]);
-  expect(names).toHaveLength(26);
-  expect(new Set(names).size).toBe(26);
-  expect(names.slice(0, 4)).toEqual(["modern", "minimal", "playful", "corporate"]);
+  expect(names).toHaveLength(74);
+  expect(new Set(names).size).toBe(74);
+  expect(names.slice(0, 3)).toEqual(["arcade", "darkmatter", "halftone"]);
+  expect(names).not.toEqual(expect.arrayContaining(["carnival", "atelier", "newsprint"]));
   for (const theme of BUILT_IN_THEMES) {
     expect(theme.source).toBe("built-in");
     expect(FONTS, theme.name).toContain(theme.font);
@@ -48,8 +49,10 @@ test("the twenty-six built-in themes read in both modes, each under its own name
   }
 });
 
-test("the theme library's twenty-two are theme files a project could have written", () => {
-  expect(Object.keys(THEME_LIBRARY)).toEqual(THEME_PRESETS.slice(4));
+test("the library themes are files a project could have written", () => {
+  expect(Object.keys(THEME_LIBRARY)).toEqual(
+    THEME_PRESETS.filter((name) => !["modern", "minimal", "playful", "corporate"].includes(name)),
+  );
   for (const [name, text] of Object.entries(THEME_LIBRARY)) {
     const { theme, diagnostics } = parseTheme({ path: `themes/${name}.yml`, text });
     expect(diagnostics, name).toEqual([]);

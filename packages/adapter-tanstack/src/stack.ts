@@ -52,6 +52,8 @@ export const STACK_PROFILE = {
     "@fontsource-variable/bodoni-moda": "5.3.0", // OFL-1.1, indestructible type*
     "@fontsource/zilla-slab": "5.3.0", // OFL-1.1, Typotheque, Mozilla
     "@fontsource-variable/jetbrains-mono": "5.3.0", // OFL-1.1, JetBrains, Philipp Nurullin, Konstantin Bulenkov
+    "@fontsource/bungee": "5.3.0", // OFL-1.1, David Jonathan Ross
+    "@fontsource-variable/chivo": "5.3.0", // OFL-1.1, Omnibus-Type
   },
   /**
    * Security fixes for dependencies of dependencies, kept in the project's pnpm-workspace.yaml
