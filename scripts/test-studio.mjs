@@ -1462,7 +1462,11 @@ try {
   await step(
     "look and feel: a theme, density and motion are chosen without touching code",
     async () => {
-      const theme = page.getByRole("region", { name: "Font, density and motion" });
+      await page.getByRole("button", { name: "Look", exact: true }).click();
+      const theme = page.getByRole("region", {
+        name: "App-wide font, density and motion",
+        exact: true,
+      });
       await theme.getByRole("button", { name: "Compact" }).click();
       await theme
         .getByRole("button", { name: "Compact", pressed: true })
@@ -1474,7 +1478,7 @@ try {
       const themes = page.getByRole("list", { name: "Themes" });
       // The project's own theme has its card, named with its file.
       await themes
-        .getByRole("button", { name: /Forest/ })
+        .getByRole("button", { name: "Use Forest theme", exact: true })
         .getByText("themes/forest.yml", { exact: false })
         .waitFor();
       // The theme swaps a font package, so the app's server restarts: the preview keeps the last
@@ -1493,13 +1497,13 @@ try {
             if (el.textContent === "Updating…") watch.updating = true;
         }, 50);
       });
-      await themes.getByRole("button", { name: /Playful/ }).click();
+      await themes.getByRole("button", { name: "Use Playful theme", exact: true }).click();
       await last
         .getByText("Use the Playful theme")
         .first()
         .waitFor({ timeout: 60000 * P });
       await themes
-        .getByRole("button", { name: /Playful/, pressed: true })
+        .getByRole("button", { name: "Use Playful theme", exact: true, pressed: true })
         .waitFor({ timeout: 60000 * P });
       await page.getByText("Updating…").waitFor({ state: "hidden", timeout: 120000 * P });
       const watch = await page.evaluate(() => {
@@ -1509,6 +1513,7 @@ try {
       if (watch.gaps)
         throw new Error(`the preview was empty in ${watch.gaps} checks during the restart`);
       if (!watch.updating) throw new Error("the preview never said Updating…");
+      await page.getByRole("button", { name: "Close look editor", exact: true }).click();
     },
   );
   // Every app has every theme's font, so a theme never needs an install (a hosted workspace
@@ -1562,21 +1567,26 @@ try {
   await step(
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
-      const look = page.getByRole("region", { name: "Theme" });
+      await page.getByRole("button", { name: "Look", exact: true }).click();
+      const look = page.getByRole("dialog", { name: "Look", exact: true });
       await look.getByText("Add a theme").click();
       await look
-        .getByLabel("Theme", { exact: true })
+        .getByRole("textbox", { name: "Theme", exact: true })
         .fill("smithableTheme: 0.1\nname: moss\nlight:\n  primary: nope\n");
-      await look.getByRole("button", { name: "Add and use" }).click();
+      await look
+        .getByRole("button", { name: "Add and use for the whole app", exact: true })
+        .click();
       await page
         .getByText(/The theme is refused/)
         .first()
         .waitFor({ timeout: 60000 * P });
       const forest = readFileSync(join(dir, "themes/forest.yml"), "utf8");
       await look
-        .getByLabel("Theme", { exact: true })
+        .getByRole("textbox", { name: "Theme", exact: true })
         .fill(forest.replace("name: forest", "name: moss"));
-      await look.getByRole("button", { name: "Add and use" }).click();
+      await look
+        .getByRole("button", { name: "Add and use for the whole app", exact: true })
+        .click();
       await last
         .getByText("Add theme moss and use it")
         .first()
@@ -1584,8 +1594,9 @@ try {
       if (!existsSync(join(dir, "themes/moss.yml"))) throw new Error("no themes/moss.yml");
       await page
         .getByRole("list", { name: "Themes" })
-        .getByRole("button", { name: /Moss/, pressed: true })
+        .getByRole("button", { name: "Use Moss theme", exact: true, pressed: true })
         .waitFor({ timeout: 60000 * P });
+      await look.getByRole("button", { name: "Close look editor", exact: true }).click();
       await page.getByRole("button", { name: "Undo", exact: true }).click();
       await status.getByText(/Undid: Add theme moss/).waitFor({ timeout: 60000 * P });
       if (existsSync(join(dir, "themes/moss.yml"))) throw new Error("undo left themes/moss.yml");
