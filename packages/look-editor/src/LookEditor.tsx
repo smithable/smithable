@@ -177,6 +177,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   const [loadError, setLoadError] = useState<string>();
   const [keptDraft, setKeptDraft] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const dirtyRef = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: loadAttempt deliberately retries this read-only host request.
   useEffect(() => {
     const controller = new AbortController();
@@ -226,17 +227,20 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               ? data.look.page
               : null;
           const opened = openProjectLook(data.look, selected);
-          setStartingTheme(
-            opened.look.theme.source === "project"
-              ? `shown:${opened.look.theme.name}`
-              : opened.look.theme.name,
-          );
-          setHistory(draftHistory(opened.text));
+          // Retrying a failed read must not replace edits made while it was unavailable.
+          if (!dirtyRef.current) {
+            setStartingTheme(
+              opened.look.theme.source === "project"
+                ? `shown:${opened.look.theme.name}`
+                : opened.look.theme.name,
+            );
+            setHistory(draftHistory(opened.text));
+            setTargetPage(selected);
+          }
           setInitialText(opened.text);
-          setTargetPage(selected);
           setBaseScope(selected);
         }
-        setPage(data.open);
+        setPage((current) => current ?? data.open);
         setStart(data);
       } catch (error) {
         if (alive && !controller.signal.aborted)
@@ -595,6 +599,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
   };
   const dirty =
     text !== initialText || !!history.present.resets?.length || targetPage !== baseScope;
+  dirtyRef.current = dirty;
   useEffect(() => host.onDirtyChange?.(dirty), [dirty, host]);
   useEffect(
     () => host.onBusyChange?.(applyBusy || openingLook || saving || switchBusy),
@@ -936,7 +941,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
           <button
             type="button"
             data-guide="save"
-            disabled={!theme || errors.length > 0 || (!PUBLIC && !start)}
+            disabled={!theme || errors.length > 0 || (!PUBLIC && (!start || Boolean(loadError)))}
             onClick={save}
           >
             {PUBLIC ? "Download" : start?.project ? "Save as new theme" : "Save theme"}
@@ -984,7 +989,14 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
               </label>
               <button
                 type="button"
-                disabled={!dirty || !theme || errors.length > 0 || needsCopy || applyBusy}
+                disabled={
+                  !dirty ||
+                  !theme ||
+                  errors.length > 0 ||
+                  needsCopy ||
+                  applyBusy ||
+                  Boolean(loadError)
+                }
                 onClick={apply}
               >
                 {applyBusy
@@ -1318,7 +1330,7 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
             className={grey ? "stage grey" : "stage"}
             data-structural={structural || undefined}
           >
-            {!start && (
+            {(!start || loadError) && (
               <section className="preview-unavailable" aria-label="Look preview">
                 <h2>{loadError ? "Preview unavailable" : "Opening the saved look…"}</h2>
                 {loadError ? (
@@ -1327,19 +1339,23 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                     <p role="status">
                       {keptDraft
                         ? "This draft is kept. You can edit or download it. Reopening the current project leaves this draft."
-                        : "Your draft is kept here. The preview cannot open until the current project is reopened."}
+                        : "Your draft is kept here. Retry the connection, or reopen the current project."}
                     </p>
                     <button type="button" onClick={() => setKeptDraft(true)}>
                       Keep this draft
                     </button>{" "}
-                    {host.onReopenProject ? (
+                    <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
+                      Retry opening project
+                    </button>{" "}
+                    {host.onReopenProject && (
                       <button
                         type="button"
-                        disabled={openingLook}
+                        disabled={openingLook || applyBusy || saving || switchBusy}
                         onClick={async () => {
-                          setOpeningLook(true);
                           try {
-                            await host.onReopenProject?.();
+                            const reopened = host.onReopenProject?.();
+                            setOpeningLook(true);
+                            await reopened;
                           } catch (error) {
                             setLoadError(error instanceof Error ? error.message : String(error));
                           } finally {
@@ -1349,24 +1365,12 @@ export function LookEditor({ host }: { host: LookEditorHost }) {
                       >
                         Reopen current project
                       </button>
-                    ) : (
-                      <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
-                        Retry opening project
-                      </button>
                     )}
                   </>
                 ) : (
                   <p role="status">Connecting to the project's preview…</p>
                 )}
               </section>
-            )}
-            {start && loadError && (
-              <p role="alert">
-                {loadError}{" "}
-                <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
-                  Retry opening project
-                </button>
-              </p>
             )}
             {structural && (
               <div className="structural-unavailable" role="status">

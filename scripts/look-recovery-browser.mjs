@@ -140,6 +140,33 @@ try {
   console.log(
     "PASS actual restart shows recovery; Keep and cancelled Reopen preserve edited draft; confirmed Reopen loads current project frames.",
   );
+  await dialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+  await dialog.waitFor({ state: "detached" });
+  await page.unroute("**/api/look?*");
+  await page.reload();
+  await page.route("**/api/look?*", (route) =>
+    route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
+  );
+  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
+  await dialog.getByLabel("Name", { exact: true }).fill("offline-retry");
+  await dialog.getByLabel("Name", { exact: true }).press("Tab");
+  assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "offline-retry");
+  await page.unroute("**/api/look?*");
+  await dialog.getByRole("button", { name: "Retry opening project", exact: true }).click();
+  await dialog
+    .getByRole("status")
+    .filter({ hasText: /Draft preview ready|Saved preview ready/ })
+    .waitFor({ timeout: 45000 });
+  assert.equal(
+    await dialog.getByLabel("Name", { exact: true }).inputValue(),
+    "offline-retry",
+    "retry overwrote offline edits",
+  );
+  assert.equal(operations.length, 0, "retry wrote an operation");
+  console.log(
+    "PASS transient-error Retry connects without replacing offline edits or writing operations.",
+  );
 } catch (error) {
   if (page)
     await page
