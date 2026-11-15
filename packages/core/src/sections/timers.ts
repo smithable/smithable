@@ -643,16 +643,23 @@ const setTimer: Operation<TimerArgs> = {
   apply({ spec }, { name, ...args }, ir) {
     const timer = ir.timers.find((t) => t.name === name);
     if (!timer) throw new OperationError(`There is no timer named "${name}".`);
+    // Changing a clock's frequency keeps its time; a different mode has no clock time to keep.
+    if (args.every && args.every !== "none" && args.at === undefined) {
+      if (timer.schedule.kind !== "every")
+        throw new OperationError('Say "at" with "every" when changing to a time of day.');
+      args.at = timer.schedule.at;
+    }
     const path = ["timers", name];
     const given = Object.entries(args).filter(([, v]) => v !== undefined);
     if (!given.length)
       throw new OperationError("Say what to change: on, at, every, cron, where or run.");
     // A new time form takes the old one's keys away.
-    if (args.cron || args.every)
+    if (args.cron || args.every) {
       for (const k of ["at", "every", "cron"])
         if (spec.has([...path, k])) spec.remove([...path, k]);
-        else if (args.at && timer.schedule.kind === "cron" && spec.has([...path, "cron"]))
-          spec.remove([...path, "cron"]);
+    } else if (args.at && timer.schedule.kind === "cron" && spec.has([...path, "cron"])) {
+      spec.remove([...path, "cron"]);
+    }
     for (const [key, raw] of given) {
       const value = key === "where" ? (raw as TimerArgs["where"]) : (raw as string);
       const none =

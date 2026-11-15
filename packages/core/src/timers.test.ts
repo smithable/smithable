@@ -212,6 +212,41 @@ test("addTimer, setTimer and removeTimer write the section; a listening outgoing
   expect(gone.ok && gone.files.spec).not.toContain("timers");
 });
 
+test("a clock frequency change keeps its time, and switching to a clock needs a time", () => {
+  const changed = applyOperation({ spec }, "setTimer", { name: "weeklyDigest", every: "weekday" });
+  if (!changed.ok) throw new Error(changed.message);
+  expect(
+    read(changed.files.spec).ir?.timers.find((t) => t.name === "weeklyDigest")?.schedule,
+  ).toEqual({ kind: "every", every: "weekday", at: "08:00" });
+  for (const name of ["payroll", "remind"])
+    expect(applyOperation({ spec }, "setTimer", { name, every: "day" })).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('Say "at" with "every"'),
+    });
+});
+
+test("a timer moves through cron, record date and clock modes without old timing keys", () => {
+  let current = spec;
+  const move = (args: Record<string, unknown>) => {
+    const result = applyOperation({ spec: current }, "setTimer", { name: "weeklyDigest", ...args });
+    if (!result.ok) throw new Error(result.message);
+    current = result.files.spec;
+    expect(read(current).diagnostics).toEqual([]);
+    return read(current).ir?.timers.find((t) => t.name === "weeklyDigest")?.schedule;
+  };
+  expect(move({ cron: "0 9 * * *" })).toEqual({ kind: "cron", cron: "0 9 * * *" });
+  expect(move({ on: "Invoice", at: "dueOn", run: "none" })).toEqual({
+    kind: "record",
+    path: ["dueOn"],
+  });
+  expect(move({ every: "day", at: "10:00", on: "none", run: "sendDigest" })).toEqual({
+    kind: "every",
+    every: "day",
+    at: "10:00",
+  });
+  expect(move({ at: "09:45" })).toEqual({ kind: "every", every: "day", at: "09:45" });
+});
+
 test("a timer follows a renamed field in its date and condition, and refuses the removal of what it uses", () => {
   const renamed = applyOperation({ spec }, "renameField", {
     model: "Session",

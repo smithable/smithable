@@ -175,6 +175,7 @@ export {
   storageOf,
   storesFiles,
   storesPictures,
+  TIMER_EVERY,
   typeKey,
   USER_MODEL,
 } from "./ir.js";
@@ -309,7 +310,7 @@ export {
 } from "./sections/payments.js";
 export { personaFor, sampleRoles } from "./sections/people-operations.js";
 export { EDITABLE_FILES, type EditableFile, emptyFile } from "./sections/spec-operations.js";
-export { cronText, timerText } from "./sections/timers.js";
+export { cronProblem, cronText, timerText } from "./sections/timers.js";
 export type { SensitiveKind } from "./sensitive.js";
 export { sensitiveKind } from "./sensitive.js";
 export type { SpecFile, ValidateOptions, ValidateResult } from "./spec.js";

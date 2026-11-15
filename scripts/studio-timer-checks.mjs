@@ -1,0 +1,176 @@
+import assert from "node:assert/strict";
+import { validateSpec } from "../packages/core/dist/index.js";
+
+export async function checkStudioTimers(browser, base) {
+  const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
+  const stem = `studio${Date.now()}`;
+  const sent = [];
+  try {
+    const project = await (await page.request.get(`${base}/api/project`)).json();
+    await page.addInitScript((name) => {
+      for (const key of ["guideDone", "presented", "zoneAsked", "ownerAsked"])
+        localStorage.setItem(`${key}:${name}`, "1");
+      const NativeEvents = window.EventSource;
+      window.EventSource = class extends NativeEvents {
+        constructor(url) {
+          super(url);
+          window.timerEvents = this;
+        }
+      };
+      localStorage.setItem("smithable:smith", "docked");
+      localStorage.setItem(
+        "smithable:windows",
+        JSON.stringify({
+          layout: "three",
+          slots: ["smith", "preview", "manual"],
+          manual: "nocode",
+        }),
+      );
+    }, project.name);
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/op") sent.push(request.postDataJSON());
+    });
+    await page.goto(`${base}?guide=off`);
+    const form = page.getByRole("region", { name: "What the app does", exact: true });
+    await form.waitFor();
+    const area = async (key) => {
+      const section = form.locator(`details[data-key="${key}"]`);
+      if (!(await section.isVisible()))
+        await form.locator(":scope > div > details").last().locator("summary").first().click();
+      if (!(await section.evaluate((element) => element.open)))
+        await section.locator(":scope > summary").click();
+      return section;
+    };
+    const save = async (button, operation) => {
+      const response = page.waitForResponse(
+        (r) =>
+          new URL(r.url()).pathname === "/api/op" && r.request().postDataJSON().name === operation,
+      );
+      await button.click();
+      const result = await (await response).json();
+      assert.ok(result.ok, result.output);
+      return sent.at(-1);
+    };
+    const timer = async () => {
+      const body = await (await page.request.get(`${base}/api/project`)).json();
+      const ir = validateSpec({ path: "smithable.yml", text: body.files.spec }).ir;
+      return ir?.timers.find((t) => t.name === `${stem}Timer`);
+    };
+    const timers = await area("timers");
+    const add = timers.getByRole("form", { name: "Add timer", exact: true });
+    const addButton = add.getByRole("button", { name: "Add timer", exact: true });
+    await add.getByRole("textbox", { name: "Timer name", exact: true }).fill(`${stem}Timer`);
+    assert.ok(await addButton.isDisabled());
+    await add.getByRole("combobox", { name: "When the timer runs" }).selectOption("every");
+    assert.ok(await addButton.isDisabled(), "a clock without a time could be added");
+    await add.getByLabel("Time of day", { exact: true }).fill("08:00");
+    // A refresh from the daemon must not save or discard an unfinished operation.
+    const refreshed = page.waitForResponse((r) => new URL(r.url()).pathname === "/api/project");
+    await page.evaluate(() =>
+      window.timerEvents.dispatchEvent(new MessageEvent("changed", { data: "{}" })),
+    );
+    await refreshed;
+    assert.equal(await add.getByLabel("Time of day", { exact: true }).inputValue(), "08:00");
+    assert.equal(sent.length, 0, "editing a timer wrote a half-set operation");
+    const added = await save(addButton, "addTimer");
+    assert.deepEqual(added.args, { name: `${stem}Timer`, every: "day", at: "08:00" });
+    const entry = timers.locator(
+      `details[data-path='${JSON.stringify(["timers", `${stem}Timer`])}']`,
+    );
+    await entry.locator(":scope > summary").click();
+    const edit = entry.getByRole("form", { name: `When ${stem}Timer runs`, exact: true });
+    const when = edit.getByRole("combobox", { name: "When the timer runs" });
+    const saveTimer = edit.getByRole("button", { name: "Save timer", exact: true });
+    await when.selectOption("cron");
+    for (const [label, value] of [
+      ["minute", "99"],
+      ["hour", "9"],
+      ["day of month", "*"],
+      ["month", "*"],
+      ["weekday", "1"],
+    ])
+      await edit.getByRole("textbox", { name: `Schedule ${label}`, exact: true }).fill(value);
+    assert.ok(await saveTimer.isDisabled(), "an invalid cron field could be saved");
+    await edit.getByRole("textbox", { name: "Schedule minute", exact: true }).fill("0");
+    assert.equal(sent.length, 1, "changing modes wrote before Save");
+    await save(saveTimer, "setTimer");
+    assert.deepEqual((await timer()).schedule, { kind: "cron", cron: "0 9 * * 1" });
+    await when.selectOption("record");
+    await edit.getByRole("combobox", { name: "Timer records" }).selectOption("Customer");
+    const offered = await edit
+      .getByRole("combobox", { name: "Timer action" })
+      .locator("option")
+      .evaluateAll((options) => options.map((o) => o.value));
+    assert.ok(!offered.includes("mergeCustomers"), "a merge was offered to a timer");
+    assert.ok(!offered.includes("scheduleFollowUps"), "a record timer offered a custom action");
+    await edit.getByRole("combobox", { name: "Timer records" }).selectOption("Order");
+    assert.ok(await saveTimer.isDisabled(), "a record timer without a date could be saved");
+    await edit.getByRole("combobox", { name: "Record date" }).selectOption("placedAt");
+    await edit.getByRole("checkbox", { name: "Before or after this date", exact: true }).check();
+    await edit.getByRole("spinbutton", { name: "Offset amount", exact: true }).fill("0");
+    assert.ok(await saveTimer.isDisabled());
+    await edit.getByRole("spinbutton", { name: "Offset amount", exact: true }).fill("2");
+    await edit.getByRole("button", { name: "Add a condition", exact: true }).click();
+    await edit.getByRole("combobox", { name: "Field", exact: true }).selectOption("status");
+    await save(saveTimer, "setTimer");
+    assert.deepEqual((await timer()).schedule, {
+      kind: "record",
+      path: ["placedAt"],
+      offset: { amount: 2, unit: "day", direction: "before" },
+    });
+    assert.equal((await timer()).on, "Order");
+    await when.selectOption("every");
+    await edit.getByRole("combobox", { name: "Timer records" }).selectOption("");
+    await edit.getByLabel("Time of day", { exact: true }).fill("09:30");
+    await save(saveTimer, "setTimer");
+    assert.deepEqual((await timer()).schedule, { kind: "every", every: "day", at: "09:30" });
+    assert.equal((await timer()).on, undefined);
+    assert.equal((await timer()).where, undefined);
+    console.log(
+      "  ✓ Timer drafts: required mode/time, atomic add, polling, all modes, positive offset, conditions and action choices",
+    );
+
+    for (const [key, label, operation] of [
+      ["queries", "query", "addQuery"],
+      ["payments", "payment", "addPayment"],
+      ["outgoing", "outgoing mail", "addOutgoing"],
+      ["incoming", "incoming call", "addIncoming"],
+    ]) {
+      const section = await area(key);
+      const creation = section.getByRole("form", { name: `Add ${label}`, exact: true });
+      const button = creation.getByRole("button", { name: `Add ${label}`, exact: true });
+      await creation
+        .getByRole("textbox", {
+          name: `${label.charAt(0).toUpperCase()}${label.slice(1)} name`,
+          exact: true,
+        })
+        .fill(`${stem}${key}`);
+      assert.ok(await button.isDisabled(), `${key} accepted a name alone`);
+      if (key === "outgoing") {
+        await creation
+          .getByRole("combobox", { name: "Mail is sent when" })
+          .selectOption("Order created");
+        await creation.getByRole("combobox", { name: "Mail recipient" }).selectOption("owner");
+      } else {
+        if (key === "incoming")
+          await creation
+            .getByRole("combobox", { name: "Incoming call does" })
+            .selectOption("record");
+        await creation.getByRole("combobox", { name: "Entry records" }).selectOption("Order");
+        if (key === "payments")
+          await creation.getByRole("combobox", { name: "Payment amount" }).selectOption("total");
+        if (key === "incoming") {
+          for (const field of ["number", "customer", "total"])
+            await creation
+              .getByRole("textbox", { name: `Incoming ${field}`, exact: true })
+              .fill(`{${field}}`);
+        }
+      }
+      const request = await save(button, operation);
+      assert.ok(Object.keys(request.args).length > 1, `${key} wrote an empty entry`);
+      console.log(`  ✓ New ${label}: ${operation} includes its required first values`);
+    }
+  } finally {
+    await page.close();
+  }
+}

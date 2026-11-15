@@ -38,6 +38,7 @@ import {
 import { checkStudioLookNavigation } from "./studio-look-navigation-checks.mjs";
 import { checkStudioQuestions } from "./studio-question-checks.mjs";
 import { checkStudioSpeech } from "./studio-speech-checks.mjs";
+import { checkStudioTimers } from "./studio-timer-checks.mjs";
 import { checkStudioUsage } from "./studio-usage-checks.mjs";
 import { checkStudioValidation } from "./studio-validation-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
@@ -358,6 +359,7 @@ try {
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
   await checkStudioDraft(browser, base);
+  await checkStudioTimers(browser, base);
   await checkStudioValidation(browser, base);
   await checkStudioQuestions(browser, base);
   await checkStudioUsage(browser, base);
