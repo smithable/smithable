@@ -11,6 +11,8 @@ import { chromium } from "playwright";
 test("review and publish keeps quiet states closed and exposes first-release, changed and unavailable evidence", {
   timeout: 240000,
 }, async () => {
+  const hosted = process.env.REVIEW_HOSTED === "1";
+  const screenshots = process.env.REVIEW_SCREENSHOTS;
   const repo = resolve(import.meta.dirname, "..");
   const root = mkdtempSync(join(tmpdir(), "smithable-release-review-")),
     dir = join(root, "app"),
@@ -40,6 +42,7 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     for (const key of Object.keys(env))
       if (/^(SMITHABLE_|ANTHROPIC_|OPENAI_|GOOGLE_|GEMINI_|MISTRAL_|AZURE_|AWS_)/.test(key))
         delete env[key];
+    if (hosted) env.SMITHABLE_HOSTED_LEVEL = "normal";
     server = spawn(process.execPath, [cli, "studio", dir, "--port", String(port)], {
       env,
       detached: true,
@@ -85,21 +88,25 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     const evidence = await (await fetch(`${base}/api/release-review`)).json();
     const development = evidence.maintenance.currentEngine === "0.0.0";
     let dialog = await open();
-    await dialog.locator("[data-first-release]").waitFor();
+    assert.equal(await dialog.locator("[data-first-release]").count(), hosted ? 0 : 1);
     assert.equal(
       await dialog.locator("[data-review-count]").innerText(),
-      `${development ? 4 : 3} need a look`,
+      `${(development ? 5 : 4) + (hosted ? 1 : 0)} need a look`,
     );
     await dialog
       .getByRole("heading", { name: "Who can use the current app", exact: true })
       .waitFor();
     assert.match(await dialog.innerText(), /People sign in/);
     const comparison = dialog.locator('[data-review-part="migrations"]');
-    assert.equal(await comparison.getAttribute("data-review-state"), "not-applicable");
-    assert.equal(await comparison.getAttribute("open"), null);
+    assert.equal(await comparison.getAttribute("data-review-state"), "needs-look");
+    assert.notEqual(await comparison.getAttribute("open"), null);
     await comparison.locator(":scope > summary").focus();
     await page.keyboard.press("Enter");
+    assert.equal(await comparison.getAttribute("open"), null);
+    await page.keyboard.press("Enter");
     assert.notEqual(await comparison.getAttribute("open"), null);
+    if (screenshots)
+      await page.screenshot({ path: join(screenshots, "01-no-baseline.png"), fullPage: true });
     // Refreshing unchanged evidence preserves manual expansion and keyboard focus.
     let releaseReply;
     const held = new Promise((resolve) => {
@@ -227,6 +234,8 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
       await dialog.locator("[data-review-count]").innerText(),
       `${development ? 3 : 2} need a look`,
     );
+    if (screenshots)
+      await page.screenshot({ path: join(screenshots, "02-compared-quiet.png"), fullPage: true });
     await expand(dialog, "checks");
     await dialog
       .getByText("Release checks passed for the current project files.", { exact: true })
@@ -290,6 +299,11 @@ test("review and publish keeps quiet states closed and exposes first-release, ch
     await dialog
       .getByText("Release checks are not verified for the current project files.", { exact: true })
       .waitFor();
+    if (screenshots)
+      await page.screenshot({
+        path: join(screenshots, "03-pending-migration.png"),
+        fullPage: true,
+      });
     await close(dialog);
     metadata(
       'recordChecks(dir,"release",[{what:"Incomplete fixture check",by:"fixture",ok:true,checked:false,findings:[]}],projectRevision(dir));',

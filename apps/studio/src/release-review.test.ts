@@ -38,7 +38,7 @@ test("current evidence keeps fine and unchanged sections quiet, with zero attent
   expect(reviewSections(review).find((s) => s.id === "checks")?.state).toBe("fine");
 });
 
-test("first local release shows current access and makes empty comparisons inapplicable", () => {
+test("first local release keeps unverified access and migration comparisons visible", () => {
   const review = {
     ...fixture(),
     baseline: undefined,
@@ -48,7 +48,7 @@ test("first local release shows current access and makes empty comparisons inapp
   };
   const sections = reviewSections(review);
   expect(sections.find((s) => s.id === "access")?.state).toBe("needs-look");
-  expect(sections.find((s) => s.id === "migrations")?.state).toBe("not-applicable");
+  expect(sections.find((s) => s.id === "migrations")?.state).toBe("needs-look");
   expect(sections.find((s) => s.id === "recovery")?.state).toBe("not-applicable");
 });
 
