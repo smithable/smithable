@@ -5,6 +5,7 @@ import type { ActionValueIR, Condition, ModelIR } from "@smithable/core";
 import { humanize } from "@smithable/core";
 import { useState } from "react";
 import { Button, Input, Select } from "../ui";
+import { usePendingEdit } from "./pending-edit";
 
 type Field = ModelIR["fields"][number];
 const USER = "User";
@@ -440,6 +441,14 @@ export function ActionRowsEditor({
   const value = part === "when" ? conditionOf(whenRows) : valuesOf(setRows);
   const was = part === "when" ? conditionOf(whenRowsOf(when)) : valuesOf(setRowsOf(set));
   const changed = JSON.stringify(value) !== JSON.stringify(was);
+  usePendingEdit(
+    changed ||
+      (part === "when"
+        ? whenRows.some(
+            (row) => row.value === "" || (Array.isArray(row.value) && !row.value.length),
+          )
+        : unfinished(setRows)),
+  );
   const empty = part === "set" && unfinished(setRows);
   return (
     <div className="space-y-2">

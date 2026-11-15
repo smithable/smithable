@@ -18,6 +18,7 @@ import { cx } from "../ui";
 import { CopyPicker, MergePicker, SplitPicker } from "./action-pickers";
 import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
+import { usePendingEdit } from "./pending-edit";
 import {
   alternativeFor,
   choicesFor,
@@ -554,6 +555,16 @@ function TextBox({
   const shown =
     value === undefined ? "" : typeof value === "string" ? value : JSON.stringify(value);
   const [text, setText] = useState(shown);
+  usePendingEdit(
+    text !== shown &&
+      JSON.stringify(
+        text.trim() === ""
+          ? undefined
+          : numeric && !Number.isNaN(Number(text.trim()))
+            ? Number(text.trim())
+            : text.trim(),
+      ) !== JSON.stringify(value),
+  );
   const commit = () => {
     if (text === shown) return;
     const trimmed = text.trim();
@@ -607,6 +618,7 @@ function Chips({
   onChange: (items: unknown[]) => Promise<boolean>;
 }) {
   const [adding, setAdding] = useState("");
+  usePendingEdit(Boolean(adding));
   const listId = useId();
   const offered = choices.filter((c) => !items.includes(c));
   return (
@@ -654,6 +666,7 @@ function Chips({
 /** An entry's new name, renamed through its operation (a field keeps its data). */
 function Rename({ name, onRename }: { name: string; onRename: (to: string) => Promise<boolean> }) {
   const [to, setTo] = useState(name);
+  usePendingEdit(to !== name);
   return (
     <div className="flex items-center gap-1">
       <span className="text-xs text-quiet">Its name in the files:</span>
@@ -678,6 +691,7 @@ function Rename({ name, onRename }: { name: string; onRename: (to: string) => Pr
 /** A new entry of a named map (a kind of record, a page): its name, then its own keys. */
 function AddEntry({ label, onAdd }: { label: string; onAdd: (name: string) => Promise<boolean> }) {
   const [name, setName] = useState("");
+  usePendingEdit(Boolean(name));
   return (
     <div className="flex items-center gap-1">
       <input

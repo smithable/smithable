@@ -9,6 +9,7 @@ import {
 import { useState } from "react";
 import { Select } from "../ui";
 import type { Run } from "./ChangeForms";
+import { usePendingEdit } from "./pending-edit";
 import { UxChoice } from "./UxChoice";
 
 export function UxLists({
@@ -133,6 +134,11 @@ function Capacity({
   const [left, setLeft] = useState(ux.calendar?.capacity?.left ?? "");
   const [of, setOf] = useState(ux.calendar?.capacity?.of ?? "");
   const [look, setLook] = useState<string>(ux.calendar?.capacity?.look ?? "number");
+  usePendingEdit(
+    left !== (ux.calendar?.capacity?.left ?? "") ||
+      of !== (ux.calendar?.capacity?.of ?? "") ||
+      look !== (ux.calendar?.capacity?.look ?? "number"),
+  );
   if (fields.length < 2 && !ux.calendar?.capacity)
     return (
       <p className="text-xs text-quiet">

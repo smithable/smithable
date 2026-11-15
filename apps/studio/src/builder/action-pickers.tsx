@@ -6,6 +6,7 @@ import { humanize } from "@smithable/core";
 import { useState } from "react";
 import { Button, Select } from "../ui";
 import { type SetRow, SetRows, setRowsOf, unfinished, valuesOf } from "./action-rows";
+import { usePendingEdit } from "./pending-edit";
 
 type Field = ModelIR["fields"][number];
 type Write = (key: string, value: unknown) => Promise<boolean>;
@@ -53,6 +54,7 @@ export function MergePicker({
   // Ask is what an unnamed field does: left out of the map.
   const named = Object.fromEntries(Object.entries(rules).filter(([, r]) => r !== "ask"));
   const changed = JSON.stringify(named) !== JSON.stringify(fields);
+  usePendingEdit(changed);
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 text-sm">
@@ -123,6 +125,7 @@ export function SplitPicker({
   const lists = (model?.fields ?? []).filter(list);
   const fields = copyable(model);
   const [taken, setTaken] = useState<string[] | undefined>(copy);
+  usePendingEdit(JSON.stringify(taken) !== JSON.stringify(copy));
   const changed = JSON.stringify(taken ?? null) !== JSON.stringify(copy ?? null);
   return (
     <div className="space-y-2">
@@ -207,6 +210,7 @@ export function CopyPicker({
 }) {
   const [rows, setRows] = useState<SetRow[]>(() => setRowsOf(copy));
   const changed = JSON.stringify(valuesOf(rows)) !== JSON.stringify(valuesOf(setRowsOf(copy)));
+  usePendingEdit(changed || unfinished(rows));
   const all = (model?.fields ?? []).filter(list);
   return (
     <div className="space-y-2">

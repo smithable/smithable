@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import type { Spec } from "../engine";
 import { Button, Check, Input, Label, Select } from "../ui";
+import { usePendingEdit } from "./pending-edit";
 import { UNIQUE, type UniqueChoice, uniqueOf, uniqueRule } from "./unique";
 
 /**
@@ -220,6 +221,7 @@ function Form({
   children: React.ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
+  usePendingEdit(busy);
   return (
     <form
       className="space-y-3"
@@ -296,6 +298,10 @@ export function FieldShapeForm({
     setTouched(touched.filter((k) => kept[k] !== base[k]));
     if (!touched.length) setBecomes({});
   }
+  const original = proposed ? parseShape(proposed, models) : shapeOf(field);
+  usePendingEdit(
+    shorthand(shape, field) !== shorthand(original, field) || shape.unique !== original.unique,
+  );
   const type = shorthand(shape, field);
   // A choice value that goes: the records and samples holding it get one of the new ones.
   const values = shape.kind === "choice" ? choiceValues(shape, field) : [];

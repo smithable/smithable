@@ -1,3 +1,4 @@
+import { usePendingEdit } from "./pending-edit";
 // The creation wizard (docs/design/studio-v3.md §4): a kind of record, a page or an action
 // described in a few words, then the change Smithable makes of it as a form (its name, its fields
 // with their types), each part editable, and Create. Nothing is written before Create. The same
@@ -65,6 +66,7 @@ export function Wizard({
   onClose: () => void;
 }) {
   const { title, asked, placeholder } = KINDS[kind];
+  usePendingEdit(true); // An open wizard must stay where the person opened it.
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [proposal, setProposal] = useState<Proposal>();

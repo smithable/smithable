@@ -45,7 +45,15 @@ function page(
   const ticks: (() => void)[] = [];
   const clicks: ((event: unknown) => void)[] = [];
   const head: { id: string; textContent: string; href?: string; rel?: string }[] = [];
-  const posted: { type: string; path?: string; status?: string; request?: string }[] = [];
+  const posted: {
+    type: string;
+    path?: string;
+    status?: string;
+    request?: string;
+    followContext?: number;
+    navigationId?: number;
+    documentId?: string;
+  }[] = [];
   const parent = { postMessage: (message: { type: string }) => posted.push(message) };
   const scrolled: number[] = [];
   const reloads: number[] = [];
@@ -642,4 +650,27 @@ test("the preview's config is written once for a run: its look identity is the r
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("preview navigation echoes only trusted editor context, without turning repeated reports into navigation", () => {
+  const { send, navigate, posted } = page("/customers");
+  const navigation = () => posted.filter((message) => message.type === "navigated").at(-1);
+  send({ type: "smithable:select-mode", on: false, followContext: 1 });
+  expect(navigation()).toMatchObject({ path: "/customers", followContext: 1, navigationId: 0 });
+  const documentId = navigation()?.documentId;
+  expect(documentId).toBeTruthy();
+  const count = posted.length;
+  send({ type: "smithable:follow-context", context: 2 });
+  expect(posted).toHaveLength(count);
+  send({ type: "smithable:follow-context", context: 99 }, "https://evil.example");
+  send({ type: "smithable:follow-context", context: 99 }, "http://localhost:5173", {});
+  navigate("/orders");
+  expect(navigation()).toMatchObject({
+    path: "/orders",
+    followContext: 2,
+    navigationId: 1,
+    documentId,
+  });
+  send({ type: "smithable:select-mode", on: false, followContext: 1 });
+  expect(navigation()).toMatchObject({ followContext: 2, navigationId: 1 });
 });

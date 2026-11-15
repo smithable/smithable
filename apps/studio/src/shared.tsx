@@ -5,7 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { api, type ChangeDetail, type TraceEntry } from "./api";
 import { type PartChange, summaryDiff } from "./builder/change-diff";
 import { entryText, grouped, numbers, restores, summary as summaryOf } from "./history";
-import { isPreviewMessage, previewTarget, setPreview } from "./preview";
+import { isPreviewMessage, previewFollowContext, previewTarget, setPreview } from "./preview";
 import { ReportDialog } from "./Report";
 import { receipt } from "./receipt";
 import { Button, cx, Input, Panel } from "./ui";
@@ -204,7 +204,12 @@ export function Preview({
   useEffect(() => {
     const send = () =>
       frame.current?.contentWindow?.postMessage(
-        { type: "smithable:select-mode", on: Boolean(selecting), code: Boolean(inCode) },
+        {
+          type: "smithable:select-mode",
+          on: Boolean(selecting),
+          code: Boolean(inCode),
+          followContext: previewFollowContext(),
+        },
         previewTarget(),
       );
     send();

@@ -11,6 +11,7 @@ import type { Project } from "../api";
 import { Button, Input, Select } from "../ui";
 import { conditionOf, type WhenRow, WhenRows } from "./action-rows";
 import type { Run } from "./ChangeForms";
+import { usePendingEdit } from "./pending-edit";
 
 type Area = "outgoing" | "payments" | "incoming" | "queries";
 const labels: Record<Area, string> = {
@@ -53,6 +54,21 @@ export function AddEntryForm({
   const [column, setColumn] = useState("");
   const [intent, setIntent] = useState("");
   const [busy, setBusy] = useState(false);
+  usePendingEdit(
+    Boolean(
+      name ||
+        modelName ||
+        trigger ||
+        recipient ||
+        amount ||
+        incoming ||
+        column ||
+        intent ||
+        condition.length ||
+        Object.keys(values).length ||
+        when !== "created",
+    ) || busy,
+  );
   const model = ir.models.find((m) => m.name === modelName);
   const timer = ir.timers.find((t) => t.name === trigger);
   const action = ir.actions.find((a) => a.name === trigger);

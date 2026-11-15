@@ -5,6 +5,7 @@ import { api } from "../api";
 import { CUSTOM_CODE_DOCS } from "../docs";
 import { Button } from "../ui";
 import type { Run } from "./ChangeForms";
+import { usePendingEdit } from "./pending-edit";
 
 /**
  * Records from a spreadsheet for one kind of record: the file is read here and sent as text; a
@@ -15,6 +16,7 @@ export function ImportRecords({ model, run }: { model: string; run: Run }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState<string>();
   const [preview, setPreview] = useState<{ ok: boolean; output: string }>();
+  usePendingEdit(open);
   if (!open)
     return (
       <button
