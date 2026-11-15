@@ -348,6 +348,31 @@ test("No code follows real preview navigation without losing edits or opening hi
       `following or drafts wrote operations: ${JSON.stringify(operations)}`,
     );
     console.log("PASS narrow hidden-window protection and zero operations");
+
+    await page.setViewportSize({ width: 1920, height: 1100 });
+    await noCode.getByRole("tab", { name: "Behavior", exact: true }).click();
+    const addTimer = (await area("timers")).getByRole("form", { name: "Add timer", exact: true });
+    await addTimer.getByRole("textbox", { name: "Timer name", exact: true }).fill("dailyCheck");
+    await addTimer.getByLabel("When the timer runs", { exact: true }).selectOption("every");
+    await addTimer.getByLabel("Time of day", { exact: true }).fill("09:00");
+    let resume;
+    const held = new Promise((resolve) => {
+      resume = resolve;
+    });
+    await page.route("**/api/op", async (route) => {
+      await held;
+      await route.continue();
+    });
+    await addTimer.getByRole("button", { name: "Add timer", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("[data-no-code] fieldset:disabled"));
+    await navigateInApp("/orders");
+    await outside();
+    assert.equal(await context(), "customers", "following left a pending save");
+    resume();
+    await followed("orders");
+    assert.equal(operations.length, 1, "following added an operation beside the explicit save");
+    assert.equal(operations[0].name, "addTimer");
+    console.log("PASS pending operation protection and following after explicit successful save");
     passed = true;
   } catch (error) {
     if (page)

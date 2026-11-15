@@ -1,6 +1,29 @@
 import { type SpecIR, validateSpec } from "@smithable/core";
-import { describe, expect, it } from "vitest";
-import { touchesPage } from "./preview";
+import { describe, expect, it, vi } from "vitest";
+import { isPreviewMessage, setPreview, touchesPage } from "./preview";
+
+describe("preview navigation messages", () => {
+  it("rejects malformed paths before any consumer handles them, and checks frame and origin", () => {
+    vi.stubGlobal("location", { href: "http://localhost:5760" });
+    try {
+      const frame = {} as Window;
+      setPreview(frame, "http://localhost:5761");
+      const message = {
+        source: frame,
+        origin: "http://localhost:5761",
+        data: { source: "smithable-preview", type: "navigated", path: "/orders" },
+      } as MessageEvent;
+      expect(isPreviewMessage(message)).toBe(true);
+      for (const path of [42, null, undefined, {}, []])
+        expect(isPreviewMessage({ ...message, data: { ...message.data, path } })).toBe(false);
+      expect(isPreviewMessage({ ...message, source: {} as Window })).toBe(false);
+      expect(isPreviewMessage({ ...message, origin: "http://localhost:5762" })).toBe(false);
+    } finally {
+      setPreview(null, "http://localhost:5761");
+      vi.unstubAllGlobals();
+    }
+  });
+});
 
 const checked = validateSpec({
   path: "smithable.yml",

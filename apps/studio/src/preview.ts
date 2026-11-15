@@ -75,7 +75,9 @@ export function isPreviewMessage(e: MessageEvent): e is MessageEvent<PreviewMess
     e.origin === previewOrigin &&
     typeof e.data === "object" &&
     e.data !== null &&
-    (e.data as { source?: string }).source === "smithable-preview"
+    (e.data as { source?: string }).source === "smithable-preview" &&
+    // Every navigation consumer, including the address field, needs a string path.
+    (e.data.type !== "navigated" || typeof e.data.path === "string")
   );
 }
 
