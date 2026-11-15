@@ -32,7 +32,7 @@ test("complete creation returns a current reference and preserves its requesting
     if (request.includes("two kinds"))
       return ["VendorOne", "VendorTwo"].map((model) => ({
         op: "addModel",
-        args: { model, fields: { name: "string!" } },
+        args: { model, fields: { name: "string!", email: "email" } },
       }));
     if (request.includes("default data page")) return [{ op: "addDataPage", args: {} }];
     if (request.includes("new landing"))
@@ -346,10 +346,32 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     assert.equal(await dialog.getByLabel("After creating, use", { exact: true }).inputValue(), "");
     assert.ok(await dialog.getByRole("button", { name: "Create", exact: true }).isDisabled());
     await dialog.getByLabel("After creating, use", { exact: true }).selectOption("VendorTwo");
+    const firstModel = dialog.getByRole("group", { name: "Kind of record VendorOne", exact: true });
+    const secondModel = dialog.getByRole("group", {
+      name: "Kind of record VendorTwo",
+      exact: true,
+    });
+    await firstModel.getByLabel("Field 1", { exact: true }).fill("email");
+    assert.ok(await dialog.getByRole("button", { name: "Create", exact: true }).isDisabled());
+    await secondModel.getByLabel("Field 1", { exact: true }).fill("title");
+    assert.ok(await dialog.getByRole("button", { name: "Create", exact: true }).isDisabled());
+    assert.ok(
+      await dialog
+        .getByText("Two fields are called email: give one of them another name.", { exact: true })
+        .isVisible(),
+    );
+    await firstModel.getByLabel("Field 1", { exact: true }).fill("name");
+    assert.ok(await dialog.getByRole("button", { name: "Create", exact: true }).isEnabled());
     await dialog.getByRole("button", { name: "Create", exact: true }).click();
     await dialog.waitFor({ state: "detached" });
     assert.equal(await result.textContent(), "VendorTwo");
-    console.log("PASS multiple new items require an explicit return choice");
+    const { parse } = studioRequire("yaml");
+    const createdSpec = parse((await (await fetch(`${base}/api/project`)).json()).files.spec);
+    assert.deepEqual(createdSpec.models.VendorOne.fields, { name: "string!", email: "email" });
+    assert.deepEqual(createdSpec.models.VendorTwo.fields, { title: "string!", email: "email" });
+    console.log(
+      "PASS multiple new items require an explicit choice and retain each model validation error",
+    );
     await propose("model", "not a creation");
     assert.ok(await dialog.getByRole("button", { name: "Create", exact: true }).isDisabled());
     await page.keyboard.press("Escape");

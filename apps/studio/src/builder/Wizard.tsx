@@ -85,7 +85,8 @@ export function Wizard({
   const creations = createdReferenceNames(kind, operations);
   const returned = creations.length === 1 ? creations[0] : creations.includes(chosen) ? chosen : "";
   // Why the form cannot be made as it stands (two fields of one name), or why Create was refused.
-  const [problem, setProblem] = useState<string>();
+  const [problems, setProblems] = useState<Record<number, string>>({});
+  const problem = Object.values(problems)[0];
   const [refused, setRefused] = useState<string>();
   // The newest request: an answer to an older one (Enter, then Next) is left.
   const asking = useRef(0);
@@ -107,7 +108,7 @@ export function Wizard({
     setChosen("");
     setBusy(true);
     setRefused(undefined);
-    setProblem(undefined);
+    setProblems({});
     let next: Proposal;
     try {
       next = await api.ask(`${asked}${text.trim()}`);
@@ -224,7 +225,14 @@ export function Wizard({
                   key={i}
                   args={o.args}
                   onArgs={(args) => setArgs(i, args)}
-                  onProblem={setProblem}
+                  onProblem={(message) =>
+                    setProblems((current) => {
+                      const next = { ...current };
+                      if (message) next[i] = message;
+                      else delete next[i];
+                      return next;
+                    })
+                  }
                 />
               ) : o.op === "addAction" &&
                 typeof o.args.on === "string" &&
@@ -292,6 +300,7 @@ export function Wizard({
               disabled={busy}
               onClick={() => {
                 setChosen("");
+                setProblems({});
                 setProposal(undefined);
               }}
             >
@@ -334,7 +343,10 @@ function ModelForm({
     onArgs({ ...args, fields: Object.fromEntries(next.filter(([name]) => name.trim())) });
   };
   return (
-    <div className="space-y-1 rounded-md border border-line bg-panel p-2">
+    <fieldset
+      aria-label={`Kind of record ${String(args.model ?? "")}`}
+      className="space-y-1 rounded-md border border-line bg-panel p-2"
+    >
       <label className="flex items-center gap-2 text-xs">
         <span className="w-28 text-quiet">Kind of record</span>
         <input
@@ -371,6 +383,6 @@ function ModelForm({
           </button>
         </div>
       ))}
-    </div>
+    </fieldset>
   );
 }
