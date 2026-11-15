@@ -230,6 +230,8 @@ export function referenceControl(
       if (key === "fields")
         return field(trigger.endsWith(" changed") ? eventModel : undefined, "stored", true);
       if (key === "show") return { ...field(eventModel, "sendable", true), word: "none" };
+      if (key === "to" && typeof value === "string" && !["mail", "push", "sms"].includes(value))
+        return undefined; // A target name defines a setting; it is not a reference to an existing record.
       if (key === "to")
         return {
           options: [

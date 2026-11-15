@@ -240,13 +240,20 @@ test("typed reference forms write complete operations and protect unfinished dra
     await search.fill("referenceLabel11");
     await naming.getByRole("combobox").selectOption("referenceLabel11");
     await waitStored(["models", "Customer", "namedBy"], ["name", "referenceLabel11"]);
+    await naming.locator('fieldset[aria-busy="true"]').waitFor({ state: "detached" });
     await naming
       .getByRole("button", { name: "Move referenceLabel11 earlier", exact: true })
       .click();
     await waitStored(["models", "Customer", "namedBy"], ["referenceLabel11", "name"]);
-    const removedName = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === "/api/op",
-    );
+    await naming.locator('fieldset[aria-busy="true"]').waitFor({ state: "detached" });
+    const removedName = page.waitForResponse((response) => {
+      if (new URL(response.url()).pathname !== "/api/op") return false;
+      const request = response.request().postDataJSON();
+      return (
+        request?.name === "setNamedBy" &&
+        JSON.stringify(request.args.parts) === JSON.stringify(["name"])
+      );
+    });
     await naming.getByRole("button", { name: "Remove referenceLabel11", exact: true }).click();
     assert.ok((await (await removedName).json()).ok);
     const named = await stored(["models", "Customer", "namedBy"]);
@@ -303,7 +310,9 @@ test("typed reference forms write complete operations and protect unfinished dra
     await save(outgoing, "Save referenceNotice");
     await waitStored(["outgoing", "referenceNotice", "recipient"], "customer.email");
     const incoming = await entry("incoming", "referenceCall");
-    const mapping = incoming.locator('[data-key="set"]');
+    const mapping = incoming
+      .getByRole("group", { name: "Edit referenceCall references", exact: true })
+      .locator(':scope > div > [data-key="set"]');
     await reveal(mapping);
     await mapping
       .getByRole("combobox", { name: "Field in set", exact: true })

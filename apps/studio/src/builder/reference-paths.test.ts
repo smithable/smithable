@@ -301,3 +301,27 @@ test("a changed parent cannot submit until its old field is replaced in the new 
   draft = referenceWith(draft, [...path, "amount"], "fee");
   expect(referenceReady(schema, referenceAt(draft, path), path, draft, ir, auth)).toBe(true);
 });
+
+test("a new outgoing target name is a definition rather than a closed existing-reference choice", () => {
+  const { document, ir, auth } = fixture();
+  let draft = referenceWith(document, ["outgoing", "receipt", "to"], "notifyTarget");
+  draft = referenceWith(draft, ["outgoing", "receipt", "recipient"], undefined);
+  const path = ["outgoing", "receipt"];
+  expect(referenceControl([...path, "to"], "notifyTarget", draft, ir, auth)).toBeUndefined();
+  expect(
+    referenceReady(
+      { type: "object", required: ["when", "to"] },
+      referenceAt(draft, path),
+      path,
+      draft,
+      ir,
+      auth,
+    ),
+  ).toBe(true);
+  const result = applyOperation({ spec }, "editSpec", {
+    file: "smithable.yml",
+    path,
+    value: referenceAt(draft, path),
+  });
+  expect(result.ok).toBe(true);
+});
