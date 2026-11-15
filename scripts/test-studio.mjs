@@ -381,18 +381,19 @@ try {
         throw new Error("Desktop did not give the pane back");
     },
   );
-  await step(
-    "the header has How to publish and Help, which open the docs (finding 14)",
-    async () => {
-      const header = page.locator("header").first();
-      for (const [name, href] of [
-        ["How to publish", "https://docs.smithable.ai/self-host.html"],
-        ["Help", "https://docs.smithable.ai/start.html"],
-      ])
-        if ((await header.getByRole("link", { name, exact: true }).getAttribute("href")) !== href)
-          throw new Error(`${name} does not lead to ${href}`);
-    },
-  );
+  await step("the header opens Review and publish and links to Help", async () => {
+    const header = page.locator("header").first();
+    if (
+      (await header.getByRole("link", { name: "Help", exact: true }).getAttribute("href")) !==
+      "https://docs.smithable.ai/start.html"
+    )
+      throw new Error("Help does not lead to the start page");
+    await header.getByRole("button", { name: /^Review and publish/ }).click();
+    const review = page.getByRole("dialog", { name: "Review and publish", exact: true });
+    await review.getByRole("heading", { name: "Review and publish", exact: true }).waitFor();
+    await review.getByRole("button", { name: "Close", exact: true }).click();
+    await review.waitFor({ state: "detached" });
+  });
   await step(
     "Leave feedback opens from the header and from Smith, each part shown before it is ticked (A 242)",
     async () => {
