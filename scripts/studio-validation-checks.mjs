@@ -24,12 +24,13 @@ export async function checkStudioValidation(browser, base) {
         // Exercise both the additive engine contract and an older diagnostic without it.
         body.diagnostics = body.diagnostics.map((d) => ({
           ...d,
-          plain: plain
-            ? {
-                message: "The timer markOverdue needs one way to say when it runs.",
-                path: ["timers", "markOverdue"],
-              }
-            : undefined,
+          plain:
+            plain && d.code === "invalid-timer"
+              ? {
+                  message: "The timer markOverdue needs one way to say when it runs.",
+                  path: ["timers", "markOverdue"],
+                }
+              : undefined,
         }));
       }
       await route.fulfill({ response, json: body });
@@ -47,16 +48,18 @@ export async function checkStudioValidation(browser, base) {
         .first()
         .click();
     await timers.locator(":scope > summary").click();
-    const name = timers.getByRole("textbox", { name: "New entry in Timers", exact: true });
+    const name = timers.locator('input[placeholder="Name…"]');
     await name.fill("markOverdue");
     await timers.getByRole("button", { name: "Add", exact: true }).click();
     const notice = page.locator("[data-validation-notice]");
-    await notice
+    const timerError = notice.locator('[data-validation-code="invalid-timer"]');
+    await timerError
       .getByText("The timer markOverdue needs one way to say when it runs.", { exact: true })
       .waitFor();
     assert.ok(refused?.diagnostics?.length, "real operation response lost validator diagnostics");
+    console.log("  ✓ Real refusal preserves structured diagnostics and plain text");
     assert.equal(
-      await notice.getByText(/one of the three/).isVisible(),
+      await timerError.getByText(/one of the three/).isVisible(),
       false,
       "grammar leaked into No code",
     );
@@ -65,14 +68,15 @@ export async function checkStudioValidation(browser, base) {
     await timers.locator(":scope > summary").click();
     await notice.getByRole("button", { name: "Open timer", exact: true }).click();
     await page.waitForFunction(() => document.querySelector('details[data-key="timers"]')?.open);
-    await notice.getByText("Code details", { exact: true }).click();
-    await notice.getByText(/one of the three/).waitFor();
+    console.log("  ✓ Validation target opens timer settings");
+    await timerError.getByText("Code details", { exact: true }).click();
+    await timerError.getByText(/one of the three/).waitFor();
     await page
       .locator('[data-guide="manual"]')
       .getByRole("tab", { name: "Code", exact: true })
       .click();
-    await notice.getByText(/one of the three/).waitFor();
-    assert.equal(await notice.getByText("Code details", { exact: true }).count(), 0);
+    await timerError.getByText(/one of the three/).waitFor();
+    assert.equal(await timerError.getByText("Code details", { exact: true }).count(), 0);
     await page
       .locator('[data-guide="manual"]')
       .getByRole("tab", { name: "No code", exact: true })
@@ -80,14 +84,18 @@ export async function checkStudioValidation(browser, base) {
     await notice.getByRole("button", { name: "Dismiss", exact: true }).click();
     await notice.waitFor({ state: "detached" });
     plain = false;
+    if (!(await timers.isVisible()))
+      await form.locator(":scope > div > details").last().locator(":scope > summary").click();
+    if (!(await timers.evaluate((el) => el.open))) await timers.locator(":scope > summary").click();
+    await name.fill("markOverdue");
     await timers.getByRole("button", { name: "Add", exact: true }).click();
     const fallback = page
       .getByRole("alert")
       .filter({ hasText: "A setting in this app needs attention" });
     await fallback.waitFor();
-    assert.equal(await fallback.getByText(/one of the three/).isVisible(), false);
-    await fallback.getByText("Code details", { exact: true }).click();
-    await fallback.getByText(/one of the three/).waitFor();
+    assert.equal(await timerError.getByText(/one of the three/).isVisible(), false);
+    await timerError.getByText("Code details", { exact: true }).click();
+    await timerError.getByText(/one of the three/).waitFor();
     await fallback.getByRole("button", { name: "Dismiss", exact: true }).click();
     console.log(
       "  ✓ Validation: real refusal diagnostics, plain banner, timer target, Code grammar, older-engine fallback",

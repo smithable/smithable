@@ -34,7 +34,11 @@ export function ValidationNotice({
         const kind = KINDS[String(d.plain?.path[0])] ?? "setting";
         const details = `${d.file}:${d.line}:${d.column} — ${d.message}${d.hint ? `\n${d.hint}` : ""}`;
         return (
-          <div key={`${d.file}:${d.line}:${d.column}:${d.code}:${d.message}`} className="space-y-1">
+          <div
+            data-validation-code={d.code}
+            key={`${d.file}:${d.line}:${d.column}:${d.code}:${d.message}`}
+            className="space-y-1"
+          >
             <div className="flex flex-wrap items-center gap-3">
               <span className="min-w-0 flex-1 whitespace-pre-wrap">
                 {code
