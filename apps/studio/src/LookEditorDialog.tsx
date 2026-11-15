@@ -188,7 +188,7 @@ export default function LookEditorDialog({
           Close look editor
         </button>
       </div>
-      <div className="shrink-0 border-b border-line px-3 py-2">
+      <fieldset disabled={isBusy || liveBusy} className="shrink-0 border-b border-line px-3 py-2">
         <Tabs
           tabs={[
             ["settings", "Theme and settings"],
@@ -201,7 +201,7 @@ export default function LookEditorDialog({
             else setTab(next);
           }}
         />
-      </div>
+      </fieldset>
       <PendingEdits.Provider value={edits.report}>
         <div hidden={tab !== "settings"} className="min-h-0 flex-1 overflow-auto">
           <fieldset disabled={isBusy || liveBusy}>

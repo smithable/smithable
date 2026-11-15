@@ -89,7 +89,7 @@ try {
     if (new URL(request.url()).pathname === "/api/op") operations.push(request.postDataJSON());
   });
   await page.goto(`${base}?guide=off`);
-  await page.getByRole("button", { name: "Edit look", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Look", exact: true }).waitFor();
   let release, arrived;
   const held = new Promise((resolve) => {
     release = resolve;
@@ -102,7 +102,11 @@ try {
     await held;
     await route.continue();
   });
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByRole("tab", { name: "Customise", exact: true })
+    .click();
   await started;
   await stopServer();
   const restarted = await startServer();
@@ -112,7 +116,7 @@ try {
     "restart did not replace project identity",
   );
   release();
-  const dialog = page.getByRole("dialog", { name: "Edit look", exact: true });
+  const dialog = page.getByRole("dialog", { name: "Look", exact: true });
   await dialog
     .getByText("The project changed. Keep this draft or reopen the current project.", {
       exact: false,
@@ -161,7 +165,11 @@ try {
   await page.route("**/api/look?*", (route) =>
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByRole("tab", { name: "Customise", exact: true })
+    .click();
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
   await dialog.getByLabel("Name", { exact: true }).fill("offline-retry");
   await dialog.getByLabel("Name", { exact: true }).press("Tab");
@@ -195,7 +203,11 @@ try {
   await page.route("**/api/look?*", (route) =>
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
-  await page.getByRole("button", { name: "Edit look", exact: true }).click();
+  await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Look", exact: true })
+    .getByRole("tab", { name: "Customise", exact: true })
+    .click();
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
   await page.unroute("**/api/look?*");
   await dialog.getByRole("button", { name: "Retry opening project", exact: true }).click();
