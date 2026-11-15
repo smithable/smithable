@@ -71,8 +71,35 @@ export interface VoiceInfo {
  * everything on the device only the ones the browser says run there.
  */
 export function usableVoices<V extends VoiceInfo>(voices: V[], onDeviceOnly: boolean): V[] {
-  return voices.filter((v) => /^en\b/i.test(v.lang) && (!onDeviceOnly || v.localService));
+  const allowed = voices.filter((v) => /^en\b/i.test(v.lang) && (!onDeviceOnly || v.localService));
+  const male = allowed.some((v) => MALE_VOICES.has(v.name));
+  return allowed
+    .filter((v) => !male || !FEMALE_VOICES.has(v.name))
+    .sort(
+      (a, b) =>
+        Number(b.name === "Google UK English Male") - Number(a.name === "Google UK English Male"),
+    );
 }
+
+// Exact browser voice identities only. An unfamiliar name says nothing about its voice.
+const MALE_VOICES = new Set([
+  "Google UK English Male",
+  "Daniel",
+  "Alex",
+  "Fred",
+  "Microsoft David - English (United States)",
+  "Microsoft Mark - English (United States)",
+]);
+const FEMALE_VOICES = new Set([
+  "Google UK English Female",
+  "Google US English",
+  "Samantha",
+  "Victoria",
+  "Karen",
+  "Moira",
+  "Tessa",
+  "Microsoft Zira - English (United States)",
+]);
 
 /** Which browser, for the line that says where the voice goes. */
 export type Browser = "chrome" | "edge" | "safari" | "firefox" | "other";

@@ -42,3 +42,22 @@ test("the voices a policy allows, and where the voice goes", () => {
   expect(whereLine("browser", "firefox", true)).toBe("Your voice is written out on this computer.");
   expect(whereLine("service", "chrome", false)).toContain("Amazon's speech service in Frankfurt");
 });
+
+test("Google's known male voice comes first, known female voices are hidden only when a male voice is available", () => {
+  const voices = [
+    "Samantha",
+    "Unfamiliar voice",
+    "Google UK English Female",
+    "Google UK English Male",
+  ].map((name) => ({ name, lang: "en-GB", localService: name === "Samantha" }));
+  expect(usableVoices(voices, false).map((v) => v.name)).toEqual([
+    "Google UK English Male",
+    "Unfamiliar voice",
+  ]);
+  expect(usableVoices(voices, true).map((v) => v.name)).toEqual(["Samantha"]);
+  expect(usableVoices(voices.slice(0, 3), false).map((v) => v.name)).toEqual([
+    "Samantha",
+    "Unfamiliar voice",
+    "Google UK English Female",
+  ]);
+});

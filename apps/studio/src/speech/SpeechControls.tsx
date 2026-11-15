@@ -97,20 +97,23 @@ export function SpeechControls({ speech }: { speech: Speech }) {
           <SpeakerIcon on={speech.sound && !speech.blocked} />
           {speech.blocked ? "Turn on sound" : `Sound ${speech.sound ? "on" : "off"}`}
         </button>
-        {speech.canSpeak && speech.voices.length > 1 && (
-          <select
-            aria-label="Voice"
-            title={speech.where}
-            value={speech.voice}
-            onChange={(e) => speech.setVoice(e.target.value)}
-            className="h-8 max-w-32 rounded-md border border-line bg-panel text-xs"
-          >
-            {speech.voices.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
+        {speech.canSpeak && (
+          <label className="flex items-center gap-1 text-xs">
+            Voice
+            <select
+              aria-label="Voice"
+              title={speech.where}
+              value={speech.voice}
+              onChange={(e) => speech.setVoice(e.target.value)}
+              className="h-8 max-w-32 rounded-md border border-line bg-panel text-xs"
+            >
+              {speech.voices.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
         {speech.canSpeak && (
           <label className="flex items-center gap-1 text-xs">
@@ -121,9 +124,9 @@ export function SpeechControls({ speech }: { speech: Speech }) {
               onChange={(e) => speech.setRate(Number(e.target.value))}
               className="h-8 rounded-md border border-line bg-panel text-xs"
             >
-              <option value={0.85}>Slower</option>
-              <option value={1}>Normal</option>
-              <option value={1.2}>Faster</option>
+              <option value={1}>1.0x</option>
+              <option value={1.5}>1.5x</option>
+              <option value={2}>2.0x</option>
             </select>
           </label>
         )}
