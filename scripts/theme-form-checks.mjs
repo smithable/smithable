@@ -18,6 +18,31 @@ export async function checkRenderedFonts(page) {
   }
 }
 
+export async function checkAdminHeading(page) {
+  const title = page.locator('[data-part="header"] h1').first();
+  await title.waitFor();
+  const values = await title.evaluate((title) => {
+    const style = getComputedStyle(title);
+    const tracking = style.getPropertyValue("--heading-tracking").trim();
+    const expected =
+      tracking === "normal"
+        ? 0
+        : Number.parseFloat(tracking) *
+          (tracking.endsWith("em") ? Number.parseFloat(style.fontSize) : 1);
+    return {
+      weight: style.fontWeight,
+      wantedWeight: style.getPropertyValue("--heading-weight").trim(),
+      tracking: style.letterSpacing === "normal" ? 0 : Number.parseFloat(style.letterSpacing),
+      expected,
+    };
+  });
+  assert.equal(values.weight, values.wantedWeight, "the admin title ignores its theme's weight");
+  assert.ok(
+    Math.abs(values.tracking - values.expected) < 0.05,
+    "the admin title ignores its theme's letter spacing",
+  );
+}
+
 /** Embedded contact forms keep the submit row after every field, even below the viewport. */
 export async function checkContactForm(page) {
   const form = page.locator('[data-section="contact"] [data-kit="model-form"] form');
