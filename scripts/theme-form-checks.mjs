@@ -1,4 +1,22 @@
 import assert from "node:assert/strict";
+import { FONT_ASSETS } from "../packages/adapter-tanstack/dist/index.js";
+import { checkLoadedFont } from "./theme-lab-checks.mjs";
+
+export async function checkRenderedFonts(page) {
+  await page.evaluate(() => document.fonts.ready);
+  const families = await page.evaluate(() => [
+    ...new Set(
+      [document.body, document.querySelector("h1")]
+        .filter(Boolean)
+        .map((el) => getComputedStyle(el).fontFamily.split(",")[0].trim().replace(/["']/g, "")),
+    ),
+  ]);
+  for (const family of families) {
+    const asset = FONT_ASSETS.find((asset) => asset.family === family);
+    assert.ok(asset, `the rendered font ${family} has no hosted asset metadata`);
+    await checkLoadedFont(page, asset);
+  }
+}
 
 /** Embedded contact forms keep the submit row after every field, even below the viewport. */
 export async function checkContactForm(page) {

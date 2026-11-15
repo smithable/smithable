@@ -40,7 +40,46 @@ test("the built-in themes read in both modes, with the selected gallery first", 
   expect(names).toHaveLength(74);
   expect(new Set(names).size).toBe(74);
   expect(names.slice(0, 3)).toEqual(["arcade", "darkmatter", "halftone"]);
-  expect(names).not.toEqual(expect.arrayContaining(["carnival", "atelier", "newsprint"]));
+  for (const excluded of ["carnival", "atelier", "newsprint"])
+    expect(names).not.toContain(excluded);
+  const leading =
+    "amber-minimal amethyst-haze arcade broadside caffeine coral cosmic-night darkmatter dusk halftone hallmark-midnight ink kiln nature refract ribbon solstice specimen spore starry-night studio sticker sunset-horizon terrazzo ultraviolet vantage".split(
+      " ",
+    );
+  const following =
+    "darkroom elegant-luxury furrow graphite grid manifesto midnight-bloom loom modern-minimal mono mocha-mousse neo-brutalism notebook rim riso sage-garden solar-dusk sport squeeze tangerine terminal vellum".split(
+      " ",
+    );
+  expect(names.slice(0, 26).toSorted()).toEqual(leading.toSorted());
+  expect(names.slice(26, 48).toSorted()).toEqual(following.toSorted());
+  expect(names.slice(48)).toEqual([
+    "modern",
+    "minimal",
+    "playful",
+    "corporate",
+    "coastal",
+    "navy",
+    "editorial",
+    "woodland",
+    "contrast",
+    "nordic",
+    "pastel",
+    "midnight",
+    "craft",
+    "restaurant",
+    "street-food",
+    "cafe",
+    "warm-service",
+    "quiet-workspace",
+    "ink-and-brass",
+    "workbench",
+    "stillwater",
+    "brass",
+    "paperwork",
+    "monochrome",
+    "softbox",
+    "helpdesk",
+  ]);
   for (const theme of BUILT_IN_THEMES) {
     expect(theme.source).toBe("built-in");
     expect(FONTS, theme.name).toContain(theme.font);
@@ -289,6 +328,9 @@ ${mode}:
 `;
     const checked = parseTheme({ path: "themes/invisible.yml", text }, { contrast: "error" });
     expect(checked.theme).toBeUndefined();
+    const project = parseTheme({ path: "themes/invisible.yml", text });
+    expect(project.theme?.[mode].input).toBe(surface);
+    expect(project.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
     expect(checked.diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
