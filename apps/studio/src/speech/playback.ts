@@ -27,12 +27,15 @@ export function playback(
       if (current !== utterance || paused) return;
       if (event.error === "not-allowed") blocked();
       current = undefined;
-      queue = [];
-      changed(false);
+      queue.shift();
+      next();
     };
     synth.speak(utterance);
   };
   return {
+    get busy() {
+      return queue.length > 0;
+    },
     speak(text: string, voice: SpeechSynthesisVoice, rate: number) {
       for (const piece of sentences(text)) {
         const utterance = new SpeechSynthesisUtterance(piece);
@@ -56,8 +59,11 @@ export function playback(
       } else {
         // Some browsers discard paused audio. Replay only its unfinished sentence.
         if (current) {
-          current.onend = null;
-          current.onerror = null;
+          const restart = new SpeechSynthesisUtterance(current.text);
+          restart.voice = current.voice;
+          restart.lang = current.lang;
+          restart.rate = current.rate;
+          queue[0] = restart;
           current = undefined;
           synth.cancel();
         }
@@ -69,6 +75,7 @@ export function playback(
       queue = [];
       paused = false;
       synth.cancel();
+      synth.resume();
       changed(false);
     },
   };
