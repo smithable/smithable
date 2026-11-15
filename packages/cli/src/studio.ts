@@ -8,6 +8,7 @@ import { type Assumption, describedWith, type Proposal, searchPhrases } from "@s
 import {
   applyOperations,
   BUILT_IN_THEMES,
+  type Diagnostic,
   EDITABLE_FILES,
   editAsOperations,
   findOperation,
@@ -1304,9 +1305,13 @@ export async function studio(
 
         const asked = new Date().toISOString();
         const packages = installed();
+        let diagnostics: Diagnostic[] | undefined;
         const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
+            onResult: (result) => {
+              if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
+            },
             ...(expectedLookProject !== undefined
               ? { projectCheck: () => expectedLookProject === lookProject }
               : {}),
@@ -1329,7 +1334,13 @@ export async function studio(
         else if (result.output.includes("Nothing was changed.")) restored(packages);
         // A failure of this change (not a refusal, and not an earlier failure).
         const report = result.ok ? undefined : offerReport(asked);
-        return json({ ...result, needsConfirm, report, ...(change ? { change } : {}) });
+        return json({
+          ...result,
+          needsConfirm,
+          report,
+          ...(change ? { change } : {}),
+          ...(diagnostics ? { diagnostics } : {}),
+        });
       }
       // The preview has not answered within Studio's wait: its last log lines, and the failure
       // kept for a report (seen on the hosted beta: a preview that never started).

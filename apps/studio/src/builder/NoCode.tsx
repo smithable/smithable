@@ -61,9 +61,18 @@ function ValueOrigin({ models, concept }: { models: ModelIR[]; concept: string }
 
 /** The event that opens a part of the app in Behavior (Smith's answer leads there). */
 export const OPEN_PART = "smithable:open-part";
+type OpenPart = string | { file: string; path: (string | number)[] };
 
 /** Where a summary's part is set: its entry in Behavior, or Who can for sign-in and access. */
-function entryOf(concept: string): { sub: SubView; path: string[] } | undefined {
+function entryOf(concept: OpenPart): { sub: SubView; path: (string | number)[] } | undefined {
+  if (typeof concept !== "string") {
+    const subs: Record<string, SubView> = {
+      "smithable.auth.yml": "who",
+      "smithable.ux.yml": "look",
+      "smithable.content.yml": "content",
+    };
+    return { sub: subs[concept.file] ?? "behavior", path: concept.path };
+  }
   const [kind = "", name = ""] = concept.split(/:(.*)/s);
   const area = {
     model: "models",
@@ -90,7 +99,7 @@ function Summary({
   onJump,
 }: {
   sections: SummarySection[];
-  onJump: (at: { sub: SubView; path: string[] }) => void;
+  onJump: (at: { sub: SubView; path: (string | number)[] }) => void;
 }) {
   const [all, setAll] = useState(false);
   // Folded, a few lines, so what follows the description is in view (Johan, 2026-10-23).
@@ -99,7 +108,11 @@ function Summary({
   const shown = all ? sections : sections.slice(0, SECTIONS);
   const more =
     sections.length > SECTIONS || shown.some((section) => section.sentences.length > SENTENCES);
-  const jump = (at: { sub: SubView; path: string[] } | undefined, text: string, key: string) =>
+  const jump = (
+    at: { sub: SubView; path: (string | number)[] } | undefined,
+    text: string,
+    key: string,
+  ) =>
     at ? (
       <button
         key={key}
@@ -193,7 +206,9 @@ export function NoCode({
     setSubState(next);
     onPlace({ sub: next });
   };
-  const [opened, setOpened] = useState(() => placeOf(place.selection)?.path);
+  const [opened, setOpened] = useState<(string | number)[] | undefined>(
+    () => placeOf(place.selection)?.path,
+  );
   // A record's value picked in the preview: its field says where the value comes from.
   const [picked, setPicked] = useState(place.selection);
   const words = (op: string, args: Record<string, unknown>) =>
@@ -203,7 +218,7 @@ export function NoCode({
     [spec],
   );
   // A sentence of the summary opens its entry and brings it into view.
-  const jumpTo = (at: { sub: SubView; path: string[] }) => {
+  const jumpTo = (at: { sub: SubView; path: (string | number)[] }) => {
     setSub(at.sub);
     setOpened(at.path);
     requestAnimationFrame(() =>
@@ -230,7 +245,7 @@ export function NoCode({
   jumpRef.current = jumpTo;
   useEffect(() => {
     const open = (e: Event) => {
-      const at = entryOf((e as CustomEvent<string>).detail);
+      const at = entryOf((e as CustomEvent<OpenPart>).detail);
       if (at) jumpRef.current(at);
     };
     window.addEventListener(OPEN_PART, open);

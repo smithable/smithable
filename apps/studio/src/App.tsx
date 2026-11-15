@@ -46,6 +46,7 @@ import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
+import { type PresentedDiagnostic, ValidationNotice } from "./validation-notice";
 import {
   gridOf,
   LayoutBar,
@@ -114,6 +115,7 @@ export function App() {
     failure?: boolean;
     /** Left for Studio by the making or the daemon (a description that could not be used). */
     notice?: boolean;
+    diagnostics?: PresentedDiagnostic[];
   }>();
   const [reporting, setReporting] = useState(false);
   // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
@@ -530,6 +532,9 @@ export function App() {
   }, [refresh]);
 
   const spec = useSpec(project);
+  const validationErrors = (
+    message?.diagnostics?.length ? message.diagnostics : (spec.diagnostics ?? [])
+  ).filter((d) => d.severity === "error");
   shownIR.current = spec.ir;
   // Smith's presentation of the app (smith-first.md §3).
   const parts = useMemo(
@@ -629,6 +634,7 @@ export function App() {
         change: result.ok,
         report: result.report,
         failure: Boolean(result.report),
+        diagnostics: result.diagnostics,
       });
       return result.ok;
     },
@@ -1369,63 +1375,87 @@ export function App() {
                 : "Your workspace is starting…"}
           </div>
         )}
-        {(message || pending) && (
-          // Hovering or focusing the notice keeps it while it is read.
-          // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
-          <div
-            role={message?.ok === false || pending ? "alert" : "status"}
-            onMouseEnter={() => setHolding(true)}
-            onMouseLeave={() => setHolding(false)}
-            onFocus={() => setHolding(true)}
-            onBlur={() => setHolding(false)}
-            className={cx(
-              "flex items-center gap-3 border-b px-4 py-2 text-sm",
-              pending
-                ? "border-amber-200 bg-amber-50"
-                : message?.ok
-                  ? "border-green-200 bg-green-50"
-                  : "border-red-200 bg-red-50",
-            )}
-          >
-            <span className="min-w-0 flex-1 whitespace-pre-wrap">
-              {pending ? pending.impact : message?.text}
-            </span>
-            {pending ? (
-              <>
-                <Button
-                  variant="danger"
-                  disabled={busy}
-                  onClick={() =>
-                    pending.undo
-                      ? undoChanges(pending.undo, true)
-                      : run(pending.name, pending.args, true)
-                  }
-                >
-                  Apply anyway
-                </Button>
-                <Button variant="ghost" onClick={() => setPending(undefined)}>
-                  Cancel
-                </Button>
-              </>
-            ) : message?.change ? (
-              // The change is the latest one, so undo takes back exactly it.
-              <Button variant="ghost" disabled={busy} onClick={() => void undo()}>
-                Undo this change
-              </Button>
-            ) : (
-              <>
-                {message?.failure && (
-                  <Button variant="ghost" onClick={() => setTroubleshooting(true)}>
-                    Troubleshoot
-                  </Button>
-                )}
-                <Button variant="ghost" onClick={() => setMessage(undefined)}>
-                  Dismiss
-                </Button>
-              </>
-            )}
-          </div>
+        {validationErrors.length > 0 && (
+          <ValidationNotice
+            diagnostics={validationErrors}
+            code={manual === "code"}
+            onDismiss={message?.diagnostics?.length ? () => setMessage(undefined) : undefined}
+            onOpen={(diagnostic) => {
+              pauseGuide();
+              if (narrow) showWindow("nocode");
+              else workIn("nocode");
+              setTimeout(
+                () =>
+                  window.dispatchEvent(
+                    new CustomEvent(OPEN_PART, {
+                      detail: { file: diagnostic.file, path: diagnostic.plain?.path },
+                    }),
+                  ),
+                150,
+              );
+            }}
+          />
         )}
+        {(message || pending) &&
+          (!validationErrors.length ||
+            pending ||
+            (!message?.diagnostics?.length && !message?.notice)) && (
+            // Hovering or focusing the notice keeps it while it is read.
+            // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
+            <div
+              role={message?.ok === false || pending ? "alert" : "status"}
+              onMouseEnter={() => setHolding(true)}
+              onMouseLeave={() => setHolding(false)}
+              onFocus={() => setHolding(true)}
+              onBlur={() => setHolding(false)}
+              className={cx(
+                "flex items-center gap-3 border-b px-4 py-2 text-sm",
+                pending
+                  ? "border-amber-200 bg-amber-50"
+                  : message?.ok
+                    ? "border-green-200 bg-green-50"
+                    : "border-red-200 bg-red-50",
+              )}
+            >
+              <span className="min-w-0 flex-1 whitespace-pre-wrap">
+                {pending ? pending.impact : message?.text}
+              </span>
+              {pending ? (
+                <>
+                  <Button
+                    variant="danger"
+                    disabled={busy}
+                    onClick={() =>
+                      pending.undo
+                        ? undoChanges(pending.undo, true)
+                        : run(pending.name, pending.args, true)
+                    }
+                  >
+                    Apply anyway
+                  </Button>
+                  <Button variant="ghost" onClick={() => setPending(undefined)}>
+                    Cancel
+                  </Button>
+                </>
+              ) : message?.change ? (
+                // The change is the latest one, so undo takes back exactly it.
+                <Button variant="ghost" disabled={busy} onClick={() => void undo()}>
+                  Undo this change
+                </Button>
+              ) : (
+                <>
+                  {message?.failure && (
+                    <Button variant="ghost" onClick={() => setTroubleshooting(true)}>
+                      Troubleshoot
+                    </Button>
+                  )}
+                  <Button variant="ghost" onClick={() => setMessage(undefined)}>
+                    Dismiss
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         {reporting && <ReportDialog onClose={() => setReporting(false)} />}
         {feedback !== undefined && (
           <FeedbackDialog

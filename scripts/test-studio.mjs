@@ -38,6 +38,7 @@ import { checkStudioLookNavigation } from "./studio-look-navigation-checks.mjs";
 import { checkStudioQuestions } from "./studio-question-checks.mjs";
 import { checkStudioSpeech } from "./studio-speech-checks.mjs";
 import { checkStudioUsage } from "./studio-usage-checks.mjs";
+import { checkStudioValidation } from "./studio-validation-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
 
@@ -355,6 +356,7 @@ try {
   await checkStudioLookNavigation(browser, base);
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
+  await checkStudioValidation(browser, base);
   await checkStudioQuestions(browser, base);
   await checkStudioUsage(browser, base);
   await step(
