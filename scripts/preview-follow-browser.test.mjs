@@ -397,31 +397,29 @@ test("No code follows real preview navigation without losing edits or opening hi
       .getByRole("button", { name: "Add", exact: true })
       .click();
     await languageRequest;
-    await language.selectOption("fi");
+    await language.selectOption("");
     await navigateInApp("/customers");
+    assert.equal(await context(), "orders", "following left a pending language save");
     releaseLanguage();
     await noCode.getByRole("button", { name: "Swedish", exact: true }).waitFor();
-    assert.equal(await language.inputValue(), "fi", "saving cleared a newer language choice");
-    await outside();
-    await settled();
-    assert.equal(await context(), "orders", "following left a newer language draft");
-    await language.selectOption("");
+    assert.equal(await language.inputValue(), "", "saving replaced a cancelled language choice");
     await outside();
     await followed("customers");
     await page.unroute("**/api/op");
+    await noCode.getByRole("button", { name: "Remove Swedish", exact: true }).click();
 
     await page.route("**/api/op", (route) =>
       route.fulfill({
         json: { ok: false, output: "Language addition refused for this test." },
       }),
     );
-    await language.selectOption("fi");
+    await language.selectOption("sv");
     await language
       .locator("xpath=ancestor::form")
       .getByRole("button", { name: "Add", exact: true })
       .click();
     await page.getByText("Language addition refused for this test.", { exact: true }).waitFor();
-    assert.equal(await language.inputValue(), "fi", "a refused language choice was cleared");
+    assert.equal(await language.inputValue(), "sv", "a refused language choice was cleared");
     await navigateInApp("/orders");
     await outside();
     assert.equal(await context(), "customers", "following left a refused language draft");
@@ -430,7 +428,7 @@ test("No code follows real preview navigation without losing edits or opening hi
       .locator("xpath=ancestor::form")
       .getByRole("button", { name: "Add", exact: true })
       .click();
-    await noCode.getByRole("button", { name: "Finnish", exact: true }).waitFor();
+    await noCode.getByRole("button", { name: "Swedish", exact: true }).waitFor();
     assert.equal(await language.inputValue(), "", "successful language choice did not settle");
     await outside();
     await followed("orders");
