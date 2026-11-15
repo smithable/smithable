@@ -169,7 +169,7 @@ export default function LookEditorDialog({
     <dialog
       ref={dialog}
       className="look-editor-dialog"
-      aria-label="Edit look"
+      aria-label="Look"
       onCancel={(event) => {
         event.preventDefault();
         close();

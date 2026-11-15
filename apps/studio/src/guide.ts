@@ -40,7 +40,7 @@ const NOCODE: Stop[] = [
   {
     anchor: "look",
     title: "The look",
-    text: "Colors, type, the app's language and how lists and forms are laid out: the look is separate from what the app does.",
+    text: "Look in the top bar holds themes and Customise. In No code, Layout holds each page's presentation and Content holds the logo and languages.",
   },
   {
     anchor: "publish",

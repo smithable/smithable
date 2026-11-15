@@ -205,6 +205,7 @@ export function NoCode({
   onPlace,
   target,
   onTargetOpened,
+  onLook,
   followingBlocked = false,
 }: {
   project: Project;
@@ -215,6 +216,7 @@ export function NoCode({
   onPlace: (place: Place["nocode"]) => void;
   target?: OpenPart;
   onTargetOpened?: () => void;
+  onLook: () => void;
   followingBlocked?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -398,12 +400,24 @@ export function NoCode({
     onPlace({ sub: at.sub, selection: s });
   };
   // A part named elsewhere (Smith's "What does this app do?") opens here.
-  const jumpRef = useRef(jumpTo);
-  jumpRef.current = jumpTo;
+  const openPart = (part: OpenPart) => {
+    if (
+      typeof part !== "string" &&
+      part.file.split(/[\\/]/).at(-1) === "smithable.ux.yml" &&
+      part.path[0] !== "pages"
+    ) {
+      cancelFollow();
+      onLook();
+      return;
+    }
+    const at = entryOf(part);
+    if (at) jumpTo(at);
+  };
+  const jumpRef = useRef(openPart);
+  jumpRef.current = openPart;
   useEffect(() => {
     const open = (e: Event) => {
-      const at = entryOf((e as CustomEvent<OpenPart>).detail);
-      if (at) jumpRef.current(at);
+      jumpRef.current((e as CustomEvent<OpenPart>).detail);
     };
     window.addEventListener(OPEN_PART, open);
     return () => window.removeEventListener(OPEN_PART, open);
@@ -411,8 +425,7 @@ export function NoCode({
   // An explicit target waits in App's state until this window is mounted.
   useEffect(() => {
     if (target === undefined) return;
-    const at = entryOf(target);
-    if (at) jumpRef.current(at);
+    jumpRef.current(target);
     onTargetOpened?.();
   }, [target, onTargetOpened]);
   useEffect(() => {
@@ -575,16 +588,25 @@ export function NoCode({
                     );
                   if (area === "pages")
                     return (
-                      <OwnCode
-                        page={name}
-                        files={codeOf(`page:${name}`, "pages")}
-                        dir={project.localDir}
-                        own={Boolean(
-                          project.concepts
-                            .find((c) => c.concept === `page:${name}`)
-                            ?.files.some((f) => f.path.startsWith("src/custom/pages/")),
-                        )}
-                      />
+                      <>
+                        <button
+                          type="button"
+                          className="rounded border border-line px-2 py-1 text-xs"
+                          onClick={() => jumpTo({ sub: "layout", path: ["pages", String(name)] })}
+                        >
+                          Page layout
+                        </button>
+                        <OwnCode
+                          page={name}
+                          files={codeOf(`page:${name}`, "pages")}
+                          dir={project.localDir}
+                          own={Boolean(
+                            project.concepts
+                              .find((c) => c.concept === `page:${name}`)
+                              ?.files.some((f) => f.path.startsWith("src/custom/pages/")),
+                          )}
+                        />
+                      </>
                     );
                   return undefined;
                 }}
@@ -596,8 +618,8 @@ export function NoCode({
                 spec={spec}
                 run={run}
                 page={contextPage}
-                onBehavior={() => jumpTo({ sub: "behavior", path: ["pages", contextPage] })}
-                onContent={() => jumpTo({ sub: "content", path: ["pages", contextPage] })}
+                onBehavior={(page) => jumpTo({ sub: "behavior", path: ["pages", page] })}
+                onContent={(page) => jumpTo({ sub: "content", path: ["pages", page] })}
                 onPage={(page) => {
                   cancelFollow();
                   setContextPage(page);

@@ -58,6 +58,7 @@ export function ThemeSettings({
   onCustomise: (theme: string) => void;
 }) {
   const { ir, ux } = spec;
+  const scope = useId();
   const source = useUxSource(
     [...(target ? ["pages", target] : []), "theme", "preset"],
     target ? "app" : "theme",
@@ -69,9 +70,10 @@ export function ThemeSettings({
   const selectedTheme = themeNamed(preset, ownThemes);
   return (
     <div className="space-y-6 p-3">
-      <label className="flex items-center gap-3 text-sm">
+      <label htmlFor={`${scope}-theme-target`} className="flex items-center gap-3 text-sm">
         Theme selection target
         <Select
+          id={`${scope}-theme-target`}
           aria-label="Theme selection target"
           value={target ?? ""}
           onChange={(e) => onTarget(e.target.value || null)}
@@ -183,31 +185,31 @@ export function ThemeSettings({
         />
       </Group>
       <Group title="App-wide font, density and motion">
-        <Segmented
+        <ThemeSetting
+          which="font"
           label="Font"
-          value={theme.font ?? "none"}
-          options={[["none", "The theme's"], ...FONTS.map((f) => [f, f] as [string, string])]}
-          onChange={(font) => run("setTheme", { font })}
+          options={FONTS.map((f) => [f, f] as [string, string])}
+          run={run}
         />
-        <Segmented
+        <ThemeSetting
+          which="density"
           label="Density"
-          value={theme.density}
           options={[
             ["comfortable", "Comfortable"],
             ["standard", "Standard"],
             ["compact", "Compact"],
           ]}
-          onChange={(density) => run("setTheme", { density })}
+          run={run}
         />
-        <Segmented
+        <ThemeSetting
+          which="motion"
           label="Motion"
-          value={theme.motion}
           options={[
             ["none", "None"],
             ["subtle", "Subtle"],
             ["lively", "Lively"],
           ]}
-          onChange={(motion) => run("setTheme", { motion })}
+          run={run}
         />
       </Group>
       <Group title="App-wide menu">
@@ -261,8 +263,8 @@ export function PageLayout({
   run: Run;
   page: string;
   onPage: (page: string) => void;
-  onBehavior: () => void;
-  onContent: () => void;
+  onBehavior: (page: string) => void;
+  onContent: (page: string) => void;
 }) {
   const { ir, ux } = spec;
   if (!ir || !ux)
@@ -272,10 +274,18 @@ export function PageLayout({
   return (
     <div className="space-y-6 p-3">
       <div className="flex gap-3 text-sm">
-        <button type="button" onClick={onBehavior}>
+        <button
+          type="button"
+          disabled={!activePage}
+          onClick={() => activePage && onBehavior(activePage.id)}
+        >
           Page behavior
         </button>
-        <button type="button" onClick={onContent}>
+        <button
+          type="button"
+          disabled={!activePage}
+          onClick={() => activePage && onContent(activePage.id)}
+        >
           Page content
         </button>
       </div>
@@ -594,6 +604,40 @@ function Segmented({
  * A theme color of the owner's (the brand color, or the background): picked, applied when the
  * picker closes; or back to the theme's own.
  */
+function ThemeSetting({
+  which,
+  label,
+  options,
+  run,
+}: {
+  which: "font" | "density" | "motion";
+  label: string;
+  options: [string, string][];
+  run: Run;
+}) {
+  const source = useUxSource(
+    ["theme", ...(which === "font" ? ["brand", which] : [which])],
+    "theme",
+  );
+  return (
+    <div className="space-y-1">
+      <Segmented
+        label={label}
+        value={source.present ? String(source.value) : "__inherited"}
+        options={[["__inherited", "Use the theme's own"], ...options]}
+        onChange={(value) =>
+          value === "__inherited"
+            ? run("resetThemeOverride", { key: which })
+            : run("setTheme", { [which]: value })
+        }
+      />
+      <p data-override-origin className="text-xs text-muted">
+        {source.present ? `App-wide override: ${humanize(String(source.value))}` : source.inherited}
+      </p>
+    </div>
+  );
+}
+
 function ThemeColor({
   which,
   label,
@@ -608,6 +652,7 @@ function ThemeColor({
   run: Run;
 }) {
   const [picked, setPicked] = useState<string>();
+  const source = useUxSource(["theme", "brand", which], "theme");
   usePendingEdit(picked !== undefined && picked !== value);
   const shown = picked ?? value ?? fallback;
   const apply = () => {
@@ -625,17 +670,20 @@ function ThemeColor({
         className="h-9 w-14 cursor-pointer rounded border border-line p-1"
       />
       <span className="text-xs text-muted">{label}</span>
-      <span className="font-mono text-xs">{value ?? "the theme's own"}</span>
+      <span data-override-origin className="text-xs">
+        {source.present ? `App-wide override: ${String(source.value)}` : source.inherited}
+      </span>
       {picked && picked !== value && (
         <button type="button" className="text-xs font-medium text-accent" onClick={apply}>
           Use this color
         </button>
       )}
-      {value && (
+      {source.present && (
         <button
           type="button"
           className="text-xs text-muted hover:text-accent"
-          onClick={() => run("setTheme", { [which]: "none" })}
+          aria-label={`Use the theme's own ${label.toLowerCase()}`}
+          onClick={() => run("resetThemeOverride", { key: which })}
         >
           Use the theme's own
         </button>

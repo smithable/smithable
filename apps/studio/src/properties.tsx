@@ -190,8 +190,8 @@ export function Properties({
   run: Run;
   /** The project's files: with them, every setting of the part is under "All settings". */
   files?: Project["files"];
-  /** Opens the Look tab (Builder only), where a list's columns and a form's fields are set. */
-  onLook?: () => void;
+  /** Opens the page's Layout, where its list columns and form fields are set. */
+  onLook?: (page?: string) => void;
 }) {
   const ir = spec.ir;
   const [kind = "", rest = ""] = concept.split(":");
@@ -363,8 +363,12 @@ export function Properties({
             {onLook ? (
               <>
                 {" "}
-                <button type="button" className="text-accent hover:underline" onClick={onLook}>
-                  set them in Look
+                <button
+                  type="button"
+                  className="text-accent hover:underline"
+                  onClick={() => onLook(name)}
+                >
+                  set them in Layout
                 </button>
                 .
               </>
@@ -758,7 +762,7 @@ function Listed({
   spec: Spec;
   model: string;
   field: string;
-  onLook?: () => void;
+  onLook?: (page?: string) => void;
 }) {
   const list = listOf(spec, model);
   if (!list) return null;
@@ -768,8 +772,12 @@ function Listed({
       {list.columns.includes(field) ? `Shown in listings on ${page}` : `Not in listings on ${page}`}
       {" · "}
       {onLook ? (
-        <button type="button" className="text-accent hover:underline" onClick={onLook}>
-          its columns are set in Look
+        <button
+          type="button"
+          className="text-accent hover:underline"
+          onClick={() => onLook(list.page)}
+        >
+          its columns are set in Layout
         </button>
       ) : (
         `its columns are pages.${list.page}.columns in smithable.ux.yml`

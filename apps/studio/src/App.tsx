@@ -406,7 +406,7 @@ export function App() {
           ? "smith"
           : anchor === "changes"
             ? "changes"
-            : ["behavior", "look"].includes(anchor)
+            : anchor === "behavior"
               ? "nocode"
               : anchor === "manual"
                 ? manual
@@ -1096,7 +1096,7 @@ export function App() {
           guideDemo.current = false;
         });
       }
-      // No code is needed by the remaining Look stop. The completed tour restores the layout.
+      // The completed tour restores the layout after the remaining top-bar stops.
       setArrangement({ ...now.arrangement, manual: "nocode" });
       if (now.narrow) now.showWindow("preview");
     },
@@ -1222,6 +1222,7 @@ export function App() {
               <Button
                 variant="ghost"
                 className="shrink-0 border border-line"
+                data-guide="look"
                 onClick={() => setEditingLook({ project, path: keptPage() })}
               >
                 Look
@@ -1663,6 +1664,7 @@ export function App() {
                             onPlace={nocodePlace}
                             target={partToOpen}
                             onTargetOpened={() => setPartToOpen(undefined)}
+                            onLook={() => setEditingLook({ project, path: keptPage() })}
                             followingBlocked={
                               busy || guideStarted || Boolean(editingLook) || show.going
                             }

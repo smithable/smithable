@@ -41,7 +41,7 @@ export function Code({
   project: Project;
   spec: Spec;
   run: Run;
-  /** Opens No code's Look: where the ux file's choices have controls. */
+  /** Opens the top-bar Look for themes and app-wide settings. */
   onLook: () => void;
   /** A setting to show, asked by another window (App.tsx, from SHOW_CODE). */
   jumpTo?: CodeJump;
@@ -344,14 +344,13 @@ function SpecEditor({
           </Button>
         </p>
       )}
-      {/* The look has controls in No code (themes, columns, forms, a landing page's sections);
-          this file is for what they do not cover, or for changing a lot at once. */}
+      {/* Look holds themes; Layout holds page presentation. The file remains editable. */}
       {file === "smithable.ux.yml" && (
         <p className="flex flex-wrap items-center gap-x-2 border-b border-line bg-subtle px-2 py-1 text-xs text-muted">
           <span>
-            Themes, colours, columns, forms and a landing page's sections have controls in No code's
-            Look tab; edit here for what Look has no control for, or to change a lot at once.
-            Ctrl-Space lists what fits.
+            Themes and colours have controls in Look. Columns, forms and page sections are in No
+            code's Layout tab. Edit here for other settings, or to change a lot at once. Ctrl-Space
+            lists what fits.
           </span>
           <Button variant="ghost" className="h-6 whitespace-nowrap text-xs" onClick={onLook}>
             Open Look
