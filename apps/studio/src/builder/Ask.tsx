@@ -253,6 +253,9 @@ export function Ask({
       });
       last.current = { text, at: Date.now(), question: next.kind === "question" };
       setProposal(next);
+      // A reply starts in an empty box, including when dictated. The original request stays
+      // in last, so answering later still carries the question's change context.
+      if (next.kind === "question") setRequest("");
       // An answer or a refusal is the end of that request: it goes into the thread.
       const reply =
         next.kind === "answer"
@@ -453,10 +456,45 @@ export function Ask({
                       ? "pointing"
                       : "waiting";
   const box = useRef<HTMLTextAreaElement>(null);
-  const send = () => {
-    if (!request.trim()) return;
+  const answerQuestion = (answer: string) => {
+    if (busy || proposal?.kind !== "question" || !last.current) return;
     clearTimeout(sendLater.current);
     speech.stopSpeaking();
+    const detailed = `${last.current.text} (${answer})`;
+    setRequest(detailed);
+    void propose(detailed);
+  };
+  const send = () => {
+    if (busy || !request.trim()) return;
+    clearTimeout(sendLater.current);
+    speech.stopSpeaking();
+    if (proposal?.kind === "question") {
+      answerQuestion(request.trim());
+      return;
+    }
+    // Only a question explicitly reopened for an answer owns the input. Passing presentation
+    // cards remain optional and never consume an unrelated request as they advance.
+    const optional = reasked;
+    if (optional) {
+      const normalized = request
+        .trim()
+        .toLowerCase()
+        .replace(/[.!?]+$/, "");
+      const option = [optional.chosen, ...optional.options].find(
+        (o) => o.toLowerCase() === normalized,
+      );
+      if (normalized === "keep it" || option === optional.chosen) {
+        show?.settle(optional, optional.chosen);
+        setReasked(undefined);
+        setRequest("");
+        return;
+      }
+      if (option) {
+        setRequest("");
+        answer(optional, option);
+        return;
+      }
+    }
     setJustApplied(false);
     // "I want to leave feedback", "feedback: <words>": the feedback panel, by rule (A 242).
     const said = feedbackRequest(request.trim());
@@ -536,7 +574,8 @@ export function Ask({
       speech.speak(
         `I propose: ${proposal.operations.map((o) => words?.(o.op, o.args) ?? o.description).join(". ")}.`,
       );
-    else if (proposal?.kind === "question") speech.speak(proposal.question);
+    else if (proposal?.kind === "question")
+      speech.speak([proposal.question, ...proposal.options].join(". "));
   }, [proposal?.id]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new answer is the signal
   useEffect(() => {
@@ -629,15 +668,16 @@ export function Ask({
               busy={busy}
               onApply={apply}
               onCancel={() => {
-                if (trace) say(request.trim(), "Discarded.");
+                if (proposal.kind === "question") {
+                  clearTimeout(sendLater.current);
+                  speech.stopSpeaking();
+                  last.current = undefined;
+                  setRequest("");
+                } else if (trace) say(request.trim(), "Discarded.");
                 setProposal(undefined);
               }}
               onEdit={onEdit}
-              onOption={(option) => {
-                const detailed = `${request.trim()} (${option})`;
-                setRequest(detailed);
-                void propose(detailed);
-              }}
+              onOption={answerQuestion}
               onRefine={(more) => {
                 const detailed = `${request.trim()} (${more})`;
                 setRequest(detailed);
@@ -1114,14 +1154,23 @@ function AssumptionLine({
       <p className="text-muted">
         I went with: <strong className="font-medium text-fg">{a.chosen}</strong>
       </p>
-      <div className="flex flex-wrap gap-1.5">
-        <button type="button" onClick={() => onKeep(a)} className={CHIP_MAIN}>
+      <div className="grid gap-2">
+        <button
+          type="button"
+          onClick={() => onKeep(a)}
+          className={cx(CHIP_MAIN, "w-full px-4 py-3 text-left whitespace-normal")}
+        >
           Keep it
         </button>
         {a.options
           .filter((o) => o !== a.chosen)
           .map((o) => (
-            <button key={o} type="button" onClick={() => onAnswer(a, o)} className={CHIP}>
+            <button
+              key={o}
+              type="button"
+              onClick={() => onAnswer(a, o)}
+              className={cx(CHIP, "w-full px-4 py-3 text-left whitespace-normal")}
+            >
               {o}
             </button>
           ))}
@@ -1156,7 +1205,8 @@ export interface Showing {
 /**
  * The presentation's state, held by Studio so the thread can move between the overlay, the
  * floating panel and the window without losing it (smith-first.md §12.3). A part follows after a
- * moment, unless a question at it waits; on the overlay the last part waits for the person's
+ * moment. Its assumptions already have a chosen answer and may stay unanswered; on the overlay
+ * the last part waits for the person's
  * word (`hold`), elsewhere the presentation ends after it.
  */
 export function usePresentation(parts: Part[], assumptions: Assumption[], hold: boolean): Showing {
@@ -1169,15 +1219,12 @@ export function usePresentation(parts: Part[], assumptions: Assumption[], hold: 
     if (said < parts.length) setSaid(said + 1);
     else setGoing(false);
   };
-  const waits = assumptions.some(
-    (a) => a.part === parts[said - 1]?.part && !settled.has(a.question),
-  );
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each part once, and again once its question is settled
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each part once
   useEffect(() => {
-    if (!going || waits || (hold && said >= parts.length)) return;
+    if (!going || (hold && said >= parts.length)) return;
     const later = setTimeout(next, 4000);
     return () => clearTimeout(later);
-  }, [going, said, waits, hold]);
+  }, [going, said, hold]);
   return {
     parts,
     said,
@@ -1473,8 +1520,19 @@ export function ProposalView({
     <section
       aria-label="Proposal"
       aria-live="polite"
-      className="space-y-3 rounded-md border border-line p-3"
+      className="relative space-y-3 rounded-md border border-line p-3"
     >
+      {proposal.kind === "question" && (
+        <button
+          type="button"
+          aria-label="Cancel this change"
+          disabled={busy}
+          onClick={onCancel}
+          className="absolute top-2 right-2 rounded p-1 text-quiet hover:bg-subtle focus-visible:outline-2 focus-visible:outline-accent"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      )}
       <p data-receipt className="text-xs text-quiet">
         {usageReceipt(
           proposal.usage,
@@ -1566,14 +1624,14 @@ export function ProposalView({
       )}
       {proposal.kind === "question" && (
         <>
-          <p className="text-sm">{proposal.question}</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="pr-6 text-sm">{proposal.question}</p>
+          <div className="grid gap-2">
             {proposal.options.map((option) => (
               <Button
                 key={option}
                 variant="ghost"
-                className="border border-line"
-                disabled={!onOption}
+                className="h-auto min-h-12 w-full justify-start border border-line px-4 py-3 text-left whitespace-normal"
+                disabled={busy || !onOption}
                 onClick={() => onOption?.(option)}
               >
                 {option}
