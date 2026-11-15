@@ -359,7 +359,7 @@ try {
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
   await checkStudioDraft(browser, base);
-  await checkStudioTimers(browser, base);
+  await checkStudioTimers(browser, base, root);
   await checkStudioValidation(browser, base);
   await checkStudioQuestions(browser, base);
   await checkStudioUsage(browser, base);
