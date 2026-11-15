@@ -2533,10 +2533,7 @@ try {
         .getByText(/theme on the home page/i)
         .first()
         .waitFor({ timeout: 60000 * P });
-      await lookDialog.getByRole("button", { name: "Close look editor", exact: true }).click();
-      await sub("Layout");
-      await page.getByLabel("Page to style").selectOption("home");
-      // A background of the owner's: picked, applied when the picker closes, in the CSS.
+      // The app-wide background stays in Look while the landing preset is selected.
       await page.getByLabel("Background", { exact: true }).fill("#f5efe6");
       await page.getByLabel("Background", { exact: true }).blur();
       await last
@@ -2545,6 +2542,9 @@ try {
         .waitFor({ timeout: 60000 * P });
       if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
         throw new Error("the ux file has no background");
+      await lookDialog.getByRole("button", { name: "Close look editor", exact: true }).click();
+      await sub("Layout");
+      await page.getByLabel("Page to style").selectOption("home");
       // Contact was added above Footer. Its up arrow moves it above Hero; wait for that
       // operation's response before reading the file it replaces.
       const moved = page.waitForResponse(
