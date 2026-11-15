@@ -27,6 +27,11 @@ export type FieldUse =
   | "owner"
   | "upload"
   | "text"
+  | "thread-body"
+  | "mail-from"
+  | "mail-subject"
+  | "mail-body"
+  | "mail-attachments"
   | "markdown"
   | "email"
   | "user"
@@ -48,15 +53,22 @@ export type FieldUse =
   | "sort"
   | "group";
 
+type OneHopUse = "name" | "date" | "datetime" | "integer" | "filter" | "group";
+type FieldSource = { kind: "field"; model: string } & (
+  | { use: OneHopUse; oneHop?: boolean }
+  | { use: Exclude<FieldUse, OneHopUse>; oneHop?: false }
+);
+
 export type ReferenceSource =
   | { kind: "model"; includeUser?: boolean; list?: boolean }
   | { kind: "page" | "query" | "timer" | "outgoing" | "role" }
   | { kind: "action"; model?: string; timer?: boolean }
-  | { kind: "field"; model: string; use: FieldUse; oneHop?: boolean }
+  | FieldSource
   | { kind: "choice"; model: string; field: string; exclude?: readonly string[] }
   | { kind: "event" }
   | { kind: "recipient"; model?: string; channels: readonly Channel[] }
-  | { kind: "reply-model" | "away-model"; model: string };
+  | { kind: "reply-model"; model: string }
+  | { kind: "away-model"; model: string; short?: boolean };
 
 const scalar = (field: FieldIR, ...names: string[]) =>
   field.type.kind === "scalar" && names.includes(field.type.name);
@@ -83,6 +95,16 @@ function eligible(field: FieldIR, use: FieldUse, model: ModelIR, ir: SpecIR): bo
       return isUpload(field);
     case "text":
       return scalar(field, "string", "text", "markdown");
+    case "thread-body":
+      return scalar(field, "text", "markdown");
+    case "mail-from":
+      return !field.formula && scalar(field, "email", "string");
+    case "mail-subject":
+      return !field.formula && scalar(field, "string", "text");
+    case "mail-body":
+      return !field.formula && scalar(field, "string", "text", "markdown");
+    case "mail-attachments":
+      return !field.formula && scalar(field, "file", "files");
     case "markdown":
       return scalar(field, "markdown");
     case "email":
@@ -157,6 +179,9 @@ function fields(source: Extract<ReferenceSource, { kind: "field" }>, ir: SpecIR)
         if ("part" in readNamePart(path, model, ir.models)) result.push(path);
       } else if (source.use === "filter") {
         if (!("problem" in filterThrough(model, path, ir.models))) result.push(path);
+      } else if (source.use === "group") {
+        // A grouping one reference away is a choice; the date-period form is local.
+        if (!field.formula && field.type.kind === "choice") result.push(path);
       } else if (!single(field) && eligible(field, source.use, target, ir)) {
         result.push(path);
       }
@@ -271,7 +296,7 @@ export function referenceOptions(
           );
           return source.kind === "reply-model"
             ? references.length === 1
-            : references.length > 0 &&
+            : (source.short ? references.length === 1 : references.length > 0) &&
                 model.fields.filter((f) => !f.formula && scalar(f, "datetime")).length >= 2;
         })
         .map((model) => model.name);

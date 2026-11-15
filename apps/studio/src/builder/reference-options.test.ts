@@ -186,3 +186,48 @@ test("reply models require exactly one single reference, without guessing a mode
   expect(values({ kind: "reply-model", model: "Reply" })).toEqual([]);
   expect(values({ kind: "away-model", model: "Venue" })).toEqual([]);
 });
+
+test("mail parts and thread bodies offer their actual field kinds rather than all text-like fields", () => {
+  expect(values({ kind: "field", model: "Booking", use: "mail-from" })).toEqual(["title", "email"]);
+  expect(values({ kind: "field", model: "Booking", use: "mail-subject" })).toEqual([
+    "title",
+    "notes",
+  ]);
+  expect(values({ kind: "field", model: "Booking", use: "mail-body" })).toEqual(["title", "notes"]);
+  expect(values({ kind: "field", model: "Booking", use: "mail-attachments" })).toEqual([
+    "document",
+  ]);
+  expect(values({ kind: "field", model: "Booking", use: "thread-body" })).toEqual(["notes"]);
+  expect(values({ kind: "field", model: "Reply", use: "thread-body" })).toEqual(["body"]);
+});
+
+test("dashboard grouping follows a reference to a choice, never a referenced date", () => {
+  const ir = fixture();
+  const venue = ir.models.find((model) => model.name === "Venue");
+  const status = ir.models
+    .find((model) => model.name === "Booking")
+    ?.fields.find((field) => field.name === "status");
+  if (!venue || !status) throw Error("Missing grouping fixture");
+  venue.fields.push({ ...status, name: "kind" });
+  const groups = values({ kind: "field", model: "Booking", use: "group", oneHop: true }, ir);
+  expect(groups).toContain("day");
+  expect(groups).toContain("venue.kind");
+  expect(groups).not.toContain("venue.opens");
+});
+
+test("short schedule-away choices exclude an ambiguous resource that the explicit long form can resolve", () => {
+  const checked = validateSpec({
+    path: "smithable.yml",
+    text: spec
+      .replace("      replies: Reply[]\n", "")
+      .replace(
+        "      author: User",
+        "      author: User\n      other: Booking!\n      starts: datetime\n      ends: datetime",
+      ),
+  });
+  expect(checked.diagnostics.filter((diagnostic) => diagnostic.severity === "error")).toEqual([]);
+  if (!checked.ir) throw Error("Invalid schedule fixture");
+  expect(values({ kind: "away-model", model: "Booking" }, checked.ir)).toEqual(["Reply"]);
+  expect(values({ kind: "away-model", model: "Booking", short: true }, checked.ir)).toEqual([]);
+  expect(values({ kind: "reply-model", model: "Booking" }, checked.ir)).toEqual([]);
+});
