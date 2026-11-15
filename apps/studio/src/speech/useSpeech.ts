@@ -100,6 +100,7 @@ export interface Speech {
   where: string;
   /** The line was shown once: the mic's first press shows it before asking the browser. */
   told: boolean;
+  notice?: string;
   /** Starts listening (held, or one utterance); finals arrive through onFinal. */
   listen: (hold: boolean) => void;
   release: () => void;
@@ -116,6 +117,7 @@ export function useSpeech(
   onEnd: (heard: boolean) => void,
 ): Speech {
   const [settings, setSettings] = useState(load);
+  const [notice, setNotice] = useState<string>();
   const save = (next: Settings) => {
     setSettings(next);
     try {
@@ -228,6 +230,10 @@ export function useSpeech(
     (hold: boolean) => {
       if (rec.current || !mayHear() || !Rec) return;
       setHearingError(undefined);
+      if (!settings.told) {
+        setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true));
+        save({ ...settings, mic: "press", told: true });
+      }
       stopSpeaking();
       const r = new Rec();
       r.lang = "en-US";
@@ -317,6 +323,10 @@ export function useSpeech(
   const startAuto = async () => {
     if (ear.current || !Rec || !canHear) return;
     setHearingError(undefined);
+    if (!settings.told) {
+      setNotice(whereLine("browser", browser, onDeviceOnly && localHearing === true));
+      save({ ...settings, told: true });
+    }
     const mine = ++generation.current;
     const cancelled = () => mine !== generation.current;
     starting.current = true;
@@ -472,6 +482,7 @@ export function useSpeech(
     interim,
     where: whereLine("browser", browser, onDeviceOnly && localHearing === true),
     told: Boolean(settings.told),
+    ...(notice ? { notice } : {}),
     listen,
     release,
     speak,

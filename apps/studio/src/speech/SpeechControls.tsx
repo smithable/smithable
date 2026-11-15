@@ -1,21 +1,19 @@
 // Smith's speech controls beside the chat box (docs/design/smith-speech.md §2): the mic (off,
 // press to talk; a click without holding listens for one utterance), sound on or off, and the
 // voice. The first press of the mic says where the voice goes before the browser asks for it.
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { cx } from "../ui";
 import { SpeechTest } from "./SpeechTest";
 import type { Speech } from "./useSpeech";
 
 const BUTTON =
-  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line text-sm hover:border-accent disabled:opacity-40";
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm hover:border-accent disabled:opacity-40";
 
 export function SpeechControls({ speech }: { speech: Speech }) {
   // Held past a moment it listens until let go; a shorter click listens for one utterance.
   const holding = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const held = useRef(false);
-  const [showWhere, setShowWhere] = useState(false);
   const down = () => {
-    if (!speech.told) setShowWhere(true);
     held.current = false;
     holding.current = setTimeout(() => {
       holding.current = undefined;
@@ -42,46 +40,64 @@ export function SpeechControls({ speech }: { speech: Speech }) {
   return (
     <div data-speech className="space-y-1">
       <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          type="button"
-          className={cx(BUTTON, speech.listening && "border-red-500 text-red-600")}
-          disabled={!speech.canHear || speech.checkingHearing}
-          title={
-            speech.needsLocalCheck
-              ? "Check whether speech recognition can run on this computer"
-              : speech.canHear
-                ? "Hold to talk (or Ctrl+Shift+Space); click to say one thing"
-                : speech.why
-          }
-          aria-label={
-            speech.needsLocalCheck
-              ? "Check on-device speech support"
-              : `Mic: ${speech.mic === "off" ? "off" : "press to talk"}${speech.listening ? ", listening" : ""}`
-          }
-          aria-pressed={speech.listening}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            // Let go anywhere still releases (the pointer stays the button's).
-            e.currentTarget.setPointerCapture(e.pointerId);
-            down();
-          }}
-          onPointerUp={up}
-          onPointerCancel={up}
-          onLostPointerCapture={() => held.current && up()}
-          onKeyDown={(e) => {
-            if (e.key !== " " || e.repeat) return;
-            e.preventDefault();
-            down();
-          }}
-          onKeyUp={(e) => {
-            if (e.key !== " ") return;
-            e.preventDefault();
-            up();
-          }}
-          onClick={(e) => e.preventDefault()}
-        >
-          <MicIcon />
-        </button>
+        <div className="inline-flex items-center rounded-md border border-line">
+          <button
+            type="button"
+            className={cx(BUTTON, speech.listening && "border-red-500 text-red-600")}
+            disabled={!speech.canHear || speech.checkingHearing}
+            title={
+              speech.needsLocalCheck
+                ? "Check whether speech recognition can run on this computer"
+                : speech.canHear
+                  ? "Hold to talk (or Ctrl+Shift+Space); click to say one thing"
+                  : speech.why
+            }
+            aria-label={
+              speech.needsLocalCheck
+                ? "Check on-device speech support"
+                : `Mic: ${speech.mic === "off" ? "off" : "press to talk"}${speech.listening ? ", listening" : ""}`
+            }
+            aria-pressed={speech.listening}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              // Let go anywhere still releases (the pointer stays the button's).
+              e.currentTarget.setPointerCapture(e.pointerId);
+              down();
+            }}
+            onPointerUp={up}
+            onPointerCancel={up}
+            onLostPointerCapture={() => held.current && up()}
+            onKeyDown={(e) => {
+              if (e.key !== " " || e.repeat) return;
+              e.preventDefault();
+              down();
+            }}
+            onKeyUp={(e) => {
+              if (e.key !== " ") return;
+              e.preventDefault();
+              up();
+            }}
+            onClick={(e) => e.preventDefault()}
+          >
+            <MicIcon />
+          </button>
+          {speech.canHear && !speech.needsLocalCheck && (
+            <button
+              type="button"
+              className={cx(
+                "h-8 rounded-md px-2 text-xs",
+                speech.auto && "border-accent text-accent",
+              )}
+              aria-pressed={speech.auto}
+              title="Listens by itself while Smith is silent; a headset works best"
+              onClick={() => {
+                speech.setAuto(!speech.auto);
+              }}
+            >
+              Auto {speech.auto ? "on" : "off"}
+            </button>
+          )}
+        </div>
         <button
           type="button"
           className={cx(
@@ -130,23 +146,6 @@ export function SpeechControls({ speech }: { speech: Speech }) {
             </select>
           </label>
         )}
-        {speech.canHear && !speech.needsLocalCheck && (
-          <button
-            type="button"
-            className={cx(
-              "h-8 rounded-md border border-line px-2 text-xs",
-              speech.auto && "border-accent text-accent",
-            )}
-            aria-pressed={speech.auto}
-            title="Listens by itself while Smith is silent; a headset works best"
-            onClick={() => {
-              if (!speech.told) setShowWhere(true);
-              speech.setAuto(!speech.auto);
-            }}
-          >
-            Automatic
-          </button>
-        )}
         {speech.speaking && (
           <button
             type="button"
@@ -157,7 +156,11 @@ export function SpeechControls({ speech }: { speech: Speech }) {
           </button>
         )}
       </div>
-      {showWhere && <p className="text-xs text-quiet">{speech.where}</p>}
+      {speech.notice && (
+        <p role="status" className="text-xs text-quiet">
+          {speech.notice}
+        </p>
+      )}
       {speech.hearingNote && (
         <p role="status" className="text-xs text-quiet">
           {speech.hearingNote}
