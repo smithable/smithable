@@ -137,7 +137,7 @@ function CreationDialog({
         <div className="space-y-3 p-4">
           <p role="status">Created {humanize(created)}. Updating the choices in your form…</p>
           <button type="button" onClick={onClose} className="rounded border border-line px-3 py-1">
-            Return to the form
+            Keep current selection
           </button>
         </div>
       ) : (

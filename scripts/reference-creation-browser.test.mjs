@@ -46,11 +46,15 @@ test("complete creation returns a current reference and preserves its requesting
       ];
     if (request.includes("not a creation"))
       return [{ op: "setApp", args: { description: "A changed description" } }];
-    const model = request.includes("refused model")
-      ? "RetrySupplier"
-      : request.includes("edited model")
-        ? "ProposedSupplier"
-        : "Supplier";
+    const model = request.includes("keep selection")
+      ? "UnselectedSupplier"
+      : request.includes("legacy model")
+        ? "LegacySupplier"
+        : request.includes("refused model")
+          ? "RetrySupplier"
+          : request.includes("edited model")
+            ? "ProposedSupplier"
+            : "Supplier";
     return [{ op: "addModel", args: { model, fields: { name: "string!" } } }];
   };
   const fake = createServer(async (req, res) => {
@@ -93,6 +97,7 @@ import {readSpec} from ${JSON.stringify(join(repo, "apps/studio/src/engine.ts"))
 import {PendingEdits,usePendingEdits,usePendingEdit} from ${JSON.stringify(join(repo, "apps/studio/src/builder/pending-edit.tsx"))};
 import {ReferenceCreation} from ${JSON.stringify(join(repo, "apps/studio/src/builder/reference-creation.ts"))};
 import {ReferenceCreationProvider} from ${JSON.stringify(join(repo, "apps/studio/src/builder/ReferenceCreationProvider.tsx"))};
+import {Wizard} from ${JSON.stringify(join(repo, "apps/studio/src/builder/Wizard.tsx"))};
 function Form(){
  const create=useContext(ReferenceCreation), [draft,setDraft]=useState("original"),[result,setResult]=useState("none"),[selected,setSelected]=useState("Customer");
  usePendingEdit(draft!=="original");
@@ -101,13 +106,15 @@ function Form(){
  {['model','page','action'].map(kind=><button key={kind} disabled={!create} onClick={async()=>{const name=await create(kind);setResult(name??'cancelled');if(name)setSelected(name)}}>New {kind}</button>)}</section>
 }
 function App(){
- const [project,setProject]=useState(), [started,setStarted]=useState(0), edits=usePendingEdits();
+ const [project,setProject]=useState(), [started,setStarted]=useState(0), [legacy,setLegacy]=useState(false), [legacyClosed,setLegacyClosed]=useState(0), edits=usePendingEdits();
  const refresh=async()=>setProject(await api.project());
  useEffect(()=>{void refresh();const events=new EventSource('/api/events');events.addEventListener('changed',refresh);return()=>events.close()},[]);
  const spec=useMemo(()=>project?readSpec(project.files):{},[project]);
  const run=async(name,args)=>{const result=await api.operation(name,args);if(result.ok)await refresh();return result.ok};
  return <PendingEdits.Provider value={edits.report}><output aria-label="Pending edits">{String(edits.pending())}</output><output aria-label="Creation starts">{started}</output>
- <ReferenceCreationProvider project={project?.lookProject} ir={spec.ir} run={run} onStart={()=>setStarted(n=>n+1)}><Form/></ReferenceCreationProvider></PendingEdits.Provider>
+ <ReferenceCreationProvider project={project?.lookProject} ir={spec.ir} run={run} onStart={()=>setStarted(n=>n+1)}><Form/></ReferenceCreationProvider>
+ <button onClick={()=>setLegacy(true)}>Open ordinary wizard</button><output aria-label="Ordinary wizard closed">{legacyClosed}</output>
+ {legacy&&<Wizard kind="model" models={spec.ir?.models??[]} run={run} onClose={()=>{setLegacy(false);setLegacyClosed(n=>n+1)}}/>}</PendingEdits.Provider>
 }
 createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMode>);
 `,
@@ -278,13 +285,65 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     await dialog.waitFor({ state: "detached" });
     assert.equal(await result.textContent(), "Supplier");
     console.log("PASS successful creation waits for current IR and returns its exact name");
+    await propose("model", "keep selection");
+    let releaseChoices, choicesArrived;
+    const choicesGate = new Promise((resolve) => {
+      releaseChoices = resolve;
+    });
+    const waitingChoices = new Promise((resolve) => {
+      choicesArrived = resolve;
+    });
+    const holdChoices = async (route) => {
+      choicesArrived();
+      await choicesGate;
+      await route.continue();
+    };
+    await page.route("**/api/project", holdChoices);
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await waitingChoices;
+    await dialog.getByRole("button", { name: "Keep current selection", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    assert.equal(await form.getByLabel("Selected reference").textContent(), "Supplier");
+    assert.equal(await result.textContent(), "cancelled");
+    const refreshedChoices = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/project",
+    );
+    releaseChoices();
+    await refreshedChoices;
+    await page.unroute("**/api/project", holdChoices);
+    assert.equal(await form.getByLabel("Selected reference").textContent(), "Supplier");
+    console.log(
+      "PASS keeping the current selection after creation never returns an unrefreshed choice",
+    );
     await propose("model", "edited model");
     await dialog.getByLabel("Kind of record", { exact: true }).fill("EditedSupplier");
+    const refuseBatch = (route) =>
+      route.request().postDataJSON()?.name === "batch"
+        ? route.fulfill({ json: { ok: false, output: "Controlled batch refusal" } })
+        : route.continue();
+    await page.route("**/api/op", refuseBatch);
+    await dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog
+      .getByRole("status")
+      .filter({ hasText: "The creation could not be applied" })
+      .waitFor();
+    assert.equal(
+      await dialog.getByLabel("Kind of record", { exact: true }).inputValue(),
+      "EditedSupplier",
+    );
+    await page.unroute("**/api/op", refuseBatch);
     await dialog.getByRole("button", { name: "Create", exact: true }).click();
     await dialog.waitFor({ state: "detached" });
     assert.equal(await result.textContent(), "EditedSupplier");
     console.log("PASS an edited complete creation uses the batch and returns the edited name");
     await propose("model", "two kinds");
+    assert.ok(await dialog.getByRole("button", { name: "Create", exact: true }).isDisabled());
+    await dialog.getByLabel("After creating, use", { exact: true }).selectOption("VendorTwo");
+    await dialog.getByRole("button", { name: "Dismiss", exact: true }).click();
+    await dialog.getByRole("textbox").first().fill("two kinds");
+    await dialog.getByRole("button", { name: "Next", exact: true }).click();
+    await dialog.getByLabel("After creating, use", { exact: true }).waitFor();
+    assert.equal(await dialog.getByLabel("After creating, use", { exact: true }).inputValue(), "");
     assert.ok(await dialog.getByRole("button", { name: "Create", exact: true }).isDisabled());
     await dialog.getByLabel("After creating, use", { exact: true }).selectOption("VendorTwo");
     await dialog.getByRole("button", { name: "Create", exact: true }).click();
@@ -340,10 +399,21 @@ createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMod
     await dialog.waitFor({ state: "detached" });
     assert.equal(await result.textContent(), "RetrySupplier");
     console.log("PASS refused creation retains the draft and can be retried explicitly");
+    await draft.fill("original");
+    assert.equal(await pending.textContent(), "false");
+    await page.getByRole("button", { name: "Open ordinary wizard", exact: true }).click();
+    const ordinary = page.getByRole("region", { name: "Add a kind of record", exact: true });
+    await ordinary.getByRole("textbox").first().fill("legacy model");
+    await ordinary.getByRole("button", { name: "Next", exact: true }).click();
+    await ordinary.getByRole("button", { name: "Create", exact: true }).click();
+    await ordinary.waitFor({ state: "detached" });
+    assert.equal(await page.getByLabel("Ordinary wizard closed").textContent(), "1");
+    assert.equal(await form.getByLabel("Selected reference").textContent(), "RetrySupplier");
+    console.log("PASS the existing ordinary wizard still closes on successful creation");
     const project = await (await fetch(`${base}/api/project`)).json();
     assert.match(project.files.spec, /EditedSupplier:/);
     assert.doesNotMatch(project.files.spec, /ProposedSupplier:/);
-    assert.equal(await draft.inputValue(), "preserved unsaved reference");
+    assert.equal(await draft.inputValue(), "original");
   } catch (error) {
     if (page)
       await page.screenshot({ path: join(root, "failure.png"), fullPage: true }).catch(() => {});

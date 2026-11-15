@@ -69,6 +69,7 @@ export function Wizard({
   onClose: () => void;
   /** A reference creator returns a successful, explicitly chosen creation instead of closing. */
   onCreated?: (name: string) => void;
+  /** A write is committing; preparation may still be cancelled. */
   onBusyChange?: (busy: boolean) => void;
 }) {
   const { title, asked, placeholder } = KINDS[kind];
@@ -103,6 +104,7 @@ export function Wizard({
   const propose = async () => {
     if (!text.trim() || busy) return;
     const n = ++asking.current;
+    setChosen("");
     setBusy(true);
     setRefused(undefined);
     setProblem(undefined);
@@ -135,10 +137,15 @@ export function Wizard({
         if (!ok) setRefused(plainRefusal(result.output));
       }
       // Edited, still one change: the operations as the form has them, in one batch (#703).
-      else
+      else {
         ok = await run("batch", {
           operations: operations.map((o) => ({ op: o.op, args: o.args })),
         });
+        if (!ok)
+          setRefused(
+            "The creation could not be applied. Your draft is kept; review the change and try again.",
+          );
+      }
     } catch (error) {
       ok = false;
       setRefused(plainRefusal(error instanceof Error ? error.message : String(error)));
@@ -280,7 +287,14 @@ export function Wizard({
             >
               Create
             </Button>
-            <Button variant="ghost" disabled={busy} onClick={() => setProposal(undefined)}>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                setChosen("");
+                setProposal(undefined);
+              }}
+            >
               Dismiss
             </Button>
             <Button
