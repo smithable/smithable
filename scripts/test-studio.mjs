@@ -390,7 +390,7 @@ try {
       throw new Error("Help does not lead to the start page");
     await header.getByRole("button", { name: /^Review and publish/ }).click();
     const review = page.getByRole("dialog", { name: "Review and publish", exact: true });
-    await review.getByRole("heading", { name: "Review and publish", exact: true }).waitFor();
+    await review.getByRole("heading", { name: /^Review and publish/ }).waitFor();
     await review.getByRole("button", { name: "Close", exact: true }).click();
     await review.waitFor({ state: "detached" });
   });
