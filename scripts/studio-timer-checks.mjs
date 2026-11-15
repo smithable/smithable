@@ -77,6 +77,9 @@ export async function checkStudioTimers(browser, base) {
     const entry = timers.locator(
       `details[data-path='${JSON.stringify(["timers", `${stem}Timer`])}']`,
     );
+    await entry.waitFor({ state: "attached" });
+    // Its first entry moves the area from Not set into the written keys, with fresh folding.
+    await area("timers");
     await entry.locator(":scope > summary").click();
     const edit = entry.getByRole("form", { name: `When ${stem}Timer runs`, exact: true });
     const when = edit.getByRole("combobox", { name: "When the timer runs" });
@@ -96,14 +99,18 @@ export async function checkStudioTimers(browser, base) {
     await save(saveTimer, "setTimer");
     assert.deepEqual((await timer()).schedule, { kind: "cron", cron: "0 9 * * 1" });
     await when.selectOption("record");
-    await edit.getByRole("combobox", { name: "Timer records" }).selectOption("Customer");
+    await edit
+      .getByRole("combobox", { name: /Kind of record|For each record of/ })
+      .selectOption("Customer");
     const offered = await edit
-      .getByRole("combobox", { name: "Timer action" })
+      .getByRole("combobox", { name: "Runs" })
       .locator("option")
       .evaluateAll((options) => options.map((o) => o.value));
     assert.ok(!offered.includes("mergeCustomers"), "a merge was offered to a timer");
     assert.ok(!offered.includes("scheduleFollowUps"), "a record timer offered a custom action");
-    await edit.getByRole("combobox", { name: "Timer records" }).selectOption("Order");
+    await edit
+      .getByRole("combobox", { name: /Kind of record|For each record of/ })
+      .selectOption("Order");
     assert.ok(await saveTimer.isDisabled(), "a record timer without a date could be saved");
     await edit.getByRole("combobox", { name: "Record date" }).selectOption("placedAt");
     await edit.getByRole("checkbox", { name: "Before or after this date", exact: true }).check();
@@ -120,7 +127,9 @@ export async function checkStudioTimers(browser, base) {
     });
     assert.equal((await timer()).on, "Order");
     await when.selectOption("every");
-    await edit.getByRole("combobox", { name: "Timer records" }).selectOption("");
+    await edit
+      .getByRole("combobox", { name: /Kind of record|For each record of/ })
+      .selectOption("");
     await edit.getByLabel("Time of day", { exact: true }).fill("09:30");
     await save(saveTimer, "setTimer");
     assert.deepEqual((await timer()).schedule, { kind: "every", every: "day", at: "09:30" });
@@ -156,13 +165,16 @@ export async function checkStudioTimers(browser, base) {
           await creation
             .getByRole("combobox", { name: "Incoming call does" })
             .selectOption("record");
-        await creation.getByRole("combobox", { name: "Entry records" }).selectOption("Order");
+        await creation.getByRole("combobox", { name: "Kind of record" }).selectOption("Order");
         if (key === "payments")
           await creation.getByRole("combobox", { name: "Payment amount" }).selectOption("total");
         if (key === "incoming") {
           for (const field of ["number", "customer", "total"])
             await creation
-              .getByRole("textbox", { name: `Incoming ${field}`, exact: true })
+              .getByRole("textbox", {
+                name: new RegExp(`^${field.charAt(0).toUpperCase()}${field.slice(1)}`),
+                exact: true,
+              })
               .fill(`{${field}}`);
         }
       }

@@ -653,12 +653,16 @@ const setTimer: Operation<TimerArgs> = {
     const given = Object.entries(args).filter(([, v]) => v !== undefined);
     if (!given.length)
       throw new OperationError("Say what to change: on, at, every, cron, where or run.");
-    // A new time form takes the old one's keys away.
+    // Keep the timer's mapping alive while changing its form. Removing its last key first
+    // would prune the empty mapping before there is somewhere to write the new values.
+    let removeKeys: string[] = [];
     if (args.cron || args.every) {
-      for (const k of ["at", "every", "cron"])
-        if (spec.has([...path, k])) spec.remove([...path, k]);
-    } else if (args.at && timer.schedule.kind === "cron" && spec.has([...path, "cron"])) {
-      spec.remove([...path, "cron"]);
+      removeKeys = ["at", "every", "cron"].filter(
+        (key) => args[key as keyof typeof args] === undefined,
+      );
+    } else if (args.at && args.at !== "none") {
+      if (timer.schedule.kind === "cron") removeKeys = ["cron"];
+      else if (timer.schedule.kind === "every" && !CLOCK_AT.test(args.at)) removeKeys = ["every"];
     }
     for (const [key, raw] of given) {
       const value = key === "where" ? (raw as TimerArgs["where"]) : (raw as string);
@@ -666,7 +670,7 @@ const setTimer: Operation<TimerArgs> = {
         value === "none" ||
         (key === "where" && typeof value === "object" && !Object.keys(value).length);
       if (none) {
-        if (spec.has([...path, key])) spec.remove([...path, key]);
+        removeKeys.push(key);
         continue;
       }
       const written =
@@ -676,6 +680,7 @@ const setTimer: Operation<TimerArgs> = {
       if (spec.has([...path, key])) spec.set([...path, key], written as YamlValue);
       else spec.add(path, key, written as YamlValue);
     }
+    for (const key of removeKeys) if (spec.has([...path, key])) spec.remove([...path, key]);
     return [];
   },
 };

@@ -1,4 +1,10 @@
-import { applyOperation, humanize, type SpecIR, type SpecPlugin } from "@smithable/core";
+import {
+  applyOperation,
+  humanize,
+  type SpecIR,
+  type SpecPlugin,
+  validateAuth,
+} from "@smithable/core";
 import { useId, useState } from "react";
 import type { Project } from "../api";
 import { Button, Input, Select } from "../ui";
@@ -53,6 +59,11 @@ export function AddEntryForm({
   const eventModel = ir.models.find(
     (m) => m.name === (timer?.on ?? (action && !action.custom ? action.on : trigger.split(" ")[0])),
   );
+  const roles = project.files.auth
+    ? (validateAuth({ path: "smithable.auth.yml", text: project.files.auth }, ir).auth?.roles.map(
+        (role) => role.name,
+      ) ?? ["admin"])
+    : ["admin"];
   const receivers = [
     "owner",
     ...(eventModel?.fields ?? [])
@@ -127,7 +138,19 @@ export function AddEntryForm({
     if (!preview?.ok || busy) return;
     setBusy(true);
     try {
-      if (await run(operations[area], args)) setName("");
+      if (await run(operations[area], args)) {
+        setName("");
+        setModelName("");
+        setTrigger("");
+        setRecipient("");
+        setAmount("");
+        setWhen("created");
+        setCondition([]);
+        setIncoming("");
+        setValues({});
+        setColumn("");
+        setIntent("");
+      }
     } finally {
       setBusy(false);
     }
@@ -161,10 +184,9 @@ export function AddEntryForm({
         </label>
         {area === "incoming" && (
           <label htmlFor={`${id}-incoming`} className="block space-y-1 text-sm">
-            A call
+            Incoming call does
             <Select
               id={`${id}-incoming`}
-              aria-label="Incoming call does"
               value={incoming}
               onChange={(event) => setIncoming(event.target.value)}
               options={[
@@ -192,15 +214,14 @@ export function AddEntryForm({
               />
             </label>
             <label htmlFor={`${id}-recipient`} className="block space-y-1 text-sm">
-              To
+              Mail recipient
               <Select
                 id={`${id}-recipient`}
-                aria-label="Mail recipient"
                 value={recipient}
                 onChange={(event) => setRecipient(event.target.value)}
                 options={[
                   ["", "Choose a recipient"],
-                  ...(listMail ? ["admin"] : receivers).map(
+                  ...(listMail || action?.custom ? roles : receivers).map(
                     (value) => [value, humanize(value)] as [string, string],
                   ),
                 ]}
@@ -216,7 +237,6 @@ export function AddEntryForm({
             Kind of record
             <Select
               id={`${id}-model`}
-              aria-label="Entry records"
               value={modelName}
               onChange={(event) => chooseModel(event.target.value)}
               options={[
@@ -231,7 +251,6 @@ export function AddEntryForm({
             First column in the mail
             <Select
               id={`${id}-column`}
-              aria-label="Mail column"
               value={column}
               onChange={(event) => setColumn(event.target.value)}
               options={[
@@ -260,7 +279,6 @@ export function AddEntryForm({
               Payment is offered
               <Select
                 id={`${id}-when`}
-                aria-label="Payment offered"
                 value={when}
                 onChange={(event) => setWhen(event.target.value)}
                 options={[
@@ -280,14 +298,13 @@ export function AddEntryForm({
             {fields.map((field) => (
               <label
                 key={field.name}
-                htmlFor={`${id}-${field.name}`}
+                htmlFor={`${id}-value-${field.name}`}
                 className="block space-y-1 text-sm"
               >
                 {humanize(field.name)}
                 {field.required ? " (required)" : ""}
                 <Input
-                  id={`${id}-${field.name}`}
-                  aria-label={`Incoming ${field.name}`}
+                  id={`${id}-value-${field.name}`}
                   value={values[field.name] ?? ""}
                   placeholder={`{${field.name}}`}
                   onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}
@@ -301,22 +318,31 @@ export function AddEntryForm({
             What it finds
             <Input
               id={`${id}-intent`}
-              aria-label="Query purpose"
               value={intent}
               onChange={(event) => setIntent(event.target.value)}
             />
           </label>
         )}
-        {preview && !preview.ok && (
-          <div className="space-y-1 text-sm">
-            <p>This entry is not ready yet. Check its records and starting values.</p>
-            <details className="text-xs text-muted">
-              <summary>Code details</summary>
-              <p>{preview.message}</p>
-            </details>
-          </div>
-        )}
-        <Button type="submit" disabled={!preview?.ok || busy}>
+        <div
+          id={`${id}-problem`}
+          role="status"
+          className={preview && !preview.ok ? "space-y-1 text-sm" : "sr-only"}
+        >
+          {preview && !preview.ok && (
+            <>
+              <p>This entry is not ready yet. Check its records and starting values.</p>
+              <details className="text-xs text-muted">
+                <summary>Code details</summary>
+                <p>{preview.message}</p>
+              </details>
+            </>
+          )}
+        </div>
+        <Button
+          type="submit"
+          disabled={!preview?.ok || busy}
+          aria-describedby={preview && !preview.ok ? `${id}-problem` : undefined}
+        >
           Add {labels[area]}
         </Button>
       </fieldset>

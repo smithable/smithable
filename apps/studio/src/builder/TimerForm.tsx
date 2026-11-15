@@ -102,9 +102,7 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
     try {
       const ok = await run(timer ? "setTimer" : "addTimer", {
         name: draft.name,
-        ...(timer
-          ? { every: "none", at: "none", cron: "none", on: "none", run: "none", where: {} }
-          : {}),
+        ...(timer ? { on: "none", run: "none", where: {} } : {}),
         ...values,
       });
       if (ok && !timer) setDraft(initial());
@@ -155,17 +153,15 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
               Every
               <Select
                 id={`${id}-every`}
-                aria-label="Repeat"
                 value={draft.every}
                 onChange={(event) => change({ every: event.target.value as typeof draft.every })}
                 options={TIMER_EVERY.map((value) => [value, humanize(value)])}
               />
             </label>
             <label className="space-y-1 text-sm" htmlFor={`${id}-time`}>
-              At
+              Time of day
               <Input
                 id={`${id}-time`}
-                aria-label="Time of day"
                 type="time"
                 required
                 value={draft.time}
@@ -209,7 +205,6 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
             {draft.mode === "record" ? "Kind of record" : "For each record of"}
             <Select
               id={`${id}-records`}
-              aria-label="Timer records"
               value={draft.on}
               onChange={(event) =>
                 change({ on: event.target.value, field: "", where: [], run: "" })
@@ -291,7 +286,6 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
             Runs
             <Select
               id={`${id}-action`}
-              aria-label="Timer action"
               value={draft.run}
               onChange={(event) => change({ run: event.target.value })}
               options={[

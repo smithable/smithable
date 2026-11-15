@@ -247,6 +247,75 @@ test("a timer moves through cron, record date and clock modes without old timing
   expect(move({ at: "09:45" })).toEqual({ kind: "every", every: "day", at: "09:45" });
 });
 
+test("an atomic timer edit resets absent timing keys and clears old record conditions", () => {
+  const cleared = { on: "none", run: "none", where: {} };
+  let current = spec;
+  for (const timing of [
+    { on: "Invoice", at: "dueOn", run: "markOverdue" },
+    { cron: "0 9 * * *", run: "sendDigest" },
+    { every: "day", at: "08:00", run: "sendDigest" },
+  ]) {
+    const changed = applyOperation({ spec: current }, "setTimer", {
+      name: "markOverdue",
+      ...cleared,
+      ...timing,
+    });
+    if (!changed.ok) throw new Error(changed.message);
+    current = changed.files.spec;
+    const timer = read(current).ir?.timers.find((t) => t.name === "markOverdue");
+    expect(timer?.where).toBeUndefined();
+    expect(read(current).diagnostics).toEqual([]);
+  }
+  const dated = applyOperation({ spec: current }, "setTimer", {
+    name: "markOverdue",
+    on: "Invoice",
+    at: "dueOn",
+    run: "markOverdue",
+  });
+  if (!dated.ok) throw new Error(dated.message);
+  expect(read(dated.files.spec).ir?.timers.find((t) => t.name === "markOverdue")?.schedule).toEqual(
+    { kind: "record", path: ["dueOn"] },
+  );
+});
+
+test("replacing all timing keys keeps an otherwise empty timer mapping, and rejects conflicting new forms", () => {
+  let current = spec.replace(
+    /timers:[\s\S]*$/,
+    'timers:\n  tick:\n    every: day\n    at: "08:00"\n',
+  );
+  const move = (args: Record<string, unknown>) => {
+    const changed = applyOperation({ spec: current }, "setTimer", {
+      name: "tick",
+      on: "none",
+      run: "none",
+      where: {},
+      ...args,
+    });
+    if (!changed.ok) throw new Error(changed.message);
+    current = changed.files.spec;
+    const checked = read(current);
+    expect(
+      checked.diagnostics.every((d) => d.code === "timer-does-nothing" && d.severity === "warning"),
+    ).toBe(true);
+    return checked.ir?.timers.find((t) => t.name === "tick")?.schedule;
+  };
+  expect(move({ cron: "0 9 * * *" })).toEqual({ kind: "cron", cron: "0 9 * * *" });
+  expect(move({ on: "Invoice", at: "dueOn" })).toEqual({ kind: "record", path: ["dueOn"] });
+  expect(move({ every: "day", at: "10:00" })).toEqual({ kind: "every", every: "day", at: "10:00" });
+  expect(
+    applyOperation({ spec: current }, "setTimer", {
+      name: "tick",
+      every: "day",
+      at: "10:00",
+      cron: "0 9 * * *",
+    }).ok,
+  ).toBe(false);
+  expect(
+    applyOperation({ spec: current }, "setTimer", { name: "tick", cron: "0 9 * * *", at: "10:00" })
+      .ok,
+  ).toBe(false);
+});
+
 test("a timer follows a renamed field in its date and condition, and refuses the removal of what it uses", () => {
   const renamed = applyOperation({ spec }, "renameField", {
     model: "Session",
