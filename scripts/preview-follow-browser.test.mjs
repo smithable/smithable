@@ -390,8 +390,7 @@ test("No code follows real preview navigation without losing edits or opening hi
             ].map((node) => node.outerHTML.slice(0, 200)),
             reports: window.followReports.slice(-4),
           })),
-        )
-        .catch(() => {});
+        );
     if (page)
       await page.screenshot({ path: join(root, "failure.png"), fullPage: true }).catch(() => {});
     console.error(`Fixture retained: ${root}\n${log}`);
