@@ -12,6 +12,8 @@ import { Button, Input, Select } from "../ui";
 import { conditionOf, type WhenRow, WhenRows } from "./action-rows";
 import type { Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
+import { ReferencePicker } from "./ReferencePicker";
+import { referenceMailRecipients, referenceOptions } from "./reference-options";
 
 type Area = "outgoing" | "payments" | "incoming" | "queries";
 const labels: Record<Area, string> = {
@@ -71,26 +73,12 @@ export function AddEntryForm({
   );
   const model = ir.models.find((m) => m.name === modelName);
   const timer = ir.timers.find((t) => t.name === trigger);
-  const action = ir.actions.find((a) => a.name === trigger);
   const listMail = Boolean(timer && !timer.on);
-  const eventModel = ir.models.find(
-    (m) => m.name === (timer?.on ?? (action && !action.custom ? action.on : trigger.split(" ")[0])),
-  );
-  const roles = project.files.auth
-    ? (validateAuth({ path: "smithable.auth.yml", text: project.files.auth }, ir).auth?.roles.map(
-        (role) => role.name,
-      ) ?? ["admin"])
-    : ["admin"];
-  const receivers = [
-    "owner",
-    ...(eventModel?.fields ?? [])
-      .filter((f) =>
-        f.type.kind === "scalar"
-          ? f.type.name === "email"
-          : f.type.kind === "relation" && !f.type.many && f.type.model === "User",
-      )
-      .map((f) => f.name),
-  ];
+  const auth = validateAuth(
+    { path: "smithable.auth.yml", text: project.files.auth ?? "smithableAuth: 0.1\n" },
+    ir,
+  ).auth;
+  const receivers = referenceMailRecipients(trigger, ir, auth);
   const fields = (model?.fields ?? []).filter(
     (f) => !f.formula && !(f.type.kind === "relation" && f.type.many),
   );
@@ -108,17 +96,6 @@ export function AddEntryForm({
       field.sequence ||
       values[field.name]?.trim(),
   );
-  const money =
-    model?.fields.filter((f) => f.type.kind === "scalar" && f.type.name === "money") ?? [];
-  const triggers: [string, string][] = [
-    ...ir.models.flatMap((m) =>
-      ["created", "changed", "deleted"].map(
-        (event) => [`${m.name} ${event}`, `${humanize(m.name)} ${event}`] as [string, string],
-      ),
-    ),
-    ...ir.actions.map((a) => [a.name, `After ${humanize(a.name)}`] as [string, string]),
-    ...ir.timers.map((t) => [t.name, `When ${humanize(t.name)} runs`] as [string, string]),
-  ];
   const args =
     area === "queries"
       ? { query: name, returns: modelName, ...(intent.trim() ? { intent: intent.trim() } : {}) }
@@ -231,82 +208,64 @@ export function AddEntryForm({
         )}
         {area === "outgoing" && (
           <>
-            <label htmlFor={`${id}-trigger`} className="block space-y-1 text-sm">
-              When
-              <Select
-                id={`${id}-trigger`}
-                aria-label="Mail is sent when"
-                value={trigger}
-                onChange={(event) => {
-                  setTrigger(event.target.value);
-                  setRecipient("");
-                  chooseModel("");
-                }}
-                options={[["", "Choose an event"], ...triggers]}
-              />
-            </label>
-            <label htmlFor={`${id}-recipient`} className="block space-y-1 text-sm">
-              Mail recipient
-              <Select
-                id={`${id}-recipient`}
-                value={recipient}
-                onChange={(event) => setRecipient(event.target.value)}
-                options={[
-                  ["", "Choose a recipient"],
-                  ...(listMail || action?.custom ? roles : receivers).map(
-                    (value) => [value, humanize(value)] as [string, string],
-                  ),
-                ]}
-              />
-            </label>
+            <ReferencePicker
+              label="Mail is sent when"
+              options={referenceOptions({ kind: "event" }, ir)}
+              value={trigger || undefined}
+              onChange={async (value) => {
+                setTrigger(String(value ?? ""));
+                setRecipient("");
+                chooseModel("");
+                return true;
+              }}
+            />
+            <ReferencePicker
+              label="Mail recipient"
+              options={receivers}
+              value={recipient || undefined}
+              onChange={async (value) => {
+                setRecipient(String(value ?? ""));
+                return true;
+              }}
+            />
           </>
         )}
         {(area === "queries" ||
           area === "payments" ||
           (area === "incoming" && incoming === "record") ||
           listMail) && (
-          <label htmlFor={`${id}-model`} className="block space-y-1 text-sm">
-            Kind of record
-            <Select
-              id={`${id}-model`}
-              value={modelName}
-              onChange={(event) => chooseModel(event.target.value)}
-              options={[
-                ["", "Choose records"],
-                ...ir.models.map((m) => [m.name, humanize(m.name)] as [string, string]),
-              ]}
-            />
-          </label>
+          <ReferencePicker
+            label="Kind of record"
+            options={referenceOptions({ kind: "model" }, ir)}
+            value={modelName || undefined}
+            onChange={async (value) => {
+              chooseModel(String(value ?? ""));
+              return true;
+            }}
+          />
         )}
         {listMail && model && (
-          <label htmlFor={`${id}-column`} className="block space-y-1 text-sm">
-            First column in the mail
-            <Select
-              id={`${id}-column`}
-              value={column}
-              onChange={(event) => setColumn(event.target.value)}
-              options={[
-                ["", "Choose a field"],
-                ...fields.map((f) => [f.name, humanize(f.name)] as [string, string]),
-              ]}
-            />
-          </label>
+          <ReferencePicker
+            label="First column in the mail"
+            options={referenceOptions({ kind: "field", model: model.name, use: "sendable" }, ir)}
+            value={column || undefined}
+            onChange={async (value) => {
+              setColumn(String(value ?? ""));
+              return true;
+            }}
+          />
         )}
         {area === "payments" && (
           <>
-            <label htmlFor={`${id}-amount`} className="block space-y-1 text-sm">
-              Amount
-              <Select
-                id={`${id}-amount`}
-                aria-label="Payment amount"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                options={[
-                  ["", "Choose a money field"],
-                  ...money.map((f) => [f.name, humanize(f.name)] as [string, string]),
-                ]}
-              />
-            </label>
+            <ReferencePicker
+              label="Payment amount"
+              options={referenceOptions({ kind: "field", model: modelName, use: "money" }, ir)}
+              value={amount || undefined}
+              onChange={async (value) => {
+                setAmount(String(value ?? ""));
+                return true;
+              }}
+            />
             <label htmlFor={`${id}-when`} className="block space-y-1 text-sm">
               Payment is offered
               <Select

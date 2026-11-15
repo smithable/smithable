@@ -6,6 +6,7 @@ import { humanize } from "@smithable/core";
 import { useState } from "react";
 import { Button, Input, Select } from "../ui";
 import { usePendingEdit } from "./pending-edit";
+import { ReferencePicker } from "./ReferencePicker";
 
 type Field = ModelIR["fields"][number];
 const USER = "User";
@@ -145,14 +146,17 @@ export function WhenRows({
             className="space-y-1.5 rounded-md border border-line p-2"
           >
             <div className="flex items-center gap-2">
-              <Select
-                aria-label="Field"
-                className="flex-1"
-                value={row.field}
-                onChange={(e) =>
-                  put(i, { field: e.target.value, value: startOf(fields, e.target.value) })
-                }
-                options={optionsFor(fields, rows, row.field)}
+              <ReferencePicker
+                label="Field"
+                value={row.field || undefined}
+                options={optionsFor(fields, rows, row.field)
+                  .filter(([value]) => Boolean(value))
+                  .map(([value, label]) => ({ value, label }))}
+                onChange={async (value) => {
+                  const field = String(value ?? "");
+                  put(i, { field, value: startOf(fields, field) });
+                  return true;
+                }}
               />
               <Button
                 variant="ghost"
@@ -294,12 +298,16 @@ export function SetRows({
             className="space-y-1.5 rounded-md border border-line p-2"
           >
             <div className="flex items-center gap-2">
-              <Select
-                aria-label="Field"
-                className="flex-1"
-                value={row.field}
-                onChange={(e) => put(i, fresh(e.target.value))}
-                options={optionsFor(fields, rows, row.field)}
+              <ReferencePicker
+                label="Field"
+                value={row.field || undefined}
+                options={optionsFor(fields, rows, row.field)
+                  .filter(([value]) => Boolean(value))
+                  .map(([value, label]) => ({ value, label }))}
+                onChange={async (value) => {
+                  put(i, fresh(String(value ?? "")));
+                  return true;
+                }}
               />
               <Button
                 variant="ghost"

@@ -12,6 +12,8 @@ import { Button, Input, Select } from "../ui";
 import { conditionOf, WhenRows, whenRowsOf } from "./action-rows";
 import type { Run } from "./ChangeForms";
 import { usePendingEdit } from "./pending-edit";
+import { ReferencePicker } from "./ReferencePicker";
+import { referenceOptions } from "./reference-options";
 
 /** Stored dates, including one step through a single reference, as the timer validator allows. */
 export function timerDates(model: ModelIR | undefined, models: ModelIR[]): string[] {
@@ -207,38 +209,31 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
           </div>
         )}
         {draft.mode && (
-          <label className="block space-y-1 text-sm" htmlFor={`${id}-records`}>
-            {draft.mode === "record" ? "Kind of record" : "For each record of"}
-            <Select
-              id={`${id}-records`}
-              value={draft.on}
-              onChange={(event) =>
-                change({ on: event.target.value, field: "", where: [], run: "" })
-              }
-              options={[
-                ["", draft.mode === "record" ? "Choose records" : "No records (once)"],
-                ...ir.models.map((m) => [m.name, humanize(m.name)] as [string, string]),
-              ]}
-            />
-          </label>
+          <ReferencePicker
+            label={draft.mode === "record" ? "Kind of record" : "For each record of"}
+            options={referenceOptions({ kind: "model" }, ir)}
+            value={draft.on || undefined}
+            unset={draft.mode === "record" ? undefined : "No records (once)"}
+            onChange={async (value) => {
+              change({ on: String(value ?? ""), field: "", where: [], run: "" });
+              return true;
+            }}
+          />
         )}
         {draft.mode === "record" && (
           <div className="space-y-2">
-            <label className="block space-y-1 text-sm" htmlFor={`${id}-date`}>
-              Date
-              <Select
-                id={`${id}-date`}
-                aria-label="Record date"
-                value={draft.field}
-                onChange={(event) => change({ field: event.target.value })}
-                options={[
-                  ["", "Choose a stored date"],
-                  ...dates.map(
-                    (path) => [path, path.split(".").map(humanize).join(" → ")] as [string, string],
-                  ),
-                ]}
-              />
-            </label>
+            <ReferencePicker
+              label="Record date"
+              options={dates.map((value) => ({
+                value,
+                label: value.split(".").map(humanize).join(" → "),
+              }))}
+              value={draft.field || undefined}
+              onChange={async (value) => {
+                change({ field: String(value ?? "") });
+                return true;
+              }}
+            />
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -294,18 +289,19 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
           />
         )}
         {draft.mode && (
-          <label className="block space-y-1 text-sm" htmlFor={`${id}-action`}>
-            Runs
-            <Select
-              id={`${id}-action`}
-              value={draft.run}
-              onChange={(event) => change({ run: event.target.value })}
-              options={[
-                ["", "Just raise the event"],
-                ...actions.map((a) => [a.name, humanize(a.name)] as [string, string]),
-              ]}
-            />
-          </label>
+          <ReferencePicker
+            label="Runs"
+            options={actions.map((action) => ({
+              value: action.name,
+              label: humanize(action.name),
+            }))}
+            value={draft.run || undefined}
+            unset="Just raise the event"
+            onChange={async (value) => {
+              change({ run: String(value ?? "") });
+              return true;
+            }}
+          />
         )}
         <div className="flex gap-2">
           <Button type="submit" disabled={!valid || busy}>

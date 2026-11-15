@@ -13,6 +13,7 @@ import { useState } from "react";
 import type { Spec } from "../engine";
 import { Button, Check, Input, Label, Select } from "../ui";
 import { usePendingEdit } from "./pending-edit";
+import { ReferencePicker } from "./ReferencePicker";
 import { UNIQUE, type UniqueChoice, uniqueOf, uniqueRule } from "./unique";
 
 /**
@@ -154,14 +155,15 @@ function FieldShapeControls({
         </Label>
       )}
       {shape.kind === "relation" && (
-        <Label text="Links to">
-          <Select
-            aria-label="Links to"
-            value={shape.target}
-            onChange={(e) => set({ target: e.target.value })}
-            options={[...models, "User"].map((m) => [m, humanize(m)] as [string, string])}
-          />
-        </Label>
+        <ReferencePicker
+          label="Links to"
+          value={shape.target || undefined}
+          options={[...models, "User"].map((value) => ({ value, label: humanize(value) }))}
+          onChange={async (value) => {
+            set({ target: String(value ?? "") });
+            return true;
+          }}
+        />
       )}
       {shape.kind !== "choice" && (
         <div className="flex gap-4">
