@@ -40,6 +40,8 @@ export default function LookEditorDialog({
   const dirty = useRef(false);
   const busy = useRef(false);
   const [isBusy, setBusy] = useState(false);
+  const liveBusyRef = useRef(liveBusy);
+  liveBusyRef.current = liveBusy;
   const livePending = useRef(0);
   const [liveRunning, setLiveRunning] = useState(false);
   const runLive: Run = async (...args) => {
@@ -98,43 +100,50 @@ export default function LookEditorDialog({
         setBusy(value);
       },
       async onReopenProject() {
-        if (busy.current || livePending.current) return false;
+        if (busy.current || liveBusyRef.current || livePending.current) return false;
         if (
           (dirty.current || edits.pending()) &&
           !window.confirm("Discard these unsaved look edits and reopen the current project?")
         )
           return false;
-        const current = await api.project();
-        let scope = draftTarget.current;
-        let previewPath = draft?.path ?? path;
-        if (scope) {
-          const response = await fetch(`/api/look?path=${encodeURIComponent(previewPath)}`);
-          if (!response.ok)
-            throw new Error("The current project could not be opened. Retry its connection.");
-          const context = (await response.json()) as Start & { lookProject?: string };
-          if (context.lookProject !== current.lookProject)
-            throw new Error("The project changed again. Retry opening it.");
-          const landing = context.look?.ir.pages.find(
-            (page) => page.id === scope && page.pattern.kind === "landing",
-          );
-          if (!landing) {
-            if (
-              !window.confirm(
-                "This draft's landing page no longer exists. Open a new draft for the whole app instead?",
+        busy.current = true;
+        setBusy(true);
+        try {
+          const current = await api.project();
+          let scope = draftTarget.current;
+          let previewPath = draft?.path ?? path;
+          if (scope) {
+            const response = await fetch(`/api/look?path=${encodeURIComponent(previewPath)}`);
+            if (!response.ok)
+              throw new Error("The current project could not be opened. Retry its connection.");
+            const context = (await response.json()) as Start & { lookProject?: string };
+            if (context.lookProject !== current.lookProject)
+              throw new Error("The project changed again. Retry opening it.");
+            const landing = context.look?.ir.pages.find(
+              (page) => page.id === scope && page.pattern.kind === "landing",
+            );
+            if (!landing) {
+              if (
+                !window.confirm(
+                  "This draft's landing page no longer exists. Open a new draft for the whole app instead?",
+                )
               )
-            )
-              return false;
-            scope = null;
-            previewPath = "/";
-          } else previewPath = landing.route;
+                return false;
+              scope = null;
+              previewPath = "/";
+            } else previewPath = landing.route;
+          }
+          setProject(current);
+          setDraft((value) => value && { target: scope, path: previewPath });
+          draftTarget.current = scope;
+          dirty.current = false;
+          setInstance((value) => value + 1);
+          setSettingsInstance((value) => value + 1);
+          return true;
+        } finally {
+          busy.current = false;
+          setBusy(false);
         }
-        setProject(current);
-        setDraft((value) => value && { target: scope, path: previewPath });
-        draftTarget.current = scope;
-        dirty.current = false;
-        setInstance((value) => value + 1);
-        setSettingsInstance((value) => value + 1);
-        return true;
       },
       async request(route, init) {
         const context = async () => {

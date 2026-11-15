@@ -141,8 +141,30 @@ try {
   page.once("dialog", (prompt) => prompt.dismiss());
   await dialog.getByRole("button", { name: "Reopen current project", exact: true }).click();
   assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "kept-draft");
+  let releaseReopen, arrivedReopen;
+  const reopenGate = new Promise((resolve) => {
+    releaseReopen = resolve;
+  });
+  const reopenStarted = new Promise((resolve) => {
+    arrivedReopen = resolve;
+  });
+  await page.route("**/api/project", async (route) => {
+    arrivedReopen();
+    await reopenGate;
+    await route.continue();
+  });
   page.once("dialog", (prompt) => prompt.accept());
   await dialog.getByRole("button", { name: "Reopen current project", exact: true }).click();
+  await reopenStarted;
+  assert.ok(
+    await dialog.getByRole("tab", { name: "Theme and settings", exact: true }).isDisabled(),
+    "Reopen allowed switching to settings while its request was pending",
+  );
+  assert.ok(
+    await dialog.getByRole("button", { name: "Close look editor", exact: true }).isDisabled(),
+    "Reopen allowed closing during its request",
+  );
+  releaseReopen();
   await dialog
     .getByRole("heading", { name: "Preview unavailable", exact: true })
     .waitFor({ state: "detached" });
@@ -156,6 +178,7 @@ try {
     "welcome",
     "reopen silently broadened the draft target",
   );
+  await page.unroute("**/api/project");
   assert.equal(operations.length, 0, "recovery wrote an operation");
   await page.screenshot({
     path: join(root, "recovered-after-workspace-restart.png"),
