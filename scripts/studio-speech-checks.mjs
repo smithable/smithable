@@ -48,7 +48,11 @@ export async function checkStudioSpeech(browser, base) {
           configurable: true,
         });
         const synth = new EventTarget();
-        synth.getVoices = () => [{ name: "Fixture voice", lang: "en-US", localService: true }];
+        synth.getVoices = () => [
+          { name: "Fixture voice", lang: "en-US", localService: true },
+          { name: "Google UK English Female", lang: "en-GB", localService: false },
+          { name: "Google UK English Male", lang: "en-GB", localService: false },
+        ];
         synth.cancel = () => {
           synth.speaking = false;
         };
@@ -104,16 +108,35 @@ export async function checkStudioSpeech(browser, base) {
       await overlay.waitFor({ state: "detached" });
       await page.goto(`${base}/?guide=off`);
       const sound = page.getByRole("button", { name: "Sound: on", exact: true });
+      const voice = page.getByLabel("Voice", { exact: true });
+      if (support === "browser") {
+        assert.equal(await voice.inputValue(), "Google UK English Male");
+        assert.equal(
+          await voice.locator("option").filter({ hasText: "Google UK English Female" }).count(),
+          0,
+        );
+        const old = await page.evaluate(() => window.speechFixture.utterances.length);
+        await voice.selectOption("Fixture voice");
+        await page.waitForFunction(
+          (before) => window.speechFixture.utterances.length > before,
+          old,
+        );
+        assert.ok(
+          await page.evaluate(() =>
+            window.speechFixture.utterances.some((u) => u.text.includes("This is my voice")),
+          ),
+        );
+      }
       await sound.click();
       await page
         .getByRole("button", { name: "Sound: off", exact: true })
         .getByText("Sound off")
         .waitFor();
-      await page.getByLabel("Speaking speed", { exact: true }).selectOption("1.2");
+      await page.getByLabel("Speaking speed", { exact: true }).selectOption("1.5");
       await page.reload();
       const off = page.getByRole("button", { name: "Sound: off", exact: true });
       await off.waitFor();
-      assert.equal(await page.getByLabel("Speaking speed", { exact: true }).inputValue(), "1.2");
+      assert.equal(await page.getByLabel("Speaking speed", { exact: true }).inputValue(), "1.5");
       await off.click();
       await page
         .getByRole("button", { name: "Sound: on", exact: true })
@@ -181,11 +204,12 @@ export async function checkStudioSpeech(browser, base) {
           .getByRole("textbox", { name: "Describe a change, or ask a question" })
           .fill("Hi");
         await page.getByRole("button", { name: "Send", exact: true }).click();
-        await page.waitForFunction(() => window.speechFixture.rates.includes(1.2));
+        await page.waitForFunction(() => window.speechFixture.rates.includes(1.5));
         const before = await page.evaluate(() => window.speechFixture.utterances.length);
+        const pauses = await page.evaluate(() => window.speechFixture.pauses);
         await page.getByRole("button", { name: "Sound: on", exact: true }).click();
         await page.getByRole("button", { name: "Sound: off", exact: true }).click();
-        assert.equal(await page.evaluate(() => window.speechFixture.pauses), 1);
+        assert.equal(await page.evaluate(() => window.speechFixture.pauses), pauses + 1);
         assert.ok(await page.evaluate(() => window.speechFixture.resumes > 0));
         assert.equal(
           await page.evaluate(() => window.speechFixture.utterances.length),

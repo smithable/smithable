@@ -30,7 +30,7 @@ function load(): Settings {
       sound: true,
       mic: "off",
       ...kept,
-      rate: [0.85, 1, 1.2].includes(kept?.rate) ? kept.rate : 1,
+      rate: [1, 1.5, 2].includes(kept?.rate) ? kept.rate : 1,
     };
   } catch {
     return { sound: true, mic: "off", rate: 1 };
@@ -435,10 +435,16 @@ export function useSpeech(
     blocked,
     voices: voices.map((v) => v.name),
     ...(voice ? { voice: voice.name } : {}),
-    setVoice: (name) => save({ ...settings, voice: name }),
+    setVoice: (name) => {
+      const selected = voices.find((voice) => voice.name === name);
+      if (!selected) return;
+      save({ ...settings, voice: name });
+      if (!player.current?.busy && settings.sound)
+        player.current?.speak("Hello, I'm Smith. This is my voice.", selected, settings.rate);
+    },
     rate: settings.rate,
     setRate: (rate) => {
-      if ([0.85, 1, 1.2].includes(rate)) save({ ...settings, rate });
+      if ([1, 1.5, 2].includes(rate)) save({ ...settings, rate });
     },
     needsLocalCheck: Boolean(Rec) && onDeviceOnly && localHearing === undefined,
     checkingHearing,
