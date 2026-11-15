@@ -51,6 +51,8 @@ test("the browser receives a strict copy of the contract, never extra service or
     { ...value, recent: Array(21).fill(value.recent[0]) },
     { ...value, recent: [{ ...value.recent[0], kind: "private-kind" }] },
     { ...value, paused: { is: true, reason: "private-reason" } },
+    { ...value, paused: { is: true, reason: null } },
+    { ...value, paused: { is: false, reason: "shared" } },
   ])
     expect(readModelUsage(bad)).toBeUndefined();
 });
@@ -71,4 +73,15 @@ test("a missing endpoint, failure or unsafe configured URL produces no figures",
   ])
     expect(await modelUsage({ ...env, SMITHABLE_MODEL_URL: url }, request)).toBeUndefined();
   expect(request).not.toHaveBeenCalled();
+});
+
+test("date strings are copied as timestamps without their free-text comments", () => {
+  const value = figures();
+  expect(
+    readModelUsage({
+      ...value,
+      window: { ...value.window, resetsAt: "Mon, 16 Nov 2026 10:00:00 GMT (private note)" },
+      recent: [{ ...value.recent[0], at: "Sun, 15 Nov 2026 10:00:00 GMT (private note)" }],
+    }),
+  ).toEqual(value);
 });

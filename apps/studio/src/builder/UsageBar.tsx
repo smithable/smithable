@@ -42,7 +42,7 @@ export function UsageBar({ busy, revision }: { busy: boolean; revision?: string 
     };
   }, [busy, revision]);
   if (!usage) return null;
-  const { window, paused, recent } = usage;
+  const { window: allowance, paused, recent } = usage;
   return (
     <section
       aria-label="AI help usage"
@@ -57,17 +57,17 @@ export function UsageBar({ busy, revision }: { busy: boolean; revision?: string 
       >
         <span className="flex justify-between gap-2">
           <span>
-            AI help: €{window.used.toFixed(2)} of €{window.allowed.toFixed(2)} used
+            AI help: €{allowance.used.toFixed(2)} of €{allowance.allowed.toFixed(2)} used
           </span>
           <span aria-hidden="true">{open ? "▴" : "▾"}</span>
         </span>
         <progress
           aria-label="AI help used"
-          value={Math.min(window.used, window.allowed)}
-          max={window.allowed || 1}
+          value={Math.min(allowance.used, allowance.allowed)}
+          max={allowance.allowed || 1}
           className="block h-1.5 w-full accent-accent"
         />
-        <span className="block text-muted">Resets {reset(window.resetsAt)}</span>
+        <span className="block text-muted">Resets {reset(allowance.resetsAt)}</span>
       </button>
       {paused.is && (
         <p>

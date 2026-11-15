@@ -876,7 +876,9 @@ export function Ask({
               />
             )}
       </form>
-      {stage !== "overlay" && <UsageBar busy={busy} revision={proposal?.id ?? trace?.[0]?.id} />}
+      {stage !== "overlay" && (
+        <UsageBar busy={busy} revision={`${proposal?.id ?? ""}:${trace?.[0]?.id ?? ""}`} />
+      )}
     </div>
   );
 }

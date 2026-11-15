@@ -38,6 +38,7 @@ export function readModelUsage(value: unknown): ModelUsage | undefined {
     body.recent.length > 20
   )
     return undefined;
+  if (paused.is ? paused.reason === null : paused.reason !== null) return undefined;
   const recent: ModelUsage["recent"] = [];
   for (const value of body.recent) {
     const row = object(value);
@@ -49,7 +50,7 @@ export function readModelUsage(value: unknown): ModelUsage | undefined {
     )
       return undefined;
     recent.push({
-      at: row.at,
+      at: new Date(row.at).toISOString(),
       kind: row.kind as ModelUsage["recent"][number]["kind"],
       cost: row.cost,
     });
@@ -59,7 +60,7 @@ export function readModelUsage(value: unknown): ModelUsage | undefined {
       used: window.used,
       allowed: window.allowed,
       remaining: window.remaining,
-      resetsAt: window.resetsAt,
+      resetsAt: new Date(window.resetsAt).toISOString(),
       currency: "EUR",
     },
     paused: { is: paused.is, reason: paused.reason as ModelUsage["paused"]["reason"] },
