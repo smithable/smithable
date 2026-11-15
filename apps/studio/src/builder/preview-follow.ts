@@ -79,14 +79,14 @@ export class PreviewNavigation {
     const previous = this.seen.get(message.documentId) ?? -1;
     if (sequence <= previous) return;
     this.seen.set(message.documentId, sequence);
-    // Track the actual path even when an older context cannot move the editor.
-    const samePath = this.path === message.path;
-    this.path = message.path;
-    if (message.followContext !== context) return;
+    // Even an old-context report identifies the document that has replaced its predecessor.
     if (message.documentId !== this.document) {
       if (this.document) this.retired.add(this.document);
       this.document = message.documentId;
     }
+    const samePath = this.path === message.path;
+    this.path = message.path;
+    if (message.followContext !== context) return;
     if (samePath) return;
     return message.path;
   }

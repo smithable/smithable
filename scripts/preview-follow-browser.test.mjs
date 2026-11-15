@@ -220,9 +220,10 @@ test("No code follows real preview navigation without losing edits or opening hi
     );
     if (!(await action.evaluate((el) => el.open))) await action.locator(":scope > summary").click();
     await action.getByRole("button", { name: "Add a condition", exact: true }).click();
+    const addedCondition = action.locator("[data-when-row]").last();
     await go("/orders");
     assert.equal(await context(), "start", "an unsaved condition row was left");
-    await action.getByRole("button", { name: /Remove Shipping method/i }).click();
+    await addedCondition.getByRole("button", { name: /^Remove / }).click();
     await outside();
     await followed("orders");
     console.log("PASS condition rows protect drafts without writing them");
@@ -247,6 +248,12 @@ test("No code follows real preview navigation without losing edits or opening hi
     await outside();
     await settled();
     assert.equal(await context(), "orders", "a queued follow overrode an explicit Open");
+    const preserved = noCode.getByRole("textbox", { name: "Timer name", exact: true });
+    assert.equal(await preserved.inputValue(), "queued", "reopening the same entry lost its draft");
+    await preserved.fill("");
+    await outside();
+    await settled();
+    assert.equal(await context(), "orders", "clearing a draft revived a cancelled follow");
     await navigateInApp("/customers/1");
     await followed("customers");
     await go("/");
@@ -277,35 +284,55 @@ test("No code follows real preview navigation without losing edits or opening hi
     await following.check();
     await outside();
     await followed("orders");
-    await page.evaluate(() =>
-      window.postMessage(
-        {
-          source: "smithable-preview",
-          type: "navigated",
-          path: "/customers",
-          documentId: "wrong",
-          navigationId: 999,
-          followContext: 0,
-        },
-        location.origin,
-      ),
+    await navigateInApp("/orders/1");
+    const authentic = await page.evaluate(() => window.followReports.at(-1));
+    await page.evaluate(
+      (report) =>
+        window.postMessage(
+          {
+            ...report,
+            path: "/customers",
+            documentId: "foreign-frame",
+            navigationId: report.navigationId + 1,
+          },
+          location.origin,
+        ),
+      authentic,
     );
-    await (await appFrame()).evaluate(() =>
-      window.parent.postMessage(
-        {
-          source: "smithable-preview",
-          type: "navigated",
-          path: 42,
-          documentId: "invalid",
-          navigationId: 999,
-          followContext: 0,
-        },
-        "*",
-      ),
+    await (await appFrame()).evaluate(
+      (report) =>
+        window.parent.postMessage(
+          { ...report, path: 42, documentId: "invalid", navigationId: report.navigationId + 1 },
+          "*",
+        ),
+      authentic,
     );
     await settled();
     assert.equal(await context(), "orders");
     console.log("PASS preference reload and wrong-frame/malformed messages ignored");
+
+    await page.getByRole("button", { name: "Edit look", exact: true }).click();
+    const look = page.getByRole("dialog", { name: "Edit look", exact: true });
+    await look.waitFor();
+    await navigateInApp("/customers");
+    assert.equal(await context(), "orders", "following moved the column under the Look dialog");
+    await look.getByRole("button", { name: "Close look editor", exact: true }).click();
+    await look.waitFor({ state: "detached" });
+    await followed("customers");
+    console.log("PASS Look dialog defers following until it closes");
+
+    // The saved guide preference prevents an automatic tour; expose the explicit Guide menu.
+    await page.goto(base);
+    await following.waitFor();
+    await page.getByRole("button", { name: "Guide", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Tour Studio", exact: true }).click();
+    const skip = page.getByRole("button", { name: "Skip guide", exact: true });
+    await skip.waitFor();
+    await navigateInApp("/orders");
+    assert.equal(await context(), "customers", "following moved the column during the guide");
+    await skip.click();
+    await followed("orders");
+    console.log("PASS active guide defers following until dismissal");
 
     await page.setViewportSize({ width: 720, height: 900 });
     await page.getByRole("radio", { name: "Preview", exact: true }).check({ force: true });

@@ -273,6 +273,10 @@ export function Preview({
     .slice(0, 8);
   const open = (path: string) => {
     current.current = path.startsWith("/") ? path : `/${path}`;
+    // A Go report repeats this same path, so the navigation listener has nothing to update.
+    try {
+      sessionStorage.setItem(PAGE_KEY, current.current);
+    } catch {}
     setTyped(current.current);
     setListing(false);
     setActive(-1);

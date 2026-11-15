@@ -104,3 +104,11 @@ it("follows a genuine return after an old-context navigation was refused", () =>
   expect(follow.receive(message("/orders", 1, 0), 1)).toBeUndefined();
   expect(follow.receive(message("/customers", 2, 1), 1)).toBe("/customers");
 });
+
+it("retires superseded documents even before their current editor context arrives", () => {
+  const follow = new PreviewNavigation();
+  expect(follow.receive(message("/customers", 0, 0, "first"), 1)).toBeUndefined();
+  expect(follow.receive(message("/orders", 0, 0, "second"), 1)).toBeUndefined();
+  expect(follow.receive(message("/customers/1", 1, 1, "first"), 1)).toBeUndefined();
+  expect(follow.receive(message("/orders/1", 1, 1, "second"), 1)).toBe("/orders/1");
+});
