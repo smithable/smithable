@@ -835,11 +835,12 @@ function ReferenceVariant({
               let parent = referenceWith(
                 referenceAt(references.document, path.slice(0, -1)),
                 ["to"],
-                undefined,
+                next === "target" ? "" : [],
               );
               if (next === "target") parent = referenceWith(parent, ["recipient"], undefined);
               void write(path.slice(0, -1), parent);
-            } else if (capacity || period) void write(path, next === "detailed" ? {} : undefined);
+            } else if (capacity) void write(path, next === "reference" ? "" : 1);
+            else if (period) void write(path, next === "detailed" ? {} : undefined);
             else
               void write(
                 path,
