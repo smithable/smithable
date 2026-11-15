@@ -536,6 +536,17 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
       active: false,
     });
     await action.getByRole("textbox", { name: "Derived list is value 1", exact: true }).fill("");
+    const remainingText = action.getByRole("textbox", {
+      name: "Derived list is value 1",
+      exact: true,
+    });
+    assert.equal(
+      await remainingText.evaluate((element) => element === document.activeElement),
+      false,
+      "deleting a text value transferred focus to the next member",
+    );
+    await page.keyboard.type("continuation");
+    assert.equal(await remainingText.inputValue(), "b", "continued typing changed the next member");
     await save(action, "Change the condition");
     await waitStored(["actions", "conditionAction", "when"], {
       derivedLabel: "",

@@ -3,7 +3,7 @@
 // core: the rows read the action's IR and give back setAction's and addAction's arguments.
 import type { ActionValueIR, Condition, ModelIR } from "@smithable/core";
 import { humanize } from "@smithable/core";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Input, Select } from "../ui";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
@@ -229,6 +229,15 @@ function WhenControl({
   onChange: (value: WhenRow["value"], emptyText?: boolean) => void;
   person: boolean;
 }) {
+  const nextTextKey = useRef(0);
+  const textKeys = useRef<number[]>([]);
+  const textCount = Array.isArray(value) ? value.length : 0;
+  while (textKeys.current.length < textCount) textKeys.current.push(++nextTextKey.current);
+  textKeys.current.length = textCount;
+  const removeText = (index: number) => {
+    textKeys.current.splice(index, 1);
+    if (Array.isArray(value)) onChange(value.filter((_, at) => at !== index));
+  };
   if (!field) return <p className="text-xs text-quiet">Saved value: {JSON.stringify(value)}</p>;
   const label = `${humanize(field.name)} is`;
   if (field.type.kind === "choice") {
@@ -296,23 +305,22 @@ function WhenControl({
       <fieldset className="space-y-1" aria-label={label}>
         <p className="text-xs text-quiet">Matches any of these text values.</p>
         {value.map((text, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: each existing text value keeps its editor
-          <div key={index} className="flex items-center gap-2">
+          <div key={textKeys.current[index]} className="flex items-center gap-2">
             <Input
               aria-label={`${label} value ${index + 1}`}
               value={text}
               onChange={(event) =>
-                onChange(
-                  event.target.value.length
-                    ? value.map((before, at) => (at === index ? event.target.value : before))
-                    : value.filter((_, at) => at !== index),
-                )
+                event.target.value.length
+                  ? onChange(
+                      value.map((before, at) => (at === index ? event.target.value : before)),
+                    )
+                  : removeText(index)
               }
             />
             <Button
               variant="ghost"
               aria-label={`Remove ${humanize(field.name)} value ${index + 1}`}
-              onClick={() => onChange(value.filter((_, at) => at !== index))}
+              onClick={() => removeText(index)}
             >
               ✕
             </Button>

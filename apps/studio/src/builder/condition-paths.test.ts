@@ -263,3 +263,23 @@ test("a choice's default in the current draft determines its modes, not the save
       ?.fields.find((field) => field.name === "status")?.required,
   ).toBe(true);
 });
+
+test("a defaulted choice rejects a conditional required rule exactly as core does", () => {
+  const { ir, document } = fixture();
+  const path = ["models", "Work", "fields", "status", "required"];
+  for (const defaultValue of [undefined, "draft", "none"]) {
+    const field = { type: "draft | ready", ...(defaultValue ? { default: defaultValue } : {}) };
+    const draft = referenceWith(document, path.slice(0, -1), field);
+    const context = conditionContext(path, draft, ir);
+    if (!context) throw Error("Missing choice condition context");
+    const expected = defaultValue === "none";
+    expect(conditionReady({ active: true }, context)).toBe(expected);
+    expect(
+      applyOperation({ spec }, "editSpec", {
+        file: "smithable.yml",
+        path: path.slice(0, -1),
+        value: { ...field, required: { active: true } },
+      }).ok,
+    ).toBe(expected);
+  }
+});
