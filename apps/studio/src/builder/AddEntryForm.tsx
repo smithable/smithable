@@ -1,6 +1,7 @@
 import {
   applyOperation,
   humanize,
+  isUpload,
   type SpecIR,
   type SpecPlugin,
   validateAuth,
@@ -77,6 +78,20 @@ export function AddEntryForm({
   const fields = (model?.fields ?? []).filter(
     (f) => !f.formula && !(f.type.kind === "relation" && f.type.many),
   );
+  const incomingFields = fields.filter(
+    (field) => field.type.kind !== "relation" && !isUpload(field),
+  );
+  const needsLink = Boolean(
+    model?.fields.some((field) => field.required && field.type.kind === "relation"),
+  );
+  const startingValues = incomingFields.every(
+    (field) =>
+      !field.required ||
+      field.default !== undefined ||
+      field.defaultFormula ||
+      field.sequence ||
+      values[field.name]?.trim(),
+  );
   const money =
     model?.fields.filter((f) => f.type.kind === "scalar" && f.type.name === "money") ?? [];
   const triggers: [string, string][] = [
@@ -124,7 +139,8 @@ export function AddEntryForm({
       : area === "payments"
         ? model && amount
         : area === "incoming"
-          ? incoming === "custom" || (incoming === "record" && model)
+          ? incoming === "custom" ||
+            (incoming === "record" && model && !needsLink && startingValues)
           : trigger && recipient && (!listMail || (model && column)));
   // This is a pure preview on copied files; effects are executed only by the real operation.
   const preview = complete
@@ -295,7 +311,12 @@ export function AddEntryForm({
         {area === "incoming" && incoming === "record" && model && (
           <fieldset className="space-y-2">
             <legend className="text-sm">Starting values from the call</legend>
-            {fields.map((field) => (
+            {needsLink && (
+              <p role="status" className="text-sm">
+                These records need a link to an existing record. Use custom code to choose it.
+              </p>
+            )}
+            {incomingFields.map((field) => (
               <label
                 key={field.name}
                 htmlFor={`${id}-value-${field.name}`}

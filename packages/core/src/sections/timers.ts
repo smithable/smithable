@@ -654,9 +654,9 @@ const setTimer: Operation<TimerArgs> = {
     if (!given.length)
       throw new OperationError("Say what to change: on, at, every, cron, where or run.");
     // Keep the timer's mapping alive while changing its form. Removing its last key first
-    // would prune the empty mapping before there is somewhere to write the new values.
+    // would leave no mapping in block style to write the new values into.
     let removeKeys: string[] = [];
-    if (args.cron || args.every) {
+    if ((args.cron && args.cron !== "none") || (args.every && args.every !== "none")) {
       removeKeys = ["at", "every", "cron"].filter(
         (key) => args[key as keyof typeof args] === undefined,
       );

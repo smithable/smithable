@@ -42,12 +42,19 @@ export async function checkStudioTimers(browser, base) {
       return section;
     };
     const save = async (button, operation) => {
-      const response = page.waitForResponse(
-        (r) =>
-          new URL(r.url()).pathname === "/api/op" && r.request().postDataJSON().name === operation,
+      assert.ok(
+        await button.isEnabled(),
+        await button.evaluate((element) => element.closest("form").innerText),
       );
-      await button.click();
-      const result = await (await response).json();
+      const [response] = await Promise.all([
+        page.waitForResponse(
+          (r) =>
+            new URL(r.url()).pathname === "/api/op" &&
+            r.request().postDataJSON().name === operation,
+        ),
+        button.click(),
+      ]);
+      const result = await response.json();
       assert.ok(result.ok, result.output);
       return sent.at(-1);
     };
@@ -136,7 +143,7 @@ export async function checkStudioTimers(browser, base) {
     assert.equal((await timer()).on, undefined);
     assert.equal((await timer()).where, undefined);
     console.log(
-      "  ✓ Timer drafts: required mode/time, atomic add, polling, all modes, positive offset, conditions and action choices",
+      "  ✓ Timer drafts: required mode/time, atomic add, refresh, all modes, positive offset, conditions and action choices",
     );
 
     for (const [key, label, operation] of [
@@ -169,7 +176,17 @@ export async function checkStudioTimers(browser, base) {
         if (key === "payments")
           await creation.getByRole("combobox", { name: "Payment amount" }).selectOption("total");
         if (key === "incoming") {
-          for (const field of ["number", "customer", "total"])
+          assert.ok(
+            await button.isDisabled(),
+            "a call could leave a required record link unresolved",
+          );
+          assert.equal(
+            await creation.getByLabel("Customer (required)", { exact: true }).count(),
+            0,
+          );
+          await creation.getByRole("combobox", { name: "Kind of record" }).selectOption("Customer");
+          assert.ok(await button.isDisabled(), "a call could omit the required name");
+          for (const field of ["name", "email"])
             await creation
               .getByRole("textbox", {
                 name: new RegExp(`^${field.charAt(0).toUpperCase()}${field.slice(1)}`),

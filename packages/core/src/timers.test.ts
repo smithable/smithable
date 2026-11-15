@@ -316,6 +316,14 @@ test("replacing all timing keys keeps an otherwise empty timer mapping, and reje
   ).toBe(false);
 });
 
+test("removing an absent cron key keeps an existing clock schedule", () => {
+  const unchanged = applyOperation({ spec }, "setTimer", { name: "weeklyDigest", cron: "none" });
+  if (!unchanged.ok) throw new Error(unchanged.message);
+  expect(
+    read(unchanged.files.spec).ir?.timers.find((t) => t.name === "weeklyDigest")?.schedule,
+  ).toEqual({ kind: "every", every: "monday", at: "08:00" });
+});
+
 test("a timer follows a renamed field in its date and condition, and refuses the removal of what it uses", () => {
   const renamed = applyOperation({ spec }, "renameField", {
     model: "Session",
