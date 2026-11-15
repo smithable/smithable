@@ -119,6 +119,16 @@ export async function checkStudioQuestions(browser, base) {
       const response = await route.fetch();
       const body = await response.json();
       body.speech = [{ name: "browser" }];
+      body.home = "https://example.invalid/projects/fixture";
+      body.beta = {
+        ...body.beta,
+        limit: {
+          limit: "projects",
+          message: "Synthetic limit notice naming every project",
+          blocking: [],
+          apps: "https://example.invalid/apps",
+        },
+      };
       await route.fulfill({ response, json: body });
     });
     await page.route("**/api/ask", async (route) => {
@@ -143,6 +153,11 @@ export async function checkStudioQuestions(browser, base) {
     const card = page.locator("[data-studio-question]");
     const zone = page.locator('[data-part="time-zone-check"]');
     await zone.waitFor();
+    assert.equal(await page.locator('[data-studio-header] [data-part="limit"]').count(), 0);
+    assert.equal(
+      await page.getByText("Synthetic limit notice naming every project", { exact: true }).count(),
+      0,
+    );
     assert.equal(await card.count(), 1);
     assert.ok(
       await zone.evaluate((el) => Boolean(el.closest("[data-smith-layer], [data-window]"))),
