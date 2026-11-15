@@ -105,7 +105,9 @@ actions:
 `,
   });
   expect(checked.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
-  const original = whenRowsOf(checked.ir?.actions[0]?.when);
+  const action = checked.ir?.actions[0];
+  expect(action && !action.custom).toBe(true);
+  const original = whenRowsOf(action && !action.custom ? action.when : undefined);
   expect(original).toEqual([{ field: "derived", value: "" }]);
   expect(unfinishedConditions(original, original)).toBe(false);
   expect(unfinishedConditions([{ field: "derived", value: "" }], [])).toBe(true);
