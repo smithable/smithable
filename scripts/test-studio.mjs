@@ -27,6 +27,7 @@ import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
+import { checkStudioDraft } from "./studio-draft-checks.mjs";
 import { checkStudioGuideSpeech } from "./studio-guide-speech-checks.mjs";
 import { checkCompactLook, checkStudioLayout } from "./studio-layout-checks.mjs";
 import {
@@ -356,6 +357,7 @@ try {
   await checkStudioLookNavigation(browser, base);
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
+  await checkStudioDraft(browser, base);
   await checkStudioValidation(browser, base);
   await checkStudioQuestions(browser, base);
   await checkStudioUsage(browser, base);

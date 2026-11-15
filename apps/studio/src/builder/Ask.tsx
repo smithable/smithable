@@ -124,14 +124,21 @@ export function Ask({
       return "";
     }
   });
+  const draftRevision = useRef(0);
   const setRequest = (text: string) => {
+    draftRevision.current++;
     setRequestState(text);
     try {
       if (text) sessionStorage.setItem(DRAFT, text);
       else sessionStorage.removeItem(DRAFT);
     } catch {}
   };
+  // A pending reply must not erase words typed or dictated after it was sent.
+  const clearRequest = (revision: number) => {
+    if (draftRevision.current === revision) setRequest("");
+  };
   const [proposal, setProposal] = useState<Proposal>();
+  const proposalRevision = useRef(0);
   // A ready prompt's answer, shown until another request.
   const [local, setLocal] = useState<"next" | "publish">();
   // A question's answer from the docs: the parts found, or that the docs cannot be reached.
@@ -168,9 +175,10 @@ export function Ask({
     if (next === undefined || taking.current) return;
     taking.current = true;
     setRequest(next);
+    const revision = draftRevision.current;
     void api
       .waiting({ remove: 0 })
-      .then(() => propose(next))
+      .then(() => propose(next, revision))
       .finally(() => {
         taking.current = false;
       });
@@ -197,7 +205,7 @@ export function Ask({
     window.addEventListener(ASK_SMITH, take);
     return () => window.removeEventListener(ASK_SMITH, take);
   }, [making]);
-  const propose = async (text: string) => {
+  const propose = async (text: string, revision = draftRevision.current) => {
     // The sample users are the preview's, not the spec's: "let them run" and "stop" are said
     // to Smith and done at once, with no change to confirm (sample-users.md §5).
     const command = peopleCommand(text, peopleRunning);
@@ -214,7 +222,7 @@ export function Ask({
               : "They are using the app now, each at their own pace: open Sample users to watch what they do, or say stop.");
         if (trace) say(text, reply);
         else setOutput(reply);
-        setRequest("");
+        clearRequest(revision);
       } catch (error) {
         setOutput((error as Error).message);
       } finally {
@@ -263,10 +271,11 @@ export function Ask({
         docs: found.map(({ title, url, text, score }) => ({ title, url, text, score })),
       });
       last.current = { text, at: Date.now(), question: next.kind === "question" };
+      proposalRevision.current = revision;
       setProposal(next);
-      // A reply starts in an empty box, including when dictated. The original request stays
-      // in last, so answering later still carries the question's change context.
-      if (next.kind === "question") setRequest("");
+      // Clear the submitted draft for the reply, unless newer words are already in the box.
+      // The original request stays in last, so answering later keeps the change context.
+      if (next.kind === "question") clearRequest(revision);
       // An answer or a refusal is the end of that request: it goes into the thread.
       const reply =
         next.kind === "answer"
@@ -281,7 +290,7 @@ export function Ask({
       if (trace && reply) {
         say(text, reply);
         setProposal(undefined);
-        setRequest("");
+        clearRequest(revision);
       }
     } catch (error) {
       setOutput((error as Error).message);
@@ -372,6 +381,7 @@ export function Ask({
   }, []);
   const apply = async () => {
     if (!proposal) return;
+    const revision = proposalRevision.current;
     onBeginChange?.();
     setBusy(true);
     try {
@@ -398,7 +408,7 @@ export function Ask({
       );
       setProposal(undefined);
       if (result.ok) {
-        setRequest("");
+        clearRequest(revision);
         setJustApplied(true);
         onDone?.();
       }
@@ -544,12 +554,13 @@ export function Ask({
       setOutput("");
       return;
     }
-    if (making)
+    if (making) {
+      const revision = draftRevision.current;
       void api.waiting({ add: request.trim() }).then(
-        () => setRequest(""),
+        () => clearRequest(revision),
         (error: Error) => setOutput(error.message),
       );
-    else void propose(followUp(request.trim(), last.current));
+    } else void propose(followUp(request.trim(), last.current));
   };
   // Esc stops Smith speaking when the focus is in his panel, and does nothing else then (§2.1).
   const panel = useRef<HTMLDivElement>(null);
