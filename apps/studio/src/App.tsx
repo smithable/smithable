@@ -22,7 +22,7 @@ import {
 import wordmark from "./brand/wordmark.svg";
 import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask, usePresentation } from "./builder/Ask";
-import { NoCode, OPEN_PART } from "./builder/NoCode";
+import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { SmithFace } from "./builder/SmithFace";
 import { Visualize } from "./builder/Visualize";
 import { ASK_SMITH } from "./builder/Wizard";
@@ -46,6 +46,7 @@ import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
 import { TroubleshootDialog } from "./Troubleshoot";
 import { Button, cx, Panel, Tabs, useMedia } from "./ui";
+import { type PresentedDiagnostic, ValidationNotice } from "./validation-notice";
 import {
   gridOf,
   LayoutBar,
@@ -114,6 +115,7 @@ export function App() {
     failure?: boolean;
     /** Left for Studio by the making or the daemon (a description that could not be used). */
     notice?: boolean;
+    diagnostics?: PresentedDiagnostic[];
   }>();
   const [reporting, setReporting] = useState(false);
   // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
@@ -415,6 +417,7 @@ export function App() {
   // A setting another window names (Who can's Why?): the Code window on screen, beside No code
   // and not over the preview where there is room, and the setting shown there.
   const [codeJump, setCodeJump] = useState<CodeJump>();
+  const [partToOpen, setPartToOpen] = useState<OpenPart>();
   const forgetJump = useCallback(() => setCodeJump(undefined), []);
   useEffect(() => {
     const onShow = (e: Event) => {
@@ -530,6 +533,10 @@ export function App() {
   }, [refresh]);
 
   const spec = useSpec(project);
+  const messageErrors = (message?.diagnostics ?? []).filter((d) => d.severity === "error");
+  const validationErrors = messageErrors.length
+    ? messageErrors
+    : (spec.diagnostics ?? []).filter((d) => d.severity === "error");
   shownIR.current = spec.ir;
   // Smith's presentation of the app (smith-first.md §3).
   const parts = useMemo(
@@ -629,6 +636,7 @@ export function App() {
         change: result.ok,
         report: result.report,
         failure: Boolean(result.report),
+        diagnostics: result.diagnostics,
       });
       return result.ok;
     },
@@ -1369,7 +1377,21 @@ export function App() {
                 : "Your workspace is starting…"}
           </div>
         )}
-        {(message || pending) && (
+        {validationErrors.length > 0 && (
+          <ValidationNotice
+            diagnostics={validationErrors}
+            code={manual === "code"}
+            onDismiss={messageErrors.length ? () => setMessage(undefined) : undefined}
+            onOpen={(diagnostic) => {
+              if (!diagnostic.plain?.path.length) return;
+              pauseGuide();
+              setPartToOpen({ file: diagnostic.file, path: diagnostic.plain.path });
+              if (narrow) showWindow("nocode");
+              else workIn("nocode");
+            }}
+          />
+        )}
+        {(message || pending) && (!validationErrors.length || pending || !messageErrors.length) && (
           // Hovering or focusing the notice keeps it while it is read.
           // biome-ignore lint/a11y/noStaticElementInteractions: a status or alert, which pauses its fading
           <div
@@ -1648,6 +1670,8 @@ export function App() {
                             run={run}
                             place={place.nocode}
                             onPlace={nocodePlace}
+                            target={partToOpen}
+                            onTargetOpened={() => setPartToOpen(undefined)}
                           />
                         ) : w === "code" ? (
                           <Suspense

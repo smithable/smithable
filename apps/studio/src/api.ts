@@ -216,6 +216,8 @@ export type Proposal = { usage: string; id: string } & (
 export interface Result {
   ok: boolean;
   output: string;
+  /** Structured validation refusals, including a plain sentence and editor target when known. */
+  diagnostics?: import("@smithable/core").Diagnostic[];
   /** A change that loses data: ask, then send it again confirmed. */
   needsConfirm?: boolean;
   /** A failure whose report can be offered. */

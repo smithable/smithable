@@ -61,9 +61,19 @@ function ValueOrigin({ models, concept }: { models: ModelIR[]; concept: string }
 
 /** The event that opens a part of the app in Behavior (Smith's answer leads there). */
 export const OPEN_PART = "smithable:open-part";
+export type OpenPart = string | { file: string; path: (string | number)[] };
 
 /** Where a summary's part is set: its entry in Behavior, or Who can for sign-in and access. */
-function entryOf(concept: string): { sub: SubView; path: string[] } | undefined {
+function entryOf(concept: OpenPart): { sub: SubView; path: (string | number)[] } | undefined {
+  if (typeof concept !== "string") {
+    const subs: Record<string, SubView> = {
+      "smithable.auth.yml": "who",
+      "smithable.ux.yml": "look",
+      "smithable.content.yml": "content",
+    };
+    const file = concept.file.split(/[\\/]/).at(-1) ?? concept.file;
+    return { sub: subs[file] ?? "behavior", path: concept.path };
+  }
   const [kind = "", name = ""] = concept.split(/:(.*)/s);
   const area = {
     model: "models",
@@ -90,7 +100,7 @@ function Summary({
   onJump,
 }: {
   sections: SummarySection[];
-  onJump: (at: { sub: SubView; path: string[] }) => void;
+  onJump: (at: { sub: SubView; path: (string | number)[] }) => void;
 }) {
   const [all, setAll] = useState(false);
   // Folded, a few lines, so what follows the description is in view (Johan, 2026-10-23).
@@ -99,7 +109,11 @@ function Summary({
   const shown = all ? sections : sections.slice(0, SECTIONS);
   const more =
     sections.length > SECTIONS || shown.some((section) => section.sentences.length > SENTENCES);
-  const jump = (at: { sub: SubView; path: string[] } | undefined, text: string, key: string) =>
+  const jump = (
+    at: { sub: SubView; path: (string | number)[] } | undefined,
+    text: string,
+    key: string,
+  ) =>
     at ? (
       <button
         key={key}
@@ -178,6 +192,8 @@ export function NoCode({
   run,
   place,
   onPlace,
+  target,
+  onTargetOpened,
 }: {
   project: Project;
   spec: Spec;
@@ -185,6 +201,8 @@ export function NoCode({
   /** Where the person was, and a way to say where they are now (App.tsx). */
   place: Place["nocode"];
   onPlace: (place: Place["nocode"]) => void;
+  target?: OpenPart;
+  onTargetOpened?: () => void;
 }) {
   const [sub, setSubState] = useState<SubView>(() =>
     SUB_VIEWS.includes(place.sub as SubView) ? (place.sub as SubView) : "behavior",
@@ -193,7 +211,9 @@ export function NoCode({
     setSubState(next);
     onPlace({ sub: next });
   };
-  const [opened, setOpened] = useState(() => placeOf(place.selection)?.path);
+  const [opened, setOpened] = useState<(string | number)[] | undefined>(
+    () => placeOf(place.selection)?.path,
+  );
   // A record's value picked in the preview: its field says where the value comes from.
   const [picked, setPicked] = useState(place.selection);
   const words = (op: string, args: Record<string, unknown>) =>
@@ -203,15 +223,26 @@ export function NoCode({
     [spec],
   );
   // A sentence of the summary opens its entry and brings it into view.
-  const jumpTo = (at: { sub: SubView; path: string[] }) => {
+  const jumpTo = (at: { sub: SubView; path: (string | number)[] }) => {
     setSub(at.sub);
-    setOpened(at.path);
-    requestAnimationFrame(() =>
-      document
-        .querySelector(`[data-path='${JSON.stringify(at.path)}']`)
-        ?.scrollIntoView({ block: "start", behavior: "smooth" }),
-    );
+    setOpened([...at.path]);
   };
+  // Reopening the same target keeps the form's drafts. For a refused addition, its enclosing
+  // section is the nearest thing that exists; open it and its ancestors after the render.
+  useEffect(() => {
+    if (!opened?.length) return;
+    const nodes = [...document.querySelectorAll<HTMLElement>("[data-path]")];
+    for (let length = opened.length; length > 0; length--) {
+      const path = JSON.stringify(opened.slice(0, length));
+      const target = nodes.find((node) => node.dataset.path === path);
+      if (!target) continue;
+      for (let node: HTMLElement | null = target; node; node = node.parentElement) {
+        if (node instanceof HTMLDetailsElement) node.open = true;
+      }
+      target.scrollIntoView({ block: "start", behavior: "smooth" });
+      break;
+    }
+  }, [opened]);
   // The preview reports what was clicked in Select, columns dragged to a new place and texts
   // changed in place.
   const runRef = useRef(run);
@@ -230,12 +261,19 @@ export function NoCode({
   jumpRef.current = jumpTo;
   useEffect(() => {
     const open = (e: Event) => {
-      const at = entryOf((e as CustomEvent<string>).detail);
+      const at = entryOf((e as CustomEvent<OpenPart>).detail);
       if (at) jumpRef.current(at);
     };
     window.addEventListener(OPEN_PART, open);
     return () => window.removeEventListener(OPEN_PART, open);
   }, []);
+  // An explicit target waits in App's state until this window is mounted.
+  useEffect(() => {
+    if (target === undefined) return;
+    const at = entryOf(target);
+    if (at) jumpRef.current(at);
+    onTargetOpened?.();
+  }, [target, onTargetOpened]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (!isPreviewMessage(e)) return;
