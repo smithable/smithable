@@ -2488,19 +2488,35 @@ try {
         .waitFor({ timeout: 60000 * P });
       if (!readFileSync(join(dir, "smithable.ux.yml"), "utf8").includes('background: "#f5efe6"'))
         throw new Error("the ux file has no background");
-      // The contact section, added last, moved above the footer with its arrow.
+      // Contact was added above Footer. Its up arrow moves it above Hero; wait for that
+      // operation's response before reading the file it replaces.
+      const moved = page.waitForResponse(
+        (response) =>
+          response.url() === `${base}/api/op` &&
+          response.request().method() === "POST" &&
+          response.request().postDataJSON()?.name === "moveSection",
+      );
       await page
         .getByRole("list", { name: "Sections of Home" })
         .getByRole("button", { name: "Move Contact up" })
         .click();
-      const above = () => {
-        const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
-        const home = spec.slice(spec.indexOf("\n  home:"));
-        return home.indexOf("contact:") < home.indexOf("footer:");
-      };
-      for (let i = 0; i < 60 * P && !above(); i++) await new Promise((r) => setTimeout(r, 1000));
-      if (!above()) throw new Error("the contact section was not moved above the footer");
-      // The panel follows: the contact section is no longer last.
+      const move = await (await moved).json();
+      if (!move.ok) throw new Error(`moveSection: ${move.output}`);
+      const spec = readFileSync(join(dir, "smithable.yml"), "utf8");
+      const home = spec.slice(spec.indexOf("\n  home:"));
+      if (
+        home.indexOf("contact:") < 0 ||
+        home.indexOf("contact:") > home.indexOf("hero:") ||
+        home.indexOf("hero:") > home.indexOf("footer:")
+      )
+        throw new Error("the sections are not Contact, Hero, Footer after the move");
+      // The panel follows: Contact is first and can still move down.
+      await page
+        .getByRole("list", { name: "Sections of Home" })
+        .locator("li")
+        .first()
+        .getByText("Contact", { exact: true })
+        .waitFor({ timeout: 60000 * P });
       const down = page
         .getByRole("list", { name: "Sections of Home" })
         .getByRole("button", { name: "Move Contact down" });
