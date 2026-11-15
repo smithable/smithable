@@ -2,6 +2,22 @@
 
 One line per round of [bench-smith](../../scripts/bench-smith.mjs) on [what people say to Smith](smith-requests.json), made by [smith-scoreboard.mjs](../../scripts/smith-scoreboard.mjs); the rows are in [smith-scoreboard.json](smith-scoreboard.json). Right is the share of requests answered as labelled; cost is Smith's own per request, in US dollars at the models' list prices (the judge apart). ▼: under the round before, for the same setup.
 
+## 2026-11-15, da2544a9 (set 2, 47 requests): Focused 47-request check: 24 targets (17 right) and 23 controls (22 right), with reconstructed follow-ups and explicit alternative readings. Labels and fixtures differ from earlier rounds; this is neither a whole-set run nor a direct model-improvement comparison. Subsequent review removes the agenda wording rule and fixes saved-only favorites selection; those later changes are checked without a model.
+
+| | small (claude-haiku-5-5) |
+|---|---|
+| **All** | 39 / 47, asked 12, $0.0026 a request |
+| ambiguous | 4 / 4 |
+| change | 28 / 35 |
+| custom-code | 4 / 5 ▼ |
+| docs-question | 2 / 2 |
+| spec-question | 1 / 1 |
+| en | 17 / 24 ▼ |
+| fi | 10 / 10 |
+| sv | 12 / 13 |
+
+Escalation: the rules answered 3, 0 of them wrong; they passed on 2 that the set says need no model. small and small>better were not both run, so the two comparing numbers are not counted.
+
 ## 2026-11-14, e48dbe04 (set 1, 326 requests): Claude Haiku 5.5 alone, judge Sonnet 5.5; hand labels on all 141 changes
 
 | | rules (no model) | small (claude-haiku-5-5) |

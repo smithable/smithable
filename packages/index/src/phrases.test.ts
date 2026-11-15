@@ -654,3 +654,85 @@ test("a sample user's persona keeps the words as typed", () => {
     matchRequest(ir(), "Add a sales who calls on Monday mornings.", ROLES)?.operations[0]?.args,
   ).toMatchObject({ persona: "Sales who calls on Monday mornings." });
 });
+
+// A single resolved target is enough to propose these display changes without a model.
+test("a theme preset is known, and an unknown theme stays for a model", () => {
+  expect(ops("Can you use the cafe theme?")).toEqual([
+    { op: "setTheme", args: { preset: "cafe" } },
+  ]);
+  expect(ops("use the unknown theme")).toBeUndefined();
+});
+
+test("turning off favorites needs an explicit page or a single page with favorites", () => {
+  const spec = SPEC.replace("crud: Customer", "crud: Customer\n    favorites: true");
+  const ir = validateSpec({ path: "smithable.yml", text: spec }).ir as NonNullable<
+    ReturnType<typeof validateSpec>["ir"]
+  >;
+  expect(matchRequest(ir, "turn off favorites")?.operations).toEqual([
+    { op: "setFavorites", args: { page: "customers", mode: "off" } },
+  ]);
+  const savedSpec = spec.replace(
+    "\nnavigation:",
+    "\n  saved:\n    crud: Customer\n    favorites: only\nnavigation:",
+  );
+  const withSaved = validateSpec({ path: "smithable.yml", text: savedSpec }).ir as typeof ir;
+  expect(matchRequest(withSaved, "turn off favorites")?.operations).toEqual([
+    { op: "setFavorites", args: { page: "customers", mode: "off" } },
+  ]);
+  const two = validateSpec({
+    path: "smithable.yml",
+    text: spec.replace("crud: Product", "crud: Product\n    favorites: true"),
+  }).ir as typeof ir;
+  expect(matchRequest(two, "turn off favorites")).toBeUndefined();
+  expect(matchRequest(two, "turn off favorites on the customers page")?.operations).toEqual([
+    { op: "setFavorites", args: { page: "customers", mode: "off" } },
+  ]);
+});
+
+const THEME_PARAPHRASES = [
+  "Apply a woodland theme.",
+  "Switch to the coastal theme.",
+  "I would like to use the minimal theme.",
+];
+const FAVORITES_PARAPHRASES = [
+  "Disable favourites on the customers page.",
+  "Please remove favorites from customers.",
+  "Could you turn off favourites?",
+];
+
+test("new rule paraphrases are held out from the benchmark requests", () => {
+  const raw = Object.values(
+    import.meta.glob("../../../docs/benchmarks/smith-requests.json", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }),
+  )[0] as string;
+  const requests = JSON.parse(raw).requests.map((r: { text: string }) =>
+    r.text.toLowerCase().replace(/[.!?]+$/, ""),
+  );
+  for (const phrase of [...THEME_PARAPHRASES, ...FAVORITES_PARAPHRASES])
+    expect(requests).not.toContain(phrase.toLowerCase().replace(/[.!?]+$/, ""));
+});
+
+test.each(THEME_PARAPHRASES)("a held-out theme instruction: %s", (request) => {
+  const preset = request.includes("woodland")
+    ? "woodland"
+    : request.includes("coastal")
+      ? "coastal"
+      : "minimal";
+  expect(ops(request)).toEqual([{ op: "setTheme", args: { preset } }]);
+});
+
+test.each(FAVORITES_PARAPHRASES)("a held-out favorites instruction: %s", (request) => {
+  const spec = SPEC.replace("crud: Customer", "crud: Customer\n    favorites: true").replace(
+    "\nnavigation:",
+    "\n  saved:\n    crud: Customer\n    favorites: only\nnavigation:",
+  );
+  const project = validateSpec({ path: "smithable.yml", text: spec }).ir as NonNullable<
+    ReturnType<typeof validateSpec>["ir"]
+  >;
+  expect(matchRequest(project, request)?.operations).toEqual([
+    { op: "setFavorites", args: { page: "customers", mode: "off" } },
+  ]);
+});

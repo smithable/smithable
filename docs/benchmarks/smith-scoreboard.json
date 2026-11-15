@@ -475,5 +475,101 @@
    "rulesAnswered": 29,
    "ruleCouldHave": 33
   }
+ },
+ {
+  "date": "2026-11-15",
+  "commit": "da2544a9",
+  "set": "2",
+  "requests": 47,
+  "runs": [
+   "bench-smith-sol-t882-validation-fixed.jsonl"
+  ],
+  "note": "Focused 47-request check: 24 targets (17 right) and 23 controls (22 right), with reconstructed follow-ups and explicit alternative readings. Labels and fixtures differ from earlier rounds; this is neither a whole-set run nor a direct model-improvement comparison. Subsequent review removes the agenda wording rule and fixes saved-only favorites selection; those later changes are checked without a model.",
+  "setups": {
+   "small": {
+    "of": 47,
+    "right": 39,
+    "wrong": 8,
+    "asked": 12,
+    "share": 83,
+    "perRequest": 0.00255,
+    "models": [
+     "claude-haiku-5-5"
+    ],
+    "kinds": {
+     "ambiguous": {
+      "of": 4,
+      "right": 4,
+      "wrong": 0,
+      "asked": 4,
+      "share": 100,
+      "perRequest": 0.00245
+     },
+     "change": {
+      "of": 35,
+      "right": 28,
+      "wrong": 7,
+      "asked": 7,
+      "share": 80,
+      "perRequest": 0.0027
+     },
+     "custom-code": {
+      "of": 5,
+      "right": 4,
+      "wrong": 1,
+      "asked": 1,
+      "share": 80,
+      "perRequest": 0.00269
+     },
+     "docs-question": {
+      "of": 2,
+      "right": 2,
+      "wrong": 0,
+      "asked": 0,
+      "share": 100,
+      "perRequest": 0.0007
+     },
+     "spec-question": {
+      "of": 1,
+      "right": 1,
+      "wrong": 0,
+      "asked": 0,
+      "share": 100,
+      "perRequest": 0.00065
+     }
+    },
+    "languages": {
+     "en": {
+      "of": 24,
+      "right": 17,
+      "wrong": 7,
+      "asked": 7,
+      "share": 70.8,
+      "perRequest": 0.00258
+     },
+     "fi": {
+      "of": 10,
+      "right": 10,
+      "wrong": 0,
+      "asked": 3,
+      "share": 100,
+      "perRequest": 0.00233
+     },
+     "sv": {
+      "of": 13,
+      "right": 12,
+      "wrong": 1,
+      "asked": 2,
+      "share": 92.3,
+      "perRequest": 0.00266
+     }
+    }
+   }
+  },
+  "escalation": {
+   "rulesWrong": 0,
+   "rulesAnswered": 3,
+   "ruleCouldHave": 2
+  }
  }
 ]

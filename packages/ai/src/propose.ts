@@ -20,6 +20,7 @@ import {
 import {
   answerQuestion,
   type ContextSlice,
+  looksLikeInstruction,
   looksLikeQuestion,
   matchRequest,
   refusalOf,
@@ -64,15 +65,16 @@ export type Proposal =
 
 const SYSTEM = `You change a Smithable app. Smithable apps are described by a spec, and change only through operations.
 Answer with JSON only:
-- {"kind":"operations","operations":[{"op":"<operation>","args":{…}}]} when the request clearly means one change (one or more operations).
-- {"kind":"question","question":"…","options":["…","…"]} when the request could mean different changes, or it is unclear what it is about. Never guess.
+- {"kind":"operations","operations":[{"op":"<operation>","args":{…}}],"note":"…"} to propose the requested change (one or more operations), with any assumption stated plainly in note. The person sees the proposal and confirms before anything is applied.
+- {"kind":"question","question":"…","options":["…","…"]} only when two plausible readings would change different things, or a necessary target cannot be identified from the app and conversation. Name those readings in the options. Do not ask just to confirm an instruction or a reasonable presentation choice: propose it with its assumption instead.
 - {"kind":"answer","text":"…"} when the request is a question about the app (who can do what, what something is, whether it is public, what happens when), answered in one to three plain sentences from the app as described; never a change.
 - {"kind":"answer","text":"…"} also for a greeting, thanks or other small talk: one or two friendly sentences, like a chat, that suggest something to change or ask about this app. Never answer "none" to small talk.
 - {"kind":"answer","text":"…"} for a question about how Smithable works (publishing, keys, data, costs, the editor): answer from the parts "From the docs" in one to three sentences and name the page; a question about this app is answered from "From this app" and the parts of the app.
 - {"kind":"answer","text":"…"} for a question not about this app or Smithable: one sentence, then lead back with something to change or ask about this app.
-- {"kind":"none","reason":"…"} when the request is a change no operation can do. Anything that sends email or messages, happens by itself (on a schedule or when something changes), calculates beyond a spreadsheet formula, or talks to other systems needs custom code: answer "none" and say so.
+- {"kind":"none","reason":"…"} when the request is a change no offered operation can do. Check the operation arguments first: actions, outgoing messages, timers and formulas have built-in operations; only behavior beyond those needs custom code.
 The reason is said to the person, as you, in one to three friendly sentences: what cannot be done here, then the nearest thing that can (an operation that comes close, or custom code; a look the app has no setting for is custom CSS in src/custom/styles.css on the kit's hooks, naming the selector, e.g. [data-kit="app-shell"] [data-part="menu"]). When the app already does it by itself (the kit's list below), say so and how, not that it cannot be done.
 Do only what is asked: add no fields, required flags (!), searches, pages or menus the request does not mention. A new field is optional (no "!") unless the request says it must always be filled in; "should have" is not "must".
+An instruction stays an instruction even when politely phrased as a question: "Can you add…", "I want…", Swedish "Kan du lägga till…", "Jag vill…", Finnish "Voitko lisätä…", "Haluan…". Propose it, rather than explaining how or asking whether to do it. Read follow-ups ("make it required", "no, by priority") with the conversation's previous target. Never invent a missing target or grant access to a role merely mentioned as the records being listed.
 If the app already does what is asked, answer {"kind":"none","reason":"Already done: …"}. Never change or remove an existing field, page, menu entry or rule unless the request asks for exactly that; a changed menu lists every page that stays in it.
 A record belongs to whoever created it. When the request says it belongs to, is handled by or is the responsibility of a person named in the record, that is setOwner with the record's User field (add the field first when there is none); access for "owner" then means that person.
 Use the exact names of models, fields and pages from the app. New names are camelCase (fields) or PascalCase (models).
@@ -161,6 +163,7 @@ export function answerSchema(operations: AnyOperation[], strict = true): object 
       options: { type: "array", items: { type: "string" } },
       text: { type: "string" },
       reason: { type: "string" },
+      note: { type: "string" },
     },
   };
 }
@@ -215,6 +218,7 @@ interface Answer {
   options?: string[];
   text?: string;
   reason?: string;
+  note?: string;
 }
 
 /**
@@ -325,7 +329,11 @@ export async function proposeChange(options: {
   // and the docs, with no operations to choose from (most of a change's prompt). When it is a
   // change after all, the model says so and the normal path below runs.
   const first = providers[0];
-  if (first && (looksLikeQuestion(options.request) || matchesNothing)) {
+  if (
+    first &&
+    !looksLikeInstruction(options.request) &&
+    (looksLikeQuestion(options.request) || matchesNothing)
+  ) {
     try {
       const answer = (await completeJson(
         first,
@@ -403,13 +411,19 @@ export async function proposeChange(options: {
           generator: "same page",
         };
       const shut = audience && "problem" in audience ? audience.problem : undefined;
+      const note = [
+        typeof answer.note === "string" ? answer.note.trim() : undefined,
+        audience && "note" in audience ? audience.note : undefined,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
       if (checked.ok && !refused && !shut)
         return {
           kind: "change",
           operations: checked.operations,
           files: checked.files,
           usage,
-          ...(audience && "note" in audience ? { note: audience.note } : {}),
+          ...(note ? { note } : {}),
         };
       problem = checked.ok ? ((refused ?? shut) as string) : checked.message;
       prompt = `${user}\n\nYour previous answer was:\n${JSON.stringify(answer)}\nIt cannot be applied: ${problem}\nAnswer again.`;

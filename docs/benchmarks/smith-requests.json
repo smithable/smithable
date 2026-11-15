@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "about": "Labelled requests to Smith, Studio's assistant, written from the ten starters and the docs, to test whether Smith tells apart what kind of request each one is. needs, where given, lists the parts of the app a prompt must carry for the labelled answer (concepts of the app summary: auth, pages, app, model:X, action:X, outgoing:X, incoming:X, timer:X); scripts/smith-stages.mjs derives them for the rest.",
+  "version": 2,
+  "about": "Labelled requests to Smith, Studio's assistant, written from the ten starters and the docs, to test whether Smith tells apart what kind of request each one is. needs, where given, lists the parts of the app a prompt must carry for the labelled answer (concepts of the app summary: auth, pages, app, model:X, action:X, outgoing:X, incoming:X, timer:X); scripts/smith-stages.mjs derives them for the rest. after names a previous turn whose labelled operation has already been applied before a follow-up. operationAlternatives lists exact accepted operation sets. acceptQuestion names the two readings that must be offered as distinct choices; it is present only for explicitly reviewed ambiguous changes.",
   "requests": [
     {
       "id": "bk-phone-instructors",
@@ -58,7 +58,12 @@
           "model": "Session",
           "field": "capacity",
           "default": 15
-        }
+        },
+        "operationAlternatives": [
+          [
+            "setFieldDefault"
+          ]
+        ]
       },
       "needs": [
         "model:Session"
@@ -669,7 +674,12 @@
           "model": "Service",
           "field": "minutes",
           "default": 45
-        }
+        },
+        "operationAlternatives": [
+          [
+            "setFieldDefault"
+          ]
+        ]
       },
       "needs": [
         "model:Service"
@@ -735,7 +745,22 @@
             "sms"
           ]
         },
-        "unsure": true
+        "unsure": true,
+        "acceptQuestion": {
+          "note": "Add text for the confirmation owner, or text the customer phone.",
+          "readings": [
+            [
+              "owner",
+              "omistaj"
+            ],
+            [
+              "customer",
+              "client",
+              "phone number",
+              "asiakka"
+            ]
+          ]
+        }
       },
       "needs": [
         "outgoing:appointmentConfirmed"
@@ -1114,19 +1139,10 @@
       "id": "ki-sunday-hours",
       "starter": "kiosk",
       "text": "we open sundays now, 12 to 18",
-      "kind": "change",
+      "kind": "custom-code",
       "language": "en",
       "outcome": {
-        "operations": [
-          "editSpec"
-        ],
-        "args": {
-          "page": "menu",
-          "hours": {
-            "sun": "12:00-18:00"
-          }
-        },
-        "unsure": true
+        "reason": "No offered operation changes an existing order page's opening hours."
       },
       "needs": [
         "pages"
@@ -1296,7 +1312,7 @@
         ],
         "args": {
           "page": "catalog",
-          "favorites": "off"
+          "mode": "off"
         }
       },
       "needs": [
@@ -1563,7 +1579,7 @@
           "setTheme"
         ],
         "args": {
-          "brand": "dark green"
+          "primary": "#14532d"
         }
       },
       "needs": [],
@@ -1676,7 +1692,22 @@
           "page": "home",
           "section": "planned"
         },
-        "unsure": true
+        "unsure": true,
+        "acceptQuestion": {
+          "note": "Hide maintenance everywhere public, or remove only its Home section.",
+          "readings": [
+            [
+              "everywhere",
+              "all public",
+              "public access",
+              "public reading"
+            ],
+            [
+              "home",
+              "section"
+            ]
+          ]
+        }
       },
       "needs": [
         "pages",
@@ -1829,7 +1860,12 @@
           "model": "SupportCase",
           "field": "priority",
           "default": 2
-        }
+        },
+        "operationAlternatives": [
+          [
+            "setFieldDefault"
+          ]
+        ]
       },
       "needs": [
         "model:SupportCase"
@@ -1851,7 +1887,22 @@
           "at": "14 days after updatedAt",
           "run": "close"
         },
-        "unsure": true
+        "unsure": true,
+        "acceptQuestion": {
+          "note": "Count from creation, or record when work starts and count from there.",
+          "readings": [
+            [
+              "created",
+              "creation"
+            ],
+            [
+              "startedat",
+              "started",
+              "work started",
+              "in progress"
+            ]
+          ]
+        }
       },
       "needs": [
         "model:SupportCase",
@@ -1878,7 +1929,11 @@
         "pages",
         "model:SupportCase"
       ],
-      "noModel": true
+      "noModel": true,
+      "fixture": {
+        "operations": [],
+        "note": "Newest first is already the default. The labelled setSort on implicit createdAt is not applicable; leave current files unchanged for the follow-up. The scored expectation is unchanged."
+      }
     },
     {
       "id": "sp-by-priority",
@@ -2107,6 +2162,26 @@
           "model": "Task",
           "field": "tag",
           "type": "string"
+        },
+        "acceptQuestion": {
+          "note": "Add a reusable free tag, or a unique identifying code.",
+          "readings": [
+            [
+              "free tag",
+              "vapaa",
+              "tagi",
+              "luokitus",
+              "non-unique"
+            ],
+            [
+              "unique code",
+              "unique identifier",
+              "unique tag",
+              "yksilöivä",
+              "yksilöivän",
+              "yksilöllinen"
+            ]
+          ]
         }
       },
       "needs": [
@@ -5281,7 +5356,24 @@
         ],
         "notGranted": [
           "member"
-        ]
+        ],
+        "acceptQuestion": {
+          "note": "List the sign-in member accounts, or create a separate Member record list.",
+          "readings": [
+            [
+              "account",
+              "sign-in",
+              "users page",
+              "user accounts"
+            ],
+            [
+              "member model",
+              "separate",
+              "new member",
+              "member records"
+            ]
+          ]
+        }
       },
       "needs": [
         "pages",
@@ -5355,7 +5447,22 @@
       "outcome": {
         "notGranted": [
           "member"
-        ]
+        ],
+        "acceptQuestion": {
+          "note": "Share the existing bookings page, or add a new bookings page.",
+          "readings": [
+            [
+              "existing",
+              "already",
+              "current"
+            ],
+            [
+              "new page",
+              "another page",
+              "separate page"
+            ]
+          ]
+        }
       },
       "needs": [
         "pages",
@@ -6164,6 +6271,57 @@
         "outgoing:appointmentConfirmed"
       ],
       "noModel": false
+    },
+    {
+      "id": "q-info-en-show-publish",
+      "starter": "booking",
+      "text": "Can you show examples of publishing?",
+      "kind": "docs-question",
+      "language": "en",
+      "outcome": {
+        "must": [],
+        "mustNot": [],
+        "note": "Information-routing control; the answer and its supplied docs context are also checked in prompt-level tests."
+      },
+      "noModel": false,
+      "docs": [
+        "start-hosted.html",
+        "self-host.html"
+      ]
+    },
+    {
+      "id": "q-info-sv-show-public",
+      "starter": "booking",
+      "text": "Kan du visa varför sidan är offentlig?",
+      "kind": "spec-question",
+      "language": "sv",
+      "outcome": {
+        "must": [],
+        "mustNot": [],
+        "note": "Information-routing control; supplied context must remain available to the first answer prompt."
+      },
+      "noModel": false,
+      "needs": [
+        "pages",
+        "auth"
+      ]
+    },
+    {
+      "id": "q-info-fi-show-publish",
+      "starter": "booking",
+      "text": "Voitko näyttää mitä julkaiseminen tarkoittaa?",
+      "kind": "docs-question",
+      "language": "fi",
+      "outcome": {
+        "must": [],
+        "mustNot": [],
+        "note": "Information-routing control; the answer and its supplied docs context are also checked in prompt-level tests."
+      },
+      "noModel": false,
+      "docs": [
+        "start-hosted.html",
+        "self-host.html"
+      ]
     }
   ]
 }

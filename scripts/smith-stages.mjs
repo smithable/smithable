@@ -12,11 +12,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { repo } from "./dev-app.mjs";
+import { indexedProject, requestProject } from "./smith-cases.mjs";
 
-const { validateAuth, validateContent, validateSpec, validateUx } = await import(
-  join(repo, "packages/core/dist/index.js")
-);
-const { appParts, buildContext, buildIndex, searchDocsWith, specLines, summarize } = await import(
+const { appParts, buildContext, searchDocsWith, specLines } = await import(
   join(repo, "packages/index/dist/index.js")
 );
 const { proposeChange } = await import(join(repo, "packages/ai/dist/index.js"));
@@ -54,16 +52,7 @@ function project(starter) {
       ["ux", "smithable.ux.yml"],
     ])
       if (read(name)) f[key] = read(name);
-    const ir = validateSpec({ path: "smithable.yml", text: f.spec }).ir;
-    const auth = f.auth && validateAuth({ path: "smithable.auth.yml", text: f.auth }, ir).auth;
-    const content =
-      f.content && validateContent({ path: "smithable.content.yml", text: f.content }, ir).content;
-    const ux = f.ux && validateUx({ path: "smithable.ux.yml", text: f.ux }, ir).ux;
-    projects.set(starter, {
-      files: f,
-      index: buildIndex({ ir, generated: {}, custom: [] }),
-      summary: summarize(ir, auth || undefined, content || undefined, [], ux || undefined),
-    });
+    projects.set(starter, indexedProject(f));
   }
   return projects.get(starter);
 }
@@ -134,7 +123,9 @@ const ruleRight = (r, p) => {
     return (p.generator === "small talk" ? "smalltalk" : "spec-question") === r.kind;
   if (p.kind === "change") {
     const got = [...new Set(p.operations.map((o) => o.op))].sort().join();
-    return got === [...new Set(r.outcome?.operations ?? [])].sort().join();
+    return [r.outcome?.operations ?? [], ...(r.outcome?.operationAlternatives ?? [])].some(
+      (ops) => got === [...new Set(ops)].sort().join(),
+    );
   }
   if (p.kind === "none") return r.kind === "custom-code" || !(r.outcome?.operations ?? []).length;
   if (p.kind === "question") return r.kind === "ambiguous";
@@ -197,7 +188,12 @@ const capture = {
 const prompts = [];
 const oracle = [];
 for (const r of requests) {
-  const { files: f, index, summary } = project(r.starter);
+  const {
+    files: f,
+    index,
+    summary,
+    conversation,
+  } = requestProject(project(r.starter), r, set.requests);
   captured = [];
   // As Studio: five parts for a request that reads as a question, three otherwise (Ask.tsx).
   const docs = searchDocsWith(docsIndex, r.text, [], asksTheDocs(r.text) ? 5 : 3);
@@ -206,6 +202,7 @@ for (const r of requests) {
     files: f,
     context: buildContext(index, r.text),
     providers: [capture],
+    conversation,
     docs,
     app: ((lines) =>
       `${appParts(summary, r.text)}${lines ? `\n\nIts lines in smithable.yml:\n${lines}` : ""}`)(

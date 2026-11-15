@@ -113,10 +113,11 @@ function right(r: Request, got: { by: string; operations?: string[]; roles?: str
         (granted ?? []).every((role) => got.roles?.includes(role)) &&
         !(notGranted ?? []).some((role) => got.roles?.includes(role))
       );
-    const wanted = r.outcome.operations ?? [];
-    return (
-      wanted.length > 0 &&
-      [...new Set(got.operations)].sort().join() === [...new Set(wanted)].sort().join()
+    const alternatives = (r.outcome.operationAlternatives ?? []) as string[][];
+    return [r.outcome.operations ?? [], ...alternatives].some(
+      (wanted) =>
+        wanted.length > 0 &&
+        [...new Set(got.operations)].sort().join() === [...new Set(wanted)].sort().join(),
     );
   }
   return false;

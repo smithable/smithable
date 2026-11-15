@@ -28,11 +28,9 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { claudeRoute } from "./claude-route.mjs";
 import { repo } from "./dev-app.mjs";
+import { acceptsQuestion, indexedProject, requestProject } from "./smith-cases.mjs";
 
-const { validateAuth, validateContent, validateSpec, validateUx } = await import(
-  join(repo, "packages/core/dist/index.js")
-);
-const { appParts, buildContext, buildIndex, searchDocsWith, specLines, summarize } = await import(
+const { appParts, buildContext, searchDocsWith, specLines } = await import(
   join(repo, "packages/index/dist/index.js")
 );
 const { proposeChange, openAICompatible, listPrice, searchPhrases, cached } = await import(
@@ -209,16 +207,7 @@ const project = (starter) => {
       ["ux", "smithable.ux.yml"],
     ])
       if (read(name)) f[key] = read(name);
-    const ir = validateSpec({ path: "smithable.yml", text: spec }).ir;
-    const auth = f.auth && validateAuth({ path: "smithable.auth.yml", text: f.auth }, ir).auth;
-    const content =
-      f.content && validateContent({ path: "smithable.content.yml", text: f.content }, ir).content;
-    const ux = f.ux && validateUx({ path: "smithable.ux.yml", text: f.ux }, ir).ux;
-    files.set(starter, {
-      files: f,
-      index: buildIndex({ ir, generated: {}, custom: [] }),
-      summary: summarize(ir, auth || undefined, content || undefined, [], ux || undefined),
-    });
+    files.set(starter, indexedProject(f));
   }
   return files.get(starter);
 };
@@ -267,6 +256,7 @@ async function judge(r, text) {
 async function scored(r, p) {
   const kind = r.kind;
   if (p.kind === "failed") return { right: false, why: p.message };
+  if (acceptsQuestion(r.outcome, p)) return { right: true, why: "labelled alternative readings" };
   // The app's own page, pointed to or asked about, instead of a second one (T760).
   if (r.outcome.existingPage)
     return {
@@ -300,8 +290,11 @@ async function scored(r, p) {
       return { right: !missing.length, why: missing.length ? `no ${missing.join(", ")}` : "" };
     }
     const got = [...new Set(p.operations.map((o) => o.op))].sort().join();
-    const wanted = [...new Set(r.outcome.operations ?? [])].sort().join();
-    return { right: got === wanted, why: got === wanted ? "" : `${got} for ${wanted}` };
+    const wanted = [r.outcome.operations ?? [], ...(r.outcome.operationAlternatives ?? [])].map(
+      (ops) => [...new Set(ops)].sort().join(),
+    );
+    const right = wanted.includes(got);
+    return { right, why: right ? "" : `${got} for ${wanted.join(" or ")}` };
   }
   if (kind === "ambiguous") return { right: p.kind === "question", why: p.kind };
   if (kind === "custom-code") return { right: p.kind === "none", why: p.kind };
@@ -344,7 +337,12 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
     // Undo, redo and feedback are Studio's own rules before Smith (apps/studio's test).
     if (r.kind === "undo" || r.kind === "feedback") continue;
     if (rows.some((x) => x.setup === setup && x.id === r.id)) continue;
-    const { files: f, index, summary } = project(r.starter);
+    const {
+      files: f,
+      index,
+      summary,
+      conversation,
+    } = requestProject(project(r.starter), r, set.requests);
     // As Studio: a question's search phrases from the cheapest model, the docs searched with them.
     const phraseUsage = [];
     const asked =
@@ -355,7 +353,6 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
     const phrases =
       asked && providers[0] ? await searchPhrases(providers[0], r.text, phraseUsage) : [];
     const docs = searchDocsWith(docsIndex, r.text, phrases);
-    const before = r.after ? requests.find((x) => x.id === r.after) : undefined;
     const started = Date.now();
     misses = [];
     // A provider's rate limit (429) is the bench's pace, not the model's answer: the request is
@@ -371,7 +368,7 @@ for (const setup of rulesOnly ? ["rules"] : setups) {
           `${appParts(summary, r.text)}${lines ? `\n\nIts lines in smithable.yml:\n${lines}` : ""}`)(
           specLines(f.spec, r.text),
         ),
-        ...(before ? { conversation: [{ request: before.text, reply: "" }] } : {}),
+        ...(conversation.length ? { conversation } : {}),
       });
     let p = await ask();
     for (
