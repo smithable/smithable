@@ -46,8 +46,9 @@ async function startServer() {
   while (Date.now() < until) {
     try {
       const response = await fetch(`${base}/api/project`, { signal: AbortSignal.timeout(1000) });
+      const project = response.ok ? await response.json() : undefined;
       if (response.ok && (await (await fetch(`${base}/api/preview/answers`)).json()).ok)
-        return response.json();
+        return project;
     } catch {}
     if (server.exitCode !== null) throw new Error(log);
     await new Promise((resolve) => setTimeout(resolve, 200));
@@ -87,11 +88,6 @@ try {
   });
   await page.getByRole("button", { name: "Edit look", exact: true }).click();
   await started;
-  await page
-    .getByRole("dialog", { name: "Edit look", exact: true })
-    .getByLabel("Name", { exact: true })
-    .fill("kept-draft");
-  console.log("Draft before restart", await page.getByLabel("Name", { exact: true }).inputValue());
   await stopServer();
   const restarted = await startServer();
   assert.notEqual(
@@ -106,8 +102,14 @@ try {
       exact: false,
     })
     .waitFor();
-  console.log("Draft after restart", await dialog.getByLabel("Name", { exact: true }).inputValue());
   await dialog.getByRole("heading", { name: "Preview unavailable", exact: true }).waitFor();
+  await dialog.getByLabel("Name", { exact: true }).fill("kept-draft");
+  await dialog.getByLabel("Name", { exact: true }).press("Tab");
+  assert.equal(
+    await dialog.getByLabel("Name", { exact: true }).inputValue(),
+    "kept-draft",
+    "draft edit was not accepted",
+  );
   await dialog.getByRole("button", { name: "Keep this draft", exact: true }).click();
   assert.equal(await dialog.getByLabel("Name", { exact: true }).inputValue(), "kept-draft");
   await dialog.getByText("This draft is kept.", { exact: false }).waitFor();
