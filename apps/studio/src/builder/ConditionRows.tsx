@@ -1,5 +1,5 @@
 import type { Condition } from "@smithable/core";
-import { Select } from "../ui";
+import { Button, Select } from "../ui";
 import { WhenRows, whenRowsOf } from "./action-rows";
 import type { ConditionContext } from "./condition-paths";
 
@@ -14,7 +14,24 @@ export function ConditionRows({
   onChange: (value: unknown) => void;
 }) {
   const { model, mode, fixed, computed, references, person } = context;
-  if (fixed) return <p className="text-xs text-quiet">{fixed}</p>;
+  if (fixed)
+    return (
+      <div className="space-y-1">
+        <p className="text-xs text-quiet">
+          {fixed === "calculated"
+            ? "Calculated fields do not have this rule."
+            : "This field's type already requires a value."}
+        </p>
+        {value !== undefined && (
+          <>
+            <p className="text-xs text-quiet">Saved rule: {JSON.stringify(value)}</p>
+            <Button variant="ghost" onClick={() => onChange(undefined)}>
+              Remove this rule
+            </Button>
+          </>
+        )}
+      </div>
+    );
   const conditional = value !== undefined && typeof value === "object" && value !== null;
   const choice =
     mode === "created"

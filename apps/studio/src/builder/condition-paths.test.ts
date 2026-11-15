@@ -9,7 +9,7 @@ app: { name: Condition contexts, timezone: UTC, currency: EUR }
 models:
   Work:
     fields:
-      name: string
+      name: { type: string }
       status: draft | ready
       active: bool
       person: User
@@ -17,21 +17,30 @@ models:
       derived: { type: string, formula: name }
       derivedText: { type: text, formula: name }
       derivedBool: { type: bool, formula: active }
+      other: Other!
+      starts: datetime
+      minutes: int
+    capacity: { per: other, max: 3 }
+    occupies: { resource: other, starts: starts, duration: minutes }
   Other:
     fields: { title: string, stage: new | old }
+    schedule: { hours: { "mon-fri": "09:00-17:00" } }
 actions:
   mark: { on: Work, set: { status: ready } }
 timers:
   daily: { every: day, at: "09:00", on: Work }
+  clock: { every: day, at: "08:00" }
 payments:
-  pay: { on: Work, amount: amount, when: created }
+  pay: { on: Work, amount: amount, when: created, refund: { by: [admin] } }
 outgoing:
   notice: { when: Work created, to: mail, recipient: admin }
+  digest: { when: clock, to: mail, recipient: admin, list: { model: Work, columns: [name] } }
 queries:
   selected: { custom: true, returns: "Other[]" }
 pages:
   home: { landing: { work: { records: Work } } }
   stats: { dashboard: { work: { count: Work } } }
+  records: { sections: { work: { records: Work } } }
 `;
 
 function fixture() {
@@ -155,4 +164,67 @@ test("required and locked retain their modes without offering rules on calculate
   expect(
     conditionContext(["models", "Work", "fields", "status", "required"], document, ir)?.fixed,
   ).toBeTruthy();
+});
+
+test("every condition context agrees with the actual validator's capabilities", () => {
+  const { ir, document } = fixture();
+  for (const [path, computed, references, person] of [
+    [["models", "Work", "capacity", "where"], false, false, false],
+    [["models", "Work", "occupies", "while"], false, false, false],
+    [["models", "Work", "fields", "name", "locked"], true, false, false],
+    [["models", "Work", "fields", "name", "required"], true, false, false],
+    [["timers", "daily", "where"], false, false, false],
+    [["actions", "mark", "when"], true, true, true],
+    [["payments", "pay", "when"], true, true, false],
+    [["payments", "pay", "refund", "when"], true, true, false],
+    [["outgoing", "notice", "where"], false, false, false],
+    [["outgoing", "digest", "list", "where"], false, false, false],
+    [["pages", "home", "landing", "work", "where"], false, false, false],
+    [["pages", "records", "sections", "work", "where"], false, false, false],
+    [["pages", "stats", "dashboard", "work", "where"], false, false, false],
+  ] as const) {
+    const context = conditionContext([...path], document, ir);
+    if (!context) throw Error(`Missing context ${path}`);
+    for (const [condition, expected] of [
+      [{ active: false }, true],
+      [{ status: ["draft", "ready"] }, true],
+      [{ status: "missing" }, false],
+      [{ derivedText: "" }, computed],
+      [{ person: "any" }, references],
+      [{ person: "ME()" }, person],
+    ] as const) {
+      expect(conditionReady(condition, context), JSON.stringify(path)).toBe(expected);
+      expect(
+        applyOperation({ spec }, "editSpec", {
+          file: "smithable.yml",
+          path: [...path],
+          value: condition,
+        }).ok,
+        JSON.stringify([path, condition]),
+      ).toBe(expected);
+    }
+  }
+});
+
+test("a redundant saved required rule remains visible/removable without contradicting the type", () => {
+  const { ir, document } = fixture();
+  const path = ["models", "Work", "fields", "name", "required"];
+  const draft = referenceWith(document, path.slice(0, -1), { type: "string!", required: true });
+  const context = conditionContext(path, draft, ir);
+  if (!context) throw Error("Missing fixed required context");
+  expect(context.fixed).toBe("required");
+  for (const [value, expected] of [
+    [true, true],
+    [false, false],
+    [undefined, true],
+  ] as const) {
+    expect(conditionReady(value, context)).toBe(expected);
+    expect(
+      applyOperation({ spec }, "editSpec", {
+        file: "smithable.yml",
+        path: path.slice(0, -1),
+        value: { type: "string!", ...(value === undefined ? {} : { required: value }) },
+      }).ok,
+    ).toBe(expected);
+  }
 });

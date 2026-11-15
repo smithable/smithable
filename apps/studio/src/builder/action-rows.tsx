@@ -48,16 +48,22 @@ export const unfinished = (rows: SetRow[]) =>
 export interface WhenRow {
   field: string;
   value: string | boolean | string[];
+  /** An existing comparison, or the person's explicit choice to match empty text. */
+  emptyText?: true;
 }
 
 export const whenRowsOf = (when: Condition | undefined): WhenRow[] =>
-  Object.entries(when ?? {}).map(([field, value]) => ({ field, value }));
+  Object.entries(when ?? {}).map(([field, value]) => ({
+    field,
+    value,
+    ...(value === "" ? { emptyText: true as const } : {}),
+  }));
 
 /** A saved computed-text condition may deliberately compare with empty text. */
 export const unfinishedConditions = (rows: WhenRow[], original: WhenRow[]) =>
   rows.some(
     (row) =>
-      (row.value === "" || (Array.isArray(row.value) && !row.value.length)) &&
+      ((row.value === "" && !row.emptyText) || (Array.isArray(row.value) && !row.value.length)) &&
       !original.some(
         (before) =>
           before.field === row.field && JSON.stringify(before.value) === JSON.stringify(row.value),
@@ -174,7 +180,13 @@ export function WhenRows({
               field={field}
               value={row.value}
               person={person}
-              onChange={(value) => put(i, { ...row, value })}
+              onChange={(value, emptyText) =>
+                put(i, {
+                  field: row.field,
+                  value,
+                  ...(emptyText ? { emptyText: true } : {}),
+                })
+              }
             />
           </div>
         );
@@ -202,7 +214,7 @@ function startOf(fields: Field[], name: string): WhenRow["value"] {
   if (f.type.kind === "choice") return [f.type.values[0] as string];
   if (f.type.kind === "relation") return "any";
   if (f.type.kind === "scalar" && f.type.name === "bool") return true;
-  return "";
+  return [];
 }
 
 /** What a condition wants of one field, by its type. */
@@ -214,7 +226,7 @@ function WhenControl({
 }: {
   field: Field | undefined;
   value: WhenRow["value"];
-  onChange: (value: WhenRow["value"]) => void;
+  onChange: (value: WhenRow["value"], emptyText?: boolean) => void;
   person: boolean;
 }) {
   if (!field) return <p className="text-xs text-quiet">Saved value: {JSON.stringify(value)}</p>;
@@ -246,34 +258,81 @@ function WhenControl({
     return (
       <Select
         aria-label={label}
-        value={String(value === true || value === "true")}
+        value={typeof value === "boolean" ? String(value) : JSON.stringify(value)}
         onChange={(e) => onChange(e.target.value === "true")}
         options={[
+          ...(typeof value === "boolean"
+            ? []
+            : [[JSON.stringify(value), `Saved: ${JSON.stringify(value)}`] as [string, string]]),
           ["true", "yes"],
           ["false", "no"],
         ]}
       />
     );
-  if (field.type.kind === "relation")
+  if (field.type.kind === "relation") {
+    const options: [string, string][] = [
+      ["none", "empty"],
+      ["any", "set"],
+      ...(person && field.type.model === USER
+        ? ([
+            ["ME()", "the person signed in"],
+            ["not ME()", "not the person signed in"],
+          ] as [string, string][])
+        : []),
+    ];
+    if (!options.some(([candidate]) => candidate === value))
+      options.unshift([String(value), `Saved: ${String(value)}`]);
     return (
       <Select
         aria-label={label}
         value={String(value)}
         onChange={(e) => onChange(e.target.value)}
-        options={[
-          ["none", "empty"],
-          ["any", "set"],
-          ...(person && field.type.model === USER
-            ? ([
-                ["ME()", "the person signed in"],
-                ["not ME()", "not the person signed in"],
-              ] as [string, string][])
-            : []),
-        ]}
+        options={options}
       />
     );
+  }
+  if (Array.isArray(value) && value.length)
+    return (
+      <fieldset className="space-y-1" aria-label={label}>
+        <p className="text-xs text-quiet">Matches any of these text values.</p>
+        {value.map((text, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: each existing text value keeps its editor
+          <div key={index} className="flex items-center gap-2">
+            <Input
+              aria-label={`${label} value ${index + 1}`}
+              value={text}
+              onChange={(event) =>
+                onChange(value.map((before, at) => (at === index ? event.target.value : before)))
+              }
+            />
+            <Button
+              variant="ghost"
+              aria-label={`Remove ${humanize(field.name)} value ${index + 1}`}
+              onClick={() => onChange(value.filter((_, at) => at !== index))}
+            >
+              ✕
+            </Button>
+          </div>
+        ))}
+      </fieldset>
+    );
   return (
-    <Input aria-label={label} value={String(value)} onChange={(e) => onChange(e.target.value)} />
+    <div className="space-y-1">
+      <Input
+        aria-label={label}
+        value={typeof value === "string" ? value : ""}
+        onChange={(event) => onChange(event.target.value.length ? event.target.value : [])}
+      />
+      <label className="flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          aria-label={`${humanize(field.name)} matches empty text`}
+          checked={value === ""}
+          onChange={(event) => onChange(event.target.checked ? "" : [], event.target.checked)}
+        />
+        Match empty text
+      </label>
+    </div>
   );
 }
 
@@ -486,12 +545,18 @@ export function ActionRowsEditor({
       ) : (
         <SetRows model={model} rows={setRows} onChange={setSetRows} help={help?.("formula")} />
       )}
-      {changed && (
+      {(changed || empty) && (
         <div className="flex items-center gap-2">
           <Button className="h-7 text-xs" disabled={empty} onClick={() => void onSave(value)}>
             {part === "when" ? "Change the condition" : "Change the values"}
           </Button>
-          {empty && <span className="text-xs text-quiet">Fill in each value, or ask for it.</span>}
+          {empty && (
+            <span className="text-xs text-quiet">
+              {part === "when"
+                ? "Choose a value for each condition, or remove its row."
+                : "Fill in each value, or ask for it."}
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -519,15 +584,22 @@ export function ProposedActionRows({
   model,
   onArgs,
   help,
+  onProblem,
 }: {
   args: Record<string, unknown>;
   model: ModelIR;
   onArgs: (args: Record<string, unknown>) => void;
   help?: (topic: "condition" | "formula") => React.ReactNode;
+  onProblem?: (problem: string | undefined) => void;
 }) {
   const [when, setWhen] = useState(() => whenRowsOf(args.when as Condition | undefined));
   const [set, setSet] = useState(() => setRowsFromArgs(args.set as Record<string, unknown>));
   const put = (nextWhen: WhenRow[], nextSet: SetRow[]) => {
+    onProblem?.(
+      unfinishedConditions(nextWhen, whenRowsOf(args.when as Condition | undefined))
+        ? "Choose a value for each condition, or remove its row."
+        : undefined,
+    );
     const condition = conditionOf(nextWhen);
     const { when: _, ...rest } = args;
     onArgs({

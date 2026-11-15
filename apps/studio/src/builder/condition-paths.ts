@@ -9,7 +9,7 @@ export interface ConditionContext {
   references: boolean;
   person: boolean;
   mode?: "required" | "locked" | "created";
-  fixed?: string;
+  fixed?: "calculated" | "required";
 }
 
 const object = (value: unknown): Record<string, unknown> =>
@@ -30,7 +30,7 @@ export function conditionContext(
   let references = false;
   let person = false;
   let mode: ConditionContext["mode"];
-  let fixed: string | undefined;
+  let fixed: ConditionContext["fixed"];
   if (area === "models") {
     if (
       path.length === 4 &&
@@ -45,13 +45,13 @@ export function conditionContext(
         .find((item) => item.name === name)
         ?.fields.find((f) => f.name === part);
       const written = object(referenceAt(document, path.slice(0, 4)));
-      if (field?.formula) fixed = "Calculated fields do not have this rule.";
+      if (field?.formula) fixed = "calculated";
       else if (
         leaf === "required" &&
-        (field?.type.kind === "choice" ||
+        ((field?.type.kind === "choice" && field.required) ||
           (typeof written.type === "string" && written.type.split(/\s/)[0]?.endsWith("!")))
       )
-        fixed = "This field's type already requires a value.";
+        fixed = "required";
     } else return undefined;
   } else if (area === "actions" && path.length === 3 && key === "when") {
     model = own.on;
@@ -97,7 +97,7 @@ export function conditionReady(value: unknown, context: ConditionContext): boole
   if (value === undefined) return context.mode !== "created";
   if (context.mode === "created" && value === "created") return true;
   if ((context.mode === "required" || context.mode === "locked") && typeof value === "boolean")
-    return !context.fixed || value === false;
+    return !context.fixed || (context.fixed === "required" && value === true);
   if (
     !value ||
     typeof value !== "object" ||
