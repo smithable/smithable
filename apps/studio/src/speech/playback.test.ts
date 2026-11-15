@@ -63,3 +63,36 @@ test("stop discards remaining sentences and ignores a late completion", () => {
   player.resume();
   expect(utterances).toHaveLength(1);
 });
+
+test("stop after pause releases the native synthesizer for the next reply", () => {
+  const { player, synth, utterances, voice } = fixture();
+  player.speak("First.", voice, 1);
+  player.pause();
+  player.stop();
+  expect(synth.resume).toHaveBeenCalledOnce();
+  player.speak("Next reply.", voice, 1);
+  expect(utterances.at(-1)?.text).toBe("Next reply.");
+});
+test("late canceled events cannot finish the restarted sentence", () => {
+  const { player, synth, utterances, voice } = fixture();
+  player.speak("First. Second.", voice, 1);
+  const old = utterances[0];
+  player.pause();
+  synth.speaking = false;
+  player.resume();
+  expect(utterances[1]).not.toBe(old);
+  old?.onend?.({} as SpeechSynthesisEvent);
+  old?.onerror?.({ error: "canceled" } as SpeechSynthesisErrorEvent);
+  expect(utterances).toHaveLength(2);
+  utterances[1]?.onend?.({} as SpeechSynthesisEvent);
+  expect(utterances.at(-1)?.text).toBe("Second.");
+});
+test("one failed sentence does not discard subsequent replies", () => {
+  const { player, utterances, voice } = fixture();
+  player.speak("First. Second.", voice, 1);
+  expect(player.busy).toBe(true);
+  utterances[0]?.onerror?.({ error: "synthesis-failed" } as SpeechSynthesisErrorEvent);
+  expect(utterances.at(-1)?.text).toBe("Second.");
+  utterances[1]?.onend?.({} as SpeechSynthesisEvent);
+  expect(player.busy).toBe(false);
+});
