@@ -1598,6 +1598,7 @@ try {
       await page
         .getByRole("list", { name: "Thread" })
         .getByText(/Hello! I'm Smith\. Tell me what to change in Acme CRM/)
+        .last()
         .waitFor({ timeout: 30000 * P });
       if ((await project()).files.spec !== before) throw new Error("the spec changed");
       // Studio keeps the thread while it runs, for a reload or another tab (A 152).
