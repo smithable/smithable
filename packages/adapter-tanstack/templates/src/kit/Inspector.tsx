@@ -10,6 +10,7 @@ import { Input } from "#/components/ui/input";
 import { AppLink } from "./AppLink";
 import type { Answer, Step } from "./assistant.server";
 import { dayText, instantText } from "./format";
+import { SoundControls } from "./SoundControls";
 import { w } from "./words";
 
 interface Asked {
@@ -114,10 +115,12 @@ export function Inspector({
 export function Shown({
   answer,
   trace = true,
+  sound = true,
   confirm,
 }: {
   answer: Answer;
   trace?: boolean;
+  sound?: boolean;
   /** "Ask" with may: change: a proposed change is made once the person confirms it. */
   confirm?: (proposal: string) => Promise<unknown>;
 }) {
@@ -148,7 +151,7 @@ export function Shown({
         ),
       )}
       {answer.note && <p className="text-sm text-muted-foreground">{answer.note}</p>}
-      <ReadAloud text={spoken(answer)} />
+      {sound && <SoundControls text={spoken(answer)} />}
       {trace && (
         <details className="text-xs text-muted-foreground">
           <summary className="cursor-pointer">
@@ -172,24 +175,6 @@ export function Shown({
         </details>
       )}
     </>
-  );
-}
-
-/** Reads the answer aloud with the browser's speech, where the browser has it. */
-function ReadAloud({ text }: { text: string }) {
-  if (!text || typeof window === "undefined" || !("speechSynthesis" in window)) return null;
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      onClick={() => {
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-      }}
-    >
-      {w.readAloud}
-    </Button>
   );
 }
 

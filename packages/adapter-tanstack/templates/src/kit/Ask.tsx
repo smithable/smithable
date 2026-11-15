@@ -105,6 +105,7 @@ export function Ask({
 }) {
   const name = texts.name ?? w.ask;
   const sheet = useRef<HTMLDialogElement>(null);
+  const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState<Asked[]>([]);
   const [busy, setBusy] = useState(false);
@@ -161,22 +162,23 @@ export function Ask({
         type="button"
         data-kit="ask-launch"
         className="fixed right-4 bottom-4 z-20 inline-flex h-12 cursor-pointer items-center gap-2 rounded-full border bg-card pr-5 pl-2 text-sm font-semibold text-card-foreground shadow-xl outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => sheet.current?.showModal()}
+        onClick={() => {
+          setOpen(true);
+          sheet.current?.showModal();
+        }}
       >
-        <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground">
-          <Sparkles aria-hidden className="size-4" />
-        </span>
-        {name}
+        <AskLabel name={name} />
       </button>
       <dialog
         ref={sheet}
+        onClose={() => setOpen(false)}
         aria-labelledby="ask-title"
         className="m-0 mt-auto w-full max-w-none rounded-t-xl border bg-background p-0 text-foreground backdrop:bg-black/40 sm:m-auto sm:max-w-xl sm:rounded-xl"
       >
         <div className="flex max-h-[85vh] flex-col gap-4 overflow-y-auto p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 id="ask-title" className="text-lg font-semibold">
-              {name}
+              <AskLabel name={name} />
             </h2>
             <Button type="button" variant="ghost" size="sm" onClick={() => sheet.current?.close()}>
               {w.close}
@@ -205,7 +207,7 @@ export function Ask({
             {asked.map((a, i) => (
               <li
                 // biome-ignore lint/suspicious/noArrayIndexKey: a conversation's turns by their place
-                key={i}
+                key={`${who}-${i}`}
                 ref={i === asked.length - 1 ? end : undefined}
                 data-answer
                 className="space-y-2"
@@ -222,7 +224,9 @@ export function Ask({
                     </div>
                   )}
                   {a.failed && <p className="text-sm text-destructive">{a.failed}</p>}
-                  {a.answer && <Shown answer={a.answer} trace={false} confirm={confirm} />}
+                  {a.answer && (
+                    <Shown answer={a.answer} trace={false} confirm={confirm} sound={open} />
+                  )}
                   {/* Questions to try, after the latest answer only: picked, one is asked. */}
                   {i === asked.length - 1 && a.answer?.suggestions?.length ? (
                     <div className="space-y-1">
@@ -265,5 +269,15 @@ export function Ask({
         </div>
       </dialog>
     </>
+  );
+}
+
+/** The mark stays at the lower left of the label, in the launcher and the open panel. */
+function AskLabel({ name }: { name: string }) {
+  return (
+    <span data-ask-label className="inline-flex items-end gap-2">
+      <Sparkles data-ask-icon aria-hidden className="size-4 shrink-0 -mb-1" />
+      <span>{name}</span>
+    </span>
   );
 }

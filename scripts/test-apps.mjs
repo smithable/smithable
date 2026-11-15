@@ -4486,9 +4486,13 @@ async function apiFlow(base) {
     // Read aloud by the browser's own speech: the number is what it says.
     await page.evaluate(() => {
       window.__spoken = [];
+      window.speechSynthesis.getVoices = () => [
+        { name: "Fixture", lang: "en-US", localService: true },
+      ];
       window.speechSynthesis.speak = (u) => window.__spoken.push(u.text);
+      window.speechSynthesis.dispatchEvent(new Event("voiceschanged"));
     });
-    await answered.getByRole("button", { name: "Read aloud" }).click();
+    await answered.getByRole("button", { name: "Sound off", exact: true }).click();
     const said = await page.evaluate(() => window.__spoken.join(" "));
     if (!said.includes(number ?? "?")) throw new Error(`read aloud: "${said}"`);
     await page.getByLabel("Act as").selectOption("visitor");
@@ -5390,11 +5394,45 @@ async function standInModel() {
 async function askPanelFlow(dir, base) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await page.addInitScript(() => {
+    const speech = { utterances: [], current: null, pauses: 0, resumes: 0, cancels: 0 };
+    window.__answerSpeech = speech;
+    const synth = window.speechSynthesis;
+    synth.getVoices = () => [
+      { name: "Fixture One", lang: "en-US", localService: true },
+      { name: "Fixture Two", lang: "en-GB", localService: true },
+    ];
+    Object.defineProperty(synth, "speaking", { get: () => Boolean(speech.current) });
+    synth.speak = (u) => {
+      speech.current = u;
+      speech.utterances.push(u);
+      u.onstart?.({});
+    };
+    synth.pause = () => {
+      speech.pauses++;
+    };
+    synth.resume = () => {
+      speech.resumes++;
+    };
+    synth.cancel = () => {
+      speech.current = null;
+      speech.cancels++;
+    };
+  });
   try {
     await signInAs(page, base, "member");
     // The first page is the team page, which a member may not open: they land on the first
     // they may, not on a refusal.
     await page.waitForURL(`${base}/admin`, { timeout: 10000 * P });
+    const launcherAtLowerLeft = await page
+      .locator("[data-kit=ask-launch] [data-ask-label]")
+      .evaluate((node) => {
+        const icon = node.querySelector("[data-ask-icon]").getBoundingClientRect();
+        const text = node.lastElementChild.getBoundingClientRect();
+        return icon.left < text.left && icon.bottom > text.bottom;
+      });
+    if (!launcherAtLowerLeft)
+      throw new Error("Ask's launcher icon is not at the label's lower left");
     await page.getByRole("button", { name: "Ask", exact: true }).click();
     const sheet = page.getByRole("dialog", { name: "Ask" });
     await sheet.getByLabel("Question").fill("how many tasks");
@@ -5405,6 +5443,62 @@ async function askPanelFlow(dir, base) {
     if (!/^\d+$/.test(number ?? "")) throw new Error(`Ask answered ${number}`);
     if (!(await sheet.getByText("Answers may come from an AI and can be wrong.").isVisible()))
       throw new Error("Ask does not say answers may come from an AI");
+    // T885: the shared reader pauses and resumes without replay; the voice menu samples,
+    // speed is numeric, and closing the panel stops its reader. All speech is a local stand-in.
+    const label = sheet.locator("[data-ask-label]");
+    const geometry = await label.evaluate((node) => {
+      const icon = node.querySelector("[data-ask-icon]").getBoundingClientRect();
+      const text = node.lastElementChild.getBoundingClientRect();
+      return icon.left < text.left && icon.bottom > text.bottom;
+    });
+    if (!geometry) throw new Error("Ask's open-panel icon is not at the label's lower left");
+    if (await sheet.getByRole("button", { name: /mic|microphone/i }).count())
+      throw new Error("Ask offers a microphone");
+    await answered.getByLabel("Speaking speed").selectOption("1.5");
+    await answered.getByRole("button", { name: "Sound off", exact: true }).click();
+    const reading = await page.evaluate(() => {
+      const s = window.__answerSpeech;
+      return {
+        text: s.utterances[0]?.text,
+        rate: s.utterances[0]?.rate,
+        count: s.utterances.length,
+      };
+    });
+    if (!reading.text?.includes(number) || reading.rate !== 1.5)
+      throw new Error(`Ask speech: ${JSON.stringify(reading)}`);
+    await answered.getByRole("button", { name: "Sound on", exact: true }).click();
+    await answered.getByRole("button", { name: "Sound off", exact: true }).click();
+    const resumed = await page.evaluate(() => {
+      const s = window.__answerSpeech;
+      return { count: s.utterances.length, pauses: s.pauses, resumes: s.resumes };
+    });
+    if (resumed.count !== reading.count || resumed.pauses !== 1 || resumed.resumes < 1)
+      throw new Error(`Ask did not resume its reader: ${JSON.stringify(resumed)}`);
+    await answered.getByRole("button", { name: "Sound on", exact: true }).click();
+    const canceledBeforeClose = await page.evaluate(() => window.__answerSpeech.cancels);
+    await sheet.getByRole("button", { name: "Close", exact: true }).click();
+    await page.waitForFunction(
+      (before) => window.__answerSpeech.current === null && window.__answerSpeech.cancels > before,
+      canceledBeforeClose,
+    );
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    await answered.getByRole("button", { name: "Sound off", exact: true }).waitFor();
+    await answered.getByLabel("Voice", { exact: true }).selectOption("Fixture Two");
+    const sample = await page.evaluate(() => {
+      const s = window.__answerSpeech;
+      const u = s.utterances.at(-1);
+      return { text: u?.text, voice: u?.voice?.name, cancels: s.cancels };
+    });
+    if (sample.text !== "Hello." || sample.voice !== "Fixture Two" || sample.cancels < 1)
+      throw new Error(`Ask voice sample: ${JSON.stringify(sample)}`);
+    await answered.getByRole("button", { name: "Sound off", exact: true }).click();
+    const afterSample = await page.evaluate(() => window.__answerSpeech.utterances.at(-1)?.text);
+    if (!afterSample?.includes(number))
+      throw new Error("Play resumed the voice sample instead of reading the answer");
+    await answered.getByRole("button", { name: "Stop", exact: true }).click();
+    console.log(
+      "  ✓ browser: Ask sound pauses/resumes without replay, samples its voice, offers speed, stops on close, has no microphone and keeps its icon at the label's lower left",
+    );
     // A chat (A 152): small talk is answered by rule with questions to try; one picked is asked,
     // and the conversation stays on a reload.
     await sheet.getByLabel("Question").fill("Hi!");
