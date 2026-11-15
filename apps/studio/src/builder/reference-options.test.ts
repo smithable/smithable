@@ -197,7 +197,10 @@ test("mail parts and thread bodies offer their actual field kinds rather than al
   expect(values({ kind: "field", model: "Booking", use: "mail-attachments" })).toEqual([
     "document",
   ]);
-  expect(values({ kind: "field", model: "Booking", use: "thread-body" })).toEqual(["notes"]);
+  const bodies = values({ kind: "field", model: "Booking", use: "thread-body" });
+  expect(bodies).toEqual(["title", "notes"]);
+  for (const body of bodies)
+    expect(applyOperation({ spec }, "setThread", { model: "Booking", body }).ok, body).toBe(true);
   expect(values({ kind: "field", model: "Reply", use: "thread-body" })).toEqual(["body"]);
 });
 
@@ -230,4 +233,23 @@ test("short schedule-away choices exclude an ambiguous resource that the explici
   expect(values({ kind: "away-model", model: "Booking" }, checked.ir)).toEqual(["Reply"]);
   expect(values({ kind: "away-model", model: "Booking", short: true }, checked.ir)).toEqual([]);
   expect(values({ kind: "reply-model", model: "Booking" }, checked.ir)).toEqual([]);
+});
+
+test("capacity candidates exclude the built-in User even when the reference is required", () => {
+  const text = spec.replace("      who: User", "      who: User!");
+  const checked = validateSpec({ path: "smithable.yml", text });
+  expect(checked.diagnostics.filter((diagnostic) => diagnostic.severity === "error")).toEqual([]);
+  if (!checked.ir) throw Error("Invalid capacity fixture");
+  expect(
+    values({ kind: "field", model: "Booking", use: "required-reference" }, checked.ir),
+  ).toEqual(["venue", "who"]);
+  expect(
+    values({ kind: "field", model: "Booking", use: "capacity-reference" }, checked.ir),
+  ).toEqual(["venue"]);
+  expect(
+    applyOperation({ spec: text }, "setCapacity", { model: "Booking", per: "venue", max: "1" }).ok,
+  ).toBe(true);
+  expect(
+    applyOperation({ spec: text }, "setCapacity", { model: "Booking", per: "who", max: "1" }).ok,
+  ).toBe(false);
 });

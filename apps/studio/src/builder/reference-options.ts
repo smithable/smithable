@@ -45,6 +45,7 @@ export type FieldUse =
   | "money"
   | "boolean"
   | "required-reference"
+  | "capacity-reference"
   | "scheduled-reference"
   | "sendable"
   | "incoming"
@@ -96,7 +97,7 @@ function eligible(field: FieldIR, use: FieldUse, model: ModelIR, ir: SpecIR): bo
     case "text":
       return scalar(field, "string", "text", "markdown");
     case "thread-body":
-      return scalar(field, "text", "markdown");
+      return scalar(field, "text", "markdown", "string");
     case "mail-from":
       return !field.formula && scalar(field, "email", "string");
     case "mail-subject":
@@ -131,6 +132,13 @@ function eligible(field: FieldIR, use: FieldUse, model: ModelIR, ir: SpecIR): bo
       return !field.formula && scalar(field, "bool");
     case "required-reference":
       return single(field) && field.required;
+    case "capacity-reference":
+      return (
+        field.type.kind === "relation" &&
+        !field.type.many &&
+        field.required &&
+        field.type.model !== "User"
+      );
     case "scheduled-reference":
       return (
         field.type.kind === "relation" &&
