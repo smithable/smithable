@@ -1,349 +1,232 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type Project, type ReleaseReview as Review } from "./api";
-import { checksPassed, needsLook, reviewSections } from "./release-review";
+import { useEffect, useRef, useState } from "react";
+import { api, type ReleaseReview as Review } from "./api";
 import { Button } from "./ui";
 
-/** One current read shared by the top-bar count and the open review. Older replies cannot win. */
-export function useReleaseReview(files: Project["files"] | undefined, enabled: boolean) {
-  const [state, setState] = useState<{ review?: Review; error?: string; loading?: boolean }>({});
-  const request = useRef(0);
-  const reload = useCallback(async (invalidate = false) => {
-    const mine = ++request.current;
-    setState((before) =>
-      invalidate ? { loading: true } : { ...before, error: undefined, loading: true },
-    );
-    try {
-      const review = await api.releaseReview();
-      if (request.current === mine) setState({ review });
-    } catch (error) {
-      if (request.current === mine)
-        setState({ error: error instanceof Error ? error.message : String(error) });
-    }
-  }, []);
-  const source = files ? JSON.stringify(files) : undefined;
-  useEffect(() => {
-    if (enabled && source) void reload(true);
-    else setState({});
-    return () => {
-      request.current++;
-    };
-  }, [source, enabled, reload]);
-  useEffect(() => {
-    if (!enabled) return;
-    const focus = () => void reload();
-    window.addEventListener("focus", focus);
-    return () => window.removeEventListener("focus", focus);
-  }, [enabled, reload]);
-  return { ...state, reload };
-}
+/** The release review as the server reads it now, or why it could not be read. */
+const read = (setReview: (r: Review) => void, setError: (e: string) => void) =>
+  api
+    .releaseReview()
+    .then(setReview)
+    .catch((error: Error) => setError(error.message));
 
-export function ReleaseReview({
-  review,
-  error,
-  loading = false,
-  reload,
-  home,
-  onClose,
-}: {
-  review?: Review;
-  error?: string;
-  loading?: boolean;
-  reload: () => Promise<void>;
-  home?: string;
-  onClose: () => void;
-}) {
+export function ReleaseReview({ onClose }: { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [review, setReview] = useState<Review>();
+  const [error, setError] = useState<string>();
   const [refused, setRefused] = useState<string>();
-  const [reviewingPrivacy, setReviewingPrivacy] = useState(false);
+  const load = () => read(setReview, setError);
   useEffect(() => {
     dialog.current?.showModal();
+    void read(setReview, setError);
   }, []);
-  // This existing operation records only that the owner read the privacy description.
+  // The owner reads the privacy page and says so: the facts as they are now, today (UTC).
   const reviewPrivacy = async (page: string, facts: string) => {
-    setReviewingPrivacy(true);
     setRefused(undefined);
     const on = new Date().toISOString().slice(0, 10);
     const result = await api
       .operation("reviewPrivacyPage", { page, facts, on })
       .catch((e: Error) => ({ ok: false, output: e.message }));
     if (!result.ok) setRefused(result.output);
-    await reload();
-    setReviewingPrivacy(false);
+    await load();
   };
-  const content = review && {
-    access: (
-      <>
-        {review.noSignIn && (
-          <p role="note" className="font-medium">
-            {review.noSignIn}
-          </p>
-        )}
-        {review.currentAccess?.length ? (
-          <>
-            <h3 className="font-semibold">Who can use the current app</h3>
-            <ul className="space-y-1">
-              {review.currentAccess.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p>
-            Current access could not be read. Review the app's access settings before publishing.
-          </p>
-        )}
-        {review.comparison === "available" ? (
-          <>
-            <p className="text-sm text-muted">
-              Compared with the local deployment recorded at {review.baseline}.
-            </p>
-            {review.access.length ? (
-              <ul className="list-disc pl-5">
-                {review.access.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                {review.accessUnchanged
-                  ? "Access is unchanged in this comparison."
-                  : "No added access detected. Other access settings changed; review the current map."}
-              </p>
-            )}
-          </>
-        ) : (
-          review.baselineState !== "none" && (
-            <p>
-              {review.comparisonReason ?? "Comparison is unavailable."} Review the current access
-              map before publishing.
-            </p>
-          )
-        )}
-      </>
-    ),
-    privacy: (
-      <>
-        {!review.privacy?.length && (
-          <p>
-            No privacy-page review is recorded. Check what the app needs to tell the people who use
-            it.
-          </p>
-        )}
-        {review.privacy?.map((p) => (
-          <div key={p.page} className="space-y-1" data-privacy={p.state}>
-            <p>
-              {p.state === "reviewed"
-                ? `You reviewed the description of the app on the ${p.page} page on ${p.on}.`
-                : p.state === "changed"
-                  ? `The description of the app on the ${p.page} page changed since your review on ${p.on}.`
-                  : `The description of the app on the ${p.page} page has not been reviewed yet.`}
-            </p>
-            {p.changed && (
-              <ul className="list-disc pl-5">
-                {p.changed.map((part) => (
-                  <li key={part}>{part}</li>
-                ))}
-              </ul>
-            )}
-            {p.state !== "reviewed" && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted">Read it in the preview first.</span>
-                <Button
-                  disabled={reviewingPrivacy}
-                  onClick={() => void reviewPrivacy(p.page, p.facts)}
-                >
-                  {p.state === "changed" ? "Review it again" : "Review it"}
-                </Button>
-              </div>
-            )}
-          </div>
-        ))}
-        {refused && <p role="alert">{refused}</p>}
-        <p className="text-sm text-muted">
-          Reviewing records that you read this description as it is now. The page says so until it
-          changes; it is not legal advice.
-        </p>
-      </>
-    ),
-    migrations:
-      review.baselineState === "none" ? (
-        <p>
-          There is no local release to compare with yet. Review generated migrations before your
-          first deployment.
-        </p>
-      ) : review.comparison !== "available" ? (
-        <p>Migration comparison unavailable. Review the generated migrations manually.</p>
-      ) : review.migrations.length ? (
-        <ul className="list-disc pl-5">
-          {review.migrations.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      ) : (
-        <p>
-          No field changes detected. Review generated migrations and model constraints before
-          release.
-        </p>
-      ),
-    checks: (
-      <>
-        <p>
-          {checksPassed(review)
-            ? "Release checks passed for the current project files."
-            : "Release checks are not verified for the current project files."}
-        </p>
-        {review.checks && (
-          <>
-            <p className="text-sm text-muted">
-              Latest recorded run: {review.checks.level}, {review.checks.at}.{" "}
-              {review.checks.current
-                ? "Project files match that run."
-                : "Project files differ or their revision is unknown."}
-            </p>
-            <ul className="list-disc pl-5">
-              {review.checks.results.map((result) => (
-                <li key={result.what}>
-                  {result.what}: {!result.checked ? "not checked" : result.ok ? "passed" : "failed"}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-        <p className="text-sm text-muted">
-          These records cover Git-visible source files. Runtime settings, ignored files and hosting
-          checks need separate verification.
-        </p>
-      </>
-    ),
-    maintenance: (
-      <>
-        <p>{review.maintenance.status}.</p>
-        <p>
-          Generated engine: {review.maintenance.generatedEngine ?? "unknown"}; this tool:{" "}
-          {review.maintenance.currentEngine}.
-        </p>
-        <p>
-          Generated stack profile: {review.maintenance.generatedProfile ?? "unknown"}; this tool:{" "}
-          {review.maintenance.currentProfile}.
-        </p>
-        <p>Recorded template kit: {review.maintenance.generatedKit ?? "unknown"}.</p>
-        <p>
-          Last recorded tested upgrade:{" "}
-          {review.maintenance.upgrade
-            ? `${review.maintenance.upgrade.from} to ${review.maintenance.upgrade.to} (${review.maintenance.upgrade.commit.slice(0, 12)})`
-            : "none recorded"}
-          .
-        </p>
-        <p>
-          Deployed apps keep their generated code until updated and released. Test upgrades on a
-          staged copy; metadata does not verify the running deployment.
-        </p>
-        <details>
-          <summary>Declared dependency versions</summary>
-          <ul className="list-disc pl-5">
-            {Object.entries(review.maintenance.dependencies).map(([name, version]) => (
-              <li key={name}>
-                {name}: {version}
-              </li>
-            ))}
-          </ul>
-        </details>
-      </>
-    ),
-    recovery: (
-      <>
-        <p>
-          Last verified restore: {review.verifiedRestore ?? "none recorded by this local tool"}.
-        </p>
-        <p>
-          A successful backup or file copy does not verify recovery. Use the hosting recovery view
-          for deployed evidence.
-        </p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>
-            <strong>Editor undo</strong> reverses a local change and may restore its development
-            database snapshot. It does not restore a published app.
-          </li>
-          <li>
-            <strong>Code rollback</strong> restores an earlier version of the code. It may require
-            the matching database schema.
-          </li>
-          <li>
-            <strong>Data restore</strong> replaces data with a snapshot. Records and uploads added
-            after that snapshot may be lost. Verify credentials and files as well as the database.
-          </li>
-        </ul>
-      </>
-    ),
-  };
+  const passed =
+    review?.checks?.level === "release" &&
+    review.checks.current &&
+    review.checks.results.length > 0 &&
+    review.checks.results.every((r) => r.ok && r.checked);
   return (
     <dialog
       ref={dialog}
-      aria-label="Review and publish"
-      aria-busy={loading || undefined}
+      aria-label="Release review"
       onClose={onClose}
       className="m-auto max-h-[90vh] w-[min(48rem,92vw)] overflow-auto rounded-lg bg-panel p-4 text-fg shadow-xl backdrop:bg-black/40"
     >
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">
-          Review and publish
-          {review && (
-            <span className="ml-2 text-sm font-normal" data-review-count>
-              {needsLook(review)} {needsLook(review) === 1 ? "needs" : "need"} a look
-            </span>
-          )}
-        </h2>
+        <h2 className="text-lg font-semibold">Release review</h2>
         <p className="text-sm text-muted">
-          Review before publishing. This view does not run checks or publish the app. Publishing
-          still performs its own checks.
+          Review before publishing. This view does not run checks or publish the app.
         </p>
-        {loading && review && (
-          <p role="status" className="text-sm text-muted">
-            Refreshing release evidence…
-          </p>
-        )}
         {error ? (
           <p role="alert">The release review could not be read: {error}</p>
         ) : !review ? (
           <p role="status">Reading release evidence…</p>
         ) : (
           <>
-            {review.baselineState === "none" && (
-              <p data-first-release>
-                No local release is recorded yet. Review who can use the current app, its privacy
-                page and whether the checks are current. Hosted publishing has its own evidence.
-              </p>
-            )}
-            {reviewSections(review).map((part) => (
-              <details
-                key={`${part.id}:${part.state}:${part.summary}`}
-                data-review-part={part.id}
-                data-review-state={part.state}
-                open={part.state === "needs-look"}
-                className={`rounded-md border p-3 ${part.state === "needs-look" ? "border-accent text-fg" : "border-line text-muted open:text-fg"}`}
-              >
-                <summary className="cursor-pointer text-sm">
-                  <span className="font-semibold">{part.title}:</span> {part.summary}
-                </summary>
-                <div className="mt-3 space-y-2 text-sm">{content?.[part.id]}</div>
-              </details>
-            ))}
-            <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
-              {home ? (
-                <a href={home} className="text-sm font-medium text-accent hover:underline">
-                  Continue to publishing
-                </a>
-              ) : (
-                <a
-                  href="https://docs.smithable.ai/self-host.html"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-medium text-accent hover:underline"
-                >
-                  Publish on your own server
-                </a>
+            <section className="space-y-2">
+              <h3 className="font-semibold">Access changes</h3>
+              {review.noSignIn && (
+                <p role="note" className="font-medium">
+                  {review.noSignIn}
+                </p>
               )}
-            </div>
+              {review.comparison !== "available" ? (
+                <p>
+                  {review.comparisonReason ?? "Comparison is unavailable."} Review the current
+                  access map before publishing.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-muted">
+                    Compared with the local deployment recorded at {review.baseline}.
+                  </p>
+                  {review.access.length ? (
+                    <ul className="list-disc pl-5">
+                      {review.access.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>
+                      No added access detected in this comparison. Changed conditions still need
+                      review.
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+            {review.privacy && review.privacy.length > 0 && (
+              <section className="space-y-2" aria-label="Privacy page">
+                <h3 className="font-semibold">Privacy page</h3>
+                {review.privacy.map((p) => (
+                  <div key={p.page} className="space-y-1" data-privacy={p.state}>
+                    <p>
+                      {p.state === "reviewed"
+                        ? `You reviewed the description of the app on the ${p.page} page on ${p.on}.`
+                        : p.state === "changed"
+                          ? `The description of the app on the ${p.page} page changed since your review on ${p.on}.`
+                          : `The description of the app on the ${p.page} page has not been reviewed yet.`}
+                    </p>
+                    {p.changed && (
+                      <ul className="list-disc pl-5">
+                        {p.changed.map((part) => (
+                          <li key={part}>{part}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {p.state !== "reviewed" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted">Read it in the preview first.</span>
+                        <Button onClick={() => void reviewPrivacy(p.page, p.facts)}>
+                          {p.state === "changed" ? "Review it again" : "Review it"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {refused && <p role="alert">{refused}</p>}
+                <p className="text-sm text-muted">
+                  Reviewing records that you read this description as it is now. The page says so
+                  until it changes; it is not legal advice.
+                </p>
+              </section>
+            )}
+            <section className="space-y-2">
+              <h3 className="font-semibold">Migration impact</h3>
+              {review.comparison !== "available" ? (
+                <p>Migration comparison unavailable. Review the generated migrations manually.</p>
+              ) : review.migrations.length ? (
+                <ul className="list-disc pl-5">
+                  {review.migrations.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>
+                  No field changes detected. Review generated migrations and model constraints
+                  before release.
+                </p>
+              )}
+            </section>
+            <section className="space-y-2">
+              <h3 className="font-semibold">Release checks</h3>
+              <p>
+                {passed
+                  ? "Release checks passed for the current project files."
+                  : "Release checks are not verified for the current project files."}
+              </p>
+              {review.checks && (
+                <>
+                  <p className="text-sm text-muted">
+                    Latest recorded run: {review.checks.level}, {review.checks.at}.{" "}
+                    {review.checks.current
+                      ? "Project files match that run."
+                      : "Project files differ or their revision is unknown."}
+                  </p>
+                  <ul className="list-disc pl-5">
+                    {review.checks.results.map((result) => (
+                      <li key={result.what}>
+                        {result.what}:{" "}
+                        {!result.checked ? "not checked" : result.ok ? "passed" : "failed"}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              <p className="text-sm text-muted">
+                These records cover Git-visible source files. Runtime settings, ignored files and
+                hosting checks need separate verification.
+              </p>
+            </section>
+            <section className="space-y-2">
+              <h3 className="font-semibold">Maintenance</h3>
+              <p>{review.maintenance.status}.</p>
+              <p>
+                Generated engine: {review.maintenance.generatedEngine ?? "unknown"}; this tool:{" "}
+                {review.maintenance.currentEngine}.
+              </p>
+              <p>
+                Generated stack profile: {review.maintenance.generatedProfile ?? "unknown"}; this
+                tool: {review.maintenance.currentProfile}.
+              </p>
+              <p>Recorded template kit: {review.maintenance.generatedKit ?? "unknown"}.</p>
+              <p>
+                Last recorded tested upgrade:{" "}
+                {review.maintenance.upgrade
+                  ? `${review.maintenance.upgrade.from} to ${review.maintenance.upgrade.to} (${review.maintenance.upgrade.commit.slice(0, 12)})`
+                  : "none recorded"}
+                .
+              </p>
+              <p>
+                Deployed apps keep their generated code until updated and released. Test upgrades on
+                a staged copy; metadata does not verify the running deployment.
+              </p>
+              <details>
+                <summary>Declared dependency versions</summary>
+                <ul className="list-disc pl-5">
+                  {Object.entries(review.maintenance.dependencies).map(([name, version]) => (
+                    <li key={name}>
+                      {name}: {version}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </section>
+            <section className="space-y-2">
+              <h3 className="font-semibold">Recovery</h3>
+              <p>
+                Last verified restore:{" "}
+                {review.verifiedRestore ?? "none recorded by this local tool"}.
+              </p>
+              <p>
+                A successful backup or file copy does not verify recovery. Use the hosting recovery
+                view for deployed evidence.
+              </p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  <strong>Editor undo</strong> reverses a local change and may restore its
+                  development database snapshot. It does not restore a published app.
+                </li>
+                <li>
+                  <strong>Code rollback</strong> restores an earlier version of the code. It may
+                  require the matching database schema.
+                </li>
+                <li>
+                  <strong>Data restore</strong> replaces data with a snapshot. Records and uploads
+                  added after that snapshot may be lost. Verify credentials and files as well as the
+                  database.
+                </li>
+              </ul>
+            </section>
           </>
         )}
         <Button onClick={() => dialog.current?.close()}>Close</Button>
