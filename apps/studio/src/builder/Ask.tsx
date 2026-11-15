@@ -11,6 +11,7 @@ import { lastLine } from "../history";
 import { usageReceipt } from "../receipt";
 import { SpeechControls } from "../speech/SpeechControls";
 import { useSpeech } from "../speech/useSpeech";
+import type { StudioQuestion } from "../studio-questions";
 import { Button, cx, Input } from "../ui";
 import { useVerified, Verified } from "../Verified";
 import { PREFILLED, type Prefill } from "./ChangeForms";
@@ -19,6 +20,7 @@ import { CustomCode, customFile } from "./custom-code";
 import { asksTheDocs, type DocsHit, docsIndex, searchDocs } from "./docs-search";
 import { useHistoryFlow } from "./HistoryFlow";
 import { type Mood, SmithFace } from "./SmithFace";
+import { StudioQuestionCard } from "./StudioQuestionCard";
 import { ASK_SMITH, HANDED } from "./Wizard";
 
 /**
@@ -51,6 +53,8 @@ export function Ask({
   guiding = false,
   onDone,
   onBeginChange,
+  studioQuestion,
+  questionVisible = true,
   onEdit,
   words,
   making = false,
@@ -74,6 +78,8 @@ export function Ask({
   guide?: GuideLine;
   guiding?: boolean;
   onBeginChange?: () => void;
+  studioQuestion?: StudioQuestion;
+  questionVisible?: boolean;
   /** The hosted beta, said in Smith's words (smith-first.md §8). */
   beta?: Beta;
   /** Smith's presentation of the app, as far as it has gone (usePresentation). */
@@ -426,6 +432,7 @@ export function Ask({
   };
   // The ready prompts rest during the presentation and the guide (smith-first.md §12.6).
   const quiet = overlay || presenting || guiding || Boolean(guide);
+  const optionalQuestion = !quiet && !busy && !proposal ? studioQuestion : undefined;
   const leftOpen = !quiet && partsSaid >= parts.length ? (show?.leftOpen ?? []) : [];
   // The preview started to run during the presentation: said with the next part, or at once
   // after the last (smith-first.md §12.1).
@@ -436,7 +443,18 @@ export function Ask({
   useEffect(() => {
     const box = scroller.current;
     if (box) box.scrollTop = box.scrollHeight;
-  }, [grown, proposal, busy, docs, output, local, waiting.length, guide, partsSaid]);
+  }, [
+    grown,
+    proposal,
+    busy,
+    docs,
+    output,
+    local,
+    waiting.length,
+    guide,
+    partsSaid,
+    optionalQuestion?.id,
+  ]);
   const lastPart = overlay && presenting && partsSaid >= parts.length;
   const mood: Mood = guide
     ? "pointing"
@@ -478,6 +496,10 @@ export function Ask({
     speech.stopSpeaking();
     if (proposal?.kind === "question") {
       answerQuestion(request.trim());
+      return;
+    }
+    if (questionVisible && optionalQuestion?.answer(request.trim())) {
+      setRequest("");
       return;
     }
     // Only a question explicitly reopened for an answer owns the input. Passing presentation
@@ -598,6 +620,21 @@ export function Ask({
     speech.speak(guide.stop.text);
     return () => speech.stopSpeaking();
   }, [guide?.stop.anchor, guide?.stop.text]);
+  // Optional cards wait until Smith is visible and sound is on; reopening never repeats them.
+  // Sound off pauses the player; only leaving the card cancels it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: identity/visibility own cancellation, sound does not
+  useEffect(() => {
+    if (!optionalQuestion || !questionVisible) return;
+    return () => speech.stopSpeaking();
+  }, [optionalQuestion?.id, questionVisible]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: question identity, not regenerated callbacks
+  useEffect(() => {
+    if (!optionalQuestion || !questionVisible || !speech.sound || optionalQuestion.spoken) return;
+    optionalQuestion.markSpoken();
+    speech.speak(
+      [optionalQuestion.text, ...optionalQuestion.choices.map((c) => c.label)].join(". "),
+    );
+  }, [optionalQuestion?.id, questionVisible, speech.sound]);
 
   return (
     <div ref={panel} className="flex min-h-0 flex-1 flex-col">
@@ -754,6 +791,9 @@ export function Ask({
               ))}
             </div>
           </div>
+        )}
+        {optionalQuestion && (
+          <StudioQuestionCard question={optionalQuestion} stopSpeaking={speech.stopSpeaking} />
         )}
         {history.view}
         {/* A ready prompt's answer comes last, where the thread is scrolled to (A 200). */}

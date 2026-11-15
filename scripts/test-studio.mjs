@@ -35,6 +35,7 @@ import {
   checkStudioLookTimeout,
 } from "./studio-look-checks.mjs";
 import { checkStudioLookNavigation } from "./studio-look-navigation-checks.mjs";
+import { checkStudioQuestions } from "./studio-question-checks.mjs";
 import { checkStudioSpeech } from "./studio-speech-checks.mjs";
 import { checkPublicLook } from "./test-public-look.mjs";
 import { checkThemeLab } from "./theme-lab-checks.mjs";
@@ -353,6 +354,7 @@ try {
   await checkStudioLookNavigation(browser, base);
   await checkStudioSpeech(browser, base);
   await checkStudioGuideSpeech(browser, base);
+  await checkStudioQuestions(browser, base);
   await step(
     "the preview shows the app as a phone or a tablet would, and keeps that choice after a reload",
     async () => {
@@ -644,6 +646,11 @@ try {
         // After the guide the app's time zone is asked about once in this browser, and the
         // answer is remembered.
         const zone = fresh.locator('[data-part="time-zone-check"]');
+        if (!(await zone.isVisible()))
+          await fresh
+            .locator("[data-studio-header]")
+            .getByRole("button", { name: /^Smith(?:, a question is waiting)?$/ })
+            .click();
         await zone.getByRole("button", { name: /^(Keep|Not now)/ }).click();
         await zone.waitFor({ state: "detached", timeout: 5000 * P });
         // Then who runs the app: the owner's address goes to the administrators.
