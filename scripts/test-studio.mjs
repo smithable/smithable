@@ -544,6 +544,22 @@ try {
           if (!(await fresh.locator(`[data-guide="${at}"]`).first().isVisible()))
             throw new Error(`the line for ${at} points at nothing`);
           await fresh.locator(`[data-guide-lit="${at}"]`).waitFor({ state: "attached" });
+          await fresh.waitForFunction(
+            (anchor) => {
+              const target = document.querySelector(`[data-guide="${anchor}"]`);
+              const ring = document.querySelector(`[data-guide-lit="${anchor}"]`);
+              if (!target || !ring) return false;
+              const box = target.getBoundingClientRect();
+              const lit = ring.getBoundingClientRect();
+              return (
+                box.width > 0 &&
+                Math.abs(lit.left - box.left + 4) < 2 &&
+                Math.abs(lit.top - box.top + 4) < 2
+              );
+            },
+            at,
+            { timeout: 5000 * P },
+          );
           if ((await fresh.locator("[data-guide-card]:visible").count()) !== 1)
             throw new Error(`the guide for ${at} is shown more than once`);
           await card.getByRole("button", { name: i === 6 ? "Done" : "Next", exact: true }).click();
