@@ -21,6 +21,8 @@ import { ActionRowsEditor } from "./action-rows";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import { ConditionRows } from "./ConditionRows";
 import { conditionContext, conditionTreeReady } from "./condition-paths";
+import { DateSetting } from "./DateExpression";
+import { dateControl, dateTreeReady } from "./date-expression";
 import { NumberBox } from "./NumberBox";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
@@ -459,7 +461,8 @@ function Value({
     return shaped;
   const condition = references && conditionContext(path, references.document, references.ir);
   const rules = Boolean(references && isRuleList(schema));
-  if (references && !drafted && !inDraft && (referenceGroup(path) || condition || rules))
+  const date = references && dateControl(path, references.document, references.ir);
+  if (references && !drafted && !inDraft && (referenceGroup(path) || condition || rules || date))
     return (
       <ReferenceDraft
         schema={schema}
@@ -469,6 +472,7 @@ function Value({
         rules={rules}
       />
     );
+  if (date) return <DateSetting value={value} control={date} write={(next) => write(path, next)} />;
   if (condition)
     return (
       <ConditionRows
@@ -1145,7 +1149,8 @@ function ReferenceDraft({
   const ready =
     referenceReady(schema, draft, path, document, references.ir, references.auth) &&
     conditionTreeReady(path, draft, document, references.ir) &&
-    semanticDraftReady(schema, draft, value);
+    semanticDraftReady(schema, draft, value) &&
+    dateTreeReady(path, draft, document, references.ir);
   const reset = () => {
     setDraft(value);
     setBaseline(current);

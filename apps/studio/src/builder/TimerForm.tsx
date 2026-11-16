@@ -11,6 +11,8 @@ import { useId, useState } from "react";
 import { Button, Input, Select } from "../ui";
 import { conditionOf, WhenRows, whenRowsOf } from "./action-rows";
 import type { Run } from "./ChangeForms";
+import { DateExpression } from "./DateExpression";
+import { dateDraftReady, dateText } from "./date-expression";
 import { usePendingEdit } from "./pending-edit";
 import { ReferencePicker } from "./ReferencePicker";
 import { referenceOptions } from "./reference-options";
@@ -69,13 +71,11 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
   const cron = draft.cron.join(" ");
   const cronError = cronProblem(cron);
   const validTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time);
-  const validRecord =
-    model &&
-    dates.includes(draft.field) &&
-    (!draft.offset ||
-      (/^\d+$/.test(draft.amount) &&
-        Number(draft.amount) >= 1 &&
-        Number.isSafeInteger(Number(draft.amount))));
+  const dateOptions = dates.map((value) => ({
+    value,
+    label: value.split(".").map(humanize).join(" → "),
+  }));
+  const validRecord = model && dateDraftReady(draft, dateOptions, "both");
   const validWhen =
     draft.mode === "every"
       ? validTime
@@ -94,7 +94,7 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
         : draft.mode === "cron"
           ? { cron }
           : {
-              at: `${draft.offset ? `${draft.amount} ${draft.unit}${Number(draft.amount) === 1 ? "" : "s"} ${draft.direction} ` : ""}${draft.field}`,
+              at: dateText(draft),
             };
     const where = conditionOf(draft.where);
     const values = {
@@ -221,63 +221,7 @@ export function TimerForm({ ir, run, timer }: { ir: SpecIR; run: Run; timer?: Ti
           />
         )}
         {draft.mode === "record" && (
-          <div className="space-y-2">
-            <ReferencePicker
-              label="Record date"
-              options={dates.map((value) => ({
-                value,
-                label: value.split(".").map(humanize).join(" → "),
-              }))}
-              value={draft.field || undefined}
-              onChange={async (value) => {
-                change({ field: String(value ?? "") });
-                return true;
-              }}
-            />
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={draft.offset}
-                onChange={(event) => change({ offset: event.target.checked })}
-              />
-              Before or after this date
-            </label>
-            {draft.offset && (
-              <div className="flex flex-wrap gap-2">
-                <Input
-                  aria-label="Offset amount"
-                  type="number"
-                  min={1}
-                  step={1}
-                  required
-                  className="w-20"
-                  value={draft.amount}
-                  onChange={(event) => change({ amount: event.target.value })}
-                />
-                <Select
-                  aria-label="Offset unit"
-                  value={draft.unit}
-                  onChange={(event) => change({ unit: event.target.value as typeof draft.unit })}
-                  options={[
-                    ["minute", "Minutes"],
-                    ["hour", "Hours"],
-                    ["day", "Days"],
-                  ]}
-                />
-                <Select
-                  aria-label="Before or after"
-                  value={draft.direction}
-                  onChange={(event) =>
-                    change({ direction: event.target.value as typeof draft.direction })
-                  }
-                  options={[
-                    ["before", "Before"],
-                    ["after", "After"],
-                  ]}
-                />
-              </div>
-            )}
-          </div>
+          <DateExpression draft={draft} change={change} options={dateOptions} offsets="both" />
         )}
         {model && (
           <WhenRows
