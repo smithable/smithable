@@ -1,12 +1,22 @@
-import { buildJsonSchema, COMPANION_SCHEMAS, operationsSetting } from "@smithable/core";
+import {
+  applyOperation,
+  buildJsonSchema,
+  COMPANION_SCHEMAS,
+  operationsSetting,
+} from "@smithable/core";
 import { expect, test } from "vitest";
+import { parse } from "yaml";
 import {
   alternativeFor,
   choicesFor,
   controlOf,
+  finiteAlternatives,
+  isRuleList,
   labelOf,
+  numberLimits,
   operationFor,
   renameFor,
+  semanticDraftReady,
   uncovered,
   wordOrList,
 } from "./spec-form";
@@ -362,20 +372,16 @@ test("a schedule, what a booking occupies and fields unique together, each throu
       { model: "Barber", hours: { "mon-fri": "09:00-17:00", sat: "10:00-14:00" }, gap: "10" },
     ],
   );
-  // setSchedule writes it whole, so a key taken away goes with it.
-  expect(operationFor("smithable.yml", [...schedule, "gap"], undefined, spec)).toEqual([
-    "setSchedule",
-    { model: "Barber", hours: { "mon-fri": "09:00-17:00" } },
-  ]);
+  // A merging setter retains omitted keys; removal falls back to editSpec.
+  expect(operationFor("smithable.yml", [...schedule, "gap"], undefined, spec)).toBeUndefined();
   expect(operationFor("smithable.yml", schedule, undefined, spec)).toEqual([
     "setSchedule",
     { model: "Barber", hours: "none" },
   ]);
   const occupies = ["models", "Visit", "occupies"];
-  expect(operationFor("smithable.yml", [...occupies, "cancelUntil"], undefined, spec)).toEqual([
-    "setOccupies",
-    { model: "Visit", resource: "barber", starts: "startsAt", duration: "minutes" },
-  ]);
+  expect(
+    operationFor("smithable.yml", [...occupies, "cancelUntil"], undefined, spec),
+  ).toBeUndefined();
   expect(operationFor("smithable.yml", [...occupies, "starts"], undefined, spec)).toBeUndefined();
   const unique = ["models", "Visit", "unique"];
   expect(
@@ -723,4 +729,145 @@ test("an emptied default box takes the default away", () => {
   expect(
     operationFor("smithable.yml", ["models", "Order", "fields", "minutes", "default"], ""),
   ).toEqual(["setFieldDefault", { model: "Order", field: "minutes", remove: true }]);
+});
+
+test("unset finite alternatives offer typed values without treating free text as a menu", () => {
+  expect(finiteAlternatives([{ type: "boolean" }, { enum: ["only"] }])).toEqual([
+    false,
+    true,
+    "only",
+  ]);
+  expect(finiteAlternatives([{ const: 0 }, { enum: [0, "0"] }])).toEqual([0, "0"]);
+  expect(finiteAlternatives([{ type: "string" }, { type: "boolean" }])).toBeUndefined();
+  expect(finiteAlternatives([{ type: "object" }])).toBeUndefined();
+});
+
+test("numeric bounds use the schema and the other field limit without inventing restrictions", () => {
+  const document = { models: { Item: { fields: { price: { min: -3.5, max: 9.5 } } } } };
+  const path = ["models", "Item", "fields", "price"];
+  expect(numberLimits({ type: "number" }, [...path, "min"], document)).toEqual({
+    max: 9.5,
+    integer: false,
+  });
+  expect(numberLimits({ type: "number" }, [...path, "max"], document)).toEqual({
+    min: -3.5,
+    integer: false,
+  });
+  expect(numberLimits({ type: "integer", minimum: 1, maximum: 5 }, ["limit"], document)).toEqual({
+    min: 1,
+    max: 5,
+    integer: true,
+  });
+  expect(numberLimits({ type: "number", maximum: 4 }, [...path, "min"], document)).toEqual({
+    max: 4,
+    integer: false,
+  });
+  expect(numberLimits({ type: "number" }, [...path, "default"], document)).toEqual({
+    integer: false,
+  });
+});
+
+test("domain rule additions stay drafts until written and named existing rules remain intact", () => {
+  const schema = {
+    type: "array",
+    "x-semantic": true,
+    items: {
+      oneOf: [{ type: "string" }, { type: "object", properties: { rule: { type: "string" } } }],
+    },
+  };
+  const named = { id: "no-overbooking", rule: "Never overbook a room." };
+  expect(isRuleList(schema)).toBe(true);
+  expect(isRuleList({ ...schema, "x-semantic": false })).toBe(false);
+  expect(semanticDraftReady(schema, [named, ""], [named])).toBe(false);
+  expect(semanticDraftReady(schema, [named, "   "], [named])).toBe(false);
+  expect(semanticDraftReady(schema, [named, "Keep the receipt."], [named])).toBe(true);
+  expect(semanticDraftReady(schema, [named], [named])).toBe(true);
+  expect(semanticDraftReady(schema, undefined, [named])).toBe(true);
+  expect(semanticDraftReady(schema, [""], [""])).toBe(true);
+  expect(semanticDraftReady(schema, [""], [named, ""])).toBe(true);
+  expect(semanticDraftReady(schema, ["", ""], [""])).toBe(false);
+  expect(
+    semanticDraftReady({ type: "object", properties: { rules: schema } }, { rules: [""] }, {}),
+  ).toBe(false);
+});
+
+test("new control values round-trip through the existing operations", () => {
+  const spec = `smithable: 0.1
+app: { name: Controls, timezone: UTC }
+models:
+  Item:
+    fields:
+      name: string!
+      amount: { type: decimal, min: -3.5, max: 9.5 }
+pages:
+  items: { crud: Item }
+`;
+  for (const value of [true, false, "only"]) {
+    expect(
+      applyOperation({ spec }, "editSpec", {
+        file: "smithable.yml",
+        path: ["pages", "items", "favorites"],
+        value,
+      }).ok,
+    ).toBe(true);
+  }
+  for (const type of ["pictures", "file", "files"]) {
+    expect(
+      applyOperation({ spec }, "addField", { model: "Item", field: "attachment", type }).ok,
+    ).toBe(true);
+  }
+  const rules = [{ id: "receipt", rule: "Keep every receipt." }, "Keep the total accurate."];
+  expect(
+    applyOperation({ spec }, "editSpec", {
+      file: "smithable.yml",
+      path: ["models", "Item", "rules"],
+      value: rules,
+    }).ok,
+  ).toBe(true);
+  expect(
+    applyOperation({ spec }, "setFieldRange", {
+      model: "Item",
+      field: "amount",
+      min: -2.5,
+      max: 9.5,
+    }).ok,
+  ).toBe(true);
+  expect(
+    applyOperation({ spec }, "setFieldRange", { model: "Item", field: "amount", min: 10, max: 9.5 })
+      .ok,
+  ).toBe(false);
+});
+
+test("removing an optional dependent key replaces it through editSpec instead of retaining it", () => {
+  const groups = {
+    capacity: { per: "room", max: 3, closes: "ends" },
+    schedule: { hours: { "mon-fri": "09:00-17:00" }, gap: 5 },
+    occupies: { resource: "room", starts: "starts", duration: "minutes", while: { active: true } },
+  };
+  const whole = { models: { Item: groups } };
+  for (const [group, key] of [
+    ["capacity", "closes"],
+    ["schedule", "gap"],
+    ["occupies", "while"],
+  ])
+    expect(
+      operationFor("smithable.yml", ["models", "Item", group, key], undefined, whole),
+    ).toBeUndefined();
+});
+
+test("the dependent-key editSpec fallback actually removes a saved optional value", () => {
+  const spec = `smithable: 0.1
+app: { name: Schedule, timezone: UTC }
+models:
+  Room:
+    fields: { name: string! }
+    schedule: { hours: { mon: '09:00-17:00' }, gap: 5 }
+`;
+  const path = ["models", "Room", "schedule", "gap"];
+  const document = parse(spec);
+  expect(operationFor("smithable.yml", path, undefined, document)).toBeUndefined();
+  const result = applyOperation({ spec }, "editSpec", { file: "smithable.yml", path, value: null });
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw Error(result.message);
+  expect(parse(result.files.spec).models.Room.schedule).toEqual({ hours: { mon: "09:00-17:00" } });
 });
