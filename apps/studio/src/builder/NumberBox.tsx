@@ -106,6 +106,7 @@ export function NumberBox({
       {(dirty || problem) && (
         <button
           type="button"
+          onPointerDown={(event) => event.preventDefault()}
           className="text-xs underline"
           disabled={busy}
           onClick={() => {

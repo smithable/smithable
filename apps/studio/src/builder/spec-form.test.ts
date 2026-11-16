@@ -5,6 +5,7 @@ import {
   operationsSetting,
 } from "@smithable/core";
 import { expect, test } from "vitest";
+import { parse } from "yaml";
 import {
   alternativeFor,
   choicesFor,
@@ -371,20 +372,16 @@ test("a schedule, what a booking occupies and fields unique together, each throu
       { model: "Barber", hours: { "mon-fri": "09:00-17:00", sat: "10:00-14:00" }, gap: "10" },
     ],
   );
-  // setSchedule writes it whole, so a key taken away goes with it.
-  expect(operationFor("smithable.yml", [...schedule, "gap"], undefined, spec)).toEqual([
-    "setSchedule",
-    { model: "Barber", hours: { "mon-fri": "09:00-17:00" } },
-  ]);
+  // A merging setter retains omitted keys; removal falls back to editSpec.
+  expect(operationFor("smithable.yml", [...schedule, "gap"], undefined, spec)).toBeUndefined();
   expect(operationFor("smithable.yml", schedule, undefined, spec)).toEqual([
     "setSchedule",
     { model: "Barber", hours: "none" },
   ]);
   const occupies = ["models", "Visit", "occupies"];
-  expect(operationFor("smithable.yml", [...occupies, "cancelUntil"], undefined, spec)).toEqual([
-    "setOccupies",
-    { model: "Visit", resource: "barber", starts: "startsAt", duration: "minutes" },
-  ]);
+  expect(
+    operationFor("smithable.yml", [...occupies, "cancelUntil"], undefined, spec),
+  ).toBeUndefined();
   expect(operationFor("smithable.yml", [...occupies, "starts"], undefined, spec)).toBeUndefined();
   const unique = ["models", "Visit", "unique"];
   expect(
@@ -839,4 +836,38 @@ pages:
     applyOperation({ spec }, "setFieldRange", { model: "Item", field: "amount", min: 10, max: 9.5 })
       .ok,
   ).toBe(false);
+});
+
+test("removing an optional dependent key replaces it through editSpec instead of retaining it", () => {
+  const groups = {
+    capacity: { per: "room", max: 3, closes: "ends" },
+    schedule: { hours: { "mon-fri": "09:00-17:00" }, gap: 5 },
+    occupies: { resource: "room", starts: "starts", duration: "minutes", while: { active: true } },
+  };
+  const whole = { models: { Item: groups } };
+  for (const [group, key] of [
+    ["capacity", "closes"],
+    ["schedule", "gap"],
+    ["occupies", "while"],
+  ])
+    expect(
+      operationFor("smithable.yml", ["models", "Item", group, key], undefined, whole),
+    ).toBeUndefined();
+});
+
+test("the dependent-key editSpec fallback actually removes a saved optional value", () => {
+  const spec = `smithable: 0.1
+app: { name: Schedule, timezone: UTC }
+models:
+  Room:
+    fields: { name: string! }
+    schedule: { hours: { mon: '09:00-17:00' }, gap: 5 }
+`;
+  const path = ["models", "Room", "schedule", "gap"];
+  const document = parse(spec);
+  expect(operationFor("smithable.yml", path, undefined, document)).toBeUndefined();
+  const result = applyOperation({ spec }, "editSpec", { file: "smithable.yml", path, value: null });
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw Error(result.message);
+  expect(parse(result.files.spec).models.Room.schedule).toEqual({ hours: { mon: "09:00-17:00" } });
 });

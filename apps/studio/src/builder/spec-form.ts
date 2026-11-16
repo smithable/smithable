@@ -735,6 +735,12 @@ export function operationFor(
     }
     if (first === "models" && model) {
       const own = path[2];
+      if (
+        path.length === 4 &&
+        value === undefined &&
+        ["capacity", "schedule", "occupies"].includes(String(own))
+      )
+        return undefined;
       // These operations keep optional keys they are not given. A complete local draft that
       // removed one must replace the group, as an individual key's removal already does.
       if (

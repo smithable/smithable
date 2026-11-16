@@ -76,7 +76,7 @@ test("small controls offer uploads, typed favorites, atomic rules and bounded nu
     for (const [path, value] of [
       [["models", "Customer", "schedule"], { hours: { "mon-fri": "09:00-17:00" } }],
       [["models", "Order", "fields", "gapAmount"], { type: "decimal", min: -3.5, max: 9.5 }],
-      [["models", "Order", "fields", "gapUpload"], "string = sample"],
+      [["models", "Order", "fields", "gapUpload"], "string"],
       [["models", "Order", "rules"], [{ id: "keepOrder", rule: "Keep every receipt." }]],
     ])
       await prepare("editSpec", { file: "smithable.yml", path, value });
@@ -169,15 +169,25 @@ test("small controls offer uploads, typed favorites, atomic rules and bounded nu
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     };
-    const save = async (scope, label) => {
+    const save = async (scope, label, confirm = false) => {
       const response = page.waitForResponse(
         (response) =>
           new URL(response.url()).pathname === "/api/op" && response.request().method() === "POST",
       );
       await scope.getByRole("button", { name: label, exact: true }).click();
-      const result = await (await response).json();
+      let result = await (await response).json();
+      if (confirm && result.needsConfirm) {
+        const accepted = page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === "/api/op" &&
+            response.request().method() === "POST",
+        );
+        await page.getByRole("button", { name: "Apply anyway", exact: true }).click();
+        result = await (await accepted).json();
+      }
       assert.ok(result.ok, result.output);
-      await scope.getByRole("button", { name: label, exact: true }).waitFor({ state: "hidden" });
+      if (label !== "Change field")
+        await scope.getByRole("button", { name: label, exact: true }).waitFor({ state: "hidden" });
     };
     await go("/orders");
     await followed("orders");
@@ -194,6 +204,10 @@ test("small controls offer uploads, typed favorites, atomic rules and bounded nu
     assert.equal(await maximum.getAttribute("min"), "-3.5");
     assert.equal(await minimum.getAttribute("step"), "any");
     let before = operations.length;
+    await minimum.fill("-2");
+    await amount.getByRole("button", { name: "Reset value", exact: true }).click();
+    assert.equal(await minimum.inputValue(), "-3.5");
+    assert.equal(operations.length, before, "Reset must not blur-commit a valid edit");
     await minimum.fill("10");
     await outside();
     assert.equal(operations.length, before);
@@ -265,6 +279,7 @@ test("small controls offer uploads, typed favorites, atomic rules and bounded nu
     );
     assert.equal(operations.length, before);
     await schedule.getByRole("button", { name: "Cancel changes", exact: true }).click();
+    await reveal(schedule.locator('[data-key="gap"]'));
     assert.equal(await gap.inputValue(), "");
     await gap.fill("5");
     await outside();
@@ -292,7 +307,7 @@ test("small controls offer uploads, typed favorites, atomic rules and bounded nu
     await upload.getByRole("combobox", { name: "Unique", exact: true }).selectOption("yes");
     for (const kind of ["pictures", "file", "files"]) {
       await type.selectOption(kind);
-      await save(upload, "Change field");
+      await save(upload, "Change field", true);
       await waitStored(["models", "Order", "fields", "gapUpload"], kind);
       assert.equal(await upload.getByRole("combobox", { name: "Unique", exact: true }).count(), 0);
     }
