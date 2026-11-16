@@ -58,7 +58,12 @@ export const windowText = (draft: WindowDraft): string | undefined =>
 export function windowReady(value: unknown): boolean {
   if (value === undefined || value === "today" || value === "tomorrow") return true;
   const draft = windowDraft(value);
-  return draft.mode === "span" && positive(draft.amount) && ["day", "week"].includes(draft.unit);
+  return (
+    draft.mode === "span" &&
+    /^\d+$/.test(draft.amount) &&
+    Number(draft.amount) >= 1 &&
+    ["day", "week"].includes(draft.unit)
+  );
 }
 export type DateControl =
   | { kind: "date"; offsets: DateOffsets; options: ReferenceOption[] }

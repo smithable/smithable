@@ -158,7 +158,7 @@ test("a list mail uses a field plus its own window, with no timer offsets", () =
   expect(dateTreeReady([...listPath, "when"], "1 day before session.startsAt", document, ir)).toBe(
     false,
   );
-  for (const value of ["today", "tomorrow", "1 day", "2 weeks"]) {
+  for (const value of ["today", "tomorrow", "1 day", "2 weeks", "9007199254740992 days"]) {
     expect(windowReady(value)).toBe(true);
     expect(windowText(windowDraft(value))).toBe(value);
     expect(
@@ -169,6 +169,21 @@ test("a list mail uses a field plus its own window, with no timer offsets", () =
       }).ok,
       value,
     ).toBe(true);
+  }
+  for (const value of [
+    "session.copiedStart",
+    "session.venue.opensAt",
+    "session.bookings",
+    "session.title",
+  ]) {
+    expect(
+      applyOperation({ spec }, "editSpec", {
+        file: "smithable.yml",
+        path: [...listPath, "when"],
+        value,
+      }).ok,
+      value,
+    ).toBe(false);
   }
   for (const value of ["", "0 days", "-1 days", "1.5 days", "2 hours"])
     expect(windowReady(value), value).toBe(false);
@@ -209,4 +224,27 @@ test("incomplete date settings block the whole existing draft before any operati
   expect(dateTreeReady(capacityPath, { per: "session", max: 3 }, document, ir)).toBe(true);
   expect(dateControl(["roles", "admin", "closes"], document, ir)).toBeUndefined();
   expect(dateControl(["models", "Booking", "fields", "closes"], document, ir)).toBeUndefined();
+});
+
+test("null is an operation removal token, not a valid saved deadline or window", () => {
+  const invalidDeadline = spec.replace(
+    "capacity: { per: session, max: 3 }",
+    "capacity: { per: session, max: 3, closes: null }",
+  );
+  const invalidWindow = spec.replace("within: '7 days'", "within: null");
+  for (const text of [invalidDeadline, invalidWindow]) {
+    expect(
+      validateSpec({ path: "smithable.yml", text }).diagnostics.some(
+        (item) => item.severity === "error",
+      ),
+    ).toBe(true);
+  }
+  const result = applyOperation({ spec }, "editSpec", {
+    file: "smithable.yml",
+    path: [...listPath, "within"],
+    value: null,
+  });
+  expect(result.ok).toBe(true);
+  if (!result.ok) throw Error(result.message);
+  expect(parse(result.files.spec).outgoing.digest.list.within).toBeUndefined();
 });

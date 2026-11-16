@@ -91,16 +91,21 @@ test("date controls respect each grammar and preserve atomic drafts, follow and 
       at: "1 day before customer.dateStarts",
     });
     await prepare("addTimer", { name: "dateDaily", every: "day", at: "09:00" });
-    await prepare("editSpec", {
-      file: "smithable.yml",
-      path: ["outgoing", "dateDigest"],
-      value: {
-        when: "dateDaily",
-        to: "mail",
-        recipient: "admin",
-        list: { model: "Order", when: "ownDate", within: "7 days", columns: ["number"] },
-      },
+    await prepare("addOutgoing", {
+      outgoing: "dateDigest",
+      when: "dateDaily",
+      to: "mail",
+      recipient: "admin",
+      list: "Order",
+      date: "ownDate",
+      within: "7 days",
+      columns: ["number"],
     });
+    const readyUntil = Date.now() + 120000;
+    while (!(await (await fetch(`${base}/api/preview/answers`)).json()).ok) {
+      if (Date.now() > readyUntil) throw Error("Preview did not recover after fixture operations");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
     const project = await (await fetch(`${base}/api/project`)).json();
     browser = await chromium.launch();
     page = await browser.newPage({ viewport: { width: 1920, height: 1100 } });
@@ -307,7 +312,7 @@ test("date controls respect each grammar and preserve atomic drafts, follow and 
       await closes.getByRole("spinbutton", { name: "Offset amount", exact: true }).inputValue(),
       "2",
     );
-    await closes.getByRole("checkbox", { name: "Set a deadline", exact: true }).uncheck();
+    await closes.getByRole("checkbox", { name: "Set a deadline", exact: true }).click();
     await save(capacity, "Save capacity");
     await waitStored(["models", "Order", "capacity", "closes"], undefined);
     await page.getByRole("button", { name: "Undo", exact: true }).click();
