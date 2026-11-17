@@ -323,12 +323,14 @@ export function ModelTable<R extends Row>({
       ui.model
     )
       return (
-        <img
-          data-part="mark"
-          src={pictureSrc(pictureField, row)}
-          alt=""
-          className="size-8 shrink-0 rounded-full object-cover"
-        />
+        <AiMarked generated={generatedPicture(row, pictureField)} tiny className="shrink-0">
+          <img
+            data-part="mark"
+            src={pictureSrc(pictureField, row)}
+            alt=""
+            className="size-8 shrink-0 rounded-full object-cover"
+          />
+        </AiMarked>
       );
     const initials = name
       .split(/\s+/)
@@ -356,11 +358,13 @@ export function ModelTable<R extends Row>({
     // A picture as a thumbnail; its address is the record's, so it is as private as the record.
     if ((field.kind === "picture" || field.kind === "pictures") && text !== "—" && ui.model)
       return (
-        <img
-          src={pictureSrc(field, row)}
-          alt={text}
-          className="h-10 w-10 rounded-md border object-cover"
-        />
+        <AiMarked generated={generatedPicture(row, field)} tiny className="w-fit">
+          <img
+            src={pictureSrc(field, row)}
+            alt={text}
+            className="h-10 w-10 rounded-md border object-cover"
+          />
+        </AiMarked>
       );
     // A long text (a message's words, where a model has nothing shorter to show) cut to two lines.
     if ((field.kind === "text" || field.kind === "markdown") && text !== "—")

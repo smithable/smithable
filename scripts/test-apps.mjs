@@ -6624,17 +6624,41 @@ async function aiMarkCheck(dir, base) {
   const veiled = /hero: \{[^}]*layout: (cover|centered|photo|tiles)/.test(ux);
   // The landing pages: the routes that use the kit's landing sections.
   const routes = [];
+  const orderRoutes = [];
   const walk = (at, route) => {
     for (const entry of readdirSync(at, { withFileTypes: true })) {
       if (entry.isDirectory()) walk(join(at, entry.name), `${route}/${entry.name}`);
-      else if (
-        entry.name === "index.tsx" &&
-        readFileSync(join(at, entry.name), "utf8").includes('from "#/kit/Landing"')
-      )
-        routes.push(route || "/");
+      else if (entry.name === "index.tsx") {
+        const page = readFileSync(join(at, entry.name), "utf8");
+        if (page.includes('from "#/kit/Landing"')) routes.push(route || "/");
+        if (page.includes('from "#/kit/OrderPage"')) orderRoutes.push(route || "/");
+      }
     }
   };
   walk(join(dir, "src", "routes"), "");
+  // An order page's choices (OrderPage.tsx): each sample picture an AI made is marked there too.
+  if (orderRoutes.length && sampled)
+    try {
+      await asyncStep("an order page's choices with pictures an AI made are marked", async () => {
+        const html = (
+          await Promise.all(orderRoutes.map(async (r) => (await fetch(`${base}${r}`)).text()))
+        ).join("");
+        const choices = html.split('data-part="choice"').slice(1);
+        const pictured = choices.filter((c) => c.split("</li>")[0].includes('src="/files/'));
+        const unmarked = pictured.filter(
+          (c) => !c.split("</li>")[0].includes('data-part="ai-mark"'),
+        );
+        if (!pictured.length) throw new Error("no choice with a picture on the order page");
+        // A sample picture of the maker's own (no generated: true) is rightly left unmarked.
+        const own = (samples.match(/\bfile: [^,}]+,[^}]*\}/g) ?? []).filter(
+          (p) => !p.includes("generated: true"),
+        ).length;
+        if (unmarked.length > own)
+          throw new Error(`${unmarked.length} of ${pictured.length} choices unmarked`);
+      });
+    } catch {
+      // Reported by the step.
+    }
   try {
     await asyncStep(
       `pictures an AI made are marked: ${gallery} gallery picture(s), ${sampled ? "the sample records' cards, " : ""}${hero ? (veiled ? "not the hero under its wash" : "the hero") : "no hero"} (${routes.join(", ")})`,

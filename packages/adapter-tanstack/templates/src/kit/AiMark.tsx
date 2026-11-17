@@ -8,15 +8,20 @@ import type { ReactNode } from "react";
 import { cn } from "#/lib/utils";
 import { w } from "./words";
 
-/** The picture, marked when an AI made it; `full` for one across the page. */
+/**
+ * The picture, marked when an AI made it; `full` for one across the page, `tiny` for a thumbnail
+ * or an avatar of a few rem, where the mark sits in the very corner.
+ */
 export function AiMarked({
   generated,
   full,
+  tiny,
   className,
   children,
 }: {
-  generated?: boolean;
+  generated?: boolean | undefined;
   full?: boolean;
+  tiny?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -26,7 +31,11 @@ export function AiMarked({
       {children}
       <span
         data-part="ai-mark"
-        className="pointer-events-none absolute right-2 bottom-2 rounded-sm bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white"
+        className={
+          tiny
+            ? "pointer-events-none absolute right-0 bottom-0 rounded-sm bg-black/70 px-0.5 text-[0.5625rem] leading-tight font-medium text-white"
+            : "pointer-events-none absolute right-2 bottom-2 rounded-sm bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white"
+        }
       >
         {full ? w.aiGenerated : w.ai}
       </span>

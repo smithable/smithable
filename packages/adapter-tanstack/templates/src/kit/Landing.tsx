@@ -116,6 +116,7 @@ function LandingLayoutView({
   const columns = menu.length > 0 || contact !== undefined;
   const named = logo ? (
     <>
+      {/* Not marked: the logo, not a picture that could pass for a photograph. */}
       <img
         src={logo}
         alt=""
@@ -740,6 +741,7 @@ function HeroView({
           data-layout="cover"
           className="relative isolate overflow-hidden"
         >
+          {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
           <img
             src={image.src}
             alt={image.alt}
@@ -807,6 +809,7 @@ function HeroView({
       >
         <div className="grid gap-4 lg:grid-cols-3 lg:grid-rows-2">
           <div className="relative isolate flex min-h-[28rem] items-end overflow-hidden rounded-[var(--radius-xl)] lg:col-span-2 lg:row-span-2 lg:min-h-[36rem]">
+            {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
             <img
               src={image.src}
               alt={image.alt}
@@ -885,6 +888,7 @@ function HeroView({
         data-layout="photo"
         className="relative isolate flex min-h-[34rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
       >
+        {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
         <img
           src={image.src}
           alt={image.alt}
@@ -926,6 +930,7 @@ function HeroView({
         data-layout="centered"
         className="relative isolate overflow-hidden"
       >
+        {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
         <img
           src={image.src}
           alt={image.alt}
