@@ -6649,7 +6649,11 @@ async function aiMarkCheck(dir, base) {
           (c) => !c.split("</li>")[0].includes('data-part="ai-mark"'),
         );
         if (!pictured.length) throw new Error("no choice with a picture on the order page");
-        if (unmarked.length)
+        // A sample picture of the maker's own (no generated: true) is rightly left unmarked.
+        const own = (samples.match(/\bfile: [^,}]+,[^}]*\}/g) ?? []).filter(
+          (p) => !p.includes("generated: true"),
+        ).length;
+        if (unmarked.length > own)
           throw new Error(`${unmarked.length} of ${pictured.length} choices unmarked`);
       });
     } catch {

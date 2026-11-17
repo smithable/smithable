@@ -8,6 +8,10 @@ test("every picture the kit shows is marked when an AI made it, or says why not"
   const unmarked: string[] = [];
   for (const [path, source] of Object.entries(TEMPLATES)) {
     if (!/^src\/kit\/.*\.tsx$/.test(path)) continue;
+    // Each wrapper takes the picture's own word for it, and wraps (never closes on itself).
+    for (const tag of source.match(/<AiMarked\b[^>]*>/g) ?? [])
+      if (!/generated=\{(?!false\})/.test(tag) || tag.endsWith("/>"))
+        unmarked.push(`${path}: ${tag}`);
     for (let at = source.indexOf("<img"); at >= 0; at = source.indexOf("<img", at + 1)) {
       const before = source.slice(0, at);
       const open = before.split("<AiMarked").length - before.split("</AiMarked>").length;

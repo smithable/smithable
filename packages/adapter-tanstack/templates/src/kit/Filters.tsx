@@ -391,7 +391,7 @@ function Filter({
               )}
             >
               {o.picture && (
-                <AiMarked generated={o.generated} tiny>
+                <AiMarked generated={o.generated} tiny className="shrink-0">
                   <img src={o.picture} alt="" className="size-6 rounded-full object-cover" />
                 </AiMarked>
               )}
