@@ -98,6 +98,7 @@ function Waiting({
   return (
     <Card data-part="waiting" className="space-y-3 p-4">
       {item.kind === "picture" ? (
+        // Not marked: a person's own upload, waiting for review, as it was sent.
         <img
           src={fileUrl(item.id)}
           alt={`${item.label}: ${item.title}`}

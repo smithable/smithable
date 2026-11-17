@@ -7,6 +7,7 @@ import { useEffect, useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input, Label } from "#/components/ui/input";
 import { cn } from "#/lib/utils";
+import { AiMarked } from "./AiMark";
 import { Combobox } from "./Combobox";
 import { withDefaults } from "./params";
 import { tx, w } from "./words";
@@ -38,7 +39,7 @@ export interface FilterUi {
    */
   kind: "chips" | "range" | "toggle" | "mine" | "person" | "unread";
   /** A choice's value and name; a related record's picture, for its chip (chips). */
-  options?: { value: string; label: string; picture?: string }[];
+  options?: { value: string; label: string; picture?: string; generated?: boolean }[];
   /** Every value as a chip however many there are, never a list to pick from (filters.look: chips). */
   chips?: boolean;
   /**
@@ -390,7 +391,9 @@ function Filter({
               )}
             >
               {o.picture && (
-                <img src={o.picture} alt="" className="size-6 rounded-full object-cover" />
+                <AiMarked generated={o.generated} tiny>
+                  <img src={o.picture} alt="" className="size-6 rounded-full object-cover" />
+                </AiMarked>
               )}
               {o.label}
             </button>

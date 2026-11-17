@@ -6,6 +6,7 @@ import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
 import type { z } from "zod";
 import { Button } from "#/components/ui/button";
+import { AiMarked } from "./AiMark";
 import { PageHeader } from "./AppShell";
 import { moneyText } from "./format";
 import { ModelForm } from "./ModelForm";
@@ -21,7 +22,7 @@ export interface Choice {
   price: number;
   section?: string | null;
   description?: string | null;
-  picture?: { src: string; alt: string } | null;
+  picture?: { src: string; alt: string; generated?: boolean } | null;
   available: boolean;
 }
 
@@ -152,11 +153,13 @@ export function OrderPage<S extends z.ZodType>(props: OrderPageProps<S>) {
               {choices.map((c) => (
                 <li key={c.id} data-part="choice" className="flex items-center gap-3 p-3">
                   {c.picture && (
-                    <img
-                      src={c.picture.src}
-                      alt={c.picture.alt}
-                      className="size-16 shrink-0 rounded-md object-cover"
-                    />
+                    <AiMarked generated={c.picture.generated} tiny className="shrink-0">
+                      <img
+                        src={c.picture.src}
+                        alt={c.picture.alt}
+                        className="size-16 shrink-0 rounded-md object-cover"
+                      />
+                    </AiMarked>
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{c.name}</p>

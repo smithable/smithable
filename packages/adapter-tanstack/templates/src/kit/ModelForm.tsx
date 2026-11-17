@@ -890,7 +890,9 @@ function Gallery({ pictures }: { pictures: { src: string; alt: string; generated
                   i === at ? "ring-2 ring-primary" : "opacity-80 hover:opacity-100",
                 )}
               >
-                <img src={p.src} alt="" loading="lazy" className="h-16 w-20 object-cover" />
+                <AiMarked generated={p.generated} tiny>
+                  <img src={p.src} alt="" loading="lazy" className="h-16 w-20 object-cover" />
+                </AiMarked>
               </button>
             </li>
           ))}
@@ -906,26 +908,30 @@ function shown(ui: ModelUi, field: FieldUi, record: Record<string, unknown>, app
   const base = `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${String(record.id)}/${field.name}`;
   if (field.kind === "picture")
     return value ? (
-      <img
-        src={versioned(base, value as { file?: string })}
-        alt={String((value as { alt?: string }).alt ?? "")}
-        className="max-h-96 rounded-md object-contain"
-      />
+      <AiMarked generated={(value as { generated?: boolean }).generated} className="w-fit">
+        <img
+          src={versioned(base, value as { file?: string })}
+          alt={String((value as { alt?: string }).alt ?? "")}
+          className="max-h-96 rounded-md object-contain"
+        />
+      </AiMarked>
     ) : (
       "—"
     );
   if (field.kind === "pictures") {
-    const pictures = Array.isArray(value) ? (value as { alt?: string }[]) : [];
+    const pictures = Array.isArray(value) ? (value as { alt?: string; generated?: boolean }[]) : [];
     return pictures.length ? (
       <ul data-part="pictures" className="flex snap-x gap-3 overflow-x-auto pb-2">
         {pictures.map((p, i) => (
           <li key={`${base}/${i}`} className="shrink-0 snap-start">
-            <img
-              src={versioned(`${base}/${i}`, p as { file?: string })}
-              alt={p.alt ?? ""}
-              loading="lazy"
-              className="h-56 w-auto rounded-md object-cover"
-            />
+            <AiMarked generated={p.generated}>
+              <img
+                src={versioned(`${base}/${i}`, p as { file?: string })}
+                alt={p.alt ?? ""}
+                loading="lazy"
+                className="h-56 w-auto rounded-md object-cover"
+              />
+            </AiMarked>
           </li>
         ))}
       </ul>

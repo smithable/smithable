@@ -230,6 +230,7 @@ function AppName({
     <span
       className={`inline-flex max-w-full gap-2 align-middle ${wrap ? "items-start" : "items-center"}`}
     >
+      {/* Not marked: the logo, not a picture that could pass for a photograph. */}
       <img
         src={logo}
         alt=""
