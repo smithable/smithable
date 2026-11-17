@@ -19,6 +19,8 @@ pnpm check      # lint, build, unit tests, every example app generated and teste
 
 `pnpm check` is the gate before every commit. Tests live next to the code (`src/**/*.test.ts`); templates in `packages/adapter-tanstack/templates/` are real files that `pnpm build` embeds, and `*.gen.ts` files are never edited by hand. A change to a section's schema needs `pnpm schema`; a change to the spec grammar updates `docs/spec/v0.1.md` in the same pull request, and an architecture change updates `docs/ARCHITECTURE.md`.
 
+Every other command (the single checks, the benchmarks, the picture scripts, the site, the gate and merging) is in [docs/development.md](../docs/development.md).
+
 ### Changing Studio and Builder
 
 Studio and Builder are one React app in `apps/studio`. To see an edit the moment it is saved, run Studio on an app and the development server beside it:

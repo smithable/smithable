@@ -11,7 +11,7 @@
     "clean": "tsc -b --clean",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check . && node scripts/kit-words.mjs",
+    "lint": "biome check . && node scripts/kit-words.mjs && node scripts/development-commands.mjs && node --test --test-reporter=dot scripts/development-commands.test.mjs",
     "fix": "biome check --write .",
     "check": "pnpm lint && pnpm build && pnpm test && pnpm site && pnpm test:apps && pnpm test:studio && pnpm test:visual",
     "schema": "pnpm build && node scripts/write-schema.mjs",
