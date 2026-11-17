@@ -232,7 +232,7 @@ interface FolderStore extends ResponseStore {
 /**
  * The folder's layout: `<2>/<key>.json` the answer; `requests/<key>.json` what was asked (the
  * system text and schemas by the hash of their file in `parts/`, written once however many
- * requests share them); `loose/<hash>.json` the key of the first answer to a model and user text.
+ * requests share them); `loose/<hash>.json` names the first answer to a model and user text.
  */
 export function folderStore(folder: string, from?: string): FolderStore {
   const path = (dir: string, key: string) => join(dir, key.slice(0, 2), `${key}.json`);
@@ -271,12 +271,12 @@ export function folderStore(folder: string, from?: string): FolderStore {
         `${JSON.stringify({ ...rest, system: part(system), schema: part(schema), fallbackSchema: part(fallbackSchema) }, null, 1)}\n`,
       );
       const loose = join(folder, looseName(request.provider, request.model, request.user));
-      if (!existsSync(loose)) write(loose, `${JSON.stringify({ key })}\n`);
+      if (!existsSync(loose)) write(loose, `${JSON.stringify({ answer: key })}\n`);
     },
     async loose(provider, model, user) {
       const index = read(looseName(provider, model, user));
       if (index === undefined) return undefined;
-      const { key } = JSON.parse(index) as { key: string };
+      const { answer: key } = JSON.parse(index) as { answer: string };
       return read(join(key.slice(0, 2), `${key}.json`));
     },
   };
