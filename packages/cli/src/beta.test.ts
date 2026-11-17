@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
@@ -57,4 +58,43 @@ test("the hosted release flow's progress is checked field by field and says when
     "release",
   ])
     expect(releaseOf(bad, A)).toBeUndefined();
+});
+
+test("uncommitted changes count as changed since the review (a second reviewer)", () => {
+  const dir = tempDir("smithable-beta-dirty-");
+  mkdirSync(join(dir, "data/.smithable"), { recursive: true });
+  const run = (args: string[]) =>
+    execFileSync("git", args, { cwd: dir, stdio: "pipe" }).toString().trim();
+  run(["init", "-q"]);
+  run([
+    "-c",
+    "user.name=t",
+    "-c",
+    "user.email=t@example.com",
+    "commit",
+    "-q",
+    "--allow-empty",
+    "-m",
+    "x",
+  ]);
+  const head = run(["rev-parse", "HEAD"]);
+  writeFileSync(join(dir, ".gitignore"), "data/\n");
+  run(["add", ".gitignore"]);
+  run(["-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "ignore data"]);
+  const reviewed = run(["rev-parse", "HEAD"]);
+  writeFileSync(
+    join(dir, BETA),
+    JSON.stringify({
+      release: {
+        url: "https://smithable.test/projects/p1/release",
+        reviewed,
+        staging: "todo",
+        production: "locked",
+      },
+    }),
+  );
+  expect(readBeta(dir)?.release?.changed).toBe(false);
+  writeFileSync(join(dir, "edited.txt"), "not yet a version");
+  expect(readBeta(dir)?.release?.changed).toBe(true);
+  expect(head).not.toBe(reviewed);
 });

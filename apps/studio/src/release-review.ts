@@ -149,3 +149,20 @@ export function releaseProgress(release: ReleaseProgress): { label: string; line
       };
   }
 }
+
+/**
+ * The progress only when its link is the service's own release page: the same origin as the
+ * project's home page (set by the service, not the workspace) and under /projects/. The facts file
+ * lives in a workspace its owner can edit, so its address is never trusted on its own.
+ */
+export function trustedRelease(
+  release: ReleaseProgress | undefined,
+  home: string | undefined,
+): ReleaseProgress | undefined {
+  if (!release || !home) return undefined;
+  const at = URL.parse(release.url);
+  const from = URL.parse(home);
+  return at && from && at.origin === from.origin && /^\/projects\/[^/]+\/release$/.test(at.pathname)
+    ? release
+    : undefined;
+}

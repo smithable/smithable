@@ -58,6 +58,7 @@ const PRODUCTION = ["locked", "todo", "live"] as const;
 
 /** The release progress as the service writes it, checked field by field; none when not that shape. */
 export function releaseOf(value: unknown, head: string | undefined): ReleaseProgress | undefined {
+  // `head` is the reviewed-comparable version: undefined when HEAD is unknown or the tree has changes.
   if (!value || typeof value !== "object") return undefined;
   const v = value as Record<string, unknown>;
   if (typeof v.url !== "string" || URL.parse(v.url)?.protocol !== "https:") return undefined;
@@ -97,8 +98,12 @@ export function readBeta(dir: string):
     const data =
       value.data === "test" || value.data === "live" ? { data: value.data as "test" | "live" } : {};
     const limit = limitOf(value.limit);
+    // The version as it stands: HEAD, and no uncommitted change (an edit not yet a version is not
+    // what was reviewed either; a second reviewer).
     const head = value.release ? git(dir, ["rev-parse", "HEAD"]) : undefined;
-    const release = releaseOf(value.release, head?.ok ? head.out.trim() : undefined);
+    const dirty = value.release ? git(dir, ["status", "--porcelain"]) : undefined;
+    const current = head?.ok && dirty?.ok && !dirty.out.trim() ? head.out.trim() : undefined;
+    const release = releaseOf(value.release, current);
     return {
       ...text("until"),
       ...text("invite"),

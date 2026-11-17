@@ -1,6 +1,12 @@
 import { expect, test } from "vitest";
 import type { ReleaseReview } from "./api";
-import { checksPassed, needsLook, releaseProgress, reviewSections } from "./release-review";
+import {
+  checksPassed,
+  needsLook,
+  releaseProgress,
+  reviewSections,
+  trustedRelease,
+} from "./release-review";
 
 function fixture(): ReleaseReview {
   return {
@@ -127,4 +133,23 @@ test("the release flow's saved progress names the next step; a change since the 
   );
   expect(releaseProgress({ ...base, staging: "failed" }).line).toMatch(/failed/);
   expect(releaseProgress({ ...base, staging: "replaced" }).line).toMatch(/another build/);
+});
+
+test("the progress is shown only when its link is the service's own release page (a second reviewer)", () => {
+  const home = "https://smithable.test/projects/p1";
+  const release = {
+    url: "https://smithable.test/projects/p1/release",
+    reviewed: null,
+    staging: "locked",
+    production: "locked",
+    changed: false,
+  } as const;
+  expect(trustedRelease(release, home)).toBe(release);
+  expect(
+    trustedRelease({ ...release, url: "https://evil.example/projects/p1/release" }, home),
+  ).toBeUndefined();
+  expect(
+    trustedRelease({ ...release, url: "https://smithable.test/elsewhere" }, home),
+  ).toBeUndefined();
+  expect(trustedRelease(release, undefined)).toBeUndefined();
 });
