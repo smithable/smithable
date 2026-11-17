@@ -1530,6 +1530,11 @@ function ReadyAnswer({ shown, ready }: { shown: "next" | "publish"; ready: Ready
  */
 function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
   const [which, setWhich] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const close = () => {
+    setWhich(false);
+    trigger.current?.focus();
+  };
   if (!to.length)
     return (
       <p data-part="ai-notice" className="rounded-md bg-subtle px-3 py-2 text-xs text-muted">
@@ -1545,6 +1550,7 @@ function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
         {`AI assistant — answers may be wrong. What you ask, with the app's files and this conversation, may be sent to an AI service${eu ? ", processed in the EU" : ""}. Do not include prohibited sensitive information.`}{" "}
         <button
           type="button"
+          ref={trigger}
           data-part="which-ai"
           aria-expanded={which}
           className="cursor-pointer text-accent underline"
@@ -1555,13 +1561,21 @@ function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
       </p>
       {which && (
         <div
+          role="dialog"
+          aria-label="Which AI?"
           data-part="which-ai-overlay"
           className="absolute inset-x-0 top-full z-10 mt-1 space-y-1 rounded-md border border-line bg-surface p-3 text-fg shadow-lg"
+          onKeyDown={(e) => {
+            // Escape closes the overlay, not the conversation around it.
+            if (e.key !== "Escape") return;
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+          }}
         >
           <p>{`Sent to ${to.join(" or ")}.`}</p>
           <p>
             What is sent: your question, this conversation, and the app's files the answer needs.
-            Nothing is sent before you ask.
           </p>
           <p>
             <a
@@ -1573,11 +1587,7 @@ function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
               Privacy
             </a>
           </p>
-          <button
-            type="button"
-            className="cursor-pointer underline"
-            onClick={() => setWhich(false)}
-          >
+          <button type="button" className="cursor-pointer underline" onClick={close}>
             Close
           </button>
         </div>

@@ -78,7 +78,7 @@ export const w = {
   aiWhich: "Vilken AI?",
   aiSentTo: (to: string) => `Skickas till ${to}.`,
   aiWhat:
-    "Det som skickas: din fråga, det här samtalet och de uppgifter svaret behöver som du får läsa. Inget skickas innan du frågar.",
+    "Det som skickas: din fråga, det här samtalet och de uppgifter svaret behöver som du får läsa.",
   aiIn: (provider: string, region: string) => `${provider} i ${region}`,
   aiConfigured: "den AI-tjänst appen är inställd på",
   aiGenerated: "AI-genererad",

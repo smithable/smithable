@@ -69,7 +69,7 @@ export const w = {
   aiWhich: "Which AI?",
   aiSentTo: (to: string) => `Sent to ${to}.`,
   aiWhat:
-    "What is sent: your question, this conversation, and the records the answer needs that you are allowed to read. Nothing is sent before you ask.",
+    "What is sent: your question, this conversation, and the records the answer needs that you are allowed to read.",
   aiIn: (provider: string, region: string) => `${provider} in ${region}`,
   aiConfigured: "the AI service this app is set up with",
   aiGenerated: "AI-generated",

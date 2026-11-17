@@ -70,7 +70,7 @@ export function aiFacts(): { provider?: string; region?: string; eu?: true } | n
     ...(ASSISTANT_PROVIDER ? { provider: ASSISTANT_PROVIDER } : {}),
     ...(ASSISTANT_REGION ? { region: ASSISTANT_REGION } : {}),
     // Every model of the app's level runs in the EU: the service says so; the app never guesses.
-    ...(ASSISTANT_EU === "1" ? { eu: true as const } : {}),
+    ...(ASSISTANT_EU?.trim() === "1" ? { eu: true as const } : {}),
   };
 }
 

@@ -114,6 +114,11 @@ export function Ask({
   const [asked, setAsked] = useState<Asked[]>([]);
   const [busy, setBusy] = useState(false);
   const [which, setWhich] = useState(false);
+  const whichButton = useRef<HTMLButtonElement>(null);
+  const closeWhich = () => {
+    setWhich(false);
+    whichButton.current?.focus();
+  };
   const end = useRef<HTMLLIElement>(null);
   // The tab's conversation for this person, once the page runs in the browser; another person's
   // (signed out, or someone else signed in) is forgotten.
@@ -206,6 +211,7 @@ export function Ask({
                 {w.aiNotice(Boolean(ai.eu))}{" "}
                 <button
                   type="button"
+                  ref={whichButton}
                   data-part="which-ai"
                   aria-expanded={which}
                   className="cursor-pointer underline"
@@ -216,6 +222,15 @@ export function Ask({
               </p>
               {which && (
                 <div
+                  role="dialog"
+                  aria-label={w.aiWhich}
+                  onKeyDown={(e) => {
+                    // Escape closes the overlay, not the conversation around it.
+                    if (e.key !== "Escape") return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeWhich();
+                  }}
                   data-part="which-ai-overlay"
                   className="absolute inset-x-0 top-full z-10 mt-1 space-y-1 rounded-md border bg-card p-3 text-card-foreground shadow-lg"
                 >
@@ -234,7 +249,7 @@ export function Ask({
                       </AppLink>
                     </p>
                   )}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setWhich(false)}>
+                  <Button type="button" variant="ghost" size="sm" onClick={closeWhich}>
                     {w.close}
                   </Button>
                 </div>
