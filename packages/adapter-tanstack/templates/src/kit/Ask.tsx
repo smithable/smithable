@@ -4,7 +4,7 @@
 // (A 152): oldest first, earlier turns go with each question, and the conversation stays for the
 // browser tab, kept by person, so a reload keeps it and signing out forgets it.
 import { Sparkles } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
@@ -115,6 +115,7 @@ export function Ask({
   const [busy, setBusy] = useState(false);
   const [which, setWhich] = useState(false);
   const whichButton = useRef<HTMLButtonElement>(null);
+  const whichId = useId();
   const closeWhich = () => {
     setWhich(false);
     whichButton.current?.focus();
@@ -181,7 +182,10 @@ export function Ask({
       </button>
       <dialog
         ref={sheet}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setWhich(false);
+        }}
         aria-labelledby="ask-title"
         className="m-0 mt-auto w-full max-w-none rounded-t-xl border bg-background p-0 text-foreground backdrop:bg-black/40 sm:m-auto sm:max-w-xl sm:rounded-xl"
       >
@@ -215,7 +219,8 @@ export function Ask({
                   data-part="which-ai"
                   aria-expanded={which}
                   className="cursor-pointer underline"
-                  onClick={() => setWhich(!which)}
+                  aria-controls={whichId}
+                  onClick={() => setWhich((shown) => !shown)}
                 >
                   {w.aiWhich}
                 </button>
@@ -231,6 +236,7 @@ export function Ask({
                     e.stopPropagation();
                     closeWhich();
                   }}
+                  id={whichId}
                   data-part="which-ai-overlay"
                   className="absolute inset-x-0 top-full z-10 mt-1 space-y-1 rounded-md border bg-card p-3 text-card-foreground shadow-lg"
                 >

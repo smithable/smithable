@@ -4,7 +4,7 @@
 
 import type { Diagnostic } from "@smithable/core";
 import type { Part, SummarySection } from "@smithable/index";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { type Assumption, api, type Proposal, type TraceEntry } from "../api";
 import type { GuideLine } from "../GuideTour";
 import { lastLine } from "../history";
@@ -1531,6 +1531,7 @@ function ReadyAnswer({ shown, ready }: { shown: "next" | "publish"; ready: Ready
 function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
   const [which, setWhich] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const overlay = useId();
   const close = () => {
     setWhich(false);
     trigger.current?.focus();
@@ -1554,7 +1555,8 @@ function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
           data-part="which-ai"
           aria-expanded={which}
           className="cursor-pointer text-accent underline"
-          onClick={() => setWhich(!which)}
+          aria-controls={overlay}
+          onClick={() => setWhich((shown) => !shown)}
         >
           Which AI?
         </button>
@@ -1563,6 +1565,7 @@ function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
         <div
           role="dialog"
           aria-label="Which AI?"
+          id={overlay}
           data-part="which-ai-overlay"
           className="absolute inset-x-0 top-full z-10 mt-1 space-y-1 rounded-md border border-line bg-surface p-3 text-fg shadow-lg"
           onKeyDown={(e) => {
