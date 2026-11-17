@@ -1,9 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { kitSummary } from "@smithable/adapter-tanstack";
 import {
+  type Completion,
   cached,
   openAICompatible,
   type Paused,
@@ -98,14 +99,41 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
   const folder = env.SMITHABLE_LLM_CACHE;
   if (!folder) return providers;
   const store = folderStore(folder, env.SMITHABLE_LLM_CACHE_FROM);
-  return providers.map((p) => cached(env.SMITHABLE_LLM_REPLAY === "1" ? offline(p) : p, store));
+  return providers.map((p) =>
+    cached(env.SMITHABLE_LLM_REPLAY === "1" ? offline(p, store) : p, store),
+  );
 }
 
-/** A provider that never asks its model: for replays, where a request not recorded is an error. */
-function offline(provider: Provider): Provider {
+/**
+ * A provider that never asks its model: for replays, where a request not recorded is an error.
+ * A recording made before the output allowance was part of the key (2026-11-14) still answers a
+ * request with an allowance, when the recorded answer is shorter than it: the model, asked with the
+ * allowance, would have given the same answer.
+ */
+function offline(provider: Provider, store: ResponseStore): Provider {
   return {
     ...provider,
-    async complete() {
+    async complete(request) {
+      if (request.maxOutputTokens !== undefined) {
+        const before = createHash("sha256")
+          .update(
+            JSON.stringify([
+              provider.name,
+              provider.model ?? null,
+              request.system,
+              request.user,
+              request.schema,
+              request.fallbackSchema ?? null,
+            ]),
+          )
+          .digest("hex");
+        const kept = await store.get(before);
+        if (kept !== undefined) {
+          const answer = JSON.parse(kept) as Completion;
+          if (answer.outputTokens < request.maxOutputTokens)
+            return { ...answer, inputTokens: 0, outputTokens: 0 };
+        }
+      }
       throw new Error(
         `Not in the recording: ${provider.model ?? provider.name} was asked something it was not asked when recorded.`,
       );

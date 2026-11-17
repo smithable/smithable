@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
 import { aiProviders, proposalOutcome, speechProviders, usageLine } from "./ask.js";
@@ -131,4 +131,15 @@ test("a replay answers from the recording only, and a fixture keeps what it read
   );
   expect(await model.complete(request)).toMatchObject({ text: "{}", cached: true });
   expect(existsSync(join(fixture, key.slice(0, 2), `${key}.json`))).toBe(true);
+  // Recorded before the output allowance was in the key: it answers a request with an allowance
+  // its answer fits in, and not one it would have overrun.
+  writeFileSync(
+    join(recording, key.slice(0, 2), `${key}.json`),
+    JSON.stringify({ text: "{}", model: "claude-haiku-5-5", inputTokens: 1, outputTokens: 900 }),
+  );
+  rmSync(fixture, { recursive: true, force: true });
+  expect(await model.complete({ ...request, maxOutputTokens: 4096 })).toMatchObject({ text: "{}" });
+  await expect(model.complete({ ...request, maxOutputTokens: 500 })).rejects.toThrow(
+    "Not in the recording",
+  );
 });
