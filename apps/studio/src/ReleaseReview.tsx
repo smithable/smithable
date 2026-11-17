@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Project, type ReleaseReview as Review } from "./api";
-import { checksPassed, needsLook, reviewSections } from "./release-review";
+import {
+  checksPassed,
+  needsLook,
+  type ReleaseProgress,
+  releaseProgress,
+  reviewSections,
+} from "./release-review";
 import { Button } from "./ui";
 
 /** One current read shared by the top-bar count and the open review. Older replies cannot win. */
@@ -43,6 +49,7 @@ export function ReleaseReview({
   loading = false,
   reload,
   home,
+  release,
   onClose,
 }: {
   review?: Review;
@@ -50,6 +57,8 @@ export function ReleaseReview({
   loading?: boolean;
   reload: () => Promise<void>;
   home?: string;
+  /** The hosted release flow's saved progress (T879 S2), when the service has written it. */
+  release?: ReleaseProgress;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -324,7 +333,20 @@ export function ReleaseReview({
               </details>
             ))}
             <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
-              {home ? (
+              {release ? (
+                <>
+                  <a
+                    href={release.url}
+                    data-release-step
+                    className="text-sm font-medium text-accent hover:underline"
+                  >
+                    {releaseProgress(release).label}
+                  </a>
+                  <span className="text-sm text-muted" data-release-line>
+                    {releaseProgress(release).line}
+                  </span>
+                </>
+              ) : home ? (
                 <a href={home} className="text-sm font-medium text-accent hover:underline">
                   Continue to publishing
                 </a>

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { ReleaseReview } from "./api";
-import { checksPassed, needsLook, reviewSections } from "./release-review";
+import { checksPassed, needsLook, releaseProgress, reviewSections } from "./release-review";
 
 function fixture(): ReleaseReview {
   return {
@@ -105,4 +105,26 @@ test("matching development versions still require source compatibility verificat
   const maintenance = reviewSections(review).find((s) => s.id === "maintenance");
   expect(maintenance?.state).toBe("needs-look");
   expect(maintenance?.summary).toContain("needs verification");
+});
+
+test("the release flow's saved progress names the next step; a change since the review starts again from it (T879 S2)", () => {
+  const base = {
+    url: "https://smithable.test/projects/p1/release",
+    reviewed: "a".repeat(40),
+    staging: "todo",
+    production: "locked",
+    changed: false,
+  } as const;
+  expect(releaseProgress({ ...base, reviewed: null }).line).toMatch(/review this version/);
+  expect(releaseProgress({ ...base, changed: true }).line).toMatch(/changed since you reviewed/);
+  expect(releaseProgress(base).label).toBe("Continue: publish to staging");
+  expect(releaseProgress({ ...base, staging: "ready" }).label).toBe("Continue: try staging");
+  expect(releaseProgress({ ...base, staging: "confirmed", production: "todo" }).label).toBe(
+    "Continue: put it live",
+  );
+  expect(releaseProgress({ ...base, staging: "confirmed", production: "live" }).line).toBe(
+    "This version is live.",
+  );
+  expect(releaseProgress({ ...base, staging: "failed" }).line).toMatch(/failed/);
+  expect(releaseProgress({ ...base, staging: "replaced" }).line).toMatch(/another build/);
 });

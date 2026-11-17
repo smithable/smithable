@@ -1851,6 +1851,7 @@ export function App() {
           loading={release.loading}
           reload={release.reload}
           home={project.home}
+          release={project.beta?.release}
           onClose={() => setReviewingRelease(false)}
         />
       )}
