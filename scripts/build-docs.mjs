@@ -396,7 +396,7 @@ for (const file of [...sources("apps/studio/src"), ...sources("packages/core/src
   const links =
     /(?:https:\/\/docs\.smithable\.ai\/|\$\{DOCS\}\/|(\$\{SPEC_REFERENCE\}))([\w/-]*\.html)?#([\w-]+)/g;
   for (const [, spec, path, hash] of text.matchAll(links)) {
-    const out = spec ? "spec.html" : path;
+    const out = spec ? "spec.html" : path || "index.html";
     const to = PAGES.find((p) => p.out === out);
     if (!to) problems.push(`${relative(root, file)}: ${out} is not on the site`);
     else if (!to.headings.some((h) => h.id === hash))
@@ -664,6 +664,8 @@ for (const page of PAGES) {
           problems.push(
             `${page.src}: a raw <${raw[1]}> would hide the rest of the page; write it as code`,
           );
+        if (text.includes("<!--") && !text.includes("-->"))
+          problems.push(`${page.src}: an unclosed <!-- would hide the rest of the page`);
         return text;
       },
       link({ href, title, tokens }) {

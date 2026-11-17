@@ -32,7 +32,7 @@ export function AreaSection({
     <details className="rounded-md border border-line" open={open}>
       <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium">
         <AreaIcon d={icon} />
-        {title}
+        <h3 className="text-sm font-medium">{title}</h3>
       </summary>
       <section aria-label={title} className="space-y-2 border-t border-line p-3">
         {children}
