@@ -384,6 +384,25 @@ for (const dir of ["docs/site", "docs/site/integrations"])
   for (const file of readdirSync(join(root, dir)))
     if (file.endsWith(".md") && !PAGES.some((page) => page.src === `${dir}/${file}`))
       problems.push(`${dir}/${file} is not in PAGES, so the site would not have it`);
+// Every link Studio and the schema make to a heading of the site (`x-docs`, the help topics, the
+// files' docs) lands on one: a link written as the site's address, ${DOCS} or ${SPEC_REFERENCE}.
+function sources(dir) {
+  return readdirSync(join(root, dir), { withFileTypes: true, recursive: true })
+    .filter((e) => e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name))
+    .map((e) => join(e.parentPath, e.name));
+}
+for (const file of [...sources("apps/studio/src"), ...sources("packages/core/src")]) {
+  const text = readFileSync(file, "utf8");
+  const links =
+    /(?:https:\/\/docs\.smithable\.ai\/|\$\{DOCS\}\/|(\$\{SPEC_REFERENCE\}))([\w/-]*\.html)?#([\w-]+)/g;
+  for (const [, spec, path, hash] of text.matchAll(links)) {
+    const out = spec ? "spec.html" : path || "index.html";
+    const to = PAGES.find((p) => p.out === out);
+    if (!to) problems.push(`${relative(root, file)}: ${out} is not on the site`);
+    else if (!to.headings.some((h) => h.id === hash))
+      problems.push(`${relative(root, file)}: no heading #${hash} in ${to.src}`);
+  }
+}
 /** Where a link in `page` goes on the site: another page, a heading, the schema or the repository. */
 function target(page, href) {
   const [path, hash] = href.split("#");
@@ -633,6 +652,21 @@ for (const page of PAGES) {
         return words.length > 1
           ? `<code class="words">${words.map((w) => `<span>${word(w)}</span>`).join(" ")}</code>`
           : `<code>${word(text)}</code>`;
+      },
+      // Raw HTML that starts an element whose content is raw text (a <title> written in prose)
+      // would swallow the rest of the page in a browser, every heading after it with it.
+      html({ text }) {
+        const raw =
+          /<(title|style|script|textarea|xmp|noscript|noembed|noframes|iframe|plaintext|template)\b/i.exec(
+            text,
+          );
+        if (raw)
+          problems.push(
+            `${page.src}: a raw <${raw[1]}> would hide the rest of the page; write it as code`,
+          );
+        if (text.includes("<!--") && !text.includes("-->"))
+          problems.push(`${page.src}: an unclosed <!-- would hide the rest of the page`);
+        return text;
       },
       link({ href, title, tokens }) {
         return `<a href="${esc(target(page, href))}"${title ? ` title="${esc(title)}"` : ""}>${this.parser.parseInline(tokens)}</a>`;

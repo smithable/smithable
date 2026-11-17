@@ -53,8 +53,13 @@ function page(
     followContext?: number;
     navigationId?: number;
     documentId?: string;
+    /** The origin it was posted to. */
+    to?: string;
   }[] = [];
-  const parent = { postMessage: (message: { type: string }) => posted.push(message) };
+  const parent = {
+    postMessage: (message: { type: string }, to?: string) =>
+      posted.push(to === undefined ? message : { ...message, to }),
+  };
   const scrolled: number[] = [];
   const reloads: number[] = [];
   const window = {
@@ -673,4 +678,23 @@ test("preview navigation echoes only trusted editor context, without turning rep
   });
   send({ type: "smithable:select-mode", on: false, followContext: 1 });
   expect(navigation()).toMatchObject({ followContext: 2, navigationId: 1 });
+});
+
+test("on the hosted shape the preview reports its pages to the Studio origin the host names, and to no other", () => {
+  // The service's Studio (s-<id>) and its preview (p-<id>) are two origins (STUDIO_ORIGIN, T907).
+  const studio = "https://s-abc.smithable.app";
+  const named = globalThis as { __smithableStudioOrigins?: string[] };
+  named.__smithableStudioOrigins = [studio];
+  try {
+    const { send, navigate, posted } = page("/customers");
+    const navigation = () => posted.filter((message) => message.type === "navigated").at(-1);
+    send({ type: "smithable:follow-context", context: 1 }, "https://p-other.smithable.app");
+    navigate("/orders");
+    expect(navigation()).toBeUndefined();
+    send({ type: "smithable:follow-context", context: 1 }, studio);
+    navigate("/invoices");
+    expect(navigation()).toMatchObject({ path: "/invoices", followContext: 1, to: studio });
+  } finally {
+    delete named.__smithableStudioOrigins;
+  }
 });

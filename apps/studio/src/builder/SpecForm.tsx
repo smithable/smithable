@@ -18,6 +18,7 @@ import { HelpMark, type HelpTopic } from "../help";
 import { cx } from "../ui";
 import { CopyPicker, MergePicker, SplitPicker } from "./action-pickers";
 import { ActionRowsEditor } from "./action-rows";
+import { AreaIcon } from "./areas";
 import { FieldShapeForm, type Run } from "./ChangeForms";
 import { ConditionRows } from "./ConditionRows";
 import { conditionContext, conditionTreeReady } from "./condition-paths";
@@ -380,7 +381,7 @@ export function SpecForm({
 const box = "block h-7 w-full rounded-md border border-line bg-panel px-2 text-sm text-fg";
 
 /** The spec's areas by a short name and an icon (A 167); the description stays the tooltip. */
-const AREAS: Record<string, { label: string; icon: string }> = {
+export const AREAS: Record<string, { label: string; icon: string }> = {
   app: { label: "App", icon: "M4 5h16v14H4zM4 9h16" },
   models: {
     label: "Data",
@@ -395,20 +396,6 @@ const AREAS: Record<string, { label: string; icon: string }> = {
   incoming: { label: "Incoming", icon: "M3 13h5l2 3h4l2-3h5M5.5 5h13L21 13v6H3v-6l2.5-8Z" },
   queries: { label: "Queries", icon: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM20 20l-4-4" },
 };
-
-function AreaIcon({ d }: { d: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" aria-hidden="true">
-      <path
-        d={d}
-        className="fill-none stroke-current"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 /** A value under its schema: its control, filled with what the file says, writing at `path`. */
 function Value({
@@ -1455,13 +1442,17 @@ function Key({
         {/* A key that is hard to grasp has its question mark (A 204). */}
         {HARD[name] && <HelpMark topic={HARD[name]} />}
         {typeof schema["x-docs"] === "string" && (
+          // A small "?" as the help marks are; its name, read aloud and as the tooltip, says where it
+          // leads (T907).
           <a
             href={schema["x-docs"]}
             target="_blank"
             rel="noreferrer"
-            className="ml-2 font-normal text-accent underline"
+            aria-label="What this is for"
+            title="What this is for"
+            className="flex size-5 shrink-0 items-center justify-center rounded-full border border-line text-[11px] font-semibold text-muted no-underline hover:border-accent hover:text-accent"
           >
-            What this is for
+            ?
           </a>
         )}
       </div>

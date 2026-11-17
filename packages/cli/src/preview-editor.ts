@@ -45,9 +45,10 @@ if (typeof window !== "undefined" && window.parent !== window) {
   const documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   let navigationId = -1;
   let reportedPath = null;
-  // Studio, and only Studio: a page on this machine, or the preview's own site (behind the
-  // service's proxy both are one origin); never another site that frames the preview.
-  const trusted = (origin) => /^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(origin) || origin === location.origin;
+  // Studio, and only Studio: a page on this machine, the preview's own site (behind the
+  // service's proxy both are one origin), or the Studio origin the host names (STUDIO_ORIGIN, the
+  // hosted service's s-<id> beside its p-<id> preview); never another site that frames it.
+  const trusted = (origin) => /^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(:\\d+)?$/.test(origin) || origin === location.origin || (globalThis.__smithableStudioOrigins || []).includes(origin);
   const post = (message) => {
     const target = studio ?? (message.type === "ready" || message.type === "errored" ? "*" : null);
     if (target) window.parent.postMessage({ source: "smithable-preview", ...message }, target);
@@ -805,6 +806,9 @@ export function smithableEditor(
     load: (id: string) =>
       id === `\0${ID}`
         ? RUNTIME +
+          (look
+            ? `\nglobalThis.__smithableStudioOrigins=${JSON.stringify(look.parentOrigins)};\n`
+            : "") +
           (look
             ? `
 if (typeof window !== "undefined") {
