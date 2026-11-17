@@ -106,3 +106,14 @@ test("a row that repeats a unique value, alone or together with others, is left 
     ]),
   ).toHaveLength(2);
 });
+
+test("a replay asks for records around its recording's day, not today", async () => {
+  const asked: CompletionRequest[] = [];
+  await draftSamples({
+    description: "A bistro",
+    ir,
+    providers: [fake({}, asked)],
+    today: "2026-11-14",
+  });
+  expect(asked[0]?.user).toContain("Dates fall in the weeks around 2026-11-14.");
+});

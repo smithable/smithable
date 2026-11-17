@@ -1,9 +1,10 @@
-import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { kitSummary } from "@smithable/adapter-tanstack";
 import {
+  type Completion,
   cached,
   openAICompatible,
   type Paused,
@@ -92,20 +93,75 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
       providers.push(anthropic(model, env.ANTHROPIC_API_KEY, env.SMITHABLE_USAGE_LOG));
   // The benchmark's and tests' response cache (SMITHABLE_LLM_CACHE=<folder>): a request seen
   // before is answered from the folder. Never on unless set. SMITHABLE_LLM_REPLAY=1 replays only:
-  // a request not in the folder fails and no model is asked. SMITHABLE_LLM_CACHE_FROM=<folder>
-  // answers from a second folder too and copies each answer used into the first (a fixture made
-  // from a whole recording keeps only what its runs read).
+  // a request not in the folder fails and no model is asked. SMITHABLE_LLM_REPLAY=loose replays
+  // too, and answers a request whose system prompt or schemas changed since the recording by the
+  // answer recorded for the same model and user text (the description); each such answer is a line
+  // in SMITHABLE_LLM_LOOSE_LOG, so a run says how many it took. A loose replay tests what runs
+  // after the model, never the model or its prompt. SMITHABLE_LLM_CACHE_FROM=<folder> answers from
+  // a second folder too and copies each answer used into the first (a fixture made from a whole
+  // recording keeps only what its runs read).
   const folder = env.SMITHABLE_LLM_CACHE;
   if (!folder) return providers;
   const store = folderStore(folder, env.SMITHABLE_LLM_CACHE_FROM);
-  return providers.map((p) => cached(env.SMITHABLE_LLM_REPLAY === "1" ? offline(p) : p, store));
+  const replay = env.SMITHABLE_LLM_REPLAY;
+  return providers.map((p) =>
+    cached(
+      replay === "1" || replay === "loose"
+        ? offline(p, store, replay === "loose" ? (env.SMITHABLE_LLM_LOOSE_LOG ?? "") : undefined)
+        : p,
+      store,
+    ),
+  );
 }
 
-/** A provider that never asks its model: for replays, where a request not recorded is an error. */
-function offline(provider: Provider): Provider {
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+
+/**
+ * A provider that never asks its model: for replays, where a request not recorded is an error.
+ * A recording made before the output allowance was part of the key (2026-11-14) still answers a
+ * request with an allowance, when the recorded answer is shorter than it: the model, asked with the
+ * allowance, would have given the same answer. With `looseLog` set (a loose replay), a request
+ * still not found is answered by the recording's answer for the same model and user text.
+ */
+function offline(provider: Provider, store: FolderStore, looseLog?: string): Provider {
+  const model = provider.model ?? null;
   return {
     ...provider,
-    async complete() {
+    async complete(request) {
+      const answer = (kept: string) => ({
+        ...(JSON.parse(kept) as Completion),
+        inputTokens: 0,
+        outputTokens: 0,
+      });
+      if (request.maxOutputTokens !== undefined) {
+        const before = sha256(
+          JSON.stringify([
+            provider.name,
+            model,
+            request.system,
+            request.user,
+            request.schema,
+            request.fallbackSchema ?? null,
+          ]),
+        );
+        const kept = await store.get(before);
+        if (
+          kept !== undefined &&
+          (JSON.parse(kept) as Completion).outputTokens < request.maxOutputTokens
+        )
+          return answer(kept);
+      }
+      if (looseLog !== undefined) {
+        const kept = await store.loose(provider.name, model, request.user);
+        if (kept !== undefined) {
+          if (looseLog)
+            appendFileSync(
+              looseLog,
+              `${JSON.stringify({ model, user: sha256(request.user).slice(0, 12) })}\n`,
+            );
+          return answer(kept);
+        }
+      }
       throw new Error(
         `Not in the recording: ${provider.model ?? provider.name} was asked something it was not asked when recorded.`,
       );
@@ -168,22 +224,61 @@ export function speechProviders(
   ];
 }
 
-/** Answers kept as files in a folder, by their key. */
-function folderStore(folder: string, from?: string): ResponseStore {
+/** A response store in a folder, which can also answer loosely (by model and user text). */
+interface FolderStore extends ResponseStore {
+  loose(provider: string, model: string | null, user: string): Promise<string | undefined>;
+}
+
+/**
+ * The folder's layout: `<2>/<key>.json` the answer; `requests/<key>.json` what was asked (the
+ * system text and schemas by the hash of their file in `parts/`, written once however many
+ * requests share them); `loose/<hash>.json` names the first answer to a model and user text.
+ */
+export function folderStore(folder: string, from?: string): FolderStore {
   const path = (dir: string, key: string) => join(dir, key.slice(0, 2), `${key}.json`);
-  const set = async (key: string, value: string) => {
-    mkdirSync(dirname(path(folder, key)), { recursive: true });
-    writeFileSync(path(folder, key), value);
+  const write = (file: string, text: string) => {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, text);
   };
+  // A file from the folder, or from the second folder, copied into the first when used.
+  const read = (name: string) => {
+    if (existsSync(join(folder, name))) return readFileSync(join(folder, name), "utf8");
+    if (!from || !existsSync(join(from, name))) return undefined;
+    const text = readFileSync(join(from, name), "utf8");
+    write(join(folder, name), text);
+    return text;
+  };
+  const part = (value: unknown) => {
+    if (value === undefined || value === null) return null;
+    const text = typeof value === "string" ? value : JSON.stringify(value);
+    const hash = sha256(text);
+    const file = join(folder, "parts", `${hash}.txt`);
+    if (!existsSync(file)) write(file, text);
+    return hash;
+  };
+  const looseName = (provider: string, model: string | null, user: string) =>
+    join("loose", `${sha256(JSON.stringify([provider, model, user]))}.json`);
   return {
     async get(key) {
-      if (existsSync(path(folder, key))) return readFileSync(path(folder, key), "utf8");
-      if (!from || !existsSync(path(from, key))) return undefined;
-      const value = readFileSync(path(from, key), "utf8");
-      await set(key, value);
-      return value;
+      return read(join(key.slice(0, 2), `${key}.json`));
     },
-    set,
+    async set(key, value, request) {
+      write(path(folder, key), value);
+      if (!request) return;
+      const { system, schema, fallbackSchema, ...rest } = request;
+      write(
+        join(folder, "requests", `${key}.json`),
+        `${JSON.stringify({ ...rest, system: part(system), schema: part(schema), fallbackSchema: part(fallbackSchema) }, null, 1)}\n`,
+      );
+      const loose = join(folder, looseName(request.provider, request.model, request.user));
+      if (!existsSync(loose)) write(loose, `${JSON.stringify({ answer: key })}\n`);
+    },
+    async loose(provider, model, user) {
+      const index = read(looseName(provider, model, user));
+      if (index === undefined) return undefined;
+      const { answer: key } = JSON.parse(index) as { answer: string };
+      return read(join(key.slice(0, 2), `${key}.json`));
+    },
   };
 }
 

@@ -343,7 +343,14 @@ export class JsonAnswerError extends SyntaxError {
 /** Where a response cache keeps its answers: the host decides (a folder, for the CLI). */
 export interface ResponseStore {
   get(key: string): Promise<string | undefined>;
-  set(key: string, value: string): Promise<void>;
+  /** The request comes along so a recording can say what was asked (T784); a store may drop it. */
+  set(key: string, value: string, request?: RecordedRequest): Promise<void>;
+}
+
+/** A request as a recording keeps it, with the provider and model it went to. */
+export interface RecordedRequest extends CompletionRequest {
+  provider: string;
+  model: string | null;
 }
 
 /**
@@ -373,7 +380,11 @@ export function cached(provider: Provider, store: ResponseStore): Provider {
         return { text, model, inputTokens: 0, outputTokens: 0, cached: true };
       }
       const completion = await provider.complete(request);
-      await store.set(key, JSON.stringify(completion));
+      await store.set(key, JSON.stringify(completion), {
+        provider: provider.name,
+        model: provider.model ?? null,
+        ...request,
+      });
       return completion;
     },
   };

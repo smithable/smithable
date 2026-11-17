@@ -13,7 +13,8 @@
 //   validates and generates; tokens and cost per build
 // The landing text's fit (`taste`) is for a judging model, scored apart; not in this script yet.
 //   node scripts/bench-first-builds.mjs [reader] [small] [small>better] [--set PATH] [--only fb-01,fb-02]
-//     [--label today] [--max-cost USD] [--record DIR] [--replay DIR [--replay-from REC]]
+//     [--label today] [--max-cost USD] [--record DIR] [--replay DIR [--replay-from REC] [--loose]]
+//     [--fail-on-leak]
 // allowance-used: free; Studio's fallback when its model refuses (the allowance used up), with a
 // stub model on this machine: the starter its questions step picks, replaced from the description.
 // reader: no model, free: the description reader alone, or (when it cannot build) the starter `new`
@@ -23,7 +24,7 @@
 // anthropic; the key in ~/.config/smithable/claude.env, never printed). Ask before a paid run.
 // Writes docs/benchmarks/first-builds-<label>.md and .jsonl.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { repo } from "./dev-app.mjs";
@@ -47,6 +48,23 @@ const maxCost = option("--max-cost") ? Number(option("--max-cost")) : Number.POS
 let stopped = false;
 const replay = option("--replay");
 if (replay && option("--record")) throw new Error("--replay and --record do not go together.");
+// --loose: a request whose system prompt or schemas changed since the recording is answered by the
+// recorded answer to the same model and description. It tests what runs after the model (the rules,
+// keptOwn, the leak checks, the scoring), never the model or its prompt (T784, Fable 2026-11-17).
+const loose = args.includes("--loose");
+// A recording says its day and engine commit (recording.json), so a replay asks on that day.
+if (option("--record")) {
+  mkdirSync(option("--record"), { recursive: true });
+  const commit = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: repo,
+    encoding: "utf8",
+  }).stdout.trim();
+  writeFileSync(
+    join(option("--record"), "recording.json"),
+    `${JSON.stringify({ date: new Date().toISOString().slice(0, 10), engine: commit }, null, 2)}\n`,
+  );
+}
+if (loose && !replay) throw new Error("--loose goes with --replay.");
 
 /**
  * For the allowance-used tier: a model on this machine that answers every call 402 with the
@@ -142,8 +160,20 @@ function envOf(tier) {
   // build with "Not in the recording" (the prompt changed since: record the case again).
   // --replay-from REC: answer from the whole recording REC too and copy what is used into DIR,
   // to make a fixture of a few cases.
-  if (replay) Object.assign(env, { SMITHABLE_LLM_CACHE: replay, SMITHABLE_LLM_REPLAY: "1" });
+  if (replay)
+    Object.assign(env, {
+      SMITHABLE_LLM_CACHE: replay,
+      SMITHABLE_LLM_REPLAY: loose ? "loose" : "1",
+    });
   if (replay && option("--replay-from")) env.SMITHABLE_LLM_CACHE_FROM = option("--replay-from");
+  // A replay asks on its recording's day, since sample records are asked for around a date.
+  if (replay) {
+    const said = [replay, option("--replay-from")]
+      .filter(Boolean)
+      .map((d) => join(d, "recording.json"))
+      .find((f) => existsSync(f));
+    if (said) env.SMITHABLE_TODAY = JSON.parse(readFileSync(said, "utf8")).date;
+  }
   return env;
 }
 
@@ -384,6 +414,8 @@ for (const tier of tiers) {
       break;
     }
     const dir = join(root, `${tier.replace(">", "-")}-${item.id}`);
+    // Each answer a loose replay took is a line in this build's own file.
+    if (loose) env.SMITHABLE_LLM_LOOSE_LOG = `${dir}.loose`;
     const clarified = spawnSync("node", [cli, "clarify", "--json", item.text], {
       cwd: repo,
       encoding: "utf8",
@@ -465,6 +497,14 @@ for (const tier of tiers) {
       ...(run.status === 0
         ? {}
         : { error: out.trim().split("\n").slice(-3).join(" ").slice(0, 300) }),
+      ...(replay ? { notRecorded: run.status !== 0 && out.includes("Not in the recording") } : {}),
+      ...(loose
+        ? {
+            loose: existsSync(`${dir}.loose`)
+              ? readFileSync(`${dir}.loose`, "utf8").split("\n").filter(Boolean).length
+              : 0,
+          }
+        : {}),
     };
     rows.push(row);
     const met = row.must.filter((m) => m.ok).length;
@@ -482,8 +522,18 @@ const out = join(repo, `docs/benchmarks/first-builds-${label}`);
 writeFileSync(`${out}.jsonl`, `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`);
 const share = (got, of) => (of ? `${got} / ${of} (${Math.round((100 * got) / of)} %)` : "–");
 const lines = [
-  `# First builds: ${label}`,
+  `# First builds: ${label}${loose ? " (LOOSE replay)" : replay ? " (replay)" : ""}`,
   "",
+  ...(replay
+    ? [
+        `Replayed from a recording, no model asked: ${rows.filter((r) => r.notRecorded).length} of ${rows.length} builds asked something not in it.${
+          loose
+            ? ` ${rows.filter((r) => r.loose).length} builds took ${rows.reduce((n, r) => n + (r.loose ?? 0), 0)} answers loosely: the system prompt or schemas changed since the recording, so the answer recorded for the same model and description was used. A loose replay tests what runs after the model (rules, keptOwn, leak checks, scoring); its numbers are never a model's score.`
+            : ""
+        }`,
+        "",
+      ]
+    : []),
   `${new Date().toISOString().slice(0, 10)}, ${items.length} descriptions of ${basename(setPath)}, labelled by a model of another family than the builder's and checked. Scored by rule on the spec each build made (bench-first-builds.mjs). A leak (a kind that must not be public made public, or a refusal the rules do not make) fails its build and is listed apart.`,
   "",
   "| Tier | Built | Must | Must not | Leaks | Open points asked | Questions | Extra models | Cost per build |",
@@ -515,3 +565,8 @@ for (const r of rows)
     lines.push(`- ${r.tier} ${r.id}: ${m.what}`);
 writeFileSync(`${out}.md`, `${lines.join("\n")}\n`);
 console.log(`${out}.md`);
+// --fail-on-leak: a leak fails the run (CI's replay, T784).
+if (args.includes("--fail-on-leak") && rows.some((r) => r.leaks.length)) {
+  console.error(`Leaks in ${rows.filter((r) => r.leaks.length).length} builds.`);
+  process.exitCode = 1;
+}

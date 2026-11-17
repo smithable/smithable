@@ -117,6 +117,8 @@ export async function draftSamples(options: {
   /** Allowed by the AI policy, cheapest first; the cheapest writes them. */
   providers: Provider[];
   count?: number;
+  /** The day the records' dates fall around (YYYY-MM-DD); today unless a replay pins its own. */
+  today?: string;
 }): Promise<{ samples: DraftedSamples; usage: Usage[] }> {
   const usage: Usage[] = [];
   const count = options.count ?? 8;
@@ -174,7 +176,7 @@ export async function draftSamples(options: {
   const user = `The app: ${options.ir.app.name}${options.ir.app.description ? `, ${options.ir.app.description}` : ""}
 What it was made from: ${options.description}
 
-Write ${count} records for each of these models. A unique field, and fields unique together, differ in every record. Dates fall in the weeks around ${new Date().toISOString().slice(0, 10)}.
+Write ${count} records for each of these models. A unique field, and fields unique together, differ in every record. Dates fall in the weeks around ${options.today ?? new Date().toISOString().slice(0, 10)}.
 ${lines.join("\n")}`;
   try {
     const answer = (await completeJson(
