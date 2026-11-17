@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
+import { AppLink } from "./AppLink";
 import type { Turn } from "./ask";
 import type { Answer } from "./assistant.server";
 import { Shown } from "./Inspector";
@@ -93,6 +94,7 @@ export function Ask({
   confirm,
   texts = {},
   ai,
+  privacy,
 }: {
   /** Who is asking (a person's id, or "visitor"): whose conversation the tab keeps. */
   who: string;
@@ -101,7 +103,9 @@ export function Ask({
   confirm?: (proposal: string) => Promise<unknown>;
   texts?: AskTexts;
   /** Where the model runs (aiFacts): said at the first interaction; none when there is no model. */
-  ai?: { provider?: string; region?: string } | null;
+  ai?: { provider?: string; region?: string; eu?: true } | null;
+  /** The app's privacy page, linked from the notice's "Which AI?" overlay. */
+  privacy?: string;
 }) {
   const name = texts.name ?? w.ask;
   const sheet = useRef<HTMLDialogElement>(null);
@@ -109,6 +113,7 @@ export function Ask({
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState<Asked[]>([]);
   const [busy, setBusy] = useState(false);
+  const [which, setWhich] = useState(false);
   const end = useRef<HTMLLIElement>(null);
   // The tab's conversation for this person, once the page runs in the browser; another person's
   // (signed out, or someone else signed in) is forgotten.
@@ -191,17 +196,50 @@ export function Ask({
             </div>
           )}
           {ai && (
-            // That it is AI, where the question goes, at the first interaction and on (U6).
-            <p
+            // That it is AI, may be wrong and what is sent, at the first interaction and on (U6);
+            // which service and where, under "Which AI?".
+            <div
               data-part="ai-notice"
-              className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground"
+              className="relative rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground"
             >
-              {w.aiNotice(
-                ai.region
-                  ? w.aiIn(ai.provider ?? w.aiConfigured, ai.region)
-                  : (ai.provider ?? w.aiConfigured),
+              <p>
+                {w.aiNotice(Boolean(ai.eu))}{" "}
+                <button
+                  type="button"
+                  data-part="which-ai"
+                  aria-expanded={which}
+                  className="cursor-pointer underline"
+                  onClick={() => setWhich(!which)}
+                >
+                  {w.aiWhich}
+                </button>
+              </p>
+              {which && (
+                <div
+                  data-part="which-ai-overlay"
+                  className="absolute inset-x-0 top-full z-10 mt-1 space-y-1 rounded-md border bg-card p-3 text-card-foreground shadow-lg"
+                >
+                  <p>
+                    {w.aiSentTo(
+                      ai.region
+                        ? w.aiIn(ai.provider ?? w.aiConfigured, ai.region)
+                        : (ai.provider ?? w.aiConfigured),
+                    )}
+                  </p>
+                  <p>{w.aiWhat}</p>
+                  {privacy && (
+                    <p>
+                      <AppLink href={privacy} className="underline">
+                        {w.privacy}
+                      </AppLink>
+                    </p>
+                  )}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setWhich(false)}>
+                    {w.close}
+                  </Button>
+                </div>
               )}
-            </p>
+            </div>
           )}
           <ol className="space-y-3">
             {asked.map((a, i) => (

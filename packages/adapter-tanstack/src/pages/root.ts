@@ -463,7 +463,7 @@ ${analytics ? "  useEffect(() => startAnalytics(analytics), []);\n" : ""}${
           {children}
         </AppShell>`
         }
-${asking ? `        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai} ask={(question, turns) => askApp({ data: { question, turns } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}${t.translated ? "        <LanguageSwitch path={pathname} />\n" : ""}        <Consent${consentProps} />
+${asking ? `        {asks && <Ask who={viewer?.id ?? "visitor"} ai={ai}${privacy ? ` privacy=${JSON.stringify(privacy)}` : ""} ask={(question, turns) => askApp({ data: { question, turns } })}${confirming ? " confirm={(id) => confirmApp({ data: { id } })}" : ""}${assistant && Object.keys(assistant).length ? ` texts={${JSON.stringify(assistant)}}` : ""} />}\n` : ""}${t.translated ? "        <LanguageSwitch path={pathname} />\n" : ""}        <Consent${consentProps} />
         <Scripts />
       </body>
     </html>

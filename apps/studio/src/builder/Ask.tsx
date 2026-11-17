@@ -44,6 +44,7 @@ interface Said {
 
 export function Ask({
   ai,
+  aiEu,
   assumptions = [],
   show,
   stage = "window",
@@ -98,6 +99,8 @@ export function Ask({
   assumptions?: Assumption[];
   /** Where Smith's requests may go, for his AI notice (legal-1.0 U6); empty: no model in use. */
   ai?: string[];
+  /** Every model Smith may use runs in the EU (the service says so): the notice says it. */
+  aiEu?: true;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -661,7 +664,7 @@ export function Ask({
       )}
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {/* Whenever Smith can be asked, the app being made included (legal-1.0 U6). */}
-        {ai && <AiNotice to={ai} />}
+        {ai && <AiNotice to={ai} eu={Boolean(aiEu)} />}
         {ready && !making && (
           <Greeting ready={ready} presenting={partsSaid > 0} sound={speech.canSpeak} />
         )}
@@ -1521,16 +1524,65 @@ function ReadyAnswer({ shown, ready }: { shown: "next" | "publish"; ready: Ready
 
 /**
  * That Smith is AI, at the first interaction and on (legal-1.0 U6, the AI Act's Article 50):
- * answers may be wrong, and where the question and the records it needs may be sent. With no
- * model configured Smith answers by rule, and says nothing leaves Studio.
+ * answers may be wrong, and that what you ask with the app's files may be sent to an AI service;
+ * which one and where under "Which AI?". With no model configured Smith answers by rule, and says
+ * nothing leaves Studio.
  */
-function AiNotice({ to }: { to: string[] }) {
+function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
+  const [which, setWhich] = useState(false);
+  if (!to.length)
+    return (
+      <p data-part="ai-notice" className="rounded-md bg-subtle px-3 py-2 text-xs text-muted">
+        No AI model is in use here: Smith answers by rule, and nothing you type leaves Studio.
+      </p>
+    );
   return (
-    <p data-part="ai-notice" className="rounded-md bg-subtle px-3 py-2 text-xs text-muted">
-      {to.length
-        ? `AI assistant — answers may be wrong. What you ask, with the app's files and this conversation, may be sent to ${to.join(" or ")}. Do not include prohibited sensitive information.`
-        : "No AI model is in use here: Smith answers by rule, and nothing you type leaves Studio."}
-    </p>
+    <div
+      data-part="ai-notice"
+      className="relative rounded-md bg-subtle px-3 py-2 text-xs text-muted"
+    >
+      <p>
+        {`AI assistant — answers may be wrong. What you ask, with the app's files and this conversation, may be sent to an AI service${eu ? ", processed in the EU" : ""}. Do not include prohibited sensitive information.`}{" "}
+        <button
+          type="button"
+          data-part="which-ai"
+          aria-expanded={which}
+          className="cursor-pointer text-accent underline"
+          onClick={() => setWhich(!which)}
+        >
+          Which AI?
+        </button>
+      </p>
+      {which && (
+        <div
+          data-part="which-ai-overlay"
+          className="absolute inset-x-0 top-full z-10 mt-1 space-y-1 rounded-md border border-line bg-surface p-3 text-fg shadow-lg"
+        >
+          <p>{`Sent to ${to.join(" or ")}.`}</p>
+          <p>
+            What is sent: your question, this conversation, and the app's files the answer needs.
+            Nothing is sent before you ask.
+          </p>
+          <p>
+            <a
+              href="https://smithable.ai/legal/privacy"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent underline"
+            >
+              Privacy
+            </a>
+          </p>
+          <button
+            type="button"
+            className="cursor-pointer underline"
+            onClick={() => setWhich(false)}
+          >
+            Close
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

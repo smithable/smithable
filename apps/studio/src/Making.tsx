@@ -52,7 +52,7 @@ export function Making({
   project,
 }: {
   making: MakingState;
-  project: Pick<Project, "plugins" | "ownThemes" | "waiting" | "ai">;
+  project: Pick<Project, "plugins" | "ownThemes" | "waiting" | "ai" | "aiEu">;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -158,7 +158,12 @@ export function Making({
       )}
       {/* The words box from the start: what is typed is made once the app is in place. */}
       <div className="-mx-4 rounded-lg border border-line bg-panel">
-        <Ask making waiting={project.waiting} {...(project.ai ? { ai: project.ai } : {})} />
+        <Ask
+          making
+          waiting={project.waiting}
+          {...(project.ai ? { ai: project.ai } : {})}
+          {...(project.aiEu ? { aiEu: true } : {})}
+        />
       </div>
       {/* A place for an animation later (docs/design/while-it-is-made.md §7). */}
       <div data-slot="making-animation" />

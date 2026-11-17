@@ -707,7 +707,7 @@ try {
         // (legal-1.0 U6).
         await page
           .locator('[data-part="ai-notice"]', {
-            hasText: "may be sent to a model on this computer",
+            hasText: "may be sent to an AI service",
           })
           .first()
           .waitFor();

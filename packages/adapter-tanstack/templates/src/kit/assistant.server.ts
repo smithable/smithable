@@ -59,15 +59,18 @@ export interface Answer {
 
 /**
  * Where the assistant's model runs, for its notice (legal-1.0 U6): the provider and the region the
- * host names (ASSISTANT_PROVIDER, _REGION); none when no model is set up, so answers come from the
+ * host names (ASSISTANT_PROVIDER, _REGION, and _EU=1 when all of it runs in the EU); none when no model is set up, so answers come from the
  * records alone and nothing is sent anywhere.
  */
-export function aiFacts(): { provider?: string; region?: string } | null {
-  const { ASSISTANT_URL, ASSISTANT_MODEL, ASSISTANT_PROVIDER, ASSISTANT_REGION } = process.env;
+export function aiFacts(): { provider?: string; region?: string; eu?: true } | null {
+  const { ASSISTANT_URL, ASSISTANT_MODEL, ASSISTANT_PROVIDER, ASSISTANT_REGION, ASSISTANT_EU } =
+    process.env;
   if (!ASSISTANT_URL || !ASSISTANT_MODEL) return null;
   return {
     ...(ASSISTANT_PROVIDER ? { provider: ASSISTANT_PROVIDER } : {}),
     ...(ASSISTANT_REGION ? { region: ASSISTANT_REGION } : {}),
+    // Every model of the app's level runs in the EU: the service says so; the app never guesses.
+    ...(ASSISTANT_EU === "1" ? { eu: true as const } : {}),
   };
 }
 
