@@ -112,6 +112,7 @@ The app reads these from its environment. None is needed beyond the ones `smitha
 |---|---|---|
 | `ASSISTANT_URL`, `ASSISTANT_KEY`, `ASSISTANT_MODEL` | none | The model Ask uses (an OpenAI-compatible address, its key, the model's name). Without them Ask answers from the records alone and sends nothing anywhere. |
 | `ASSISTANT_PROVIDER`, `ASSISTANT_REGION` | none | Who runs that model and where, as Ask's notice tells its users. |
+| `ASSISTANT_EU` | none | `1` when every model of that service runs in the EU: Ask's notice then says the questions are processed in the EU. |
 | `OUTGOING_<TARGET>_URL`, `OUTGOING_<TARGET>_SECRET` | none | Where an outgoing entry's calls go, and the secret they are signed with. Until both are set, the calls wait. |
 | `INCOMING_<NAME>_SECRET` | none | The secret an incoming entry's caller signs with. Without it the entry refuses every call. |
 | `INCOMING_<NAME>_ADDRESS` | `MAIL_FROM` | For an incoming mail entry: the mailbox it is fed from, given as `Reply-To` on the app's mail in its threads. |

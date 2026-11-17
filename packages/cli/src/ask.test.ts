@@ -37,6 +37,25 @@ test("a proposal's outcome is logged under its id, for training data", () => {
   });
 });
 
+test("Smith's notice says processed in the EU only when the service says so and only its model is allowed (T876)", async () => {
+  const { aiInEu } = await import("./ask.js");
+  const hosted = { SMITHABLE_MODEL: "m", SMITHABLE_MODEL_URL: "https://x" };
+  expect(aiInEu({ ...hosted, ASSISTANT_EU: "1" })).toBe(true);
+  expect(aiInEu(hosted)).toBe(false);
+  expect(aiInEu({ ...hosted, ASSISTANT_REGION: "the EU" })).toBe(false);
+  expect(aiInEu({ ASSISTANT_EU: "1" })).toBe(false);
+  // A frontier model beside it: not every model runs where the service says.
+  expect(
+    aiInEu({
+      ...hosted,
+      ASSISTANT_EU: "1",
+      SMITHABLE_FRONTIER: "anthropic",
+      SMITHABLE_FRONTIER_MODEL: "c",
+      ANTHROPIC_API_KEY: "k",
+    }),
+  ).toBe(false);
+});
+
 test("Smith's AI notice names where the policy's models run, and nothing without a model (legal-1.0 U6)", async () => {
   const { aiDestinations } = await import("./ask.js");
   expect(aiDestinations({})).toEqual([]);

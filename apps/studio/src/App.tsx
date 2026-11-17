@@ -1003,6 +1003,8 @@ export function App() {
     <div data-guide="change" className="flex h-full min-h-0 flex-col">
       <Ask
         {...(project.ai ? { ai: project.ai } : {})}
+        {...(project.aiEu ? { aiEu: true } : {})}
+        {...(project.aiPrivacy ? { aiPrivacy: project.aiPrivacy } : {})}
         stage={stage}
         show={show}
         previewRuns={previewRuns}

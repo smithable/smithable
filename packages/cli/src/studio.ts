@@ -23,6 +23,7 @@ import {
 import { describeChange } from "@smithable/index";
 import {
   aiDestinations,
+  aiInEu,
   applyProposal,
   proposalOutcome,
   proposeFor,
@@ -877,6 +878,10 @@ export async function studio(
       ...((beta) => (beta ? { beta } : {}))(readBeta(dir)),
       // Where Smith's requests may go, for his AI notice (legal-1.0 U6).
       ai: aiDestinations(),
+      ...(aiInEu() ? { aiEu: true as const } : {}),
+      // Smithable's privacy page speaks for the hosted service's model only; a self-hosted Studio
+      // sends to its own provider, so it links none.
+      ...(hostedLevel() ? { aiPrivacy: "https://smithable.ai/legal/privacy" } : {}),
       // The hosted service's workspaces (it sets the level) run on its model, which it pays for:
       // Studio's change lines then show no amounts (T750, Johan 2026-11-13).
       ...(hostedLevel() ? { servicePays: true as const } : {}),

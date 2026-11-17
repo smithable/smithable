@@ -190,6 +190,10 @@ export interface Project {
   };
   /** Where Smith's requests may go, in words, one per model the AI policy allows (U6). */
   ai?: string[];
+  /** Every model Smith may use runs in the EU, as the service says (ASSISTANT_EU). */
+  aiEu?: true;
+  /** The privacy page that covers Smith's model: the hosted service's; none self-hosted. */
+  aiPrivacy?: string;
   /** The hosted service pays for the model (its workspaces): change lines show no amounts (T750). */
   servicePays?: true;
   /** Where Smith may hear and speak (smith-speech.md §3); empty: speech is off. */

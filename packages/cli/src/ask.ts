@@ -208,6 +208,20 @@ export function aiDestinations(env: NodeJS.ProcessEnv = process.env): string[] {
 }
 
 /**
+ * Whether every model Smith may use runs in the EU, for his notice's "processed in the EU": only
+ * when the service says so (ASSISTANT_EU=1, for its EU levels) and its model is the only one the
+ * policy allows; the engine never decides it from a region's name.
+ */
+export function aiInEu(env: NodeJS.ProcessEnv = process.env): boolean {
+  const providers = providersFor(env);
+  return (
+    env.ASSISTANT_EU?.trim() === "1" &&
+    providers.length > 0 &&
+    providers.every((p) => p.name === "smithable")
+  );
+}
+
+/**
  * Where Smith may hear and speak (docs/design/smith-speech.md §3), from the same policy as his
  * requests: `browser` (the browser's own recognition and voices; under eu-only only what the
  * browser says runs on the device) and, on the hosted service, `service` (its gateway, in the EU).
