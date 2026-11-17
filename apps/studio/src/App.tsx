@@ -41,7 +41,7 @@ import { isPreviewMessage, type Place, touched, touchesPage } from "./preview";
 import { ReleaseReview, useReleaseReview } from "./ReleaseReview";
 import { ReportDialog } from "./Report";
 import { plainRefusal } from "./refusal";
-import { needsLook } from "./release-review";
+import { needsLook, trustedRelease } from "./release-review";
 import { type Bounds, type LayerMode, SmithLayer, sideFor, useSmithPlace } from "./SmithLayer";
 import { keptPage, Preview, Trace } from "./shared";
 import { useStudioQuestion } from "./studio-questions";
@@ -1851,6 +1851,7 @@ export function App() {
           loading={release.loading}
           reload={release.reload}
           home={project.home}
+          release={trustedRelease(project.beta?.release, project.home)}
           onClose={() => setReviewingRelease(false)}
         />
       )}

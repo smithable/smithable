@@ -169,6 +169,17 @@ export interface Project {
     /** The service's state (legal-1.0 item 1.11): test-only, or live within the AUP at `aup`. */
     data?: "test" | "live";
     aup?: string;
+    /**
+     * The hosted service's saved release flow (T879 S2): display only, the release page decides.
+     * `changed`: the app changed since the person reviewed it.
+     */
+    release?: {
+      url: string;
+      reviewed: string | null;
+      staging: "locked" | "todo" | "building" | "failed" | "ready" | "confirmed" | "replaced";
+      production: "locked" | "todo" | "live";
+      changed: boolean;
+    };
     /** The account at a limit of its level (T762), in the service's own words. */
     limit?: {
       limit: "projects" | "published";

@@ -101,3 +101,72 @@ export function reviewSections(review: Review): ReviewSection[] {
 
 export const needsLook = (review: Review) =>
   reviewSections(review).filter((s) => s.state === "needs-look").length;
+
+/** The hosted release flow's saved progress, as the service writes it (T879 S2). */
+export type ReleaseProgress = NonNullable<NonNullable<import("./api").Project["beta"]>["release"]>;
+
+/**
+ * The link to the service's release page and one line on where the flow stands (display only:
+ * the release page decides). A change since the review starts again from the review.
+ */
+export function releaseProgress(release: ReleaseProgress): { label: string; line: string } {
+  if (!release.reviewed)
+    return {
+      label: "Continue to publishing",
+      line: "Next: review this version on the release page.",
+    };
+  if (release.changed)
+    return {
+      label: "Continue to publishing",
+      line: "Your app changed since you reviewed it: review the new version first.",
+    };
+  if (release.production === "live")
+    return { label: "Open the release page", line: "This version is live." };
+  if (release.production === "todo")
+    return {
+      label: "Continue: put it live",
+      line: "You tried this version on staging and said it works.",
+    };
+  switch (release.staging) {
+    case "building":
+      return { label: "Open the release page", line: "Staging is being built for this version." };
+    case "ready":
+      return {
+        label: "Continue: try staging",
+        line: "Staging has this version: try it, then confirm it works.",
+      };
+    case "failed":
+      return { label: "Open the release page", line: "The staging build of this version failed." };
+    case "replaced":
+      return {
+        label: "Continue: publish to staging",
+        line: "Staging now holds another build: publish this version again.",
+      };
+    default:
+      return {
+        label: "Continue: publish to staging",
+        line: "Reviewed. Next: publish this version to staging.",
+      };
+  }
+}
+
+/**
+ * The progress only when its link is the service's own release page: the same origin as the
+ * project's home page (set by the service, not the workspace) and under /projects/. The facts file
+ * lives in a workspace its owner can edit, so its address is never trusted on its own.
+ */
+export function trustedRelease(
+  release: ReleaseProgress | undefined,
+  home: string | undefined,
+): ReleaseProgress | undefined {
+  if (!release || !home) return undefined;
+  const at = URL.parse(release.url);
+  const from = URL.parse(home);
+  // This project's own release page: home's origin and path, then /release (a second reviewer).
+  return at &&
+    from &&
+    at.origin === from.origin &&
+    at.pathname === `${from.pathname.replace(/\/$/, "")}/release`
+    ? release
+    : undefined;
+}

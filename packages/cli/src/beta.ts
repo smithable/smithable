@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { git } from "./git.js";
 
 /**
  * The beta's facts, written by the hosted service (smith-first.md §8): `{ until?, invite, guide }`,
@@ -40,6 +41,45 @@ export function limitOf(value: unknown): Limit | undefined {
   return { limit: v.limit, message: v.message.trim(), blocking, apps: v.apps };
 }
 
+/**
+ * The hosted service's saved release flow (Review, Staging, Production; the service's release page
+ * is the authority, this is display only). `changed`: the project's HEAD is no longer the commit the
+ * person reviewed, so the flow starts again from the review.
+ */
+export interface ReleaseProgress {
+  url: string;
+  reviewed: string | null;
+  staging: "locked" | "todo" | "building" | "failed" | "ready" | "confirmed" | "replaced";
+  production: "locked" | "todo" | "live";
+  changed: boolean;
+}
+const STAGING = ["locked", "todo", "building", "failed", "ready", "confirmed", "replaced"] as const;
+const PRODUCTION = ["locked", "todo", "live"] as const;
+
+/** The release progress as the service writes it, checked field by field; none when not that shape. */
+export function releaseOf(value: unknown, head: string | undefined): ReleaseProgress | undefined {
+  // `head` is the reviewed-comparable version: undefined when HEAD is unknown or the tree has changes.
+  if (!value || typeof value !== "object") return undefined;
+  const v = value as Record<string, unknown>;
+  if (typeof v.url !== "string" || URL.parse(v.url)?.protocol !== "https:") return undefined;
+  const reviewed =
+    v.reviewed === null
+      ? null
+      : typeof v.reviewed === "string" && /^[0-9a-f]{40}$/.test(v.reviewed)
+        ? v.reviewed
+        : undefined;
+  if (reviewed === undefined) return undefined;
+  if (!STAGING.includes(v.staging as never) || !PRODUCTION.includes(v.production as never))
+    return undefined;
+  return {
+    url: v.url,
+    reviewed,
+    staging: v.staging as ReleaseProgress["staging"],
+    production: v.production as ReleaseProgress["production"],
+    changed: reviewed !== null && head !== reviewed,
+  };
+}
+
 export function readBeta(dir: string):
   | {
       until?: string;
@@ -48,6 +88,7 @@ export function readBeta(dir: string):
       data?: "test" | "live";
       aup?: string;
       limit?: Limit;
+      release?: ReleaseProgress;
     }
   | undefined {
   try {
@@ -57,6 +98,12 @@ export function readBeta(dir: string):
     const data =
       value.data === "test" || value.data === "live" ? { data: value.data as "test" | "live" } : {};
     const limit = limitOf(value.limit);
+    // The version as it stands: HEAD, and no uncommitted change (an edit not yet a version is not
+    // what was reviewed either; a second reviewer).
+    const head = value.release ? git(dir, ["rev-parse", "HEAD"]) : undefined;
+    const dirty = value.release ? git(dir, ["status", "--porcelain"]) : undefined;
+    const current = head?.ok && dirty?.ok && !dirty.out.trim() ? head.out.trim() : undefined;
+    const release = releaseOf(value.release, current);
     return {
       ...text("until"),
       ...text("invite"),
@@ -64,6 +111,7 @@ export function readBeta(dir: string):
       ...data,
       ...text("aup"),
       ...(limit ? { limit } : {}),
+      ...(release ? { release } : {}),
     };
   } catch {
     return undefined;
