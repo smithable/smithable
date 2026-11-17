@@ -151,5 +151,9 @@ test("the progress is shown only when its link is the service's own release page
   expect(
     trustedRelease({ ...release, url: "https://smithable.test/elsewhere" }, home),
   ).toBeUndefined();
+  // Another project's release page on the same service is not this one's.
+  expect(
+    trustedRelease({ ...release, url: "https://smithable.test/projects/p2/release" }, home),
+  ).toBeUndefined();
   expect(trustedRelease(release, undefined)).toBeUndefined();
 });
