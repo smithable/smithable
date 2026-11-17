@@ -5,8 +5,6 @@ import { Link, type LinkProps } from "@tanstack/react-router";
 import {
   Check,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   type LucideIcon,
   Mail,
@@ -29,6 +27,7 @@ import { contactHref } from "./contact-href";
 import { dayText, numberText } from "./format";
 import { ModelTable, PicturePlaceholder } from "./ModelTable";
 import { type AppUi, type RecordUi, type Row, textMarker } from "./model";
+import { PictureDialog } from "./PictureDialog";
 import { tx, w } from "./words";
 
 export interface LandingLink {
@@ -451,7 +450,7 @@ function SectionView({
       {...sectionHooks(texts)}
       aria-labelledby={title ? `${id}-title` : undefined}
       data-layout={layout}
-      {...frame(band, "py-12")}
+      {...frame(band, "py-10 sm:py-12")}
     >
       {eyebrow && <Eyebrow texts={texts}>{eyebrow}</Eyebrow>}
       {title && (
@@ -723,7 +722,7 @@ function HeroView({
       >
         {text}
         {shortcutList && <div className="mt-16 [&_nav]:mt-0 [&_nav]:px-0">{shortcutList}</div>}
-        {cue && <div className="mt-12">{cue}</div>}
+        {cue && <div className="mt-8 sm:mt-12">{cue}</div>}
         {end}
       </section>
     );
@@ -886,7 +885,7 @@ function HeroView({
         data-hero=""
         data-height={height}
         data-layout="photo"
-        className="relative isolate flex min-h-[34rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
+        className="relative isolate flex min-h-[26rem] items-end overflow-hidden sm:min-h-[38rem] lg:min-h-[80vh] lg:items-center"
       >
         {/* Not marked: the hero under its wash or veil (AiMark.tsx). */}
         <img
@@ -907,7 +906,7 @@ function HeroView({
         />
         <div
           className={cn(
-            "mx-auto w-full max-w-(--landing-width) px-5 py-16 sm:py-24 [&_h1]:max-w-2xl",
+            "mx-auto w-full max-w-(--landing-width) px-5 py-10 sm:py-24 [&_h1]:max-w-2xl",
             wash === "brand"
               ? "text-primary-foreground [&_a]:bg-background [&_a]:text-foreground [&_a:hover]:bg-background/90 [&_p]:text-primary-foreground/90 dark:text-foreground dark:[&_a]:bg-primary dark:[&_a]:text-primary-foreground dark:[&_a:hover]:bg-primary-hover dark:[&_p]:text-foreground/90"
               : "text-white [&_p]:text-white/90",
@@ -915,7 +914,7 @@ function HeroView({
           )}
         >
           {text}
-          {!shortcutList && cue && <div className="mt-12 text-white/80">{cue}</div>}
+          {!shortcutList && cue && <div className="mt-8 text-white/80 sm:mt-12">{cue}</div>}
           {!shortcutList && end}
         </div>
       </section>,
@@ -942,12 +941,12 @@ function HeroView({
         <div aria-hidden className="absolute inset-0 -z-10 bg-black/60" />
         <div
           className={cn(
-            "mx-auto flex max-w-4xl flex-col items-center px-5 py-24 text-center text-white sm:py-36 [&_h1]:mx-auto [&_p]:mx-auto [&_p]:text-white/90",
+            "mx-auto flex max-w-4xl flex-col items-center px-5 py-16 text-center text-white sm:py-36 [&_h1]:mx-auto [&_p]:mx-auto [&_p]:text-white/90",
             shortcutList && "pb-28 sm:pb-40",
           )}
         >
           {text}
-          {!shortcutList && cue && <div className="mt-12 text-white/80">{cue}</div>}
+          {!shortcutList && cue && <div className="mt-8 text-white/80 sm:mt-12">{cue}</div>}
           {!shortcutList && end}
         </div>
       </section>,
@@ -1254,7 +1253,9 @@ function RecordCardsView({
       layout={layout ?? "cards"}
     >
       {door && (
-        <div data-part="door" className="mb-8 space-y-4">
+        // On a phone the door stays short, so the first record's picture shows on the first
+        // screen: the choices are one row to swipe, not lines of their own.
+        <div data-part="door" className="mb-6 space-y-3 sm:mb-8 sm:space-y-4">
           {door.search && (
             <search>
               <form action={door.to} method="get" className="flex max-w-xl gap-2">
@@ -1272,12 +1273,16 @@ function RecordCardsView({
             </search>
           )}
           {door.chips?.map((chip) => (
-            <nav key={chip.name} aria-label={chip.label} className="flex flex-wrap gap-2">
+            <nav
+              key={chip.name}
+              aria-label={chip.label}
+              className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0"
+            >
               {chip.options.map((option) => (
                 <AppLink
                   key={option.value}
                   href={`${door.to}?${new URLSearchParams({ [chip.name]: option.value })}`}
-                  className="inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
+                  className="inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {option.label}
                 </AppLink>
@@ -1911,79 +1916,6 @@ function GalleryView({
       </ul>
       <PictureDialog dialog={dialog} pictures={pictures} open={open} show={show} />
     </Section>
-  );
-}
-
-/** Shared full-image view: native focus/Escape plus gallery previous/next. */
-function PictureDialog({
-  dialog,
-  pictures,
-  open,
-  show,
-}: {
-  dialog: React.RefObject<HTMLDialogElement | null>;
-  pictures: { image: LandingImage; caption?: string }[];
-  open: number;
-  show: (index: number) => void;
-}) {
-  const current = pictures[open];
-  return (
-    <dialog
-      ref={dialog}
-      aria-label={current?.image.alt}
-      className="m-auto max-h-[92vh] w-[min(1200px,94vw)] bg-transparent p-0 backdrop:bg-black/85"
-      onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
-      onKeyDown={(e) => {
-        if (e.key === "ArrowRight") show(open + 1);
-        if (e.key === "ArrowLeft") show(open - 1);
-      }}
-    >
-      {current && (
-        <figure className="relative">
-          {/* As wide as the picture, so the mark sits on its corner. */}
-          <AiMarked generated={current.image.generated} full className="mx-auto w-fit">
-            <img
-              src={current.image.src}
-              alt={current.image.alt}
-              className="mx-auto block max-h-[80vh] max-w-full rounded-lg object-contain"
-            />
-          </AiMarked>
-          {current.caption && (
-            <figcaption className="mt-3 text-center text-white">{current.caption}</figcaption>
-          )}
-          <div className="mt-3 flex justify-center gap-2">
-            {pictures.length > 1 && (
-              <button
-                type="button"
-                aria-label={w.previousPicture}
-                className={buttonVariants({ variant: "secondary", size: "icon" })}
-                onClick={() => show(open - 1)}
-              >
-                <ChevronLeft aria-hidden />
-              </button>
-            )}
-            <button
-              type="button"
-              aria-label={w.close}
-              className={buttonVariants({ variant: "secondary", size: "icon" })}
-              onClick={() => dialog.current?.close()}
-            >
-              <X aria-hidden />
-            </button>
-            {pictures.length > 1 && (
-              <button
-                type="button"
-                aria-label={w.nextPicture}
-                className={buttonVariants({ variant: "secondary", size: "icon" })}
-                onClick={() => show(open + 1)}
-              >
-                <ChevronRight aria-hidden />
-              </button>
-            )}
-          </div>
-        </figure>
-      )}
-    </dialog>
   );
 }
 

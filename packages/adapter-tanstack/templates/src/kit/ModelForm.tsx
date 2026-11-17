@@ -21,6 +21,7 @@ import {
   type Options,
   textMarker,
 } from "./model";
+import { PictureDialog } from "./PictureDialog";
 import { type InUse, inUseFacts, TogetherDialog } from "./Together";
 import { clockText, whenAt } from "./time-text";
 import { w } from "./words";
@@ -376,10 +377,11 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
   if (readOnly && initial) {
     const record = { ...initial, ...computed };
     // The record's pictures large (record.pictures): its first picture field, out of the fields.
-    const pictureField = picturesLook
-      ? ui.fields.find((f) => (f.kind === "picture" || f.kind === "pictures") && !f.computed)
-      : undefined;
-    const gallery = pictureField ? picturesOf(ui, pictureField, record) : [];
+    // Without that look the field stays in its place, and on a phone it comes first.
+    const pictureField = ui.fields.find(
+      (f) => (f.kind === "picture" || f.kind === "pictures") && !f.computed,
+    );
+    const gallery = pictureField && picturesLook ? picturesOf(ui, pictureField, record) : [];
     const shownGroups = groups(ui).map((group) => ({
       ...group,
       fields: gallery.length ? group.fields.filter((f) => f !== pictureField) : group.fields,
@@ -403,15 +405,34 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
               <Gallery key={String(record.id)} pictures={gallery} />
             </div>
           )}
-          <div className={cn("space-y-6", big && picturesLook === "aside" && "lg:col-span-5")}>
+          <div
+            className={cn(
+              "flex flex-col gap-6",
+              big && picturesLook === "aside" && "lg:col-span-5",
+            )}
+          >
             {shownGroups.map((group) => (
-              <section key={group.name ?? ""} data-part="section" className="space-y-4">
+              <section
+                key={group.name ?? ""}
+                data-part="section"
+                className={cn(
+                  "space-y-4",
+                  !big &&
+                    pictureField &&
+                    group.fields.includes(pictureField) &&
+                    "max-sm:order-first",
+                )}
+              >
                 {group.title && (
                   <h2 className="text-base font-semibold" data-part="title">
                     {group.title}
                   </h2>
                 )}
-                <dl className={ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-5"}>
+                <dl
+                  className={
+                    ui.formColumns === 2 ? "grid gap-6 sm:grid-cols-2" : "flex flex-col gap-5"
+                  }
+                >
                   {/* The title is the page's heading already. */}
                   {group.fields
                     .filter((field) => field.name !== ui.titleField)
@@ -420,7 +441,10 @@ export function ModelForm<S extends z.ZodType>(props: ModelFormProps<S>) {
                         key={field.name}
                         data-kit="field"
                         data-field={field.name}
-                        className={wide(field) ? "sm:col-span-2" : undefined}
+                        className={cn(
+                          wide(field) && "sm:col-span-2",
+                          field === pictureField && "max-sm:order-first",
+                        )}
                       >
                         <dt className="text-sm font-medium text-muted-foreground">{field.label}</dt>
                         <dd
@@ -863,19 +887,27 @@ function picturesOf(ui: ModelUi, field: FieldUi, record: Record<string, unknown>
  * The pictures large, the first shown; several get a strip of thumbnails, buttons that switch the
  * large one in place, the one shown marked. An AI's picture keeps its mark.
  */
-function Gallery({ pictures }: { pictures: { src: string; alt: string; generated?: boolean }[] }) {
+function Gallery({ pictures }: { pictures: Picture[] }) {
   const [at, setAt] = useState(0);
+  const dialog = useRef<HTMLDialogElement>(null);
   const shownPicture = pictures[at] ?? pictures[0];
   if (!shownPicture) return null;
   return (
     <div data-part="gallery" className="space-y-3">
-      <AiMarked generated={shownPicture.generated} full>
-        <img
-          src={shownPicture.src}
-          alt={shownPicture.alt}
-          className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover"
-        />
-      </AiMarked>
+      <button
+        type="button"
+        aria-label={w.openPicture(shownPicture.alt || w.pictureOf(at + 1, pictures.length))}
+        onClick={() => dialog.current?.showModal()}
+        className="block w-full rounded-[var(--picture-radius,var(--radius-lg))] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <AiMarked generated={shownPicture.generated} full>
+          <img
+            src={shownPicture.src}
+            alt={shownPicture.alt}
+            className="aspect-[4/3] w-full rounded-[var(--picture-radius,var(--radius-lg))] object-cover"
+          />
+        </AiMarked>
+      </button>
       {pictures.length > 1 && (
         <ul className="flex snap-x gap-2 overflow-x-auto pb-1">
           {pictures.map((p, i) => (
@@ -898,7 +930,74 @@ function Gallery({ pictures }: { pictures: { src: string; alt: string; generated
           ))}
         </ul>
       )}
+      <PictureDialog
+        dialog={dialog}
+        pictures={pictures.map((image) => ({ image }))}
+        open={at}
+        show={(i) => setAt((i + pictures.length) % pictures.length)}
+      />
     </div>
+  );
+}
+
+type Picture = { src: string; alt: string; generated?: boolean | undefined };
+
+/**
+ * A record's pictures in their place among the fields. On a phone each is as wide as the card
+ * (several a row to swipe, the next one peeking in); on a wider screen they keep their own
+ * shape. Each opens whole over the page.
+ */
+function PictureRow({ pictures, single }: { pictures: Picture[]; single: boolean }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [open, setOpen] = useState(0);
+  const show = (i: number) => setOpen((i + pictures.length) % pictures.length);
+  return (
+    <>
+      <ul
+        data-part="pictures"
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:snap-proximity"
+      >
+        {pictures.map((p, i) => (
+          <li
+            key={p.src}
+            className={cn(
+              "shrink-0 snap-start",
+              pictures.length > 1 ? "w-[85%] sm:w-auto" : "w-full sm:w-auto",
+            )}
+          >
+            <button
+              type="button"
+              aria-label={w.openPicture(p.alt || w.pictureOf(i + 1, pictures.length))}
+              onClick={() => {
+                show(i);
+                dialog.current?.showModal();
+              }}
+              className="block w-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-fit"
+            >
+              <AiMarked generated={p.generated} className="w-full sm:w-fit">
+                <img
+                  src={p.src}
+                  alt={p.alt}
+                  loading={i ? "lazy" : undefined}
+                  className={cn(
+                    "w-full rounded-md",
+                    single
+                      ? "max-h-[70vh] object-contain sm:max-h-96 sm:w-auto"
+                      : "aspect-[3/2] object-cover sm:aspect-auto sm:h-56 sm:w-auto",
+                  )}
+                />
+              </AiMarked>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <PictureDialog
+        dialog={dialog}
+        pictures={pictures.map((image) => ({ image }))}
+        open={open}
+        show={show}
+      />
+    </>
   );
 }
 
@@ -906,35 +1005,10 @@ function Gallery({ pictures }: { pictures: { src: string; alt: string; generated
 function shown(ui: ModelUi, field: FieldUi, record: Record<string, unknown>, app: AppUi) {
   const value = record[field.name];
   const base = `/files/${ui.model?.replace(/[A-Z]/g, (c, i) => `${i ? "-" : ""}${c.toLowerCase()}`)}/${String(record.id)}/${field.name}`;
-  if (field.kind === "picture")
-    return value ? (
-      <AiMarked generated={(value as { generated?: boolean }).generated} className="w-fit">
-        <img
-          src={versioned(base, value as { file?: string })}
-          alt={String((value as { alt?: string }).alt ?? "")}
-          className="max-h-96 rounded-md object-contain"
-        />
-      </AiMarked>
-    ) : (
-      "—"
-    );
-  if (field.kind === "pictures") {
-    const pictures = Array.isArray(value) ? (value as { alt?: string; generated?: boolean }[]) : [];
+  if (field.kind === "picture" || field.kind === "pictures") {
+    const pictures = picturesOf(ui, field, record);
     return pictures.length ? (
-      <ul data-part="pictures" className="flex snap-x gap-3 overflow-x-auto pb-2">
-        {pictures.map((p, i) => (
-          <li key={`${base}/${i}`} className="shrink-0 snap-start">
-            <AiMarked generated={p.generated}>
-              <img
-                src={versioned(`${base}/${i}`, p as { file?: string })}
-                alt={p.alt ?? ""}
-                loading="lazy"
-                className="h-56 w-auto rounded-md object-cover"
-              />
-            </AiMarked>
-          </li>
-        ))}
-      </ul>
+      <PictureRow pictures={pictures} single={field.kind === "picture"} />
     ) : (
       "—"
     );
