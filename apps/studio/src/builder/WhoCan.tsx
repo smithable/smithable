@@ -17,8 +17,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { Spec } from "../engine";
 import { Button, cx, Input, Select } from "../ui";
+import { AreaSection } from "./areas";
 import type { Run } from "./ChangeForms";
 import { PendingInput, usePendingEdit } from "./pending-edit";
+import { AREAS } from "./SpecForm";
 import { WhyAccess } from "./WhyAccess";
 import {
   adminPage,
@@ -154,12 +156,23 @@ function useAdvanced(): [boolean, (open: boolean) => void] {
   ];
 }
 
+/** Who can's sections, drawn as Behavior's areas: their icons in the same line style (T907). */
+const ICONS: Record<string, string> = {
+  "Sign-in": "M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4",
+  "What each can do":
+    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
+  Records: AREAS.models?.icon ?? "",
+  "Who can": "M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18",
+  Roles:
+    "M3 5h18v14H3zM7 10a2 2 0 1 0 4 0 2 2 0 0 0-4 0M5 16c.7-1.5 2-2 4-2s3.3.5 4 2M15 9h3M15 13h3",
+  "Ask, the assistant in the app": "M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z",
+};
+
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="space-y-2">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-quiet">{title}</h3>
+    <AreaSection icon={ICONS[title] ?? ""} title={title}>
       {children}
-    </section>
+    </AreaSection>
   );
 }
 

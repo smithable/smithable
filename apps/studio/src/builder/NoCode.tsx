@@ -471,27 +471,31 @@ export function NoCode({
               </div>
             }
           >
-            <label className="flex items-center gap-2 border-b border-line px-4 py-2 text-xs text-muted">
-              <input
-                type="checkbox"
-                checked={following}
-                onChange={(event) => {
-                  const next = event.target.checked;
-                  cancelFollow();
-                  setFollowing(next);
-                  try {
-                    localStorage.setItem("smithable:follows-preview", next ? "1" : "0");
-                  } catch {}
-                  if (next && spec.ir) {
-                    const page = pageForPreviewPath(spec.ir, keptPage(), spec.content?.languages);
-                    previewPage.current = page;
-                    if (page) pending.current = { page, context: previewFollowContext() };
-                    schedule();
-                  }
-                }}
-              />
-              Follows preview
-            </label>
+            {/* Following opens the preview's page in Behavior and Layout; Who can and Content have
+                no page to follow, so they do not offer it (T907). */}
+            {(sub === "behavior" || sub === "layout") && (
+              <label className="flex items-center gap-2 border-b border-line px-4 py-2 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={following}
+                  onChange={(event) => {
+                    const next = event.target.checked;
+                    cancelFollow();
+                    setFollowing(next);
+                    try {
+                      localStorage.setItem("smithable:follows-preview", next ? "1" : "0");
+                    } catch {}
+                    if (next && spec.ir) {
+                      const page = pageForPreviewPath(spec.ir, keptPage(), spec.content?.languages);
+                      previewPage.current = page;
+                      if (page) pending.current = { page, context: previewFollowContext() };
+                      schedule();
+                    }
+                  }}
+                />
+                Follows preview
+              </label>
+            )}
             {sub === "behavior" ? (
               <>
                 <Summary sections={sections} onJump={jumpTo} />
