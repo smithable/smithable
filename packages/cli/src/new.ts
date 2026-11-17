@@ -549,6 +549,10 @@ export async function create(
         ir,
         ...(texts ? { content: texts } : {}),
         providers,
+        // A replay asks on the day it was recorded (SMITHABLE_TODAY, T784): the dates are in the request.
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(process.env.SMITHABLE_TODAY ?? "")
+          ? { today: process.env.SMITHABLE_TODAY }
+          : {}),
       });
       if (drafted.usage.length) io.out(`${usageLine(drafted.usage)}\n`);
       draftedSamples = drafted.samples;

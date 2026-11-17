@@ -40,6 +40,7 @@ export type {
   OpenAICompatibleOptions,
   Policy,
   Provider,
+  RecordedRequest,
   ResponseStore,
   Tier,
   Usage,

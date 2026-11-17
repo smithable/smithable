@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { aiProviders, proposalOutcome, speechProviders, usageLine } from "./ask.js";
+import { aiProviders, folderStore, proposalOutcome, speechProviders, usageLine } from "./ask.js";
 import { tempDir } from "./test-dir.js";
 
 test("a change a wording rule read says so, not that no model was used", () => {
@@ -140,6 +140,47 @@ test("a replay answers from the recording only, and a fixture keeps what it read
   rmSync(fixture, { recursive: true, force: true });
   expect(await model.complete({ ...request, maxOutputTokens: 4096 })).toMatchObject({ text: "{}" });
   await expect(model.complete({ ...request, maxOutputTokens: 500 })).rejects.toThrow(
+    "Not in the recording",
+  );
+});
+
+test("a recording keeps each request; a loose replay answers a changed system prompt by model and user text", async () => {
+  const recording = tempDir("loose-recording-");
+  const store = folderStore(recording);
+  const request = {
+    provider: "anthropic",
+    model: "claude-haiku-5-5",
+    system: "rules v1",
+    user: "a booking app",
+    schema: { type: "object" },
+  };
+  await store.set(
+    "ab12",
+    JSON.stringify({ text: '{"v":1}', model: "claude-haiku-5-5", inputTokens: 1, outputTokens: 1 }),
+    request,
+  );
+  // What was asked is kept, the long parts once by their hash.
+  const kept = JSON.parse(readFileSync(join(recording, "requests", "ab12.json"), "utf8"));
+  expect(kept).toMatchObject({ user: "a booking app", model: "claude-haiku-5-5" });
+  expect(readFileSync(join(recording, "parts", `${kept.system}.txt`), "utf8")).toBe("rules v1");
+  const log = join(tempDir("loose-log-"), "loose.log");
+  const env = {
+    SMITHABLE_FRONTIER: "anthropic",
+    SMITHABLE_FRONTIER_MODEL: "claude-haiku-5-5",
+    ANTHROPIC_API_KEY: "replay-asks-no-model",
+    SMITHABLE_LLM_CACHE: tempDir("loose-fixture-"),
+    SMITHABLE_LLM_CACHE_FROM: recording,
+    SMITHABLE_LLM_LOOSE_LOG: log,
+  };
+  const changed = { system: "rules v2", user: "a booking app", schema: { type: "object" } };
+  // An exact replay refuses the changed prompt; a loose one answers it and says so in its log.
+  const [exact] = aiProviders({ ...env, SMITHABLE_LLM_REPLAY: "1" });
+  await expect(exact?.complete(changed)).rejects.toThrow("Not in the recording");
+  const [loose] = aiProviders({ ...env, SMITHABLE_LLM_REPLAY: "loose" });
+  expect(await loose?.complete(changed)).toMatchObject({ text: '{"v":1}' });
+  expect(readFileSync(log, "utf8").trim().split("\n")).toHaveLength(1);
+  // Another description is still not in the recording.
+  await expect(loose?.complete({ ...changed, user: "a shop" })).rejects.toThrow(
     "Not in the recording",
   );
 });
