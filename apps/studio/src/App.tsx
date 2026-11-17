@@ -1004,6 +1004,7 @@ export function App() {
       <Ask
         {...(project.ai ? { ai: project.ai } : {})}
         {...(project.aiEu ? { aiEu: true } : {})}
+        {...(project.aiPrivacy ? { aiPrivacy: project.aiPrivacy } : {})}
         stage={stage}
         show={show}
         previewRuns={previewRuns}

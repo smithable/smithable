@@ -45,6 +45,7 @@ interface Said {
 export function Ask({
   ai,
   aiEu,
+  aiPrivacy,
   assumptions = [],
   show,
   stage = "window",
@@ -101,6 +102,8 @@ export function Ask({
   ai?: string[];
   /** Every model Smith may use runs in the EU (the service says so): the notice says it. */
   aiEu?: true;
+  /** The privacy page covering Smith's model (the hosted service's); none self-hosted. */
+  aiPrivacy?: string;
   /** A change was made. */
   onDone?: () => void;
   onEdit?: (prefill: Prefill) => void;
@@ -664,7 +667,7 @@ export function Ask({
       )}
       <div ref={scroller} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {/* Whenever Smith can be asked, the app being made included (legal-1.0 U6). */}
-        {ai && <AiNotice to={ai} eu={Boolean(aiEu)} />}
+        {ai && <AiNotice to={ai} eu={Boolean(aiEu)} privacy={aiPrivacy} />}
         {ready && !making && (
           <Greeting ready={ready} presenting={partsSaid > 0} sound={speech.canSpeak} />
         )}
@@ -1528,7 +1531,15 @@ function ReadyAnswer({ shown, ready }: { shown: "next" | "publish"; ready: Ready
  * which one and where under "Which AI?". With no model configured Smith answers by rule, and says
  * nothing leaves Studio.
  */
-function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
+function AiNotice({
+  to,
+  eu,
+  privacy,
+}: {
+  to: string[];
+  eu: boolean;
+  privacy?: string | undefined;
+}) {
   const [which, setWhich] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const overlay = useId();
@@ -1548,7 +1559,7 @@ function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
       className="relative rounded-md bg-subtle px-3 py-2 text-xs text-muted"
     >
       <p>
-        {`AI assistant — answers may be wrong. What you ask, with the app's files and this conversation, may be sent to an AI service${eu ? ", processed in the EU" : ""}. Do not include prohibited sensitive information.`}{" "}
+        {`AI assistant — answers may be wrong. What you ask, with the app's files and this conversation, may be sent to an AI service${eu ? " and processed in the EU" : ""}. Do not include prohibited sensitive information.`}{" "}
         <button
           type="button"
           ref={trigger}
@@ -1580,16 +1591,13 @@ function AiNotice({ to, eu }: { to: string[]; eu: boolean }) {
           <p>
             What is sent: your question, this conversation, and the app's files the answer needs.
           </p>
-          <p>
-            <a
-              href="https://smithable.ai/legal/privacy"
-              target="_blank"
-              rel="noreferrer"
-              className="text-accent underline"
-            >
-              Privacy
-            </a>
-          </p>
+          {privacy && (
+            <p>
+              <a href={privacy} target="_blank" rel="noreferrer" className="text-accent underline">
+                Privacy
+              </a>
+            </p>
+          )}
           <button type="button" className="cursor-pointer underline" onClick={close}>
             Close
           </button>

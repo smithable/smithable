@@ -52,7 +52,7 @@ export function Making({
   project,
 }: {
   making: MakingState;
-  project: Pick<Project, "plugins" | "ownThemes" | "waiting" | "ai" | "aiEu">;
+  project: Pick<Project, "plugins" | "ownThemes" | "waiting" | "ai" | "aiEu" | "aiPrivacy">;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -163,6 +163,7 @@ export function Making({
           waiting={project.waiting}
           {...(project.ai ? { ai: project.ai } : {})}
           {...(project.aiEu ? { aiEu: true } : {})}
+          {...(project.aiPrivacy ? { aiPrivacy: project.aiPrivacy } : {})}
         />
       </div>
       {/* A place for an animation later (docs/design/while-it-is-made.md §7). */}

@@ -65,7 +65,7 @@ export const w = {
   ai: "AI",
   // Said at the assistant's first interaction (legal-1.0 U6, the AI Act's Article 50).
   aiNotice: (eu: boolean) =>
-    `AI assistant — answers may be wrong. Your question and relevant records you are allowed to access may be sent to an AI service${eu ? ", processed in the EU" : ""}. Do not include prohibited sensitive information.`,
+    `AI assistant — answers may be wrong. Your question and relevant records you are allowed to access may be sent to an AI service${eu ? " and processed in the EU" : ""}. Do not include prohibited sensitive information.`,
   aiWhich: "Which AI?",
   aiSentTo: (to: string) => `Sent to ${to}.`,
   aiWhat:
