@@ -3851,7 +3851,7 @@ async function marketplaceFlow(dir, base) {
     if ((await record.getAttribute("data-pictures")) !== "aside")
       throw new Error("the item's photos are not beside its details");
     // Several photos: a thumbnail switches the large one in place, and is marked.
-    const thumbs = gallery.getByRole("button");
+    const thumbs = gallery.locator("button[aria-pressed]");
     if ((await thumbs.count()) > 1) {
       const large = gallery.locator("img").first();
       const before = await large.getAttribute("src");
@@ -3870,6 +3870,40 @@ async function marketplaceFlow(dir, base) {
     if (await page.getByRole("button", { name: /Remove|Add pictures/ }).count())
       throw new Error("a visitor's item page offers to change its pictures");
     console.log("  ✓ browser: a visitor sees an item's pictures and texts, without form controls");
+
+    // On a phone (T930): the item's picture is as wide as its card, never cut off, and opens
+    // whole; the landing page and the list show a first item picture on the first screen.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(page, `${base}/1`);
+    const large = gallery.locator("img").first();
+    await large.waitFor({ timeout: 10000 * P });
+    const [shot, card] = await Promise.all([large.boundingBox(), record.boundingBox()]);
+    if (!shot || !card || shot.x < card.x || shot.x + shot.width > card.x + card.width + 0.5)
+      throw new Error(
+        `on a phone the item's picture is cut off (${JSON.stringify({ shot, card })})`,
+      );
+    if (shot.width < card.width * 0.8)
+      throw new Error(`on a phone the item's picture is ${shot.width}px of a ${card.width}px card`);
+    await gallery.getByRole("button", { name: /^Open / }).click();
+    await page.locator("dialog[open] img").waitFor({ timeout: 5000 * P });
+    await page.keyboard.press("Escape");
+    for (const path of ["/welcome", "/"]) {
+      await open(page, `${base}${path}`);
+      const top = await page.evaluate(() => {
+        const img = [...document.querySelectorAll("img")].find((i) =>
+          i.getAttribute("src")?.startsWith("/files/"),
+        );
+        return img ? img.getBoundingClientRect().top : null;
+      });
+      if (top === null || top >= 844)
+        throw new Error(
+          `on a phone ${path} shows no item picture on the first screen (top ${top})`,
+        );
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    console.log(
+      "  ✓ browser: on a phone an item's picture fills its card and opens whole, and the landing page and list show one on the first screen",
+    );
 
     await signInAs(page, base, "member");
     await open(page, `${base}/new`);
