@@ -323,7 +323,6 @@ export function Ask({
                 {busy ? w.asking : name}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">{w.aiMayBeWrong}</p>
           </form>
         </div>
       </dialog>

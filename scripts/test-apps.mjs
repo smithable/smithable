@@ -5453,8 +5453,9 @@ async function askPanelFlow(dir, base) {
     await answered.getByText("From your records").waitFor({ timeout: 10000 * P });
     const number = await answered.locator(".text-2xl").textContent();
     if (!/^\d+$/.test(number ?? "")) throw new Error(`Ask answered ${number}`);
-    if (!(await sheet.getByText("Answers may come from an AI and can be wrong.").isVisible()))
-      throw new Error("Ask does not say answers may come from an AI");
+    // That it is AI is said once, in the notice at the first question (T876), not under each answer.
+    if (await sheet.getByText("Answers may come from an AI and can be wrong.").count())
+      throw new Error("Ask still repeats the AI line under its answers");
     // T885: the shared reader pauses and resumes without replay; the voice menu samples,
     // speed is numeric, and closing the panel stops its reader. All speech is a local stand-in.
     const label = sheet.locator("[data-ask-label]");
