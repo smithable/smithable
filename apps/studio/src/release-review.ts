@@ -162,7 +162,11 @@ export function trustedRelease(
   if (!release || !home) return undefined;
   const at = URL.parse(release.url);
   const from = URL.parse(home);
-  return at && from && at.origin === from.origin && /^\/projects\/[^/]+\/release$/.test(at.pathname)
+  // This project's own release page: home's origin and path, then /release (a second reviewer).
+  return at &&
+    from &&
+    at.origin === from.origin &&
+    at.pathname === `${from.pathname.replace(/\/$/, "")}/release`
     ? release
     : undefined;
 }
