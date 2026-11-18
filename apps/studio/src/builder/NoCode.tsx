@@ -3,8 +3,8 @@
 // lands here: a part picked in Select opens Behavior at it, columns dragged and texts changed in
 // place are made as changes.
 import { formatFormula, humanize, kebab, type ModelIR } from "@smithable/core";
-import { describeChange, type SummarySection, summarize } from "@smithable/index";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { describeChange } from "@smithable/index";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
 import {
@@ -28,6 +28,7 @@ import { PendingEdits, usePendingEdits } from "./pending-edit";
 import { PreviewNavigation, pageForPreviewPath } from "./preview-follow";
 import { ReferenceCreationProvider } from "./ReferenceCreationProvider";
 import { SpecForm } from "./SpecForm";
+import { entryOf, type OpenPart } from "./summary-tab";
 import { TimerForm } from "./TimerForm";
 import { UxSource } from "./UxSource";
 import { WhoCan } from "./WhoCan";
@@ -73,105 +74,7 @@ function ValueOrigin({ models, concept }: { models: ModelIR[]; concept: string }
 
 /** The event that opens a part of the app in Behavior (Smith's answer leads there). */
 export const OPEN_PART = "smithable:open-part";
-export type OpenPart = string | { file: string; path: (string | number)[] };
-
-/** Where a summary's part is set: its entry in Behavior, or Who can for sign-in and access. */
-function entryOf(concept: OpenPart): { sub: SubView; path: (string | number)[] } | undefined {
-  if (typeof concept !== "string") {
-    const subs: Record<string, SubView> = {
-      "smithable.auth.yml": "who",
-      "smithable.ux.yml": "layout",
-      "smithable.content.yml": "content",
-    };
-    const file = concept.file.split(/[\\/]/).at(-1) ?? concept.file;
-    return { sub: subs[file] ?? "behavior", path: concept.path };
-  }
-  const [kind = "", name = ""] = concept.split(/:(.*)/s);
-  const area = {
-    model: "models",
-    action: "actions",
-    query: "queries",
-    outgoing: "outgoing",
-    timer: "timers",
-    incoming: "incoming",
-    page: "pages",
-  }[kind];
-  if (area) return { sub: "behavior", path: [area, name] };
-  if (kind === "app" || kind === "pages") return { sub: "behavior", path: [kind] };
-  if (kind === "auth") return { sub: "who", path: [] };
-  return undefined;
-}
-
-/**
- * The app in plain words (studio-v3.md §5, Johan 2026-10-17): summarize()'s sentences at the
- * top of Behavior, the first parts shown and the rest behind Show all. Each sentence leads to
- * the entry it was made from; nothing here is edited.
- */
-function Summary({
-  sections,
-  onJump,
-}: {
-  sections: SummarySection[];
-  onJump: (at: { sub: SubView; path: (string | number)[] }) => void;
-}) {
-  const [all, setAll] = useState(false);
-  // Folded, a few lines, so what follows the description is in view (Johan, 2026-10-23).
-  const SECTIONS = 2;
-  const SENTENCES = 3;
-  const shown = all ? sections : sections.slice(0, SECTIONS);
-  const more =
-    sections.length > SECTIONS || shown.some((section) => section.sentences.length > SENTENCES);
-  const jump = (
-    at: { sub: SubView; path: (string | number)[] } | undefined,
-    text: string,
-    key: string,
-  ) =>
-    at ? (
-      <button
-        key={key}
-        type="button"
-        className="text-left hover:text-accent hover:underline"
-        onClick={() => onJump(at)}
-      >
-        {text}
-      </button>
-    ) : (
-      <span key={key}>{text}</span>
-    );
-  return (
-    <section aria-label="The app in words" className="space-y-3 border-b border-line p-4 text-sm">
-      {shown.map((section) => {
-        const at = entryOf(section.concept);
-        return (
-          <div key={section.concept} className="space-y-1">
-            <h3 className="font-medium">{jump(at, section.title, "title")}</h3>
-            {(all ? section.sentences : section.sentences.slice(0, SENTENCES)).map(
-              (sentence, i) => {
-                // A field's own line leads to the field; the others to their part.
-                const field = section.fields?.find((f) => f.text === sentence.replace(/^- /, ""));
-                const to =
-                  field && at ? { sub: at.sub, path: [...at.path, "fields", field.field] } : at;
-                return (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a section's sentences are by their place
-                  <p key={i}>{jump(to, sentence.replace(/^- /, ""), `s${i}`)}</p>
-                );
-              },
-            )}
-          </div>
-        );
-      })}
-      {more && (
-        <button
-          type="button"
-          className="text-xs text-accent underline"
-          onClick={() => setAll(!all)}
-        >
-          {all ? "Show less" : "Show all"}
-        </button>
-      )}
-    </section>
-  );
-}
+export type { OpenPart };
 
 /** Behavior's Add for a kind of record, a page or an action: the creation wizard, not a name. */
 function AddByWizard({
@@ -266,10 +169,6 @@ export function NoCode({
   const [picked, setPicked] = useState(place.selection);
   const words = (op: string, args: Record<string, unknown>) =>
     spec.ir ? describeChange(op, args, spec.ir, spec.content) : undefined;
-  const sections = useMemo(
-    () => (spec.ir ? summarize(spec.ir, spec.auth, spec.content, spec.plugins, spec.ux) : []),
-    [spec],
-  );
   flush.current = () => {
     const next = pending.current;
     if (!next || !following || followingBlocked || edits.pending()) return;
@@ -483,7 +382,6 @@ export function NoCode({
           >
             {sub === "behavior" ? (
               <>
-                <Summary sections={sections} onJump={jumpTo} />
                 <SpecForm
                   // A new pick opens the form afresh down to it.
                   key={JSON.stringify(opened ?? null)}

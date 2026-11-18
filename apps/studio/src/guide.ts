@@ -20,7 +20,7 @@ const NOCODE: Stop[] = [
   {
     anchor: "manual",
     title: "By hand",
-    text: "Here you can change the app by hand: No code, in plain words and forms, or Code, the definition itself as text.",
+    text: "Here you can change the app by hand: No code, in plain words and forms, or Code, the definition itself as text. Summary tells the whole app in plain words, each line opening where it is set.",
   },
   {
     anchor: "behavior",

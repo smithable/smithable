@@ -451,18 +451,46 @@ try {
     },
   );
   await step(
-    "the app in words tops Behavior, the rest behind Show all; a sentence opens the entry it was made from",
+    "the app in words is its own tab: sections folded with icons, the first open; a line opens its part in No code, or in Code when chosen; Behavior no longer shows it",
     async () => {
-      const words = page.getByRole("region", { name: "The app in words" });
-      await words.getByRole("button", { name: "Show all" }).click();
-      // The customers' email (the first kind of record that has one).
-      await words.getByRole("button", { name: "an email (unique)", exact: true }).first().click();
+      if (await page.getByRole("region", { name: "The app in words" }).count())
+        throw new Error("Behavior still shows the summary");
+      const tabs = page.locator("[data-subtabs]");
+      await tabs.getByRole("tab", { name: "Summary", exact: true }).click();
+      const summary = page.getByRole("region", { name: "Summary", exact: true });
+      const toggles = summary.locator("button[aria-expanded]");
+      if ((await toggles.first().getAttribute("aria-expanded")) !== "true")
+        throw new Error("the first section is not open");
+      if ((await toggles.nth(1).getAttribute("aria-expanded")) !== "false")
+        throw new Error("the other sections are not folded");
+      if ((await summary.locator("svg").count()) < (await toggles.count()))
+        throw new Error("a section has no icon");
+      // The customers' email (the first kind of record that has one), in No code.
+      const unfold = summary.getByRole("button", { name: /^Unfold Customer/ }).first();
+      await unfold.press("Enter");
+      const email = summary.getByRole("button", { name: "an email (unique)", exact: true }).first();
+      await email.click();
       await page
         .getByRole("region", { name: "What the app does" })
         .locator("details[open]", { has: page.locator('summary:text-is("email")') })
         .first()
         .waitFor();
-      await words.getByRole("button", { name: "Show less" }).click();
+      // Kept while Studio is open: the section unfolded before is unfolded again.
+      await tabs.getByRole("tab", { name: "Summary", exact: true }).click();
+      await summary
+        .getByRole("button", { name: /^Fold Customer/ })
+        .first()
+        .waitFor();
+      // The same line in Code.
+      await summary.getByRole("button", { name: "Open links in Code" }).click();
+      await email.click();
+      await page.getByRole("region", { name: "Code", exact: true }).waitFor();
+      await tabs.getByRole("tab", { name: "Code", selected: true }).waitFor();
+      // Back to No code for the steps after, its setting too.
+      await tabs.getByRole("tab", { name: "Summary", exact: true }).click();
+      await summary.getByRole("button", { name: "Open links in No code" }).click();
+      await tabs.getByRole("tab", { name: "No code", exact: true }).click();
+      await page.getByRole("tab", { name: "Behavior" }).waitFor();
     },
   );
   await step(

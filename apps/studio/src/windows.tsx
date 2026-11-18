@@ -5,12 +5,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, cx, Select } from "./ui";
 
-export type WindowId = "nocode" | "code" | "preview" | "smith" | "changes";
+export type WindowId = "nocode" | "code" | "summary" | "preview" | "smith" | "changes";
 /**
- * No code and Code are the two sub-tabs of one window, the view for changing the app by hand
- * (smith-first.md §6), named by the one open; nothing calls it "manual" on the screen.
+ * No code, Code and the app's Summary are the sub-tabs of one window, the view for changing the
+ * app by hand (smith-first.md §6; Summary T962), named by the one open; nothing calls it
+ * "manual" on the screen.
  */
-export type ManualView = "nocode" | "code";
+export type ManualView = "nocode" | "code" | "summary";
+/** Whether a window is one of that view's sub-tabs. */
+export const isManualView = (window: string | undefined): window is ManualView =>
+  window === "nocode" || window === "code" || window === "summary";
 /** A slot holds one window, Smith with Changes under it, or the view with No code and Code. */
 export type SlotContent = "manual" | "preview" | "smith" | "changes" | "smith+changes";
 export type Layout = "one" | "two" | "three" | "three-below";
@@ -18,6 +22,7 @@ export type Layout = "one" | "two" | "three" | "three-below";
 export const WINDOW_NAMES: Record<SlotContent | WindowId, string> = {
   nocode: "No code",
   code: "Code",
+  summary: "Summary",
   manual: "No code and Code",
   preview: "Preview",
   smith: "Smith",
@@ -268,7 +273,7 @@ function WindowSettings({
   onClose: () => void;
 }) {
   const options = (Object.entries(WINDOW_NAMES) as [SlotContent | WindowId, string][]).filter(
-    (o): o is [SlotContent, string] => o[0] !== "nocode" && o[0] !== "code",
+    (o): o is [SlotContent, string] => !isManualView(o[0]),
   );
   // The browser's own modal dialog: Escape closes it and the focus stays inside.
   const dialog = useRef<HTMLDialogElement>(null);
