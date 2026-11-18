@@ -417,6 +417,26 @@ function readable(color: string, bg: string, towardsColor: string, ratio: number
   return out;
 }
 
+/**
+ * The primary as text (an eyebrow, a link, an active tab), read at 4.5:1 on every surface text
+ * sits on: the page, a card, the muted surface and a strong band (a step further from the page).
+ * A theme's primary is made for a button with its own text on it; as text on the page it can
+ * fall short (halftone's red, 3.2:1 on its paper; T975). Moved towards the text color until it
+ * reads; the primary itself, for buttons and bands, stays the theme's.
+ */
+export function primaryText(tokens: Tokens): string {
+  const surfaces = [
+    tokens.background,
+    tokens.card,
+    tokens.muted,
+    towards(tokens.muted, tokens.foreground, 0.12),
+  ];
+  let out = tokens.primary;
+  for (let i = 0; i < 40 && surfaces.some((s) => contrast(hexOf(out), hexOf(s)) < 4.5); i++)
+    out = towards(out, tokens.foreground, 0.1);
+  return out;
+}
+
 /** A hue-rotated color of the same lightness and chroma. */
 function rotate(color: string, degrees: number): string {
   const [l, c, h] = rgbToOklch(hexToRgb(hexOf(color)));

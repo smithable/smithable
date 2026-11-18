@@ -65,14 +65,14 @@ export function ArticleList({
       {(older || newer) && (
         <nav aria-label={w.moreArticles} className="flex justify-between gap-4">
           {newer ? (
-            <AppLink href={newer} className="font-medium text-primary">
+            <AppLink href={newer} className="font-medium text-primary-text">
               {w.newerArticles}
             </AppLink>
           ) : (
             <span />
           )}
           {older && (
-            <AppLink href={older} className="font-medium text-primary">
+            <AppLink href={older} className="font-medium text-primary-text">
               {w.olderArticles}
             </AppLink>
           )}
@@ -124,7 +124,7 @@ export function ArticleView({
           <p className="text-muted-foreground">{[date, author].filter(Boolean).join(" · ")}</p>
         )}
         {edit && (
-          <AppLink href={edit} className="text-sm font-medium text-primary">
+          <AppLink href={edit} className="text-sm font-medium text-primary-text">
             {w.edit}
           </AppLink>
         )}
@@ -135,14 +135,14 @@ export function ArticleView({
       {(previous || next) && (
         <nav aria-label={w.otherArticles} className="flex justify-between gap-4 border-t pt-6">
           {previous ? (
-            <AppLink href={previous.href} className="text-primary">
+            <AppLink href={previous.href} className="text-primary-text">
               ← {previous.title}
             </AppLink>
           ) : (
             <span />
           )}
           {next && (
-            <AppLink href={next.href} className="text-right text-primary">
+            <AppLink href={next.href} className="text-right text-primary-text">
               {next.title} →
             </AppLink>
           )}

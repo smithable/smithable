@@ -22,7 +22,7 @@ const components: Components = {
   a: ({ node: _, href, ...props }) => (
     <AppLink
       href={href}
-      className="text-primary underline underline-offset-4"
+      className="text-primary-text underline underline-offset-4"
       {...(href && /^https?:\/\//.test(href) ? { rel: "noopener nofollow" } : {})}
       {...props}
     />

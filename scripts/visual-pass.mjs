@@ -42,7 +42,9 @@ const VIEWPORTS = { wide: { width: 1280, height: 800 }, phone: { width: 390, hei
 function checks() {
   const found = [];
   const label = (el) => {
-    const text = (el.getAttribute("aria-label") || el.textContent || "").trim().replace(/\s+/g, " ");
+    const text = (el.getAttribute("aria-label") || el.textContent || "")
+      .trim()
+      .replace(/\s+/g, " ");
     const kit = el.closest("[data-kit]")?.getAttribute("data-kit");
     return `${el.tagName.toLowerCase()}${kit ? ` in ${kit}` : ""} "${text.slice(0, 50)}"`;
   };
@@ -191,8 +193,9 @@ try {
         if (!roles) {
           const probe = await browser.newPage();
           await open(probe, `${base}/sign-in`);
-          const names = (await probe.getByRole("button", { name: /^Sign in as / }).allTextContents())
-            .map((t) => t.replace(/^Sign in as /, "").trim());
+          const names = (
+            await probe.getByRole("button", { name: /^Sign in as / }).allTextContents()
+          ).map((t) => t.replace(/^Sign in as /, "").trim());
           await probe.close();
           roles = names.includes("admin") ? ["admin"] : names.slice(0, 1);
         }
@@ -208,12 +211,25 @@ try {
                   try {
                     await open(page, `${base}${view.path}`);
                   } catch (error) {
-                    findings.push({ starter, view: view.name, who, vp, mode, theme, kind: "page-error", detail: String(error).slice(0, 120) });
+                    findings.push({
+                      starter,
+                      view: view.name,
+                      who,
+                      vp,
+                      mode,
+                      theme,
+                      kind: "page-error",
+                      detail: String(error).slice(0, 120),
+                    });
                     continue;
                   }
                   await page.waitForTimeout(300);
                   // A page that needs signing in sends a visitor away: not a view of its own.
-                  if (who === "visitor" && view.path !== "/sign-in" && new URL(page.url()).pathname === "/sign-in")
+                  if (
+                    who === "visitor" &&
+                    view.path !== "/sign-in" &&
+                    new URL(page.url()).pathname === "/sign-in"
+                  )
                     continue;
                   for (const f of await page.evaluate(checks))
                     findings.push({ starter, view: view.name, who, vp, mode, theme, ...f });
@@ -222,7 +238,10 @@ try {
                     (vp === "phone" && mode === "dark" && theme !== "own");
                   if (shoot)
                     await page.screenshot({
-                      path: join(opts.out, `${starter}-${view.name}-${who}-${vp}-${mode}-${theme}.png`),
+                      path: join(
+                        opts.out,
+                        `${starter}-${view.name}-${who}-${vp}-${mode}-${theme}.png`,
+                      ),
                       fullPage: true,
                       animations: "disabled",
                     });
@@ -237,7 +256,9 @@ try {
                     for (const f of await page.evaluate(checks))
                       findings.push({ starter, view: "menu", who, vp, mode, theme, ...f });
                     if (mode === "dark" && theme !== "own")
-                      await page.screenshot({ path: join(opts.out, `${starter}-menu-${who}-${vp}-${mode}-${theme}.png`) });
+                      await page.screenshot({
+                        path: join(opts.out, `${starter}-menu-${who}-${vp}-${mode}-${theme}.png`),
+                      });
                   }
                 }
               } finally {

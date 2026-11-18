@@ -4,6 +4,7 @@ import {
   hexOf,
   hexToRgb,
   pageLookUx,
+  primaryText,
   resolveLook,
   rgbToOklch,
   type ThemeIR,
@@ -262,6 +263,7 @@ export function themeCss(ux: UxIR, themes: readonly ThemeIR[] = []): string {
     return {
       light: `${selector} {
 ${block(look.tokens.light, "  ")}
+  --primary-text: ${primaryText(look.tokens.light)};
   --picture-filter: ${pictureFilter(theme, look.tokens.light.primary)};
   --radius: ${theme.radius};
   --font-body: ${fontStack(font)};
@@ -280,6 +282,7 @@ ${HOVER.light}
 }`,
       dark: `${dark} {
 ${block(look.tokens.dark, "  ")}
+  --primary-text: ${primaryText(look.tokens.dark)};
   --picture-filter: ${pictureFilter(theme, look.tokens.dark.primary)};
 ${HOVER.dark}
 }`,

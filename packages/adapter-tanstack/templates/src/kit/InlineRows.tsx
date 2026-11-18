@@ -198,6 +198,7 @@ function InlineRow({
             key={f.name}
             className={f.computed ? "text-right tabular-nums" : "min-w-24 py-1.5"}
             data-field={f.name}
+            data-label={f.label}
           >
             {f.computed ? (
               row ? (

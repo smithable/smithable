@@ -327,6 +327,7 @@ export {
   lowContrast,
   oppositeMode,
   parseTheme,
+  primaryText,
   SHADOWS,
   TOKEN_NAMES,
   themeNamed,

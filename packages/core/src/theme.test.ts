@@ -10,9 +10,12 @@ import {
   lowContrast,
   oppositeMode,
   parseTheme,
+  primaryText,
+  type ThemeIR,
   type Tokens,
   themeNamed,
   themeThumbnail,
+  tokensOf,
   withBackground,
 } from "./theme.js";
 import { THEME_LIBRARY } from "./theme-library.js";
@@ -365,4 +368,26 @@ test("a field's edge stands at 3:1 on the card and the page, from a quiet border
       "light",
     ).input,
   ).toBe("#eeeeee");
+});
+
+test("the primary as text reads at 4.5:1 on every surface, and a readable primary stays as it is (T975)", () => {
+  // Halftone's red on its muted paper and on its night: 3.2:1 and 3.5:1 as the theme gives it.
+  for (const mode of ["light", "dark"] as const) {
+    const tokens = tokensOf(themeNamed("halftone") as ThemeIR, mode);
+    const worst = (color: string) =>
+      Math.min(
+        ...[tokens.background, tokens.card, tokens.muted].map((on) =>
+          contrast(hexOf(color), hexOf(on)),
+        ),
+      );
+    expect(worst(tokens.primary)).toBeLessThan(4.5);
+    const text = primaryText(tokens);
+    for (const surface of [tokens.background, tokens.card, tokens.muted])
+      expect(contrast(hexOf(text), hexOf(surface))).toBeGreaterThanOrEqual(4.5);
+  }
+  const clear = deriveTokens(
+    { background: "#ffffff", foreground: "#111111", primary: "#1e3a8a" },
+    "light",
+  );
+  expect(primaryText(clear)).toBe(clear.primary);
 });

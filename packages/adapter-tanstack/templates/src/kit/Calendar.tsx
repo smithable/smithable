@@ -589,7 +589,7 @@ export function Calendar({
               className={`border-b py-3 ${range.view === "agenda" ? "" : "md:border md:border-border md:py-0"} ${empty ? (listed ? "hidden" : "max-md:hidden") : ""} ${range.view === "agenda" && records.length === 0 ? "hidden" : ""} ${range.view === "days" ? "snap-start" : ""} ${outside ? "md:opacity-50" : ""} ${range.view === "month" ? "md:min-h-28 md:p-1" : ""}`}
             >
               <h3
-                className={`text-sm font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today && range.view !== "day" ? "text-primary" : ""}`}
+                className={`text-sm font-medium md:flex md:h-10 md:items-center md:justify-center ${d === today && range.view !== "day" ? "text-primary-text" : ""}`}
               >
                 {range.view === "agenda" ? (
                   long
