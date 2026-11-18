@@ -138,5 +138,10 @@ function hosted(given: "stdin" | "env") {
   });
 }
 
+test("the CLI's package says the preview takes the derived credential, for the hosted service", () => {
+  const pkg = JSON.parse(readFileSync(join(root, "packages/cli/package.json"), "utf8"));
+  expect(pkg.smithable?.previewAuth).toBe("derived");
+});
+
 describe("the token on standard input", () => hosted("stdin"));
 describe("the token in Studio's environment", () => hosted("env"));

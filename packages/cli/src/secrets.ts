@@ -6,6 +6,8 @@ const NAMES = ["SMITHABLE_STUDIO_TOKEN", "SMITHABLE_MODEL_KEY"] as const;
 type SecretName = (typeof NAMES)[number];
 
 const held: Partial<Record<SecretName, string>> = {};
+/** The values came on standard input, as only a hosted workspace's start passes them. */
+let fromStdin = false;
 
 /** At start: the two names out of the environment, into this module only. Idempotent. */
 export function holdSecrets(env: NodeJS.ProcessEnv = process.env): void {
@@ -36,6 +38,7 @@ export function holdSecretsFromJson(text: string): void {
       throw new Error(`--secrets-stdin: "${key}" must be a string.`);
     held[name] = value;
   }
+  fromStdin = true;
 }
 
 /** Studio's token (the proxy's bearer), for Studio's own checks and its requests to the preview. */
@@ -45,10 +48,16 @@ export const studioToken = (): string | undefined => held.SMITHABLE_STUDIO_TOKEN
 export const modelKey = (): string | undefined => held.SMITHABLE_MODEL_KEY;
 
 /**
- * Whether this process holds either value. Such a process (Studio in a hosted workspace) loads no
- * code the project can write: no plugin, and the app's own tools only in the project worker.
+ * Whether this process holds a value it must keep from the project's code: Studio's token, values
+ * given on standard input, or anything held in a hosted workspace (SMITHABLE_HOSTED_LEVEL set).
+ * Such a process loads no code the project can write: no plugin, and the app's own tools only in
+ * the project worker. A model key from the environment alone, on someone's own machine, is the
+ * local product (docs/ai.md): the key is theirs and so is the project's code, so plugins load.
  */
-export const holdsSecret = (): boolean => NAMES.some((name) => held[name] !== undefined);
+export const holdsSecret = (env: NodeJS.ProcessEnv = process.env): boolean =>
+  held.SMITHABLE_STUDIO_TOKEN !== undefined ||
+  (NAMES.some((name) => held[name] !== undefined) &&
+    (fromStdin || Boolean(env.SMITHABLE_HOSTED_LEVEL?.trim())));
 
 /** A child's environment: the one given (this process's by default) and extras, without the two. */
 export function childEnv(
@@ -63,4 +72,5 @@ export function childEnv(
 /** For tests: forget what is held. */
 export function releaseSecretsForTests(): void {
   for (const name of NAMES) delete held[name];
+  fromStdin = false;
 }

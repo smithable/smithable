@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { loadPlugins, NO_PLUGINS_HERE } from "./plugins.js";
 import { shaped, stepsFor, stopWorkers } from "./project-worker.js";
-import { holdSecretsFromJson, releaseSecretsForTests } from "./secrets.js";
+import {
+  holdSecrets,
+  holdSecretsFromJson,
+  holdsSecret,
+  releaseSecretsForTests,
+} from "./secrets.js";
 import { teach } from "./teach.js";
 
 const TOKEN = "studio-token-7f3a";
@@ -124,6 +129,30 @@ test("holding a secret, no plugin is loaded and teach writes nothing", async () 
   // Without a secret (local), as before: the plugin is loaded (here it throws on load).
   releaseSecretsForTests();
   expect(() => loadPlugins(dir)).toThrow("loaded");
+});
+
+test("a model key from the environment alone is the local product; the token, stdin or hosting is not", () => {
+  const dir = project();
+  write(dir, "smithable.context.yml", "plugins: [newsletter]\n");
+  write(dir, "smithable/plugins/newsletter/plugin.mjs", "throw new Error('loaded');\n");
+  write(dir, "smithable.yml", "newsletter:\n  weekly: true\n");
+  // On someone's own machine, with the key exported as docs/ai.md says: plugins load as before.
+  const env: NodeJS.ProcessEnv = { SMITHABLE_MODEL_KEY: KEY };
+  holdSecrets(env);
+  expect(env.SMITHABLE_MODEL_KEY).toBeUndefined();
+  expect(holdsSecret({})).toBe(false);
+  expect(() => loadPlugins(dir)).toThrow("loaded");
+  // The same key in a hosted workspace: refused.
+  expect(holdsSecret({ SMITHABLE_HOSTED_LEVEL: "normal" })).toBe(true);
+  // Studio's token from the environment: refused.
+  holdSecrets({ SMITHABLE_STUDIO_TOKEN: TOKEN });
+  expect(holdsSecret({})).toBe(true);
+  expect(() => loadPlugins(dir)).toThrow(NO_PLUGINS_HERE);
+  // Only the model key, but on standard input: refused.
+  releaseSecretsForTests();
+  holdSecretsFromJson(JSON.stringify({ modelKey: KEY }));
+  expect(holdsSecret({})).toBe(true);
+  expect(() => loadPlugins(dir)).toThrow(NO_PLUGINS_HERE);
 });
 
 test("holding a secret, the app's tools run in the worker, which sees neither secret", async () => {
