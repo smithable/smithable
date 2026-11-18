@@ -46,10 +46,17 @@ function checks() {
     const kit = el.closest("[data-kit]")?.getAttribute("data-kit");
     return `${el.tagName.toLowerCase()}${kit ? ` in ${kit}` : ""} "${text.slice(0, 50)}"`;
   };
+  // Seen by a person: laid out, not in a closed details (its box is still measured), not
+  // hidden from everyone (a spam trap), not text for screen readers only.
   const visible = (el) => {
     const r = el.getBoundingClientRect();
     const s = getComputedStyle(el);
-    return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none";
+    if (r.width <= 2 || r.height <= 2 || s.visibility === "hidden" || s.display === "none")
+      return false;
+    const closed = el.closest("details:not([open])");
+    if (closed && !el.closest("summary")) return false;
+    if (el.closest("[aria-hidden=true], [inert]")) return false;
+    return !/rect\(0/.test(s.clip) && s.clipPath !== "inset(50%)";
   };
   // Inside something that scrolls sideways on purpose (a wide table), sideways is fine.
   const inScroller = (el) => {
@@ -99,7 +106,16 @@ function checks() {
       });
   }
   // Contrast: text against the first solid background behind it (pictures behind are skipped).
-  const rgb = (c) => (c.match(/[\d.]+/g) ?? []).map(Number);
+  // Any CSS colour (oklch included) as the sRGB pixel a canvas paints, with its alpha.
+  const paint = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  const rgb = (c) => {
+    paint.clearRect(0, 0, 1, 1);
+    paint.fillStyle = "#000";
+    paint.fillStyle = c;
+    paint.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = paint.getImageData(0, 0, 1, 1).data;
+    return [r, g, b, a / 255];
+  };
   const lum = ([r, g, b]) => {
     const f = (v) => {
       const x = v / 255;
