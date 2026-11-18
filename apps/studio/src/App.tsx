@@ -24,6 +24,7 @@ import wordmarkDark from "./brand/wordmark-dark.svg";
 import { Ask, usePresentation } from "./builder/Ask";
 import { NoCode, OPEN_PART, type OpenPart } from "./builder/NoCode";
 import { SmithFace } from "./builder/SmithFace";
+import { SummaryTab } from "./builder/SummaryTab";
 import { Visualize } from "./builder/Visualize";
 import { ASK_SMITH } from "./builder/Wizard";
 import { type CodeJump, SHOW_CODE } from "./code-jump";
@@ -52,6 +53,7 @@ import { Button, cx, Panel, Tabs, useMedia } from "./ui";
 import { type PresentedDiagnostic, ValidationNotice } from "./validation-notice";
 import {
   gridOf,
+  isManualView,
   LayoutBar,
   type ManualView,
   PhoneSettingsButton,
@@ -273,23 +275,25 @@ export function App() {
     ? (place.window as PhoneWindow)
     : place.window === "changes" && phone.changesUnderSmith
       ? "smith"
-      : place.window === "nocode" || place.window === "code"
+      : isManualView(place.window)
         ? "manual"
         : "smith";
-  // Which of No code and Code the view shows; a phone without Code shows No code.
-  const manual = narrow && !phone.code ? "nocode" : (arrangement.manual ?? "nocode");
+  // Which of No code, Code and Summary the view shows; a phone without Code shows No code for it.
+  const manual: ManualView =
+    narrow && !phone.code && arrangement.manual === "code"
+      ? "nocode"
+      : (arrangement.manual ?? "nocode");
   // Visualize: the app map's views over the windows, which stay as they are underneath (A 150).
   const [visualize, setVisualize] = useState(false);
   const showWindow = (window: WindowId | PhoneWindow) => {
     setVisualize(false);
-    if (window === "nocode" || window === "code")
-      setArrangement({ ...arrangement, manual: window });
+    if (isManualView(window)) setArrangement({ ...arrangement, manual: window });
     setPlace((p) => ({
       ...p,
       window:
         window === "changes" && phone.changesUnderSmith
           ? "smith"
-          : window === "nocode" || window === "code"
+          : isManualView(window)
             ? "manual"
             : window,
     }));
@@ -379,7 +383,7 @@ export function App() {
   // The sub-tabs a phone's window has: No code and Code, or Smith and Changes under him.
   const subStep = (content: string | undefined, direction: 1 | -1): boolean => {
     if (content === "manual") {
-      const subs: ManualView[] = phone.code ? ["nocode", "code"] : ["nocode"];
+      const subs: ManualView[] = phone.code ? ["nocode", "code", "summary"] : ["nocode", "summary"];
       const next = subs[subs.indexOf(manual) + direction];
       if (next) setArrangement({ ...arrangement, manual: next });
       return Boolean(next);
@@ -474,10 +478,10 @@ export function App() {
   const workIn = (window: WindowId) => {
     setVisualize(false);
     if (floating && window === "smith") return setPanelOpen(true);
-    const sub = window === "nocode" || window === "code" ? window : undefined;
+    const sub = isManualView(window) ? window : undefined;
     const kept = { ...arrangement, ...(sub ? { manual: sub } : {}) };
     if (slotOf(window) !== undefined) return;
-    const content: SlotContent = window === "nocode" || window === "code" ? "manual" : window;
+    const content: SlotContent = isManualView(window) ? "manual" : window;
     const from = laid.findIndex(
       (s) =>
         s === content || (s === "smith+changes" && (window === "smith" || window === "changes")),
@@ -896,7 +900,7 @@ export function App() {
       const target = event.target instanceof Element ? event.target : undefined;
       if (!target || target.closest("[data-guide-card]")) return;
       const manual = target.closest(
-        '[data-window="manual"], [data-window="nocode"], [data-window="code"]',
+        '[data-window="manual"], [data-window="nocode"], [data-window="code"], [data-window="summary"]',
       );
       const editable = target.closest(
         'input, textarea, select, [contenteditable="true"], [role="textbox"]',
@@ -1731,6 +1735,7 @@ export function App() {
                             ...(narrow && !phone.code
                               ? []
                               : [["code", WINDOW_NAMES.code] as [ManualView, string]]),
+                            ["summary", WINDOW_NAMES.summary],
                           ]}
                           value={manual}
                           onChange={(sub) => setArrangement({ ...arrangement, manual: sub })}
@@ -1779,6 +1784,25 @@ export function App() {
                               }}
                             />
                           </Suspense>
+                        ) : w === "summary" ? (
+                          <SummaryTab
+                            key={w}
+                            sections={sections}
+                            onOpen={(link) => {
+                              pauseGuide();
+                              if (link.in === "code") {
+                                window.dispatchEvent(
+                                  new CustomEvent(SHOW_CODE, {
+                                    detail: { file: link.file, path: link.path },
+                                  }),
+                                );
+                                return;
+                              }
+                              setPartToOpen(link.part);
+                              if (narrow) showWindow("nocode");
+                              else workIn("nocode");
+                            }}
+                          />
                         ) : w === "smith" ? (
                           <Panel
                             key={w}
