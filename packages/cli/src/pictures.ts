@@ -16,6 +16,7 @@ import { type PictureCredit, type PictureEntry, pickPictures } from "@smithable/
 import { type ContentIR, kebab, type SpecIR, YamlEditor } from "@smithable/core";
 import type { Io } from "./io.js";
 import {
+  creditsText,
   type LibraryVersion,
   libraryVersion,
   type PictureRecord,
@@ -317,8 +318,11 @@ export function placePictures(
   // A starter's own pictures are library pictures too: the record names them, by their hashes.
   if (version) {
     const records = rebuildRecords(dir, version, true);
-    if (Object.keys(records).length)
+    if (Object.keys(records).length) {
       writeFileSync(join(dir, "public", "images", "pictures.json"), recordsText(records));
+      const credits = creditsText(records);
+      if (credits) writeFileSync(join(dir, "public", "images", "CREDITS.md"), credits);
+    }
   }
 }
 

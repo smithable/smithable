@@ -144,7 +144,7 @@ export function rebuildRecords(
     if (records[file]?.sha256) continue;
     const role = roleOf(file);
     const entry = byHash.get(sha256(readFileSync(join(imagesDir(dir), file))));
-    if (role && entry) records[file] = recordOf(version, entry, role);
+    if (role && entry && entry.kind === role) records[file] = recordOf(version, entry, role);
   }
   return records;
 }
@@ -271,6 +271,11 @@ export async function placeStyle(
   if (failed.length) return `No pictures were changed: ${failed.join("; ")}.`;
   const records = rebuildRecords(dir, version);
   for (const write of plan.writes) records[write.file] = write.record;
+  // A picture the owner changed or removed is no longer what its record says: the record goes,
+  // so it gets no library credit or mark and is never taken for a library picture again.
+  const present = new Set(placedFiles(dir));
+  for (const file of Object.keys(records))
+    if (plan.kept.includes(file) || (roleOf(file) && !present.has(file))) delete records[file];
   const texts = [{ path: "public/images/pictures.json", text: recordsText(records) }];
   texts.push({ path: "public/images/CREDITS.md", text: creditsText(records) });
   const hero = plan.writes.find((w) => w.file === "hero.webp");
