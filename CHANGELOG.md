@@ -22,6 +22,7 @@ The entries are filled in from the merged pull requests at each release. A fix t
 
 ### Fixes
 
+- Generated apps: the build leaves out the sample pictures nothing in the app names (those `public/images/pictures.json` records as samples, unchanged); the owner's own pictures, the hero, the mark and any picture a page names still ship (`fixes/unused-sample-pictures.yml`).
 - Generated apps: Ask and the inspector can pause and resume answer playback, sample a voice, and choose the speaking speed; Ask keeps its mark at the lower left of its label (`fixes/ask-sound-controls.yml`).
 
 - Embedded contact forms keep Send below the fields; full-page editors retain sticky Save controls, and page titles follow their theme's letter spacing (`fixes/contact-form-layout.yml`). Theme checks flag invisible field edges in both modes.
