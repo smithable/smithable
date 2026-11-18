@@ -254,6 +254,22 @@ export interface Result {
   verification?: Verification;
 }
 
+export interface PictureStyles {
+  offer?: string;
+  project?: string;
+  current?: string;
+  error?: string;
+  styles: {
+    id: string;
+    name: string;
+    line: string;
+    kept: number;
+    total: number;
+    generated: number;
+    previews: { src: string; alt: string }[];
+  }[];
+}
+
 /** A hosted workspace waking: starting, preparing its packages first, or every one busy. */
 export type Waking = "starting" | "preparing" | "busy" | undefined;
 let wakingNow: Waking;
@@ -431,6 +447,23 @@ export const api = {
     lookProject: string,
     envelope: { expectedRevision?: string; requestId?: string } = {},
   ) => changing(call<Result>("/api/op", { name, args, confirm: true, lookProject, ...envelope })),
+  pictureStyles: (project: string) =>
+    call<PictureStyles>(`/api/picture-styles?project=${encodeURIComponent(project)}&language=en`),
+  choosePictureStyle: (
+    style: string,
+    revision: string,
+    lookProject: string,
+    pictureOffer: string,
+  ) =>
+    changing(
+      call<Result>("/api/op", {
+        name: "setPictureStyle",
+        args: { style },
+        expectedRevision: revision,
+        lookProject,
+        pictureOffer,
+      }),
+    ),
   chooseTheme: (preset: string, revision: string, lookProject: string) =>
     changing(
       call<Result>("/api/op", {

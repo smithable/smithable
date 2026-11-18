@@ -61,13 +61,24 @@ export class ThemePreview {
     });
   }
 
-  finish(keep: boolean): Promise<void> {
+  finish(keep: boolean, apply?: (revision: string) => Promise<LookChange>): Promise<void> {
     this.closing = true;
     return this.enqueue(async () => {
-      if (keep) return;
-      // A refused/uncertain mutation is never guessed at or undone by a generic Undo.
-      if (this.refusal) throw new Error(this.refusal);
-      await this.restore();
+      try {
+        if (keep) {
+          if (apply) {
+            const result = await apply(this.revision);
+            if (!result.ok) throw new Error(result.output);
+          }
+          return;
+        }
+        // A refused/uncertain mutation is never guessed at or undone by a generic Undo.
+        if (this.refusal) throw new Error(this.refusal);
+        await this.restore();
+      } catch (error) {
+        this.closing = false;
+        throw error;
+      }
     });
   }
 }

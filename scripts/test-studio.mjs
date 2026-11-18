@@ -24,6 +24,7 @@ import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@mod
 import { startFakeModel } from "./fake-model.mjs";
 import { checkFirstLook } from "./first-look-checks.mjs";
 import { P } from "./patience.mjs";
+import { checkPicturePicker } from "./picture-picker-browser.mjs";
 import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
@@ -3917,4 +3918,5 @@ if (failed) {
   process.exit(1);
 }
 rmSync(root, { recursive: true, force: true });
+await checkPicturePicker(port + 5);
 console.log("\nStudio works in both modes.");

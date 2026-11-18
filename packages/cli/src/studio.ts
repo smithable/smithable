@@ -64,6 +64,7 @@ import {
 } from "./old-version.js";
 import { projectFiles, runOperation } from "./op.js";
 import { readOutbox } from "./outbox.js";
+import { type LibraryVersion, libraryVersion } from "./picture-style.js";
 import { declaredPlugins, loadPlugins, pluginPath } from "./plugins.js";
 import {
   PREVIEW_TOKEN_DIGEST,
@@ -97,6 +98,7 @@ import {
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
+import { pictureHashes, pictureStyleCards, pinnedPictureVersion } from "./studio-picture-styles.js";
 import { translate } from "./translate.js";
 import { undo, undoChange } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
@@ -492,6 +494,10 @@ export async function studio(
   // changes.
   const previewId = randomUUID();
   let lookProject = randomUUID();
+  const pictureOffers = new Map<
+    string,
+    { project: string; version: LibraryVersion; hashes: string; expires: number }
+  >();
   const configuredParent = process.env.STUDIO_ORIGIN;
   const parentUrl = configuredParent ? URL.parse(configuredParent) : undefined;
   const lookOrigins = options.host
@@ -1166,6 +1172,30 @@ export async function studio(
         people.touch();
         return json(people.state());
       }
+      if (req.method === "GET" && url.pathname === "/api/picture-styles") {
+        const project = lookProject;
+        if (url.searchParams.get("project") !== project)
+          return json({ styles: [], error: "The app changed. Reopen Look." }, 409);
+        const version = await libraryVersion(fetch);
+        if (project !== lookProject)
+          return json({ styles: [], error: "The app changed. Reopen Look." }, 409);
+        if (typeof version === "string")
+          return json({
+            styles: [],
+            error: "Picture styles could not be reached. You can still choose a theme.",
+          });
+        const hashes = pictureHashes(dir);
+        const cards = pictureStyleCards(dir, version, url.searchParams.get("language") ?? "en");
+        if (hashes !== pictureHashes(dir))
+          return json({ styles: [], error: "The app's pictures changed. Reopen Look." }, 409);
+        const offer = randomUUID();
+        for (const [key, value] of pictureOffers)
+          if (value.expires < Date.now()) pictureOffers.delete(key);
+        while (pictureOffers.size >= 20)
+          pictureOffers.delete(pictureOffers.keys().next().value as string);
+        pictureOffers.set(offer, { project, version, hashes, expires: Date.now() + 10 * 60_000 });
+        return json({ ...cards, offer, project });
+      }
       // A picture of the project's (the Look tab shows its logo); an SVG may not run anything.
       const image =
         /^\/api\/images\/((?:[\w-][\w.-]*\/)*[\w-][\w.-]*\.(webp|avif|jpe?g|png|svg))$/.exec(
@@ -1251,6 +1281,7 @@ export async function studio(
           lookProject: expectedLookProject,
           expectedRevision,
           requestId,
+          pictureOffer,
         } = await body();
         if (expectedLookProject !== undefined && expectedLookProject !== lookProject)
           return json(
@@ -1259,6 +1290,21 @@ export async function studio(
               output:
                 "The project changed. Keep this draft or reopen the current project before Apply.",
             },
+            409,
+          );
+        const offeredPictures =
+          typeof pictureOffer === "string" ? pictureOffers.get(pictureOffer) : undefined;
+        if (
+          pictureOffer !== undefined &&
+          (name !== "setPictureStyle" ||
+            !offeredPictures ||
+            offeredPictures.expires < Date.now() ||
+            offeredPictures.project !== lookProject ||
+            expectedLookProject !== lookProject ||
+            typeof expectedRevision !== "string")
+        )
+          return json(
+            { ok: false, output: "These picture choices expired or the app changed. Reopen Look." },
             409,
           );
         // A theme Apply from a host carries the revision its draft was opened on, always: without
@@ -1318,15 +1364,24 @@ export async function studio(
             yes: confirm === true,
             onResult: (result) => {
               if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
-              if (name === "setTheme" && result.ok && result.verification?.revision)
+              if (
+                ["setTheme", "setPictureStyle"].includes(String(name)) &&
+                result.ok &&
+                result.verification?.revision
+              )
                 themeChange = {
                   change: result.verification.revision,
                   revision: projectRevision(dir),
                 };
             },
             ...(expectedLookProject !== undefined
-              ? { projectCheck: () => expectedLookProject === lookProject }
+              ? {
+                  projectCheck: () =>
+                    expectedLookProject === lookProject &&
+                    (!offeredPictures || offeredPictures.hashes === pictureHashes(dir)),
+                }
               : {}),
+            ...(offeredPictures ? { fetch: pinnedPictureVersion(offeredPictures.version) } : {}),
             ...(typeof expectedRevision === "string" ? { expectedRevision } : {}),
             ...(typeof requestId === "string" ? { requestId } : {}),
             reportLater: true,
