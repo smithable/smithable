@@ -376,9 +376,6 @@ try {
       await page.getByText("No changes yet.").waitFor();
     },
   );
-  // The first-look picker keeps a theme (a change), so it comes after the empty history above; and
-  // before the checks below that open Studio afresh, which expect it seen and Smith presenting.
-  await checkFirstLook(browser, base);
   // Start the guide only after dismissing the fixture's error. Its demonstration makes real
   // changes and undoes them, so the initial empty-history assertion must also come first.
   await checkStudioLayout(lookSeen, base);
@@ -3816,6 +3813,9 @@ try {
       if (waiting) process.kill(-waiting.pid);
     } catch {}
   }
+  // The first-look picker last: it keeps a theme and leaves its lines in Smith's thread, which
+  // the checks before it do not expect; its own fresh browser shows it whatever ran before.
+  await checkFirstLook(browser, base);
 } catch (error) {
   // A failed step has said so above; anything else (a check outside the steps, the site not
   // built) is said here, and fails the run rather than skipping the steps after it.
