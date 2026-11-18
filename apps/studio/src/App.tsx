@@ -557,9 +557,13 @@ export function App() {
       !seenLook(lookApp) &&
       lookFinished !== lookApp,
   );
+  const showLookPreview = useRef(showWindow);
+  showLookPreview.current = showWindow;
   useEffect(() => {
-    if (initialLook && !pickingLook && !editingLook && spec.ux && project)
+    if (initialLook && !pickingLook && !editingLook && spec.ux && project) {
+      showLookPreview.current("preview");
       setPickingLook({ project, preset: spec.ux.theme.preset, automatic: true });
+    }
   }, [initialLook, pickingLook, editingLook, spec.ux, project]);
   const messageErrors = (message?.diagnostics ?? []).filter((d) => d.severity === "error");
   const validationErrors = messageErrors.length
@@ -1264,8 +1268,10 @@ export function App() {
                 disabled={busy || Boolean(pickingLook)}
                 onClick={() => {
                   pauseGuide();
+                  showWindow("preview");
                   if (spec.ux)
                     setPickingLook({ project, preset: spec.ux.theme.preset, automatic: false });
+                  else setEditingLook({ project, path: keptPage() });
                 }}
               >
                 Look

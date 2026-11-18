@@ -217,7 +217,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 12px 48px rgb(0 0 0 / 22%);
 }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .first-look {
     inset: auto 0 0;
     width: 100%;
@@ -226,7 +226,7 @@ body {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .first-look-workspace {
     padding-right: 432px;
   }

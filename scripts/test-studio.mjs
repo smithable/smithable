@@ -22,6 +22,7 @@ import { chromium } from "playwright";
 import { Client } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js";
 import { StreamableHTTPClientTransport } from "../packages/cli/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js";
 import { startFakeModel } from "./fake-model.mjs";
+import { checkFirstLook } from "./first-look-checks.mjs";
 import { P } from "./patience.mjs";
 import { checkPorts } from "./ports.mjs";
 import { checkPreviewPages } from "./preview-pages-checks.mjs";
@@ -328,6 +329,7 @@ try {
     await preview
       .locator('body[data-page="customers"][data-hydrated=true]')
       .waitFor({ timeout: 90000 * P });
+    await checkFirstLook(browser, base);
     await checkStudioLook(page, dir);
     await checkStudioLookTimeout(page, dir);
     await checkStudioLookGallery(page, dir);
