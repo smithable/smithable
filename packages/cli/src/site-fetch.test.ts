@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test } from "vitest";
 import { describePage, readPage, readPageCommand } from "./from-page.js";
 import { type SiteBundleResult, siteBundleResult } from "./site-bundle.js";
 import { readSite } from "./site-fetch.js";
@@ -10,19 +10,24 @@ import { allowedByRobots, createSiteFetch } from "./site-fetch-policy.js";
 
 let server: Server;
 let base: string;
-const hits: string[] = [];
-let slow = false;
+let hits: string[];
+let onServicesRequest: (() => void) | undefined;
 const html = (body: string) =>
   `<html><head><title>Example Workshop</title><meta property="og:site_name" content="Example Workshop"></head><body>${body}</body></html>`;
-beforeAll(async () => {
+beforeEach(async () => {
+  // An aborted client can settle before the server observes its last request.
+  // Keep each crawl's request log on its own listener.
+  const requests: string[] = [];
+  hits = requests;
+  onServicesRequest = undefined;
   server = createServer((req, res) => {
-    hits.push(req.url ?? "");
+    requests.push(req.url ?? "");
     if (req.url === "/robots.txt") return res.end("User-agent: *\nDisallow: /secret\n");
     if (req.url === "/image.png")
       return res
         .writeHead(200, { "content-type": "image/png" })
         .end(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]));
-    if (req.url === "/one" && slow) return;
+    if (req.url === "/one" && onServicesRequest) return onServicesRequest();
     if (req.url === "/one")
       return res
         .writeHead(200, { "content-type": "text/html" })
@@ -44,11 +49,14 @@ beforeAll(async () => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 });
-afterAll(() => server.close());
+afterEach(async () => {
+  await new Promise<void>((resolve, reject) =>
+    server.close((error) => (error ? reject(error) : resolve())),
+  );
+});
 const options = () => ({ refuse: () => false, ports: [80, 443, Number(new URL(base).port)] });
 
 test("local readSite follows breadth-first depth2 with one robots policy and retains source evidence", async () => {
-  hits.length = 0;
   const result = await readSite(`${base}/#start`, options());
   expect(result.bundle.startUrl).toBe(`${base}/`);
   expect(result.bundle.pages.map((page) => page.url)).toEqual([
@@ -73,7 +81,6 @@ test("local readSite follows breadth-first depth2 with one robots policy and ret
 });
 
 test("authorized local originals use context IDs and inert raster bytes without accepting source file paths", async () => {
-  hits.length = 0;
   const result = await readSite(`${base}/`, { ...options(), allowAssets: true });
   expect(result.originals).toHaveLength(1);
   expect(result.originals[0]?.id).toBe(result.reading.images[0]?.id);
@@ -143,22 +150,16 @@ test("wildcard robots policies are bounded and session depth cannot be supplied 
 });
 
 test("upstream cancellation never turns an interrupted local crawl into generation input", async () => {
-  slow = true;
   const controller = new AbortController();
   const reason = new Error("Owner cancelled");
-  const timer = setTimeout(() => controller.abort(reason), 30);
-  try {
-    await expect(readSite(`${base}/`, { ...options(), signal: controller.signal })).rejects.toBe(
-      reason,
-    );
-  } finally {
-    slow = false;
-    clearTimeout(timer);
-  }
+  onServicesRequest = () => controller.abort(reason);
+  await expect(readSite(`${base}/`, { ...options(), signal: controller.signal })).rejects.toBe(
+    reason,
+  );
+  expect(hits).toContain("/one");
 });
 
 test("local outer traversal honors caller-lowered page, depth and byte limits without extra fetches", async () => {
-  hits.length = 0;
   const result = await readSite(`${base}/`, { ...options(), limits: { pages: 1, depth: 0 } });
   expect(result.bundle.pages).toHaveLength(1);
   expect(hits).not.toContain("/one");
