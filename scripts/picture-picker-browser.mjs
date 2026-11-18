@@ -213,6 +213,13 @@ export async function checkPicturePicker(port = 5840) {
     await opened.picker.getByRole("button", { name: "Next: Pictures", exact: true }).click();
     const pastel = opened.picker.getByRole("button", { name: "Use Pastel pictures", exact: true });
     assert.equal(await pastel.locator("img").count(), 3);
+    // The previews come through Studio (T951), so they load for a hosted owner too.
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('button[aria-label="Use Pastel pictures"] img')].every(
+        (img) =>
+          img.complete && img.naturalWidth > 0 && new URL(img.src).origin === location.origin,
+      ),
+    );
     assert.equal(
       await opened.picker
         .getByRole("button", { name: "Use Ink wash pictures", exact: true })

@@ -76,7 +76,8 @@ export async function libraryIndex(
   }
 }
 
-async function bytesOf(url: string, fetchFn: Fetch): Promise<Uint8Array | undefined> {
+/** A library picture's bytes, fetched by the host and capped at 2 MB; undefined when not read. */
+export async function libraryBytes(url: string, fetchFn: Fetch): Promise<Uint8Array | undefined> {
   try {
     const response = await fetchFn(atLibrary(url), { signal: AbortSignal.timeout(TIMEOUT) });
     if (!response.ok) return undefined;
@@ -203,7 +204,7 @@ export async function addLibraryPictures(options: {
     if (!drafted.has(model)) continue;
     let n = 0;
     for (const sample of entries) {
-      const bytes = await bytesOf(sample.url, fetchFn);
+      const bytes = await libraryBytes(sample.url, fetchFn);
       if (!bytes) continue;
       n += 1;
       written.push({
@@ -224,7 +225,7 @@ export async function addLibraryPictures(options: {
   let n = 0;
   for (const sample of shared) {
     if (n === 3) break;
-    const bytes = await bytesOf(sample.url, fetchFn);
+    const bytes = await libraryBytes(sample.url, fetchFn);
     if (!bytes) continue;
     written.push({ file: `samples/${n}.webp`, alt: sample.alt, bytes, ...meta(sample, "sample") });
     n += 1;
@@ -236,7 +237,7 @@ export async function addLibraryPictures(options: {
       ? landing.pattern.sections.find((s) => s.kind === "hero")
       : undefined;
   if (picked.hero && landing && hero) {
-    const bytes = await bytesOf(picked.hero.url, fetchFn);
+    const bytes = await libraryBytes(picked.hero.url, fetchFn);
     if (bytes) {
       written.push({
         file: "hero.webp",
@@ -268,7 +269,7 @@ export async function addLibraryPictures(options: {
   }
   // The app's mark (docs/design/app-logo.md §4), unless its texts already name one.
   if (picked.logo) {
-    const bytes = await bytesOf(picked.logo.url, fetchFn);
+    const bytes = await libraryBytes(picked.logo.url, fetchFn);
     const editor = new YamlEditor(
       options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
     );

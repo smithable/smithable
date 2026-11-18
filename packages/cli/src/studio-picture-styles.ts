@@ -8,8 +8,9 @@ import {
   readRecords,
   rebuildRecords,
   roleOf,
+  sha256,
 } from "./picture-style.js";
-import { atLibrary, libraryBase } from "./pictures.js";
+import { libraryBase, libraryBytes } from "./pictures.js";
 
 export interface PictureStyleCard {
   id: string;
@@ -24,7 +25,20 @@ export interface PictureStyleCard {
 export const pictureHashes = (dir: string) =>
   JSON.stringify({ files: currentHashes(dir), records: readRecords(dir) });
 
-export function pictureStyleCards(dir: string, version: LibraryVersion, language = "en") {
+/**
+ * A style the app does not have yet shows its previews through Studio itself (T951): a hosted
+ * workspace reaches the library only by the service's inner address, which the owner's browser
+ * cannot, and locally the browser is not sent to another site.
+ */
+export const previewSrc = (offer: string, entry: { id: string; sha256: string }) =>
+  `/api/picture-styles/preview?${new URLSearchParams({ offer, entry: entry.id, v: entry.sha256 })}`;
+
+export function pictureStyleCards(
+  dir: string,
+  version: LibraryVersion,
+  language = "en",
+  offer = "",
+) {
   const linked = linkedRecordPath(dir);
   if (linked) return { styles: [], error: "The app's pictures cannot be read safely." };
   const records = rebuildRecords(dir, version);
@@ -64,14 +78,7 @@ export function pictureStyleCards(dir: string, version: LibraryVersion, language
         const file = owned[index]?.[0] as string;
         return [{ src: `/api/images/${file}?v=${hashes[file]}`, alt: entry.alt }];
       }
-      try {
-        const url = new URL(atLibrary(entry.url));
-        if (!["http:", "https:"].includes(url.protocol)) return [];
-        url.searchParams.set("v", entry.sha256);
-        return [{ src: url.href, alt: entry.alt }];
-      } catch {
-        return [];
-      }
+      return [{ src: previewSrc(offer, entry), alt: entry.alt }];
     });
     if (!previews.length) continue;
     styles.push({
@@ -103,4 +110,28 @@ export function pinnedPictureVersion(
     if (url === `${base}/versions/${version.version}.json`) return Response.json(version);
     return fetchFn(input, init);
   }) as typeof fetch;
+}
+
+/**
+ * One preview of an offer: only an entry of the offer's pinned version, fetched by the host
+ * through the library (size-capped), and sent only when its bytes match the entry's sha256 and
+ * are a WebP picture. Nothing else is fetched through it.
+ */
+export async function stylePreview(
+  version: LibraryVersion,
+  entryId: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<{ bytes: Uint8Array; sha256: string } | { status: number; error: string }> {
+  const entry = version.entries.find((candidate) => candidate.id === entryId);
+  if (!entry || typeof entry.url !== "string" || typeof entry.sha256 !== "string")
+    return { status: 404, error: "No such picture in this offer." };
+  const bytes = await libraryBytes(entry.url, fetchFn);
+  if (!bytes) return { status: 502, error: "The picture could not be read from the library." };
+  const webp =
+    bytes.length > 12 &&
+    String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF" &&
+    String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP";
+  if (sha256(bytes) !== entry.sha256 || !webp)
+    return { status: 502, error: "The library sent a different picture." };
+  return { bytes, sha256: entry.sha256 };
 }

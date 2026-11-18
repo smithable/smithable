@@ -98,7 +98,12 @@ import {
 import { projectIndex } from "./rules.js";
 import { doorAt, projectPeople } from "./sample-people.js";
 import { sampleRunner } from "./sample-run.js";
-import { pictureHashes, pictureStyleCards, pinnedPictureVersion } from "./studio-picture-styles.js";
+import {
+  pictureHashes,
+  pictureStyleCards,
+  pinnedPictureVersion,
+  stylePreview,
+} from "./studio-picture-styles.js";
 import { translate } from "./translate.js";
 import { undo, undoChange } from "./undo.js";
 import { loadSpec, projectTranslations } from "./validate.js";
@@ -1185,16 +1190,35 @@ export async function studio(
             error: "Picture styles could not be reached. You can still choose a theme.",
           });
         const hashes = pictureHashes(dir);
-        const cards = pictureStyleCards(dir, version, url.searchParams.get("language") ?? "en");
+        const offer = randomUUID();
+        const language = url.searchParams.get("language") ?? "en";
+        const cards = pictureStyleCards(dir, version, language, offer);
         if (hashes !== pictureHashes(dir))
           return json({ styles: [], error: "The app's pictures changed. Reopen Look." }, 409);
-        const offer = randomUUID();
         for (const [key, value] of pictureOffers)
           if (value.expires < Date.now()) pictureOffers.delete(key);
         while (pictureOffers.size >= 20)
           pictureOffers.delete(pictureOffers.keys().next().value as string);
         pictureOffers.set(offer, { project, version, hashes, expires: Date.now() + 10 * 60_000 });
         return json({ ...cards, offer, project });
+      }
+      // A style card's preview, served by Studio from its offer's pinned version (T951).
+      if (req.method === "GET" && url.pathname === "/api/picture-styles/preview") {
+        const held = pictureOffers.get(url.searchParams.get("offer") ?? "");
+        if (!held || held.expires < Date.now() || held.project !== lookProject)
+          return json({ error: "This offer has ended. Reopen Look." }, 404);
+        const preview = await stylePreview(held.version, url.searchParams.get("entry") ?? "");
+        if ("error" in preview) return json({ error: preview.error }, preview.status);
+        res.writeHead(200, {
+          "Content-Type": "image/webp",
+          "Content-Length": preview.bytes.length,
+          // The address names the picture's hash, so it never changes under it.
+          "Cache-Control": "private, max-age=31536000, immutable",
+          ETag: `"${preview.sha256}"`,
+          "X-Content-Type-Options": "nosniff",
+        });
+        res.end(preview.bytes);
+        return;
       }
       // A picture of the project's (the Look tab shows its logo); an SVG may not run anything.
       const image =
