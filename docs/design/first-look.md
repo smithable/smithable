@@ -109,8 +109,14 @@ library. Picking is free, instant and the same every time.
 
 ### 4.4 Records in the app's own data
 
-Sample records name sample files, so they show the new pictures. A picture a person uploaded to
-a record lives in the app's data, not under `public/images/`, and is not touched.
+Seeding copies each sample picture into the app's uploads, and a sample record stores that copy.
+So placing new files alone would leave the records already seeded with the old pictures. The
+host therefore also rewrites, in the project's own development data only, each record whose
+stored picture is the copy of a sample this change replaces: found by the old sample's hash and
+confirmed by comparing the bytes, never by names. It happens inside the operation's data
+snapshot, so undo brings the records and files back, and a failure rewrites nothing. The result
+says how many records changed. A picture a person uploaded, or one replaced by hand, never
+matches and is not touched. A deployed app's data is never touched by a style change.
 
 ## 5 The AI mark
 
