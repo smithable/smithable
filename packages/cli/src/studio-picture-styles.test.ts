@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { type LibraryVersion, libraryVersion, sha256, type VersionEntry } from "./picture-style.js";
 import { libraryBase } from "./pictures.js";
-import { pictureHashes, pictureStyleCards, pinnedPictureVersion } from "./studio-picture-styles.js";
+import {
+  pictureHashes,
+  pictureStyleCards,
+  pinnedPictureVersion,
+  stylePreview,
+} from "./studio-picture-styles.js";
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "style-cards-"));
@@ -130,4 +135,62 @@ test("the current style shows the app's actual files when the library has newer 
   } finally {
     rmSync(f.dir, { recursive: true, force: true });
   }
+});
+
+test("a style the app does not have yet shows its previews through Studio, named by offer and hash", () => {
+  const f = fixture();
+  try {
+    const cards = pictureStyleCards(f.dir, f.version, "en", "offer-1");
+    const pastel = cards.styles.find((style) => style.id === "pastel");
+    for (const preview of pastel?.previews ?? []) {
+      const src = new URL(preview.src, "http://studio.invalid");
+      expect(src.origin).toBe("http://studio.invalid");
+      expect(src.pathname).toBe("/api/picture-styles/preview");
+      expect(src.searchParams.get("offer")).toBe("offer-1");
+    }
+    const cafe = f.version.entries.find((entry) => entry.id === "cafe-pastel");
+    expect(pastel?.previews[0]?.src).toContain(`v=${cafe?.sha256}`);
+  } finally {
+    rmSync(f.dir, { recursive: true, force: true });
+  }
+});
+
+test("a preview is only an entry of the offer's version, and only when its bytes match", async () => {
+  const webp = Buffer.concat([Buffer.from("RIFF\0\0\0\0WEBP"), Buffer.from("VP8L a picture")]);
+  const entry = (id: string, bytes: Uint8Array) => ({
+    id,
+    kind: "sample",
+    style: "pastel",
+    subject: id,
+    generated: true,
+    tags: [],
+    alt: id,
+    sha256: sha256(bytes),
+    url: `${libraryBase()}/files/${id}.webp`,
+  });
+  const version: LibraryVersion = {
+    version: "v1",
+    entries: [
+      entry("good", webp),
+      entry("swapped", webp),
+      entry("text", Buffer.from("not a webp")),
+    ],
+    styles: [],
+  };
+  const fetched: string[] = [];
+  const fetchFn = (async (input: string | URL | Request) => {
+    const url = String(input);
+    fetched.push(url);
+    if (url.endsWith("/swapped.webp")) return new Response(Buffer.from("other bytes"));
+    if (url.endsWith("/text.webp")) return new Response(Buffer.from("not a webp"));
+    return new Response(webp);
+  }) as typeof fetch;
+  const good = await stylePreview(version, "good", fetchFn);
+  expect("bytes" in good && Buffer.from(good.bytes).equals(webp)).toBe(true);
+  expect(await stylePreview(version, "elsewhere", fetchFn)).toMatchObject({ status: 404 });
+  expect(await stylePreview(version, "swapped", fetchFn)).toMatchObject({ status: 502 });
+  expect(await stylePreview(version, "text", fetchFn)).toMatchObject({ status: 502 });
+  // Only the entries' own addresses were fetched; an unknown entry fetched nothing.
+  expect(fetched.every((url) => url.startsWith(`${libraryBase()}/files/`))).toBe(true);
+  expect(fetched).toHaveLength(3);
 });
