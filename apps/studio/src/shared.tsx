@@ -47,6 +47,8 @@ export function Preview({
   highlight,
   pages = [],
   go,
+  following,
+  onFollowing,
 }: {
   url: string;
   version: number;
@@ -66,6 +68,10 @@ export function Preview({
   pages?: [string, string][];
   /** A page to open, as the address bar would (Follow's sign-in); `key` makes it again. */
   go?: { path: string; key: number };
+  /** Whether the editors open the preview's page as it changes (No code's Behavior and Layout);
+   * offered beside the address only with `onFollowing`. */
+  following?: boolean;
+  onFollowing?: (on: boolean) => void;
 }) {
   // The preview's records are samples, and a published app starts empty: said until dismissed.
   const [samples, setSamples] = useState(() => {
@@ -344,14 +350,17 @@ export function Preview({
               Select
             </Button>
           )}
-          <form
-            className="relative flex items-center gap-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              open(typed);
-            }}
-          >
+          {/* No form: a lone text field in a form that submits is what password managers take for
+              an identity or address form (T969); Enter opens the page from the key handler. */}
+          <div className="relative flex items-center gap-1">
             <Input
+              type="text"
+              name="preview-path"
+              inputMode="url"
+              spellCheck={false}
+              data-1p-ignore=""
+              data-lpignore="true"
+              data-form-type="other"
               aria-label="Preview address"
               role="combobox"
               aria-autocomplete="list"
@@ -380,10 +389,10 @@ export function Preview({
                   setActive((at) => (at + step + matches.length) % Math.max(matches.length, 1));
                   return;
                 }
-                const chosen = matches[active];
-                if (e.key === "Enter" && listing && chosen) {
+                if (e.key === "Enter") {
                   e.preventDefault();
-                  open(chosen[0]);
+                  const chosen = matches[active];
+                  open(listing && chosen ? chosen[0] : typed);
                 }
               }}
               className="h-7 w-56 font-mono text-xs"
@@ -417,10 +426,31 @@ export function Preview({
                 ))}
               </div>
             )}
-            <Button type="submit" variant="ghost" className="h-7">
-              Go
-            </Button>
-          </form>
+            {onFollowing && (
+              <button
+                type="button"
+                aria-pressed={Boolean(following)}
+                aria-label="Link the editors to the preview"
+                title={
+                  following
+                    ? "Linked: the editors open the page the preview shows. Click to unlink."
+                    : "Not linked: the editors stay where they are. Click to open the page the preview shows."
+                }
+                onClick={() => onFollowing(!following)}
+                className={cx(
+                  "grid h-7 w-7 place-items-center rounded-md border border-line",
+                  following ? "bg-accent-soft" : "text-quiet hover:bg-subtle",
+                )}
+              >
+                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none">
+                  <g stroke="currentColor" strokeWidth="1.5" transform="rotate(-45 8 8)">
+                    <rect x="1.5" y="5.5" width="7" height="5" rx="2.5" />
+                    <rect x="7.5" y="5.5" width="7" height="5" rx="2.5" />
+                  </g>
+                </svg>
+              </button>
+            )}
+          </div>
           {onHide && (
             <Button variant="ghost" className="h-7" onClick={onHide}>
               Hide

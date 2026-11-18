@@ -169,6 +169,20 @@ export function App() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [people, setPeople] = useState<PeopleState>();
   const [go, setGo] = useState<{ path: string; key: number }>();
+  // Whether No code's editors open the preview's page as it changes (the link beside the address).
+  const [following, setFollowingState] = useState(() => {
+    try {
+      return localStorage.getItem("smithable:follows-preview") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const setFollowing = (on: boolean) => {
+    setFollowingState(on);
+    try {
+      localStorage.setItem("smithable:follows-preview", on ? "1" : "0");
+    } catch {}
+  };
   const [holding, setHolding] = useState(false);
   useEffect(() => {
     if (!message?.ok || holding) return;
@@ -1624,6 +1638,15 @@ export function App() {
                     highlight={highlight}
                     pages={pages}
                     go={go}
+                    following={following}
+                    onFollowing={
+                      // Behavior and Layout follow the preview; Who can and Content have no page
+                      // to follow, so the link is not offered then (T907).
+                      slotOf("nocode") !== undefined &&
+                      ["behavior", "layout", "look", undefined].includes(place.nocode.sub)
+                        ? setFollowing
+                        : undefined
+                    }
                   />
                 )}
                 {!narrow && (
@@ -1736,6 +1759,7 @@ export function App() {
                             followingBlocked={
                               busy || guideStarted || Boolean(editingLook) || show.going
                             }
+                            following={following}
                           />
                         ) : w === "code" ? (
                           <Suspense

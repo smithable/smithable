@@ -208,6 +208,7 @@ export function NoCode({
   onTargetOpened,
   onLook,
   followingBlocked = false,
+  following = true,
 }: {
   project: Project;
   spec: Spec;
@@ -219,17 +220,13 @@ export function NoCode({
   onTargetOpened?: () => void;
   onLook: (page?: string) => void;
   followingBlocked?: boolean;
+  /** Whether the editors open the preview's page as it changes: the link button beside the
+   * preview's address (shared.tsx), kept by App.tsx. */
+  following?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const edits = usePendingEdits();
   const [contextPage, setContextPage] = useState(place.page ?? "");
-  const [following, setFollowing] = useState(() => {
-    try {
-      return localStorage.getItem("smithable:follows-preview") !== "0";
-    } catch {
-      return true;
-    }
-  });
   const pending = useRef<{ page: string; context: number }>(undefined);
   const navigation = useRef(new PreviewNavigation());
   const previewPage = useRef<string>(undefined);
@@ -324,6 +321,19 @@ export function NoCode({
     pending.current = { page, context: previewFollowContext() };
     schedule();
   };
+  // Linking again (the button beside the preview's address) opens the page the preview shows;
+  // unlinking drops what was waiting to open.
+  const linked = useRef(following);
+  useEffect(() => {
+    if (linked.current === following) return;
+    linked.current = following;
+    cancelFollow();
+    if (!following || !spec.ir) return;
+    const page = pageForPreviewPath(spec.ir, keptPage(), spec.content?.languages);
+    previewPage.current = page;
+    if (page) pending.current = { page, context: previewFollowContext() };
+    schedule();
+  });
   // Flush only after all draft/focus/transient guards have settled, never in a blur handler.
   useEffect(() => {
     if (pending.current) schedule();
@@ -471,31 +481,6 @@ export function NoCode({
               </div>
             }
           >
-            {/* Following opens the preview's page in Behavior and Layout; Who can and Content have
-                no page to follow, so they do not offer it (T907). */}
-            {(sub === "behavior" || sub === "layout") && (
-              <label className="flex items-center gap-2 border-b border-line px-4 py-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  checked={following}
-                  onChange={(event) => {
-                    const next = event.target.checked;
-                    cancelFollow();
-                    setFollowing(next);
-                    try {
-                      localStorage.setItem("smithable:follows-preview", next ? "1" : "0");
-                    } catch {}
-                    if (next && spec.ir) {
-                      const page = pageForPreviewPath(spec.ir, keptPage(), spec.content?.languages);
-                      previewPage.current = page;
-                      if (page) pending.current = { page, context: previewFollowContext() };
-                      schedule();
-                    }
-                  }}
-                />
-                Follows preview
-              </label>
-            )}
             {sub === "behavior" ? (
               <>
                 <Summary sections={sections} onJump={jumpTo} />
