@@ -114,7 +114,7 @@ function hosted(given: "stdin" | "env") {
       expect(value).not.toContain(tokenDigest(TOKEN));
     }
     // The preview holds only its own credential's digest.
-    const [{ env = {} }] = lines.filter((line) => line.env);
+    const env = lines.find((line) => line.env)?.env ?? {};
     expect(env[PREVIEW_TOKEN_DIGEST]).toBe(tokenDigest(preview));
     expect(env.SMITHABLE_STUDIO_TOKEN).toBeUndefined();
     const requests = lines.filter((line) => line.raw);

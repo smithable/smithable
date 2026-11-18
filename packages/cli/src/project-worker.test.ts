@@ -180,6 +180,33 @@ export class Generator { async run() { appendFileSync(${JSON.stringify(join(dir,
   ]);
 });
 
+test("after a good answer, two failures in a row still give the worker up", async () => {
+  const dir = project();
+  tampered(dir);
+  const runs = join(dir, "runs");
+  // The first run answers; every later one writes a line that is not an answer and hangs.
+  write(
+    dir,
+    "node_modules/@tanstack/router-generator/index.js",
+    `import { appendFileSync, existsSync, readFileSync, writeSync } from "node:fs";
+export const getConfig = () => ({});
+export class Generator { async run() {
+  const before = existsSync(${JSON.stringify(runs)}) ? readFileSync(${JSON.stringify(runs)}, "utf8") : "";
+  appendFileSync(${JSON.stringify(runs)}, "x");
+  if (before === "") return;
+  writeSync(3, '{"id":0,"value":true,"err":"","more":1}\\n');
+  await new Promise(() => {});
+} }`,
+  );
+  holdSecretsFromJson(JSON.stringify({ studioToken: TOKEN }));
+  const steps = stepsFor(dir, { err: () => {} });
+  expect(await steps.routeTree()).toBe(true);
+  expect(await steps.routeTree()).toBe(false);
+  expect(await steps.routeTree()).toBe(false);
+  // The first worker answered once and failed once, its replacement failed: no third start.
+  expect(readFileSync(runs, "utf8")).toBe("xxx");
+});
+
 /**
  * Code the project can write is loaded only in the worker's process: the CLI's sources call
  * createRequire and import() with a computed path only where that is allowed, and the steps that

@@ -75,6 +75,9 @@ class Worker {
       if (this.child === child) this.read(chunk);
     });
     pipe.on("error", () => this.stop(child));
+    // A worker that closes its end without exiting is as good as gone: no waiting out the limit.
+    pipe.on("end", () => this.stop(child));
+    pipe.on("close", () => this.stop(child));
     child.on("exit", () => this.stop(child));
     child.on("error", () => this.stop(child));
     // Neither keeps this process alive on its own: only a question waiting for its answer does.
@@ -133,13 +136,15 @@ class Worker {
         if (!this.start()) return undefined;
         const answer = await this.once(step, migration);
         if (answer) {
-          this.starts = 0;
+          // Two failures in a row give it up: the worker that answered counts as the first start.
+          this.starts = 1;
           return answer;
         }
       }
       return undefined;
     });
-    this.queue = asked;
+    // A question that failed must not keep the ones after it from being asked.
+    this.queue = asked.catch(() => undefined);
     return asked;
   }
 
@@ -180,6 +185,8 @@ export function shaped(line: string): (Answer & { id: number }) | undefined {
 }
 
 const workers = new Map<string, Worker>();
+// The workers are in groups of their own, so they would outlive this process: stopped with it.
+process.on("exit", () => stopWorkers());
 
 function workerFor(dir: string): Worker {
   const root = resolve(dir);
