@@ -179,6 +179,35 @@ const server = spawn("node", [cli, "studio", dir, "--port", String(port)], {
 const browser = await chromium.launch();
 // Wide enough that the preview, beside No code and Smith, shows lists as tables.
 const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
+/**
+ * The browser for checks of what comes after the first-look picker: their pages count it as seen
+ * (it shows once per browser, kept in localStorage, first-look.ts), as a returning person's do.
+ * The picker's own checks (checkFirstLook, the guide's first visit) use `browser` itself.
+ */
+const seenContext = async (options) => {
+  const context = await browser.newContext(options);
+  await context.addInitScript(() => {
+    const get = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (key) {
+      return String(key).startsWith("lookPickerSeen:") ? "1" : get.call(this, key);
+    };
+  });
+  return context;
+};
+const lookSeen = new Proxy(browser, {
+  get(target, key) {
+    if (key === "newContext") return seenContext;
+    if (key === "newPage")
+      return async (options) => {
+        const context = await seenContext(options);
+        const opened = await context.newPage();
+        opened.on("close", () => context.close().catch(() => {}));
+        return opened;
+      };
+    const value = Reflect.get(target, key);
+    return typeof value === "function" ? value.bind(target) : value;
+  },
+});
 // The test's layout keeps Changes under Smith (closed by default since ask-flows.md §8): an
 // arrangement kept in the browser, as a person's would be. Only when none is kept yet.
 await page.addInitScript(() => {
@@ -330,7 +359,6 @@ try {
     await preview
       .locator('body[data-page="customers"][data-hydrated=true]')
       .waitFor({ timeout: 90000 * P });
-    await checkFirstLook(browser, base);
     await checkStudioLook(page, dir);
     await checkStudioLookTimeout(page, dir);
     await checkStudioLookGallery(page, dir);
@@ -356,16 +384,17 @@ try {
   );
   // Start the guide only after dismissing the fixture's error. Its demonstration makes real
   // changes and undoes them, so the initial empty-history assertion must also come first.
-  await checkStudioLayout(browser, base);
-  await checkCompactLook(browser, base);
-  await checkStudioLookNavigation(browser, base);
-  await checkStudioSpeech(browser, base);
+  await checkStudioLayout(lookSeen, base);
+  await checkCompactLook(lookSeen, base);
+  await checkStudioLookNavigation(lookSeen, base);
+  await checkStudioSpeech(lookSeen, base);
+  // It passes the first-look picker itself, as a new browser meets it.
   await checkStudioGuideSpeech(browser, base);
-  await checkStudioDraft(browser, base);
-  await checkStudioTimers(browser, base, root);
-  await checkStudioValidation(browser, base);
-  await checkStudioQuestions(browser, base);
-  await checkStudioUsage(browser, base);
+  await checkStudioDraft(lookSeen, base);
+  await checkStudioTimers(lookSeen, base, root);
+  await checkStudioValidation(lookSeen, base);
+  await checkStudioQuestions(lookSeen, base);
+  await checkStudioUsage(lookSeen, base);
   await step(
     "the preview shows the app as a phone or a tablet would, and keeps that choice after a reload",
     async () => {
@@ -2183,7 +2212,7 @@ try {
       await history.getByText(`#${number} is undone already`).waitFor({ timeout: 30000 * P });
       // A browser that kept no arrangement opens with Changes closed; Show all opens it. Smith
       // docked (he floats by default, and then Changes waits behind the preview's arrow).
-      const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      const fresh = await lookSeen.newPage({ viewport: { width: 1440, height: 900 } });
       try {
         await fresh.addInitScript(() => {
           try {
@@ -3568,7 +3597,7 @@ try {
         // The page, open before the description is sent: the making screen comes at once, with
         // the description and the bar, then the app's name and one line once the model has answered, then
         // Builder with the app (docs/design/while-it-is-made.md stage one).
-        const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+        const watcher = await lookSeen.newPage({ viewport: { width: 1440, height: 900 } });
         await watcher.goto(`${other}/?guide=off`);
         await watcher
           .locator("header")
@@ -3730,7 +3759,7 @@ try {
         // with its answers as buttons, the words box keeping what is typed, and once the app is
         // in place, the request made as if typed then.
         await again();
-        const watcher = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+        const watcher = await lookSeen.newPage({ viewport: { width: 1440, height: 900 } });
         try {
           await watcher.goto(`${other}/?guide=off`);
           await watcher
@@ -3791,6 +3820,9 @@ try {
       if (waiting) process.kill(-waiting.pid);
     } catch {}
   }
+  // The first-look picker last: it keeps a theme and leaves its lines in Smith's thread, which
+  // the checks before it do not expect; its own fresh browser shows it whatever ran before.
+  await checkFirstLook(browser, base);
 } catch (error) {
   // A failed step has said so above; anything else (a check outside the steps, the site not
   // built) is said here, and fails the run rather than skipping the steps after it.

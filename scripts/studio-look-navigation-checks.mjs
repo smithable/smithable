@@ -16,7 +16,6 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
     const main = await page.locator('iframe[title="App preview"]').elementHandle();
     const mainFrame = await main.contentFrame();
     await mainFrame.locator('body[data-hydrated="true"]').waitFor();
-    await context.clearCookies();
     let redirected = false;
     page.on("framenavigated", (frame) => {
       if (
@@ -27,7 +26,12 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
         redirected = true;
     });
     await page.getByRole("button", { name: "Look", exact: true }).click();
-    await page.getByRole("button", { name: "More look settings", exact: true }).click();
+    // Look opens the first-look picker, which may reload the preview (signing it in again); the
+    // session ends once it is open, so the editor's own frame is the one that meets sign-in.
+    const more = page.getByRole("button", { name: "More look settings", exact: true });
+    await more.waitFor();
+    await context.clearCookies();
+    await more.click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog.getByRole("button", { name: label, exact: true }).click();
