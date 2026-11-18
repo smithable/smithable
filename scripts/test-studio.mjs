@@ -184,24 +184,30 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
  * (it shows once per browser, kept in localStorage, first-look.ts), as a returning person's do.
  * The picker's own checks (checkFirstLook, the guide's first visit) use `browser` itself.
  */
-const lookSeen = {
-  async newContext(options) {
-    const context = await browser.newContext(options);
-    await context.addInitScript(() => {
-      const get = Storage.prototype.getItem;
-      Storage.prototype.getItem = function (key) {
-        return String(key).startsWith("lookPickerSeen:") ? "1" : get.call(this, key);
-      };
-    });
-    return context;
-  },
-  async newPage(options) {
-    const context = await lookSeen.newContext(options);
-    const opened = await context.newPage();
-    opened.on("close", () => context.close().catch(() => {}));
-    return opened;
-  },
+const seenContext = async (options) => {
+  const context = await browser.newContext(options);
+  await context.addInitScript(() => {
+    const get = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (key) {
+      return String(key).startsWith("lookPickerSeen:") ? "1" : get.call(this, key);
+    };
+  });
+  return context;
 };
+const lookSeen = new Proxy(browser, {
+  get(target, key) {
+    if (key === "newContext") return seenContext;
+    if (key === "newPage")
+      return async (options) => {
+        const context = await seenContext(options);
+        const opened = await context.newPage();
+        opened.on("close", () => context.close().catch(() => {}));
+        return opened;
+      };
+    const value = Reflect.get(target, key);
+    return typeof value === "function" ? value.bind(target) : value;
+  },
+});
 // The test's layout keeps Changes under Smith (closed by default since ask-flows.md §8): an
 // arrangement kept in the browser, as a person's would be. Only when none is kept yet.
 await page.addInitScript(() => {
