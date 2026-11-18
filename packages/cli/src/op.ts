@@ -63,7 +63,7 @@ import {
   refusalText,
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
-import { placeStyle } from "./picture-style.js";
+import { currentHashes, placeStyle } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
@@ -648,6 +648,11 @@ async function applyAndCheckpoint(
     io.err("The project source changed before Apply could write it. The draft was not written.\n");
     return 1;
   }
+  // The pictures were planned before their files were fetched: someone may have changed one since.
+  if (placed && JSON.stringify(currentHashes(dir)) !== JSON.stringify(placed.planned)) {
+    io.err("A picture changed while the style's pictures were fetched. Nothing was changed.\n");
+    return 1;
+  }
   // From the first write to the commit: rollback only while no newer editor files would be lost.
   let committed = false;
   try {
@@ -670,8 +675,10 @@ async function applyAndCheckpoint(
     if (placed) {
       for (const file of placed.files) writeFileSync(join(dir, file.path), file.bytes);
       for (const file of placed.texts)
-        if (file.text) writeFileSync(join(dir, file.path), file.text);
-        else rmSync(join(dir, file.path), { force: true });
+        if (file.text) {
+          mkdirSync(dirname(join(dir, file.path)), { recursive: true });
+          writeFileSync(join(dir, file.path), file.text);
+        } else rmSync(join(dir, file.path), { force: true });
       io.out(
         `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}\n`,
       );

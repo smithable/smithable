@@ -5,7 +5,7 @@
 // credits and the hero's words. Files the owner changed, and files with no record, are theirs and
 // stay. Core fetches nothing; generation never fetches.
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { PictureCredit, PictureEntry } from "@smithable/ai";
 import { YamlEditor } from "@smithable/core";
@@ -81,16 +81,37 @@ export const recordsText = (records: PictureRecords) =>
     2,
   )}\n`;
 
-/** The files under public/images/ a library picture may lie at: the hero, the mark, samples. */
+/** A plain file or folder, not a link: a link may lead out of the project, so it is never followed. */
+const plain = (path: string, kind: "file" | "dir") => {
+  try {
+    const s = lstatSync(path);
+    return kind === "file" ? s.isFile() : s.isDirectory();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * The files under public/images/ a library picture may lie at: the hero, the mark, samples.
+ * Only plain files in plain folders: a link is the owner's business and is never written through.
+ */
 function placedFiles(dir: string): string[] {
   const images = imagesDir(dir);
-  const files = ["hero.webp", "logo.webp"].filter((f) => existsSync(join(images, f)));
+  if (!plain(join(dir, "public"), "dir") || !plain(images, "dir")) return [];
+  const files = ["hero.webp", "logo.webp"].filter((f) => plain(join(images, f), "file"));
   const samples = join(images, "samples");
-  if (existsSync(samples))
+  if (plain(samples, "dir"))
     for (const name of readdirSync(samples).sort())
-      if (name.endsWith(".webp")) files.push(`samples/${name}`);
+      if (/^[\w.-]+\.webp$/.test(name) && plain(join(samples, name), "file"))
+        files.push(`samples/${name}`);
   return files;
 }
+
+/** The hash of each placed file as it is now, to see that nothing changed before writing. */
+export const currentHashes = (dir: string): Record<string, string> =>
+  Object.fromEntries(
+    placedFiles(dir).map((f) => [f, sha256(readFileSync(join(imagesDir(dir), f)))]),
+  );
 
 const recordOf = (version: LibraryVersion, entry: VersionEntry, role: PictureRole) => ({
   generated: entry.generated ?? true,
@@ -103,12 +124,19 @@ const recordOf = (version: LibraryVersion, entry: VersionEntry, role: PictureRol
 });
 
 /**
- * The record with every placed file the library knows, for apps made before it: a file whose
- * bytes match an entry's hash in this version gets that entry's record; a file that matches none
- * is the owner's and gets none. By hash only, never by name. Records already there are kept.
+ * The record with every placed file the library knows, once, for apps made before it: a file
+ * whose bytes match an entry's hash in this version gets that entry's record; a file that matches
+ * none is the owner's and gets none. By hash only, never by name. An app whose record already
+ * names hashes keeps it as it is, so a picture the owner adds later is never adopted.
  */
-export function rebuildRecords(dir: string, version: LibraryVersion): PictureRecords {
+export function rebuildRecords(
+  dir: string,
+  version: LibraryVersion,
+  /** At creation every file is Smithable's, so each the library knows is recorded. */
+  creating = false,
+): PictureRecords {
   const records = readRecords(dir);
+  if (!creating && Object.values(records).some((r) => r?.sha256)) return records;
   // The first entry with a hash wins: the index lists what apps got first before later styles.
   const byHash = new Map<string, VersionEntry>();
   for (const e of version.entries) if (!byHash.has(e.sha256)) byHash.set(e.sha256, e);
@@ -207,6 +235,8 @@ export async function libraryVersion(fetchFn: Fetch): Promise<LibraryVersion | s
 /** What placing a style writes, every file fetched and checked; or why nothing is. */
 export interface PlacedStyle {
   files: { path: string; bytes: Uint8Array }[];
+  /** Each placed file's hash when it was planned; the host writes only if they are unchanged. */
+  planned: Record<string, string>;
   /** public/images/pictures.json, CREDITS.md and smithable.content.yml, as text. */
   texts: { path: string; text: string }[];
   kept: string[];
@@ -227,6 +257,7 @@ export async function placeStyle(
   if (typeof version === "string") return `No pictures were changed: ${version}.`;
   if (!version.styles.some((s) => s.id === style))
     return `The image library has no style "${style}"; it has ${version.styles.map((s) => s.id).join(", ")}.`;
+  const planned = currentHashes(dir);
   const plan = planStyle(dir, version, style);
   if (plan.missing.length)
     return `The ${style} style has no picture for ${plan.missing.join(", ")}, so it is not offered for this app.`;
@@ -245,7 +276,7 @@ export async function placeStyle(
   const hero = plan.writes.find((w) => w.file === "hero.webp");
   const content = hero && heroWords(dir, hero.entry);
   if (content) texts.push({ path: "smithable.content.yml", text: content });
-  return { files, texts, kept: plan.kept };
+  return { files, texts, kept: plan.kept, planned };
 }
 
 /** CREDITS.md from the records: a line for each credited photograph; empty when none. */
@@ -301,7 +332,7 @@ export function taggedContent<T>(dir: string, content: T): T {
   const tag = (src: string) => {
     if (!tags.has(src)) {
       const file = join(dir, "public", src);
-      tags.set(src, existsSync(file) ? sha256(readFileSync(file)).slice(0, 16) : "");
+      tags.set(src, plain(file, "file") ? sha256(readFileSync(file)).slice(0, 16) : "");
     }
     return tags.get(src);
   };
@@ -311,7 +342,8 @@ export function taggedContent<T>(dir: string, content: T): T {
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(value)) out[key] = walk(v);
     const src = out.src;
-    if (typeof src === "string" && /^images\/[\w/.-]+$/.test(src)) {
+    // Only a plain path under images/ (no "..", no link): generation reads nothing else.
+    if (typeof src === "string" && /^images\/(?:[\w-]+\/)*[\w-]+\.[a-z0-9]+$/.test(src)) {
       const t = tag(src);
       if (t) out.src = `${src}?v=${t}`;
     }

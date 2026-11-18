@@ -206,11 +206,48 @@ test("validate says when smithable.ux.yml names a style the placed pictures are 
   const io = captureIo();
   const code = validate(dir, io);
   if (code) throw new Error(io.stderr + io.stdout);
-  expect(io.stderr).toContain("smithable.ux.yml says the pictures are pastel, but 3 library pictures");
+  expect(io.stderr).toContain(
+    "smithable.ux.yml says the pictures are pastel, but 3 library pictures",
+  );
   expect(io.stderr).toContain("smithable op setPictureStyle pastel");
   // Once they are, nothing is said.
   writeFileSync(join(dir, "smithable.ux.yml"), "smithableUx: 0.1\npictures: { style: lifelike }\n");
   const quiet = captureIo();
   expect(validate(dir, quiet)).toBe(0);
   expect(quiet.stderr).not.toContain("says the pictures are");
+});
+
+test("a picture the owner adds after the record is never adopted, even with library bytes", async () => {
+  const dir = oldApp();
+  const first = await placeStyle(dir, "pastel", library());
+  if (typeof first === "string") throw new Error(first);
+  for (const f of first.files) writeFileSync(join(dir, f.path), f.bytes);
+  for (const t of first.texts) writeFileSync(join(dir, t.path), t.text);
+  writeFileSync(join(dir, "public", "images", "samples", "9.webp"), fileOf("bicycle"));
+  const back = await placeStyle(dir, "lifelike", library());
+  if (typeof back === "string") throw new Error(back);
+  expect(back.kept).toEqual(["samples/9.webp"]);
+});
+
+test("a picture that is a link is never written through, and generation reads only images/", async () => {
+  const { symlinkSync } = await import("node:fs");
+  const { taggedContent } = await import("./picture-style.js");
+  const dir = oldApp();
+  const outside = join(dir, "outside.webp");
+  writeFileSync(outside, fileOf("bicycle"));
+  const sample = join(dir, "public", "images", "samples", "0.webp");
+  const { rmSync } = await import("node:fs");
+  rmSync(sample);
+  symlinkSync(outside, sample);
+  const placed = await placeStyle(dir, "pastel", library());
+  if (typeof placed === "string") throw new Error(placed);
+  expect(placed.files.map((f) => f.path)).not.toContain("public/images/samples/0.webp");
+  const tagged = taggedContent(dir, {
+    a: { src: "images/hero.webp" },
+    b: { src: "images/../../etc/passwd" },
+    c: { src: "images/samples/0.webp" },
+  });
+  expect(tagged.a.src).toMatch(/^images\/hero\.webp\?v=[a-f0-9]{16}$/);
+  expect(tagged.b.src).toBe("images/../../etc/passwd");
+  expect(tagged.c.src).toBe("images/samples/0.webp");
 });

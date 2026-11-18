@@ -316,7 +316,7 @@ export function placePictures(
   writePictures(dir, pictures);
   // A starter's own pictures are library pictures too: the record names them, by their hashes.
   if (version) {
-    const records = rebuildRecords(dir, version);
+    const records = rebuildRecords(dir, version, true);
     if (Object.keys(records).length)
       writeFileSync(join(dir, "public", "images", "pictures.json"), recordsText(records));
   }
