@@ -203,7 +203,8 @@ body {
 /* The running preview stays visible beside the picker, above its sheet on a phone. */
 .first-look {
   position: fixed;
-  z-index: 45;
+  /* Above Smith's floating panel (z-50), which otherwise covers the phone's sheet. */
+  z-index: 55;
   top: 72px;
   right: 16px;
   bottom: 16px;

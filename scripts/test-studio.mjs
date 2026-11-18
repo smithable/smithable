@@ -330,7 +330,6 @@ try {
     await preview
       .locator('body[data-page="customers"][data-hydrated=true]')
       .waitFor({ timeout: 90000 * P });
-    await checkFirstLook(browser, base);
     await checkStudioLook(page, dir);
     await checkStudioLookTimeout(page, dir);
     await checkStudioLookGallery(page, dir);
@@ -354,6 +353,9 @@ try {
       await page.getByText("No changes yet.").waitFor();
     },
   );
+  // The first-look picker keeps a theme (a change), so it comes after the empty history above; and
+  // before the checks below that open Studio afresh, which expect it seen and Smith presenting.
+  await checkFirstLook(browser, base);
   // Start the guide only after dismissing the fixture's error. Its demonstration makes real
   // changes and undoes them, so the initial empty-history assertion must also come first.
   await checkStudioLayout(browser, base);

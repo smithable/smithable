@@ -1265,7 +1265,9 @@ export function App() {
                 variant="ghost"
                 className="shrink-0 border border-line"
                 data-guide="look"
-                disabled={busy || Boolean(pickingLook)}
+                // Until the spec is read (its plugins load first) there is no ux to tell the
+                // picker from the editor, and a click then opened the editor instead.
+                disabled={busy || Boolean(pickingLook) || !spec.plugins}
                 onClick={() => {
                   pauseGuide();
                   showWindow("preview");
