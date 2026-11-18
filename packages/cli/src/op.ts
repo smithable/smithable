@@ -63,12 +63,12 @@ import {
   refusalText,
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
+import { placeStyle } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
 import { afterFailure, recordFailure } from "./report.js";
 import { recordRule } from "./rules.js";
-import { placeStyle } from "./picture-style.js";
 import { themeTransaction } from "./theme-transaction.js";
 import { projectThemeFiles, projectThemes, projectTranslations } from "./validate.js";
 import {

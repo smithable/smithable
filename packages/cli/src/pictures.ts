@@ -19,8 +19,8 @@ import {
   type LibraryVersion,
   libraryVersion,
   type PictureRecord,
-  rebuildRecords,
   type PictureRole,
+  rebuildRecords,
   recordsText,
   type VersionEntry,
 } from "./picture-style.js";

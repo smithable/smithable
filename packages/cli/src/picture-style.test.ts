@@ -188,3 +188,29 @@ test("a library without versions refuses and says so", async () => {
   const none: Fetch = (async () => new Response("", { status: 404 })) as Fetch;
   expect(await placeStyle(oldApp(), "pastel", none)).toMatch(/could not be reached/);
 });
+
+test("validate says when smithable.ux.yml names a style the placed pictures are not in", async () => {
+  const { validate } = await import("./validate.js");
+  const { captureIo } = await import("./test-io.js");
+  const dir = oldApp();
+  writeFileSync(
+    join(dir, "smithable.yml"),
+    "smithable: 0.1\napp: { name: Cafe }\nmodels:\n  Dish: { fields: { name: string! } }\npages:\n  home: { route: /, landing: { hero: { button: dishes } } }\n  dishes: { crud: Dish }\n",
+  );
+  writeFileSync(join(dir, "smithable.auth.yml"), "smithableAuth: 0.1\nsignIn: none\n");
+  writeFileSync(join(dir, "smithable.ux.yml"), "smithableUx: 0.1\npictures: { style: pastel }\n");
+  writeFileSync(
+    join(dir, "public", "images", "pictures.json"),
+    JSON.stringify(rebuildRecords(dir, version)),
+  );
+  const io = captureIo();
+  const code = validate(dir, io);
+  if (code) throw new Error(io.stderr + io.stdout);
+  expect(io.stderr).toContain("smithable.ux.yml says the pictures are pastel, but 3 library pictures");
+  expect(io.stderr).toContain("smithable op setPictureStyle pastel");
+  // Once they are, nothing is said.
+  writeFileSync(join(dir, "smithable.ux.yml"), "smithableUx: 0.1\npictures: { style: lifelike }\n");
+  const quiet = captureIo();
+  expect(validate(dir, quiet)).toBe(0);
+  expect(quiet.stderr).not.toContain("says the pictures are");
+});

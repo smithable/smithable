@@ -48,6 +48,7 @@ import {
 } from "@smithable/core";
 import { hostedLevel, levelWarnings } from "./hosted-level.js";
 import type { Io } from "./io.js";
+import { readRecords, sha256 } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { contextFacts, reviewsFor } from "./privacy-review.js";
 
@@ -379,7 +380,37 @@ function privacyFindings(
           line: 1,
           column: 1,
         });
-  return privacy;
+  return [...privacy, ...pictureStyleFindings(dirname(path), ux)];
+}
+
+/**
+ * smithable.ux.yml names an image style the placed pictures are not in (a hand edit of the key,
+ * first-look.md §4.2): said, with the command that applies it; generation never tries to.
+ */
+function pictureStyleFindings(dir: string, ux: UxIR | undefined): Diagnostic[] {
+  const style = ux?.pictures?.style;
+  if (!style) return [];
+  const other = Object.entries(readRecords(dir)).filter(
+    ([file, r]) =>
+      (r.role === "hero" || r.role === "sample") &&
+      r.style &&
+      r.style !== style &&
+      r.sha256 &&
+      existsSync(join(dir, "public", "images", file)) &&
+      sha256(readFileSync(join(dir, "public", "images", file))) === r.sha256,
+  );
+  if (!other.length) return [];
+  return [
+    {
+      severity: "warning",
+      code: "picture-style-differs",
+      message: `smithable.ux.yml says the pictures are ${style}, but ${other.length === 1 ? "one library picture is" : `${other.length} library pictures are`} in another style (${other.map(([f, r]) => `${f}: ${r.style}`).join(", ")}).`,
+      hint: `Put them in that style with smithable op setPictureStyle ${style}, or set the style they are in.`,
+      file: join(dir, "smithable.ux.yml"),
+      line: 1,
+      column: 1,
+    },
+  ];
 }
 
 export function isDirectory(path: string): boolean {
