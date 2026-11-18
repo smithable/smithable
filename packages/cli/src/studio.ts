@@ -864,6 +864,7 @@ export async function studio(
         .map((name) => ({ name, version: statSync(pluginPath(dir, name)).mtimeMs })),
       concepts: ir && auth ? projectIndex(dir, ir, auth).concepts : [],
       trace: trace(dir),
+      revision: projectRevision(dir),
       // Whether Redo has a change it would make again.
       canRedo: Boolean(redoTarget(dir)),
       // The Look entry shows only where its tickets can be minted: on a host, that needs a valid
@@ -1311,11 +1312,17 @@ export async function studio(
         const asked = new Date().toISOString();
         const packages = installed();
         let diagnostics: Diagnostic[] | undefined;
+        let themeChange: { change: string; revision: string } | undefined;
         const result = await capture((io) =>
           runOperation(dir, io, String(name), (args ?? {}) as OperationArgs, {
             yes: confirm === true,
             onResult: (result) => {
               if (!result.ok && result.diagnostics.length) diagnostics = result.diagnostics;
+              if (name === "setTheme" && result.ok && result.verification?.revision)
+                themeChange = {
+                  change: result.verification.revision,
+                  revision: projectRevision(dir),
+                };
             },
             ...(expectedLookProject !== undefined
               ? { projectCheck: () => expectedLookProject === lookProject }
@@ -1344,6 +1351,7 @@ export async function studio(
           needsConfirm,
           report,
           ...(change ? { change } : {}),
+          ...themeChange,
           ...(diagnostics ? { diagnostics } : {}),
         });
       }
@@ -1751,7 +1759,43 @@ export async function studio(
         });
       }
       if (req.method === "POST" && url.pathname === "/api/undo") {
-        const { change, check, confirm } = await body();
+        const {
+          change,
+          check,
+          confirm,
+          expectedChange,
+          expectedRevision,
+          lookProject: expectedProject,
+        } = await body();
+        if (expectedChange !== undefined || expectedRevision !== undefined) {
+          if (
+            typeof expectedChange !== "string" ||
+            !/^[a-f0-9]{40}$/.test(expectedChange) ||
+            typeof expectedRevision !== "string" ||
+            !/^[a-f0-9]{64}$/.test(expectedRevision) ||
+            expectedProject !== lookProject
+          )
+            return json(
+              { ok: false, output: "The look picker no longer matches this app. Reopen Look." },
+              409,
+            );
+          const packages = installed();
+          let revision: string | undefined;
+          const result = await capture((io) =>
+            undo(dir, io, {
+              change: expectedChange,
+              revision: expectedRevision,
+              onResult: (value) => {
+                revision = value;
+              },
+            }),
+          );
+          if (result.ok) {
+            restored(packages);
+            undoResult();
+          }
+          return json({ ...result, revision });
+        }
         const packages = installed();
         // One change by its id (studio-v3.md §3): the newest as before, an earlier one reversed
         // as a new change, or refused; `check` only asks.

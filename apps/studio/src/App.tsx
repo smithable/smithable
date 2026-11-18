@@ -29,6 +29,8 @@ import { ASK_SMITH } from "./builder/Wizard";
 import { type CodeJump, SHOW_CODE } from "./code-jump";
 import { type Spec, useSpec } from "./engine";
 import { FeedbackDialog } from "./Feedback";
+import { FirstLook } from "./FirstLook";
+import { lookSeenKey, seenLook } from "./first-look";
 import { doneKey, guideOff, presentedKey, TOURS } from "./guide";
 import { grouped, line } from "./history";
 import { logStore } from "./logs";
@@ -148,6 +150,12 @@ export function App() {
     path: string;
     target?: string;
   }>();
+  const [pickingLook, setPickingLook] = useState<{
+    project: Project;
+    preset: string;
+    automatic: boolean;
+  }>();
+  const [lookFinished, setLookFinished] = useState<string>();
   const [troubleshooting, setTroubleshooting] = useState(false);
   const wakingNow = useSyncExternalStore(waking.subscribe, waking.get);
   const [outbox, setOutbox] = useState(false);
@@ -539,6 +547,20 @@ export function App() {
   }, [refresh]);
 
   const spec = useSpec(project);
+  const lookApp = project?.localDir ?? project?.name ?? "";
+  const initialLook = Boolean(
+    project &&
+      !project.making &&
+      project.lookProject &&
+      project.revision &&
+      !guideOff() &&
+      !seenLook(lookApp) &&
+      lookFinished !== lookApp,
+  );
+  useEffect(() => {
+    if (initialLook && !pickingLook && !editingLook && spec.ux && project)
+      setPickingLook({ project, preset: spec.ux.theme.preset, automatic: true });
+  }, [initialLook, pickingLook, editingLook, spec.ux, project]);
   const messageErrors = (message?.diagnostics ?? []).filter((d) => d.severity === "error");
   const validationErrors = messageErrors.length
     ? messageErrors
@@ -910,7 +932,14 @@ export function App() {
     app: project?.name,
     spec: project?.files.spec,
     auth: project?.files.auth,
-    ready: !project?.making && !guideOff() && !overlaid && !guiding && !firstVisit,
+    ready:
+      !project?.making &&
+      !guideOff() &&
+      !overlaid &&
+      !guiding &&
+      !firstVisit &&
+      !initialLook &&
+      !pickingLook,
     onUseZone: async (timezone) => (await run("setApp", { timezone })) !== false,
     onChooseZone: () => {
       nocodePlace({ sub: "behavior" });
@@ -927,16 +956,16 @@ export function App() {
   const decided = useRef(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, when the app is read
   useEffect(() => {
-    if (!firstVisit || decided.current || !spec.ir) return;
+    if (!firstVisit || initialLook || pickingLook || decided.current || !spec.ir) return;
     decided.current = true;
     if (!parts.length || seenOverlay(project?.name ?? "")) return setPresented(true);
     setLayer("overlay");
     show.start();
-  }, [firstVisit, spec.ir]);
+  }, [firstVisit, spec.ir, initialLook, pickingLook]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: once the preview is up and the overlay is closed
   useEffect(() => {
-    if (firstVisit && previewUp && presented) startGuide();
-  }, [firstVisit, previewUp, presented]);
+    if (firstVisit && previewUp && presented && !initialLook && !pickingLook) startGuide();
+  }, [firstVisit, previewUp, presented, initialLook, pickingLook]);
   // The preview running behind: said with the next part.
   // biome-ignore lint/correctness/useExhaustiveDependencies: when it starts to run
   useEffect(() => {
@@ -1120,7 +1149,10 @@ export function App() {
   return (
     <div className={cx("h-full", motion && "motion")}>
       {/* Behind the overlay Studio loads as ever, taking no click or key (smith-first.md §12.1). */}
-      <div inert={overlaid || undefined} className="flex h-full flex-col">
+      <div
+        inert={overlaid || undefined}
+        className={cx("flex h-full flex-col", pickingLook && "first-look-workspace")}
+      >
         {/* On a phone the items wrap onto a second line instead of running off the screen. */}
         <header
           data-studio-header
@@ -1229,7 +1261,12 @@ export function App() {
                 variant="ghost"
                 className="shrink-0 border border-line"
                 data-guide="look"
-                onClick={() => setEditingLook({ project, path: keptPage() })}
+                disabled={busy || Boolean(pickingLook)}
+                onClick={() => {
+                  pauseGuide();
+                  if (spec.ux)
+                    setPickingLook({ project, preset: spec.ux.theme.preset, automatic: false });
+                }}
               >
                 Look
               </Button>
@@ -1806,6 +1843,25 @@ export function App() {
           </PhoneRow>
         )}
       </div>
+      {pickingLook && (
+        <FirstLook
+          project={pickingLook.project}
+          preset={pickingLook.preset}
+          automatic={pickingLook.automatic}
+          onRefresh={catchUp}
+          onClose={({ error, settings }) => {
+            const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;
+            try {
+              localStorage.setItem(lookSeenKey(finishedApp), "1");
+            } catch {}
+            setLookFinished(finishedApp);
+            setPickingLook(undefined);
+            if (error) setMessage({ ok: false, text: error });
+            if (settings && pickingLook.project.lookProject === project.lookProject)
+              setEditingLook({ project, path: keptPage() });
+          }}
+        />
+      )}
       {editingLook && (
         <Suspense fallback={<p role="status">Opening look editor…</p>}>
           <LookEditorDialog

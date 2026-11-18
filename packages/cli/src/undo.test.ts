@@ -183,3 +183,37 @@ test("changes are numbered in the order made, an undo too, and undone by their n
   expect(range.stdout).toContain("#3 is undone already (by #4).");
   expect(range.stdout).toContain('Safe to undo "Change 2": it is the newest change.');
 });
+
+test("a guarded picker undo refuses an intervening source edit and another newest change", async () => {
+  const { undo } = await import("./undo.js");
+  const { projectRevision } = await import("./project-revision.js");
+  const { dir, shas } = history([base, withPhone, withOrder]);
+  dirs.push(dir);
+  const before = git(dir, ["rev-parse", "HEAD"]).out;
+  const io = captureIo();
+  expect(undo(dir, io, { change: shas[0] ?? "", revision: projectRevision(dir) })).toBe(1);
+  expect(git(dir, ["rev-parse", "HEAD"]).out).toBe(before);
+  const revision = projectRevision(dir);
+  writeFileSync(join(dir, "smithable.yml"), `${withOrder}\n# Someone else's edit\n`);
+  expect(undo(dir, io, { change: shas[1] ?? "", revision })).toBe(1);
+  expect(git(dir, ["rev-parse", "HEAD"]).out).toBe(before);
+});
+
+test("a guarded picker undo returns its post-undo revision while holding the lock", async () => {
+  const { undo } = await import("./undo.js");
+  const { projectRevision } = await import("./project-revision.js");
+  const { dir, shas } = history([base, withPhone]);
+  dirs.push(dir);
+  const io = captureIo();
+  let returned: string | undefined;
+  expect(
+    undo(dir, io, {
+      change: shas[0] ?? "",
+      revision: projectRevision(dir),
+      onResult: (value) => {
+        returned = value;
+      },
+    }),
+  ).toBe(0);
+  expect(returned).toBe(projectRevision(dir));
+});

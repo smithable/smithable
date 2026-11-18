@@ -520,6 +520,10 @@ try {
       const fresh = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       try {
         await fresh.goto(base);
+        await fresh
+          .getByRole("dialog", { name: "Choose a look", exact: true })
+          .getByRole("button", { name: "Skip", exact: true })
+          .click();
         // A new project: Smith presents it on the overlay, Studio behind it (smith-first.md
         // §12.1); Enter brings the next part, Skip closes it into his floating panel, then the
         // guide.
@@ -1463,6 +1467,7 @@ try {
     "look and feel: a theme, density and motion are chosen without touching code",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
+      await page.getByRole("button", { name: "More look settings", exact: true }).click();
       const theme = page.getByRole("region", {
         name: "App-wide font, density and motion",
         exact: true,
@@ -1568,6 +1573,7 @@ try {
     "a theme pasted in the Look tab is checked, added as a file and used; undo removes it",
     async () => {
       await page.getByRole("button", { name: "Look", exact: true }).click();
+      await page.getByRole("button", { name: "More look settings", exact: true }).click();
       const look = page.getByRole("dialog", { name: "Look", exact: true });
       await look.getByText("Add a theme").click();
       await look
@@ -2328,6 +2334,7 @@ try {
       .getByText("Add a logo")
       .waitFor({ timeout: 60000 * P });
     await page.getByRole("button", { name: "Look", exact: true }).click();
+    await page.getByRole("button", { name: "More look settings", exact: true }).click();
     await look("App-wide font, density and motion")
       .getByRole("button", { name: "Comfortable" })
       .click();
@@ -2384,6 +2391,7 @@ try {
     // Native selected-page controls have visible labels and keyboard focus. They use the same
     // project history as chat: one Undo restores the original authored source.
     await page.getByRole("button", { name: "Look", exact: true }).click();
+    await page.getByRole("button", { name: "More look settings", exact: true }).click();
     const menu = page
       .getByRole("dialog", { name: "Look", exact: true })
       .getByLabel("Menu layout", { exact: true });
@@ -2526,6 +2534,7 @@ try {
         .waitFor({ timeout: 60000 * P });
       // Its own theme, from the Look tab (look.md §1.5).
       await page.getByRole("button", { name: "Look", exact: true }).click();
+      await page.getByRole("button", { name: "More look settings", exact: true }).click();
       const lookDialog = page.getByRole("dialog", { name: "Look", exact: true });
       await lookDialog.getByLabel("Theme selection target", { exact: true }).selectOption("home");
       await lookDialog.getByRole("button", { name: "Use Playful theme", exact: true }).click();

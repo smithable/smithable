@@ -128,6 +128,8 @@ export interface ModelUsage {
 
 export interface Project {
   name: string;
+  /** Source fingerprint, including Git HEAD, for the look picker's conditional changes. */
+  revision?: string;
   files: {
     spec?: string;
     auth?: string;
@@ -245,6 +247,8 @@ export interface Result {
   report?: "offer";
   /** For an editSpec: the newest change's id after it (grown or new), for the editor to grow. */
   change?: string;
+  /** Source fingerprint captured under the mutation lock after a picker change. */
+  revision?: string;
   /** A proposal whose base moved: not applied, its consequences worked out again (§4.1). */
   stale?: boolean;
   verification?: Verification;
@@ -427,6 +431,23 @@ export const api = {
     lookProject: string,
     envelope: { expectedRevision?: string; requestId?: string } = {},
   ) => changing(call<Result>("/api/op", { name, args, confirm: true, lookProject, ...envelope })),
+  chooseTheme: (preset: string, revision: string, lookProject: string) =>
+    changing(
+      call<Result>("/api/op", {
+        name: "setTheme",
+        args: { preset },
+        expectedRevision: revision,
+        lookProject,
+      }),
+    ),
+  undoThemeChoice: (change: string, revision: string, lookProject: string) =>
+    changing(
+      call<Result>("/api/undo", {
+        expectedChange: change,
+        expectedRevision: revision,
+        lookProject,
+      }),
+    ),
   customize: (page: string) => changing(call<Result>("/api/customize", { page })),
   /** The language's empty texts drafted by the configured model (smithable translate). */
   translate: (language: string) => changing(call<Result>("/api/translate", { language })),

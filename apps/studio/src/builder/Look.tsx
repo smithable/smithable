@@ -18,6 +18,7 @@ import { useId, useState } from "react";
 import type { Project } from "../api";
 import type { Spec } from "../engine";
 import { ICON_CHOICES } from "../properties";
+import { ThemeCards } from "../ThemeCards";
 import { cx, Select } from "../ui";
 import type { Run } from "./ChangeForms";
 import { PendingInput, usePendingEdit } from "./pending-edit";
@@ -117,55 +118,14 @@ export function ThemeSettings({
       </p>
       <Group title="Theme">
         {/* A card per theme, built in or the project's, with its picture (docs/design/look.md §3). */}
-        <ul aria-label="Themes" className="grid grid-cols-2 gap-2">
-          {themes.map((t) => {
-            const current = t.name === preset;
-            return (
-              <li key={t.name}>
-                <button
-                  type="button"
-                  aria-label={`Use ${humanize(t.name)} theme`}
-                  aria-pressed={current}
-                  onClick={() =>
-                    !current &&
-                    run("setTheme", { preset: t.name, ...(target ? { page: target } : {}) })
-                  }
-                  className={cx(
-                    "w-full overflow-hidden rounded-md border text-left",
-                    current
-                      ? "border-accent ring-4 ring-accent/40"
-                      : "border-line hover:border-line-strong",
-                  )}
-                >
-                  <img
-                    src={`data:image/svg+xml;utf8,${encodeURIComponent(t.thumbnail)}`}
-                    alt=""
-                    width={320}
-                    height={100}
-                    className="block h-auto w-full"
-                  />
-                  <span className={cx("block px-2 py-1.5 text-xs", current && "bg-accent-soft")}>
-                    <span className="font-medium">{humanize(t.name)}</span>
-                    {/* The one in use says so in words, not only by its outline. */}
-                    {current && <span className="ml-1.5 font-medium text-accent">· In use</span>}
-                    <span className="block text-quiet">
-                      {t.source === "project" ? `themes/${t.name}.yml · ` : ""}
-                      {t.font}
-                    </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="mt-1 rounded border border-line px-2 py-1 text-xs"
-                  aria-label={`Customise ${humanize(t.name)}`}
-                  onClick={() => onCustomise(t.name)}
-                >
-                  Customise this
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <ThemeCards
+          themes={themes}
+          preset={preset}
+          onChoose={(preset) => {
+            void run("setTheme", { preset, ...(target ? { page: target } : {}) });
+          }}
+          onCustomise={onCustomise}
+        />
         <AddTheme run={run} />
       </Group>
       <Group title="App-wide color">

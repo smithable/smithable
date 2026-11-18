@@ -18,6 +18,7 @@ import { exec, type Io } from "./io.js";
 import { type FilesPlan, lostFields, runFilesChange } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutationSync } from "./project-mutation.js";
+import { projectRevision } from "./project-revision.js";
 import { projectThemes } from "./validate.js";
 import { installing } from "./vite-cache.js";
 
@@ -329,9 +330,21 @@ function lostFieldsOf(dir: string, text: string): string[] {
  * a new commit, so an undo can itself be undone with Git. The dev database goes back to
  * its snapshot from before the operation.
  */
-export function undo(dir: string, io: Io): number {
+export function undo(
+  dir: string,
+  io: Io,
+  guard?: { change: string; revision: string; onResult?: (revision: string) => void },
+): number {
   try {
-    return withProjectMutationSync(dir, (root) => undoLocked(root, io));
+    return withProjectMutationSync(dir, (root) => {
+      if (guard && projectRevision(root) !== guard.revision) {
+        io.err("Another change came between. The look picker's changes were left in history.\n");
+        return 1;
+      }
+      const result = undoLocked(root, io, guard?.change);
+      if (result === 0) guard?.onResult?.(projectRevision(root));
+      return result;
+    });
   } catch (error) {
     if (!(error instanceof ProjectBusyError || error instanceof ProjectLockError)) throw error;
     io.err(`${error.message}\n`);
@@ -339,7 +352,7 @@ export function undo(dir: string, io: Io): number {
   }
 }
 
-function undoLocked(dir: string, io: Io): number {
+function undoLocked(dir: string, io: Io, expectedChange?: string): number {
   if (!ownRepository(dir)) {
     io.err("There is nothing to undo: this project has no history yet.\n");
     return 1;
@@ -367,6 +380,10 @@ function undoLocked(dir: string, io: Io): number {
   }
   if (!target) {
     io.err("There is no operation to undo.\n");
+    return 1;
+  }
+  if (expectedChange !== undefined && target.sha !== expectedChange) {
+    io.err("Another change came between. Only the look picker's own change can be undone here.\n");
     return 1;
   }
   // Git's own message for the revert, with the change number its commit takes like any other.
