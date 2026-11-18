@@ -14,7 +14,7 @@ import { join, resolve } from "node:path";
 import { FRAME_RUNTIME } from "./frame-runtime.js";
 import { type Io, tool } from "./io.js";
 import { RECORD_PROBE } from "./preview-discovery.js";
-import { childEnv } from "./secrets.js";
+import { childEnv, holdsSecret } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /** A page to save: where it is, what it is called, the file it goes to, and a state to put it in. */
@@ -394,8 +394,9 @@ const freePort = () =>
 
 /** The app's Playwright (its smoke test's), else one installed globally. */
 async function browserOf(app: string): Promise<{ launch(): Promise<StaticBrowser> } | undefined> {
+  // The app's copy is the project's code: not loaded by a process holding a secret (T991).
   for (const path of [
-    join(app, "node_modules", "@playwright", "test", "index.mjs"),
+    ...(holdsSecret() ? [] : [join(app, "node_modules", "@playwright", "test", "index.mjs")]),
     "playwright",
   ]) {
     try {

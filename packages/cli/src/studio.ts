@@ -37,7 +37,6 @@ import { logTokens } from "./context.js";
 import { customize } from "./customize.js";
 import { devServerEnv } from "./dev.js";
 import { backFromFix, rememberBeforeFix } from "./fix-open.js";
-import { warmTools } from "./generate.js";
 import {
   generationId,
   generationReceipt,
@@ -73,6 +72,7 @@ import {
   writePreviewConfig as writeConfig,
 } from "./preview-editor.js";
 import { projectRevision } from "./project-revision.js";
+import { warmTools } from "./project-worker.js";
 import { redo, redoTarget } from "./redo.js";
 import { releaseReview } from "./release-review.js";
 import {

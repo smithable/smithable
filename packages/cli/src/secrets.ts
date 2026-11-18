@@ -44,6 +44,12 @@ export const studioToken = (): string | undefined => held.SMITHABLE_STUDIO_TOKEN
 /** The hosted model's key, for the engine's own calls to the model. */
 export const modelKey = (): string | undefined => held.SMITHABLE_MODEL_KEY;
 
+/**
+ * Whether this process holds either value. Such a process (Studio in a hosted workspace) loads no
+ * code the project can write: no plugin, and the app's own tools only in the project worker.
+ */
+export const holdsSecret = (): boolean => NAMES.some((name) => held[name] !== undefined);
+
 /** A child's environment: the one given (this process's by default) and extras, without the two. */
 export function childEnv(
   base: NodeJS.ProcessEnv = process.env,

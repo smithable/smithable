@@ -5,7 +5,8 @@ import { SECTIONS, YamlEditor } from "@smithable/core";
 import { type Coder, coderFromEnv, runCoder } from "./code.js";
 import { generate } from "./generate.js";
 import { exec, type Io, tool } from "./io.js";
-import { declaredPlugins, PLUGIN_NAME, pluginPath } from "./plugins.js";
+import { declaredPlugins, NO_PLUGINS_HERE, PLUGIN_NAME, pluginPath } from "./plugins.js";
+import { holdsSecret } from "./secrets.js";
 
 /**
  * `smithable teach <section>` (ARCHITECTURE §5.1): for a section of smithable.yml that no
@@ -18,6 +19,10 @@ export async function teach(
   key: string | undefined,
   coder: Coder | undefined = coderFromEnv(),
 ): Promise<number> {
+  if (holdsSecret()) {
+    io.err(`${NO_PLUGINS_HERE}\n`);
+    return 1;
+  }
   if (!key || !PLUGIN_NAME.test(key)) {
     io.err(
       `teach needs a section name with letters, numbers, and dashes, like: smithable teach newsletter\n`,
