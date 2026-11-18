@@ -42,7 +42,9 @@ export async function checkStudioTimers(browser, base, pictures) {
     // These checks exercise explicit timer/entry editing; preview navigation is covered by
     // preview-follow-browser.test.mjs. Keep its pending first-page navigation from moving
     // this fixture after a saved operation clears the last draft/focus guard.
-    await page.getByRole("checkbox", { name: "Follows preview", exact: true }).uncheck();
+    // The link beside the preview's address, pressed while the editors follow it.
+    const following = page.getByRole("button", { name: "Link the editors to the preview" });
+    if ((await following.getAttribute("aria-pressed")) === "true") await following.click();
     const area = async (key) => {
       const section = form.locator(`details[data-key="${key}"]`);
       if (!(await section.isVisible()))

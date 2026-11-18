@@ -179,9 +179,12 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
     });
     await page.goto(`${base}?guide=off`);
     const noCode = page.locator("[data-no-code]");
-    const following = noCode.getByRole("checkbox", { name: "Follows preview", exact: true });
+    const following = page.getByRole("button", {
+      name: "Link the editors to the preview",
+      exact: true,
+    });
     await following.waitFor();
-    assert.ok(await following.isChecked());
+    assert.ok((await following.getAttribute("aria-pressed")) === "true");
     const context = () =>
       page.evaluate(
         () => JSON.parse(sessionStorage.getItem("smithable:place") ?? "{}").nocode?.page,
@@ -198,7 +201,7 @@ test("condition rows preserve valid drafts, contextual fields and atomic operati
     const go = async (path) => {
       const count = await page.evaluate(() => window.followReports.length);
       await page.getByLabel("Preview address", { exact: true }).fill(path);
-      await page.getByRole("button", { name: "Go", exact: true }).click();
+      await page.getByLabel("Preview address", { exact: true }).press("Enter");
       await page.waitForFunction(
         ({ count, path }) =>
           window.followReports.slice(count).some((message) => message.path === path),

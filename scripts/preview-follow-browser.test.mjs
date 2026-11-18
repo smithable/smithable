@@ -106,9 +106,12 @@ test("No code follows real preview navigation without losing edits or opening hi
     });
     await page.goto(`${base}?guide=off`);
     const noCode = page.locator("[data-no-code]");
-    const following = noCode.getByRole("checkbox", { name: "Follows preview", exact: true });
+    const following = page.getByRole("button", {
+      name: "Link the editors to the preview",
+      exact: true,
+    });
     await following.waitFor();
-    assert.ok(await following.isChecked());
+    assert.ok((await following.getAttribute("aria-pressed")) === "true");
     const context = () =>
       page.evaluate(
         () => JSON.parse(sessionStorage.getItem("smithable:place") ?? "{}").nocode?.page,
@@ -133,7 +136,7 @@ test("No code follows real preview navigation without losing edits or opening hi
     const go = async (path) => {
       const count = await page.evaluate(() => window.followReports.length);
       await page.getByLabel("Preview address", { exact: true }).fill(path);
-      await page.getByRole("button", { name: "Go", exact: true }).click();
+      await page.getByLabel("Preview address", { exact: true }).press("Enter");
       await page.waitForFunction(
         ({ count, path }) =>
           window.followReports.slice(count).some((message) => message.path === path),
@@ -263,7 +266,7 @@ test("No code follows real preview navigation without losing edits or opening hi
       "PASS global tabs retained, explicit editor Open wins, later record navigation follows",
     );
 
-    await following.uncheck();
+    if ((await following.getAttribute("aria-pressed")) === "true") await following.click();
     await page.evaluate(() =>
       window.dispatchEvent(new CustomEvent("smithable:open-part", { detail: "model:Order" })),
     );
@@ -281,8 +284,8 @@ test("No code follows real preview navigation without losing edits or opening hi
     assert.equal(await context(), stoppedAt);
     await page.reload();
     await following.waitFor();
-    assert.equal(await following.isChecked(), false);
-    await following.check();
+    assert.equal((await following.getAttribute("aria-pressed")) === "true", false);
+    if (!((await following.getAttribute("aria-pressed")) === "true")) await following.click();
     await outside();
     await followed("orders");
     await navigateInApp("/orders/1");
