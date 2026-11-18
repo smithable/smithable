@@ -67,7 +67,8 @@ export function ReleaseReview({
   // The page just confirmed, said in its section, which stays open (Johan, 2026-11-18: the button
   // seemed to do nothing but disable itself).
   const [readPrivacy, setReadPrivacy] = useState<string>();
-  const hosted = Boolean(home || release);
+  // The hosted service sets home; its release progress is trusted only with home (trustedRelease).
+  const hosted = Boolean(home);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
