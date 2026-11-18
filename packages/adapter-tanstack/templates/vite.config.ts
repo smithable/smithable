@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { leaveOutUnusedSamples } from "./src/kit/unused-samples";
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
@@ -21,6 +22,8 @@ export default defineConfig({
       },
     }),
     viteReact(),
+    // A built app carries no sample picture nothing in it uses (src/kit/unused-samples.ts).
+    leaveOutUnusedSamples(),
   ],
   // The dev server hands any file of the project to whoever can reach it (`?raw`). The app's
   // data is not for that: the database, the uploads, and the outbox with its sign-in codes.

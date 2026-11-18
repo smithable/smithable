@@ -13965,6 +13965,7 @@ exports[`../../../examples/api/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
@@ -14170,6 +14171,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
@@ -14232,7 +14234,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "tests/smoke.spec.ts": "24a5a8cb generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -21769,6 +21771,7 @@ exports[`../../../examples/barbers/smithable.yml > file list and generated code 
   "kit: src/kit/tell.server.ts",
   "kit: src/kit/time-text.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/words.ts",
@@ -21956,6 +21959,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -22001,7 +22005,7 @@ exports[`../../../examples/barbers/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "dabb9af3 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -37035,6 +37039,7 @@ exports[`../../../examples/booking/smithable.yml > file list and generated code 
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
@@ -37289,6 +37294,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
@@ -37369,7 +37375,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "c6858e63 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -47032,6 +47038,7 @@ exports[`../../../examples/crm/smithable.yml > file list and generated code 1`] 
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
@@ -47223,6 +47230,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -47267,7 +47275,7 @@ exports[`../../../examples/crm/smithable.yml > the generated files are as review
   "tests/smoke.spec.ts": "cd6797d3 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -56478,6 +56486,7 @@ exports[`../../../examples/invoicing/smithable.yml > file list and generated cod
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
@@ -56677,6 +56686,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
@@ -56720,7 +56730,7 @@ exports[`../../../examples/invoicing/smithable.yml > the generated files are as 
   "tests/smoke.spec.ts": "dadec54d generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -65813,6 +65823,7 @@ exports[`../../../examples/kiosk/smithable.yml > file list and generated code 1`
   "kit: src/kit/tell.server.ts",
   "kit: src/kit/time-text.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/words.ts",
@@ -66014,6 +66025,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "src/kit/tell.server.ts": "e70cc335 kit",
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -66057,7 +66069,7 @@ exports[`../../../examples/kiosk/smithable.yml > the generated files are as revi
   "tests/smoke.spec.ts": "7a8dce6a generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -71259,6 +71271,7 @@ exports[`../../../examples/marketplace/smithable.yml > file list and generated c
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
@@ -71430,6 +71443,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
@@ -71473,7 +71487,7 @@ exports[`../../../examples/marketplace/smithable.yml > the generated files are a
   "tests/smoke.spec.ts": "dcf4060e generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -75359,6 +75373,7 @@ exports[`../../../examples/records/smithable.yml > file list and generated code 
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
@@ -75510,6 +75525,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -75541,7 +75557,7 @@ exports[`../../../examples/records/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "b04668e0 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -89776,6 +89792,7 @@ exports[`../../../examples/status/smithable.yml > file list and generated code 1
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
   "kit: src/kit/words.ts",
@@ -89989,6 +90006,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
   "src/kit/words.ts": "dd75b285 kit",
@@ -90046,7 +90064,7 @@ exports[`../../../examples/status/smithable.yml > the generated files are as rev
   "tests/smoke.spec.ts": "5de3170c generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;
@@ -97870,6 +97888,7 @@ exports[`../../../examples/support/smithable.yml > file list and generated code 
   "kit: src/kit/time-text.ts",
   "kit: src/kit/tools.ts",
   "kit: src/kit/trace.server.ts",
+  "kit: src/kit/unused-samples.ts",
   "kit: src/kit/uploads.ts",
   "kit: src/kit/visitor.ts",
   "kit: src/kit/where.ts",
@@ -98054,6 +98073,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "src/kit/time-text.ts": "eb8db028 kit",
   "src/kit/tools.ts": "7c01e448 kit",
   "src/kit/trace.server.ts": "97a6b62b kit",
+  "src/kit/unused-samples.ts": "1f45a580 kit",
   "src/kit/uploads.ts": "1218e9e3 kit",
   "src/kit/visitor.ts": "8a06eea1 kit",
   "src/kit/where.ts": "7d021c19 kit",
@@ -98092,7 +98112,7 @@ exports[`../../../examples/support/smithable.yml > the generated files are as re
   "tests/smoke.spec.ts": "ed46d289 generated",
   "tsconfig.json": "802b1b64 kit",
   "tsr.config.json": "3ee61b99 kit",
-  "vite.config.ts": "508bc581 kit",
+  "vite.config.ts": "9350497c kit",
   "vitest.config.ts": "fdf3b985 kit",
 }
 `;

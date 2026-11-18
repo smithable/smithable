@@ -8130,6 +8130,18 @@ for (const [index, example] of examples.entries()) {
       }).stdout.trim();
       if (found) throw new Error(`found in ${found}`);
     });
+    step("the production build carries no sample picture that nothing in it names", () => {
+      const samples = join(dir, "dist/client/images/samples");
+      const shipped = existsSync(samples) ? readdirSync(samples) : [];
+      const unnamed = shipped.filter(
+        (file) =>
+          spawnSync("grep", ["-rlF", "--exclude-dir=images", `images/samples/${file}`, "dist"], {
+            cwd: dir,
+            encoding: "utf8",
+          }).stdout.trim() === "",
+      );
+      if (unnamed.length) throw new Error(`unnamed: ${unnamed.join(", ")}`);
+    });
     step("the app's own tests pass (access for every role, formula examples)", () =>
       run("pnpm", ["test"], dir),
     );
