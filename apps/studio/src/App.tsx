@@ -1854,6 +1854,7 @@ export function App() {
           project={pickingLook.project}
           preset={pickingLook.preset}
           automatic={pickingLook.automatic}
+          aiBadge={spec.ux?.aiBadge ?? true}
           onRefresh={catchUp}
           onClose={({ error, settings }) => {
             const finishedApp = pickingLook.project.localDir ?? pickingLook.project.name;

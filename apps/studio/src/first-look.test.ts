@@ -77,3 +77,42 @@ describe("first look's own changes", () => {
     expect(f.calls).toEqual(["apply:paper", "undo:change1"]);
   });
 });
+
+test("picture commit waits for the last theme and receives its exact revision", async () => {
+  let release!: () => void;
+  const waiting = new Promise<void>((done) => {
+    release = done;
+  });
+  const order: string[] = [];
+  const picker = new ThemePreview(
+    { preset: "simple", revision: "opening" },
+    {
+      async apply() {
+        await waiting;
+        order.push("theme");
+        return { ok: true, output: "Theme", change: "theme-commit", revision: "after-theme" };
+      },
+      async undo() {
+        return { ok: true, output: "Undone", revision: "undone" };
+      },
+    },
+  );
+  const choice = picker.choose("forest");
+  const keep = picker.finish(true, async (revision) => {
+    order.push(`pictures:${revision}`);
+    return { ok: true, output: "Pictures" };
+  });
+  release();
+  await Promise.all([choice, keep]);
+  expect(order).toEqual(["theme", "pictures:after-theme"]);
+});
+
+test("a failed picture fetch can be followed by Skip of the picker theme alone", async () => {
+  const f = fixture();
+  await f.picker.choose("paper");
+  await expect(
+    f.picker.finish(true, async () => ({ ok: false, output: "Offline" })),
+  ).rejects.toThrow("Offline");
+  await f.picker.finish(false);
+  expect(f.current()).toBe("simple");
+});
