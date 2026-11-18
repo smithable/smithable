@@ -30,6 +30,32 @@ describe("smithable.ux.yml", () => {
     expect(on && on.ok && on.files.ux).not.toContain("aiBadge");
   });
 
+  test("the pictures' style: unsaid unless set; setting it reports the pictures to place", () => {
+    const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
+    expect(read("smithableUx: 0.1\n").ux?.pictures).toBeUndefined();
+    expect(read("smithableUx: 0.1\npictures: { style: ink-wash }\n").ux?.pictures).toEqual({
+      style: "ink-wash",
+    });
+    expect(codes("smithableUx: 0.1\npictures: { style: Ink Wash }\n")).toContain("invalid-value");
+    expect(codes("smithableUx: 0.1\npictures: { colour: red }\n")).not.toEqual([]);
+    const set = applyOperation({ spec: crm, ux: "smithableUx: 0.1\n" }, "setPictureStyle", {
+      style: "pastel",
+    });
+    if (!set.ok) throw new Error(set.message);
+    expect(set.files.ux).toMatch(/pictures:\n {2}style: pastel/);
+    // Core fetches nothing: the host places the pictures, as the effect says.
+    expect(set.effects).toEqual([{ kind: "place-pictures", style: "pastel" }]);
+    // The same style again still places: the key may have been edited by hand.
+    const again = applyOperation({ spec: crm, ux: set.files.ux }, "setPictureStyle", {
+      style: "pastel",
+    });
+    expect(again.ok && again.effects).toEqual([{ kind: "place-pictures", style: "pastel" }]);
+    expect(
+      applyOperation({ spec: crm, ux: "smithableUx: 0.1\n" }, "setPictureStyle", { style: "../x" })
+        .ok,
+    ).toBe(false);
+  });
+
   test("Ask's voice: plain unless said, set and returned by its operation, an unknown one refused", () => {
     const read = (text: string) => validateUx({ path: "smithable.ux.yml", text }, ir);
     expect(read("smithableUx: 0.1\n").ux?.assistant.voice).toBe("plain");

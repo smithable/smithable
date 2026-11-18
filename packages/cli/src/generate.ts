@@ -17,6 +17,7 @@ import { YamlEditor } from "@smithable/core";
 import { cardFiles } from "./card.js";
 import { exec, execQuiet, type Io, lap, tool } from "./io.js";
 import { templateKitRevision } from "./maintenance.js";
+import { taggedContent } from "./picture-style.js";
 import { contextFacts } from "./privacy-review.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
@@ -108,7 +109,7 @@ export async function generate(dir: string, io: Io, flags: GenerateFlags): Promi
     ...(plugins?.length ? { plugins } : {}),
     customPages: customPages(dir),
     cardFiles: cardFiles(dir, content ?? {}),
-    ...(content ? { content } : {}),
+    ...(content ? { content: taggedContent(dir, content) } : {}),
     ...(ux ? { ux } : {}),
     ...(themes ? { themes } : {}),
     ...(samples ? { samples } : {}),

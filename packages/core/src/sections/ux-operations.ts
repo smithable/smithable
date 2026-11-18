@@ -15,6 +15,7 @@ import {
   ICONS,
   NAVIGATIONS,
   notPickable,
+  PICTURE_STYLE,
   SECTION_LOOKS,
   THEME_PRESETS,
   TONES,
@@ -1108,6 +1109,41 @@ const setAiBadge: Operation<{ shown?: "true" | "false" }> = {
   },
 };
 
+/**
+ * The image style of the app's library pictures (first-look.md §4.3). Core writes the key and
+ * reports the pictures to place; the host fetches, checks and writes them before the one commit,
+ * or refuses, so the key never names a style whose pictures are not there.
+ */
+const setPictureStyle: Operation<{ style: string }> = {
+  name: "setPictureStyle",
+  sets: ["smithable.ux.yml:pictures.style"],
+  summary:
+    "Put the app's library pictures (the hero and the sample pictures) in an image style of the image library, e.g. pastel; pictures you changed or added yourself stay. Needs the network.",
+  schema: {
+    type: "object",
+    required: ["style"],
+    additionalProperties: false,
+    properties: {
+      style: {
+        type: "string",
+        pattern: PICTURE_STYLE.source,
+        description: "A style of the image library, e.g. lifelike, pastel or ink-wash.",
+      },
+    },
+  },
+  positional: ["style"],
+  describe: ({ style }) => `Put the app's pictures in the ${style} style`,
+  destructive: () => false,
+  apply(editors, { style }) {
+    if (!PICTURE_STYLE.test(style))
+      throw new OperationError(
+        `"${style}" is not a style id: lowercase words joined by "-", e.g. pastel or ink-wash.`,
+      );
+    put(editors.ux, ["pictures", "style"], style);
+    return [{ kind: "place-pictures", style }];
+  },
+};
+
 /** Where the app's menu sits (look-gap.md §4); default removes the key, back to the sidebar. */
 const setMenuLayout: Operation<{ navigation: string }> = {
   name: "setMenuLayout",
@@ -1557,6 +1593,7 @@ export const uxOperations: AnyOperation[] = [
   setFormColumns,
   setView,
   setAiBadge,
+  setPictureStyle,
   setAssistantVoice,
   setSort,
   setFiltersShown,

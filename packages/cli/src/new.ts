@@ -44,6 +44,7 @@ import { generate } from "./generate.js";
 import { ensureRepository } from "./git.js";
 import { hostedLevel } from "./hosted-level.js";
 import { exec, type Io, tool } from "./io.js";
+import { type LibraryVersion, libraryVersion } from "./picture-style.js";
 import { addLibraryPictures, dropMissingPictures, placePictures } from "./pictures.js";
 import { readSite } from "./site-fetch.js";
 import { projectSitePersonal, replaceSitePersonalText } from "./site-personal.js";
@@ -162,6 +163,7 @@ export async function create(
   }
   // A page as the starting point: what it says is the description (first-build.md §2.8).
   let pictures: { file: string; alt: string; bytes: Uint8Array; model?: string }[] = [];
+  let library: LibraryVersion | string | undefined;
   let fromPage = false;
   let draftedSamples: DraftedSamples = {};
   if (options.from) {
@@ -564,8 +566,10 @@ export async function create(
       options.pictureData !== false &&
       !fromPage &&
       process.env.SMITHABLE_NO_PICTURES !== "1"
-    )
+    ) {
+      library = await libraryVersion(fetch);
       pictures = await addLibraryPictures({
+        version: library,
         description,
         ir,
         ...(texts ? { content: texts } : {}),
@@ -573,6 +577,7 @@ export async function create(
         files,
         io,
       });
+    }
   }
   if (options.name?.trim()) files = named(files, options.name.trim());
   // The app's first administrator is whoever makes it: a starter's sample address never
@@ -660,10 +665,20 @@ export async function create(
   // The starter's own pictures (a drafted app's texts may still use them), then the page's as
   // sample pictures (never linked to the site) or the library's where its list says
   // (samples/<n>.webp, and hero.webp): the hero picked for this app replaces the starter's.
+  const starterAssets =
+    website || options.pictureData === false ? {} : (STARTER_ASSETS[name] ?? {});
+  // The record of what was placed names the library's version (first-look.md §4.2).
+  if (
+    library === undefined &&
+    Object.keys(starterAssets).length &&
+    process.env.SMITHABLE_NO_PICTURES !== "1"
+  )
+    library = await libraryVersion(fetch);
   placePictures(
     dir,
-    website || options.pictureData === false ? {} : (STARTER_ASSETS[name] ?? {}),
+    starterAssets,
     pictures.map((p) => (fromPage ? { ...p, file: `samples/${p.file}` } : p)),
+    typeof library === "object" ? library : undefined,
   );
   if (website) {
     const copyFiles = {

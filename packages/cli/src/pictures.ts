@@ -15,8 +15,20 @@ import { dirname, join } from "node:path";
 import { type PictureCredit, type PictureEntry, pickPictures } from "@smithable/ai";
 import { type ContentIR, kebab, type SpecIR, YamlEditor } from "@smithable/core";
 import type { Io } from "./io.js";
+import {
+  creditsText,
+  type LibraryVersion,
+  libraryVersion,
+  type PictureRecord,
+  type PictureRole,
+  rebuildRecords,
+  recordsText,
+  type VersionEntry,
+} from "./picture-style.js";
 
 const LIBRARY = "https://docs.smithable.ai/images";
+/** The styles a new app's pictures are in; drawn styles are chosen afterwards (first-look §4). */
+const CREATION_STYLES = new Set(["photographs", "lifelike"]);
 /**
  * Where the library is: SMITHABLE_IMAGE_LIBRARY, else docs.smithable.ai/images. A hosted
  * workspace has no internet, so the service serves the library to it at its own address.
@@ -88,6 +100,8 @@ export interface PlacedPicture {
   /** The model whose sample records name it (samples/<model>-<n>.webp). */
   model?: string;
   sourceUrl?: string;
+  /** Which library entry of which version it is, for public/images/pictures.json (first-look §4.2). */
+  record?: Omit<PictureRecord, "generated">;
 }
 
 /** Whether an index entry was made by an image model: an index from before photographs says nothing. */
@@ -134,9 +148,18 @@ export async function addLibraryPictures(options: {
   cacheDir?: string;
   /** A business import uses library illustrations without replacing its identity. */
   website?: boolean;
+  /** The library version already read (libraryVersion), so it is read once. */
+  version?: LibraryVersion | string;
 }): Promise<PlacedPicture[]> {
   const fetchFn = options.fetchFn ?? fetch;
-  const index = options.index ?? (await libraryIndex(fetchFn, options.cacheDir));
+  // A versioned library is the record's source; a new app gets what apps have always got (no
+  // drawn style: those are chosen afterwards). Without versions, today's index.
+  const version = options.index ? undefined : (options.version ?? (await libraryVersion(fetchFn)));
+  const versioned = typeof version === "object" ? version : undefined;
+  const index =
+    options.index ??
+    versioned?.entries.filter((e) => !e.style || CREATION_STYLES.has(e.style)) ??
+    (await libraryIndex(fetchFn, options.cacheDir));
   if (!index) {
     options.io.out("No pictures: the Smithable image library could not be reached.\n");
     return [];
@@ -153,11 +176,26 @@ export async function addLibraryPictures(options: {
   }
   logMisses(options.description, options.ir, picked.misses);
   const written: PlacedPicture[] = [];
-  const meta = (entry: PictureEntry) => ({
-    generated: madeByAi(entry),
-    sourceUrl: entry.url,
-    ...(entry.credit ? { credit: entry.credit } : {}),
-  });
+  const meta = (entry: PictureEntry, role: PictureRole) => {
+    const hash = (entry as Partial<VersionEntry>).sha256;
+    const style = (entry as Partial<VersionEntry>).style;
+    return {
+      generated: madeByAi(entry),
+      sourceUrl: entry.url,
+      ...(entry.credit ? { credit: entry.credit } : {}),
+      ...(versioned && hash
+        ? {
+            record: {
+              version: versioned.version,
+              entry: entry.id,
+              ...(style ? { style } : {}),
+              sha256: hash,
+              role,
+            },
+          }
+        : {}),
+    };
+  };
   // Sample pictures are for records' picture fields; an app without any gets none (picked has
   // only the models with pictures).
   const drafted = options.drafted ?? new Set<string>();
@@ -173,7 +211,7 @@ export async function addLibraryPictures(options: {
         alt: sample.alt,
         bytes,
         model,
-        ...meta(sample),
+        ...meta(sample, "sample"),
       });
     }
   }
@@ -188,7 +226,7 @@ export async function addLibraryPictures(options: {
     if (n === 3) break;
     const bytes = await bytesOf(sample.url, fetchFn);
     if (!bytes) continue;
-    written.push({ file: `samples/${n}.webp`, alt: sample.alt, bytes, ...meta(sample) });
+    written.push({ file: `samples/${n}.webp`, alt: sample.alt, bytes, ...meta(sample, "sample") });
     n += 1;
   }
   const pictured = Object.values(picked.models).some((entries) => entries.length > 0);
@@ -200,7 +238,12 @@ export async function addLibraryPictures(options: {
   if (picked.hero && landing && hero) {
     const bytes = await bytesOf(picked.hero.url, fetchFn);
     if (bytes) {
-      written.push({ file: "hero.webp", alt: picked.hero.alt, bytes, ...meta(picked.hero) });
+      written.push({
+        file: "hero.webp",
+        alt: picked.hero.alt,
+        bytes,
+        ...meta(picked.hero, "hero"),
+      });
       const editor = new YamlEditor(
         options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
       );
@@ -230,7 +273,12 @@ export async function addLibraryPictures(options: {
       options.files["smithable.content.yml"] ?? "smithableContent: 0.1\n",
     );
     if (bytes && !editor.has(["logo"])) {
-      written.push({ file: "logo.webp", alt: picked.logo.alt, bytes, ...meta(picked.logo) });
+      written.push({
+        file: "logo.webp",
+        alt: picked.logo.alt,
+        bytes,
+        ...meta(picked.logo, "logo"),
+      });
       editor.add([], "logo", {
         src: "images/logo.webp",
         alt: picked.logo.alt,
@@ -259,18 +307,28 @@ export async function addLibraryPictures(options: {
 export function placePictures(
   dir: string,
   starterAssets: Record<string, string>,
-  pictures: Pick<PlacedPicture, "file" | "bytes" | "generated" | "credit">[],
+  pictures: Pick<PlacedPicture, "file" | "bytes" | "generated" | "credit" | "record">[],
+  version?: LibraryVersion,
 ): void {
   for (const [file, data] of Object.entries(starterAssets)) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
     writeFileSync(join(dir, file), Buffer.from(data, "base64"));
   }
   writePictures(dir, pictures);
+  // A starter's own pictures are library pictures too: the record names them, by their hashes.
+  if (version) {
+    const records = rebuildRecords(dir, version, true);
+    if (Object.keys(records).length) {
+      writeFileSync(join(dir, "public", "images", "pictures.json"), recordsText(records));
+      const credits = creditsText(records);
+      if (credits) writeFileSync(join(dir, "public", "images", "CREDITS.md"), credits);
+    }
+  }
 }
 
 export function writePictures(
   dir: string,
-  pictures: Pick<PlacedPicture, "file" | "bytes" | "generated" | "credit">[],
+  pictures: Pick<PlacedPicture, "file" | "bytes" | "generated" | "credit" | "record">[],
 ): void {
   for (const picture of pictures) {
     const path = join(dir, "public", "images", picture.file);
@@ -288,7 +346,7 @@ export function writePictures(
  */
 function writeCredits(
   dir: string,
-  pictures: Pick<PlacedPicture, "file" | "generated" | "credit">[],
+  pictures: Pick<PlacedPicture, "file" | "generated" | "credit" | "record">[],
 ): void {
   const said = pictures.filter((p) => p.generated !== undefined);
   if (!said.length) return;
@@ -296,7 +354,18 @@ function writeCredits(
   mkdirSync(images, { recursive: true });
   writeFileSync(
     join(images, "pictures.json"),
-    `${JSON.stringify(Object.fromEntries(said.map((p) => [p.file, { generated: p.generated }])), null, 2)}\n`,
+    recordsText(
+      Object.fromEntries(
+        said.map((p) => [
+          p.file,
+          {
+            generated: p.generated ?? true,
+            ...p.record,
+            ...(p.credit ? { credit: p.credit } : {}),
+          },
+        ]),
+      ),
+    ),
   );
   const credited = said.filter((p) => p.credit);
   const credits = join(images, "CREDITS.md");

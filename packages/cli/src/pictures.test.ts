@@ -400,7 +400,7 @@ test("a photograph from the library is not badged, and the app credits it", asyn
   const images = join(dir, "public", "images");
   expect(JSON.parse(readFileSync(join(images, "pictures.json"), "utf8"))).toEqual({
     "samples/0.webp": { generated: true },
-    "hero.webp": { generated: false },
+    "hero.webp": { generated: false, credit },
   });
   expect(readFileSync(join(images, "CREDITS.md"), "utf8")).toContain(
     "- hero.webp: A. Photographer, [CC0](https://creativecommons.org/publicdomain/zero/1.0/), from https://commons.wikimedia.org/wiki/File:Cafe.jpg (fetched 2026-10-25)",

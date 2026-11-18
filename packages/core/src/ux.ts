@@ -74,6 +74,11 @@ export interface UxIR {
   /** Whether pictures an AI made carry the badge (AiMark.tsx); on unless the owner switches it off. */
   aiBadge: boolean;
   /**
+   * The image style the app's library pictures are in (docs/design/first-look.md §4.2), a style id
+   * of the image library. Unsaid, the placed pictures' record says what they are.
+   */
+  pictures?: { style: string };
+  /**
    * Where the app's menu sits on a wide screen (docs/design/look-gap.md §4): the sidebar, or a bar
    * across the top with the name at the start or centred between the links. Unsaid, the sidebar.
    */
@@ -451,6 +456,9 @@ export type ThemePreset = (typeof THEME_PRESETS)[number];
 
 export { FONTS };
 
+/** An image style's id in the image library: lowercase words joined by "-" (ink-wash). */
+export const PICTURE_STYLE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+
 export function emptyUx(): UxIR {
   return {
     theme: { preset: "modern", density: "comfortable", motion: "subtle" },
@@ -813,6 +821,7 @@ export function validateUx(
         "pages",
         "tones",
         "aiBadge",
+        "pictures",
         "assistant",
         "navigation",
         "chrome",
@@ -837,6 +846,22 @@ export function validateUx(
           `"${key}" is ${allowed.join(", ").replace(/, ([^,]*)$/, " or $1")}.`,
         );
     }
+    if (key === "pictures")
+      for (const option of checkKeys(
+        ctx,
+        mapEntries(ctx, value, '"pictures"') ?? [],
+        '"pictures"',
+        { allowed: ["style"] },
+      )) {
+        const style = readString(ctx, option.value, '"style" of "pictures"');
+        if (style !== undefined && PICTURE_STYLE.test(style)) ux.pictures = { style };
+        else if (style !== undefined)
+          ctx.error(
+            option.value,
+            "invalid-value",
+            '"style" of "pictures" is a style of the image library, in lowercase words joined by "-" (e.g. pastel).',
+          );
+      }
     if (key === "assistant")
       for (const option of checkKeys(
         ctx,

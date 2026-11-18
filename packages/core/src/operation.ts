@@ -71,7 +71,13 @@ export type Effect =
       source: { path: string } | { text: string };
       map: Record<string, string>;
       dryRun: boolean;
-    };
+    }
+  /**
+   * The app's library pictures to put in an image style (first-look.md §4.3): the host resolves
+   * the style against one library version, fetches and checks every file, writes them with
+   * public/images/pictures.json and the credits, or refuses and changes nothing. Core fetches nothing.
+   */
+  | { kind: "place-pictures"; style: string };
 
 export type OperationArgs = { [key: string]: unknown };
 

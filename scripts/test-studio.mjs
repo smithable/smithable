@@ -2299,7 +2299,7 @@ try {
     // A 138: when the logo never shows, say which half is stale: what the dev server renders
     // for the frame's address and what it gives the browser for the root route.
     await preview
-      .locator('img[data-part="logo"][src="/images/logo.png"] >> visible=true')
+      .locator('img[data-part="logo"][src^="/images/logo.png"] >> visible=true')
       .first()
       .waitFor({ timeout: 60000 * P })
       .catch(async (error) => {

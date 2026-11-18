@@ -63,6 +63,7 @@ import {
   refusalText,
 } from "./import.js";
 import { type Io, lap, lapFrom } from "./io.js";
+import { currentHashes, placeStyle, reseedPictures } from "./picture-style.js";
 import { loadPlugins } from "./plugins.js";
 import { ProjectBusyError, ProjectLockError, withProjectMutation } from "./project-mutation.js";
 import { projectRevision, sourceDigests } from "./project-revision.js";
@@ -126,6 +127,8 @@ export interface OpFlags {
    * written with the change and committed in it, so an undo takes them back too.
    */
   files?: { path: string; bytes: Uint8Array }[];
+  /** How the image library is reached (setPictureStyle); the global fetch when unsaid. */
+  fetch?: typeof fetch;
   /** How deep to verify the change (change-verified.md §3.3); `change` when unsaid. */
   verify?: Depth;
   /** Where the change is made, for its result; local (or hosted, in a workspace) when unsaid. */
@@ -537,6 +540,13 @@ async function applyAndCheckpoint(
       return prepared.refusals.length ? 1 : 0;
     }
   }
+  // A picture style: every file fetched and checked before anything is written, or nothing is.
+  const placing = result.effects.find((e) => e.kind === "place-pictures");
+  const placed = placing && (await placeStyle(dir, placing.style, flags.fetch ?? fetch));
+  if (typeof placed === "string") {
+    io.err(`${placed}\n`);
+    return 1;
+  }
   if (destructive && !flags.yes) {
     io.err(
       `${result.description}: ${plan ? `this deletes the ${lost.join(", ")} ${lost.length === 1 ? "column" : "columns"} and the values in ${lost.length === 1 ? "it" : "them"}.` : dataImpact(dir, result.effects, args)}\nRun again with ${flags.mcp ? "confirm: true" : "--yes"} to apply it.\n`,
@@ -638,6 +648,11 @@ async function applyAndCheckpoint(
     io.err("The project source changed before Apply could write it. The draft was not written.\n");
     return 1;
   }
+  // The pictures were planned before their files were fetched: someone may have changed one since.
+  if (placed && JSON.stringify(currentHashes(dir)) !== JSON.stringify(placed.planned)) {
+    io.err("A picture changed while the style's pictures were fetched. Nothing was changed.\n");
+    return 1;
+  }
   // From the first write to the commit: rollback only while no newer editor files would be lost.
   let committed = false;
   try {
@@ -656,6 +671,18 @@ async function applyAndCheckpoint(
     for (const file of [...result.added, ...(flags.files ?? [])]) {
       mkdirSync(dirname(join(dir, file.path)), { recursive: true });
       writeFileSync(join(dir, file.path), "text" in file ? file.text : file.bytes);
+    }
+    if (placed) {
+      for (const file of placed.files) writeFileSync(join(dir, file.path), file.bytes);
+      for (const file of placed.texts)
+        if (file.text) {
+          mkdirSync(dirname(join(dir, file.path)), { recursive: true });
+          writeFileSync(join(dir, file.path), file.text);
+        } else rmSync(join(dir, file.path), { force: true });
+      const reseeded = reseedPictures(dir, placed.swaps);
+      io.out(
+        `Pictures placed: ${placed.files.length ? placed.files.map((f) => f.path.replace("public/images/", "")).join(", ") : "none needed changing"}.${placed.kept.length ? ` Your own pictures stay: ${placed.kept.join(", ")}.` : ""}${reseeded ? ` Sample records with the new pictures: ${reseeded}.` : ""}\n`,
+      );
     }
     followInSamples(dir, result.effects);
     // The imported file is kept beside the checkpoint; the log names it instead of holding it.
