@@ -119,12 +119,12 @@ export function DueList({
               {href ? (
                 <AppLink
                   href={href.replace("${id}", String(row.id))}
-                  className="min-w-0 truncate font-medium after:absolute after:inset-0 hover:underline max-sm:basis-full max-sm:whitespace-normal"
+                  className="min-w-0 font-medium after:absolute after:inset-0 hover:underline max-sm:basis-full max-sm:[overflow-wrap:anywhere] sm:truncate"
                 >
                   {row.title}
                 </AppLink>
               ) : (
-                <span className="min-w-0 truncate font-medium max-sm:basis-full max-sm:whitespace-normal">
+                <span className="min-w-0 font-medium max-sm:basis-full max-sm:[overflow-wrap:anywhere] sm:truncate">
                   {row.title}
                 </span>
               )}

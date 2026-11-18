@@ -417,6 +417,14 @@ function readable(color: string, bg: string, towardsColor: string, ratio: number
   return out;
 }
 
+/** The surfaces text sits on: the page, a card, the muted surface and a strong band's paper. */
+export const textSurfaces = (tokens: Tokens): string[] => [
+  tokens.background,
+  tokens.card,
+  tokens.muted,
+  towards(tokens.muted, tokens.foreground, 0.12),
+];
+
 /**
  * The primary as text (an eyebrow, a link, an active tab), read at 4.5:1 on every surface text
  * sits on: the page, a card, the muted surface and a strong band (a step further from the page).
@@ -425,16 +433,12 @@ function readable(color: string, bg: string, towardsColor: string, ratio: number
  * reads; the primary itself, for buttons and bands, stays the theme's.
  */
 export function primaryText(tokens: Tokens): string {
-  const surfaces = [
-    tokens.background,
-    tokens.card,
-    tokens.muted,
-    towards(tokens.muted, tokens.foreground, 0.12),
-  ];
+  const surfaces = textSurfaces(tokens);
+  const reads = (color: string) => surfaces.every((s) => contrast(hexOf(color), hexOf(s)) >= 4.5);
   let out = tokens.primary;
-  for (let i = 0; i < 40 && surfaces.some((s) => contrast(hexOf(out), hexOf(s)) < 4.5); i++)
-    out = towards(out, tokens.foreground, 0.1);
-  return out;
+  for (let i = 0; i < 40 && !reads(out); i++) out = towards(out, tokens.foreground, 0.1);
+  // Never reached (a theme whose text itself falls short on a strong band): the text color.
+  return reads(out) ? out : tokens.foreground;
 }
 
 /** A hue-rotated color of the same lightness and chroma. */

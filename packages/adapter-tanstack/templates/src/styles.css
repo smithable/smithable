@@ -312,49 +312,64 @@
    input's own label, otherwise for screen readers only, is shown; a value without one shows its
    column's name. */
 @media (max-width: 639px) {
-  [data-kit="inline-rows"] :is(table, tbody, tfoot, tr, td) {
+  [data-kit="inline-rows"] > div > table,
+  [data-kit="inline-rows"] > div > table > :is(tbody, tfoot),
+  [data-kit="inline-rows"] > div > table > :is(tbody, tfoot) > tr,
+  [data-kit="inline-rows"] > div > table > :is(tbody, tfoot) > tr > td {
     display: block;
     width: 100%;
   }
-  [data-kit="inline-rows"] thead {
-    display: none;
+  /* The column names stay for screen readers. */
+  [data-kit="inline-rows"] > div > table > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  [data-kit="inline-rows"] tbody tr {
+  [data-kit="inline-rows"] > div > table > tbody > tr {
     display: grid;
     gap: 0.5rem;
     padding-block: 0.75rem;
     border-bottom: 1px solid var(--border);
   }
-  [data-kit="inline-rows"] td {
+  [data-kit="inline-rows"] > div > table > tbody > tr > td {
     padding: 0;
     min-width: 0;
     text-align: start;
   }
-  [data-kit="inline-rows"] td label.sr-only {
+  [data-kit="inline-rows"] > div > table > tbody > tr > td > label.sr-only {
     position: static;
     width: auto;
     height: auto;
     margin: 0 0 0.25rem;
+    padding: 0;
     overflow: visible;
     clip: auto;
+    clip-path: none;
     white-space: normal;
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
   }
-  [data-kit="inline-rows"] td[data-label]:not(:has(label))::before {
+  [data-kit="inline-rows"] > div > table > tbody > tr > td[data-label]:not(:has(label))::before {
     content: attr(data-label);
     display: block;
     font-size: 0.875rem;
+    font-weight: 500;
     color: var(--muted-foreground);
   }
-  [data-kit="inline-rows"] tfoot tr {
+  [data-kit="inline-rows"] > div > table > tfoot > tr {
     display: flex;
     justify-content: space-between;
     padding-block: 0.75rem;
   }
-  [data-kit="inline-rows"] tfoot td {
+  [data-kit="inline-rows"] > div > table > tfoot > tr > td {
     width: auto;
+  }
+  [data-kit="inline-rows"] > div > table > tfoot > tr > td:empty {
+    display: none;
   }
 }
 

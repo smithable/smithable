@@ -13,6 +13,7 @@ import {
   primaryText,
   type ThemeIR,
   type Tokens,
+  textSurfaces,
   themeNamed,
   themeThumbnail,
   tokensOf,
@@ -382,7 +383,7 @@ test("the primary as text reads at 4.5:1 on every surface, and a readable primar
       );
     expect(worst(tokens.primary)).toBeLessThan(4.5);
     const text = primaryText(tokens);
-    for (const surface of [tokens.background, tokens.card, tokens.muted])
+    for (const surface of textSurfaces(tokens))
       expect(contrast(hexOf(text), hexOf(surface))).toBeGreaterThanOrEqual(4.5);
   }
   const clear = deriveTokens(
