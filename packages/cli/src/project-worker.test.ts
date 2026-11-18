@@ -147,7 +147,13 @@ test("holding a secret, the app's tools run in the worker, which sees neither se
     expect(tried.env).not.toContain("SMITHABLE_STUDIO_TOKEN");
     // A child may not read its parent's memory where Yama's ptrace_scope is 1 or more (this
     // machine, GitHub's runners); with 0 that is the host's setting, not this code's to test.
-    if (ptraceScope() >= 1) expect(tried.mem).toMatch(/^refused/);
+    // A pass here is the host refusing, not this code: hosted workspaces are checked under
+    // their own runtime (Studio non-dumpable, and the host check of environ, maps and mem).
+    if (ptraceScope() >= 1)
+      expect(
+        tried.mem,
+        `refused by this host's Yama ptrace_scope ${ptraceScope()}, not by Smithable`,
+      ).toMatch(/^refused/);
   }
 });
 
