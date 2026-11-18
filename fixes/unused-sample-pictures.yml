@@ -4,6 +4,6 @@ severity: fix
 exposure: none
 introduced: unknown
 affects:
-  kit: [vite.config.ts]
+  kit: [src/kit/unused-samples.ts]
   features: [any]
 migration: none
