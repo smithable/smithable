@@ -65,7 +65,8 @@ const library = (calls: string[] = []): Fetch =>
   (async (url: string | URL | Request) => {
     const address = String(url);
     calls.push(address);
-    if (address.endsWith("/library.json")) return Response.json({ latest: version.version });
+    if (address.endsWith("/latest.json"))
+      return Response.json({ version: version.version, index: `versions/${version.version}.json` });
     if (address.endsWith(`/versions/${version.version}.json`)) return Response.json(version);
     const hash = address.match(/files\/([a-f0-9]{64})\.webp$/)?.[1];
     const content = hash && files[hash];

@@ -240,7 +240,13 @@ async function fetchChecked(entry: VersionEntry, fetchFn: Fetch): Promise<Uint8A
   }
 }
 
-/** The library's current version: library.json names it, versions/<it>.json holds it. */
+/** A library version's name, as latest.json says it: no path, no "..". */
+const VERSION_NAME = /^[\w-]+(\.[\w-]+)*$/;
+
+/**
+ * The library's current version: latest.json says it ({ version, index }), and
+ * versions/<version>.json holds it. The index path is never followed as given, only checked.
+ */
 export async function libraryVersion(fetchFn: Fetch): Promise<LibraryVersion | string> {
   const get = async (path: string) => {
     const response = await fetchFn(`${libraryBase()}/${path}`, {
@@ -250,10 +256,14 @@ export async function libraryVersion(fetchFn: Fetch): Promise<LibraryVersion | s
     return response.json();
   };
   try {
-    const { latest } = ((await get("library.json")) ?? {}) as { latest?: unknown };
-    if (typeof latest !== "string" || !/^[\w.-]+$/.test(latest))
+    const pointer = ((await get("latest.json")) ?? {}) as { version?: unknown; index?: unknown };
+    const latest = pointer.version;
+    if (typeof latest !== "string" || !VERSION_NAME.test(latest))
       return "the image library's index has no versions yet";
+    if (pointer.index !== undefined && pointer.index !== `versions/${latest}.json`)
+      return "the image library's latest.json names an index that is not its version's";
     const version = (await get(`versions/${latest}.json`)) as LibraryVersion;
+    if (version?.version !== latest) return "the image library's index could not be read";
     if (!Array.isArray(version?.entries) || !Array.isArray(version.styles))
       return "the image library's index could not be read";
     return version;

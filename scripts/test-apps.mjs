@@ -6598,7 +6598,8 @@ async function logoCheck(dir, base) {
   const drawn = async (where) => {
     const logo = page.locator(`${where} img[data-part="logo"]`).first();
     await logo.waitFor({ state: "visible" });
-    if ((await logo.getAttribute("src")) !== `/${src}`) throw new Error(`${where}: not /${src}`);
+    if ((await logo.getAttribute("src"))?.split("?v=")[0] !== `/${src}`)
+      throw new Error(`${where}: not /${src}`);
     if (!(await logo.evaluate((img) => img.complete && img.naturalWidth > 0)))
       throw new Error(`${where}: the file did not load`);
   };
@@ -6610,7 +6611,8 @@ async function logoCheck(dir, base) {
         if (await page.locator('[data-kit="landing"]').count())
           await drawn('[data-kit="landing"] [data-part="header"]');
         const icon = await page.locator('link[rel="icon"]').getAttribute("href");
-        if (icon !== `/${src}`) throw new Error(`the icon is ${icon}`);
+        // The icon carries the file's hash (?v=…), so a changed picture is not served from cache.
+        if (icon?.split("?v=")[0] !== `/${src}`) throw new Error(`the icon is ${icon}`);
         if (!role) return;
         await signInAs(page, base, role);
         // Signed in, the app's start is in the shell, or a landing page or onboarding leads there.
