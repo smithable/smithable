@@ -20,6 +20,8 @@ import {
   type Allowed,
   type AuthIR,
   actionAccess,
+  adminOnly,
+  type Diagnostic,
   modelAccess,
   pageAccess,
   type SpecIR,
@@ -339,6 +341,63 @@ function wider(before: Allowed, after: Allowed, roles: string[]): string[] {
     );
   return changes;
 }
+/** The validator's warnings an owner can act on before publishing: data shown more widely than usual. */
+const WORTH_NOTING = new Set([
+  "public-personal-data",
+  "open-shared-access",
+  "api-personal-data",
+  "visitors-read-drafts",
+]);
+const list = (names: string[]) =>
+  names.length < 3 ? names.join(" and ") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+/**
+ * Roles other than admin with an administrator's kind of power (T879, Johan 2026-11-18): every
+ * grant, an administrator's page, everyone's records in every model, or, for the role anyone who
+ * signs up gets, everyone's records in any model.
+ */
+export function powerfulRoles(ir: SpecIR, auth: AuthIR): string[] {
+  if (auth.signIn === "none") return [];
+  const open = auth.signIn.selfSignUp && !auth.signIn.allowedDomains?.length;
+  const joining = (role: string) =>
+    role !== auth.defaultRole
+      ? ""
+      : open
+        ? ", and everyone who signs up gets it"
+        : ", and every new user gets it";
+  const found: string[] = [];
+  if (auth.defaultRole === "admin")
+    found.push(
+      open
+        ? "Everyone who signs up becomes an administrator."
+        : "Every new user becomes an administrator.",
+    );
+  for (const role of auth.roles) {
+    if (role.name === "admin") continue;
+    const everyones = ir.models
+      .filter((m) => {
+        const a = modelAccess(m, auth);
+        return a.write.roles.includes(role.name) || a.delete.roles.includes(role.name);
+      })
+      .map((m) => m.name);
+    const pages = ir.pages
+      .filter((p) => adminOnly(p) && pageAccess(p, auth).roles.includes(role.name))
+      .map((p) => p.id);
+    const all = role.grants === "all";
+    const every = ir.models.length > 0 && everyones.length === ir.models.length;
+    const anyone = role.name === auth.defaultRole && open && everyones.length > 0;
+    if (!all && !every && !pages.length && !anyone) continue;
+    const can = all
+      ? ["do everything an administrator can"]
+      : [
+          ...(everyones.length ? [`change or delete everyone's ${list(everyones)} records`] : []),
+          ...(pages.length
+            ? [`open the ${list(pages)} ${pages.length === 1 ? "page" : "pages"}`]
+            : []),
+        ];
+    found.push(`The ${role.name} role can ${can.join(" and ")}${joining(role.name)}.`);
+  }
+  return found;
+}
 /** Compare the complete effective access map, not just the list of added grants. */
 function accessFacts(ir: SpecIR, auth: AuthIR) {
   return {
@@ -352,7 +411,8 @@ function accessFacts(ir: SpecIR, auth: AuthIR) {
 export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
   const revision = projectRevision(dir);
   const recorded = { checks: checksRecord(dir), deployment: deploymentRecord(dir) };
-  const current = loadSpec(dir, { out: () => {}, err: () => {} });
+  const found: Diagnostic[] = [];
+  const current = loadSpec(dir, { out: () => {}, err: () => {} }, [], found);
   const baseline = recorded.deployment;
   const plugins = loadPlugins(dir);
   const before =
@@ -474,6 +534,18 @@ export function releaseReview(dir: string, options: { hosted?: boolean } = {}) {
             (s) => s.concept === "auth",
           )?.sentences
         : undefined,
+    // What an owner may not expect, at the top of the review (T879, Johan 2026-11-18).
+    warnings:
+      current.ir && current.auth
+        ? [
+            ...powerfulRoles(current.ir, current.auth),
+            ...new Set(
+              found
+                .filter((d) => d.severity === "warning" && WORTH_NOTING.has(d.code))
+                .map((d) => d.plain?.message ?? d.message),
+            ),
+          ]
+        : [],
     assets: assetReview(dir),
     // The privacy page: reviewed, changed since its review (and what), or never (§6.4).
     privacy: privacyStates(dir),

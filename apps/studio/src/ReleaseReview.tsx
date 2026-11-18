@@ -64,6 +64,10 @@ export function ReleaseReview({
   const dialog = useRef<HTMLDialogElement>(null);
   const [refused, setRefused] = useState<string>();
   const [reviewingPrivacy, setReviewingPrivacy] = useState(false);
+  // The page just confirmed, said in its section, which stays open (Johan, 2026-11-18: the button
+  // seemed to do nothing but disable itself).
+  const [readPrivacy, setReadPrivacy] = useState<string>();
+  const hosted = Boolean(home || release);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
@@ -76,10 +80,18 @@ export function ReleaseReview({
       .operation("reviewPrivacyPage", { page, facts, on })
       .catch((e: Error) => ({ ok: false, output: e.message }));
     if (!result.ok) setRefused(result.output);
+    else setReadPrivacy(page);
     await reload();
     setReviewingPrivacy(false);
   };
   const content = review && {
+    noting: (
+      <ul className="list-disc space-y-1 pl-5" data-review-warnings>
+        {review.warnings?.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    ),
     access: (
       <>
         {review.noSignIn && (
@@ -88,14 +100,14 @@ export function ReleaseReview({
           </p>
         )}
         {review.currentAccess?.length ? (
-          <>
-            <h3 className="font-semibold">Who can use the current app</h3>
-            <ul className="space-y-1">
+          <details data-review-roles>
+            <summary className="cursor-pointer font-semibold">Who can use the current app</summary>
+            <ul className="mt-2 space-y-1">
               {review.currentAccess.map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
-          </>
+          </details>
         ) : (
           <p>
             Current access could not be read. Review the app's access settings before publishing.
@@ -121,7 +133,8 @@ export function ReleaseReview({
             )}
           </>
         ) : (
-          review.baselineState !== "none" && (
+          review.baselineState !== "none" &&
+          !hosted && (
             <p>
               {review.comparisonReason ?? "Comparison is unavailable."} Review the current access
               map before publishing.
@@ -154,14 +167,22 @@ export function ReleaseReview({
                 ))}
               </ul>
             )}
+            {p.state === "reviewed" && readPrivacy === p.page && (
+              <p role="status" data-privacy-recorded>
+                Recorded: you read it today.
+              </p>
+            )}
             {p.state !== "reviewed" && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted">Read it in the preview first.</span>
+              <div className="space-y-2">
+                <p className="text-sm text-muted">
+                  Open the {p.page} page in the preview and read it. When it says what the app does,
+                  confirm here.
+                </p>
                 <Button
                   disabled={reviewingPrivacy}
                   onClick={() => void reviewPrivacy(p.page, p.facts)}
                 >
-                  {p.state === "changed" ? "Review it again" : "Review it"}
+                  {reviewingPrivacy ? "Recording…" : "I have read it"}
                 </Button>
               </div>
             )}
@@ -169,8 +190,8 @@ export function ReleaseReview({
         ))}
         {refused && <p role="alert">{refused}</p>}
         <p className="text-sm text-muted">
-          Reviewing records that you read this description as it is now. The page says so until it
-          changes; it is not legal advice.
+          Confirming records that you read this description as it is now, until it changes. It is
+          not legal advice.
         </p>
       </>
     ),
@@ -293,7 +314,8 @@ export function ReleaseReview({
           Review and publish
           {review && (
             <span className="ml-2 text-sm font-normal" data-review-count>
-              {needsLook(review)} {needsLook(review) === 1 ? "needs" : "need"} a look
+              {needsLook(review, { hosted })}{" "}
+              {needsLook(review, { hosted }) === 1 ? "needs" : "need"} a look
             </span>
           )}
         </h2>
@@ -318,12 +340,15 @@ export function ReleaseReview({
                 page and whether the checks are current. Hosted publishing has its own evidence.
               </p>
             )}
-            {reviewSections(review).map((part) => (
+            {reviewSections(review, { hosted }).map((part) => (
               <details
                 key={`${part.id}:${part.state}:${part.summary}`}
                 data-review-part={part.id}
                 data-review-state={part.state}
-                open={part.state === "needs-look"}
+                open={
+                  part.state === "needs-look" ||
+                  (part.id === "privacy" && readPrivacy !== undefined)
+                }
                 className={`rounded-md border p-3 ${part.state === "needs-look" ? "border-accent text-fg" : "border-line text-muted open:text-fg"}`}
               >
                 <summary className="cursor-pointer text-sm">

@@ -79,6 +79,8 @@ export interface ReleaseReview {
   baselineState?: "none" | "available" | "unavailable";
   accessUnchanged?: boolean;
   currentAccess?: string[];
+  /** What an owner may not expect: powerful roles, data shown more widely than usual (T879). */
+  warnings?: string[];
   maintenance: {
     generatedEngine?: string;
     generatedProfile?: string;
