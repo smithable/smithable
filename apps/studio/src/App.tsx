@@ -122,6 +122,12 @@ export function App() {
     diagnostics?: PresentedDiagnostic[];
   }>();
   const [reporting, setReporting] = useState(false);
+  // Studio hands a notice to the first read of the project only, so whichever read that is (the
+  // page loading, a reconnect, the catch-up after a change) shows it.
+  const noticed = useCallback((next: Project) => {
+    if (next.notice) setMessage({ ok: false, text: next.notice, notice: true });
+    return next;
+  }, []);
   // A held fix opened from the service's link, ?fix=<id> (A 245): read once, then gone from the address.
   const [fixLine, setFixLine] = useState<string>();
   useEffect(() => {
@@ -501,7 +507,7 @@ export function App() {
     // While the daemon restarts, what is shown stays; the next event brings it up to date.
     const next = await api.project().catch(() => undefined);
     if (!next) return;
-    if (next.notice) setMessage({ ok: false, text: next.notice, notice: true });
+    noticed(next);
     setProject((p) => keepWaiting(p, next));
     // The preview loads again only when the change touches the page it shows (studio-v2 §2):
     // another kind of record's field leaves it, and the person's place in it, as it is.
@@ -524,7 +530,7 @@ export function App() {
     )
       setVersion((v) => v + 1);
     setUpdating(false);
-  }, []);
+  }, [noticed]);
 
   useEffect(() => {
     refresh();
@@ -540,11 +546,15 @@ export function App() {
       else if (event === "beta")
         setProject((p) => p && { ...p, beta: (data as Project["beta"] | null) ?? undefined });
       // After a reconnect: the project as it is now, without reloading the preview.
-      else if (event === "open") api.project().then(setProject, () => {});
+      else if (event === "open")
+        api.project().then(
+          (next) => setProject(noticed(next)),
+          () => {},
+        );
       else if (event === "people") setPeople(data as PeopleState);
       else logStore.push(String(data));
     });
-  }, [refresh]);
+  }, [refresh, noticed]);
 
   const spec = useSpec(project);
   const lookApp = project?.localDir ?? project?.name ?? "";
@@ -602,6 +612,7 @@ export function App() {
   const catchUp = async () => {
     const next = await api.project().catch(() => undefined);
     if (next) {
+      noticed(next);
       if (guideDemo.current) {
         const last = next.trace[0];
         guideChange.current =
