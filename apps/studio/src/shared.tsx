@@ -357,6 +357,8 @@ export function Preview({
               type="text"
               name="preview-path"
               inputMode="url"
+              // A phone's keyboard shows Go for Enter, the Go button's place.
+              enterKeyHint="go"
               spellCheck={false}
               data-1p-ignore=""
               data-lpignore="true"
