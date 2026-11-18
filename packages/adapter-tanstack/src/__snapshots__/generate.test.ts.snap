@@ -11792,9 +11792,9 @@ function AdminPage() {
         title={pageUi["admin"].title}
         actions={
           <>
-            <Link to="/admin/activity" className="text-sm font-medium text-primary">{w.activity}</Link>
-            {admin && <Link to="/admin/ask" className="text-sm font-medium text-primary">{w.ask}</Link>}
-            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
+            <Link to="/admin/activity" className="text-sm font-medium text-primary-text">{w.activity}</Link>
+            {admin && <Link to="/admin/ask" className="text-sm font-medium text-primary-text">{w.ask}</Link>}
+            {restore && <a href={restore} className="text-sm font-medium text-primary-text">{w.restoreData}</a>}
           </>
         }
       />
@@ -14192,7 +14192,7 @@ exports[`../../../examples/api/smithable.yml > the generated files are as review
   "src/routes/__root.tsx": "72e51f25 generated",
   "src/routes/admin/activity.tsx": "225b605d generated",
   "src/routes/admin/ask.tsx": "0430add2 generated",
-  "src/routes/admin/index.tsx": "247d3d7b generated",
+  "src/routes/admin/index.tsx": "e9f3b1b5 generated",
   "src/routes/admin/notes/$id.tsx": "087fdc58 generated",
   "src/routes/admin/notes/index.tsx": "54d57aec generated",
   "src/routes/admin/notes/new.tsx": "6d8a3ab3 generated",
@@ -33035,8 +33035,8 @@ function AdminPage() {
         title={pageUi["admin"].title}
         actions={
           <>
-            <Link to="/admin/activity" className="text-sm font-medium text-primary">{w.activity}</Link>
-            {restore && <a href={restore} className="text-sm font-medium text-primary">{w.restoreData}</a>}
+            <Link to="/admin/activity" className="text-sm font-medium text-primary-text">{w.activity}</Link>
+            {restore && <a href={restore} className="text-sm font-medium text-primary-text">{w.restoreData}</a>}
           </>
         }
       />
@@ -37325,7 +37325,7 @@ exports[`../../../examples/booking/smithable.yml > the generated files are as re
   "src/routes/admin/class-types/$id.tsx": "8603d18a generated",
   "src/routes/admin/class-types/index.tsx": "8db2bc16 generated",
   "src/routes/admin/class-types/new.tsx": "15a01d89 generated",
-  "src/routes/admin/index.tsx": "19b6cd26 generated",
+  "src/routes/admin/index.tsx": "f64b4832 generated",
   "src/routes/admin/instructors/$id.tsx": "52bb8fb7 generated",
   "src/routes/admin/instructors/index.tsx": "a34071e2 generated",
   "src/routes/admin/instructors/new.tsx": "f43b4446 generated",
