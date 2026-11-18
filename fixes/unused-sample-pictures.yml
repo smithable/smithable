@@ -1,0 +1,9 @@
+id: unused-sample-pictures
+title: A built app carried every sample picture, though its records start empty and only a picture a page names is ever shown.
+severity: fix
+exposure: none
+introduced: unknown
+affects:
+  kit: [src/kit/unused-samples.ts]
+  features: [any]
+migration: none

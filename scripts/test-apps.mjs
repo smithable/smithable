@@ -8130,6 +8130,43 @@ for (const [index, example] of examples.entries()) {
       }).stdout.trim();
       if (found) throw new Error(`found in ${found}`);
     });
+    step("the production build carries no recorded sample picture that nothing in it names", () => {
+      // Only pictures.json's samples may go; an app without that record keeps them all. The
+      // examples have none, so the kiosk (whose /where page names one sample) gets the record
+      // the image library would have written, and is built again with it.
+      const record = join(dir, "public/images/pictures.json");
+      const own = join(dir, "public/images/samples");
+      if (example === "kiosk" && !existsSync(record) && existsSync(own)) {
+        const entries = readdirSync(own).map((file) => [
+          `samples/${file}`,
+          {
+            role: "sample",
+            sha256: createHash("sha256")
+              .update(readFileSync(join(own, file)))
+              .digest("hex"),
+          },
+        ]);
+        if (entries.length < 2) throw new Error("the kiosk has fewer than two sample pictures");
+        writeFileSync(record, JSON.stringify(Object.fromEntries(entries)));
+        run("pnpm", ["build"], dir);
+        const left = readdirSync(join(dir, "dist/client/images/samples"));
+        if (left.length >= entries.length) throw new Error("no sample picture was left out");
+        if (!left.includes("food-soup-b.webp"))
+          throw new Error("the /where page's picture is gone");
+      }
+      const placed = existsSync(record) ? JSON.parse(readFileSync(record, "utf8")) : {};
+      const samples = join(dir, "dist/client/images/samples");
+      const shipped = existsSync(samples) ? readdirSync(samples) : [];
+      const unnamed = shipped.filter(
+        (file) =>
+          placed[`samples/${file}`]?.role === "sample" &&
+          spawnSync("grep", ["-rlF", "--exclude-dir=images", `images/samples/${file}`, "dist"], {
+            cwd: dir,
+            encoding: "utf8",
+          }).stdout.trim() === "",
+      );
+      if (unnamed.length) throw new Error(`unnamed: ${unnamed.join(", ")}`);
+    });
     step("the app's own tests pass (access for every role, formula examples)", () =>
       run("pnpm", ["test"], dir),
     );
