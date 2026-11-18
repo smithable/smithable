@@ -16,6 +16,28 @@ export function holdSecrets(env: NodeJS.ProcessEnv = process.env): void {
   }
 }
 
+/**
+ * From the process's standard input (`--secrets-stdin`): a JSON object with `studioToken` and
+ * `modelKey`, each a string or left out, as a hosted workspace's start passes them, so they are
+ * never in the environment at all. Anything else in it is refused.
+ */
+export function holdSecretsFromJson(text: string): void {
+  const given = JSON.parse(text) as unknown;
+  if (!given || typeof given !== "object" || Array.isArray(given))
+    throw new Error("--secrets-stdin wants a JSON object.");
+  const keys: Record<string, SecretName> = {
+    studioToken: "SMITHABLE_STUDIO_TOKEN",
+    modelKey: "SMITHABLE_MODEL_KEY",
+  };
+  for (const [key, value] of Object.entries(given)) {
+    const name = keys[key];
+    if (!name) throw new Error(`--secrets-stdin does not take "${key}".`);
+    if (typeof value !== "string" || !value)
+      throw new Error(`--secrets-stdin: "${key}" must be a string.`);
+    held[name] = value;
+  }
+}
+
 /** Studio's token (the proxy's bearer), for Studio's own checks and its requests to the preview. */
 export const studioToken = (): string | undefined => held.SMITHABLE_STUDIO_TOKEN;
 

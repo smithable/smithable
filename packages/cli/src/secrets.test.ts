@@ -4,7 +4,14 @@ import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { git } from "./git.js";
 import { execQuiet } from "./io.js";
-import { childEnv, holdSecrets, modelKey, releaseSecretsForTests, studioToken } from "./secrets.js";
+import {
+  childEnv,
+  holdSecrets,
+  holdSecretsFromJson,
+  modelKey,
+  releaseSecretsForTests,
+  studioToken,
+} from "./secrets.js";
 
 const NAMES = ["SMITHABLE_STUDIO_TOKEN", "SMITHABLE_MODEL_KEY"];
 const dirs: string[] = [];
@@ -99,4 +106,15 @@ test("a command and git run without the two names", () => {
   expect(seen[1]).toContain("PATH=");
   // The engine still has them.
   expect(studioToken()).toBe("studio-token");
+});
+
+test("on standard input the two come as JSON, and nothing else is taken", () => {
+  holdSecretsFromJson(JSON.stringify({ studioToken: "from-stdin", modelKey: "key-on-stdin" }));
+  expect(studioToken()).toBe("from-stdin");
+  expect(modelKey()).toBe("key-on-stdin");
+  expect(() => holdSecretsFromJson("[]")).toThrow(/JSON object/);
+  expect(() => holdSecretsFromJson(JSON.stringify({ PATH: "/bin" }))).toThrow(
+    /does not take "PATH"/,
+  );
+  expect(() => holdSecretsFromJson(JSON.stringify({ modelKey: 4 }))).toThrow(/must be a string/);
 });

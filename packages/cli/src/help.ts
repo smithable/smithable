@@ -392,6 +392,8 @@ export const COMMANDS: Command[] = [
       "--host 0.0.0.0, --preview-url (the preview's public address) and --home",
       "(a link back to the service's page for the project); with --host it needs",
       "SMITHABLE_STUDIO_TOKEN, or --insecure to run open to the network.",
+      "--secrets-stdin: the token and the model key come as JSON on standard input",
+      '({ "studioToken": …, "modelKey": … }) instead of the environment.',
       "--replaceable: the project may be replaced by another app, once (a hosted",
       "workspace that waits for whoever claims it); never for your own project",
     ],
