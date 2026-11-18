@@ -2,7 +2,7 @@
 // to its title with its kind's icon (Behavior's own, A 167), the first open at first; each title
 // and sentence leads to its part, in No code or in Code as the person chooses.
 import type { SummarySection } from "@smithable/index";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cx } from "../ui";
 import { AreaIcon } from "./areas";
 import { AREAS } from "./SpecForm";
@@ -48,6 +48,12 @@ export function SummaryTab({
   onOpen: (link: NonNullable<SummaryLink>) => void;
 }) {
   const [open, setOpen] = useState(() => openSections(sections, kept));
+  // The spec read later, or changed: the first section opens if nothing was chosen yet, and a
+  // section that is gone is dropped.
+  useEffect(
+    () => setOpen((now) => openSections(sections, kept ?? (now.length ? now : undefined))),
+    [sections],
+  );
   const [target, setTargetState] = useState<SummaryTarget>(() => {
     try {
       return readTarget(localStorage.getItem(TARGET_KEY));
@@ -128,16 +134,15 @@ export function SummaryTab({
               </button>
               <h3 className="font-medium">{link(section.concept, section.title)}</h3>
             </div>
-            {expanded && (
-              <div id={id} className="space-y-1 border-t border-line px-3 py-2">
-                {section.sentences.map((sentence, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a section's sentences are by their place
-                  <p key={i}>
-                    {link(section.concept, sentence.replace(/^- /, ""), fieldOf(section, sentence))}
-                  </p>
-                ))}
-              </div>
-            )}
+            {/* In the page while folded, so the toggle's aria-controls always names it. */}
+            <div id={id} hidden={!expanded} className="space-y-1 border-t border-line px-3 py-2">
+              {section.sentences.map((sentence, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: a section's sentences are by their place
+                <p key={i}>
+                  {link(section.concept, sentence.replace(/^- /, ""), fieldOf(section, sentence))}
+                </p>
+              ))}
+            </div>
           </div>
         );
       })}
