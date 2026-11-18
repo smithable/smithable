@@ -33,7 +33,7 @@ export const ANSWER_MOST = 16 * 1024;
 const ERR_MOST = 4000;
 /** A first migration on a slow, sandboxed machine stays well under this. */
 const PATIENCE = 120_000;
-/** Started once, and again once after it failed. */
+/** Started once, and again once after it failed: two failures in a row and it is given up. */
 const STARTS = 2;
 
 class Worker {
@@ -43,6 +43,8 @@ class Worker {
   private next = 1;
   private starts = 0;
   private readonly waiting = new Map<number, (answer: Answer | undefined) => void>();
+  /** One question at a time, so a restart is never raced by a second caller. */
+  private queue: Promise<unknown> = Promise.resolve();
   /** Said once, the first time the worker is given up. */
   failed = false;
 
@@ -56,6 +58,8 @@ class Worker {
       cwd: this.dir,
       env: childEnv(),
       stdio: ["ignore", "ignore", "ignore", "pipe"],
+      // A group of its own, so stopping it stops whatever the app's tools started too.
+      detached: true,
     });
     const pipe = child.stdio[3] as (Readable & Writable) | null;
     if (!pipe) {
@@ -66,8 +70,11 @@ class Worker {
     this.pipe = pipe;
     this.buffer = "";
     pipe.setEncoding("utf8");
-    pipe.on("data", (chunk: string) => this.read(chunk));
-    pipe.on("error", () => this.stop());
+    // Only the current child's pipe is listened to: a late chunk from a stopped one is dropped.
+    pipe.on("data", (chunk: string) => {
+      if (this.child === child) this.read(chunk);
+    });
+    pipe.on("error", () => this.stop(child));
     child.on("exit", () => this.stop(child));
     child.on("error", () => this.stop(child));
     // Neither keeps this process alive on its own: only a question waiting for its answer does.
@@ -100,7 +107,12 @@ class Worker {
   /** Kills the child (if it is still the current one) and answers everything waiting with nothing. */
   private stop(which: ChildProcess | undefined = this.child): void {
     if (!which || which !== this.child) return;
-    which.kill("SIGKILL");
+    try {
+      if (which.pid) process.kill(-which.pid, "SIGKILL");
+    } catch {
+      which.kill("SIGKILL");
+    }
+    this.pipe?.destroy();
     this.child = undefined;
     this.pipe = undefined;
     const waiting = [...this.waiting.values()];
@@ -115,13 +127,20 @@ class Worker {
   }
 
   /** One step in the worker; undefined when it could not be asked or did not answer properly. */
-  async ask(step: Step, migration?: MigrationPlan): Promise<Answer | undefined> {
-    for (let attempt = 0; attempt < STARTS; attempt++) {
-      if (!this.start()) return undefined;
-      const answer = await this.once(step, migration);
-      if (answer) return answer;
-    }
-    return undefined;
+  ask(step: Step, migration?: MigrationPlan): Promise<Answer | undefined> {
+    const asked = this.queue.then(async () => {
+      for (let attempt = 0; attempt < STARTS; attempt++) {
+        if (!this.start()) return undefined;
+        const answer = await this.once(step, migration);
+        if (answer) {
+          this.starts = 0;
+          return answer;
+        }
+      }
+      return undefined;
+    });
+    this.queue = asked;
+    return asked;
   }
 
   private once(step: Step, migration?: MigrationPlan): Promise<Answer | undefined> {

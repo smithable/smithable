@@ -16,7 +16,8 @@ pipe.on("data", (chunk: string) => {
   for (let end = buffer.indexOf("\n"); end >= 0; end = buffer.indexOf("\n")) {
     const line = buffer.slice(0, end);
     buffer = buffer.slice(end + 1);
-    queue = queue.then(() => answer(line));
+    // A question that fails to parse ends the worker; the parent starts it again or falls back.
+    queue = queue.then(() => answer(line)).catch(() => process.exit(1));
   }
 });
 pipe.on("end", () => process.exit(0));

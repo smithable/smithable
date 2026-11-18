@@ -23,6 +23,14 @@ function project(): string {
   return dir;
 }
 
+function ptraceScope(): number {
+  try {
+    return Number(readFileSync("/proc/sys/kernel/yama/ptrace_scope", "utf8"));
+  } catch {
+    return 0;
+  }
+}
+
 function write(dir: string, path: string, text: string): void {
   mkdirSync(join(dir, path, ".."), { recursive: true });
   writeFileSync(join(dir, path), text);
@@ -137,8 +145,9 @@ test("holding a secret, the app's tools run in the worker, which sees neither se
       expect(tried.environ).not.toContain(value);
     }
     expect(tried.env).not.toContain("SMITHABLE_STUDIO_TOKEN");
-    // A child may not read its parent's memory (Yama ptrace_scope 1, which hosted workspaces set).
-    expect(tried.mem).toMatch(/^refused/);
+    // A child may not read its parent's memory where Yama's ptrace_scope is 1 or more (this
+    // machine, GitHub's runners); with 0 that is the host's setting, not this code's to test.
+    if (ptraceScope() >= 1) expect(tried.mem).toMatch(/^refused/);
   }
 });
 
@@ -149,15 +158,17 @@ test("a worker answering out of shape is started again once, then the tools run 
   write(
     dir,
     "node_modules/@tanstack/router-generator/index.js",
-    `import { writeSync } from "node:fs";
+    `import { appendFileSync, writeSync } from "node:fs";
 export const getConfig = () => ({});
-export class Generator { async run() { writeSync(3, '{"id":1,"value":true,"err":"","more":1}\\n'); await new Promise(() => {}); } }`,
+export class Generator { async run() { appendFileSync(${JSON.stringify(join(dir, "runs"))}, "x"); writeSync(3, '{"id":1,"value":true,"err":"","more":1}\\n'); await new Promise(() => {}); } }`,
   );
   holdSecretsFromJson(JSON.stringify({ studioToken: TOKEN }));
   const said: string[] = [];
   const steps = stepsFor(dir, { err: (text) => void said.push(text) });
   expect(await steps.routeTree()).toBe(false);
   expect(await steps.routeTree()).toBe(false);
+  // Started twice for the first question, and not again for the second.
+  expect(readFileSync(join(dir, "runs"), "utf8")).toBe("xx");
   expect(said).toEqual([
     "The project worker stopped; the app's tools run as processes of their own.\n",
   ]);
