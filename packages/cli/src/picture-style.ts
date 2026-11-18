@@ -75,6 +75,8 @@ export const roleOf = (file: string): PictureRole | undefined =>
         : undefined;
 
 export function readRecords(dir: string): PictureRecords {
+  // Never through a link: the record is read only from a plain file in plain folders.
+  if (linkedRecordPath(dir)) return {};
   try {
     const said = JSON.parse(readFileSync(join(imagesDir(dir), "pictures.json"), "utf8"));
     return said && typeof said === "object" && !Array.isArray(said) ? said : {};
@@ -99,6 +101,25 @@ const plain = (path: string, kind: "file" | "dir") => {
     return false;
   }
 };
+
+/**
+ * The first of public/, public/images/, pictures.json and CREDITS.md that is there but not a plain
+ * folder or file (a link, above all); undefined when each is plain or absent. Placing refuses then:
+ * writing the record would go through the link, outside the project.
+ */
+export function linkedRecordPath(dir: string): string | undefined {
+  const there = (path: string) => lstatSync(path, { throwIfNoEntry: false });
+  for (const [path, kind] of [
+    ["public", "dir"],
+    ["public/images", "dir"],
+    ["public/images/pictures.json", "file"],
+    ["public/images/CREDITS.md", "file"],
+  ] as const) {
+    const s = there(join(dir, path));
+    if (s && !(kind === "dir" ? s.isDirectory() : s.isFile())) return path;
+  }
+  return undefined;
+}
 
 /**
  * The files under public/images/ a library picture may lie at: the hero, the mark, samples.
@@ -268,6 +289,9 @@ export async function placeStyle(
   if (typeof version === "string") return `No pictures were changed: ${version}.`;
   if (!version.styles.some((s) => s.id === style))
     return `The image library has no style "${style}"; it has ${version.styles.map((s) => s.id).join(", ")}.`;
+  const linked = linkedRecordPath(dir);
+  if (linked)
+    return `No pictures were changed: ${linked} is a link or not a plain ${/\.\w+$/.test(linked) ? "file" : "folder"}, so the record would be written outside the project.`;
   const planned = currentHashes(dir);
   const plan = planStyle(dir, version, style);
   if (plan.missing.length)
@@ -290,11 +314,17 @@ export async function placeStyle(
   for (const write of plan.writes) records[write.file] = write.record;
   // A picture the owner changed or removed is no longer what its record says: the record goes,
   // so it gets no library credit or mark and is never taken for a library picture again.
+  // A record from before hashes ({ generated } alone) stays as it is: the kit reads its mark.
   const present = new Set(placedFiles(dir));
-  for (const file of Object.keys(records))
-    if (plan.kept.includes(file) || (roleOf(file) && !present.has(file))) delete records[file];
-  const texts = [{ path: "public/images/pictures.json", text: recordsText(records) }];
-  texts.push({ path: "public/images/CREDITS.md", text: creditsText(records) });
+  for (const [file, record] of Object.entries(records))
+    if ((record?.sha256 && plan.kept.includes(file)) || (roleOf(file) && !present.has(file)))
+      delete records[file];
+  // An app with no library pictures and no record gets neither file, nor loses its own CREDITS.md.
+  const texts: PlacedStyle["texts"] = [];
+  if (plan.writes.length || Object.keys(readRecords(dir)).length) {
+    texts.push({ path: "public/images/pictures.json", text: recordsText(records) });
+    texts.push({ path: "public/images/CREDITS.md", text: creditsText(records) });
+  }
   const hero = plan.writes.find((w) => w.file === "hero.webp");
   const content = hero && heroWords(dir, hero.entry);
   if (content) texts.push({ path: "smithable.content.yml", text: content });

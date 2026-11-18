@@ -292,3 +292,47 @@ test("seeded records follow the new samples; an uploaded picture and one replace
   expect(b).toBe(uploaded);
   expect(c).toBe(handmade);
 });
+
+test("a record from before hashes keeps its mark when its picture matches no entry", async () => {
+  const dir = oldApp();
+  writeFileSync(join(dir, "public", "images", "samples", "drawn.webp"), bytes("an image model's"));
+  writeFileSync(
+    join(dir, "public", "images", "pictures.json"),
+    JSON.stringify({
+      "samples/drawn.webp": { generated: true },
+      "samples/0.webp": { generated: true },
+    }),
+  );
+  const placed = await placeStyle(dir, "pastel", library());
+  if (typeof placed === "string") throw new Error(placed);
+  const record = JSON.parse(
+    placed.texts.find((t) => t.path.endsWith("pictures.json"))?.text ?? "{}",
+  );
+  expect(record["samples/drawn.webp"]).toEqual({ generated: true });
+});
+
+test("a linked images folder or record file refuses; an app without library pictures gets no record", async () => {
+  const { symlinkSync, rmSync, renameSync } = await import("node:fs");
+  const linkedFile = oldApp();
+  const outside = join(linkedFile, "outside.json");
+  writeFileSync(outside, "{}");
+  rmSync(join(linkedFile, "public", "images", "pictures.json"));
+  symlinkSync(outside, join(linkedFile, "public", "images", "pictures.json"));
+  expect(await placeStyle(linkedFile, "pastel", library())).toMatch(
+    /public\/images\/pictures.json is a link or not a plain file/,
+  );
+  expect(readFileSync(outside, "utf8")).toBe("{}");
+  const linkedFolder = oldApp();
+  renameSync(join(linkedFolder, "public", "images"), join(linkedFolder, "elsewhere"));
+  symlinkSync(join(linkedFolder, "elsewhere"), join(linkedFolder, "public", "images"));
+  expect(await placeStyle(linkedFolder, "pastel", library())).toMatch(
+    /public\/images is a link or not a plain folder/,
+  );
+  // No library pictures, no record: neither file is written, an own CREDITS.md stays.
+  const bare = mkdtempSync(join(tmpdir(), "picture-style-"));
+  mkdirSync(join(bare, "public", "images"), { recursive: true });
+  writeFileSync(join(bare, "public", "images", "CREDITS.md"), "mine\n");
+  const placed = await placeStyle(bare, "pastel", library());
+  if (typeof placed === "string") throw new Error(placed);
+  expect(placed.texts).toEqual([]);
+});
