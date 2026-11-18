@@ -11,6 +11,7 @@ import {
   projectRevision,
   recordDeployment,
 } from "./release-review.js";
+import { childEnv } from "./secrets.js";
 import { security } from "./security.js";
 
 /** Sign-in provider keys and mail settings passed to the app from the environment when set; never stored. */
@@ -92,7 +93,12 @@ export async function deploy(
     ...(remote ? { DOCKER_HOST: options.target } : {}),
   };
   const docker = (args: string[]) =>
-    spawnSync("docker", args, { cwd: dir, env, encoding: "utf8", maxBuffer: 1 << 26 });
+    spawnSync("docker", args, {
+      cwd: dir,
+      env: childEnv(env),
+      encoding: "utf8",
+      maxBuffer: 1 << 26,
+    });
   io.out(`Deploying ${name} to ${remote ? options.target : "Docker on this machine"}…\n`);
   const built = docker(["build", "-q", "-t", name, "."]);
   if (built.status !== 0) {

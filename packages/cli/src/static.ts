@@ -14,6 +14,7 @@ import { join, resolve } from "node:path";
 import { FRAME_RUNTIME } from "./frame-runtime.js";
 import { type Io, tool } from "./io.js";
 import { RECORD_PROBE } from "./preview-discovery.js";
+import { childEnv } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 
 /** A page to save: where it is, what it is called, the file it goes to, and a state to put it in. */
@@ -443,7 +444,7 @@ export async function staticPages(
   io.out(`Starting the app at ${base}…\n`);
   const child = spawn(...tool(app, "vite", ["dev", "--port", String(port), "--strictPort"]), {
     cwd: app,
-    env: { ...process.env, BETTER_AUTH_URL: base, NO_COLOR: "1" },
+    env: childEnv({ ...process.env, BETTER_AUTH_URL: base, NO_COLOR: "1" }),
     stdio: ["ignore", "ignore", "pipe"],
   });
   let said = "";

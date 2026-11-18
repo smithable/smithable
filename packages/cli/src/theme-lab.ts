@@ -1,3 +1,4 @@
+import { childEnv } from "./secrets.js";
 // `smithable theme lab` (docs/design/theme-lab.md §3, local mode): the theme lab beside a real
 // app. Makes the chosen starter's app (booking by default, with the controls it lacks, as the
 // theme sheet makes it), serves its preview with the editor's runtime and the lab on the next
@@ -193,12 +194,12 @@ export async function themeLab(
       ]),
       {
         cwd: app,
-        env: {
+        env: childEnv({
           ...process.env,
           SMITHABLE_LOOK_KEY: lookKey,
           BETTER_AUTH_URL: preview,
           NO_COLOR: "1",
-        },
+        }),
       },
     );
     child.stderr?.on("data", (d) => io.err(String(d)));

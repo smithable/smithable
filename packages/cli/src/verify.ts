@@ -33,6 +33,7 @@ import { ensureRepository, git, uncommittedRefusal } from "./git.js";
 import { exec, type Io, tool } from "./io.js";
 import { projectRevision } from "./project-revision.js";
 import { projectIndex } from "./rules.js";
+import { childEnv } from "./secrets.js";
 import { loadSpec } from "./validate.js";
 import { VERSION } from "./version.js";
 
@@ -275,6 +276,7 @@ export function runDeeper(dir: string, v: Verification, typecheck = true, out?: 
       ...(named === all ? [] : named),
     ]);
     const spawned = spawnSync(command, args, {
+      env: childEnv(),
       cwd: dir,
       stdio: "ignore",
       timeout: 15 * 60_000,

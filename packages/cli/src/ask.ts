@@ -27,6 +27,7 @@ import type { Io } from "./io.js";
 import { requiredButEmpty, runOperation } from "./op.js";
 import { loadPlugins } from "./plugins.js";
 import { projectIndex } from "./rules.js";
+import { modelKey } from "./secrets.js";
 import { loadSpec, projectThemes } from "./validate.js";
 
 /**
@@ -60,7 +61,9 @@ export function aiProviders(env: NodeJS.ProcessEnv = process.env): Provider[] {
         name: "smithable",
         baseUrl: env.SMITHABLE_MODEL_URL,
         model: env.SMITHABLE_MODEL,
-        ...(env.SMITHABLE_MODEL_KEY ? { apiKey: env.SMITHABLE_MODEL_KEY } : {}),
+        ...((env.SMITHABLE_MODEL_KEY ?? modelKey())
+          ? { apiKey: env.SMITHABLE_MODEL_KEY ?? modelKey() }
+          : {}),
         tier: "smithable",
         location: env.SMITHABLE_MODEL_LOCATION === "elsewhere" ? "elsewhere" : "eu",
         ...(env.SMITHABLE_MODEL_PRICE ? { price: { input, output } } : {}),

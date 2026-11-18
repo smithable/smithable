@@ -1,4 +1,5 @@
 import { hostedLevel } from "./hosted-level.js";
+import { modelKey } from "./secrets.js";
 
 export interface ModelUsage {
   window: { used: number; allowed: number; remaining: number; resetsAt: string; currency: "EUR" };
@@ -73,7 +74,8 @@ export async function modelUsage(
   env: NodeJS.ProcessEnv = process.env,
   request: typeof fetch = fetch,
 ): Promise<ModelUsage | undefined> {
-  if (!hostedLevel(env) || !env.SMITHABLE_MODEL_URL || !env.SMITHABLE_MODEL_KEY) return undefined;
+  if (!hostedLevel(env) || !env.SMITHABLE_MODEL_URL || !(env.SMITHABLE_MODEL_KEY ?? modelKey()))
+    return undefined;
   try {
     const url = new URL(env.SMITHABLE_MODEL_URL);
     if (
@@ -86,7 +88,7 @@ export async function modelUsage(
       return undefined;
     url.pathname = `${url.pathname.replace(/\/$/, "")}/usage`;
     const response = await request(url, {
-      headers: { authorization: `Bearer ${env.SMITHABLE_MODEL_KEY}` },
+      headers: { authorization: `Bearer ${env.SMITHABLE_MODEL_KEY ?? modelKey()}` },
       redirect: "error",
       signal: AbortSignal.timeout(3000),
     });
