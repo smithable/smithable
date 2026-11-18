@@ -103,6 +103,7 @@ try {
     await route.continue();
   });
   await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page.getByRole("button", { name: "More look settings", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByLabel("Theme selection target", { exact: true })
@@ -198,6 +199,7 @@ try {
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
   await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page.getByRole("button", { name: "More look settings", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByLabel("Theme selection target", { exact: true })
@@ -240,6 +242,7 @@ try {
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );
   await page.getByRole("button", { name: "Look", exact: true }).click();
+  await page.getByRole("button", { name: "More look settings", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Look", exact: true })
     .getByLabel("Theme selection target", { exact: true })

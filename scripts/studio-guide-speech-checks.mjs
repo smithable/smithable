@@ -72,6 +72,10 @@ export async function checkStudioGuideSpeech(browser, base) {
       await route.fulfill({ response, json: body });
     });
     await page.goto(base);
+    await page
+      .getByRole("dialog", { name: "Choose a look", exact: true })
+      .getByRole("button", { name: "Skip", exact: true })
+      .click();
     const overlay = page.getByRole("dialog", { name: /^Smith presents / });
     await overlay.getByRole("button", { name: "Skip", exact: true }).click();
     await overlay.waitFor({ state: "detached" });

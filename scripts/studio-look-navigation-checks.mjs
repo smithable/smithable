@@ -27,6 +27,7 @@ export async function checkStudioLookNavigation(browser, base, label = "Customer
         redirected = true;
     });
     await page.getByRole("button", { name: "Look", exact: true }).click();
+    await page.getByRole("button", { name: "More look settings", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Look", exact: true });
     await dialog.getByRole("tab", { name: "Customise", exact: true }).click();
     await dialog.getByRole("button", { name: label, exact: true }).click();

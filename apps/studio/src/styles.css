@@ -199,3 +199,35 @@ body {
 .look-editor-dialog::backdrop {
   background: rgb(0 0 0 / 45%);
 }
+
+/* The running preview stays visible beside the picker, above its sheet on a phone. */
+.first-look {
+  position: fixed;
+  z-index: 45;
+  top: 72px;
+  right: 16px;
+  bottom: 16px;
+  width: min(400px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 48px rgb(0 0 0 / 22%);
+}
+@media (max-width: 1023px) {
+  .first-look {
+    inset: auto 0 0;
+    width: 100%;
+    height: 55dvh;
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .first-look-workspace {
+    padding-right: 432px;
+  }
+}
