@@ -83,6 +83,7 @@ exports[`the keys left to editSpec, as reviewed: every other key has its operati
   "smithable.ux.yml:pages.*.theme.density",
   "smithable.ux.yml:pages.*.theme.motion",
   "smithable.ux.yml:pages.*.theme.preset",
+  "smithable.ux.yml:pictures",
   "smithable.ux.yml:theme",
   "smithable.ux.yml:theme.brand",
   "smithable.ux.yml:tones",

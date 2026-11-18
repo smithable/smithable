@@ -290,3 +290,32 @@ function heroWords(dir: string, entry: VersionEntry): string | undefined {
   }
   return editor.text;
 }
+
+/**
+ * The content's pictures under public/images/ with their bytes' hash in their address
+ * (images/hero.webp?v=…), so a new picture is a new address and the preview shows it without a
+ * reload (first-look.md §4.3). By the file as it is, so it is the same on every machine.
+ */
+export function taggedContent<T>(dir: string, content: T): T {
+  const tags = new Map<string, string>();
+  const tag = (src: string) => {
+    if (!tags.has(src)) {
+      const file = join(dir, "public", src);
+      tags.set(src, existsSync(file) ? sha256(readFileSync(file)).slice(0, 16) : "");
+    }
+    return tags.get(src);
+  };
+  const walk = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(walk);
+    if (!value || typeof value !== "object") return value;
+    const out: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value)) out[key] = walk(v);
+    const src = out.src;
+    if (typeof src === "string" && /^images\/[\w/.-]+$/.test(src)) {
+      const t = tag(src);
+      if (t) out.src = `${src}?v=${t}`;
+    }
+    return out;
+  };
+  return walk(content) as T;
+}
