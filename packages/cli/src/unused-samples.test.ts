@@ -68,6 +68,11 @@ test("an owner's picture in samples/ always ships: one with no record, and one w
   ]);
 });
 
+test("a sample picture named at run time (custom code building the path) keeps them all", () => {
+  expect(unusedSamples(built("src:`/images/samples/${dish.photo}`"))).toEqual([]);
+  expect(unusedSamples(built('src:"/images/samples/"+n'))).toEqual([]);
+});
+
 test("without pictures.json nothing is left out (an app from before roles)", () => {
   const client = built("");
   rmSync(join(client, "images", "pictures.json"));

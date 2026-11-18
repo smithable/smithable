@@ -13,17 +13,23 @@ interface Placed {
   sha256?: string;
 }
 
-/** The text of every file the build wrote outside images/, where a page names a picture. */
-function builtText(dir: string, skip: string): string {
-  let text = "";
+/**
+ * What the files the build wrote outside images/ name under images/samples/: each name, as written
+ * up to a quote, space, query or bracket. A name built at run time (`images/samples/${x}`) shows as
+ * one that is no file, and then every sample ships.
+ */
+function namedSamples(dir: string, skip: string, names = new Set<string>()): Set<string> {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
     if (path === skip) continue;
-    if (statSync(path).isDirectory()) text += builtText(path, skip);
+    if (statSync(path).isDirectory()) namedSamples(path, skip, names);
     else if (/\.(m?js|css|html|json|txt|xml|webmanifest)$/.test(name))
-      text += readFileSync(path, "utf8");
+      for (const [, file] of readFileSync(path, "utf8").matchAll(
+        /images\/samples\/([^"'`?#\s)]*)/g,
+      ))
+        names.add(file ?? "");
   }
-  return text;
+  return names;
 }
 
 /**
@@ -38,12 +44,13 @@ export function unusedSamples(client: string): string[] {
   } catch {
     return [];
   }
-  const text = builtText(client, images);
+  const named = namedSamples(client, images);
+  for (const file of named) if (!file || !existsSync(join(images, "samples", file))) return [];
   return Object.entries(placed)
     .filter(([file, record]) => {
       const path = join(images, file);
       if (record.role !== "sample" || !record.sha256 || !existsSync(path)) return false;
-      if (text.includes(`images/${file}`)) return false;
+      if (named.has(file.slice("samples/".length))) return false;
       return createHash("sha256").update(readFileSync(path)).digest("hex") === record.sha256;
     })
     .map(([file]) => file);
