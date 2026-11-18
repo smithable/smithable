@@ -382,7 +382,8 @@ try {
   await checkCompactLook(lookSeen, base);
   await checkStudioLookNavigation(lookSeen, base);
   await checkStudioSpeech(lookSeen, base);
-  await checkStudioGuideSpeech(lookSeen, base);
+  // It passes the first-look picker itself, as a new browser meets it.
+  await checkStudioGuideSpeech(browser, base);
   await checkStudioDraft(lookSeen, base);
   await checkStudioTimers(lookSeen, base, root);
   await checkStudioValidation(lookSeen, base);
