@@ -187,9 +187,12 @@ test("typed reference forms write complete operations and protect unfinished dra
     });
     await page.goto(`${base}?guide=off`);
     const noCode = page.locator("[data-no-code]");
-    const following = noCode.getByRole("checkbox", { name: "Follows preview", exact: true });
+    const following = page.getByRole("button", {
+      name: "Link the editors to the preview",
+      exact: true,
+    });
     await following.waitFor();
-    assert.ok(await following.isChecked());
+    assert.ok((await following.getAttribute("aria-pressed")) === "true");
     const context = () =>
       page.evaluate(
         () => JSON.parse(sessionStorage.getItem("smithable:place") ?? "{}").nocode?.page,
@@ -206,7 +209,7 @@ test("typed reference forms write complete operations and protect unfinished dra
     const go = async (path) => {
       const count = await page.evaluate(() => window.followReports.length);
       await page.getByLabel("Preview address", { exact: true }).fill(path);
-      await page.getByRole("button", { name: "Go", exact: true }).click();
+      await page.getByLabel("Preview address", { exact: true }).press("Enter");
       await page.waitForFunction(
         ({ count, path }) =>
           window.followReports.slice(count).some((message) => message.path === path),
@@ -281,7 +284,7 @@ test("typed reference forms write complete operations and protect unfinished dra
     await search.fill("");
     await outside();
     await followed("orders");
-    await following.uncheck();
+    if ((await following.getAttribute("aria-pressed")) === "true") await following.click();
     console.log("PASS actual preview navigation preserves reference search without any operation");
 
     await entry("models", "Customer");

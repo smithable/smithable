@@ -137,7 +137,7 @@ async function shoot(browser, starter, change) {
         })
         .waitFor({ state: "detached", timeout: 90000 });
       await page.getByLabel("Preview address").fill(change.route);
-      await page.getByRole("button", { name: "Go", exact: true }).click();
+      await page.getByLabel("Preview address", { exact: true }).press("Enter");
       await page.waitForTimeout(6000);
       const bottom = await frame
         .contentFrame()

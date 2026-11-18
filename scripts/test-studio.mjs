@@ -289,8 +289,8 @@ try {
       .locator('section[aria-busy="true"]', { has: page.getByRole("heading", { name: "Preview" }) })
       .waitFor({ state: "detached", timeout: 60000 * P });
     await page.getByLabel("Preview address").fill(path);
-    await page.getByRole("button", { name: "Go", exact: true }).click();
-    // Go makes a new frame; until it has loaded the page, select mode sent would reach the old
+    await page.getByLabel("Preview address").press("Enter");
+    // Enter makes a new frame; until it has loaded the page, select mode sent would reach the old
     // one (marking it, so a test sees the mark) and a click would land on the new one, unmarked.
     // The old frame, on the same page, may be found in the moment before it is removed: then the
     // next one is waited for.
@@ -527,6 +527,41 @@ try {
     await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
     if (await note.count()) throw new Error("the samples notice came back");
   });
+  await step(
+    "the preview's address is no form a password manager fills, opens on Enter with no Go button, and its link button is kept",
+    async () => {
+      const address = page.getByRole("combobox", { name: "Preview address" });
+      const field = await address.evaluate((el) => ({
+        form: Boolean(el.closest("form")),
+        complete: el.getAttribute("autocomplete"),
+        ignored: el.hasAttribute("data-1p-ignore") && el.getAttribute("data-lpignore") === "true",
+        name: el.getAttribute("name"),
+      }));
+      if (field.form || field.complete !== "off" || !field.ignored || field.name !== "preview-path")
+        throw new Error(JSON.stringify(field));
+      if (await page.getByRole("button", { name: "Go", exact: true }).count())
+        throw new Error("the Go button is still there");
+      const link = page.getByRole("button", { name: "Link the editors to the preview" });
+      if ((await link.getAttribute("aria-pressed")) !== "true")
+        throw new Error("not linked at first");
+      if (!(await link.getAttribute("title"))?.includes("open the page the preview shows"))
+        throw new Error(await link.getAttribute("title"));
+      if (await page.getByText("Follows preview", { exact: true }).count())
+        throw new Error("the words are still there");
+      await link.click();
+      await page.reload();
+      await page.getByRole("heading", { name: "Ask Smith", exact: true }).waitFor();
+      if ((await link.getAttribute("aria-pressed")) !== "false")
+        throw new Error("unlinking was not kept");
+      await link.click();
+      if ((await link.getAttribute("aria-pressed")) !== "true") throw new Error("not linked again");
+      // Who can has no page to follow, so the link is not offered there (T907).
+      await page.getByRole("tab", { name: "Who can", exact: true }).click();
+      await link.waitFor({ state: "detached", timeout: 5000 * P });
+      await page.getByRole("tab", { name: "Behavior", exact: true }).click();
+      await link.waitFor({ timeout: 5000 * P });
+    },
+  );
   await step(
     "the sample users' panel opens beside the preview, sensible or trying everything, and says when there are none",
     async () => {

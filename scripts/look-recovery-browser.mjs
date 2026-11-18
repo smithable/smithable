@@ -194,7 +194,7 @@ try {
   await page.unroute("**/api/look?*");
   await page.reload();
   await page.getByLabel("Preview address", { exact: true }).fill("/welcome");
-  await page.getByRole("button", { name: "Go", exact: true }).click();
+  await page.getByLabel("Preview address", { exact: true }).press("Enter");
   await page.route("**/api/look?*", (route) =>
     route.fulfill({ status: 503, json: { error: "The connection is temporarily unavailable." } }),
   );

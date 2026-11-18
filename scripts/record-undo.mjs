@@ -136,7 +136,7 @@ const go = async (path) => {
     .locator('section[aria-busy="true"]', { has: page.getByRole("heading", { name: "Preview" }) })
     .waitFor({ state: "detached", timeout: 60000 });
   await page.getByLabel("Preview address").fill(path);
-  await page.getByRole("button", { name: "Go", exact: true }).click();
+  await page.getByLabel("Preview address", { exact: true }).press("Enter");
 };
 
 try {
