@@ -30,6 +30,7 @@ import { checkPreviewPages } from "./preview-pages-checks.mjs";
 import { checkProjectLookApply } from "./project-look-checks.mjs";
 import { checkStaticStates } from "./static-state-checks.mjs";
 import { checkStudioDraft } from "./studio-draft-checks.mjs";
+import { openFormEntry } from "./studio-form-checks.mjs";
 import { checkStudioGuideSpeech } from "./studio-guide-speech-checks.mjs";
 import { checkCompactLook, checkStudioLayout } from "./studio-layout-checks.mjs";
 import {
@@ -266,14 +267,7 @@ try {
     if (!(await found.evaluate((d) => d.open))) await found.locator("summary").first().click();
     return found;
   };
-  const entry = async (scope, name) => {
-    const found = scope
-      .locator("details", { has: page.locator(`summary:text-is("${name}")`) })
-      .first();
-    if (!(await found.evaluate((d) => d.open)))
-      await found.locator(`summary:text-is("${name}")`).first().click();
-    return found;
-  };
+  const entry = (scope, name) => openFormEntry(page, scope, name);
   // The window in the first place: No code or Code (the gear's dialog).
   // No code or Code: the sub-tab of the view that holds both (smith-first.md §6).
   const firstWindow = async (value) => {

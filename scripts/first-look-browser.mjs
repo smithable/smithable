@@ -6,13 +6,17 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 import { checkFirstLook } from "./first-look-checks.mjs";
 import { checkPorts } from "./ports.mjs";
+import { checkStudioSmoke } from "./studio-smoke-checks.mjs";
 
 const repo = resolve(import.meta.dirname, "..");
-const root = mkdtempSync(join(tmpdir(), "smithable-first-look-"));
+const smoke = process.argv.includes("--smoke");
+const root = mkdtempSync(
+  join(tmpdir(), smoke ? "smithable-studio-smoke-" : "smithable-first-look-"),
+);
 const dir = join(root, "crm");
 const cli = join(repo, "packages/cli/dist/bin.js");
 const port = Number(process.env.TEST_STUDIO_PORT ?? 5820);
-checkPorts("First look browser test", [port, port + 1]);
+checkPorts(smoke ? "Studio smoke test" : "First look browser test", [port, port + 1]);
 const base = `http://localhost:${port}`;
 const env = { ...process.env, XDG_CONFIG_HOME: join(root, "config") };
 for (const key of Object.keys(env))
@@ -51,7 +55,14 @@ try {
   }
   if (!ready) throw new Error(`Studio startup timeout: ${log}`);
   browser = await chromium.launch();
-  await checkFirstLook(browser, base);
+  if (smoke) await checkStudioSmoke(browser, base, root);
+  else await checkFirstLook(browser, base);
+} catch (error) {
+  if (smoke) {
+    writeFileSync(join(root, "server.log"), log);
+    console.error(`Studio smoke evidence: ${root}`);
+  }
+  throw error;
 } finally {
   await browser?.close();
   if (server?.pid && server.exitCode === null) {
